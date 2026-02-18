@@ -6,6 +6,63 @@
 
 @layer base {
   :root {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 355 78% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 30%;
+
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 15%;
+
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 355 78% 50%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 35%;
+    --sidebar-primary: 355 78% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 355 78% 50%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 355 78% 50%;
+    --sidebar-muted: 0 0% 60%;
+
+    --chart-green: 142 71% 40%;
+    --chart-red: 0 84% 55%;
+    --chart-blue: 217 91% 55%;
+    --chart-orange: 25 95% 48%;
+    --chart-purple: 262 83% 53%;
+    --chart-yellow: 45 93% 42%;
+
+    --kpi-positive: 142 71% 40%;
+    --kpi-negative: 0 84% 55%;
+    --kpi-neutral: 0 0% 45%;
+
+    --switch-bg: 0 0% 90%;
+    --switch-active: 0 0% 15%;
+    --switch-inactive: 0 0% 55%;
+  }
+
+  .dark {
     --background: 0 0% 4%;
     --foreground: 0 0% 95%;
 
@@ -96,6 +153,9 @@
 @layer utilities {
   .glass-card {
     @apply bg-card border border-border rounded-xl;
+  }
+
+  .dark .glass-card {
     background: linear-gradient(135deg, hsl(0 0% 8% / 0.8), hsl(0 0% 6% / 0.9));
   }
 

@@ -1,11 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TopSwitch } from "@/components/TopSwitch";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 const Index = () => {
   const [level, setLevel] = useState("FRANQUEADORA");
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
 
   const handleLevelChange = (newLevel: string) => {
     setLevel(newLevel);
@@ -14,15 +19,16 @@ const Index = () => {
         navigate("/franqueadora/financeiro");
       }
     }
-    // Other levels are placeholders
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top bar with switch */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-center py-3">
+        <div className="flex items-center justify-center py-3 px-4 relative">
           <TopSwitch active={level} onChange={handleLevelChange} />
+          <div className="absolute right-4">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
