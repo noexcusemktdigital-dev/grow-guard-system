@@ -10,6 +10,10 @@ import FinanceiroDashboard from "./pages/FinanceiroDashboard";
 import FinanceiroMesAMes from "./pages/FinanceiroMesAMes";
 import FinanceiroClientes from "./pages/FinanceiroClientes";
 import FinanceiroConfiguracoes from "./pages/FinanceiroConfiguracoes";
+import FinanceiroDespesas from "./pages/FinanceiroDespesas";
+import FinanceiroReceitas from "./pages/FinanceiroReceitas";
+import FinanceiroRepasse from "./pages/FinanceiroRepasse";
+import FinanceiroImpostos from "./pages/FinanceiroImpostos";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +29,10 @@ const App = () => (
             <Route path="franqueadora" element={<FranqueadoraLayout />}>
               <Route index element={<Navigate to="/franqueadora/financeiro" replace />} />
               <Route path="financeiro" element={<FinanceiroDashboard />} />
+              <Route path="financeiro/despesas" element={<FinanceiroDespesas />} />
+              <Route path="financeiro/receitas" element={<FinanceiroReceitas />} />
+              <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
+              <Route path="financeiro/impostos" element={<FinanceiroImpostos />} />
               <Route path="financeiro/mes-a-mes" element={<FinanceiroMesAMes />} />
               <Route path="financeiro/clientes" element={<FinanceiroClientes />} />
               <Route path="financeiro/configuracoes" element={<FinanceiroConfiguracoes />} />
