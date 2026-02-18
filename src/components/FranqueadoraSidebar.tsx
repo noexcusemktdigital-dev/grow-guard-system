@@ -7,6 +7,7 @@ import {
   Building2,
   TrendingUp,
   Rocket,
+  MessageSquare,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -14,6 +15,11 @@ import {
   CalendarDays,
   Users,
   Settings,
+  Calendar,
+  Megaphone,
+  Zap,
+  GraduationCap,
+  Trophy,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -25,8 +31,27 @@ interface SidebarItem {
   children?: { label: string; icon: React.ElementType; path: string }[];
 }
 
-const adminSection: SidebarItem[] = [
+const principalSection: SidebarItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/franqueadora/dashboard", disabled: true },
+  { label: "Agenda", icon: Calendar, path: "/franqueadora/agenda", disabled: true },
+  { label: "Comunicados", icon: Megaphone, path: "/franqueadora/comunicados", disabled: true },
+];
+
+const redeSection: SidebarItem[] = [
+  { label: "Franquias", icon: Building2, path: "/franqueadora/franquias", disabled: true },
+  { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm", disabled: true },
+  { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding", disabled: true },
+  { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento", disabled: true },
+];
+
+const comercialSection: SidebarItem[] = [
+  { label: "Marketing", icon: Zap, path: "/franqueadora/marketing", disabled: true },
+  { label: "Treinamentos", icon: GraduationCap, path: "/franqueadora/treinamentos", disabled: true },
+  { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas", disabled: true },
+];
+
+const adminSection: SidebarItem[] = [
+  { label: "Contratos", icon: FileText, path: "/franqueadora/contratos", disabled: true },
   {
     label: "Financeiro", icon: DollarSign, path: "/franqueadora/financeiro",
     children: [
@@ -36,14 +61,7 @@ const adminSection: SidebarItem[] = [
       { label: "Configurações", icon: Settings, path: "/franqueadora/financeiro/configuracoes" },
     ],
   },
-  { label: "Contratos", icon: FileText, path: "/franqueadora/contratos", disabled: true },
   { label: "Drive Corporativo", icon: FolderOpen, path: "/franqueadora/drive", disabled: true },
-];
-
-const redeSection: SidebarItem[] = [
-  { label: "Franquias", icon: Building2, path: "/franqueadora/franquias", disabled: true },
-  { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm", disabled: true },
-  { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding", disabled: true },
 ];
 
 function SidebarSection({ title, items, collapsed }: { title: string; items: SidebarItem[]; collapsed: boolean }) {
@@ -148,8 +166,10 @@ export function FranqueadoraSidebar() {
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto py-6">
-        <SidebarSection title="Administrativo" items={adminSection} collapsed={collapsed} />
+        <SidebarSection title="Principal" items={principalSection} collapsed={collapsed} />
         <SidebarSection title="Rede" items={redeSection} collapsed={collapsed} />
+        <SidebarSection title="Comercial" items={comercialSection} collapsed={collapsed} />
+        <SidebarSection title="Administrativo" items={adminSection} collapsed={collapsed} />
       </div>
 
       {/* Collapse toggle */}
