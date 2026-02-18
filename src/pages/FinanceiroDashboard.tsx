@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { KpiCard } from "@/components/KpiCard";
 import { AlertCard } from "@/components/AlertCard";
-import { getMonthSummary, getHistoricalData, parcelas, getActiveClientsForMonth, getReceitasForMonth } from "@/data/mockData";
+import { getMonthSummary, getHistoricalData, parcelas, getActiveClientsForMonth, getReceitasForMonth, getBreakEven, getInvestmentSignal, getProjection } from "@/data/mockData";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend,
@@ -20,6 +20,9 @@ export default function FinanceiroDashboard() {
   const summary = getMonthSummary(mesSelecionado);
   const historicalData = getHistoricalData();
   const receitas = getReceitasForMonth(mesSelecionado);
+  const breakEven = getBreakEven();
+  const signal = getInvestmentSignal(mesSelecionado);
+  const projection = getProjection(1);
 
   const pieDataDespesas = Object.entries(summary.despesasPorCategoria).map(([name, value]) => ({ name, value }));
   const pieDataReceitas = Object.entries(summary.receitaPorTipo).map(([name, value]) => ({ name, value }));
@@ -32,12 +35,40 @@ export default function FinanceiroDashboard() {
     .filter(p => p.status === "Ativo")
     .sort((a, b) => (a.totalParcelas - a.parcelaAtual) - (b.totalParcelas - b.parcelaAtual));
 
+  const signalConfig = {
+    green: { label: "🟢 Pode Investir", bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-500" },
+    yellow: { label: "🟡 Cuidado", bg: "bg-yellow-500/10 border-yellow-500/30", text: "text-yellow-500" },
+    red: { label: "🔴 Não Recomendado", bg: "bg-red-500/10 border-red-500/30", text: "text-red-500" },
+  };
+  const sc = signalConfig[signal];
+
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-[1400px]">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Financeiro • Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Visão geral — Fevereiro 2026</p>
+        </div>
+      </div>
+
+      {/* Semáforo de Investimento */}
+      <div className={`glass-card p-5 border ${sc.bg} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground mb-1">Decisão de Investimento</h3>
+          <p className={`text-lg font-bold ${sc.text}`}>{sc.label}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Margem: {summary.receitaLiquida > 0 ? ((summary.resultado / summary.receitaLiquida) * 100).toFixed(1) : 0}% • Runway: {summary.runway} meses
+          </p>
+        </div>
+        <div className="flex gap-4 text-sm">
+          <div className="text-center">
+            <p className="text-muted-foreground text-xs">Break-even</p>
+            <p className="font-bold text-foreground">{breakEven.clientesNecessarios} clientes</p>
+          </div>
+          <div className="text-center">
+            <p className="text-muted-foreground text-xs">Próximo mês</p>
+            <p className="font-bold text-foreground">{projection[0] ? formatBRL(projection[0].resultado) : "—"}</p>
+          </div>
         </div>
       </div>
 

@@ -393,3 +393,96 @@ export function getHistoricalData() {
 
   return data;
 }
+
+// ── PROJEÇÃO (CAMADA 3) ──
+
+export function getProjection(mesesFuturos: number): { mes: string; label: string; receitaRecorrente: number; folha: number; parcelas: number; eventos: number; impostos: number; resultado: number }[] {
+  const baseMonth = "2026-02";
+  const baseYear = 2026;
+  const baseM = 2; // fevereiro
+
+  const results: ReturnType<typeof getProjection> = [];
+
+  for (let i = 1; i <= mesesFuturos; i++) {
+    const m = baseM + i;
+    const year = baseYear + Math.floor((m - 1) / 12);
+    const month = ((m - 1) % 12) + 1;
+    const mesStr = `${year}-${String(month).padStart(2, "0")}`;
+    const labels = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const label = `${labels[month]}/${String(year).slice(2)}`;
+
+    // Receita recorrente: clientes ativos recorrentes
+    const activeClients = clientes.filter(c => {
+      if (c.status !== "Ativo") return false;
+      if (c.tipoReceita !== "Recorrente" && c.tipoReceita !== "Sistema") return false;
+      return c.inicio <= mesStr + "-31";
+    });
+    const receitaRecorrente = activeClients.reduce((s, c) => s + c.valor, 0)
+      + franqueados.filter(f => f.status === "Ativo").reduce((s, f) => s + f.mensalidadeSistema, 0);
+
+    // Folha projetada com reajustes
+    const folha = getFolhaForMonth(mesStr);
+
+    // Parcelas ativas (removendo encerradas)
+    const parcelasAtivas = parcelas.filter(p => {
+      if (p.status === "Encerrado") return false;
+      if (p.inicio > mesStr + "-31") return false;
+      // Estimar se já encerrou
+      const parcelasRestantes = p.totalParcelas - p.parcelaAtual;
+      const mesesDesdeBase = i;
+      return mesesDesdeBase <= parcelasRestantes;
+    });
+    const totalParcelas = parcelasAtivas.reduce((s, p) => s + p.valorMensal, 0);
+
+    // Eventos e treinamento (a partir de abril)
+    const eventos = mesStr >= "2026-04" ? 5000 : 0;
+
+    // Plataformas + Estrutura (fixos)
+    const fixos = plataformas.reduce((s, p) => s + p.valor, 0) + estrutura.reduce((s, e) => s + e.valor, 0);
+
+    const custoTotal = folha.total + totalParcelas + eventos + fixos;
+
+    // Imposto: 10% sobre (receita recorrente com NF + folha operacional)
+    const faturamentoComNF = activeClients.filter(c => c.notaFiscalEmitida).reduce((s, c) => s + c.valor, 0)
+      + franqueados.filter(f => f.status === "Ativo").reduce((s, f) => s + f.mensalidadeSistema, 0);
+    const impostos = (faturamentoComNF + folha.operacional) * 0.10;
+
+    // Repasse
+    const totalRepasse = activeClients.filter(c => c.geraRepasse).reduce((s, c) => s + c.valor * (c.percentualRepasse / 100), 0);
+
+    const receitaLiquida = receitaRecorrente - totalRepasse;
+    const resultado = receitaLiquida - custoTotal - impostos;
+
+    results.push({
+      mes: mesStr,
+      label,
+      receitaRecorrente,
+      folha: folha.total,
+      parcelas: totalParcelas,
+      eventos,
+      impostos,
+      resultado,
+    });
+  }
+
+  return results;
+}
+
+export function getBreakEven(): { custoMensal: number; ticketMedio: number; clientesNecessarios: number; clientesAtuais: number } {
+  const summary = getMonthSummary("2026-02");
+  const activeClients = getActiveClientsForMonth("2026-02").filter(c => c.tipoReceita === "Recorrente");
+  const custoMensal = summary.custosTotal;
+  const ticketMedio = activeClients.length > 0 ? activeClients.reduce((s, c) => s + c.valor, 0) / activeClients.length : 0;
+  const clientesNecessarios = ticketMedio > 0 ? Math.ceil(custoMensal / ticketMedio) : 0;
+  return { custoMensal, ticketMedio, clientesNecessarios, clientesAtuais: activeClients.length };
+}
+
+export function getInvestmentSignal(mes: string = "2026-02"): "green" | "yellow" | "red" {
+  const summary = getMonthSummary(mes);
+  const margemLucro = summary.receitaLiquida > 0 ? summary.resultado / summary.receitaLiquida : 0;
+  const runway = summary.runway;
+
+  if (margemLucro > 0.15 && runway > 3) return "green";
+  if (margemLucro > 0.05 && runway > 2) return "yellow";
+  return "red";
+}
