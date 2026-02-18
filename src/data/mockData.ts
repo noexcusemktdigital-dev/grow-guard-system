@@ -47,7 +47,7 @@ export interface Despesa {
   recorrente: boolean;
   valor: number;
   vencimento: number;
-  status: "Previsto" | "Pago";
+  status: "Previsto" | "Pago" | "Atrasado" | "Cancelado";
   notas: string;
 }
 
