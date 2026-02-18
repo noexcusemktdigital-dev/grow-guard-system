@@ -70,6 +70,7 @@ const adminSection: SidebarItem[] = [
       { label: "Receitas", icon: Receipt, path: "/franqueadora/financeiro/receitas" },
       { label: "Repasse", icon: ArrowRightLeft, path: "/franqueadora/financeiro/repasse" },
       { label: "Impostos", icon: Calculator, path: "/franqueadora/financeiro/impostos" },
+      { label: "Projeção", icon: TrendingUp, path: "/franqueadora/financeiro/projecao" },
       { label: "Mês a Mês", icon: CalendarDays, path: "/franqueadora/financeiro/mes-a-mes" },
       { label: "Clientes", icon: Users, path: "/franqueadora/financeiro/clientes" },
       { label: "Configurações", icon: Settings, path: "/franqueadora/financeiro/configuracoes" },

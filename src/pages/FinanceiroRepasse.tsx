@@ -1,23 +1,98 @@
 import { useState } from "react";
-import { getReceitasForMonth, franqueados, getMonthSummary } from "@/data/mockData";
+import { getReceitasForMonth, franqueados, getMonthSummary, clientes } from "@/data/mockData";
 import { KpiCard } from "@/components/KpiCard";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+type Tab = "franqueado" | "pendentes" | "pagos" | "historico";
+
 export default function FinanceiroRepasse() {
   const [mes, setMes] = useState("2026-02");
+  const [tab, setTab] = useState<Tab>("franqueado");
 
   const receitas = getReceitasForMonth(mes);
   const summary = getMonthSummary(mes);
   const comRepasse = receitas.filter(r => r.aplicaRepasse);
 
-  // Group by origin
-  const porOrigem: Record<string, typeof comRepasse> = {};
+  // Por Franqueado — agrupar por franqueadoVinculado
+  const porFranqueado: Record<string, typeof comRepasse> = {};
   comRepasse.forEach(r => {
-    const key = r.origemRepasse || "Outro";
-    if (!porOrigem[key]) porOrigem[key] = [];
-    porOrigem[key].push(r);
+    const fId = r.franqueadoId || "parceiros";
+    if (!porFranqueado[fId]) porFranqueado[fId] = [];
+    porFranqueado[fId].push(r);
   });
+
+  const getFranqueadoName = (id: string) => {
+    if (id === "parceiros") return "Parceiros";
+    return franqueados.find(f => f.id === id)?.nomeUnidade || id;
+  };
+
+  // Simular status de pagamento (Pendente/Pago) baseado no campo pago do cliente
+  const pendentes = comRepasse.filter(r => {
+    const cliente = clientes.find(c => c.id === r.clienteId);
+    return cliente ? !cliente.pago : false;
+  });
+  const pagos = comRepasse.filter(r => {
+    const cliente = clientes.find(c => c.id === r.clienteId);
+    return cliente ? cliente.pago : true;
+  });
+
+  // Histórico
+  const mesesList = ["2026-01", "2026-02", "2026-03"];
+  const historico = mesesList.map(m => {
+    const recs = getReceitasForMonth(m).filter(r => r.aplicaRepasse);
+    return {
+      mes: m,
+      label: m === "2026-01" ? "Jan/26" : m === "2026-02" ? "Fev/26" : "Mar/26",
+      total: recs.reduce((s, r) => s + r.valorRepasse, 0),
+      count: recs.length,
+    };
+  });
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "franqueado", label: "Por Franqueado" },
+    { key: "pendentes", label: `Pendentes (${pendentes.length})` },
+    { key: "pagos", label: `Pagos (${pagos.length})` },
+    { key: "historico", label: "Histórico" },
+  ];
+
+  const renderTable = (items: typeof comRepasse) => (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="border-b border-border">
+          <th className="text-left py-3 px-4 text-muted-foreground font-medium">Cliente</th>
+          <th className="text-left py-3 px-4 text-muted-foreground font-medium">Origem</th>
+          <th className="text-right py-3 px-4 text-muted-foreground font-medium">Valor Bruto</th>
+          <th className="text-center py-3 px-4 text-muted-foreground font-medium">%</th>
+          <th className="text-right py-3 px-4 text-muted-foreground font-medium">Repasse</th>
+          <th className="text-right py-3 px-4 text-muted-foreground font-medium">Líquido</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map(r => (
+          <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+            <td className="py-3 px-4 text-foreground">{r.clienteNome}</td>
+            <td className="py-3 px-4 text-muted-foreground">{r.origemRepasse}</td>
+            <td className="py-3 px-4 text-right text-foreground">{formatBRL(r.valorBruto)}</td>
+            <td className="py-3 px-4 text-center text-muted-foreground">{r.percentualRepasse}%</td>
+            <td className="py-3 px-4 text-right font-medium text-primary">{formatBRL(r.valorRepasse)}</td>
+            <td className="py-3 px-4 text-right text-foreground">{formatBRL(r.valorLiquido)}</td>
+          </tr>
+        ))}
+      </tbody>
+      {items.length > 0 && (
+        <tfoot>
+          <tr className="border-t border-border bg-secondary/20">
+            <td colSpan={2} className="py-3 px-4 font-semibold text-foreground">Total</td>
+            <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(items.reduce((s, r) => s + r.valorBruto, 0))}</td>
+            <td />
+            <td className="py-3 px-4 text-right font-bold text-primary">{formatBRL(items.reduce((s, r) => s + r.valorRepasse, 0))}</td>
+            <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(items.reduce((s, r) => s + r.valorLiquido, 0))}</td>
+          </tr>
+        </tfoot>
+      )}
+    </table>
+  );
 
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-[1400px]">
@@ -43,52 +118,78 @@ export default function FinanceiroRepasse() {
       <div className="glass-card p-5">
         <h3 className="text-sm font-semibold text-foreground mb-2">Regra de Repasse</h3>
         <p className="text-sm text-muted-foreground">
-          O repasse é aplicado automaticamente quando o cliente tem origem <strong>Franqueado</strong> (20%) ou <strong>Parceiro</strong> (10%), 
+          O repasse é aplicado automaticamente quando o cliente tem origem <strong>Franqueado</strong> (20%) ou <strong>Parceiro</strong> (10%),
           ou quando marcado manualmente como "gera repasse". O cálculo é: <code className="bg-secondary px-1.5 py-0.5 rounded text-xs">Valor × % repasse</code>.
         </p>
       </div>
 
-      {/* By origin */}
-      {Object.entries(porOrigem).map(([origem, items]) => (
-        <div key={origem} className="glass-card overflow-hidden">
-          <div className="px-4 py-3 border-b border-border bg-secondary/20">
-            <h3 className="text-sm font-semibold text-foreground">Origem: {origem}</h3>
-          </div>
+      {/* Tabs */}
+      <div className="flex gap-1 bg-secondary/50 p-1 rounded-lg w-fit">
+        {tabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 text-sm rounded-md transition-colors ${tab === t.key ? "bg-background text-foreground font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {tab === "franqueado" && (
+        <>
+          {Object.entries(porFranqueado).map(([fId, items]) => (
+            <div key={fId} className="glass-card overflow-hidden">
+              <div className="px-4 py-3 border-b border-border bg-secondary/20">
+                <h3 className="text-sm font-semibold text-foreground">{getFranqueadoName(fId)}</h3>
+              </div>
+              {renderTable(items)}
+            </div>
+          ))}
+        </>
+      )}
+
+      {tab === "pendentes" && (
+        <div className="glass-card overflow-hidden">
+          {pendentes.length === 0 ? (
+            <p className="p-8 text-center text-muted-foreground">Nenhum repasse pendente ✓</p>
+          ) : renderTable(pendentes)}
+        </div>
+      )}
+
+      {tab === "pagos" && (
+        <div className="glass-card overflow-hidden">
+          {pagos.length === 0 ? (
+            <p className="p-8 text-center text-muted-foreground">Nenhum repasse pago neste mês.</p>
+          ) : renderTable(pagos)}
+        </div>
+      )}
+
+      {tab === "historico" && (
+        <div className="glass-card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-muted-foreground font-medium">Cliente</th>
-                <th className="text-right py-3 px-4 text-muted-foreground font-medium">Valor Bruto</th>
-                <th className="text-center py-3 px-4 text-muted-foreground font-medium">%</th>
-                <th className="text-right py-3 px-4 text-muted-foreground font-medium">Repasse</th>
-                <th className="text-right py-3 px-4 text-muted-foreground font-medium">Líquido</th>
+                <th className="text-left py-3 px-4 text-muted-foreground font-medium">Mês</th>
+                <th className="text-center py-3 px-4 text-muted-foreground font-medium">Clientes</th>
+                <th className="text-right py-3 px-4 text-muted-foreground font-medium">Total Repasse</th>
               </tr>
             </thead>
             <tbody>
-              {items.map(r => (
-                <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                  <td className="py-3 px-4 text-foreground">{r.clienteNome}</td>
-                  <td className="py-3 px-4 text-right text-foreground">{formatBRL(r.valorBruto)}</td>
-                  <td className="py-3 px-4 text-center text-muted-foreground">{r.percentualRepasse}%</td>
-                  <td className="py-3 px-4 text-right font-medium text-primary">{formatBRL(r.valorRepasse)}</td>
-                  <td className="py-3 px-4 text-right text-foreground">{formatBRL(r.valorLiquido)}</td>
+              {historico.map(h => (
+                <tr key={h.mes} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                  <td className="py-3 px-4 font-medium text-foreground">{h.label}</td>
+                  <td className="py-3 px-4 text-center text-foreground">{h.count}</td>
+                  <td className="py-3 px-4 text-right font-semibold text-primary">{formatBRL(h.total)}</td>
                 </tr>
               ))}
             </tbody>
-            <tfoot>
-              <tr className="border-t border-border bg-secondary/20">
-                <td className="py-3 px-4 font-semibold text-foreground">Subtotal</td>
-                <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(items.reduce((s, r) => s + r.valorBruto, 0))}</td>
-                <td />
-                <td className="py-3 px-4 text-right font-bold text-primary">{formatBRL(items.reduce((s, r) => s + r.valorRepasse, 0))}</td>
-                <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(items.reduce((s, r) => s + r.valorLiquido, 0))}</td>
-              </tr>
-            </tfoot>
           </table>
         </div>
-      ))}
+      )}
 
-      {comRepasse.length === 0 && (
+      {comRepasse.length === 0 && tab === "franqueado" && (
         <div className="glass-card p-8 text-center text-muted-foreground">Nenhum cliente com repasse neste mês.</div>
       )}
     </div>
