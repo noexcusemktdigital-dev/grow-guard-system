@@ -20,6 +20,10 @@ import {
   Zap,
   GraduationCap,
   Trophy,
+  Receipt,
+  ArrowRightLeft,
+  Calculator,
+  CreditCard,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -61,7 +65,11 @@ const adminSection: SidebarItem[] = [
   {
     label: "Financeiro", icon: DollarSign, path: "/franqueadora/financeiro",
     children: [
-      { label: "Visão Geral", icon: BarChart3, path: "/franqueadora/financeiro" },
+      { label: "Dashboard", icon: BarChart3, path: "/franqueadora/financeiro" },
+      { label: "Despesas", icon: CreditCard, path: "/franqueadora/financeiro/despesas" },
+      { label: "Receitas", icon: Receipt, path: "/franqueadora/financeiro/receitas" },
+      { label: "Repasse", icon: ArrowRightLeft, path: "/franqueadora/financeiro/repasse" },
+      { label: "Impostos", icon: Calculator, path: "/franqueadora/financeiro/impostos" },
       { label: "Mês a Mês", icon: CalendarDays, path: "/franqueadora/financeiro/mes-a-mes" },
       { label: "Clientes", icon: Users, path: "/franqueadora/financeiro/clientes" },
       { label: "Configurações", icon: Settings, path: "/franqueadora/financeiro/configuracoes" },
