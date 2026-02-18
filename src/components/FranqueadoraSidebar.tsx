@@ -23,12 +23,18 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+interface SidebarChild {
+  label: string;
+  icon: React.ElementType;
+  path: string;
+}
+
 interface SidebarItem {
   label: string;
   icon: React.ElementType;
   path: string;
   disabled?: boolean;
-  children?: { label: string; icon: React.ElementType; path: string }[];
+  children?: SidebarChild[];
 }
 
 const principalSection: SidebarItem[] = [
@@ -64,6 +70,62 @@ const adminSection: SidebarItem[] = [
   { label: "Drive Corporativo", icon: FolderOpen, path: "/franqueadora/drive", disabled: true },
 ];
 
+function SidebarItemWithChildren({ item, collapsed }: { item: SidebarItem; collapsed: boolean }) {
+  const location = useLocation();
+  const isParentActive = location.pathname.startsWith(item.path);
+  const [open, setOpen] = useState(isParentActive);
+  const Icon = item.icon;
+
+  if (collapsed) {
+    return (
+      <RouterNavLink
+        to={item.path}
+        className={`flex items-center justify-center px-4 py-3 text-sm transition-all duration-150 rounded-r-lg
+          ${isParentActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-foreground hover:bg-secondary/50"}
+        `}
+        title={item.label}
+      >
+        <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isParentActive ? "text-primary" : ""}`} />
+      </RouterNavLink>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-3 px-4 py-3 text-sm w-full transition-all duration-150 rounded-r-lg
+          ${isParentActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-foreground hover:bg-secondary/50"}
+        `}
+      >
+        <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isParentActive ? "text-primary" : ""}`} />
+        <span className="flex-1 text-left">{item.label}</span>
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-0" : "-rotate-90"}`} />
+      </button>
+      {open && (
+        <div className="ml-7 border-l border-border/50 mt-0.5">
+          {item.children!.map(child => {
+            const isChildActive = location.pathname === child.path;
+            const ChildIcon = child.icon;
+            return (
+              <RouterNavLink
+                key={child.path}
+                to={child.path}
+                className={`flex items-center gap-2.5 pl-4 pr-4 py-2 text-sm transition-colors ${
+                  isChildActive ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <ChildIcon className="w-3.5 h-3.5" />
+                <span>{child.label}</span>
+              </RouterNavLink>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SidebarSection({ title, items, collapsed }: { title: string; items: SidebarItem[]; collapsed: boolean }) {
   const location = useLocation();
 
@@ -72,11 +134,8 @@ function SidebarSection({ title, items, collapsed }: { title: string; items: Sid
       {!collapsed && <div className="section-label px-4 mb-3">{title}</div>}
       <nav className="flex flex-col gap-0.5">
         {items.map((item) => {
-          const isParentActive = location.pathname.startsWith(item.path);
-          const Icon = item.icon;
-          const [open, setOpen] = useState(isParentActive);
-
           if (item.disabled) {
+            const Icon = item.icon;
             return (
               <div
                 key={item.path}
@@ -89,54 +148,23 @@ function SidebarSection({ title, items, collapsed }: { title: string; items: Sid
             );
           }
 
-          if (item.children && !collapsed) {
-            return (
-              <div key={item.path}>
-                <button
-                  onClick={() => setOpen(!open)}
-                  className={`flex items-center gap-3 px-4 py-3 text-sm w-full transition-all duration-150 rounded-r-lg
-                    ${isParentActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-foreground hover:bg-secondary/50"}
-                  `}
-                >
-                  <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isParentActive ? "text-primary" : ""}`} />
-                  <span className="flex-1 text-left">{item.label}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-0" : "-rotate-90"}`} />
-                </button>
-                {open && (
-                  <div className="ml-7 border-l border-border/50 mt-0.5">
-                    {item.children.map(child => {
-                      const isChildActive = location.pathname === child.path;
-                      const ChildIcon = child.icon;
-                      return (
-                        <RouterNavLink
-                          key={child.path}
-                          to={child.path}
-                          className={`flex items-center gap-2.5 pl-4 pr-4 py-2 text-sm transition-colors ${
-                            isChildActive ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          <ChildIcon className="w-3.5 h-3.5" />
-                          <span>{child.label}</span>
-                        </RouterNavLink>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
+          if (item.children) {
+            return <SidebarItemWithChildren key={item.path} item={item} collapsed={collapsed} />;
           }
 
+          const Icon = item.icon;
+          const isActive = location.pathname.startsWith(item.path);
           return (
             <RouterNavLink
               key={item.path}
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 text-sm transition-all duration-150 rounded-r-lg
                 ${collapsed ? "justify-center" : ""}
-                ${isParentActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-foreground hover:bg-secondary/50"}
+                ${isActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-foreground hover:bg-secondary/50"}
               `}
               title={collapsed ? item.label : undefined}
             >
-              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isParentActive ? "text-primary" : ""}`} />
+              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? "text-primary" : ""}`} />
               {!collapsed && <span>{item.label}</span>}
             </RouterNavLink>
           );
@@ -153,7 +181,6 @@ export function FranqueadoraSidebar() {
     <aside
       className={`h-[calc(100vh-49px)] bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 sticky top-[49px] ${collapsed ? "w-16" : "w-60"}`}
     >
-      {/* Logo */}
       <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
         {!collapsed && (
           <div className="flex items-center gap-2">
@@ -164,7 +191,6 @@ export function FranqueadoraSidebar() {
         {collapsed && <div className="w-2 h-6 bg-primary rounded-full" />}
       </div>
 
-      {/* Navigation */}
       <div className="flex-1 overflow-y-auto py-6">
         <SidebarSection title="Principal" items={principalSection} collapsed={collapsed} />
         <SidebarSection title="Rede" items={redeSection} collapsed={collapsed} />
@@ -172,7 +198,6 @@ export function FranqueadoraSidebar() {
         <SidebarSection title="Administrativo" items={adminSection} collapsed={collapsed} />
       </div>
 
-      {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="flex items-center justify-center h-12 border-t border-sidebar-border text-muted-foreground hover:text-foreground transition-colors"
