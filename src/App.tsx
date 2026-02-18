@@ -7,14 +7,11 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { FranqueadoraLayout } from "./components/FranqueadoraLayout";
 import FinanceiroDashboard from "./pages/FinanceiroDashboard";
-import FinanceiroMesAMes from "./pages/FinanceiroMesAMes";
-import FinanceiroClientes from "./pages/FinanceiroClientes";
 import FinanceiroConfiguracoes from "./pages/FinanceiroConfiguracoes";
 import FinanceiroDespesas from "./pages/FinanceiroDespesas";
 import FinanceiroReceitas from "./pages/FinanceiroReceitas";
 import FinanceiroRepasse from "./pages/FinanceiroRepasse";
 import FinanceiroImpostos from "./pages/FinanceiroImpostos";
-import FinanceiroProjecao from "./pages/FinanceiroProjecao";
 
 const queryClient = new QueryClient();
 
@@ -34,9 +31,6 @@ const App = () => (
               <Route path="financeiro/receitas" element={<FinanceiroReceitas />} />
               <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
               <Route path="financeiro/impostos" element={<FinanceiroImpostos />} />
-              <Route path="financeiro/projecao" element={<FinanceiroProjecao />} />
-              <Route path="financeiro/mes-a-mes" element={<FinanceiroMesAMes />} />
-              <Route path="financeiro/clientes" element={<FinanceiroClientes />} />
               <Route path="financeiro/configuracoes" element={<FinanceiroConfiguracoes />} />
             </Route>
           </Route>

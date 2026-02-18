@@ -1,20 +1,23 @@
 import { useState } from "react";
 import { getReceitasForMonth, franqueados, getMonthSummary, clientes } from "@/data/mockData";
 import { KpiCard } from "@/components/KpiCard";
+import { Pencil, Check } from "lucide-react";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 type Tab = "franqueado" | "pendentes" | "pagos" | "historico";
+const statusOptions = ["Pendente", "Aprovado", "Pago", "Contestação"] as const;
 
 export default function FinanceiroRepasse() {
   const [mes, setMes] = useState("2026-02");
   const [tab, setTab] = useState<Tab>("franqueado");
+  const [editedStatus, setEditedStatus] = useState<Map<string, string>>(new Map());
 
   const receitas = getReceitasForMonth(mes);
   const summary = getMonthSummary(mes);
   const comRepasse = receitas.filter(r => r.aplicaRepasse);
 
-  // Por Franqueado — agrupar por franqueadoVinculado
+  // Por Franqueado
   const porFranqueado: Record<string, typeof comRepasse> = {};
   comRepasse.forEach(r => {
     const fId = r.franqueadoId || "parceiros";
@@ -27,15 +30,21 @@ export default function FinanceiroRepasse() {
     return franqueados.find(f => f.id === id)?.nomeUnidade || id;
   };
 
-  // Simular status de pagamento (Pendente/Pago) baseado no campo pago do cliente
-  const pendentes = comRepasse.filter(r => {
+  const getRepasseStatus = (r: typeof comRepasse[0]) => {
+    if (editedStatus.has(r.id)) return editedStatus.get(r.id)!;
     const cliente = clientes.find(c => c.id === r.clienteId);
-    return cliente ? !cliente.pago : false;
-  });
-  const pagos = comRepasse.filter(r => {
-    const cliente = clientes.find(c => c.id === r.clienteId);
-    return cliente ? cliente.pago : true;
-  });
+    return cliente?.pago ? "Pago" : "Pendente";
+  };
+
+  const pendentes = comRepasse.filter(r => getRepasseStatus(r) === "Pendente");
+  const pagos = comRepasse.filter(r => getRepasseStatus(r) === "Pago");
+
+  const handleStatusChange = (id: string, status: string) => {
+    setEditedStatus(prev => new Map(prev).set(id, status));
+  };
+
+  const handleAprovar = (id: string) => handleStatusChange(id, "Aprovado");
+  const handlePagar = (id: string) => handleStatusChange(id, "Pago");
 
   // Histórico
   const mesesList = ["2026-01", "2026-02", "2026-03"];
@@ -56,7 +65,14 @@ export default function FinanceiroRepasse() {
     { key: "historico", label: "Histórico" },
   ];
 
-  const renderTable = (items: typeof comRepasse) => (
+  const statusColor = (s: string) => {
+    if (s === "Pago") return "bg-emerald-500/15 text-emerald-500";
+    if (s === "Aprovado") return "bg-blue-500/15 text-blue-500";
+    if (s === "Contestação") return "bg-red-500/15 text-red-500";
+    return "bg-yellow-500/15 text-yellow-500";
+  };
+
+  const renderTable = (items: typeof comRepasse, showActions = true) => (
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border">
@@ -65,20 +81,45 @@ export default function FinanceiroRepasse() {
           <th className="text-right py-3 px-4 text-muted-foreground font-medium">Valor Bruto</th>
           <th className="text-center py-3 px-4 text-muted-foreground font-medium">%</th>
           <th className="text-right py-3 px-4 text-muted-foreground font-medium">Repasse</th>
-          <th className="text-right py-3 px-4 text-muted-foreground font-medium">Líquido</th>
+          <th className="text-center py-3 px-4 text-muted-foreground font-medium">Status</th>
+          {showActions && <th className="text-center py-3 px-4 text-muted-foreground font-medium">Ações</th>}
         </tr>
       </thead>
       <tbody>
-        {items.map(r => (
-          <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-            <td className="py-3 px-4 text-foreground">{r.clienteNome}</td>
-            <td className="py-3 px-4 text-muted-foreground">{r.origemRepasse}</td>
-            <td className="py-3 px-4 text-right text-foreground">{formatBRL(r.valorBruto)}</td>
-            <td className="py-3 px-4 text-center text-muted-foreground">{r.percentualRepasse}%</td>
-            <td className="py-3 px-4 text-right font-medium text-primary">{formatBRL(r.valorRepasse)}</td>
-            <td className="py-3 px-4 text-right text-foreground">{formatBRL(r.valorLiquido)}</td>
-          </tr>
-        ))}
+        {items.map(r => {
+          const status = getRepasseStatus(r);
+          return (
+            <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+              <td className="py-3 px-4 text-foreground">{r.clienteNome}</td>
+              <td className="py-3 px-4 text-muted-foreground">{r.origemRepasse}</td>
+              <td className="py-3 px-4 text-right text-foreground">{formatBRL(r.valorBruto)}</td>
+              <td className="py-3 px-4 text-center text-muted-foreground">{r.percentualRepasse}%</td>
+              <td className="py-3 px-4 text-right font-medium text-primary">{formatBRL(r.valorRepasse)}</td>
+              <td className="py-3 px-4 text-center">
+                <select value={status} onChange={e => handleStatusChange(r.id, e.target.value)}
+                  className={`text-xs px-2 py-0.5 rounded border-0 cursor-pointer ${statusColor(status)}`}>
+                  {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </td>
+              {showActions && (
+                <td className="py-3 px-4 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    {status === "Pendente" && (
+                      <button onClick={() => handleAprovar(r.id)} title="Aprovar" className="p-1.5 rounded hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-colors">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {status === "Aprovado" && (
+                      <button onClick={() => handlePagar(r.id)} title="Marcar pago" className="p-1.5 rounded hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500 transition-colors">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              )}
+            </tr>
+          );
+        })}
       </tbody>
       {items.length > 0 && (
         <tfoot>
@@ -87,7 +128,7 @@ export default function FinanceiroRepasse() {
             <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(items.reduce((s, r) => s + r.valorBruto, 0))}</td>
             <td />
             <td className="py-3 px-4 text-right font-bold text-primary">{formatBRL(items.reduce((s, r) => s + r.valorRepasse, 0))}</td>
-            <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(items.reduce((s, r) => s + r.valorLiquido, 0))}</td>
+            <td colSpan={showActions ? 2 : 1} />
           </tr>
         </tfoot>
       )}
@@ -99,7 +140,7 @@ export default function FinanceiroRepasse() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Financeiro • Repasse</h1>
-          <p className="text-sm text-muted-foreground mt-1">Franqueados e Parceiros</p>
+          <p className="text-sm text-muted-foreground mt-1">Logbook CRUD — Franqueados e Parceiros</p>
         </div>
         <select value={mes} onChange={(e) => setMes(e.target.value)} className="bg-secondary text-foreground border border-border rounded-lg px-3 py-2 text-sm">
           <option value="2026-01">Jan/2026</option>
@@ -118,19 +159,15 @@ export default function FinanceiroRepasse() {
       <div className="glass-card p-5">
         <h3 className="text-sm font-semibold text-foreground mb-2">Regra de Repasse</h3>
         <p className="text-sm text-muted-foreground">
-          O repasse é aplicado automaticamente quando o cliente tem origem <strong>Franqueado</strong> (20%) ou <strong>Parceiro</strong> (10%),
-          ou quando marcado manualmente como "gera repasse". O cálculo é: <code className="bg-secondary px-1.5 py-0.5 rounded text-xs">Valor × % repasse</code>.
+          Repasse automático: <strong>Franqueado</strong> (20%) e <strong>Parceiro</strong> (10%), editável por lançamento.
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-secondary/50 p-1 rounded-lg w-fit">
         {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm rounded-md transition-colors ${tab === t.key ? "bg-background text-foreground font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`px-4 py-2 text-sm rounded-md transition-colors ${tab === t.key ? "bg-background text-foreground font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             {t.label}
           </button>
         ))}
@@ -147,6 +184,9 @@ export default function FinanceiroRepasse() {
               {renderTable(items)}
             </div>
           ))}
+          {comRepasse.length === 0 && (
+            <div className="glass-card p-8 text-center text-muted-foreground">Nenhum cliente com repasse neste mês.</div>
+          )}
         </>
       )}
 
@@ -162,7 +202,7 @@ export default function FinanceiroRepasse() {
         <div className="glass-card overflow-hidden">
           {pagos.length === 0 ? (
             <p className="p-8 text-center text-muted-foreground">Nenhum repasse pago neste mês.</p>
-          ) : renderTable(pagos)}
+          ) : renderTable(pagos, false)}
         </div>
       )}
 
@@ -187,10 +227,6 @@ export default function FinanceiroRepasse() {
             </tbody>
           </table>
         </div>
-      )}
-
-      {comRepasse.length === 0 && tab === "franqueado" && (
-        <div className="glass-card p-8 text-center text-muted-foreground">Nenhum cliente com repasse neste mês.</div>
       )}
     </div>
   );
