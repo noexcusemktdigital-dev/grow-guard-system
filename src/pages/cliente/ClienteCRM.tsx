@@ -1115,8 +1115,6 @@ export default function ClienteCRM() {
         </Badge>
       </div>
 
-      <FunnelVisualization leads={filteredLeads} stages={stages} />
-
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-xs">

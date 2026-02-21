@@ -178,11 +178,11 @@ export default function FranqueadoProspeccaoIA() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="glass-card">
-                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">💡 Ideias de Prospecção</CardTitle></CardHeader>
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Ideias de Prospecção</CardTitle></CardHeader>
                   <CardContent><ul className="space-y-2">{mockPlano.ideias.map((i, idx) => <li key={idx} className="text-sm flex gap-2"><span className="text-primary font-bold">{idx + 1}.</span>{i}</li>)}</ul></CardContent>
                 </Card>
                 <Card className="glass-card">
-                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">📋 Plano de Ação</CardTitle></CardHeader>
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Plano de Ação</CardTitle></CardHeader>
                   <CardContent><ul className="space-y-2">{mockPlano.planoAcao.map((p, idx) => <li key={idx} className="text-sm">{p}</li>)}</ul></CardContent>
                 </Card>
                 <Card className="glass-card">
@@ -190,7 +190,7 @@ export default function FranqueadoProspeccaoIA() {
                   <CardContent><div className="flex flex-wrap gap-2">{mockPlano.canais.map(c => <span key={c} className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">{c}</span>)}</div></CardContent>
                 </Card>
                 <Card className="glass-card">
-                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">🎯 Abordagens Sugeridas</CardTitle></CardHeader>
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Abordagens Sugeridas</CardTitle></CardHeader>
                   <CardContent><ul className="space-y-2">{mockPlano.abordagens.map((a, idx) => <li key={idx} className="text-sm flex gap-2"><Megaphone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />{a}</li>)}</ul></CardContent>
                 </Card>
               </div>
@@ -246,7 +246,7 @@ export default function FranqueadoProspeccaoIA() {
           {scriptGerado && (
             <div className="space-y-6">
               <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">📝 Script Inicial</CardTitle></CardHeader>
+                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Script Inicial</CardTitle></CardHeader>
                 <CardContent>
                   <div className="bg-muted/30 rounded-xl p-4 text-sm whitespace-pre-wrap leading-relaxed">{mockScript.scriptInicial}</div>
                   <div className="flex gap-2 mt-3">
@@ -262,7 +262,7 @@ export default function FranqueadoProspeccaoIA() {
                   <CardContent><ul className="space-y-2">{mockScript.perguntas.map((p, i) => <li key={i} className="text-sm flex gap-2"><span className="text-primary font-bold">{i + 1}.</span>{p}</li>)}</ul></CardContent>
                 </Card>
                 <Card className="glass-card">
-                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">🛡️ Quebra de Objeções</CardTitle></CardHeader>
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Quebra de Objeções</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     {mockScript.objecoes.map((o, i) => (
                       <div key={i} className="text-sm">
@@ -275,7 +275,7 @@ export default function FranqueadoProspeccaoIA() {
               </div>
 
               <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">🎯 CTA Final</CardTitle></CardHeader>
+                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">CTA Final</CardTitle></CardHeader>
                 <CardContent><p className="text-sm bg-primary/10 rounded-xl p-4 font-medium">{mockScript.ctaFinal}</p></CardContent>
               </Card>
 
@@ -318,7 +318,7 @@ export default function FranqueadoProspeccaoIA() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Badge variant={item.tipo === "plano" ? "default" : "secondary"} className="text-[10px]">
-                        {item.tipo === "plano" ? "📋 Plano" : "📝 Script"}
+                        {item.tipo === "plano" ? "Plano" : "Script"}
                       </Badge>
                       <span className="text-xs text-muted-foreground">{item.data}</span>
                     </div>

@@ -902,7 +902,7 @@ export function getChatConversations(): ChatConversation[] {
     },
     {
       id: "c4", accountId: "wa1", contactName: "Ana Costa", contactPhone: "(11) 99999-4444", contactEmail: "ana@email.com",
-      avatar: "AC", lastMessage: "Contrato assinado! ✅", lastMessageTime: "2h",
+      avatar: "AC", lastMessage: "Contrato assinado!", lastMessageTime: "2h",
       unread: 0, attendanceStatus: "encerrado", attendant: "Você", tag: "Cliente", crmLinked: true, crmStage: "Fechado", crmResponsible: "Você",
       messages: [
         { id: "m1", sender: "user", senderName: "Você", text: "Ana, segue o contrato para assinatura", time: "10:00" },

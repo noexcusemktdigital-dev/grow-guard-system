@@ -275,7 +275,7 @@ export default function FranqueadoFinanceiro() {
       <Dialog open={dreDialogOpen} onOpenChange={setDreDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>📊 Fechamento — {dreSelecionado?.mes}</DialogTitle>
+            <DialogTitle>Fechamento — {dreSelecionado?.mes}</DialogTitle>
             <DialogDescription>Demonstrativo de Resultado (DRE)</DialogDescription>
           </DialogHeader>
           {dreSelecionado && (() => {

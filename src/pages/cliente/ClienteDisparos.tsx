@@ -283,7 +283,7 @@ export default function ClienteDisparos() {
                         }`}
                         onClick={() => setWizardData(p => ({ ...p, temperature: p.temperature === t ? "" : t }))}
                       >
-                        {t === "Quente" ? "🔥" : t === "Morno" ? "🌤️" : "❄️"} {t}
+                        {t}
                       </button>
                     ))}
                   </div>

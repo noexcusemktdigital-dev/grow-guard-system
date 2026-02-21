@@ -236,7 +236,7 @@ export function DiagnosticoEstrategia({ pontuacao, nivel, gargalos, empresa }: D
       {/* Justificativa Técnica */}
       <Card className="glass-card">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold uppercase tracking-wider">📄 Justificativa Técnica</CardTitle>
+          <CardTitle className="text-sm font-bold uppercase tracking-wider">Justificativa Técnica</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground leading-relaxed">
