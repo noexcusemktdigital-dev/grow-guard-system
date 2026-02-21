@@ -706,112 +706,255 @@ export default function ClientePlanoVendas() {
                 </CardContent>
               </Card>
 
-              {/* Metas Salvas */}
-              {metasMensais.length > 0 && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-emerald-500/15"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></div>
-                      Metas Definidas ({metasMensais.length})
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {metasMensais.map(m => {
-                      const tipoConfig = TIPO_META_CONFIG[m.tipo];
-                      const Icon = tipoConfig.icon;
-                      const isMoney = m.tipo === "faturamento" || m.tipo === "ticket_medio";
-                      const isPercent = m.tipo === "conversao" || m.tipo === "retencao";
-                      const prioridadeColors = { alta: "border-red-500/30 bg-red-500/5", media: "border-yellow-500/30 bg-yellow-500/5", baixa: "border-emerald-500/30 bg-emerald-500/5" };
-                      return (
-                        <Card key={m.id} className={`overflow-hidden ${prioridadeColors[m.prioridade]}`}>
-                          <div className={`h-1 ${tipoConfig.gradient}`} />
-                          <CardContent className="p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div className={`p-1.5 rounded-lg ${tipoConfig.bg}`}>
-                                  <Icon className={`w-3.5 h-3.5 ${tipoConfig.color}`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  {editingMetaId === m.id ? (
-                                    <Input value={editDraft.nome} onChange={e => setEditDraft(p => ({ ...p, nome: e.target.value }))}
-                                      className="h-6 text-xs font-semibold px-1.5" autoFocus />
-                                  ) : (
-                                    <p className="text-xs font-semibold truncate">{m.nome}</p>
-                                  )}
-                                  {editingMetaId === m.id ? (
-                                    <Select value={editDraft.mesRef} onValueChange={v => setEditDraft(p => ({ ...p, mesRef: v }))}>
-                                      <SelectTrigger className="h-5 text-[10px] px-1.5 w-auto mt-0.5"><SelectValue /></SelectTrigger>
-                                      <SelectContent>
-                                        {MESES_COMPLETOS.map((mes, i) => {
-                                          const valor = `${mes}/${i >= new Date().getMonth() ? anoAtual : anoAtual + 1}`;
-                                          return <SelectItem key={mes} value={valor} className="text-xs">{valor}</SelectItem>;
-                                        })}
-                                      </SelectContent>
-                                    </Select>
-                                  ) : (
-                                    <p className="text-[10px] text-muted-foreground">{m.mesRef} · {tipoConfig.label} · {m.periodo}</p>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {editingMetaId === m.id ? (
-                                  <>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-emerald-500 hover:text-emerald-600" onClick={saveEditing}>
-                                      <Check className="w-3 h-3" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={cancelEditing}>
-                                      <X className="w-3 h-3" />
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" onClick={() => startEditing(m)}>
-                                      <Pencil className="w-3 h-3" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                      onClick={() => { setMetasMensais(prev => prev.filter(x => x.id !== m.id)); toast({ title: "Meta removida." }); }}>
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            {editingMetaId === m.id ? (
-                              <div className="flex items-center gap-2">
-                                <Input type="number" value={editDraft.valorAlvo || ""} onChange={e => setEditDraft(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
-                                  className="h-8 text-lg font-black w-40" />
-                                <span className="text-xs text-muted-foreground">{isMoney ? "(R$)" : isPercent ? "(%)" : "(un)"}</span>
-                              </div>
-                            ) : (
-                              <p className="text-xl font-black">
-                                {isMoney ? fmtBRL(m.valorAlvo) : isPercent ? fmtPct(m.valorAlvo) : fmtNum(m.valorAlvo)}
-                              </p>
-                            )}
-                            <div className="flex flex-wrap gap-1.5">
-                              <Badge variant="outline" className="text-[10px]">
-                                {m.escopo === "empresa" ? "🏢 Empresa" : m.escopo === "equipe" ? `👥 ${m.equipe}` : `👤 ${m.responsavel}`}
-                              </Badge>
-                              <Badge variant="outline" className={`text-[10px] ${m.prioridade === "alta" ? "text-red-500 border-red-500/30" : m.prioridade === "media" ? "text-yellow-600 border-yellow-500/30" : "text-emerald-500 border-emerald-500/30"}`}>
-                                {m.prioridade === "alta" ? "🔴 Alta" : m.prioridade === "media" ? "🟡 Média" : "🟢 Baixa"}
-                              </Badge>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
+               {/* Metas Salvas com Acompanhamento */}
+              {metasMensais.length > 0 && (() => {
+                // Simulate progress for each meta
+                const metasComProgresso = metasMensais.map((m, i) => {
+                  const seed = m.id.charCodeAt(m.id.length - 1) + i;
+                  const progressPercent = Math.min(((seed * 17 + 23) % 85) + 15, 100);
+                  const isMoney = m.tipo === "faturamento" || m.tipo === "ticket_medio";
+                  const isPercent = m.tipo === "conversao" || m.tipo === "retencao";
+                  const realizado = Math.round(m.valorAlvo * progressPercent / 100);
+                  return { ...m, progressPercent, realizado, isMoney, isPercent };
+                });
+                const totalMetas = metasComProgresso.length;
+                const metasBatidas = metasComProgresso.filter(m => m.progressPercent >= 100).length;
+                const metasEmRisco = metasComProgresso.filter(m => m.progressPercent < 40).length;
+                const mediaProgresso = Math.round(metasComProgresso.reduce((s, m) => s + m.progressPercent, 0) / totalMetas);
+                const metasFat = metasComProgresso.filter(m => m.tipo === "faturamento");
+                const totalAlvoFat = metasFat.reduce((s, m) => s + m.valorAlvo, 0);
+                const totalRealizadoFat = metasFat.reduce((s, m) => s + m.realizado, 0);
 
-                  {/* Resumo */}
-                  <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                    <CardContent className="py-4 grid grid-cols-4 gap-4 text-center">
-                      <div><p className="text-xl font-black text-primary">{metasMensais.length}</p><p className="text-xs text-muted-foreground">Total metas</p></div>
-                      <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "empresa").length}</p><p className="text-xs text-muted-foreground">Empresa</p></div>
-                      <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "equipe").length}</p><p className="text-xs text-muted-foreground">Por equipe</p></div>
-                      <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "individual").length}</p><p className="text-xs text-muted-foreground">Individuais</p></div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
+                // Chart data for bar chart comparison
+                const chartData = metasComProgresso.map(m => ({
+                  nome: m.nome.length > 15 ? m.nome.slice(0, 15) + "…" : m.nome,
+                  meta: m.valorAlvo,
+                  realizado: m.realizado,
+                }));
+
+                // Chart data for progress by type
+                const tipoAgrupado = Object.entries(
+                  metasComProgresso.reduce((acc, m) => {
+                    if (!acc[m.tipo]) acc[m.tipo] = { total: 0, realizado: 0, count: 0 };
+                    acc[m.tipo].total += m.valorAlvo;
+                    acc[m.tipo].realizado += m.realizado;
+                    acc[m.tipo].count += 1;
+                    return acc;
+                  }, {} as Record<string, { total: number; realizado: number; count: number }>)
+                ).map(([tipo, d]) => ({
+                  tipo: TIPO_META_LABELS[tipo as TipoMeta],
+                  progresso: Math.round((d.realizado / d.total) * 100),
+                  count: d.count,
+                }));
+
+                return (
+                  <>
+                    {/* KPI Summary */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      <Card className="overflow-hidden">
+                        <div className="h-1 bg-gradient-to-r from-primary to-primary/60" />
+                        <CardContent className="p-4 text-center">
+                          <p className="text-2xl font-black text-primary">{fmtPct(mediaProgresso)}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Progresso Médio</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="overflow-hidden">
+                        <div className="h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                        <CardContent className="p-4 text-center">
+                          <p className="text-2xl font-black text-emerald-500">{metasBatidas}/{totalMetas}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Metas Batidas</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="overflow-hidden">
+                        <div className="h-1 bg-gradient-to-r from-red-400 to-red-600" />
+                        <CardContent className="p-4 text-center">
+                          <p className="text-2xl font-black text-red-500">{metasEmRisco}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Em Risco (&lt;40%)</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="overflow-hidden">
+                        <div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600" />
+                        <CardContent className="p-4 text-center">
+                          <p className="text-2xl font-black">{totalAlvoFat > 0 ? fmtPct(Math.round((totalRealizadoFat / totalAlvoFat) * 100)) : "—"}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Faturamento vs Meta</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Charts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Bar Chart: Meta vs Realizado */}
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <BarChart3 className="w-4 h-4 text-primary" /> Meta vs Realizado
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ResponsiveContainer width="100%" height={220}>
+                            <BarChart data={chartData} barGap={4}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="nome" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} angle={-20} textAnchor="end" height={50} />
+                              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                              <Tooltip formatter={(v: number) => fmtNum(v)} />
+                              <Bar dataKey="meta" fill="hsl(var(--muted-foreground)/0.3)" radius={[4, 4, 0, 0]} name="Meta" />
+                              <Bar dataKey="realizado" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Realizado" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </CardContent>
+                      </Card>
+
+                      {/* Progress by Type */}
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Target className="w-4 h-4 text-primary" /> Progresso por Tipo
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {tipoAgrupado.map(t => {
+                            const color = t.progresso >= 100 ? "bg-emerald-500" : t.progresso >= 60 ? "bg-primary" : t.progresso >= 40 ? "bg-amber-500" : "bg-red-500";
+                            return (
+                              <div key={t.tipo} className="space-y-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-medium">{t.tipo} <span className="text-muted-foreground">({t.count})</span></span>
+                                  <span className="font-bold">{fmtPct(t.progresso)}</span>
+                                </div>
+                                <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                                  <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${Math.min(t.progresso, 100)}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {tipoAgrupado.length === 0 && <p className="text-xs text-muted-foreground text-center py-6">Nenhuma meta criada ainda.</p>}
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Metas Cards with Progress */}
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-emerald-500/15"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></div>
+                        Metas Definidas ({metasMensais.length})
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {metasComProgresso.map(m => {
+                        const tipoConfig = TIPO_META_CONFIG[m.tipo];
+                        const Icon = tipoConfig.icon;
+                        const prioridadeColors = { alta: "border-red-500/30 bg-red-500/5", media: "border-yellow-500/30 bg-yellow-500/5", baixa: "border-emerald-500/30 bg-emerald-500/5" };
+                        const progressColor = m.progressPercent >= 100 ? "bg-emerald-500" : m.progressPercent >= 60 ? "bg-primary" : m.progressPercent >= 40 ? "bg-amber-500" : "bg-red-500";
+                        const statusLabel = m.progressPercent >= 100 ? "✓ Batida" : m.progressPercent >= 60 ? "Em progresso" : m.progressPercent >= 40 ? "Atenção" : "Em risco";
+                        const statusColor = m.progressPercent >= 100 ? "text-emerald-600 border-emerald-500/30" : m.progressPercent >= 60 ? "text-primary border-primary/30" : m.progressPercent >= 40 ? "text-amber-600 border-amber-500/30" : "text-red-600 border-red-500/30";
+                        return (
+                          <Card key={m.id} className={`overflow-hidden ${prioridadeColors[m.prioridade]}`}>
+                            <div className={`h-1 ${tipoConfig.gradient}`} />
+                            <CardContent className="p-4 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className={`p-1.5 rounded-lg ${tipoConfig.bg}`}>
+                                    <Icon className={`w-3.5 h-3.5 ${tipoConfig.color}`} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    {editingMetaId === m.id ? (
+                                      <Input value={editDraft.nome} onChange={e => setEditDraft(p => ({ ...p, nome: e.target.value }))}
+                                        className="h-6 text-xs font-semibold px-1.5" autoFocus />
+                                    ) : (
+                                      <p className="text-xs font-semibold truncate">{m.nome}</p>
+                                    )}
+                                    {editingMetaId === m.id ? (
+                                      <Select value={editDraft.mesRef} onValueChange={v => setEditDraft(p => ({ ...p, mesRef: v }))}>
+                                        <SelectTrigger className="h-5 text-[10px] px-1.5 w-auto mt-0.5"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          {MESES_COMPLETOS.map((mes, i) => {
+                                            const valor = `${mes}/${i >= new Date().getMonth() ? anoAtual : anoAtual + 1}`;
+                                            return <SelectItem key={mes} value={valor} className="text-xs">{valor}</SelectItem>;
+                                          })}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      <p className="text-[10px] text-muted-foreground">{m.mesRef} · {tipoConfig.label} · {m.periodo}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {editingMetaId === m.id ? (
+                                    <>
+                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-emerald-500 hover:text-emerald-600" onClick={saveEditing}>
+                                        <Check className="w-3 h-3" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={cancelEditing}>
+                                        <X className="w-3 h-3" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" onClick={() => startEditing(m)}>
+                                        <Pencil className="w-3 h-3" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                        onClick={() => { setMetasMensais(prev => prev.filter(x => x.id !== m.id)); toast({ title: "Meta removida." }); }}>
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Progress Section */}
+                              {editingMetaId === m.id ? (
+                                <div className="flex items-center gap-2">
+                                  <Input type="number" value={editDraft.valorAlvo || ""} onChange={e => setEditDraft(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
+                                    className="h-8 text-lg font-black w-40" />
+                                  <span className="text-xs text-muted-foreground">{m.isMoney ? "(R$)" : m.isPercent ? "(%)" : "(un)"}</span>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-xl font-black">
+                                      {m.isMoney ? fmtBRL(m.realizado) : m.isPercent ? fmtPct(m.realizado) : fmtNum(m.realizado)}
+                                    </p>
+                                    <Badge variant="outline" className={`text-[10px] ${statusColor}`}>{statusLabel}</Badge>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                                      <div className={`h-full rounded-full ${progressColor} transition-all duration-700`} style={{ width: `${Math.min(m.progressPercent, 100)}%` }} />
+                                    </div>
+                                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                                      <span>Realizado: {m.isMoney ? fmtBRL(m.realizado) : m.isPercent ? fmtPct(m.realizado) : fmtNum(m.realizado)}</span>
+                                      <span>Meta: {m.isMoney ? fmtBRL(m.valorAlvo) : m.isPercent ? fmtPct(m.valorAlvo) : fmtNum(m.valorAlvo)}</span>
+                                    </div>
+                                    <p className="text-right text-xs font-bold">{fmtPct(m.progressPercent)}</p>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex flex-wrap gap-1.5">
+                                <Badge variant="outline" className="text-[10px]">
+                                  {m.escopo === "empresa" ? "🏢 Empresa" : m.escopo === "equipe" ? `👥 ${m.equipe}` : `👤 ${m.responsavel}`}
+                                </Badge>
+                                <Badge variant="outline" className={`text-[10px] ${m.prioridade === "alta" ? "text-red-500 border-red-500/30" : m.prioridade === "media" ? "text-yellow-600 border-yellow-500/30" : "text-emerald-500 border-emerald-500/30"}`}>
+                                  {m.prioridade === "alta" ? "🔴 Alta" : m.prioridade === "media" ? "🟡 Média" : "🟢 Baixa"}
+                                </Badge>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+
+                    {/* Resumo */}
+                    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                      <CardContent className="py-4 grid grid-cols-4 gap-4 text-center">
+                        <div><p className="text-xl font-black text-primary">{metasMensais.length}</p><p className="text-xs text-muted-foreground">Total metas</p></div>
+                        <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "empresa").length}</p><p className="text-xs text-muted-foreground">Empresa</p></div>
+                        <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "equipe").length}</p><p className="text-xs text-muted-foreground">Por equipe</p></div>
+                        <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "individual").length}</p><p className="text-xs text-muted-foreground">Individuais</p></div>
+                      </CardContent>
+                    </Card>
+                  </>
+                );
+              })()}
             </>
           )}
 
