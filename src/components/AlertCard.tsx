@@ -14,7 +14,7 @@ const icons = {
 export function AlertCard({ type, message }: AlertCardProps) {
   const Icon = icons[type];
   return (
-    <div className={`flex items-start gap-3 p-3 rounded-lg border ${
+    <div className={`flex items-start gap-3 p-3 rounded-xl border hover-lift ${
       type === "warning" ? "border-chart-orange/30 bg-chart-orange/5" :
       type === "clock" ? "border-chart-blue/30 bg-chart-blue/5" :
       "border-primary/30 bg-primary/5"

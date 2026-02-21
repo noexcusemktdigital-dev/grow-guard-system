@@ -1,0 +1,33 @@
+import { Badge } from "@/components/ui/badge";
+
+interface PageHeaderProps {
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  icon?: React.ReactNode;
+  actions?: React.ReactNode;
+  backButton?: React.ReactNode;
+}
+
+export function PageHeader({ title, subtitle, badge, icon, actions, backButton }: PageHeaderProps) {
+  return (
+    <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center gap-3">
+        {backButton}
+        {icon && (
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            {icon}
+          </div>
+        )}
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="page-header-title">{title}</h1>
+            {badge && <Badge variant="secondary" className="text-[10px] font-semibold">{badge}</Badge>}
+          </div>
+          {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      {actions && <div className="flex items-center gap-2">{actions}</div>}
+    </div>
+  );
+}

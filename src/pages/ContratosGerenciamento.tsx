@@ -196,7 +196,7 @@ export default function ContratosGerenciamento() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Gerenciamento de Contratos</h1>
+          <h1 className="page-header-title">Gerenciamento de Contratos</h1>
           <Badge variant="secondary" className="mt-1">Franqueadora (acesso total)</Badge>
         </div>
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-1" />Novo Contrato</Button>

@@ -52,13 +52,13 @@ export default function Agenda() {
   const handleEditEvent = (ev: AgendaEvent) => { setEditingEvent(ev); setShowEventForm(true); };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-49px)]">
+    <div className="flex flex-col h-[calc(100vh-49px)] -m-6 lg:-m-8">
       {/* Header */}
       <div className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-primary" />
-            <h1 className="text-xl font-bold">Agenda</h1>
+            <h1 className="page-header-title">Agenda</h1>
             <Badge variant="outline" className="text-[10px]">Franqueadora</Badge>
           </div>
           <div className="flex items-center gap-2">

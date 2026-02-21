@@ -10,7 +10,7 @@ interface KpiCardProps {
 
 export function KpiCard({ label, value, sublabel, trend, accent }: KpiCardProps) {
   return (
-    <div className={`kpi-card animate-fade-in ${accent ? "border-primary/30" : ""}`}>
+    <div className={`kpi-card animate-fade-in ${accent ? "border-primary/20 bg-gradient-to-br from-primary/5 to-transparent" : ""}`}>
       <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
       <div className="flex items-end gap-2 mt-1">
         <span className={`text-2xl font-bold ${

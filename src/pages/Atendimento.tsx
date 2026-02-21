@@ -130,7 +130,7 @@ export default function Atendimento() {
           <div>
             <div className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
-              <h1 className="text-xl font-bold">Atendimento</h1>
+              <h1 className="page-header-title">Central de Atendimento</h1>
               <Badge variant="secondary" className="text-[10px]">Franqueadora</Badge>
             </div>
             <p className="text-sm text-muted-foreground">Central de suporte e chamados da rede</p>

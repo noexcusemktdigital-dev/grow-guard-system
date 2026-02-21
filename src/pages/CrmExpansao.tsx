@@ -157,7 +157,7 @@ export default function CrmExpansao() {
   // Detail view
   if (view === "detail" && selectedLead) {
     return (
-      <div className="p-6">
+      <div>
         <CrmLeadDetail
           lead={selectedLead}
           onBack={() => setView("kanban")}
@@ -189,20 +189,20 @@ export default function CrmExpansao() {
   // Config view
   if (view === "config") {
     return (
-      <div className="p-6">
+      <div>
         <CrmConfig onBack={() => setView("kanban")} />
       </div>
     );
   }
 
   return (
-    <div className="p-6 animate-in fade-in duration-300">
+    <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
             <TrendingUp className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold">CRM Expansão</h1>
+            <h1 className="page-header-title">CRM Expansão</h1>
             <Badge variant="outline">Franqueadora</Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">Gestão de leads e oportunidades da rede</p>
