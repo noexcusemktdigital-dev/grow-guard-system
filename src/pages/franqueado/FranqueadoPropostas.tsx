@@ -14,12 +14,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
-  FileText, Download, ArrowLeft, FileCheck2, Target,
-  Calculator, TrendingUp, BarChart3, CheckCircle2,
+  FileText, Download, ArrowLeft, FileCheck2,
+  Calculator, CheckCircle2,
   Palette, Share2, Zap, Globe, Database, ChevronDown, ChevronUp,
   ArrowRight, Minus, Plus,
 } from "lucide-react";
-import { getFranqueadoPropostas, getDiagnosticosNOE, getFranqueadoLeads, FranqueadoProposta } from "@/data/franqueadoData";
+import { getFranqueadoPropostas, getFranqueadoLeads, FranqueadoProposta } from "@/data/franqueadoData";
 import { toast } from "sonner";
 
 // ── TIPOS ──
@@ -120,12 +120,6 @@ const statusColors: Record<string, string> = {
   recusada: "text-red-600 dark:text-red-400 border-red-400/30",
 };
 
-const projecaoMock = [
-  { mes: "Mês 1", leads: 15, conversoes: 2, faturamento: "R$ 8.000" },
-  { mes: "Mês 3", leads: 35, conversoes: 6, faturamento: "R$ 22.000" },
-  { mes: "Mês 6", leads: 60, conversoes: 12, faturamento: "R$ 48.000" },
-  { mes: "Mês 12", leads: 120, conversoes: 28, faturamento: "R$ 112.000" },
-];
 
 // ── COMPONENTE DE SERVIÇO COM QUANTIDADE ──
 function ServicoItem({ servico, ativo, quantidade, onToggle, onQuantidadeChange }: {
@@ -179,12 +173,9 @@ export default function FranqueadoPropostas() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const leadIdParam = searchParams.get("leadId");
-  const diagnosticoIdParam = searchParams.get("diagnosticoId");
 
   const [propostas, setPropostas] = useState(() => getFranqueadoPropostas());
-  const diagnosticos = getDiagnosticosNOE();
   const leads = getFranqueadoLeads();
-  const diagnostico = diagnosticos.find(d => d.id === diagnosticoIdParam || d.leadId === leadIdParam);
   const lead = leads.find(l => l.id === leadIdParam);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -329,108 +320,58 @@ export default function FranqueadoPropostas() {
     <div className="max-w-7xl mx-auto space-y-6">
       <PageHeader title="Gerador de Proposta" subtitle="Crie propostas baseadas no Diagnóstico NOE" />
 
-      <Tabs defaultValue={diagnostico ? "estrategia" : "calculadora"}>
+      <Tabs defaultValue="propostas">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="estrategia"><Target className="w-4 h-4 mr-1" /> Estratégia</TabsTrigger>
+          <TabsTrigger value="propostas"><FileText className="w-4 h-4 mr-1" /> Propostas</TabsTrigger>
           <TabsTrigger value="calculadora"><Calculator className="w-4 h-4 mr-1" /> Calculadora</TabsTrigger>
         </TabsList>
 
-        {/* ── ABA ESTRATÉGIA ── */}
-        <TabsContent value="estrategia" className="space-y-6">
-          {diagnostico ? (
-            <>
-              <Card className="glass-card">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-primary" /> Diagnóstico: {diagnostico.leadNome}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl font-bold">{diagnostico.pontuacao}%</span>
-                    <Badge className={`${diagnostico.nivel === "Avançado" ? "bg-green-500" : diagnostico.nivel === "Intermediário" ? "bg-yellow-500" : "bg-red-500"} text-white`}>
-                      {diagnostico.nivel}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{diagnostico.empresa}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">🎯 Objetivos Identificados</CardTitle></CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {diagnostico.recomendacoes.map((r, i) => (
-                      <li key={i} className="text-sm flex gap-2"><CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />{r}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">📋 Plano de Ação Recomendado</CardTitle></CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    <li className="text-sm">1. Diagnóstico completo e alinhamento de expectativas</li>
-                    <li className="text-sm">2. Setup de ferramentas e canais prioritários</li>
-                    <li className="text-sm">3. Criação de conteúdo e campanhas iniciais</li>
-                    <li className="text-sm">4. Otimização contínua com base em métricas</li>
-                    <li className="text-sm">5. Escala e expansão de canais</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="glass-card">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-primary" /> Projeção de Resultados
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Período</TableHead>
-                        <TableHead>Leads</TableHead>
-                        <TableHead>Conversões</TableHead>
-                        <TableHead>Faturamento Est.</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {projecaoMock.map(p => (
-                        <TableRow key={p.mes}>
-                          <TableCell className="font-medium">{p.mes}</TableCell>
-                          <TableCell>{p.leads}</TableCell>
-                          <TableCell>{p.conversoes}</TableCell>
-                          <TableCell className="font-semibold text-primary">{p.faturamento}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">📄 Justificativa Técnica</CardTitle></CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Com base no diagnóstico realizado, identificamos que a {diagnostico.empresa} possui potencial significativo de crescimento
-                    através de uma estratégia integrada de marketing digital. Os principais gargalos estão em
-                    {diagnostico.gargalos.slice(0, 2).join(" e ").toLowerCase()}, que podem ser resolvidos com as entregas propostas.
-                    A projeção conservadora indica ROI positivo a partir do 3º mês de operação.
-                  </p>
-                </CardContent>
-              </Card>
-            </>
-          ) : (
-            <Card className="glass-card">
-              <CardContent className="p-12 text-center">
-                <BarChart3 className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground mb-4">Nenhum diagnóstico vinculado. Acesse via CRM ou Diagnóstico NOE.</p>
-                <Button variant="outline" onClick={() => navigate("/franqueado/diagnostico")}>Ir para Diagnóstico NOE</Button>
-              </CardContent>
-            </Card>
-          )}
+        {/* ── ABA PROPOSTAS ── */}
+        <TabsContent value="propostas" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold uppercase tracking-wider">Propostas Existentes</CardTitle>
+            </CardHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Criada em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {propostas.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      Nenhuma proposta criada. Use a Calculadora para gerar uma proposta.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  propostas.map(p => (
+                    <TableRow key={p.id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedId(p.id)}>
+                      <TableCell className="font-medium">{p.id}</TableCell>
+                      <TableCell>{p.clienteNome}</TableCell>
+                      <TableCell className="font-semibold">R$ {p.valor.toLocaleString()}</TableCell>
+                      <TableCell><Badge variant="outline" className={statusColors[p.status]}>{p.status}</Badge></TableCell>
+                      <TableCell className="text-muted-foreground">{p.criadaEm}</TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8"><FileText className="w-4 h-4" /></Button>
+                        {p.status === "aceita" && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 dark:text-green-400" onClick={(e) => { e.stopPropagation(); openConvertDialog(p); }} title="Converter em Contrato">
+                            <FileCheck2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
         </TabsContent>
 
         {/* ── ABA CALCULADORA — WIZARD ── */}
@@ -708,44 +649,6 @@ export default function FranqueadoPropostas() {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Lista de propostas existentes */}
-      <Card className="glass-card mt-8">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold uppercase tracking-wider">Propostas Existentes</CardTitle>
-        </CardHeader>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Valor</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Criada em</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {propostas.map(p => (
-              <TableRow key={p.id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedId(p.id)}>
-                <TableCell className="font-medium">{p.id}</TableCell>
-                <TableCell>{p.clienteNome}</TableCell>
-                <TableCell className="font-semibold">R$ {p.valor.toLocaleString()}</TableCell>
-                <TableCell><Badge variant="outline" className={statusColors[p.status]}>{p.status}</Badge></TableCell>
-                <TableCell className="text-muted-foreground">{p.criadaEm}</TableCell>
-                <TableCell className="text-right space-x-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8"><FileText className="w-4 h-4" /></Button>
-                  {p.status === "aceita" && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 dark:text-green-400" onClick={(e) => { e.stopPropagation(); openConvertDialog(p); }} title="Converter em Contrato">
-                      <FileCheck2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
 
       {/* Dialog Converter */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

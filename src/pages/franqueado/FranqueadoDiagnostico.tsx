@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DiagnosticoEstrategia } from "@/components/diagnostico/DiagnosticoEstrategia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -198,9 +199,17 @@ export default function FranqueadoDiagnostico() {
           </CardContent>
         </Card>
 
+        {/* Seções de Estratégia */}
+        <DiagnosticoEstrategia
+          pontuacao={pontuacaoFinal}
+          nivel={nivelFinal.label}
+          gargalos={gargalosFinal}
+          empresa={clienteEmpresa || "a empresa"}
+        />
+
         <div className="flex gap-2">
           <Button size="sm"><FileText className="w-4 h-4 mr-1" /> Exportar PDF</Button>
-          <Button size="sm" variant="outline" onClick={() => navigate(`/franqueado/propostas?leadId=${leadIdParam || ""}&diagnosticoId=${diagnosticoExistente?.id || "new"}`)}>
+          <Button size="sm" variant="outline" onClick={() => navigate(`/franqueado/propostas?leadId=${leadIdParam || ""}`)}>
             <ChevronRight className="w-4 h-4 mr-1" /> Gerar Proposta
           </Button>
         </div>
