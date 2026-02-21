@@ -1,5 +1,5 @@
 import {
-  Image, Target, Package, Presentation, Palette, Briefcase,
+  Image, Target, Presentation, Palette, Briefcase,
   FileText, FileImage, FileVideo, FileArchive, File, FileSpreadsheet,
 } from "lucide-react";
 
@@ -7,7 +7,6 @@ import {
 export type MarketingCategory =
   | "RedesSociais"
   | "CampanhaProduto"
-  | "EmbaldeMensal"
   | "ApresentacaoPortfolio"
   | "Marca"
   | "KitDiaADia";
@@ -53,7 +52,6 @@ export function getCategoryLabel(cat: MarketingCategory): string {
   const map: Record<MarketingCategory, string> = {
     RedesSociais: "Redes Sociais",
     CampanhaProduto: "Campanhas por Produto",
-    EmbaldeMensal: "Embalde Mensal",
     ApresentacaoPortfolio: "Apresentações & Portfólio",
     Marca: "Materiais da Marca",
     KitDiaADia: "Kit do Dia a Dia",
@@ -65,7 +63,6 @@ export function getCategoryIcon(cat: MarketingCategory) {
   const map: Record<MarketingCategory, React.ElementType> = {
     RedesSociais: Image,
     CampanhaProduto: Target,
-    EmbaldeMensal: Package,
     ApresentacaoPortfolio: Presentation,
     Marca: Palette,
     KitDiaADia: Briefcase,
@@ -90,7 +87,6 @@ export function getCategoryColor(cat: MarketingCategory): string {
   const map: Record<MarketingCategory, string> = {
     RedesSociais: "blue",
     CampanhaProduto: "orange",
-    EmbaldeMensal: "purple",
     ApresentacaoPortfolio: "emerald",
     Marca: "rose",
     KitDiaADia: "amber",
@@ -102,7 +98,6 @@ export function getCategoryDescription(cat: MarketingCategory): string {
   const map: Record<MarketingCategory, string> = {
     RedesSociais: "Posts, stories, reels e carrosséis para suas redes",
     CampanhaProduto: "Materiais de campanhas organizados por produto",
-    EmbaldeMensal: "Pacote completo pronto para uso mensal",
     ApresentacaoPortfolio: "Apresentações institucionais e portfólio de cases",
     Marca: "Logos, manual da marca e identidade visual",
     KitDiaADia: "Fundos, assinaturas e templates do dia a dia",
@@ -140,7 +135,7 @@ export function getAssetsInFolder(category: MarketingCategory, folderPath: strin
 }
 
 export const allCategories: MarketingCategory[] = [
-  "RedesSociais", "CampanhaProduto", "EmbaldeMensal",
+  "RedesSociais", "CampanhaProduto",
   "ApresentacaoPortfolio", "Marca", "KitDiaADia",
 ];
 
@@ -175,9 +170,8 @@ export const mockFolders: MarketingFolder[] = [
   { id: "cp-4", name: "Copy", parentId: "cp-2", category: "CampanhaProduto", path: "Noexcuse/Venda Franquia 2026/Copy", childCount: 1 },
   { id: "cp-5", name: "Mídia Paga", parentId: "cp-2", category: "CampanhaProduto", path: "Noexcuse/Venda Franquia 2026/Mídia Paga", childCount: 1 },
 
-  // Embalde Mensal
-  { id: "em-1", name: "2026", parentId: null, category: "EmbaldeMensal", path: "2026", childCount: 1 },
-  { id: "em-2", name: "02 Fevereiro", parentId: "em-1", category: "EmbaldeMensal", path: "2026/02 Fevereiro", childCount: 0 },
+
+  // Apresentações
 
   // Apresentações
   { id: "ap-1", name: "Institucional", parentId: null, category: "ApresentacaoPortfolio", path: "Institucional", childCount: 1 },
@@ -214,9 +208,8 @@ export const mockAssets: MarketingAsset[] = [
   { id: "a9", title: "Copy Anúncios Facebook", fileName: "copy-anuncios-fb.doc", fileSize: "120 KB", type: "CampanhaProduto", year: 2026, month: 2, product: "Noexcuse", campaign: "Venda Franquia 2026", format: "doc", tags: ["copy", "facebook"], version: "v1", isPublished: true, uploadedBy: "Carlos", createdAt: "2026-02-02", folder: "Noexcuse/Venda Franquia 2026/Copy" },
   { id: "a10", title: "Criativo Google Ads", fileName: "criativo-google-ads.jpg", fileSize: "890 KB", type: "CampanhaProduto", year: 2026, month: 2, product: "Noexcuse", campaign: "Venda Franquia 2026", format: "jpg", tags: ["google ads", "mídia paga"], version: "v1", isPublished: false, uploadedBy: "Ana Paula", createdAt: "2026-02-10", folder: "Noexcuse/Venda Franquia 2026/Mídia Paga" },
 
-  // Embalde Mensal
-  { id: "a11", title: "Embalde Fevereiro 2026", fileName: "embalde-fev-2026.zip", fileSize: "128 MB", type: "EmbaldeMensal", year: 2026, month: 2, product: "Geral", format: "zip", tags: ["embalde", "mensal"], version: "v1", isPublished: true, uploadedBy: "Ana Paula", createdAt: "2026-02-01", folder: "2026/02 Fevereiro" },
-  { id: "a12", title: "Guia de Uso Fevereiro", fileName: "guia-uso-fev-2026.pdf", fileSize: "3.2 MB", type: "EmbaldeMensal", year: 2026, month: 2, product: "Geral", format: "pdf", tags: ["guia", "instrução"], version: "v1", isPublished: true, uploadedBy: "Ana Paula", createdAt: "2026-02-01", folder: "2026/02 Fevereiro" },
+
+  // Apresentações
 
   // Apresentações
   { id: "a13", title: "Apresentação Institucional 2026", fileName: "institucional-2026.ppt", fileSize: "15.4 MB", type: "ApresentacaoPortfolio", year: 2026, month: 1, product: "Geral", format: "ppt", tags: ["institucional"], version: "v3", isPublished: true, uploadedBy: "Carlos", createdAt: "2026-01-15", folder: "Institucional" },
