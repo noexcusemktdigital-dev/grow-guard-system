@@ -1,122 +1,200 @@
 
 
-# Redesign Visual Completo - Estilo Premium Impactante
+# Redesign Completo do Modulo de Marketing - Cliente Final
 
-## Objetivo
-Aplicar o estilo visual da plataforma de referencia em todas as 3 visoes (Franqueadora, Franqueado, Cliente Final), removendo todos os emojis restantes e modernizando tipografia, shapes e animacoes.
+## Visao Geral
 
----
-
-## 1. Sistema Tipografico e CSS Global
-
-**Arquivo: `src/index.css`**
-- Importar a fonte **Inter** com variacao completa (300-900) - ja em uso, mas ajustar os pesos
-- Titulos principais: `font-black uppercase italic tracking-tighter` (estilo do design de referencia)
-- Labels de KPI: `text-[10px] font-black uppercase tracking-[0.2em]` com cor `text-gray-400`
-- Valores grandes: `text-3xl font-black tracking-tighter`
-
-**Arquivo: `tailwind.config.ts`**
-- Ajustar font-family para priorizar Inter em ambas sans e display
-- Atualizar border-radius padrao para valores mais arredondados
-
-**Novas classes utilitarias no CSS:**
-- `.page-title` - Titulos bold, italic, uppercase, tracking-tighter (estilo dashboard de referencia)
-- `.kpi-label` - Labels de metricas em 10px uppercase tracking-widest
-- `.card-premium` - Cards com `rounded-[32px]` ou `rounded-[40px]`, padding generoso, hover com shadow-xl e translate-y
-- `.card-dark` - Card escuro estilo agenda (bg-gray-800, texto branco, shapes decorativos)
+Reestruturar todo o ecossistema de Marketing do Cliente Final, transformando cada pagina em um modulo com abordagem de **Base de Conhecimento** (dados fixos de referencia) + **Briefing Mensal** (informacoes objetivas para gerar entregas). Remover a pagina de Campanhas.
 
 ---
 
-## 2. Remocao Total de Emojis (17 arquivos)
+## 1. Remover Campanhas
 
-Substituir todos os emojis restantes por icones Lucide ou texto limpo:
-
-| Arquivo | Emojis | Substituicao |
-|---------|--------|-------------|
-| `ClienteGamificacao.tsx` | Medalhas com emoji | Icones Lucide (Target, Coins, Timer, Smartphone, BarChart3, Trophy) |
-| `ClienteAgentesIA.tsx` | Tipos de agente com emoji | Icones Lucide (Target, DollarSign, Wrench, RefreshCw) |
-| `ClientePlanoVendas.tsx` | Sim/Nao com emoji | Texto limpo "Sim" / "Nao" com estilo de badge |
-| `ClienteConteudos.tsx` | Rocket em copy mock | Texto limpo |
-| `AcademyQuiz.tsx` | Party emoji em toast | Texto "Aprovado!" limpo |
-| `AcademyLesson.tsx` | Check emoji em toast | Texto limpo |
-| `AcademyModuleDetail.tsx` | Party emoji | Texto limpo |
-| `CrmExpansao.tsx` | Emojis em toasts | Texto limpo |
-| `FranqueadoContratos.tsx` | Doc/check/link emojis | Icones Lucide (FileText, CheckCircle, Link) |
-| `clienteData.ts` | Medalhas com emoji | Campo `icon` com nome de icone Lucide |
-| `clienteData.ts` | Timeline e conteudos | Texto limpo |
+**Arquivos afetados:**
+- Remover rota `/cliente/campanhas` de `src/App.tsx`
+- Remover item "Campanhas" do `src/components/ClienteSidebar.tsx`
+- Deletar `src/pages/cliente/ClienteCampanhas.tsx`
 
 ---
 
-## 3. Redesign dos Componentes Core
+## 2. Plano de Marketing (Dashboard + Diagnostico)
 
-### PageHeader (`src/components/PageHeader.tsx`)
-- Titulo: `text-4xl font-black text-black tracking-tighter uppercase italic`
-- Subtitulo: `text-gray-400 font-medium`
-- Seguindo exatamente o estilo "DASHBOARD" da referencia
+**Arquivo: `src/pages/cliente/ClientePlanoMarketing.tsx`** - Reescrita completa
 
-### KpiCard (`src/components/KpiCard.tsx`)
-- Cards com `rounded-[40px]` e padding `p-8`
-- Shape decorativo no canto superior direito (circulo bg-gray-50)
-- Icone em container `p-4 bg-gray-50 rounded-2xl` com hover scale
-- Badge de trend em pill `bg-green-50 text-green-600 rounded-full`
-- Valor com hover que muda para cor primary (`group-hover:text-primary`)
+**Estrutura com 2 abas:**
 
-### Cards gerais (glass-card utility)
-- Atualizar para `rounded-[32px]` com border sutil
-- Hover: `shadow-xl` + `translate-y-[-2px]`
-- Gradiente top-line no hover (`h-1 bg-gradient-to-r from-primary to-black`)
+### Aba 1: Dashboard Principal
+- KPIs consolidados puxando dados de todos os modulos (conteudos produzidos, artes geradas, campanhas de trafego ativas, leads do site)
+- Cards de status por modulo: Conteudos, Redes Sociais, Sites, Trafego Pago - cada um com progresso mensal e ultimas entregas
+- Insights e recomendacoes (cards com icone Sparkles, texto de sugestao baseado nos dados)
+- Timeline de atividades recentes do marketing
+- Grafico de evolucao mensal (leads, conteudos, investimento)
 
----
-
-## 4. Componentes Especificos
-
-### Sidebar (todas as visoes)
-- Manter sidebar escura
-- Section labels: `text-[10px] font-black uppercase tracking-[0.2em]` com cor muted
-- Label "FRANCHISE SYSTEM" como subtitulo decorativo
-
-### Home/Dashboard
-- Aplicar grid de KPI cards com o novo estilo premium
-- Card de agenda com fundo escuro `bg-gray-800 rounded-[48px]`
-- Botoes com `rounded-2xl text-xs font-black uppercase tracking-widest`
-
-### CRM, Chat e demais modulos
-- Aplicar o novo border-radius e spacing
-- Substituir qualquer emoji remanescente
+### Aba 2: Diagnostico de Marketing
+- Questionario profundo sobre o negocio organizado em categorias:
+  - Presenca Digital (site, redes sociais, frequencia de postagem)
+  - Estrategia (persona definida, funil estruturado, metricas acompanhadas)
+  - Trafego Pago (investe? quanto? quais plataformas?)
+  - Conteudo (produz conteudo? qual frequencia? qual formato?)
+  - Branding (identidade visual definida? manual de marca?)
+- Cada pergunta com opcoes de resposta (escala ou multipla escolha)
+- Resultado: Termometro de maturidade com 4 niveis (Iniciante 0-25%, Basico 26-50%, Intermediario 51-75%, Avancado 76-100%)
+- Grafico radar por area
+- Plano de acao recomendado baseado no nivel
 
 ---
 
-## 5. Dark Mode
+## 3. Conteudos (Base de Conhecimento + Geracao Mensal)
 
-- Manter as variaveis CSS do dark mode existentes
-- Cards premium: no dark mode usar `bg-card` com border sutil `border-white/5`
-- Garantir que o hover com primary funcione em ambos os temas
+**Arquivo: `src/pages/cliente/ClienteConteudos.tsx`** - Reescrita completa
+
+**Estrutura com 2 abas:**
+
+### Aba 1: Base de Conhecimento
+- Secoes organizadas em cards editaveis:
+  - **Sobre o Negocio**: Nicho, publico-alvo, persona, tom de voz, proposta de valor
+  - **Concorrencia**: Lista de concorrentes com links e observacoes
+  - **Referencias**: Links e perfis de referencia de conteudo
+  - **Pilares de Conteudo**: Temas e categorias que o cliente aborda
+  - **Regras e Restricoes**: O que nao pode ser dito, termos obrigatorios, compliance
+- Cada secao com botao de editar e salvar
+- Status de preenchimento (barra de progresso geral)
+
+### Aba 2: Geracao Mensal
+- Briefing do mes: campos objetivos (tema do mes, promocoes, datas comemorativas, destaques)
+- Botao "Gerar Conteudos do Mes" com IA
+- Resultado: Lista de roteiros e ideias organizados por semana
+  - Cada item: titulo, descricao curta, formato sugerido, rede social, etapa do funil
+  - Botoes: Copiar, Editar, Aprovar
+- Calendario visual com os conteudos distribuidos
+- Contador de conteudos gerados vs pacote mensal
+
+---
+
+## 4. Redes Sociais (Base de Conhecimento + Artes Mensais + Calendario)
+
+**Arquivo: `src/pages/cliente/ClienteRedesSociais.tsx`** - Reescrita completa
+
+**Estrutura com 3 abas:**
+
+### Aba 1: Base de Conhecimento
+- Secoes editaveis:
+  - **Identidade Visual**: Logo (upload), paleta de cores, fontes, estilo visual preferido
+  - **Referencias Visuais**: Imagens e links de referencia
+  - **Concorrencia Visual**: Exemplos visuais de concorrentes
+  - **Tom e Linguagem**: Como a marca se comunica visualmente
+  - **Banco de Imagens**: Upload de fotos de produtos, equipe, espaco fisico
+- Area de upload de arquivos (logo, imagens de referencia)
+
+### Aba 2: Pacote Mensal
+- Briefing mensal: promocoes, destaques, eventos, temas visuais
+- Configuracao do pacote: quantidade de posts (feed, stories, carrossel)
+- Botao "Gerar Pacote do Mes" com IA
+- Grid de artes geradas com preview visual (placeholder), legenda e hashtags
+- Cada arte com acoes: Baixar, Copiar Legenda, Editar, Aprovar
+- Progresso: X de Y artes geradas
+
+### Aba 3: Calendario
+- Calendario mensal com as artes distribuidas por dia
+- Drag visual dos posts entre dias
+- Legenda por tipo (Feed, Story, Carrossel)
+- Visao semanal compacta
+
+---
+
+## 5. Sites (Base de Conhecimento + Criacao de Site)
+
+**Arquivo: `src/pages/cliente/ClienteSites.tsx`** - Reescrita completa
+
+**Estrutura com 2 abas:**
+
+### Aba 1: Base de Conhecimento
+- Perguntas essenciais para criacao do site:
+  - Qual o objetivo do site? (Captura, Institucional, Vendas, Portfolio)
+  - Quais servicos/produtos oferece?
+  - Qual o diferencial?
+  - Tem depoimentos de clientes?
+  - Quais informacoes de contato?
+  - Tem imagens proprias? (upload)
+  - Cores e estilo visual preferido
+  - Referencia de sites que gosta (links)
+- Campos editaveis e salvos como base fixa
+
+### Aba 2: Gerar Site
+- Resumo das informacoes da base de conhecimento
+- Botao "Gerar Site com IA"
+- Preview do site gerado (iframe ou mock visual)
+- Opcoes:
+  - "Publicar Site" (colocar no ar)
+  - "Baixar Codigo" (download do HTML/CSS)
+  - "Editar" (ajustar textos e blocos antes de publicar)
+- Historico de sites gerados
+
+---
+
+## 6. Trafego Pago (Base de Conhecimento + Campanhas + Tutoriais)
+
+**Arquivo: `src/pages/cliente/ClienteTrafegoPago.tsx`** - Reescrita completa
+
+**Estrutura com 3 abas:**
+
+### Aba 1: Base de Conhecimento
+- Informacoes essenciais para campanhas:
+  - Publico-alvo detalhado (idade, localizacao, interesses, comportamento)
+  - Orcamento mensal disponivel
+  - Plataformas de interesse (Google, Meta, TikTok, LinkedIn)
+  - Historico de campanhas anteriores
+  - Paginas de destino (URLs de LPs)
+  - Pixel/tags ja instalados?
+  - Objetivos de negocio (leads, vendas, awareness)
+
+### Aba 2: Campanhas
+- Briefing mensal: objetivo do mes, promocoes, orcamento
+- Botao "Gerar Estrutura de Campanhas"
+- Cards visuais por plataforma (Google, Meta, TikTok, LinkedIn) com:
+  - Nome da campanha sugerida
+  - Objetivo
+  - Publico segmentado
+  - Orcamento sugerido
+  - Copy do anuncio
+  - Formato de criativo sugerido
+- Visual didatico com icones e badges por plataforma
+- KPIs estimados (alcance, cliques, CPC estimado)
+
+### Aba 3: Tutoriais
+- Guias passo a passo para criar campanhas em cada plataforma
+- Cards por plataforma (Meta, Google, TikTok, LinkedIn)
+- Cada tutorial com passos numerados, screenshots placeholder, dicas
+- Checklist de configuracao por plataforma
+- Links uteis e boas praticas
+
+---
+
+## 7. Atualizacao da Sidebar
+
+**Arquivo: `src/components/ClienteSidebar.tsx`**
+- Remover item "Campanhas" da `marketingSection`
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos que serao modificados:
-1. `src/index.css` - Novas classes utilitarias, ajuste tipografico
-2. `tailwind.config.ts` - Border-radius, font weights
-3. `src/components/PageHeader.tsx` - Estilo titulo impactante
-4. `src/components/KpiCard.tsx` - Redesign completo do card
-5. `src/pages/cliente/ClienteGamificacao.tsx` - Remover emojis
-6. `src/pages/cliente/ClienteAgentesIA.tsx` - Remover emojis
-7. `src/pages/cliente/ClientePlanoVendas.tsx` - Remover emojis
-8. `src/pages/cliente/ClienteConteudos.tsx` - Remover emojis
-9. `src/components/academy/AcademyQuiz.tsx` - Remover emojis
-10. `src/components/academy/AcademyLesson.tsx` - Remover emojis
-11. `src/components/academy/AcademyModuleDetail.tsx` - Remover emojis
-12. `src/pages/CrmExpansao.tsx` - Remover emojis
-13. `src/pages/franqueado/FranqueadoContratos.tsx` - Remover emojis
-14. `src/data/clienteData.ts` - Remover emojis dos dados mock
-15. `src/components/home/HomeAtalhos.tsx` - Aplicar novo estilo de cards
+### Arquivos modificados:
+1. `src/App.tsx` - Remover rota de campanhas
+2. `src/components/ClienteSidebar.tsx` - Remover item campanhas
+3. `src/pages/cliente/ClientePlanoMarketing.tsx` - Reescrita (Dashboard + Diagnostico)
+4. `src/pages/cliente/ClienteConteudos.tsx` - Reescrita (Base Conhecimento + Geracao)
+5. `src/pages/cliente/ClienteRedesSociais.tsx` - Reescrita (Base + Pacote + Calendario)
+6. `src/pages/cliente/ClienteSites.tsx` - Reescrita (Base + Gerar Site)
+7. `src/pages/cliente/ClienteTrafegoPago.tsx` - Reescrita (Base + Campanhas + Tutoriais)
 
-### Principio de design:
-- Tipografia bold/italic/uppercase para titulos = impacto visual
-- Rounded extremo (32-48px) nos cards = modernidade
-- Shapes decorativos sutis = sofisticacao
-- Tracking widest em labels = identidade premium
-- Hover com scale e color transition = interatividade refinada
+### Arquivo deletado:
+- `src/pages/cliente/ClienteCampanhas.tsx`
+
+### Padrao de design:
+- Todas as paginas seguem o estilo "Premium Impact" ja implementado (Inter, tracking-tighter, rounded-2xl, icones Lucide)
+- Tabs com estilo consistente para navegacao entre Base de Conhecimento e Geracao
+- Cards com hover premium e shapes decorativos
+- Sem emojis - apenas icones Lucide
+- Labels em uppercase tracking-widest para secoes
 
