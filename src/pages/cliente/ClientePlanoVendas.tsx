@@ -40,6 +40,10 @@ interface EstruturaComercial {
   etapasProcesso: string[]; tempoMedioFechamento: string; reuniaoRecorrente: boolean;
   frequenciaReuniao: string;
 }
+interface TimeComercial {
+  id: string; nome: string; funcao: string; membros: string[];
+}
+const FUNCOES_COMERCIAIS = ["SDR / Pré-vendas", "Closer / Vendedor", "CS / Pós-venda", "Gestor Comercial", "Analista", "Estagiário"];
 type EscopoAvaliacao = "empresa" | "individual";
 interface Avaliacao { id: string; data: string; mesRef: string; respostas: number[]; score: number; escopo: EscopoAvaliacao; vendedor?: string; }
 
@@ -124,6 +128,15 @@ export default function ClientePlanoVendas() {
   const [historicoFiltro, setHistoricoFiltro] = useState<"todos" | "empresa" | "individual">("todos");
   const [pastasAbertas, setPastasAbertas] = useState<Record<string, boolean>>({});
   const [avaliacaoMesRef, setAvaliacaoMesRef] = useState("");
+
+  // ── TIMES STATE ──
+  const [timesComerciais, setTimesComerciais] = useState<TimeComercial[]>([]);
+  const [novoTimeOpen, setNovoTimeOpen] = useState(false);
+  const [novoTime, setNovoTime] = useState<{ nome: string; funcao: string; membros: string[] }>({ nome: "", funcao: "", membros: [] });
+  const [editandoEstrutura, setEditandoEstrutura] = useState(false);
+
+  // ── METAS MONTH FILTER ──
+  const [mesFiltroMetas, setMesFiltroMetas] = useState<string>("todos");
 
   const toggleCanal = (c: string) => setEstrutura(prev => ({ ...prev, canaisAquisicao: prev.canaisAquisicao.includes(c) ? prev.canaisAquisicao.filter(x => x !== c) : [...prev.canaisAquisicao, c] }));
   const toggleFerramenta = (f: string) => setEstrutura(prev => ({ ...prev, ferramentas: prev.ferramentas.includes(f) ? prev.ferramentas.filter(x => x !== f) : [...prev.ferramentas, f] }));
@@ -401,15 +414,30 @@ export default function ClientePlanoVendas() {
 
         {/* ===== MINHAS METAS ===== */}
         <TabsContent value="metas" className="space-y-5">
-          {/* Header com botão */}
-          <div className="flex items-center justify-between">
+          {/* Header com botão e filtro de mês */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold">Acompanhamento de Metas</h3>
               <p className="text-sm text-muted-foreground">{metasMensais.length} meta(s) cadastrada(s)</p>
             </div>
-            <Button className="gap-2" onClick={() => setNovaMetaOpen(true)}>
-              <Plus className="w-4 h-4" /> Nova Meta
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg p-1">
+                <Button size="sm" variant={mesFiltroMetas === "todos" ? "default" : "ghost"} className="text-xs h-7 px-2.5"
+                  onClick={() => setMesFiltroMetas("todos")}>Todos</Button>
+                {(() => {
+                  const mesesUnicos = [...new Set(metasMensais.map(m => m.mesRef))].sort();
+                  return mesesUnicos.map(mes => (
+                    <Button key={mes} size="sm" variant={mesFiltroMetas === mes ? "default" : "ghost"} className="text-xs h-7 px-2.5"
+                      onClick={() => setMesFiltroMetas(mes)}>
+                      {mes.split("/")[0].slice(0, 3)}
+                    </Button>
+                  ));
+                })()}
+              </div>
+              <Button className="gap-2" onClick={() => setNovaMetaOpen(true)}>
+                <Plus className="w-4 h-4" /> Nova Meta
+              </Button>
+            </div>
           </div>
 
           {metasMensais.length === 0 ? (
@@ -423,7 +451,8 @@ export default function ClientePlanoVendas() {
               </CardContent>
             </Card>
           ) : (() => {
-            const metasComProgresso = metasMensais.map((m, i) => {
+            const metasFiltradas = mesFiltroMetas === "todos" ? metasMensais : metasMensais.filter(m => m.mesRef === mesFiltroMetas);
+            const metasComProgresso = metasFiltradas.map((m, i) => {
               const seed = m.id.charCodeAt(m.id.length - 1) + i;
               const progressPercent = Math.min(((seed * 17 + 23) % 85) + 15, 100);
               const isMoney = m.tipo === "faturamento" || m.tipo === "ticket_medio";
@@ -854,177 +883,387 @@ export default function ClientePlanoVendas() {
 
         {/* ===== ESTRUTURA COMERCIAL ===== */}
         <TabsContent value="estrutura" className="space-y-5">
-          {/* Equipe */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3 bg-gradient-to-r from-blue-500/10 to-transparent border-b border-blue-500/10">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-blue-500/15"><Users className="w-4 h-4 text-blue-500" /></div>
-                Equipe Comercial
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Quem faz parte da sua operação de vendas</p>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-5">
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-blue-500" /> Quantas pessoas trabalham no comercial?</Label>
-                <div className="flex flex-wrap gap-2">
-                  {["Só eu", "2-3 pessoas", "4-7 pessoas", "8-15 pessoas", "16+ pessoas"].map(opt => (
-                    <Button key={opt} size="sm" variant={estrutura.tamanhoEquipe === opt ? "default" : "outline"}
-                      onClick={() => setEstrutura(p => ({ ...p, tamanhoEquipe: opt }))}>{opt}</Button>
-                  ))}
+          {estruturaSalva && !editandoEstrutura ? (
+            <>
+              {/* ── MINHA ESTRUTURA ATUAL ── */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Minha Estrutura Atual
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Última atualização: {estruturaDataSalva}</p>
                 </div>
+                <Button variant="outline" className="gap-2" onClick={() => setEditandoEstrutura(true)}>
+                  <Pencil className="w-4 h-4" /> Alterar Estrutura
+                </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 space-y-2">
-                  <Label className="text-xs font-semibold block">SDR / Pré-vendas</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {["Sim", "Não", "Pretendo"].map(opt => (
-                      <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temSDR === opt ? "default" : "outline"}
-                        onClick={() => setEstrutura(p => ({ ...p, temSDR: opt }))}>{opt}</Button>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/30 space-y-2">
-                  <Label className="text-xs font-semibold block">Closer / Vendedor</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {["Sim", "Não", "Eu mesmo"].map(opt => (
-                      <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temCloser === opt ? "default" : "outline"}
-                        onClick={() => setEstrutura(p => ({ ...p, temCloser: opt }))}>{opt}</Button>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/30 space-y-2">
-                  <Label className="text-xs font-semibold block">CS / Pós-venda</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {["Sim", "Não", "Pretendo"].map(opt => (
-                      <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temCS === opt ? "default" : "outline"}
-                        onClick={() => setEstrutura(p => ({ ...p, temCS: opt }))}>{opt}</Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Processo */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/10">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-500/15"><Layers className="w-4 h-4 text-amber-500" /></div>
-                Processo Comercial
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Como funciona sua operação de vendas hoje</p>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-5">
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-amber-500" /> Processo documentado?</Label>
-                <div className="flex gap-2">
-                  {["Sim, completo", "Parcialmente", "Não"].map(opt => (
-                    <Button key={opt} size="sm" variant={estrutura.processoDocumentado === opt ? "default" : "outline"}
-                      onClick={() => setEstrutura(p => ({ ...p, processoDocumentado: opt }))}>{opt}</Button>
-                  ))}
-                </div>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className="overflow-hidden">
+                  <div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600" />
+                  <CardContent className="p-4 text-center">
+                    <Users className="w-5 h-5 mx-auto text-blue-500 mb-1" />
+                    <p className="text-lg font-black">{estrutura.tamanhoEquipe || "—"}</p>
+                    <p className="text-[10px] text-muted-foreground">Equipe</p>
+                  </CardContent>
+                </Card>
+                <Card className="overflow-hidden">
+                  <div className="h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                  <CardContent className="p-4 text-center">
+                    <TrendingUp className="w-5 h-5 mx-auto text-emerald-500 mb-1" />
+                    <p className="text-lg font-black">{estrutura.canaisAquisicao.length}</p>
+                    <p className="text-[10px] text-muted-foreground">Canais Ativos</p>
+                  </CardContent>
+                </Card>
+                <Card className="overflow-hidden">
+                  <div className="h-1 bg-gradient-to-r from-purple-400 to-purple-600" />
+                  <CardContent className="p-4 text-center">
+                    <Zap className="w-5 h-5 mx-auto text-purple-500 mb-1" />
+                    <p className="text-lg font-black">{estrutura.ferramentas.length}</p>
+                    <p className="text-[10px] text-muted-foreground">Ferramentas</p>
+                  </CardContent>
+                </Card>
+                <Card className="overflow-hidden">
+                  <div className="h-1 bg-gradient-to-r from-amber-400 to-amber-600" />
+                  <CardContent className="p-4 text-center">
+                    <Layers className="w-5 h-5 mx-auto text-amber-500 mb-1" />
+                    <p className="text-lg font-black">{estrutura.etapasProcesso.length}</p>
+                    <p className="text-[10px] text-muted-foreground">Etapas do Funil</p>
+                  </CardContent>
+                </Card>
               </div>
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-amber-500" /> Quais etapas existem no seu funil?</Label>
-                <div className="flex flex-wrap gap-2">
-                  {["Prospecção", "Qualificação", "Apresentação", "Proposta", "Negociação", "Fechamento", "Pós-venda"].map(etapa => (
-                    <Button key={etapa} size="sm" variant={estrutura.etapasProcesso.includes(etapa) ? "default" : "outline"}
-                      className={estrutura.etapasProcesso.includes(etapa) ? "" : "border-dashed"}
-                      onClick={() => setEstrutura(p => ({
-                        ...p,
-                        etapasProcesso: p.etapasProcesso.includes(etapa) ? p.etapasProcesso.filter(e => e !== etapa) : [...p.etapasProcesso, etapa]
-                      }))}>{etapa}</Button>
-                  ))}
-                </div>
-                {estrutura.etapasProcesso.length > 0 && (
-                  <p className="text-[10px] text-muted-foreground mt-1.5">{estrutura.etapasProcesso.length} etapas selecionadas: {estrutura.etapasProcesso.join(" → ")}</p>
-                )}
-              </div>
+
+              {/* Details Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-amber-500" /> Tempo médio de fechamento</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Até 7 dias", "7-15 dias", "15-30 dias", "30-60 dias", "60+ dias"].map(opt => (
-                      <Button key={opt} size="sm" variant={estrutura.tempoMedioFechamento === opt ? "default" : "outline"}
-                        onClick={() => setEstrutura(p => ({ ...p, tempoMedioFechamento: opt }))}>{opt}</Button>
-                    ))}
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-blue-500" /> Equipe</CardTitle></CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Tamanho:</span><span className="font-medium">{estrutura.tamanhoEquipe}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">SDR / Pré-vendas:</span><Badge variant="outline" className="text-xs">{estrutura.temSDR || "—"}</Badge></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Closer / Vendedor:</span><Badge variant="outline" className="text-xs">{estrutura.temCloser || "—"}</Badge></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">CS / Pós-venda:</span><Badge variant="outline" className="text-xs">{estrutura.temCS || "—"}</Badge></div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Layers className="w-4 h-4 text-amber-500" /> Processo</CardTitle></CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Documentado:</span><Badge variant={estrutura.processoDocumentado === "Sim, completo" ? "default" : "outline"} className="text-xs">{estrutura.processoDocumentado || "—"}</Badge></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Tempo de fechamento:</span><span className="font-medium">{estrutura.tempoMedioFechamento || "—"}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Reunião recorrente:</span><span className="font-medium">{estrutura.reuniaoRecorrente ? `Sim (${estrutura.frequenciaReuniao})` : "Não"}</span></div>
+                    {estrutura.etapasProcesso.length > 0 && (
+                      <div className="pt-1">
+                        <p className="text-muted-foreground text-xs mb-1">Funil:</p>
+                        <div className="flex flex-wrap gap-1">{estrutura.etapasProcesso.map(e => <Badge key={e} variant="secondary" className="text-[10px]">{e}</Badge>)}</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4 text-emerald-500" /> Canais de Aquisição</CardTitle></CardHeader>
+                  <CardContent><div className="flex flex-wrap gap-1.5">{estrutura.canaisAquisicao.length > 0 ? estrutura.canaisAquisicao.map(c => <Badge key={c} className="text-xs">{c}</Badge>) : <span className="text-sm text-muted-foreground">Nenhum canal selecionado</span>}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Zap className="w-4 h-4 text-purple-500" /> Ferramentas</CardTitle></CardHeader>
+                  <CardContent><div className="flex flex-wrap gap-1.5">{estrutura.ferramentas.length > 0 ? estrutura.ferramentas.map(f => <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>) : <span className="text-sm text-muted-foreground">Nenhuma ferramenta selecionada</span>}</div></CardContent>
+                </Card>
+              </div>
+
+              {/* ── TIMES E USUÁRIOS ── */}
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3 bg-gradient-to-r from-indigo-500/10 to-transparent border-b border-indigo-500/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-indigo-500/15"><Users className="w-4 h-4 text-indigo-500" /></div>
+                        Times e Funções
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">Organize sua equipe em times e vincule pessoas às funções</p>
+                    </div>
+                    <Button size="sm" className="gap-1.5" onClick={() => setNovoTimeOpen(true)}>
+                      <Plus className="w-3.5 h-3.5" /> Criar Time
+                    </Button>
                   </div>
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-amber-500" /> Reunião comercial recorrente?</Label>
-                  <div className="flex gap-2">
-                    {["Sim", "Não"].map(opt => (
-                      <Button key={opt} size="sm" variant={(estrutura.reuniaoRecorrente && opt === "Sim") || (!estrutura.reuniaoRecorrente && opt === "Não") ? "default" : "outline"}
-                        onClick={() => setEstrutura(p => ({ ...p, reuniaoRecorrente: opt === "Sim" }))}>{opt}</Button>
-                    ))}
-                  </div>
-                  {estrutura.reuniaoRecorrente && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {["Diária", "Semanal", "Quinzenal", "Mensal"].map(opt => (
-                        <Button key={opt} size="sm" className="text-xs h-7" variant={estrutura.frequenciaReuniao === opt ? "default" : "outline"}
-                          onClick={() => setEstrutura(p => ({ ...p, frequenciaReuniao: opt }))}>{opt}</Button>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {timesComerciais.length === 0 ? (
+                    <div className="text-center py-8 space-y-2">
+                      <Users className="w-8 h-8 mx-auto text-muted-foreground/30" />
+                      <p className="text-sm text-muted-foreground">Nenhum time criado ainda.</p>
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setNovoTimeOpen(true)}>
+                        <Plus className="w-3.5 h-3.5" /> Criar primeiro time
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {timesComerciais.map(time => (
+                        <Card key={time.id} className="border-dashed">
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="p-1.5 rounded-lg bg-indigo-500/15"><Users className="w-3.5 h-3.5 text-indigo-500" /></div>
+                                <div>
+                                  <p className="text-sm font-semibold">{time.nome}</p>
+                                  <p className="text-[10px] text-muted-foreground">{time.funcao}</p>
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => { setTimesComerciais(prev => prev.filter(t => t.id !== time.id)); toast({ title: "Time removido." }); }}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <div className="space-y-1.5">
+                              <p className="text-xs font-medium text-muted-foreground">{time.membros.length} membro(s):</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {time.membros.map(membro => (
+                                  <Badge key={membro} variant="secondary" className="text-xs gap-1">
+                                    <UserCheck className="w-3 h-3" /> {membro}
+                                    <button className="ml-0.5 hover:text-destructive" onClick={() => {
+                                      setTimesComerciais(prev => prev.map(t => t.id === time.id ? { ...t, membros: t.membros.filter(m => m !== membro) } : t));
+                                    }}><X className="w-2.5 h-2.5" /></button>
+                                  </Badge>
+                                ))}
+                              </div>
+                              <Select onValueChange={v => {
+                                if (v && !time.membros.includes(v)) {
+                                  setTimesComerciais(prev => prev.map(t => t.id === time.id ? { ...t, membros: [...t.membros, v] } : t));
+                                }
+                              }}>
+                                <SelectTrigger className="h-7 text-xs w-auto mt-1"><SelectValue placeholder="+ Adicionar membro" /></SelectTrigger>
+                                <SelectContent>
+                                  {VENDEDORES_MOCK.filter(v => !time.membros.includes(v)).map(v => (
+                                    <SelectItem key={v} value={v} className="text-xs">{v}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </CardContent>
+                        </Card>
                       ))}
                     </div>
                   )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Canais e Ferramentas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="overflow-hidden">
-              <CardHeader className="pb-3 bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-emerald-500/10">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/15"><TrendingUp className="w-4 h-4 text-emerald-500" /></div>
-                  Canais de Aquisição
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-3 flex flex-wrap gap-2">
-                {CANAIS_OPTIONS.map(c => (
-                  <Button key={c} size="sm" variant={estrutura.canaisAquisicao.includes(c) ? "default" : "outline"}
-                    className={estrutura.canaisAquisicao.includes(c) ? "" : "border-dashed"}
-                    onClick={() => toggleCanal(c)}>{c}</Button>
-                ))}
-              </CardContent>
-            </Card>
-            <Card className="overflow-hidden">
-              <CardHeader className="pb-3 bg-gradient-to-r from-purple-500/10 to-transparent border-b border-purple-500/10">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-purple-500/15"><Zap className="w-4 h-4 text-purple-500" /></div>
-                  Ferramentas Utilizadas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-3 flex flex-wrap gap-2">
-                {FERRAMENTAS_OPTIONS.map(f => (
-                  <Button key={f} size="sm" variant={estrutura.ferramentas.includes(f) ? "default" : "outline"}
-                    className={estrutura.ferramentas.includes(f) ? "" : "border-dashed"}
-                    onClick={() => toggleFerramenta(f)}>{f}</Button>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          {estruturaSalva ? (
-            <Card className="border-emerald-500/20 bg-emerald-500/5">
-              <CardContent className="py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <span className="text-sm font-medium">Estrutura salva em {estruturaDataSalva}</span>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => { setEstruturaSalva(false); setEstruturaDataSalva(""); }}>
-                  <Pencil className="w-3 h-3 mr-1" /> Editar
-                </Button>
-              </CardContent>
-            </Card>
+              {/* Dialog Novo Time */}
+              <Dialog open={novoTimeOpen} onOpenChange={setNovoTimeOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-indigo-500/15"><Users className="w-4 h-4 text-indigo-500" /></div>
+                      Criar Novo Time
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-xs font-semibold mb-2 block">Nome do time</Label>
+                      <Input value={novoTime.nome} onChange={e => setNovoTime(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Equipe de Prospecção" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold mb-2 block">Função principal</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {FUNCOES_COMERCIAIS.map(f => (
+                          <Button key={f} size="sm" variant={novoTime.funcao === f ? "default" : "outline"}
+                            className={`text-xs ${novoTime.funcao !== f ? "border-dashed" : ""}`}
+                            onClick={() => setNovoTime(p => ({ ...p, funcao: f }))}>{f}</Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold mb-2 block">Membros</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {VENDEDORES_MOCK.map(v => {
+                          const selected = novoTime.membros.includes(v);
+                          return (
+                            <Button key={v} size="sm" variant={selected ? "default" : "outline"}
+                              className={`text-xs ${!selected ? "border-dashed" : ""}`}
+                              onClick={() => setNovoTime(p => ({ ...p, membros: selected ? p.membros.filter(m => m !== v) : [...p.membros, v] }))}>{v}</Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <Button className="w-full gap-2" disabled={!novoTime.nome || !novoTime.funcao} onClick={() => {
+                      const novo: TimeComercial = { id: `time-${Date.now()}`, nome: novoTime.nome, funcao: novoTime.funcao, membros: novoTime.membros };
+                      setTimesComerciais(prev => [...prev, novo]);
+                      setNovoTime({ nome: "", funcao: "", membros: [] });
+                      setNovoTimeOpen(false);
+                      toast({ title: `Time "${novo.nome}" criado!` });
+                    }}>
+                      <Plus className="w-4 h-4" /> Criar Time
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
           ) : (
-            <Button onClick={salvarEstrutura} className="w-full">
-              <Save className="w-4 h-4 mr-2" /> Salvar Estrutura Comercial
-            </Button>
+            <>
+              {/* ── FORMULÁRIO DE EDIÇÃO ── */}
+              {editandoEstrutura && (
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Editando Estrutura Comercial</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setEditandoEstrutura(false)}>Cancelar</Button>
+                </div>
+              )}
+              {/* Equipe */}
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3 bg-gradient-to-r from-blue-500/10 to-transparent border-b border-blue-500/10">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-blue-500/15"><Users className="w-4 h-4 text-blue-500" /></div>
+                    Equipe Comercial
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Quem faz parte da sua operação de vendas</p>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-5">
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-blue-500" /> Quantas pessoas trabalham no comercial?</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {["Só eu", "2-3 pessoas", "4-7 pessoas", "8-15 pessoas", "16+ pessoas"].map(opt => (
+                        <Button key={opt} size="sm" variant={estrutura.tamanhoEquipe === opt ? "default" : "outline"}
+                          onClick={() => setEstrutura(p => ({ ...p, tamanhoEquipe: opt }))}>{opt}</Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-3 rounded-xl bg-muted/30 space-y-2">
+                      <Label className="text-xs font-semibold block">SDR / Pré-vendas</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {["Sim", "Não", "Pretendo"].map(opt => (
+                          <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temSDR === opt ? "default" : "outline"}
+                            onClick={() => setEstrutura(p => ({ ...p, temSDR: opt }))}>{opt}</Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-muted/30 space-y-2">
+                      <Label className="text-xs font-semibold block">Closer / Vendedor</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {["Sim", "Não", "Eu mesmo"].map(opt => (
+                          <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temCloser === opt ? "default" : "outline"}
+                            onClick={() => setEstrutura(p => ({ ...p, temCloser: opt }))}>{opt}</Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-muted/30 space-y-2">
+                      <Label className="text-xs font-semibold block">CS / Pós-venda</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {["Sim", "Não", "Pretendo"].map(opt => (
+                          <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temCS === opt ? "default" : "outline"}
+                            onClick={() => setEstrutura(p => ({ ...p, temCS: opt }))}>{opt}</Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Processo */}
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/10">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-amber-500/15"><Layers className="w-4 h-4 text-amber-500" /></div>
+                    Processo Comercial
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Como funciona sua operação de vendas hoje</p>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-5">
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-amber-500" /> Processo documentado?</Label>
+                    <div className="flex gap-2">
+                      {["Sim, completo", "Parcialmente", "Não"].map(opt => (
+                        <Button key={opt} size="sm" variant={estrutura.processoDocumentado === opt ? "default" : "outline"}
+                          onClick={() => setEstrutura(p => ({ ...p, processoDocumentado: opt }))}>{opt}</Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-amber-500" /> Quais etapas existem no seu funil?</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {["Prospecção", "Qualificação", "Apresentação", "Proposta", "Negociação", "Fechamento", "Pós-venda"].map(etapa => (
+                        <Button key={etapa} size="sm" variant={estrutura.etapasProcesso.includes(etapa) ? "default" : "outline"}
+                          className={estrutura.etapasProcesso.includes(etapa) ? "" : "border-dashed"}
+                          onClick={() => setEstrutura(p => ({
+                            ...p,
+                            etapasProcesso: p.etapasProcesso.includes(etapa) ? p.etapasProcesso.filter(e => e !== etapa) : [...p.etapasProcesso, etapa]
+                          }))}>{etapa}</Button>
+                      ))}
+                    </div>
+                    {estrutura.etapasProcesso.length > 0 && (
+                      <p className="text-[10px] text-muted-foreground mt-1.5">{estrutura.etapasProcesso.length} etapas selecionadas: {estrutura.etapasProcesso.join(" → ")}</p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-amber-500" /> Tempo médio de fechamento</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {["Até 7 dias", "7-15 dias", "15-30 dias", "30-60 dias", "60+ dias"].map(opt => (
+                          <Button key={opt} size="sm" variant={estrutura.tempoMedioFechamento === opt ? "default" : "outline"}
+                            onClick={() => setEstrutura(p => ({ ...p, tempoMedioFechamento: opt }))}>{opt}</Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-amber-500" /> Reunião comercial recorrente?</Label>
+                      <div className="flex gap-2">
+                        {["Sim", "Não"].map(opt => (
+                          <Button key={opt} size="sm" variant={(estrutura.reuniaoRecorrente && opt === "Sim") || (!estrutura.reuniaoRecorrente && opt === "Não") ? "default" : "outline"}
+                            onClick={() => setEstrutura(p => ({ ...p, reuniaoRecorrente: opt === "Sim" }))}>{opt}</Button>
+                        ))}
+                      </div>
+                      {estrutura.reuniaoRecorrente && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {["Diária", "Semanal", "Quinzenal", "Mensal"].map(opt => (
+                            <Button key={opt} size="sm" className="text-xs h-7" variant={estrutura.frequenciaReuniao === opt ? "default" : "outline"}
+                              onClick={() => setEstrutura(p => ({ ...p, frequenciaReuniao: opt }))}>{opt}</Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Canais e Ferramentas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="overflow-hidden">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-emerald-500/10">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-emerald-500/15"><TrendingUp className="w-4 h-4 text-emerald-500" /></div>
+                      Canais de Aquisição
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-3 flex flex-wrap gap-2">
+                    {CANAIS_OPTIONS.map(c => (
+                      <Button key={c} size="sm" variant={estrutura.canaisAquisicao.includes(c) ? "default" : "outline"}
+                        className={estrutura.canaisAquisicao.includes(c) ? "" : "border-dashed"}
+                        onClick={() => toggleCanal(c)}>{c}</Button>
+                    ))}
+                  </CardContent>
+                </Card>
+                <Card className="overflow-hidden">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-purple-500/10 to-transparent border-b border-purple-500/10">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-purple-500/15"><Zap className="w-4 h-4 text-purple-500" /></div>
+                      Ferramentas Utilizadas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-3 flex flex-wrap gap-2">
+                    {FERRAMENTAS_OPTIONS.map(f => (
+                      <Button key={f} size="sm" variant={estrutura.ferramentas.includes(f) ? "default" : "outline"}
+                        className={estrutura.ferramentas.includes(f) ? "" : "border-dashed"}
+                        onClick={() => toggleFerramenta(f)}>{f}</Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Button onClick={() => { salvarEstrutura(); setEditandoEstrutura(false); }} className="w-full">
+                <Save className="w-4 h-4 mr-2" /> Salvar Estrutura Comercial
+              </Button>
+            </>
           )}
         </TabsContent>
-
-        {/* ===== AVALIAR MEU COMERCIAL ===== */}
         <TabsContent value="diagnostico" className="space-y-5">
           {/* Iniciar avaliação ou histórico */}
           {!avaliacaoAtiva ? (
