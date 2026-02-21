@@ -17,6 +17,8 @@ import { HomeComercial } from "@/components/home/HomeComercial";
 import { HomeAlertas } from "@/components/home/HomeAlertas";
 import { HomeAtalhos } from "@/components/home/HomeAtalhos";
 import { PageHeader } from "@/components/PageHeader";
+import { TaskListCard } from "@/components/premium/TaskListCard";
+import { ProgressCtaCard } from "@/components/premium/ProgressCtaCard";
 
 const quickActionIcons: Record<string, React.ElementType> = {
   MessageSquare, Calendar, Megaphone, TrendingUp,
@@ -80,6 +82,30 @@ export default function Home() {
         <HomeAgenda eventos={eventos} />
         <HomeComercial dados={comercial} />
       </div>
+
+      <ProgressCtaCard
+        title="PERFORMANCE DA REDE"
+        level="FRANQUEADORA"
+        metaLabel="META DA REDE"
+        metaDescription="Faltam R$ 45.000 para atingir a meta consolidada do mês."
+        percent={78}
+        ctaTitle="AÇÃO NECESSÁRIA"
+        ctaSubtitle="REVISÃO DE METAS TRIMESTRAIS"
+        ctaDescription="Agende a reunião de revisão com os franqueados até sexta-feira."
+        ctaButtonLabel="AGENDAR REUNIÃO"
+        onCtaClick={() => navigate("/franqueadora/agenda")}
+      />
+
+      <TaskListCard
+        title="TAREFAS OPERACIONAIS"
+        tasks={[
+          { id: "t1", title: "Revisar relatórios financeiros", description: "Consolidar fechamento mensal de todas as unidades.", time: "09:00", done: true },
+          { id: "t2", title: "Aprovar materiais de marketing", description: "Validar artes da campanha de Março antes do envio.", time: "10:30" },
+          { id: "t3", title: "Reunião com novos franqueados", description: "Onboarding das 2 unidades aprovadas este mês.", time: "14:00" },
+          { id: "t4", title: "Atualizar comunicado da rede", description: "Publicar informativo sobre novas políticas comerciais.", time: "16:00" },
+        ]}
+        onTaskClick={() => navigate("/franqueadora/atendimento")}
+      />
 
       <HomeAlertas alertas={alertas} />
       <HomeAtalhos />

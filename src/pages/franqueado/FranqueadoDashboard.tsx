@@ -14,6 +14,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { HomeHojePreciso } from "@/components/home/HomeHojePreciso";
+import { TaskListCard } from "@/components/premium/TaskListCard";
+import { ProgressCtaCard } from "@/components/premium/ProgressCtaCard";
 import { HomeAlertas } from "@/components/home/HomeAlertas";
 import {
   getFranqueadoFinanceiro, getFranqueadoLeads, getFranqueadoPropostas,
@@ -154,6 +156,30 @@ export default function FranqueadoDashboard() {
         <KpiCard label="Vendas do Mês" value={String(vendasMes)} sublabel="Propostas aceitas" icon={TrendingUp} delay={2} variant="accent" />
         <KpiCard label="Meta do Mês" value={`R$ ${metas[0]?.objetivo?.toLocaleString() || "0"}`} sublabel={`${Math.round((metas[0]?.atual / metas[0]?.objetivo) * 100) || 0}% atingido`} icon={Target} delay={3} />
       </div>
+
+      <ProgressCtaCard
+        title="MEU PROGRESSO DE VENDAS"
+        level="NÍVEL PRO"
+        metaLabel="META MENSAL"
+        metaDescription={`Faltam R$ ${Math.max(0, (metas[0]?.objetivo || 0) - (metas[0]?.atual || 0)).toLocaleString()} para o bônus de performance.`}
+        percent={Math.round(((metas[0]?.atual || 0) / (metas[0]?.objetivo || 1)) * 100)}
+        ctaTitle="AÇÃO NECESSÁRIA"
+        ctaSubtitle="PROSPECÇÃO DE LEADS"
+        ctaDescription="Você tem 5 leads sem contato há mais de 48h. Priorize o follow-up hoje."
+        ctaButtonLabel="ACESSAR CRM"
+        onCtaClick={() => navigate("/franqueado/crm")}
+      />
+
+      <TaskListCard
+        title="TAREFAS OPERACIONAIS"
+        tasks={[
+          { id: "ft1", title: "Follow-up leads pendentes", description: "Garantir que todos os leads de ontem receberam o primeiro contato.", time: "09:00", done: true },
+          { id: "ft2", title: "Enviar propostas em aberto", description: "Finalizar e enviar as 3 propostas com prazo até amanhã.", time: "10:30" },
+          { id: "ft3", title: "Reunião comercial semanal", description: "Revisar pipeline e metas com a equipe de vendas.", time: "14:00" },
+          { id: "ft4", title: "Atualizar CRM", description: "Registrar todas as interações do dia no sistema.", time: "17:00" },
+        ]}
+        onTaskClick={() => navigate("/franqueado/crm")}
+      />
 
       {/* Agenda + Alertas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
