@@ -249,7 +249,7 @@ export default function FranqueadoPropostas() {
 
   // Calculadora
   const [selecoes, setSelecoes] = useState<Record<string, SelecaoServico>>({});
-  const [duracao, setDuracao] = useState<"6" | "12">("12");
+  const [duracao, setDuracao] = useState<1 | 6 | 12>(12);
   const [formaPagamento, setFormaPagamento] = useState<"avista" | "3x" | "6x">("avista");
   const [nomeCliente, setNomeCliente] = useState(lead?.nome || "");
 
@@ -268,14 +268,48 @@ export default function FranqueadoPropostas() {
     return { totalUnitario: unit, totalMensal: mensal };
   }, [servicosAtivos]);
 
-  const totalGeral = totalUnitario + totalMensal;
-  const totalProjeto = totalUnitario + totalMensal * Number(duracao);
+  // Lógica de diluição NOE: unitário é diluído nos primeiros meses junto com o mensal
+  const getPaymentDetails = useMemo(() => {
+    const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR")}`;
 
-  const parcelaInfo = useMemo(() => {
-    if (formaPagamento === "avista") return { parcelas: 1, valorParcela: totalProjeto, label: "À Vista" };
-    if (formaPagamento === "3x") return { parcelas: 3, valorParcela: Math.ceil(totalProjeto / 3), label: "3x" };
-    return { parcelas: 6, valorParcela: Math.ceil(totalProjeto / 6), label: "6x" };
-  }, [formaPagamento, totalProjeto]);
+    // Duração 1 mês ou sem mensal: pagamento único
+    if (duracao === 1) {
+      return {
+        label: "Pagamento Único",
+        firstMonthsLabel: "Mês 1",
+        firstMonthsValue: fmt(totalUnitario + totalMensal),
+        afterMonthsLabel: totalMensal > 0 ? "Mês único" : "",
+        afterMonthsValue: "",
+        installments: 1,
+      };
+    }
+
+    const installments = formaPagamento === "avista" ? 1 : formaPagamento === "3x" ? 3 : 6;
+    const diluted = totalMensal + (totalUnitario / installments);
+    const hasAfter = installments < duracao;
+
+    if (formaPagamento === "avista") {
+      return {
+        label: "À Vista",
+        firstMonthsLabel: "Mês 1",
+        firstMonthsValue: fmt(Math.ceil(totalUnitario + totalMensal)),
+        afterMonthsLabel: totalMensal > 0 ? "Mês 2+" : "Sem mensalidade após",
+        afterMonthsValue: totalMensal > 0 ? fmt(totalMensal) : "",
+        installments: 1,
+      };
+    }
+
+    return {
+      label: `${installments}x`,
+      firstMonthsLabel: `Mês 1-${installments}`,
+      firstMonthsValue: fmt(Math.ceil(diluted)),
+      afterMonthsLabel: hasAfter
+        ? (totalMensal > 0 ? `Mês ${installments + 1}+` : "Sem mensalidade após")
+        : "",
+      afterMonthsValue: hasAfter && totalMensal > 0 ? fmt(totalMensal) : "",
+      installments,
+    };
+  }, [formaPagamento, totalUnitario, totalMensal, duracao]);
 
   const toggleServico = (id: string) => {
     setSelecoes(prev => {
@@ -336,11 +370,11 @@ export default function FranqueadoPropostas() {
     const newProposta: FranqueadoProposta = {
       id: `P-${Date.now()}`,
       clienteNome: nome,
-      valor: totalGeral,
+      valor: totalUnitario + totalMensal,
       valorExcedente: 0,
       emissorExcedente: "franqueado",
       tipo: "Recorrente",
-      prazo: duracao,
+      prazo: String(duracao),
       status: "rascunho",
       criadaEm: new Date().toISOString().split("T")[0],
       validaAte: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
@@ -543,8 +577,8 @@ export default function FranqueadoPropostas() {
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">{servicosAtivos.length} serviço{servicosAtivos.length !== 1 ? "s" : ""} selecionado{servicosAtivos.length !== 1 ? "s" : ""}</p>
-                    <p className="text-lg font-bold text-primary">R$ {totalGeral.toLocaleString()}</p>
-                    <p className="text-[10px] text-muted-foreground">Unit: R$ {totalUnitario.toLocaleString()} | Mensal: R$ {totalMensal.toLocaleString()}</p>
+                    <p className="text-sm font-bold text-primary">Unit: R$ {totalUnitario.toLocaleString()}</p>
+                    <p className="text-sm font-bold text-primary">Mensal: R$ {totalMensal.toLocaleString()}/mês</p>
                   </div>
                   <Button onClick={() => setWizardStep(1)} disabled={servicosAtivos.length === 0}>
                     Próximo <ArrowRight className="w-4 h-4 ml-1" />
@@ -560,71 +594,105 @@ export default function FranqueadoPropostas() {
               <Card className="glass-card">
                 <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Duração do Projeto</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(["6", "12"] as const).map(d => (
+                  <div className="grid grid-cols-3 gap-3">
+                    {([
+                      { value: 1 as const, label: "01 Mês", desc: "Entrega única" },
+                      { value: 6 as const, label: "Semestral", desc: "6 meses de projeto" },
+                      { value: 12 as const, label: "Anual", desc: "12 meses de projeto" },
+                    ]).map(d => (
                       <button
-                        key={d}
-                        onClick={() => setDuracao(d)}
+                        key={d.value}
+                        onClick={() => {
+                          setDuracao(d.value);
+                          if (d.value === 1) setFormaPagamento("avista");
+                        }}
                         className={`p-4 rounded-xl border-2 text-center transition-all ${
-                          duracao === d ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                          duracao === d.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
                         }`}
                       >
-                        <p className="text-2xl font-bold">{d}</p>
-                        <p className="text-sm text-muted-foreground">meses</p>
+                        <p className="text-lg font-bold">{d.label}</p>
+                        <p className="text-xs text-muted-foreground">{d.desc}</p>
                       </button>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Forma de Pagamento</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-3">
-                    {([
-                      { value: "avista" as const, label: "À Vista", desc: "Pagamento único" },
-                      { value: "3x" as const, label: "3x", desc: "Parcelado em 3" },
-                      { value: "6x" as const, label: "6x", desc: "Parcelado em 6" },
-                    ]).map(fp => (
-                      <button
-                        key={fp.value}
-                        onClick={() => setFormaPagamento(fp.value)}
-                        className={`p-4 rounded-xl border-2 text-center transition-all ${
-                          formaPagamento === fp.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
-                        }`}
-                      >
-                        <p className="text-lg font-bold">{fp.label}</p>
-                        <p className="text-xs text-muted-foreground">{fp.desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              {duracao > 1 && (
+                <Card className="glass-card">
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Forma de Pagamento do Setup</CardTitle></CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground mb-3">O valor unitário (setup) será diluído nos primeiros meses junto com o mensal.</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {([
+                        { value: "avista" as const, label: "À Vista", desc: "Setup no 1º mês" },
+                        { value: "3x" as const, label: "3x", desc: "Setup diluído em 3 meses" },
+                        { value: "6x" as const, label: "6x", desc: "Setup diluído em 6 meses" },
+                      ]).map(fp => {
+                        const installments = fp.value === "avista" ? 1 : fp.value === "3x" ? 3 : 6;
+                        const diluted = totalMensal + (totalUnitario / installments);
+                        return (
+                          <button
+                            key={fp.value}
+                            onClick={() => setFormaPagamento(fp.value)}
+                            className={`p-4 rounded-xl border-2 text-left transition-all ${
+                              formaPagamento === fp.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                            }`}
+                          >
+                            <p className="text-lg font-bold">{fp.label}</p>
+                            <p className="text-xs text-muted-foreground">{fp.desc}</p>
+                            {totalUnitario > 0 && (
+                              <div className="mt-2 pt-2 border-t border-border">
+                                <p className="text-[10px] text-muted-foreground">
+                                  {fp.value === "avista" ? "Mês 1" : `Mês 1-${installments}`}: <span className="font-semibold text-foreground">R$ {Math.ceil(diluted).toLocaleString()}</span>
+                                </p>
+                                {totalMensal > 0 && (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {fp.value === "avista" ? "Mês 2+" : `Mês ${installments + 1}+`}: <span className="font-semibold text-foreground">R$ {totalMensal.toLocaleString()}</span>
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Simulação */}
               <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="p-6">
                   <h3 className="text-sm font-bold uppercase tracking-wider mb-4">Simulação de Investimento</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Total Unitário</p>
+                      <p className="text-xs text-muted-foreground">Total Unitário (Setup)</p>
                       <p className="text-lg font-bold">R$ {totalUnitario.toLocaleString()}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Mensal</p>
+                      <p className="text-xs text-muted-foreground">Total Mensal (Recorrência)</p>
                       <p className="text-lg font-bold">R$ {totalMensal.toLocaleString()}/mês</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Total {duracao} meses</p>
-                      <p className="text-lg font-bold text-primary">R$ {totalProjeto.toLocaleString()}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">{parcelaInfo.label}</p>
-                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                        {parcelaInfo.parcelas}x R$ {parcelaInfo.valorParcela.toLocaleString()}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Forma de Pagamento</p>
+                      <p className="text-sm font-bold text-primary">{getPaymentDetails.label}</p>
                     </div>
                   </div>
+                  {duracao > 1 && totalUnitario > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-2 gap-3">
+                      <div className="bg-background/50 rounded-lg p-3 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase">{getPaymentDetails.firstMonthsLabel}</p>
+                        <p className="text-lg font-bold text-primary">{getPaymentDetails.firstMonthsValue}</p>
+                      </div>
+                      {getPaymentDetails.afterMonthsValue && (
+                        <div className="bg-background/50 rounded-lg p-3 text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase">{getPaymentDetails.afterMonthsLabel}</p>
+                          <p className="text-lg font-bold">{getPaymentDetails.afterMonthsValue}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -676,7 +744,7 @@ export default function FranqueadoPropostas() {
                     {/* Duração */}
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-gray-700">Duração do Projeto:</span>
-                      <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">{duracao} meses</span>
+                      <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">{duracao === 1 ? "Entrega Única" : `${duracao} meses`}</span>
                     </div>
 
                     {/* Serviços agrupados */}
@@ -714,12 +782,14 @@ export default function FranqueadoPropostas() {
                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                       <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Resumo Financeiro</h3>
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div><span className="text-gray-500">Total Unitário:</span></div>
+                        <div><span className="text-gray-500">Total Unitário (Setup):</span></div>
                         <div className="text-right font-semibold">R$ {totalUnitario.toLocaleString()}</div>
-                        <div><span className="text-gray-500">Total Mensal:</span></div>
-                        <div className="text-right font-semibold">R$ {totalMensal.toLocaleString()}/mês</div>
-                        <div className="border-t border-gray-300 pt-2"><span className="font-bold">Total do Projeto ({duracao} meses):</span></div>
-                        <div className="border-t border-gray-300 pt-2 text-right font-bold text-red-600 text-lg">R$ {totalProjeto.toLocaleString()}</div>
+                        {totalMensal > 0 && (
+                          <>
+                            <div><span className="text-gray-500">Total Mensal (Recorrência):</span></div>
+                            <div className="text-right font-semibold">R$ {totalMensal.toLocaleString()}/mês</div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -727,11 +797,23 @@ export default function FranqueadoPropostas() {
                     <div className="bg-red-50 rounded-lg p-4">
                       <h3 className="text-sm font-bold text-red-600 uppercase tracking-wider mb-2">Investimento</h3>
                       <p className="text-sm">
-                        <span className="font-semibold">Forma de pagamento:</span> {parcelaInfo.label}
+                        <span className="font-semibold">Forma de pagamento:</span> {getPaymentDetails.label}
                       </p>
-                      <p className="text-lg font-bold text-gray-800 mt-1">
-                        {parcelaInfo.parcelas}x de R$ {parcelaInfo.valorParcela.toLocaleString()}
-                      </p>
+                      <div className="mt-2 space-y-1">
+                        <p className="text-sm">
+                          <span className="text-gray-500">{getPaymentDetails.firstMonthsLabel}:</span>{" "}
+                          <span className="font-bold text-gray-800">{getPaymentDetails.firstMonthsValue}</span>
+                        </p>
+                        {getPaymentDetails.afterMonthsValue && (
+                          <p className="text-sm">
+                            <span className="text-gray-500">{getPaymentDetails.afterMonthsLabel}:</span>{" "}
+                            <span className="font-bold text-gray-800">{getPaymentDetails.afterMonthsValue}</span>
+                          </p>
+                        )}
+                        {!getPaymentDetails.afterMonthsValue && totalMensal === 0 && duracao > 1 && (
+                          <p className="text-sm text-gray-500 italic">Sem mensalidade após o pagamento do setup</p>
+                        )}
+                      </div>
                     </div>
 
                     {/* Rodapé */}
