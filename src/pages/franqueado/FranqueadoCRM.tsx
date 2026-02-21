@@ -99,6 +99,74 @@ function getAlerts(leads: FranqueadoLead[], tasks: FranqueadoTask[]): CrmAlert[]
   ];
 }
 
+// ── KANBAN CARD ──
+function KanbanLeadCard({
+  lead, proposta, hasOverdue, onOpen, onMove, onLost,
+}: {
+  lead: FranqueadoLead; proposta?: FranqueadoProposta; hasOverdue: boolean;
+  onOpen: () => void; onMove: (v: string) => void; onLost: () => void;
+}) {
+  const [showMove, setShowMove] = useState(false);
+  return (
+    <div
+      className="bg-card border border-border rounded-lg p-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group"
+      onClick={onOpen}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <span className="font-medium text-sm leading-tight">{lead.nome}</span>
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{lead.origem}</Badge>
+      </div>
+      {lead.empresa && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+          <Building2 className="w-3 h-3" /> {lead.empresa}
+        </div>
+      )}
+      {lead.valor && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+          <DollarSign className="w-3 h-3" /> R$ {lead.valor.toLocaleString("pt-BR")}
+        </div>
+      )}
+      {proposta && (
+        <Badge variant="outline" className="text-[10px] mb-1">
+          <FileSignature className="w-3 h-3 mr-1" /> Proposta {proposta.status}
+        </Badge>
+      )}
+      {hasOverdue && (
+        <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200 text-[10px] mt-1">
+          <AlertTriangle className="w-3 h-3 mr-1" /> Tarefa atrasada
+        </Badge>
+      )}
+      <div className="hidden group-hover:flex items-center gap-1 mt-2 pt-2 border-t border-border" onClick={e => e.stopPropagation()}>
+        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onOpen}>
+          <Eye className="w-3 h-3 mr-1" /> Abrir
+        </Button>
+        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setShowMove(!showMove)}>
+          <ArrowRight className="w-3 h-3 mr-1" /> Mover
+        </Button>
+        {lead.etapa !== "Perdido" && lead.etapa !== "Venda" && (
+          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-red-600" onClick={onLost}>
+            <XCircle className="w-3 h-3" />
+          </Button>
+        )}
+      </div>
+      {showMove && (
+        <div className="mt-2" onClick={e => e.stopPropagation()}>
+          <Select onValueChange={(v) => { onMove(v); setShowMove(false); }}>
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Mover para..." />
+            </SelectTrigger>
+            <SelectContent>
+              {etapasCRM.filter(s => s !== lead.etapa).map(s => (
+                <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN COMPONENT ──
 export default function FranqueadoCRM() {
   const navigate = useNavigate();
