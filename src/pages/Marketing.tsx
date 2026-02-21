@@ -50,7 +50,7 @@ export default function Marketing() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [uploadCategory, setUploadCategory] = useState<MarketingCategory | undefined>();
+  const [uploadFolder, setUploadFolder] = useState("");
 
   const campaigns = useMemo(() => {
     const set = new Set<string>();
@@ -58,8 +58,8 @@ export default function Marketing() {
     return Array.from(set);
   }, []);
 
-  const handleUploadFromDrive = (category: MarketingCategory) => {
-    setUploadCategory(category);
+  const handleUploadFromDrive = (folder: string) => {
+    setUploadFolder(folder);
     setUploadOpen(true);
   };
 
@@ -76,7 +76,7 @@ export default function Marketing() {
             Gerencie e distribua materiais de marketing para toda a rede
           </p>
         </div>
-        <Button size="lg" className="gap-2 shadow-sm" onClick={() => { setUploadCategory(undefined); setUploadOpen(true); }}>
+        <Button size="lg" className="gap-2 shadow-sm" onClick={() => { setUploadFolder(""); setUploadOpen(true); }}>
           <Upload className="w-4 h-4" /> Novo Upload
         </Button>
       </div>
@@ -213,10 +213,10 @@ export default function Marketing() {
         filterFormat={filterFormat}
         filterCampaign={filterCampaign}
         filterStatus={filterStatus}
-        onUpload={() => handleUploadFromDrive(activeTab)}
+        onUpload={(folder) => handleUploadFromDrive(folder)}
       />
 
-      <MarketingUpload open={uploadOpen} onOpenChange={setUploadOpen} defaultCategory={uploadCategory} />
+      <MarketingUpload open={uploadOpen} onOpenChange={setUploadOpen} defaultCategory={activeTab} currentFolder={uploadFolder} />
     </div>
   );
 }
