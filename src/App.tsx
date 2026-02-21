@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { FranqueadoraLayout } from "./components/FranqueadoraLayout";
 import { FranqueadoLayout } from "./components/FranqueadoLayout";
+import { ClienteLayout } from "./components/ClienteLayout";
 import FinanceiroDashboard from "./pages/FinanceiroDashboard";
 import FinanceiroConfiguracoes from "./pages/FinanceiroConfiguracoes";
 import FinanceiroDespesas from "./pages/FinanceiroDespesas";
@@ -41,6 +42,24 @@ import FranqueadoMateriais from "./pages/franqueado/FranqueadoMateriais";
 import FranqueadoAcademy from "./pages/franqueado/FranqueadoAcademy";
 import FranqueadoFinanceiro from "./pages/franqueado/FranqueadoFinanceiro";
 import FranqueadoContratos from "./pages/franqueado/FranqueadoContratos";
+// Cliente Final pages
+import ClienteInicio from "./pages/cliente/ClienteInicio";
+import ClienteChecklist from "./pages/cliente/ClienteChecklist";
+import ClienteNotificacoes from "./pages/cliente/ClienteNotificacoes";
+import ClienteGamificacao from "./pages/cliente/ClienteGamificacao";
+import ClientePlanoVendas from "./pages/cliente/ClientePlanoVendas";
+import ClienteChat from "./pages/cliente/ClienteChat";
+import ClienteCRM from "./pages/cliente/ClienteCRM";
+import ClienteAgentesIA from "./pages/cliente/ClienteAgentesIA";
+import ClienteScripts from "./pages/cliente/ClienteScripts";
+import ClienteDisparos from "./pages/cliente/ClienteDisparos";
+import ClienteRelatorios from "./pages/cliente/ClienteRelatorios";
+import ClientePlanoMarketing from "./pages/cliente/ClientePlanoMarketing";
+import ClienteCampanhas from "./pages/cliente/ClienteCampanhas";
+import ClienteConteudos from "./pages/cliente/ClienteConteudos";
+import ClienteRedesSociais from "./pages/cliente/ClienteRedesSociais";
+import ClienteSites from "./pages/cliente/ClienteSites";
+import ClienteTrafegoPago from "./pages/cliente/ClienteTrafegoPago";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +110,26 @@ const App = () => (
               <Route path="academy" element={<FranqueadoAcademy />} />
               <Route path="financeiro" element={<FranqueadoFinanceiro />} />
               <Route path="contratos" element={<FranqueadoContratos />} />
+            </Route>
+            <Route path="cliente" element={<ClienteLayout />}>
+              <Route index element={<Navigate to="/cliente/inicio" replace />} />
+              <Route path="inicio" element={<ClienteInicio />} />
+              <Route path="checklist" element={<ClienteChecklist />} />
+              <Route path="notificacoes" element={<ClienteNotificacoes />} />
+              <Route path="gamificacao" element={<ClienteGamificacao />} />
+              <Route path="plano-vendas" element={<ClientePlanoVendas />} />
+              <Route path="chat" element={<ClienteChat />} />
+              <Route path="crm" element={<ClienteCRM />} />
+              <Route path="agentes-ia" element={<ClienteAgentesIA />} />
+              <Route path="scripts" element={<ClienteScripts />} />
+              <Route path="disparos" element={<ClienteDisparos />} />
+              <Route path="relatorios" element={<ClienteRelatorios />} />
+              <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
+              <Route path="campanhas" element={<ClienteCampanhas />} />
+              <Route path="conteudos" element={<ClienteConteudos />} />
+              <Route path="redes-sociais" element={<ClienteRedesSociais />} />
+              <Route path="sites" element={<ClienteSites />} />
+              <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />

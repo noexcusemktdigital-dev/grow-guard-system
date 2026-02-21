@@ -13,7 +13,9 @@ const Index = () => {
 
   // Sync level with current path
   useEffect(() => {
-    if (location.pathname.startsWith("/franqueado")) {
+    if (location.pathname.startsWith("/cliente")) {
+      setLevel("CLIENTE FINAL");
+    } else if (location.pathname.startsWith("/franqueado")) {
       setLevel("FRANQUEADO");
     } else if (location.pathname.startsWith("/franqueadora")) {
       setLevel("FRANQUEADORA");
@@ -29,6 +31,10 @@ const Index = () => {
     } else if (newLevel === "FRANQUEADO") {
       if (!location.pathname.startsWith("/franqueado")) {
         navigate("/franqueado/dashboard");
+      }
+    } else if (newLevel === "CLIENTE FINAL") {
+      if (!location.pathname.startsWith("/cliente")) {
+        navigate("/cliente/inicio");
       }
     }
   };
@@ -51,16 +57,7 @@ const Index = () => {
         </div>
       </header>
 
-      {level === "FRANQUEADORA" || level === "FRANQUEADO" ? (
-        <Outlet />
-      ) : (
-        <div className="flex items-center justify-center h-[calc(100vh-60px)]">
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-foreground mb-2">{level}</h2>
-            <p className="text-muted-foreground">Em desenvolvimento</p>
-          </div>
-        </div>
-      )}
+      <Outlet />
     </div>
   );
 };
