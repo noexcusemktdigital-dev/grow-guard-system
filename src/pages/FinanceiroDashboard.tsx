@@ -3,14 +3,12 @@ import { KpiCard } from "@/components/KpiCard";
 import { AlertCard } from "@/components/AlertCard";
 import {
   getMonthSummary, getHistoricalData, parcelas, getActiveClientsForMonth, getReceitasForMonth,
-  getBreakEven, getInvestmentSignal, getProjection, getDespesasForMonth, getFolhaForMonth,
-  colaboradores, clientes,
+  getBreakEven, getInvestmentSignal, colaboradores,
 } from "@/data/mockData";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend,
 } from "recharts";
-import { Slider } from "@/components/ui/slider";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -34,7 +32,6 @@ export default function FinanceiroDashboard() {
   const receitas = getReceitasForMonth(mesSelecionado);
   const breakEven = getBreakEven();
   const signal = getInvestmentSignal(mesSelecionado);
-  const projection = getProjection(1);
 
   const pieDataDespesas = Object.entries(summary.despesasPorCategoria).map(([name, value]) => ({ name, value }));
 
@@ -99,8 +96,8 @@ export default function FinanceiroDashboard() {
             <p className="font-bold text-foreground">{breakEven.clientesNecessarios} clientes</p>
           </div>
           <div className="text-center">
-            <p className="text-muted-foreground text-xs">Próximo mês</p>
-            <p className="font-bold text-foreground">{projection[0] ? formatBRL(projection[0].resultado) : "—"}</p>
+            <p className="text-muted-foreground text-xs">Runway</p>
+            <p className="font-bold text-foreground">{summary.runway} meses</p>
           </div>
         </div>
       </div>
@@ -235,175 +232,6 @@ export default function FinanceiroDashboard() {
         </div>
       </div>
 
-      {/* ══════════ BLOCO B — PROJEÇÃO INTELIGENTE ══════════ */}
-      <div className="border-t border-border pt-6">
-        <h2 className="text-xl font-bold text-foreground mb-1">Projeção Inteligente</h2>
-        <p className="text-sm text-muted-foreground mb-6">Projeção automática 6 meses à frente com simulação de cenários</p>
-
-        <ProjecaoInteligente />
-      </div>
-    </div>
-  );
-}
-
-/* ── Projeção Inteligente (painel único) ── */
-function ProjecaoInteligente() {
-  const [novosClientes, setNovosClientes] = useState(0);
-  const [ticketMedio, setTicketMedio] = useState(2500);
-  const [franquiasMes, setFranquiasMes] = useState(0);
-  const [eventosMes, setEventosMes] = useState(false);
-  const [contratacao, setContratacao] = useState(false);
-  const [custoContratacao, setCustoContratacao] = useState(2500);
-
-  const projection6 = getProjection(6);
-  const breakEven = getBreakEven();
-
-  // Simulate
-  const simulated = projection6.map((p, i) => {
-    const receitaNovos = novosClientes * (i + 1) * ticketMedio;
-    const receitaFranquias = franquiasMes * 15000 * (i === 0 ? 1 : 0);
-    const custoEventoMes = eventosMes ? 3000 : 0;
-    const custoContratacaoMes = contratacao ? custoContratacao : 0;
-
-    const receitaTotal = p.receitaRecorrente + receitaNovos + receitaFranquias;
-    const custoTotal = p.folha + p.parcelas + p.eventos + p.impostos + custoEventoMes + custoContratacaoMes;
-    const resultado = receitaTotal - custoTotal;
-
-    return { ...p, receitaTotal, custoTotal, resultado, label: p.label };
-  });
-
-  const signalSim = simulated[0]?.resultado > 0 ? (simulated[0].resultado / simulated[0].receitaTotal > 0.15 ? "green" : "yellow") : "red";
-  const signalColors = { green: "text-emerald-500", yellow: "text-yellow-500", red: "text-red-500" };
-  const signalLabels = { green: "🟢 Pode investir", yellow: "🟡 Cuidado", red: "🔴 Não recomendado" };
-
-  const capacidadeAtual = breakEven.clientesAtuais;
-  const mesesAteContratar = novosClientes > 0 ? Math.ceil((30 * 0.8 - capacidadeAtual) / novosClientes) : null;
-
-  return (
-    <div className="space-y-6">
-      {/* Projeção automática 6 meses */}
-      <div className="glass-card overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left py-3 px-4 text-muted-foreground font-medium">Mês</th>
-              <th className="text-right py-3 px-4 text-muted-foreground font-medium">Receita</th>
-              <th className="text-right py-3 px-4 text-muted-foreground font-medium">Folha</th>
-              <th className="text-right py-3 px-4 text-muted-foreground font-medium">Parcelas</th>
-              <th className="text-right py-3 px-4 text-muted-foreground font-medium">Eventos</th>
-              <th className="text-right py-3 px-4 text-muted-foreground font-medium">Impostos</th>
-              <th className="text-right py-3 px-4 text-muted-foreground font-medium">Resultado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {simulated.map(p => (
-              <tr key={p.mes} className="border-b border-border/50 hover:bg-secondary/30">
-                <td className="py-3 px-4 font-medium text-foreground">{p.label}</td>
-                <td className="py-3 px-4 text-right text-foreground">{formatBRL(p.receitaTotal)}</td>
-                <td className="py-3 px-4 text-right text-foreground">{formatBRL(p.folha)}</td>
-                <td className="py-3 px-4 text-right text-foreground">{formatBRL(p.parcelas)}</td>
-                <td className="py-3 px-4 text-right text-foreground">{p.eventos > 0 ? formatBRL(p.eventos) : "—"}</td>
-                <td className="py-3 px-4 text-right text-foreground">{formatBRL(p.impostos)}</td>
-                <td className={`py-3 px-4 text-right font-bold ${p.resultado >= 0 ? "text-emerald-500" : "text-red-500"}`}>{formatBRL(p.resultado)}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-border bg-secondary/20">
-              <td className="py-3 px-4 font-semibold text-foreground">Total</td>
-              <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(simulated.reduce((s, p) => s + p.receitaTotal, 0))}</td>
-              <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(simulated.reduce((s, p) => s + p.folha, 0))}</td>
-              <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(simulated.reduce((s, p) => s + p.parcelas, 0))}</td>
-              <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(simulated.reduce((s, p) => s + p.eventos, 0))}</td>
-              <td className="py-3 px-4 text-right font-bold text-foreground">{formatBRL(simulated.reduce((s, p) => s + p.impostos, 0))}</td>
-              <td className={`py-3 px-4 text-right font-bold ${simulated.reduce((s, p) => s + p.resultado, 0) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                {formatBRL(simulated.reduce((s, p) => s + p.resultado, 0))}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="glass-card p-5">
-          <h4 className="text-sm font-semibold text-foreground mb-4">Caixa Projetado</h4>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={simulated}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} className="fill-muted-foreground" axisLine={false} />
-              <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" axisLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} formatter={(v: number) => formatBRL(v)} />
-              <Line type="monotone" dataKey="receitaTotal" stroke="hsl(142,71%,45%)" strokeWidth={2} name="Receita" dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="custoTotal" stroke="hsl(355,78%,56%)" strokeWidth={2} name="Custos" dot={{ r: 3 }} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="glass-card p-5">
-          <h4 className="text-sm font-semibold text-foreground mb-4">Lucro Projetado</h4>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={simulated}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} className="fill-muted-foreground" axisLine={false} />
-              <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" axisLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} formatter={(v: number) => formatBRL(v)} />
-              <Bar dataKey="resultado" name="Resultado" radius={[4, 4, 0, 0]}>
-                {simulated.map((e, i) => <Cell key={i} fill={e.resultado >= 0 ? "hsl(217,91%,60%)" : "hsl(355,78%,56%)"} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Controles de Simulação */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="glass-card p-5 space-y-5">
-          <h4 className="text-sm font-semibold text-foreground">Simulação — Receita</h4>
-          <div>
-            <label className="text-xs text-muted-foreground">Crescimento clientes/mês: {novosClientes}</label>
-            <Slider value={[novosClientes]} onValueChange={v => setNovosClientes(v[0])} min={0} max={10} step={1} className="mt-2" />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Ticket médio (R$)</label>
-            <input type="number" value={ticketMedio} onChange={e => setTicketMedio(Number(e.target.value))}
-              className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground mt-1" />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Franquias vendidas/mês</label>
-            <input type="number" value={franquiasMes} onChange={e => setFranquiasMes(Number(e.target.value))}
-              className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground mt-1" />
-          </div>
-        </div>
-
-        <div className="glass-card p-5 space-y-5">
-          <h4 className="text-sm font-semibold text-foreground">Simulação — Custos</h4>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={eventosMes} onChange={() => setEventosMes(!eventosMes)} className="rounded border-border accent-primary" />
-            <span className="text-sm text-foreground">Ativar evento mensal (R$ 3.000)</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={contratacao} onChange={() => setContratacao(!contratacao)} className="rounded border-border accent-primary" />
-            <span className="text-sm text-foreground">Ativar contratação</span>
-          </label>
-          {contratacao && (
-            <div>
-              <label className="text-xs text-muted-foreground">Custo contratação (R$)</label>
-              <input type="number" value={custoContratacao} onChange={e => setCustoContratacao(Number(e.target.value))}
-                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground mt-1" />
-            </div>
-          )}
-          <div className="border-t border-border pt-4 space-y-2">
-            <p className={`text-sm font-bold ${signalColors[signalSim as keyof typeof signalColors]}`}>
-              {signalLabels[signalSim as keyof typeof signalLabels]}
-            </p>
-            {mesesAteContratar !== null && mesesAteContratar > 0 && (
-              <p className="text-xs text-muted-foreground">🕐 Quando contratar? Em ~{mesesAteContratar} meses (capacidade 80%)</p>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

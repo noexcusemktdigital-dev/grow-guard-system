@@ -86,72 +86,93 @@ function PorFranqueadoTab() {
 function DRECard({ dre }: { dre: DREFranqueado }) {
   const mesLabel = mesesDisponiveis.find(m => m.value === dre.mes)?.label || dre.mes;
 
+  const lines: { label: string; value: number; type: "header" | "deduction" | "subtotal" | "result" }[] = [
+    { label: "Receita Bruta (100%)", value: dre.receitaBruta, type: "header" },
+    { label: "(-) Retenção Franqueadora (80%)", value: dre.retencaoFranqueadora, type: "deduction" },
+    { label: "= Repasse Franqueado (20%)", value: dre.repasseFranqueado, type: "subtotal" },
+    { label: "(-) Royalties (1%)", value: dre.royalties, type: "deduction" },
+    { label: "(-) Imposto proporcional", value: dre.impostoProporcional, type: "deduction" },
+    { label: "(-) Sistema (R$250)", value: dre.sistema, type: "deduction" },
+    { label: "= Resultado Líquido do Franqueado", value: dre.resultadoLiquido, type: "result" },
+  ];
+
   return (
-    <div className="glass-card p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border pb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded bg-primary/15 flex items-center justify-center">
-              <FileSpreadsheet className="w-4 h-4 text-primary" />
+    <div className="bg-background border border-border rounded-lg overflow-hidden">
+      {/* Header planilha */}
+      <div className="bg-secondary/50 px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
+              <FileSpreadsheet className="w-5 h-5 text-primary" />
             </div>
-            <span className="text-xs font-bold tracking-widest text-muted-foreground uppercase">Skillzy</span>
+            <div>
+              <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">Skillzy</p>
+              <h3 className="text-lg font-bold text-foreground">DRE — {dre.franqueadoNome}</h3>
+            </div>
           </div>
-          <h3 className="text-lg font-bold text-foreground">DRE — {dre.franqueadoNome}</h3>
-          <p className="text-sm text-muted-foreground">Competência: {mesLabel}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">Resultado Líquido</p>
-          <p className={`text-2xl font-bold ${dre.resultadoLiquido >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-            {formatBRL(dre.resultadoLiquido)}
-          </p>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Competência</p>
+            <p className="text-sm font-semibold text-foreground">{mesLabel}</p>
+          </div>
         </div>
       </div>
 
       {/* Clientes */}
       {dre.clientesAtivos.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-foreground mb-3">Clientes Ativos ({dre.clientesAtivos.length})</h4>
-          <div className="space-y-1">
+        <div className="px-6 py-4 border-b border-border">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Clientes Ativos ({dre.clientesAtivos.length})
+          </h4>
+          <div className="space-y-0">
             {dre.clientesAtivos.map((c, i) => (
-              <div key={i} className="flex justify-between py-1.5 border-b border-border/30 last:border-0">
-                <span className="text-sm text-foreground">{c.nome}</span>
-                <span className="text-sm font-medium text-foreground">{formatBRL(c.valor)}</span>
+              <div key={i} className={`flex justify-between py-2 px-3 text-sm ${i % 2 === 0 ? "bg-secondary/30" : ""}`}>
+                <span className="text-foreground">{c.nome}</span>
+                <span className="font-medium text-foreground">{formatBRL(c.valor)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* DRE Lines */}
-      <div className="space-y-2">
-        <div className="flex justify-between py-2 border-b border-border">
-          <span className="text-sm font-semibold text-foreground">Receita Bruta</span>
-          <span className="text-sm font-bold text-foreground">{formatBRL(dre.receitaBruta)}</span>
-        </div>
-        <div className="flex justify-between py-1.5 pl-4">
-          <span className="text-sm text-muted-foreground">(-) Royalties (1%)</span>
-          <span className="text-sm text-red-500">-{formatBRL(dre.royalties)}</span>
-        </div>
-        <div className="flex justify-between py-1.5 pl-4">
-          <span className="text-sm text-muted-foreground">(-) Imposto proporcional</span>
-          <span className="text-sm text-red-500">-{formatBRL(dre.impostoProporcional)}</span>
-        </div>
-        <div className="flex justify-between py-1.5 pl-4">
-          <span className="text-sm text-muted-foreground">(-) Sistema (R$250)</span>
-          <span className="text-sm text-red-500">-{formatBRL(dre.sistema)}</span>
-        </div>
-        {dre.repasseMatriz > 0 && (
-          <div className="flex justify-between py-1.5 pl-4">
-            <span className="text-sm text-muted-foreground">(-) Repasse matriz</span>
-            <span className="text-sm text-red-500">-{formatBRL(dre.repasseMatriz)}</span>
-          </div>
-        )}
-        <div className="flex justify-between py-2 border-t border-border mt-2">
-          <span className="text-sm font-bold text-foreground">= Resultado Líquido</span>
-          <span className={`text-sm font-bold ${dre.resultadoLiquido >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-            {formatBRL(dre.resultadoLiquido)}
-          </span>
+      {/* DRE Lines - estilo planilha */}
+      <div className="px-6 py-4">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Demonstrativo
+        </h4>
+        <div className="border border-border rounded-lg overflow-hidden">
+          {lines.map((line, i) => {
+            const isEven = i % 2 === 0;
+            const bgClass = line.type === "result"
+              ? "bg-secondary/60"
+              : line.type === "subtotal"
+                ? "bg-secondary/40"
+                : isEven ? "bg-secondary/20" : "";
+
+            const textClass = line.type === "result"
+              ? `text-base font-bold ${dre.resultadoLiquido >= 0 ? "text-emerald-500" : "text-red-500"}`
+              : line.type === "subtotal"
+                ? "text-sm font-bold text-primary"
+                : line.type === "header"
+                  ? "text-sm font-semibold text-foreground"
+                  : "text-sm text-muted-foreground";
+
+            const valueClass = line.type === "result"
+              ? `text-base font-bold ${dre.resultadoLiquido >= 0 ? "text-emerald-500" : "text-red-500"}`
+              : line.type === "subtotal"
+                ? "text-sm font-bold text-primary"
+                : line.type === "deduction"
+                  ? "text-sm text-red-500"
+                  : "text-sm font-bold text-foreground";
+
+            return (
+              <div key={i} className={`flex justify-between items-center py-3 px-4 border-b border-border last:border-0 ${bgClass}`}>
+                <span className={textClass}>{line.label}</span>
+                <span className={valueClass}>
+                  {line.type === "deduction" ? `-${formatBRL(line.value)}` : formatBRL(line.value)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -175,18 +196,20 @@ function TodosFechamentosTab() {
             <th className="text-left py-3 px-4 text-muted-foreground font-medium">Mês</th>
             <th className="text-left py-3 px-4 text-muted-foreground font-medium">Franqueado</th>
             <th className="text-right py-3 px-4 text-muted-foreground font-medium">Receita Bruta</th>
+            <th className="text-right py-3 px-4 text-muted-foreground font-medium">Repasse (20%)</th>
             <th className="text-right py-3 px-4 text-muted-foreground font-medium">Deduções</th>
             <th className="text-right py-3 px-4 text-muted-foreground font-medium">Resultado</th>
           </tr>
         </thead>
         <tbody>
           {allDREs.map((d, i) => {
-            const deducoes = d.royalties + d.impostoProporcional + d.sistema + d.repasseMatriz;
+            const deducoes = d.royalties + d.impostoProporcional + d.sistema;
             return (
               <tr key={i} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                 <td className="py-3 px-4 text-foreground">{d.mesLabel}</td>
                 <td className="py-3 px-4 font-medium text-foreground">{d.franqueadoNome}</td>
                 <td className="py-3 px-4 text-right text-foreground">{formatBRL(d.receitaBruta)}</td>
+                <td className="py-3 px-4 text-right text-primary font-medium">{formatBRL(d.repasseFranqueado)}</td>
                 <td className="py-3 px-4 text-right text-red-500">-{formatBRL(deducoes)}</td>
                 <td className={`py-3 px-4 text-right font-bold ${d.resultadoLiquido >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                   {formatBRL(d.resultadoLiquido)}

@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { getReceitasForMonth, getMonthSummary, clientes, franqueados, type Cliente, type Receita } from "@/data/mockData";
+import { getReceitasForMonth, getMonthSummary, clientes, franqueados, type Receita } from "@/data/mockData";
 import { KpiCard } from "@/components/KpiCard";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { Plus, Pencil, Trash2, Check, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -15,9 +16,6 @@ const COLORS = [
   "hsl(142, 71%, 45%)", "hsl(217, 91%, 60%)", "hsl(25, 95%, 53%)",
   "hsl(262, 83%, 58%)", "hsl(45, 93%, 47%)",
 ];
-
-const origemOptions = ["Venda Interna", "Franqueado", "Parceiro"] as const;
-const produtoOptions = ["Assessoria Noexcuse", "SaaS", "Sistema"] as const;
 
 export default function FinanceiroReceitas() {
   const [mes, setMes] = useState("2026-02");
@@ -27,7 +25,7 @@ export default function FinanceiroReceitas() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Financeiro • Receitas</h1>
-          <p className="text-sm text-muted-foreground mt-1">Logbook por produto + Clientes</p>
+          <p className="text-sm text-muted-foreground mt-1">Logbook por produto</p>
         </div>
         <select value={mes} onChange={(e) => setMes(e.target.value)} className="bg-secondary text-foreground border border-border rounded-lg px-3 py-2 text-sm">
           <option value="2026-01">Jan/2026</option>
@@ -43,7 +41,6 @@ export default function FinanceiroReceitas() {
           <TabsTrigger value="saas">SaaS</TabsTrigger>
           <TabsTrigger value="sistema">Sistema</TabsTrigger>
           <TabsTrigger value="franquia">Venda de Franquia</TabsTrigger>
-          <TabsTrigger value="clientes">Clientes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="visao-geral"><VisaoGeralTab mes={mes} /></TabsContent>
@@ -51,7 +48,6 @@ export default function FinanceiroReceitas() {
         <TabsContent value="saas"><ProdutoTab mes={mes} produto="SaaS" /></TabsContent>
         <TabsContent value="sistema"><SistemaTab mes={mes} /></TabsContent>
         <TabsContent value="franquia"><VendaFranquiaTab /></TabsContent>
-        <TabsContent value="clientes"><ClientesTab /></TabsContent>
       </Tabs>
     </div>
   );
@@ -126,21 +122,70 @@ function VisaoGeralTab({ mes }: { mes: string }) {
   );
 }
 
-/* ── Produto Tab (Assessoria / SaaS) ── */
+/* ── Produto Tab (Assessoria / SaaS) com CRUD ── */
+interface ReceitaLocal {
+  id: string;
+  clienteNome: string;
+  valor: number;
+  origem: string;
+  status: "A Receber" | "Recebido" | "Atrasado";
+  nfEmitida: boolean;
+  geraRepasse: boolean;
+  percentualRepasse: number;
+  observacoes: string;
+}
+
 function ProdutoTab({ mes, produto }: { mes: string; produto: string }) {
   const receitas = getReceitasForMonth(mes);
-  const clientesProduto = clientes.filter(c => c.produto === produto && c.status !== "Cancelado");
+  const { toast } = useToast();
 
   const receitasProduto = receitas.filter(r => {
     const cliente = clientes.find(c => c.id === r.clienteId);
     return cliente?.produto === produto;
   });
 
-  const [editedStatus, setEditedStatus] = useState<Map<string, string>>(new Map());
-  const [editedNF, setEditedNF] = useState<Map<string, boolean>>(new Map());
+  const [localReceitas, setLocalReceitas] = useState<ReceitaLocal[]>(() =>
+    receitasProduto.map(r => ({
+      id: r.id,
+      clienteNome: r.clienteNome || "",
+      valor: r.valorBruto,
+      origem: r.origemRepasse || "Venda Interna",
+      status: r.pago ? "Recebido" : "A Receber",
+      nfEmitida: r.notaFiscalEmitida,
+      geraRepasse: r.aplicaRepasse,
+      percentualRepasse: r.percentualRepasse,
+      observacoes: r.notas,
+    }))
+  );
 
-  const getStatus = (r: Receita) => editedStatus.get(r.id) || (r.pago ? "Recebido" : "A Receber");
-  const getNF = (r: Receita) => editedNF.get(r.id) ?? r.notaFiscalEmitida;
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const emptyForm: Omit<ReceitaLocal, "id"> = {
+    clienteNome: "", valor: 0, origem: "Venda Interna", status: "A Receber",
+    nfEmitida: false, geraRepasse: false, percentualRepasse: 0, observacoes: "",
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  const openCreate = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
+  const openEdit = (r: ReceitaLocal) => {
+    setEditingId(r.id);
+    setForm({ clienteNome: r.clienteNome, valor: r.valor, origem: r.origem, status: r.status, nfEmitida: r.nfEmitida, geraRepasse: r.geraRepasse, percentualRepasse: r.percentualRepasse, observacoes: r.observacoes });
+    setDialogOpen(true);
+  };
+  const handleSave = () => {
+    if (editingId) {
+      setLocalReceitas(prev => prev.map(r => r.id === editingId ? { ...r, ...form } : r));
+      toast({ title: "Receita atualizada" });
+    } else {
+      setLocalReceitas(prev => [...prev, { id: `nr-${Date.now()}`, ...form }]);
+      toast({ title: "Receita adicionada" });
+    }
+    setDialogOpen(false);
+  };
+  const handleDelete = (id: string) => {
+    setLocalReceitas(prev => prev.filter(r => r.id !== id));
+    toast({ title: "Receita excluída" });
+  };
 
   const statusColor = (s: string) => {
     if (s === "Recebido") return "bg-emerald-500/15 text-emerald-500";
@@ -150,10 +195,13 @@ function ProdutoTab({ mes, produto }: { mes: string; produto: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <KpiCard label="Clientes Ativos" value={String(clientesProduto.filter(c => c.status === "Ativo").length)} />
-        <KpiCard label="Receita do Mês" value={formatBRL(receitasProduto.reduce((s, r) => s + r.valorBruto, 0))} />
-        <KpiCard label="Geram Repasse" value={String(receitasProduto.filter(r => r.aplicaRepasse).length)} />
+      <div className="flex items-center justify-between">
+        <div className="grid grid-cols-3 gap-4 flex-1 mr-4">
+          <KpiCard label="Receitas" value={String(localReceitas.length)} />
+          <KpiCard label="Total do Mês" value={formatBRL(localReceitas.reduce((s, r) => s + r.valor, 0))} />
+          <KpiCard label="Geram Repasse" value={String(localReceitas.filter(r => r.geraRepasse).length)} />
+        </div>
+        <Button size="sm" onClick={openCreate} className="gap-2 shrink-0"><Plus className="w-4 h-4" /> Nova Receita</Button>
       </div>
 
       <div className="glass-card overflow-hidden overflow-x-auto">
@@ -170,40 +218,80 @@ function ProdutoTab({ mes, produto }: { mes: string; produto: string }) {
             </tr>
           </thead>
           <tbody>
-            {receitasProduto.map(r => {
-              const status = getStatus(r);
-              const nf = getNF(r);
-              return (
-                <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                  <td className="py-3 px-3 text-foreground font-medium">{r.clienteNome}</td>
-                  <td className="py-3 px-3 text-center text-xs text-muted-foreground">{r.origemRepasse || "Interna"}</td>
-                  <td className="py-3 px-3 text-right text-foreground">{formatBRL(r.valorBruto)}</td>
-                  <td className="py-3 px-3 text-center"><span className={`text-xs px-2 py-0.5 rounded ${statusColor(status)}`}>{status}</span></td>
-                  <td className="py-3 px-3 text-center"><span className={`text-xs px-2 py-0.5 rounded ${nf ? "bg-emerald-500/15 text-emerald-500" : "bg-red-500/15 text-red-500"}`}>{nf ? "Sim" : "Não"}</span></td>
-                  <td className="py-3 px-3 text-center">{r.aplicaRepasse ? <span className="text-primary text-xs font-medium">{r.percentualRepasse}%</span> : "—"}</td>
-                  <td className="py-3 px-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      {status !== "Recebido" && <button onClick={() => setEditedStatus(prev => new Map(prev).set(r.id, "Recebido"))} className="p-1.5 rounded hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500"><Check className="w-3.5 h-3.5" /></button>}
-                      {!nf && <button onClick={() => setEditedNF(prev => new Map(prev).set(r.id, true))} className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"><FileText className="w-3.5 h-3.5" /></button>}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {localReceitas.map(r => (
+              <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                <td className="py-3 px-3 text-foreground font-medium">{r.clienteNome}</td>
+                <td className="py-3 px-3 text-center text-xs text-muted-foreground">{r.origem}</td>
+                <td className="py-3 px-3 text-right text-foreground">{formatBRL(r.valor)}</td>
+                <td className="py-3 px-3 text-center"><span className={`text-xs px-2 py-0.5 rounded ${statusColor(r.status)}`}>{r.status}</span></td>
+                <td className="py-3 px-3 text-center"><span className={`text-xs px-2 py-0.5 rounded ${r.nfEmitida ? "bg-emerald-500/15 text-emerald-500" : "bg-red-500/15 text-red-500"}`}>{r.nfEmitida ? "Sim" : "Não"}</span></td>
+                <td className="py-3 px-3 text-center">{r.geraRepasse ? <span className="text-primary text-xs font-medium">{r.percentualRepasse}%</span> : "—"}</td>
+                <td className="py-3 px-3 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <button onClick={() => openEdit(r)} className="p-1.5 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"><Pencil className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {localReceitas.length === 0 && (
+              <tr><td colSpan={7} className="py-8 text-center text-muted-foreground text-sm">Nenhuma receita cadastrada</td></tr>
+            )}
           </tbody>
         </table>
       </div>
+
+      <ReceitaDialog open={dialogOpen} onOpenChange={setDialogOpen} form={form} setForm={setForm} onSave={handleSave} isEditing={!!editingId} tipo="assessoria" />
     </div>
   );
 }
 
-/* ── Sistema Tab ── */
+/* ── Sistema Tab com CRUD ── */
+interface SistemaLocal {
+  id: string;
+  franqueadoNome: string;
+  valor: number;
+  status: "Pago" | "A Receber" | "Atrasado";
+}
+
 function SistemaTab({ mes }: { mes: string }) {
   const receitas = getReceitasForMonth(mes).filter(r => r.tipo === "Sistema");
+  const { toast } = useToast();
+
+  const [localReceitas, setLocalReceitas] = useState<SistemaLocal[]>(() =>
+    receitas.map(r => ({ id: r.id, franqueadoNome: r.clienteNome || "", valor: r.valorBruto, status: "Pago" as const }))
+  );
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ franqueadoNome: "", valor: 250, status: "A Receber" as SistemaLocal["status"] });
+
+  const openCreate = () => { setEditingId(null); setForm({ franqueadoNome: "", valor: 250, status: "A Receber" }); setDialogOpen(true); };
+  const openEdit = (r: SistemaLocal) => { setEditingId(r.id); setForm({ franqueadoNome: r.franqueadoNome, valor: r.valor, status: r.status }); setDialogOpen(true); };
+  const handleSave = () => {
+    if (editingId) {
+      setLocalReceitas(prev => prev.map(r => r.id === editingId ? { ...r, ...form } : r));
+      toast({ title: "Atualizado" });
+    } else {
+      setLocalReceitas(prev => [...prev, { id: `ns-${Date.now()}`, ...form }]);
+      toast({ title: "Adicionado" });
+    }
+    setDialogOpen(false);
+  };
+  const handleDelete = (id: string) => { setLocalReceitas(prev => prev.filter(r => r.id !== id)); toast({ title: "Excluído" }); };
+
+  const statusColor = (s: string) => {
+    if (s === "Pago") return "bg-emerald-500/15 text-emerald-500";
+    if (s === "Atrasado") return "bg-red-500/15 text-red-500";
+    return "bg-yellow-500/15 text-yellow-500";
+  };
 
   return (
     <div className="space-y-6">
-      <KpiCard label="Total Sistema" value={formatBRL(receitas.reduce((s, r) => s + r.valorBruto, 0))} sublabel={`${receitas.length} franqueados`} />
+      <div className="flex items-center justify-between">
+        <KpiCard label="Total Sistema" value={formatBRL(localReceitas.reduce((s, r) => s + r.valor, 0))} sublabel={`${localReceitas.length} franqueados`} />
+        <Button size="sm" onClick={openCreate} className="gap-2"><Plus className="w-4 h-4" /> Nova Receita</Button>
+      </div>
       <div className="glass-card overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -211,39 +299,116 @@ function SistemaTab({ mes }: { mes: string }) {
               <th className="text-left py-3 px-4 text-muted-foreground font-medium">Franqueado</th>
               <th className="text-right py-3 px-4 text-muted-foreground font-medium">Valor</th>
               <th className="text-center py-3 px-4 text-muted-foreground font-medium">Status</th>
+              <th className="text-center py-3 px-4 text-muted-foreground font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
-            {receitas.map(r => (
+            {localReceitas.map(r => (
               <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30">
-                <td className="py-3 px-4 text-foreground font-medium">{r.clienteNome}</td>
-                <td className="py-3 px-4 text-right text-foreground">{formatBRL(r.valorBruto)}</td>
-                <td className="py-3 px-4 text-center"><span className="text-xs px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500">Pago</span></td>
+                <td className="py-3 px-4 text-foreground font-medium">{r.franqueadoNome}</td>
+                <td className="py-3 px-4 text-right text-foreground">{formatBRL(r.valor)}</td>
+                <td className="py-3 px-4 text-center"><span className={`text-xs px-2 py-0.5 rounded ${statusColor(r.status)}`}>{r.status}</span></td>
+                <td className="py-3 px-4 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <button onClick={() => openEdit(r)} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"><Pencil className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{editingId ? "Editar" : "Nova"} Receita Sistema</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Franqueado</label>
+              <select value={form.franqueadoNome} onChange={e => setForm({ ...form, franqueadoNome: e.target.value })}
+                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
+                <option value="">Selecione...</option>
+                {franqueados.map(f => <option key={f.id} value={f.nomeUnidade}>{f.nomeUnidade}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Valor (R$)</label>
+              <input type="number" value={form.valor} onChange={e => setForm({ ...form, valor: Number(e.target.value) })}
+                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Status</label>
+              <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value as SistemaLocal["status"] })}
+                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
+                <option value="A Receber">A Receber</option>
+                <option value="Pago">Pago</option>
+                <option value="Atrasado">Atrasado</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave}>{editingId ? "Salvar" : "Criar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-/* ── Venda de Franquia ── */
+/* ── Venda de Franquia com CRUD ── */
+interface VendaFranquiaLocal {
+  id: string;
+  nome: string;
+  valor: number;
+  status: "Pago" | "Pendente" | "Parcial";
+  contrato: string;
+  data: string;
+  onboarding: string;
+}
+
 function VendaFranquiaTab() {
-  const vendas = franqueados.map(f => ({
-    id: f.id,
-    nome: f.nomeUnidade,
-    valor: 15000,
-    status: "Pago" as const,
-    contrato: "Ativo",
-    data: "2025-06-01",
-    onboarding: "Concluído",
-  }));
+  const { toast } = useToast();
+  const [localVendas, setLocalVendas] = useState<VendaFranquiaLocal[]>(() =>
+    franqueados.map(f => ({
+      id: f.id, nome: f.nomeUnidade, valor: 15000, status: "Pago" as const,
+      contrato: "Ativo", data: "2025-06-01", onboarding: "Concluído",
+    }))
+  );
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const emptyForm: Omit<VendaFranquiaLocal, "id"> = { nome: "", valor: 15000, status: "Pendente", contrato: "", data: "", onboarding: "Pendente" };
+  const [form, setForm] = useState(emptyForm);
+
+  const openCreate = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
+  const openEdit = (v: VendaFranquiaLocal) => { setEditingId(v.id); setForm({ nome: v.nome, valor: v.valor, status: v.status, contrato: v.contrato, data: v.data, onboarding: v.onboarding }); setDialogOpen(true); };
+  const handleSave = () => {
+    if (editingId) {
+      setLocalVendas(prev => prev.map(v => v.id === editingId ? { ...v, ...form } : v));
+      toast({ title: "Atualizado" });
+    } else {
+      setLocalVendas(prev => [...prev, { id: `vf-${Date.now()}`, ...form }]);
+      toast({ title: "Adicionado" });
+    }
+    setDialogOpen(false);
+  };
+  const handleDelete = (id: string) => { setLocalVendas(prev => prev.filter(v => v.id !== id)); toast({ title: "Excluído" }); };
+
+  const statusColor = (s: string) => {
+    if (s === "Pago") return "bg-emerald-500/15 text-emerald-500";
+    if (s === "Parcial") return "bg-yellow-500/15 text-yellow-500";
+    return "bg-red-500/15 text-red-500";
+  };
 
   return (
     <div className="space-y-6">
-      <div className="glass-card p-4 border border-primary/20">
-        <p className="text-sm text-muted-foreground">🔗 Preparado para integração futura com módulo Onboarding</p>
+      <div className="flex items-center justify-between">
+        <div className="glass-card p-4 border border-primary/20 flex-1 mr-4">
+          <p className="text-sm text-muted-foreground">🔗 Preparado para integração futura com módulo Onboarding</p>
+        </div>
+        <Button size="sm" onClick={openCreate} className="gap-2 shrink-0"><Plus className="w-4 h-4" /> Nova Venda</Button>
       </div>
       <div className="glass-card overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
@@ -255,143 +420,22 @@ function VendaFranquiaTab() {
               <th className="text-center py-3 px-4 text-muted-foreground font-medium">Contrato</th>
               <th className="text-center py-3 px-4 text-muted-foreground font-medium">Data</th>
               <th className="text-center py-3 px-4 text-muted-foreground font-medium">Onboarding</th>
+              <th className="text-center py-3 px-4 text-muted-foreground font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
-            {vendas.map(v => (
+            {localVendas.map(v => (
               <tr key={v.id} className="border-b border-border/50 hover:bg-secondary/30">
                 <td className="py-3 px-4 text-foreground font-medium">{v.nome}</td>
                 <td className="py-3 px-4 text-right text-foreground">{formatBRL(v.valor)}</td>
-                <td className="py-3 px-4 text-center"><span className="text-xs px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500">{v.status}</span></td>
+                <td className="py-3 px-4 text-center"><span className={`text-xs px-2 py-0.5 rounded ${statusColor(v.status)}`}>{v.status}</span></td>
                 <td className="py-3 px-4 text-center text-xs text-foreground">{v.contrato}</td>
                 <td className="py-3 px-4 text-center text-xs text-muted-foreground">{v.data}</td>
                 <td className="py-3 px-4 text-center text-xs text-foreground">{v.onboarding}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-/* ── Clientes Tab ── */
-function ClientesTab() {
-  const [origemFiltro, setOrigemFiltro] = useState<string>("todos");
-  const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
-  const [localClientes, setLocalClientes] = useState<Cliente[]>([...clientes]);
-
-  const emptyCliente: Omit<Cliente, "id"> = {
-    nome: "", valor: 0, status: "Ativo", tipoReceita: "Recorrente", origem: "Venda Interna",
-    produto: "Assessoria Noexcuse", geraRepasse: false, percentualRepasse: 0, inicio: "2026-02-01",
-    notaFiscalEmitida: false, pago: false, observacoes: "",
-  };
-  const [form, setForm] = useState(emptyCliente);
-
-  const filtered = localClientes.filter(c => {
-    if (origemFiltro !== "todos" && c.origem !== origemFiltro) return false;
-    if (tipoFiltro !== "todos" && c.tipoReceita !== tipoFiltro) return false;
-    return true;
-  });
-
-  const statusColor = (s: string) => {
-    if (s === "Ativo") return "bg-emerald-500/15 text-emerald-500";
-    if (s === "Pausado") return "bg-yellow-500/15 text-yellow-500";
-    return "bg-red-500/15 text-red-500";
-  };
-
-  const openCreate = () => { setEditingCliente(null); setForm(emptyCliente); setDialogOpen(true); };
-  const openEdit = (c: Cliente) => {
-    setEditingCliente(c);
-    setForm({ nome: c.nome, valor: c.valor, status: c.status, tipoReceita: c.tipoReceita, origem: c.origem, produto: c.produto, geraRepasse: c.geraRepasse, percentualRepasse: c.percentualRepasse, inicio: c.inicio, notaFiscalEmitida: c.notaFiscalEmitida, pago: c.pago, observacoes: c.observacoes, franqueadoVinculado: c.franqueadoVinculado, idCobrancaAsaas: c.idCobrancaAsaas, tipoCobrancaAsaas: c.tipoCobrancaAsaas, statusCobrancaAsaas: c.statusCobrancaAsaas });
-    setDialogOpen(true);
-  };
-
-  const handleSave = () => {
-    if (editingCliente) {
-      setLocalClientes(prev => prev.map(c => c.id === editingCliente.id ? { ...c, ...form } : c));
-    } else {
-      setLocalClientes(prev => [...prev, { id: `c-${Date.now()}`, ...form } as Cliente]);
-    }
-    setDialogOpen(false);
-  };
-
-  const handleDelete = (id: string) => { setLocalClientes(prev => prev.filter(c => c.id !== id)); };
-  const handleStatusChange = (id: string, newStatus: Cliente["status"]) => {
-    setLocalClientes(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
-  };
-
-  const handleOrigemChange = (origem: Cliente["origem"]) => {
-    const geraRepasse = origem === "Franqueado" || origem === "Parceiro";
-    const percentualRepasse = origem === "Franqueado" ? 20 : origem === "Parceiro" ? 10 : 0;
-    setForm({ ...form, origem, geraRepasse, percentualRepasse });
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{localClientes.length} clientes • Total: {formatBRL(localClientes.filter(c => c.status === "Ativo").reduce((s, c) => s + c.valor, 0))}/mês</p>
-        <Button size="sm" onClick={openCreate} className="gap-2"><Plus className="w-4 h-4" /> Novo Cliente</Button>
-      </div>
-
-      <div className="flex flex-wrap gap-4">
-        <div>
-          <span className="text-xs text-muted-foreground block mb-1">Origem</span>
-          <div className="flex gap-1">
-            {["todos", "Venda Interna", "Franqueado", "Parceiro"].map(f => (
-              <button key={f} onClick={() => setOrigemFiltro(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${origemFiltro === f ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
-              >{f}</button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <span className="text-xs text-muted-foreground block mb-1">Tipo</span>
-          <div className="flex gap-1">
-            {["todos", "Recorrente", "Unitária", "Sistema"].map(f => (
-              <button key={f} onClick={() => setTipoFiltro(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tipoFiltro === f ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
-              >{f}</button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="glass-card overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left py-3 px-3 text-muted-foreground font-medium">Cliente</th>
-              <th className="text-right py-3 px-3 text-muted-foreground font-medium">Valor</th>
-              <th className="text-center py-3 px-3 text-muted-foreground font-medium">Tipo</th>
-              <th className="text-center py-3 px-3 text-muted-foreground font-medium">Origem</th>
-              <th className="text-center py-3 px-3 text-muted-foreground font-medium">Repasse</th>
-              <th className="text-center py-3 px-3 text-muted-foreground font-medium">Status</th>
-              <th className="text-center py-3 px-3 text-muted-foreground font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(c => (
-              <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                <td className="py-3 px-3 text-foreground font-medium">{c.nome}</td>
-                <td className="py-3 px-3 text-right text-foreground">{c.valor > 0 ? formatBRL(c.valor) : <span className="text-muted-foreground text-xs">A definir</span>}</td>
-                <td className="py-3 px-3 text-center"><span className="text-xs font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground">{c.tipoReceita}</span></td>
-                <td className="py-3 px-3 text-center text-xs text-muted-foreground">{c.origem}</td>
-                <td className="py-3 px-3 text-center">{c.geraRepasse ? <span className="text-primary text-xs font-medium">{c.percentualRepasse}%</span> : <span className="text-muted-foreground text-xs">—</span>}</td>
-                <td className="py-3 px-3 text-center">
-                  <select value={c.status} onChange={e => handleStatusChange(c.id, e.target.value as Cliente["status"])}
-                    className={`text-xs px-2 py-0.5 rounded border-0 cursor-pointer ${statusColor(c.status)}`}>
-                    <option value="Ativo">Ativo</option>
-                    <option value="Pausado">Pausado</option>
-                    <option value="Cancelado">Cancelado</option>
-                  </select>
-                </td>
-                <td className="py-3 px-3 text-center">
+                <td className="py-3 px-4 text-center">
                   <div className="flex items-center justify-center gap-1">
-                    <button onClick={() => openEdit(c)} className="p-1.5 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"><Pencil className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => handleDelete(c.id)} className="p-1.5 rounded hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => openEdit(v)} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"><Pencil className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDelete(v.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </td>
               </tr>
@@ -400,94 +444,143 @@ function ClientesTab() {
         </table>
       </div>
 
-      {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingCliente ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{editingId ? "Editar" : "Nova"} Venda de Franquia</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">Nome</label>
+              <label className="text-xs text-muted-foreground block mb-1">Franqueado</label>
               <input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })}
                 className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">Mensalidade (R$)</label>
+                <label className="text-xs text-muted-foreground block mb-1">Valor (R$)</label>
                 <input type="number" value={form.valor} onChange={e => setForm({ ...form, valor: Number(e.target.value) })}
                   className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">Produto</label>
-                <select value={form.produto} onChange={e => setForm({ ...form, produto: e.target.value as Cliente["produto"] })} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
-                  {produtoOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                <label className="text-xs text-muted-foreground block mb-1">Status Pagamento</label>
+                <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value as VendaFranquiaLocal["status"] })}
+                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
+                  <option value="Pendente">Pendente</option>
+                  <option value="Pago">Pago</option>
+                  <option value="Parcial">Parcial</option>
                 </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">Tipo Receita</label>
-                <select value={form.tipoReceita} onChange={e => setForm({ ...form, tipoReceita: e.target.value as Cliente["tipoReceita"] })} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
-                  <option value="Recorrente">Recorrente</option>
-                  <option value="Unitária">Unitária</option>
-                  <option value="Sistema">Sistema</option>
-                </select>
+                <label className="text-xs text-muted-foreground block mb-1">Contrato</label>
+                <input value={form.contrato} onChange={e => setForm({ ...form, contrato: e.target.value })}
+                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">Origem</label>
-                <select value={form.origem} onChange={e => handleOrigemChange(e.target.value as Cliente["origem"])} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
-                  {origemOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-            </div>
-            {form.geraRepasse && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">% Repasse</label>
-                  <input type="number" value={form.percentualRepasse} onChange={e => setForm({ ...form, percentualRepasse: Number(e.target.value) })}
-                    className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Franqueado Vinculado</label>
-                  <select value={form.franqueadoVinculado || ""} onChange={e => setForm({ ...form, franqueadoVinculado: e.target.value || undefined })} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
-                    <option value="">Nenhum</option>
-                    {franqueados.map(f => <option key={f.id} value={f.id}>{f.nomeUnidade}</option>)}
-                  </select>
-                </div>
-              </div>
-            )}
-            {/* Asaas placeholders */}
-            <div className="border-t border-border pt-3">
-              <p className="text-xs text-muted-foreground mb-2">🔗 Integração Asaas (em breve)</p>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">ID Cobrança</label>
-                  <input value={form.idCobrancaAsaas || ""} onChange={e => setForm({ ...form, idCobrancaAsaas: e.target.value })}
-                    className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" placeholder="—" disabled />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Tipo Cobrança</label>
-                  <input value={form.tipoCobrancaAsaas || ""} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" placeholder="—" disabled />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Status</label>
-                  <input value={form.statusCobrancaAsaas || ""} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" placeholder="—" disabled />
-                </div>
+                <label className="text-xs text-muted-foreground block mb-1">Data</label>
+                <input type="date" value={form.data} onChange={e => setForm({ ...form, data: e.target.value })}
+                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" />
               </div>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">Observações</label>
-              <textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })}
-                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground min-h-[60px]" />
+              <label className="text-xs text-muted-foreground block mb-1">Onboarding</label>
+              <select value={form.onboarding} onChange={e => setForm({ ...form, onboarding: e.target.value })}
+                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
+                <option value="Pendente">Pendente</option>
+                <option value="Em andamento">Em andamento</option>
+                <option value="Concluído">Concluído</option>
+              </select>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editingCliente ? "Salvar" : "Criar"}</Button>
+            <Button onClick={handleSave}>{editingId ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/* ── Dialog reutilizável para receita Assessoria/SaaS ── */
+function ReceitaDialog({ open, onOpenChange, form, setForm, onSave, isEditing, tipo }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  form: Omit<ReceitaLocal, "id">;
+  setForm: (f: Omit<ReceitaLocal, "id">) => void;
+  onSave: () => void;
+  isEditing: boolean;
+  tipo: string;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader><DialogTitle>{isEditing ? "Editar" : "Nova"} Receita</DialogTitle></DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">Cliente</label>
+            <input value={form.clienteNome} onChange={e => setForm({ ...form, clienteNome: e.target.value })}
+              className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Valor (R$)</label>
+              <input type="number" value={form.valor} onChange={e => setForm({ ...form, valor: Number(e.target.value) })}
+                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Origem</label>
+              <select value={form.origem} onChange={e => setForm({ ...form, origem: e.target.value })}
+                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
+                <option value="Venda Interna">Venda Interna</option>
+                <option value="Franqueado">Franqueado</option>
+                <option value="Parceiro">Parceiro</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Status</label>
+              <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value as ReceitaLocal["status"] })}
+                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
+                <option value="A Receber">A Receber</option>
+                <option value="Recebido">Recebido</option>
+                <option value="Atrasado">Atrasado</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">NF Emitida</label>
+              <select value={form.nfEmitida ? "sim" : "nao"} onChange={e => setForm({ ...form, nfEmitida: e.target.value === "sim" })}
+                className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground">
+                <option value="sim">Sim</option>
+                <option value="nao">Não</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={form.geraRepasse} onChange={e => setForm({ ...form, geraRepasse: e.target.checked })}
+                className="rounded border-border" />
+              <label className="text-xs text-muted-foreground">Gera repasse</label>
+            </div>
+            {form.geraRepasse && (
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">% Repasse</label>
+                <input type="number" value={form.percentualRepasse} onChange={e => setForm({ ...form, percentualRepasse: Number(e.target.value) })}
+                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground" />
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">Observações</label>
+            <textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })}
+              className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-full text-foreground min-h-[60px]" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={onSave}>{isEditing ? "Salvar" : "Criar"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
