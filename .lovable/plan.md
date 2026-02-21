@@ -1,147 +1,94 @@
 
-# Modulo Gestao -- Financeiro Unidade + Meus Contratos (Rewrite Completo)
 
-## Visao Geral
+# Fluxo Integrado CRM → Proposta → Contrato → Financeiro → DRE
 
-Reescrever completamente as 2 paginas do modulo Gestao do Franqueado e expandir os dados em `franqueadoData.ts` para suportar:
-- Logica de excedente (quem emitiu a cobranca define a % retida)
-- Dashboard financeiro com 8 KPIs + graficos
-- Entradas detalhadas por cliente
-- Saidas locais do franqueado
-- Fechamentos/DRE com download
-- Alertas automaticos
-- Contratos com filtros, geracao, detalhe rico e alertas de vencimento
+## Resumo
 
----
+Implementar o fluxo operacional completo onde o franqueado nunca sai do contexto desnecessariamente. Cada etapa alimenta a seguinte automaticamente com feedback visual.
 
-## Arquivo 1: `src/data/franqueadoData.ts`
-
-### Substituir interfaces e dados existentes
-
-**Substituir `FranqueadoContrato`** para incluir:
-- `valorBase`, `valorExcedente`, `emissorExcedente` ("franqueado" | "matriz" | null)
-- `status` agora inclui "vencendo"
-- `tipo` agora e "Recorrente" | "Unitario"
-- `assinado: boolean`, `propostaId?: string`
-
-**Substituir `FranqueadoFinanceiroResumo`** para incluir:
-- `receitaBruta`, `repasse`, `excedenteGerado`, `excedenteEmitido`
-- `valorLiquidoEstimado`, `royalties`, `sistemaMensalidade`, `resultadoEstimado`
-
-### Novos tipos
-
-- **`FranqueadoEntrada`**: clienteNome, tipo (Recorrente/Unitario/SaaS/Excedente), valorContrato, repasseValor (20%), excedente, emissorExcedente, valorFinalFranqueado (calculado), statusCobranca, recebido, data
-- **`FranqueadoSaida`**: descricao, tipo, valor, categoria (Pessoas/Estrutura/Marketing/Ferramentas/Outros), mes, status
-- **`FranqueadoFechamento`**: mes, receita, repasse, excedenteFranqueado, royalties, sistema, valorLiquido, status (Disponivel/Pago/Pendente)
-- **`FranqueadoAlertaFinanceiro`**: tipo (warning/info/clock), mensagem
-
-### Novas funcoes
-
-- `getFranqueadoEntradas()` -- 5 entradas com mix de emissores e status
-- `getFranqueadoSaidas()` -- 5 despesas locais (aluguel, salario, ads, licenca, material)
-- `getFranqueadoFechamentos()` -- 5 meses com status variados
-- `getFranqueadoAlertasFinanceiros()` -- 4 alertas (contrato vencendo, cobranca pendente, fechamento disponivel, DRE aguardando)
-- `getFranqueadoReceitaMensal()` -- 6 meses de receita + repasse para grafico
-
-### Logica do Excedente (regra de negocio)
+## Arquivos Modificados
 
 ```text
-Se emissorExcedente === "franqueado":
-  valorFinalFranqueado = (20% do valorBase) + 100% do excedente
-
-Se emissorExcedente === "matriz":
-  valorFinalFranqueado = (20% do valorBase) + 20% do excedente
-
-Se excedente === 0:
-  valorFinalFranqueado = 20% do valorBase
+src/data/franqueadoData.ts                        -- adicionar campos de vinculacao (leadId nas propostas, propostaConvertida nos leads)
+src/pages/franqueado/FranqueadoCRM.tsx             -- adicionar drawer "Gerar Proposta" + modal "Converter em Contrato" no kanban
+src/pages/franqueado/FranqueadoPropostas.tsx       -- adicionar botao "Converter em Contrato" nas propostas aceitas + modal
+src/pages/franqueado/FranqueadoContratos.tsx       -- receber navegacao com highlight do contrato recem-criado
+src/pages/franqueado/FranqueadoFinanceiro.tsx      -- adicionar modal de visualizacao do fechamento DRE
+src/pages/franqueado/FranqueadoDashboard.tsx       -- pequeno ajuste: mostrar indicador de novo contrato/impacto estimado
 ```
 
 ---
 
-## Arquivo 2: `src/pages/franqueado/FranqueadoFinanceiro.tsx` (rewrite completo)
+## Detalhes por Arquivo
 
-### Estrutura: 4 abas via Tabs component
+### 1. `franqueadoData.ts` -- Vinculos entre modulos
 
-#### Aba 1 -- Dashboard Financeiro
-- **8 KPI cards** em grid 2x4:
-  - Receita Bruta do Mes
-  - Repasse (20%)
-  - Excedente Gerado
-  - Excedente Emitido por Voce
-  - Valor Liquido Estimado
-  - Royalties (1%)
-  - Sistema Mensalidade
-  - Resultado Estimado
-- **Grafico Recharts** (BarChart): Receita vs Repasse nos ultimos 6 meses
-- **Card de Alertas** com lista dos alertas financeiros (usando AlertCard ou similar)
+Adicionar campo `leadId` na interface `FranqueadoProposta` (opcional, para vincular ao lead de origem).
+Nos dados mock, vincular P-1 ao lead L-1 (Carlos Mendes) e P-3 ao lead L-7 (Marcos Silva).
 
-#### Aba 2 -- Entradas
-- Tabela com colunas: Cliente, Tipo, Valor Contrato, 20% Repasse, Excedente, Status Cobranca (quem emitiu), Recebido (sim/nao badge), Data
-- Tooltip ou badge explicando a logica do excedente por linha
-- Totalizador no rodape
+### 2. `FranqueadoCRM.tsx` -- Drawer + Modal integrados
 
-#### Aba 3 -- Saidas
-- Tabela com colunas: Descricao, Tipo, Valor, Categoria, Mes, Status
-- Filtro por categoria (tabs secundarias ou badges)
-- Totalizador
-- Texto explicativo: "Gestao interna da unidade -- nao interfere no financeiro da matriz"
+**No card do kanban (etapa "Proposta"):**
+- Adicionar botao vermelho "Gerar Proposta" que abre um **Sheet** (drawer lateral direito, `sm:max-w-lg`)
+- Drawer contem formulario: Valor Base, Excedente, Tipo (Recorrente/Unitario), Prazo, Quem emite cobranca
+- Botao "Gerar Proposta" no drawer: salva no state local, fecha drawer, mostra toast "Proposta criada com sucesso", atualiza badge no card
 
-#### Aba 4 -- Fechamentos (DRE)
-- Tabela com colunas: Mes, Receita, Repasse, Excedente Franqueado, Royalties, Sistema, Valor Liquido, Status
-- Badge de status colorido (Disponivel = azul, Pago = verde, Pendente = amarelo)
-- Botoes de download PDF e Excel por linha
-- Somente leitura -- sem edicao
+**No card do kanban (etapa "Proposta" com proposta vinculada, ou etapa "Venda"):**
+- Adicionar botao verde "Converter em Contrato" que abre um **Dialog** (modal central)
+- Modal mostra resumo: Cliente, Valor Base, Excedente, Tipo, Data Inicio, Data Vencimento
+- Botao "Criar Contrato" no modal: toast "Contrato ativado com sucesso", redireciona para `/franqueado/contratos`
 
----
+**No detalhe do lead (view existente):**
+- Se etapa === "Proposta": botao "Gerar Proposta" abrindo o mesmo drawer
+- Se proposta aceita vinculada: botao "Converter em Contrato" abrindo o mesmo modal
 
-## Arquivo 3: `src/pages/franqueado/FranqueadoContratos.tsx` (rewrite completo)
+### 3. `FranqueadoPropostas.tsx` -- Botao Converter
 
-### Estrutura: 3 abas + detalhe
+**No detalhe da proposta (quando status === "aceita"):**
+- Adicionar botao "Converter em Contrato" que abre o mesmo Dialog de confirmacao
+- Ao confirmar: toast + redirecionar para `/franqueado/contratos`
 
-#### Aba 1 -- Lista de Contratos
-- **4 KPI cards**: Contratos Ativos, Receita Recorrente, Vencendo em 15 dias, Pendentes (sem assinatura)
-- **Filtros**: Status (todos/ativo/vencendo/pendente/encerrado), Tipo (todos/recorrente/unitario)
-- **Tabela** com colunas: Cliente, Tipo, Valor Base, Excedente, Data Inicio, Data Vencimento, Status, Assinado
-- Clicar na linha abre o detalhe (aba 3)
-- Status badges coloridos (ativo=verde, vencendo=laranja, pendente=amarelo, encerrado=cinza)
+**Na tabela (coluna Acoes):**
+- Para propostas aceitas: icone de conversao direto na linha
 
-#### Aba 2 -- Gerar Novo Contrato
-- Formulario com campos:
-  - Select de cliente (do CRM -- getFranqueadoLeads)
-  - Select de proposta vinculada (getFranqueadoPropostas, filtrado por status aceita)
-  - Valor base (auto-preenchido da proposta)
-  - Valor excedente (input numerico)
-  - Forma de cobranca (select: Franqueado / Matriz)
-  - Prazo (select: 6 meses / 12 meses / 24 meses)
-  - Tipo (Recorrente / Unitario)
-- Botao "Gerar Contrato" (mock -- adiciona toast de sucesso)
-- Botao "Baixar PDF" (mock)
+### 4. `FranqueadoContratos.tsx` -- Highlight + link financeiro
 
-#### Aba 3 -- Detalhe do Contrato (exibido ao clicar em um contrato)
-- Card com todos os dados: cliente, valor base, excedente, % repasse calculado, emissor, data inicio, vencimento, status assinatura
-- Historico placeholder (lista de eventos)
-- Botoes: Download PDF, Anexar Assinado (mock upload)
-- Botao Voltar retorna para aba 1
+- Aceitar query param `?novo=CT-ID` para destacar visualmente o contrato recem-criado (borda primary pulsando)
+- Adicionar botao "Ver impacto financeiro" no detalhe do contrato que navega para `/franqueado/financeiro`
 
-#### Alertas (exibidos na aba 1)
-- Card de alertas: contratos vencendo em 15 dias, contratos sem assinatura, cliente sem cobranca emitida
+### 5. `FranqueadoFinanceiro.tsx` -- Modal DRE
+
+**Na aba Fechamentos:**
+- Ao clicar "Visualizar" em uma linha: abre **Dialog** elegante com:
+  - Receita total, Repasse, Excedente, Royalties, Sistema, Valor final
+  - Mini comparativo vs mes anterior (texto, nao grafico complexo)
+  - Botoes: Baixar PDF, Baixar Excel, Fechar
+- Substituir os botoes de download por: botao "Visualizar" (abre modal) + botoes de download na propria linha
+
+### 6. `FranqueadoDashboard.tsx` -- Indicador
+
+- Na secao de KPIs ou logo apos "Hoje eu preciso de...": card simples que mostra "+1 novo contrato ativo" e "Impacto estimado no mes: R$ X" (mock estatico por enquanto)
 
 ---
 
-## Arquivos modificados
+## Componentes UI Utilizados
+
+- **Sheet** (drawer lateral): ja disponivel em `src/components/ui/sheet.tsx` -- para formulario de proposta
+- **Dialog**: ja disponivel em `src/components/ui/dialog.tsx` -- para confirmacao de contrato e visualizacao DRE
+- **toast** (sonner): ja utilizado -- para feedback em todas as acoes
+
+## Fluxo UX Resumido
 
 ```text
-src/data/franqueadoData.ts                        -- substituir interfaces + adicionar 6 novas funcoes
-src/pages/franqueado/FranqueadoFinanceiro.tsx      -- rewrite completo com 4 abas
-src/pages/franqueado/FranqueadoContratos.tsx       -- rewrite completo com 3 abas + detalhe
+CRM Kanban
+  └─ Card na etapa "Proposta"
+       └─ [Gerar Proposta] → Sheet lateral (formulario)
+            └─ [Gerar] → Toast + badge atualizado no card
+                 └─ [Converter em Contrato] → Dialog central (resumo)
+                      └─ [Criar Contrato] → Toast + navega /contratos (highlight)
+                           └─ Financeiro recebe entrada automatica
+                                └─ DRE → [Visualizar] → Dialog modal
 ```
 
-Nenhum arquivo da franqueadora e tocado.
+Nenhuma navegacao forcada. Drawers e modais mantem o contexto. Toasts confirmam cada acao.
 
----
-
-## Ordem de implementacao
-
-1. `franqueadoData.ts` -- novos tipos, dados e funcoes
-2. `FranqueadoFinanceiro.tsx` -- 4 abas completas com graficos e alertas
-3. `FranqueadoContratos.tsx` -- lista com filtros, gerador, detalhe e alertas
