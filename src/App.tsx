@@ -18,6 +18,7 @@ import ContratosTemplates from "./pages/ContratosTemplates";
 import ContratosConfiguracoes from "./pages/ContratosConfiguracoes";
 import Marketing from "./pages/Marketing";
 import Academy from "./pages/Academy";
+import MetasRanking from "./pages/MetasRanking";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="contratos/configuracoes" element={<ContratosConfiguracoes />} />
               <Route path="marketing" element={<Marketing />} />
               <Route path="treinamentos" element={<Academy />} />
+              <Route path="metas" element={<MetasRanking />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
