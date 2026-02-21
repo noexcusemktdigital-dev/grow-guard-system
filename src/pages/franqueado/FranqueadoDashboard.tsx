@@ -16,7 +16,7 @@ import { KpiCard } from "@/components/KpiCard";
 import {
   getFranqueadoIndicadores, getFranqueadoMetas, getFranqueadoRanking,
   getFranqueadoChamados, getFranqueadoMensagemDia, getFranqueadoEventos,
-  getFranqueadoComunicadosUnidade,
+  getFranqueadoComunicadosUnidade, getFranqueadoContratos, getFranqueadoFinanceiro,
 } from "@/data/franqueadoData";
 
 export default function FranqueadoDashboard() {
@@ -28,6 +28,12 @@ export default function FranqueadoDashboard() {
   const mensagem = getFranqueadoMensagemDia();
   const eventos = useMemo(() => getFranqueadoEventos().slice(0, 3), []);
   const comunicados = useMemo(() => getFranqueadoComunicadosUnidade().slice(0, 3), []);
+
+  // New contract indicator
+  const contratos = useMemo(() => getFranqueadoContratos(), []);
+  const fin = useMemo(() => getFranqueadoFinanceiro(), []);
+  const contratosAtivos = contratos.filter(c => c.status === "ativo").length;
+  const contratosRecentes = contratos.filter(c => c.status === "ativo" && c.inicioEm >= "2026-02-01").length;
 
   const hoje = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const hojeCapitalized = hoje.charAt(0).toUpperCase() + hoje.slice(1);
@@ -66,6 +72,26 @@ export default function FranqueadoDashboard() {
           />
         ))}
       </div>
+
+      {/* Novo contrato indicator */}
+      {contratosRecentes > 0 && (
+        <Card className="glass-card border-green-500/20 bg-green-500/5 hover-lift cursor-pointer" onClick={() => navigate("/franqueado/contratos")}>
+          <CardContent className="py-4 px-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                <FileSignature className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">+{contratosRecentes} novo(s) contrato(s) ativo(s) este mês</p>
+                <p className="text-xs text-muted-foreground">Impacto estimado: R$ {fin.resultadoEstimado.toLocaleString()}/mês</p>
+              </div>
+            </div>
+            <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-400/30">
+              {contratosAtivos} ativos
+            </Badge>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Hoje eu preciso de... */}
       <Card className="glass-card hover-lift">

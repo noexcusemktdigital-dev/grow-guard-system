@@ -43,10 +43,15 @@ export interface FranqueadoProposta {
   id: string;
   clienteNome: string;
   valor: number;
+  valorExcedente?: number;
+  emissorExcedente?: "franqueado" | "matriz";
+  tipo?: "Recorrente" | "Unitário";
+  prazo?: string;
   status: "rascunho" | "enviada" | "aceita" | "recusada";
   criadaEm: string;
   validaAte: string;
   servicos: string[];
+  leadId?: string;
 }
 
 export interface FranqueadoContrato {
@@ -225,10 +230,10 @@ export function getFranqueadoLeads(): FranqueadoLead[] {
 
 export function getFranqueadoPropostas(): FranqueadoProposta[] {
   return [
-    { id: "P-1", clienteNome: "Carlos Mendes", valor: 4500, status: "enviada", criadaEm: "2026-02-18", validaAte: "2026-03-18", servicos: ["Marketing Digital", "SEO"] },
-    { id: "P-2", clienteNome: "Patricia Rocha", valor: 5000, status: "rascunho", criadaEm: "2026-02-20", validaAte: "2026-03-20", servicos: ["Gestão de Redes", "Tráfego Pago", "CRM"] },
-    { id: "P-3", clienteNome: "Marcos Silva", valor: 6200, status: "aceita", criadaEm: "2026-02-01", validaAte: "2026-03-01", servicos: ["Branding", "Marketing Digital", "Consultoria"] },
-    { id: "P-4", clienteNome: "Camila Duarte", valor: 1500, status: "recusada", criadaEm: "2026-01-25", validaAte: "2026-02-25", servicos: ["Social Media"] },
+    { id: "P-1", clienteNome: "Carlos Mendes", valor: 4500, valorExcedente: 800, emissorExcedente: "franqueado", tipo: "Recorrente", prazo: "12", status: "enviada", criadaEm: "2026-02-18", validaAte: "2026-03-18", servicos: ["Marketing Digital", "SEO"], leadId: "L-1" },
+    { id: "P-2", clienteNome: "Patricia Rocha", valor: 5000, status: "rascunho", criadaEm: "2026-02-20", validaAte: "2026-03-20", servicos: ["Gestão de Redes", "Tráfego Pago", "CRM"], leadId: "L-6" },
+    { id: "P-3", clienteNome: "Marcos Silva", valor: 6200, valorExcedente: 1200, emissorExcedente: "franqueado", tipo: "Recorrente", prazo: "12", status: "aceita", criadaEm: "2026-02-01", validaAte: "2026-03-01", servicos: ["Branding", "Marketing Digital", "Consultoria"], leadId: "L-7" },
+    { id: "P-4", clienteNome: "Camila Duarte", valor: 1500, status: "recusada", criadaEm: "2026-01-25", validaAte: "2026-02-25", servicos: ["Social Media"], leadId: "L-8" },
   ];
 }
 
