@@ -2,7 +2,11 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Trophy, TrendingUp, Users, DollarSign, FileText, Target, MessageSquare, Calendar, BarChart3 } from "lucide-react";
+import {
+  Trophy, TrendingUp, Users, DollarSign, FileText, Target,
+  MessageSquare, Calendar, BarChart3, UserPlus, Headphones,
+  FileSignature, LayoutGrid,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,9 +15,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import {
   getFranqueadoIndicadores, getFranqueadoMetas, getFranqueadoRanking,
-  getFranqueadoChamados,
+  getFranqueadoChamados, getFranqueadoMensagemDia, getFranqueadoEventos,
+  getFranqueadoComunicadosUnidade,
 } from "@/data/franqueadoData";
-import { getMensagemHoje, getProximosEventos, getComunicadosAtivos } from "@/data/homeData";
 
 export default function FranqueadoDashboard() {
   const navigate = useNavigate();
@@ -21,12 +25,19 @@ export default function FranqueadoDashboard() {
   const metas = useMemo(() => getFranqueadoMetas(), []);
   const ranking = getFranqueadoRanking();
   const chamados = useMemo(() => getFranqueadoChamados().filter(c => c.status !== "resolvido"), []);
-  const mensagem = getMensagemHoje();
-  const eventos = useMemo(() => getProximosEventos(3), []);
-  const comunicados = useMemo(() => getComunicadosAtivos(3), []);
+  const mensagem = getFranqueadoMensagemDia();
+  const eventos = useMemo(() => getFranqueadoEventos().slice(0, 3), []);
+  const comunicados = useMemo(() => getFranqueadoComunicadosUnidade().slice(0, 3), []);
 
   const hoje = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const hojeCapitalized = hoje.charAt(0).toUpperCase() + hoje.slice(1);
+
+  const atalhos = [
+    { label: "Criar Lead", icon: UserPlus, rota: "/franqueado/crm" },
+    { label: "Abrir Chamado", icon: Headphones, rota: "/franqueado/suporte" },
+    { label: "Ver Propostas", icon: FileSignature, rota: "/franqueado/propostas" },
+    { label: "Acessar CRM", icon: LayoutGrid, rota: "/franqueado/crm" },
+  ];
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -55,6 +66,30 @@ export default function FranqueadoDashboard() {
           />
         ))}
       </div>
+
+      {/* Hoje eu preciso de... */}
+      <Card className="glass-card hover-lift">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold uppercase tracking-wider">
+            🎯 Hoje eu preciso de...
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {atalhos.map(a => (
+              <Button
+                key={a.label}
+                variant="outline"
+                className="h-auto py-4 flex flex-col items-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all"
+                onClick={() => navigate(a.rota)}
+              >
+                <a.icon className="w-5 h-5 text-primary" />
+                <span className="text-xs font-medium">{a.label}</span>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Metas + Ranking */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -133,8 +168,8 @@ export default function FranqueadoDashboard() {
             ) : eventos.map(e => (
               <div key={e.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate("/franqueado/agenda")}>
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
-                  <span className="text-[10px] text-primary font-bold">{format(new Date(e.inicio), "dd")}</span>
-                  <span className="text-[8px] text-muted-foreground uppercase">{format(new Date(e.inicio), "MMM", { locale: ptBR })}</span>
+                  <span className="text-[10px] text-primary font-bold">{format(new Date(e.data), "dd")}</span>
+                  <span className="text-[8px] text-muted-foreground uppercase">{format(new Date(e.data), "MMM", { locale: ptBR })}</span>
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{e.titulo}</p>

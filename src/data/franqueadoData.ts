@@ -190,6 +190,69 @@ export function getMateriaisCategorias(): MaterialCategoria[] {
   ];
 }
 
+// ── Dados independentes da unidade ──
+
+export interface FranqueadoMensagemDia {
+  categoria: string;
+  texto: string;
+  autor: string;
+}
+
+export interface FranqueadoEvento {
+  id: string;
+  titulo: string;
+  data: string;
+  hora: string;
+  tipo: string;
+  visibilidade: "pessoal" | "unidade" | "rede";
+  editavel: boolean;
+}
+
+export interface FranqueadoComunicado {
+  id: string;
+  titulo: string;
+  conteudo: string;
+  prioridade: "Crítica" | "Alta" | "Normal";
+  autorNome: string;
+  criadoEm: string;
+  destinatario: "rede" | "unidade";
+  lido: boolean;
+}
+
+export function getFranqueadoMensagemDia(): FranqueadoMensagemDia {
+  return {
+    categoria: "Motivação",
+    texto: "Cada cliente que você conquista hoje é a base do faturamento de amanhã. Faça valer cada contato!",
+    autor: "Diretoria da Rede",
+  };
+}
+
+export function getFranqueadoEventos(): FranqueadoEvento[] {
+  return [
+    { id: "FE-1", titulo: "Reunião com cliente Tech Solutions", data: "2026-02-21", hora: "09:00", tipo: "Reunião", visibilidade: "pessoal", editavel: true },
+    { id: "FE-2", titulo: "Treinamento da equipe comercial", data: "2026-02-21", hora: "14:00", tipo: "Treinamento", visibilidade: "unidade", editavel: true },
+    { id: "FE-3", titulo: "Workshop de Vendas — Rede Nacional", data: "2026-02-22", hora: "10:00", tipo: "Workshop", visibilidade: "rede", editavel: false },
+    { id: "FE-4", titulo: "Follow-up lead Carlos Mendes", data: "2026-02-22", hora: "11:00", tipo: "Comercial", visibilidade: "pessoal", editavel: true },
+    { id: "FE-5", titulo: "Apresentação de resultados mensal", data: "2026-02-24", hora: "15:00", tipo: "Gestão", visibilidade: "unidade", editavel: true },
+    { id: "FE-6", titulo: "Webinar: Tendências de Marketing 2026", data: "2026-02-25", hora: "19:00", tipo: "Webinar", visibilidade: "rede", editavel: false },
+    { id: "FE-7", titulo: "Almoço networking — parceiros locais", data: "2026-02-26", hora: "12:00", tipo: "Networking", visibilidade: "pessoal", editavel: true },
+    { id: "FE-8", titulo: "Convenção Anual da Rede", data: "2026-03-05", hora: "08:00", tipo: "Evento", visibilidade: "rede", editavel: false },
+    { id: "FE-9", titulo: "Reunião de alinhamento semanal", data: "2026-02-23", hora: "09:30", tipo: "Reunião", visibilidade: "unidade", editavel: true },
+    { id: "FE-10", titulo: "Entrega de proposta — Digital Co", data: "2026-02-27", hora: "16:00", tipo: "Comercial", visibilidade: "pessoal", editavel: true },
+  ];
+}
+
+export function getFranqueadoComunicadosUnidade(): FranqueadoComunicado[] {
+  return [
+    { id: "FC-1", titulo: "Nova política de repasse atualizada", conteudo: "A partir de março de 2026, o repasse mensal passará a ser calculado com base na receita líquida confirmada, considerando somente os pagamentos efetivamente compensados. Leiam o documento completo no repositório de contratos.", prioridade: "Crítica", autorNome: "Financeiro Matriz", criadoEm: "2026-02-20", destinatario: "rede", lido: false },
+    { id: "FC-2", titulo: "Campanha de Março — materiais disponíveis", conteudo: "Os materiais visuais da campanha de março já estão disponíveis na seção Materiais da Marca. Inclui posts para redes sociais, stories animados e banners para site. Façam o download e adaptem com os dados locais da unidade.", prioridade: "Alta", autorNome: "Marketing Matriz", criadoEm: "2026-02-19", destinatario: "rede", lido: false },
+    { id: "FC-3", titulo: "Manutenção programada do sistema", conteudo: "O sistema ficará indisponível para manutenção no dia 28/02 das 22h às 02h. Salvem todos os trabalhos em andamento antes desse horário. Nenhum dado será perdido.", prioridade: "Normal", autorNome: "TI Matriz", criadoEm: "2026-02-18", destinatario: "rede", lido: false },
+    { id: "FC-4", titulo: "Parabéns pela meta atingida!", conteudo: "A unidade Curitiba atingiu 110% da meta de faturamento em janeiro! Continuem com esse excelente trabalho. A diretoria preparou um bônus especial que será detalhado na próxima reunião mensal.", prioridade: "Normal", autorNome: "Diretoria", criadoEm: "2026-02-17", destinatario: "unidade", lido: false },
+    { id: "FC-5", titulo: "Atualização de contrato padrão", conteudo: "O template do contrato padrão foi atualizado para incluir a nova cláusula de LGPD. Todos os novos contratos devem usar o modelo v3.2 disponível no Gerador de Propostas. Contratos antigos não precisam ser alterados.", prioridade: "Alta", autorNome: "Jurídico Matriz", criadoEm: "2026-02-15", destinatario: "rede", lido: false },
+    { id: "FC-6", titulo: "Novo módulo Academy disponível", conteudo: "O módulo 'Vendas Consultivas Avançadas' já está liberado no Academy. São 8 aulas com certificado ao final. Prazo recomendado para conclusão: 30 dias. Excelente para a equipe comercial da unidade.", prioridade: "Normal", autorNome: "Academy Matriz", criadoEm: "2026-02-14", destinatario: "rede", lido: false },
+  ];
+}
+
 export function getDiagnosticoPerguntas() {
   return [
     { id: 1, secao: "Presença Digital", pergunta: "A empresa possui site atualizado?", tipo: "sim_nao" as const },
