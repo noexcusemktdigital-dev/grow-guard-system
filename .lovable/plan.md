@@ -1,150 +1,71 @@
 
 
-# Rewrite Calculadora e Proposta -- Estilo Calculadora NOE
+# Reorganizar Propostas e Mover Estrategia para Diagnostico NOE
 
-## Objetivo
+## Resumo
 
-Reescrever a aba "Calculadora" do Gerador de Proposta para seguir exatamente o layout e estrutura de servicos do site de referencia (calcculadoranoe.lovable.app), mantendo a parte de excedente que ja existe no sistema atual.
-
----
+Tres mudancas principais:
+1. Na pagina de Propostas, a aba "Estrategia" vira "Propostas" (lista de propostas existentes)
+2. A calculadora perde a lista de propostas que ficava embaixo e fica so com o wizard
+3. A secao de Estrategia (objetivos, plano de acao, projecao, justificativa) muda para o Diagnostico NOE, como uma aba/secao adicional no resultado
 
 ## O que muda
 
-### Layout da Calculadora (aba "Calculadora")
+### Pagina de Propostas (`FranqueadoPropostas.tsx`)
 
-**ANTES**: Grid simples com 7 checkboxes genericos (Marketing Digital, SEO, Trafego, etc.) e valor fixo por item.
+**Tabs: "Propostas" + "Calculadora"** (antes era "Estrategia" + "Calculadora")
 
-**DEPOIS**: Servicos organizados por modulos em **Accordion** (colapsaveis), cada modulo com header colorido (vermelho), icone e descricao. Dentro de cada modulo, cada servico tem:
-- Nome do servico
-- Badge "Unitario" ou "Mensal"
-- Descricao detalhada (texto truncado com expand)
-- Switch (toggle) para ativar/desativar
+- **Aba "Propostas"**: Contem a tabela de propostas existentes (que antes ficava abaixo de tudo). Cada proposta pode ser clicada para ver detalhes, exportar PDF, converter em contrato.
+- **Aba "Calculadora"**: Permanece com o wizard de 3 steps (Servicos, Valores/Excedente, Resumo). Remove a tabela de propostas que ficava embaixo.
 
-### Modulos e Servicos (conforme referencia)
+**Descricoes dos servicos**: Atualizar para usar os textos EXATOS do site de referencia (mais longos e detalhados). Os nomes tambem ajustados para igualar: "Artes (Criativos Organicos)", "Videos (Reels)", "Gestao de Trafego Google (inclui YouTube)", "Configuracao CRM + Acompanhamento (RD Station)", "Fluxo/Funil (Etapas de venda + roteiro comercial)".
 
-**Branding** (Identidade visual e materiais de marca)
-- Logo + Manual de Marca (Unitario)
-- Material de Marca (Unitario)
-- Midia Off (Unitario)
-- Naming (Unitario)
-- Registro INPI (Unitario)
-- Ebook (Unitario)
-- Apresentacao Comercial (Unitario)
+**Quantidades e valores**: Mantidos como estao (quantidade x valor = subtotal). O site de referencia nao mostra valores -- isso e interno da franquia.
 
-**Social Media** (Conteudo organico e gestao de redes sociais)
-- Artes / Criativos Organicos (Mensal)
-- Videos / Reels (Mensal)
-- Programacao Meta (Mensal)
-- Programacao LinkedIn (Mensal)
-- Programacao TikTok (Mensal)
-- Programacao YouTube (Mensal)
-- Capa de Destaques (Unitario)
-- Criacao de Avatar (Unitario)
-- Template Canva (Unitario)
-- Edicao de Video YouTube (Unitario)
+### Diagnostico NOE (`FranqueadoDiagnostico.tsx`)
 
-**Performance** (Gestao de trafego pago e campanhas)
-- Gestao de Trafego Meta (Mensal)
-- Gestao de Trafego Google (Mensal)
-- Gestao de Trafego LinkedIn (Mensal)
-- Gestao de Trafego TikTok (Mensal)
-- Configuracao Google Meu Negocio (Unitario)
-- Artes de Campanha (Mensal)
-- Videos de Campanha (Mensal)
+No resultado do diagnostico (tela pos-finalizacao), adicionar novas secoes de estrategia:
 
-**Web** (Sites, landing pages e e-commerce)
-- Pagina de Site + SEO (Unitario)
-- Landing Page Link na Bio (Unitario)
-- Landing Page VSL (Unitario)
-- Landing Page Vendas (Unitario)
-- Landing Page Captura (Unitario)
-- Landing Page Ebook (Unitario)
-- Alterar Contato (Unitario)
-- Alterar Secao (Unitario)
-- E-commerce WooCommerce (Unitario)
+- **Objetivos Identificados** -- gerados com base nas respostas do diagnostico (recomendacoes ja existentes)
+- **Plano de Acao Recomendado** -- 5 passos estrategicos (mock)
+- **Projecao de Resultados** -- mini tabela mes 1/3/6/12 com leads, conversoes, faturamento
+- **Como Bater a Meta** -- texto com base nos gargalos identificados
+- **Entregas do Projeto** -- lista de entregas recomendadas com base no nivel de maturidade (o franqueado depois leva isso para a calculadora)
+- **Justificativa Tecnica** -- texto usando dados do diagnostico
 
-**Dados / CRM** (Configuracao de CRM e automacoes)
-- Configuracao CRM + Acompanhamento RD Station (Unitario)
-- Fluxo/Funil - Etapas de venda + roteiro comercial (Unitario)
-
-Cada servico tera um valor pre-definido (mock) que sera somado ao valor base quando selecionado.
-
-### Secao de Valores (mantida + melhorada)
-
-Abaixo dos modulos accordion, a secao "Valores" permanece com:
-- Toggle "Valor base manual" (se nao, calcula pela soma dos servicos selecionados)
-- Valor Base (R$)
-- **Excedente (R$)** -- campo que NAO existe na referencia, mas deve continuar aqui
-- Recorrencia (mensal/trimestral/semestral/anual)
-- Prazo (6/12/18/24 meses)
-- Emissor da cobranca (Franqueado / Matriz)
-
-### Resumo Financeiro (mantido)
-
-Card de resumo com:
-- Valor Total
-- Repasse 20%
-- Projecao Unidade
-- Impacto 12 meses
-
-### Resumo de Servicos Selecionados
-
-Antes do botao "Gerar Proposta", exibir lista dos servicos selecionados com seus valores, similar ao rodape da referencia ("Nenhum servico selecionado" quando vazio).
-
-### Aba Estrategia e Lista de Propostas
-
-Permanecem inalteradas.
+Botao "Gerar Proposta" continua no final, levando para a calculadora.
 
 ---
 
 ## Secao Tecnica
 
-### Componentes utilizados
-- `Accordion` (radix) para os modulos colapsaveis
-- `Switch` (radix) para toggle de cada servico em vez de Checkbox
-- `Badge` para "Unitario" / "Mensal"
-- Os demais componentes (Card, Input, Select, etc.) permanecem
-
-### Dados dos servicos
-
-Criar um array `servicosNOE` diretamente no arquivo `FranqueadoPropostas.tsx` com a estrutura:
-
-```ts
-type ServicoNOE = {
-  id: string;
-  nome: string;
-  tipo: "unitario" | "mensal";
-  descricao: string;
-  valor: number;
-};
-
-type ModuloNOE = {
-  id: string;
-  nome: string;
-  descricao: string;
-  icone: string; // lucide icon name
-  servicos: ServicoNOE[];
-};
-```
-
-### Arquivo modificado
+### Arquivos modificados
 
 ```
-src/pages/franqueado/FranqueadoPropostas.tsx    -- rewrite da aba Calculadora
+src/pages/franqueado/FranqueadoPropostas.tsx   -- tabs renomeadas, lista de propostas na aba Propostas, remove lista de baixo, descricoes atualizadas
+src/pages/franqueado/FranqueadoDiagnostico.tsx -- adiciona secoes de estrategia no resultado
 ```
 
-Nenhum outro arquivo e alterado.
+### Detalhes de implementacao
 
-### Logica de calculo
+**FranqueadoPropostas.tsx:**
+- Renomear TabsTrigger "Estrategia" para "Propostas" com icone FileText
+- Conteudo da aba "Propostas" = tabela de propostas (mover de baixo para dentro da aba)
+- Remover Card "Propostas Existentes" que fica apos o Tabs
+- Remover todo o conteudo da antiga aba Estrategia (diagnostico cards, projecao, justificativa)
+- Atualizar descricoes dos servicos nos `modulosNOE` para textos identicos ao site de referencia
+- Ajustar nomes: "Artes (Criativos Organicos)", "Videos (Reels)", "Gestao de Trafego Google (inclui YouTube)", etc.
 
-- `valorCalculado` = soma dos valores dos servicos selecionados (servicos mensais somam direto, unitarios somam direto tambem)
-- `valorFinal` = valorBaseManual ? valorBase : valorCalculado (igual ao atual)
-- `excedente`, `repasse20`, `projecaoUnidade`, `impacto12` = logica atual mantida integralmente
+**FranqueadoDiagnostico.tsx:**
+- No bloco `if (concluido)`, apos os cards de Gargalos e Recomendacoes, adicionar:
+  - Card "Plano de Acao Recomendado" com 5 items
+  - Card "Projecao de Resultados" com tabela mes 1/3/6/12
+  - Card "Como Bater a Meta" com texto baseado nos gargalos
+  - Card "Entregas Recomendadas" com lista de servicos sugeridos por nivel de maturidade
+  - Card "Justificativa Tecnica" com texto usando dados do diagnostico
 
 ### Ordem de implementacao
 
-1. Substituir o array `entregasDisponiveis` pelo novo `modulosNOE` com todos os servicos detalhados
-2. Reescrever a secao de entregas na aba Calculadora usando Accordion + Switch
-3. Adicionar secao "Servicos Selecionados" (resumo) antes do botao Gerar Proposta
-4. Manter inalterados: aba Estrategia, detalhe da proposta, lista de propostas, dialogs
+1. `FranqueadoPropostas.tsx` -- reorganizar tabs, mover lista, atualizar descricoes
+2. `FranqueadoDiagnostico.tsx` -- adicionar secoes de estrategia no resultado
 
