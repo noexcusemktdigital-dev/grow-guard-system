@@ -222,14 +222,48 @@ export function getClienteSites(): ClienteSite[] {
   ];
 }
 
-export function getPlanoVendasData() {
+export function getPlanoVendasDefaults() {
   return {
-    metaMensal: 65000,
+    // Aba 1 — Visão Geral
+    periodo: "mensal" as const,
+    receitaAtual: 47500,
+    receitaDesejada: 65000,
+    mercado: "Serviços digitais",
+    tipoVenda: "B2B" as const,
+    // Aba 2 — Meta Financeira
+    metaFaturamento: 65000,
     ticketMedio: 4500,
-    taxaConversao: 18.5,
-    leadsNecessarios: 78,
+    conversaoVenda: 20,
+    conversaoProposta: 30,
+    // Aba 3 — Estrutura Comercial
+    vendedores: 3,
+    canais: ["Google Ads", "Instagram", "Indicação"] as string[],
+    ferramentas: ["CRM", "WhatsApp", "Email"] as string[],
+    tempoFechamento: 15,
+    processoEstruturado: true,
+    // Aba 4 — Mercado
+    concorrentes: ["Concorrente A", "Concorrente B", ""] as string[],
+    diferenciais: "Atendimento personalizado e resultados comprovados",
+    posicionamento: "Na média",
+    saturacao: 5,
+    // Aba 5 — Diagnóstico
+    respostasDiagnostico: [4, 3, 3, 2, 4] as number[],
+    // extras
     vendasRealizadas: 34200,
     leadsAtivos: 134,
+  };
+}
+
+// backward compat
+export function getPlanoVendasData() {
+  const d = getPlanoVendasDefaults();
+  return {
+    metaMensal: d.metaFaturamento,
+    ticketMedio: d.ticketMedio,
+    taxaConversao: d.conversaoVenda,
+    leadsNecessarios: 78,
+    vendasRealizadas: d.vendasRealizadas,
+    leadsAtivos: d.leadsAtivos,
   };
 }
 
