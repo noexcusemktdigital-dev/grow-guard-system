@@ -37,7 +37,7 @@ const vendasSection: SidebarItem[] = [
 
 const marketingSection: SidebarItem[] = [
   { label: "Plano de Marketing", icon: Megaphone, path: "/cliente/plano-marketing" },
-  { label: "Campanhas", icon: Rocket, path: "/cliente/campanhas" },
+  
   { label: "Conteúdos", icon: FileText, path: "/cliente/conteudos" },
   { label: "Redes Sociais", icon: Share2, path: "/cliente/redes-sociais" },
   { label: "Sites", icon: Globe, path: "/cliente/sites" },
