@@ -2,7 +2,7 @@ import { useState } from "react";
 import { franqueados, getDREFranqueado, type DREFranqueado } from "@/data/mockData";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Download } from "lucide-react";
+import { FileSpreadsheet, Download, Eye, ArrowLeft, FolderOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -180,6 +180,9 @@ function DRECard({ dre }: { dre: DREFranqueado }) {
 }
 
 function TodosFechamentosTab() {
+  const [selectedDRE, setSelectedDRE] = useState<DREFranqueado | null>(null);
+  const { toast } = useToast();
+
   const allDREs: (DREFranqueado & { mesLabel: string })[] = [];
   mesesDisponiveis.forEach(m => {
     franqueados.forEach(f => {
@@ -188,37 +191,79 @@ function TodosFechamentosTab() {
     });
   });
 
+  const handleExport = (tipo: string) => {
+    toast({ title: "Em breve", description: `Exportação ${tipo} será implementada em fase futura.` });
+  };
+
+  if (selectedDRE) {
+    const mesLabel = mesesDisponiveis.find(m => m.value === selectedDRE.mes)?.label || selectedDRE.mes;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedDRE(null)} className="gap-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="w-4 h-4" /> Voltar ao histórico
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleExport("Excel")} className="gap-2">
+              <FileSpreadsheet className="w-4 h-4" /> Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleExport("PDF")} className="gap-2">
+              <Download className="w-4 h-4" /> PDF
+            </Button>
+          </div>
+        </div>
+        <DRECard dre={selectedDRE} />
+      </div>
+    );
+  }
+
+  // Agrupar por mês para visual de "drive"
+  const mesesComDREs = mesesDisponiveis.map(m => ({
+    ...m,
+    dres: allDREs.filter(d => d.mes === m.value),
+  })).filter(m => m.dres.length > 0);
+
   return (
-    <div className="glass-card overflow-hidden overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Mês</th>
-            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Franqueado</th>
-            <th className="text-right py-3 px-4 text-muted-foreground font-medium">Receita Bruta</th>
-            <th className="text-right py-3 px-4 text-muted-foreground font-medium">Repasse (20%)</th>
-            <th className="text-right py-3 px-4 text-muted-foreground font-medium">Deduções</th>
-            <th className="text-right py-3 px-4 text-muted-foreground font-medium">Resultado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {allDREs.map((d, i) => {
-            const deducoes = d.royalties + d.impostoProporcional + d.sistema;
-            return (
-              <tr key={i} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                <td className="py-3 px-4 text-foreground">{d.mesLabel}</td>
-                <td className="py-3 px-4 font-medium text-foreground">{d.franqueadoNome}</td>
-                <td className="py-3 px-4 text-right text-foreground">{formatBRL(d.receitaBruta)}</td>
-                <td className="py-3 px-4 text-right text-primary font-medium">{formatBRL(d.repasseFranqueado)}</td>
-                <td className="py-3 px-4 text-right text-red-500">-{formatBRL(deducoes)}</td>
-                <td className={`py-3 px-4 text-right font-bold ${d.resultadoLiquido >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                  {formatBRL(d.resultadoLiquido)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-6">
+      {mesesComDREs.map(mesGroup => (
+        <div key={mesGroup.value} className="glass-card overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-3 bg-secondary/40 border-b border-border">
+            <FolderOpen className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">{mesGroup.label}</h3>
+            <span className="text-xs text-muted-foreground">({mesGroup.dres.length} fechamento{mesGroup.dres.length > 1 ? "s" : ""})</span>
+          </div>
+          <div className="divide-y divide-border/50">
+            {mesGroup.dres.map((d, i) => {
+              const deducoes = d.royalties + d.impostoProporcional + d.sistema;
+              return (
+                <div key={i}
+                  onClick={() => setSelectedDRE(d)}
+                  className="flex items-center justify-between px-5 py-3 hover:bg-secondary/30 cursor-pointer transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileSpreadsheet className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{d.franqueadoNome}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Receita {formatBRL(d.receitaBruta)} • Repasse {formatBRL(d.repasseFranqueado)} • Deduções -{formatBRL(deducoes)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Resultado</p>
+                      <p className={`text-sm font-bold ${d.resultadoLiquido >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                        {formatBRL(d.resultadoLiquido)}
+                      </p>
+                    </div>
+                    <Eye className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
