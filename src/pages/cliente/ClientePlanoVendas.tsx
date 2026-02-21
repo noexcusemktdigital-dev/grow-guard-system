@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, Globe, ClipboardCheck, Rocket, ChevronRight } from "lucide-react";
+import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, ChevronRight, Lightbulb, Zap, BarChart3, ArrowUpRight, ArrowDownRight, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { getPlanoVendasDefaults } from "@/data/clienteData";
-import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from "recharts";
 
 const CANAIS_OPTIONS = ["Google Ads", "Instagram", "Indicação", "Site", "LinkedIn", "Outro"];
 const FERRAMENTAS_OPTIONS = ["CRM", "WhatsApp", "Email", "Telefone"];
@@ -36,6 +35,14 @@ function getNivel(score: number) {
   if (score <= 75) return { label: "Escalável", cor: "#eab308", desc: "Estrutura sólida, pronta para escalar com ajustes." };
   return { label: "Alta Performance", cor: "#16a34a", desc: "Máquina comercial rodando com previsibilidade." };
 }
+
+// Mock data for charts
+const weeklyPerformance = [
+  { semana: "Sem 1", leads: 28, propostas: 12, vendas: 4 },
+  { semana: "Sem 2", leads: 35, propostas: 15, vendas: 6 },
+  { semana: "Sem 3", leads: 22, propostas: 10, vendas: 3 },
+  { semana: "Sem 4", leads: 40, propostas: 18, vendas: 7 },
+];
 
 export default function ClientePlanoVendas() {
   const defaults = getPlanoVendasDefaults();
@@ -69,18 +76,14 @@ export default function ClientePlanoVendas() {
 
   const nivel = getNivel(calc.scoreMaturidade);
 
-  // Tabs completadas (simples: considera preenchida se os campos-chave mudaram dos defaults iniciais)
-  const tabKeys = ["visao", "meta", "estrutura", "mercado", "diagnostico", "acao"];
   const filledTabs = [
     state.receitaAtual > 0,
     state.metaFaturamento > 0,
     state.vendedores > 0,
-    state.concorrentes.some(c => c.trim() !== ""),
     state.respostasDiagnostico.some(r => r > 0),
-    true, // aba de ação é sempre "preenchida"
   ].filter(Boolean).length;
 
-  // Projeção de crescimento (AreaChart)
+  // Projeção de crescimento
   const mesesLabel = state.periodo === "mensal" ? 1 : state.periodo === "trimestral" ? 3 : state.periodo === "semestral" ? 6 : 12;
   const projecaoData = Array.from({ length: mesesLabel + 1 }, (_, i) => ({
     mes: `Mês ${i}`,
@@ -103,12 +106,28 @@ export default function ClientePlanoVendas() {
   ];
   const maxFunnel = funnelSteps[0].value || 1;
 
-  // Insights (aba 3)
-  const insights: { text: string; severity: "warn" | "error" }[] = [];
+  // Insights
+  const insights: { text: string; severity: "warn" | "error" | "success" | "info" }[] = [];
   if (state.conversaoVenda < 15) insights.push({ text: "Seu funil indica baixa conversão. Recomendamos revisar a etapa de proposta.", severity: "error" });
   if (calc.leadsNecessarios > state.leadsAtivos * 1.3) insights.push({ text: `Sua meta exige ${Math.round(((calc.leadsNecessarios - state.leadsAtivos) / state.leadsAtivos) * 100)}% mais leads do que você tem hoje.`, severity: "warn" });
   if (state.vendedores > 0 && state.vendedores < calc.vendasNecessarias / 10) insights.push({ text: "Sua equipe pode estar subdimensionada para a meta.", severity: "warn" });
   if (!state.processoEstruturado) insights.push({ text: "A falta de processo impacta diretamente a previsibilidade comercial.", severity: "error" });
+  if (state.conversaoVenda >= 20) insights.push({ text: "Sua taxa de conversão está acima da média do mercado. Excelente!", severity: "success" });
+  if (state.canais.length >= 3) insights.push({ text: "Boa diversificação de canais de aquisição. Continue testando e otimizando.", severity: "info" });
+
+  const insightColors = {
+    error: { border: "border-destructive/40", bg: "bg-destructive/5", icon: "text-destructive" },
+    warn: { border: "border-yellow-500/40", bg: "bg-yellow-500/5", icon: "text-yellow-500" },
+    success: { border: "border-emerald-500/40", bg: "bg-emerald-500/5", icon: "text-emerald-500" },
+    info: { border: "border-blue-500/40", bg: "bg-blue-500/5", icon: "text-blue-500" },
+  };
+
+  const insightIcons = {
+    error: AlertTriangle,
+    warn: AlertCircle,
+    success: ArrowUpRight,
+    info: Lightbulb,
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -127,8 +146,8 @@ export default function ClientePlanoVendas() {
       <Card>
         <CardContent className="py-4 flex items-center gap-4">
           <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Progresso do plano</span>
-          <Progress value={(filledTabs / 6) * 100} className="h-2 flex-1" />
-          <Badge variant="secondary" className="text-xs">{filledTabs}/6</Badge>
+          <Progress value={(filledTabs / 4) * 100} className="h-2 flex-1" />
+          <Badge variant="secondary" className="text-xs">{filledTabs}/4</Badge>
         </CardContent>
       </Card>
 
@@ -137,20 +156,162 @@ export default function ClientePlanoVendas() {
         <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1.5">
           {[
             { value: "visao", icon: TrendingUp, label: "Visão Geral" },
-            { value: "meta", icon: Target, label: "Meta Financeira" },
+            { value: "metas", icon: Target, label: "Minhas Metas" },
             { value: "estrutura", icon: Users, label: "Estrutura Comercial" },
-            { value: "mercado", icon: Globe, label: "Mercado" },
-            { value: "diagnostico", icon: ClipboardCheck, label: "Diagnóstico" },
-            { value: "acao", icon: Rocket, label: "Plano de Ação" },
+            { value: "diagnostico", icon: ClipboardCheck, label: "Avaliar Meu Comercial" },
           ].map(t => (
-            <TabsTrigger key={t.value} value={t.value} className="flex-1 min-w-[120px] gap-1.5 text-xs">
+            <TabsTrigger key={t.value} value={t.value} className="flex-1 min-w-[140px] gap-1.5 text-xs">
               <t.icon className="w-3.5 h-3.5" /> {t.label}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {/* ===== ABA 1: Visão Geral ===== */}
-        <TabsContent value="visao" className="space-y-4">
+        {/* ===== ABA 1: Visão Geral (com alertas, insights, gráficos e plano de ação) ===== */}
+        <TabsContent value="visao" className="space-y-5">
+          {/* KPIs de alto nível */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard label="Receita Atual" value={`R$ ${state.receitaAtual.toLocaleString()}`} />
+            <KpiCard label="Meta" value={`R$ ${state.metaFaturamento.toLocaleString()}`} variant="accent" />
+            <KpiCard label="Crescimento" value={`${calc.crescimento.toFixed(1)}%`} trend={calc.crescimento > 0 ? "up" : "down"} />
+            <KpiCard label="Maturidade" value={`${Math.round(calc.scoreMaturidade)}%`} sublabel={nivel.label} />
+          </div>
+
+          {/* Alertas e Insights */}
+          {insights.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-primary" /> Alertas & Insights
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {insights.map((ins, i) => {
+                  const style = insightColors[ins.severity];
+                  const Icon = insightIcons[ins.severity];
+                  return (
+                    <Card key={i} className={`${style.border} ${style.bg}`}>
+                      <CardContent className="py-3 flex items-start gap-3">
+                        <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${style.icon}`} />
+                        <p className="text-sm">{ins.text}</p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Gráficos */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Projeção de crescimento */}
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção de Crescimento</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={200}>
+                  <AreaChart data={projecaoData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString()}`} />
+                    <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="hsl(var(--primary)/0.2)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Performance semanal */}
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Performance Semanal</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={weeklyPerformance}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="semana" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <Tooltip />
+                    <Bar dataKey="leads" fill="hsl(var(--chart-2))" name="Leads" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="propostas" fill="hsl(var(--chart-3))" name="Propostas" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="vendas" fill="hsl(var(--primary))" name="Vendas" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Funil dinâmico */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Funil Dinâmico</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {funnelSteps.map(step => (
+                <div key={step.label} className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-medium">{step.label}</span>
+                    <span className="font-bold">{step.value}</span>
+                  </div>
+                  <div className="h-6 rounded-md overflow-hidden bg-muted">
+                    <div
+                      className="h-full rounded-md transition-all duration-500"
+                      style={{ width: `${Math.max((step.value / maxFunnel) * 100, 4)}%`, backgroundColor: step.color }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Metas diárias (do Plano de Ação) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard label="Leads / dia" value={calc.leadsDiarios.toString()} variant="accent" />
+            <KpiCard label="Leads / semana" value={calc.leadsSemanais.toString()} />
+            <KpiCard label="Vendas / semana" value={Math.ceil(calc.vendasNecessarias / 4).toString()} />
+            <KpiCard label="Valor / semana" value={`R$ ${Math.round(calc.metaSemanal).toLocaleString()}`} />
+          </div>
+
+          {/* Estratégia de abordagem (do Plano de Ação) */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Rocket className="w-4 h-4 text-primary" /> Plano de Ação</CardTitle></CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                Com base no modelo <strong>{state.tipoVenda}</strong> e nos canais selecionados ({state.canais.join(", ") || "nenhum"}), recomendamos:
+              </p>
+              {(state.tipoVenda as string) === "B2B" && <p>• Foque em prospecção ativa com abordagem consultiva e follow-ups estruturados.</p>}
+              {(state.tipoVenda as string) === "B2C" && <p>• Priorize campanhas de performance e automação de nutrição.</p>}
+              {(state.tipoVenda as string) === "Hibrido" && <p>• Combine prospecção ativa para contas-chave com automação para volume.</p>}
+              {state.canais.includes("Instagram") && <p>• Use Instagram para gerar autoridade e converter via conteúdo educativo.</p>}
+              {state.canais.includes("Google Ads") && <p>• Google Ads para captura de demanda existente — foque em palavras de alta intenção.</p>}
+              {state.canais.includes("Indicação") && <p>• Estruture um programa de indicação com incentivos claros.</p>}
+            </CardContent>
+          </Card>
+
+          {/* Botões de integração */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-1" onClick={() => { toast({ title: "Gerando scripts com base no plano..." }); navigate("/cliente/scripts"); }}>
+              <span className="font-semibold text-sm">Criar Scripts Automaticamente</span>
+              <span className="text-xs text-muted-foreground">Baseado no nicho e tipo de venda</span>
+            </Button>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-1" onClick={() => { toast({ title: "Gerando playbook estratégico..." }); navigate("/cliente/scripts"); }}>
+              <span className="font-semibold text-sm">Gerar Playbook</span>
+              <span className="text-xs text-muted-foreground">Roteiro completo de vendas</span>
+            </Button>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-1" onClick={() => { toast({ title: "Atualizando metas no CRM..." }); navigate("/cliente/crm"); }}>
+              <span className="font-semibold text-sm">Atualizar Metas no CRM</span>
+              <span className="text-xs text-muted-foreground">Sincronizar funil e metas</span>
+            </Button>
+          </div>
+
+          {/* Resumo consolidado */}
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Resumo do Plano</CardTitle></CardHeader>
+            <CardContent className="text-sm space-y-1 text-muted-foreground">
+              <p><strong>Período:</strong> {state.periodo} | <strong>Tipo:</strong> {state.tipoVenda} | <strong>Mercado:</strong> {state.mercado}</p>
+              <p><strong>Meta:</strong> R$ {state.metaFaturamento.toLocaleString()} | <strong>Ticket:</strong> R$ {state.ticketMedio.toLocaleString()}</p>
+              <p><strong>Funil:</strong> {calc.contatosNecessarios} contatos → {calc.leadsNecessarios} leads → {calc.propostasNecessarias} propostas → {calc.vendasNecessarias} vendas</p>
+              <p><strong>Equipe:</strong> {state.vendedores} vendedores | <strong>Fechamento:</strong> {state.tempoFechamento} dias</p>
+              <p><strong>Maturidade:</strong> {Math.round(calc.scoreMaturidade)}% — {nivel.label}</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== ABA 2: Minhas Metas ===== */}
+        <TabsContent value="metas" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Período</CardTitle></CardHeader>
@@ -202,33 +363,6 @@ export default function ClientePlanoVendas() {
             </Card>
           </div>
 
-          {/* Crescimento calculado + gráfico */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-              <CardContent className="py-6 text-center">
-                <p className="text-3xl font-black text-primary">{calc.crescimento.toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground mt-1">Crescimento desejado</p>
-              </CardContent>
-            </Card>
-            <Card className="md:col-span-2">
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção de Crescimento</CardTitle></CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart data={projecaoData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString()}`} />
-                    <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="hsl(var(--primary)/0.2)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* ===== ABA 2: Meta Financeira ===== */}
-        <TabsContent value="meta" className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Meta Faturamento (R$)</CardTitle></CardHeader>
@@ -256,27 +390,6 @@ export default function ClientePlanoVendas() {
             <KpiCard label="Contatos Necessários" value={calc.contatosNecessarios.toString()} />
           </div>
 
-          {/* Funil dinâmico */}
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Funil Dinâmico</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {funnelSteps.map(step => (
-                <div key={step.label} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="font-medium">{step.label}</span>
-                    <span className="font-bold">{step.value}</span>
-                  </div>
-                  <div className="h-6 rounded-md overflow-hidden bg-muted">
-                    <div
-                      className="h-full rounded-md transition-all duration-500"
-                      style={{ width: `${Math.max((step.value / maxFunnel) * 100, 4)}%`, backgroundColor: step.color }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
           {/* Meta detalhada */}
           <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
             <CardContent className="py-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -284,6 +397,22 @@ export default function ClientePlanoVendas() {
               <div><p className="text-2xl font-black">R$ {Math.round(calc.metaSemanal).toLocaleString()}</p><p className="text-xs text-muted-foreground">Meta / semana</p></div>
               <div><p className="text-2xl font-black">{calc.leadsDiarios}</p><p className="text-xs text-muted-foreground">Leads / dia</p></div>
               <div><p className="text-2xl font-black">{calc.leadsSemanais}</p><p className="text-xs text-muted-foreground">Leads / semana</p></div>
+            </CardContent>
+          </Card>
+
+          {/* Projeção */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção de Crescimento</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={projecaoData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString()}`} />
+                  <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="hsl(var(--primary)/0.2)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>
@@ -332,89 +461,9 @@ export default function ClientePlanoVendas() {
               <Switch checked={state.processoEstruturado} onCheckedChange={v => set("processoEstruturado", v)} />
             </CardContent>
           </Card>
-
-          {/* Insights automáticos */}
-          {insights.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">Insights Automáticos</h3>
-              {insights.map((ins, i) => (
-                <Card key={i} className={ins.severity === "error" ? "border-destructive/40 bg-destructive/5" : "border-yellow-500/40 bg-yellow-500/5"}>
-                  <CardContent className="py-3 flex items-start gap-3">
-                    <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${ins.severity === "error" ? "text-destructive" : "text-yellow-500"}`} />
-                    <p className="text-sm">{ins.text}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
         </TabsContent>
 
-        {/* ===== ABA 4: Mercado ===== */}
-        <TabsContent value="mercado" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Principais Concorrentes</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {state.concorrentes.map((c, i) => (
-                <Input
-                  key={i}
-                  placeholder={`Concorrente ${i + 1}`}
-                  value={c}
-                  onChange={e => {
-                    const arr = [...state.concorrentes];
-                    arr[i] = e.target.value;
-                    set("concorrentes", arr);
-                  }}
-                />
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Diferenciais Competitivos</CardTitle></CardHeader>
-            <CardContent>
-              <Textarea value={state.diferenciais} onChange={e => set("diferenciais", e.target.value)} rows={3} />
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Posicionamento de Preço</CardTitle></CardHeader>
-              <CardContent>
-                <Select value={state.posicionamento} onValueChange={v => set("posicionamento", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Abaixo do mercado">Abaixo do mercado</SelectItem>
-                    <SelectItem value="Na média">Na média</SelectItem>
-                    <SelectItem value="Acima do mercado">Acima do mercado</SelectItem>
-                    <SelectItem value="Premium">Premium</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Saturação do Mercado ({state.saturacao}/10)</CardTitle></CardHeader>
-              <CardContent className="pt-2">
-                <Slider value={[state.saturacao]} onValueChange={v => set("saturacao", v[0])} min={1} max={10} step={1} />
-                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                  <span>Baixa</span><span>Média</span><span>Alta</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sugestões de IA */}
-          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent relative overflow-hidden">
-            <Badge className="absolute top-3 right-3 text-[10px]" variant="secondary"><Brain className="w-3 h-3 mr-1" /> Powered by IA</Badge>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Sugestões de IA</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">• Baseado no seu nicho, considere diferenciação por atendimento personalizado.</p>
-              <p className="text-sm text-muted-foreground">• Posicionamento premium requer prova social forte — invista em cases de sucesso.</p>
-              <p className="text-sm text-muted-foreground">• Mercados com saturação acima de 7 exigem estratégia de nicho bem definida.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ===== ABA 5: Diagnóstico ===== */}
+        {/* ===== ABA 4: Avaliar Meu Comercial ===== */}
         <TabsContent value="diagnostico" className="space-y-4">
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Avalie sua Maturidade Comercial (1 a 5)</CardTitle></CardHeader>
@@ -451,7 +500,6 @@ export default function ClientePlanoVendas() {
                 <p className="text-5xl font-black" style={{ color: nivel.cor }}>{Math.round(calc.scoreMaturidade)}%</p>
                 <Badge className="text-sm px-4 py-1 text-white" style={{ backgroundColor: nivel.cor }}>{nivel.label}</Badge>
                 <p className="text-sm text-muted-foreground">{nivel.desc}</p>
-                {/* Mini termômetro */}
                 <div className="relative mt-4">
                   <div className="h-4 rounded-full overflow-hidden" style={{ background: "linear-gradient(90deg, #dc2626 0%, #ea580c 33%, #eab308 66%, #16a34a 100%)" }}>
                     <div className="absolute top-0 w-1 h-4 bg-foreground rounded-full shadow-lg transition-all duration-500" style={{ left: `${Math.min(Math.max(calc.scoreMaturidade, 2), 98)}%`, transform: "translateX(-50%)" }} />
@@ -475,74 +523,40 @@ export default function ClientePlanoVendas() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
 
-        {/* ===== ABA 6: Plano de Ação ===== */}
-        <TabsContent value="acao" className="space-y-4">
-          {/* Metas calculadas */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Leads / dia" value={calc.leadsDiarios.toString()} variant="accent" />
-            <KpiCard label="Leads / semana" value={calc.leadsSemanais.toString()} />
-            <KpiCard label="Vendas / semana" value={Math.ceil(calc.vendasNecessarias / 4).toString()} />
-            <KpiCard label="Valor / semana" value={`R$ ${Math.round(calc.metaSemanal).toLocaleString()}`} />
-          </div>
-
-          {/* Estratégia de abordagem */}
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Estratégia de Abordagem</CardTitle></CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>
-                Com base no modelo <strong>{state.tipoVenda}</strong> e nos canais selecionados ({state.canais.join(", ") || "nenhum"}), recomendamos:
-              </p>
-              {(state.tipoVenda as string) === "B2B" && <p>• Foque em prospecção ativa com abordagem consultiva e follow-ups estruturados.</p>}
-              {(state.tipoVenda as string) === "B2C" && <p>• Priorize campanhas de performance e automação de nutrição.</p>}
-              {(state.tipoVenda as string) === "Hibrido" && <p>• Combine prospecção ativa para contas-chave com automação para volume.</p>}
-              {state.canais.includes("Instagram") && <p>• Use Instagram para gerar autoridade e converter via conteúdo educativo.</p>}
-              {state.canais.includes("Google Ads") && <p>• Google Ads para captura de demanda existente — foque em palavras de alta intenção.</p>}
-              {state.canais.includes("Indicação") && <p>• Estruture um programa de indicação com incentivos claros.</p>}
-            </CardContent>
-          </Card>
-
-          {/* Sugestões baseadas nos insights */}
-          {insights.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Ações Recomendadas</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                {insights.map((ins, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm">
-                    <ChevronRight className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                    <span>{ins.text}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Botões de integração */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-auto py-4 flex flex-col gap-1" onClick={() => { toast({ title: "Gerando scripts com base no plano..." }); navigate("/cliente/scripts"); }}>
-              <span className="font-semibold text-sm">Criar Scripts Automaticamente</span>
-              <span className="text-xs text-muted-foreground">Baseado no nicho e tipo de venda</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-4 flex flex-col gap-1" onClick={() => { toast({ title: "Gerando playbook estratégico..." }); navigate("/cliente/scripts"); }}>
-              <span className="font-semibold text-sm">Gerar Playbook</span>
-              <span className="text-xs text-muted-foreground">Roteiro completo de vendas</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-4 flex flex-col gap-1" onClick={() => { toast({ title: "Atualizando metas no CRM..." }); navigate("/cliente/crm"); }}>
-              <span className="font-semibold text-sm">Atualizar Metas no CRM</span>
-              <span className="text-xs text-muted-foreground">Sincronizar funil e metas</span>
-            </Button>
-          </div>
-
-          {/* Resumo consolidado */}
-          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Resumo do Plano</CardTitle></CardHeader>
-            <CardContent className="text-sm space-y-1 text-muted-foreground">
-              <p><strong>Período:</strong> {state.periodo} | <strong>Tipo:</strong> {state.tipoVenda} | <strong>Mercado:</strong> {state.mercado}</p>
-              <p><strong>Meta:</strong> R$ {state.metaFaturamento.toLocaleString()} | <strong>Ticket:</strong> R$ {state.ticketMedio.toLocaleString()}</p>
-              <p><strong>Funil:</strong> {calc.contatosNecessarios} contatos → {calc.leadsNecessarios} leads → {calc.propostasNecessarias} propostas → {calc.vendasNecessarias} vendas</p>
-              <p><strong>Equipe:</strong> {state.vendedores} vendedores | <strong>Fechamento:</strong> {state.tempoFechamento} dias</p>
-              <p><strong>Maturidade:</strong> {Math.round(calc.scoreMaturidade)}% — {nivel.label}</p>
+          {/* Sugestões de IA */}
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent relative overflow-hidden">
+            <Badge className="absolute top-3 right-3 text-[10px]" variant="secondary"><Brain className="w-3 h-3 mr-1" /> Powered by IA</Badge>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Recomendações Inteligentes</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {calc.scoreMaturidade <= 25 && (
+                <>
+                  <p className="text-sm text-muted-foreground">• Comece documentando seu processo de vendas passo a passo.</p>
+                  <p className="text-sm text-muted-foreground">• Implante um CRM e registre todas as interações com leads.</p>
+                  <p className="text-sm text-muted-foreground">• Defina metas semanais simples e acompanhe diariamente.</p>
+                </>
+              )}
+              {calc.scoreMaturidade > 25 && calc.scoreMaturidade <= 50 && (
+                <>
+                  <p className="text-sm text-muted-foreground">• Estruture um funil de vendas com etapas claras e mensuráveis.</p>
+                  <p className="text-sm text-muted-foreground">• Automatize follow-ups para leads que não respondem em 48h.</p>
+                  <p className="text-sm text-muted-foreground">• Invista em scripts de vendas para padronizar a abordagem.</p>
+                </>
+              )}
+              {calc.scoreMaturidade > 50 && calc.scoreMaturidade <= 75 && (
+                <>
+                  <p className="text-sm text-muted-foreground">• Otimize taxas de conversão por etapa do funil.</p>
+                  <p className="text-sm text-muted-foreground">• Implante relatórios semanais de performance por vendedor.</p>
+                  <p className="text-sm text-muted-foreground">• Considere escalar com novos canais de aquisição.</p>
+                </>
+              )}
+              {calc.scoreMaturidade > 75 && (
+                <>
+                  <p className="text-sm text-muted-foreground">• Foque em previsibilidade: forecast semanal com precisão acima de 85%.</p>
+                  <p className="text-sm text-muted-foreground">• Implante upselling e cross-selling para aumentar ticket médio.</p>
+                  <p className="text-sm text-muted-foreground">• Automatize processos repetitivos com IA para liberar tempo dos vendedores.</p>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
