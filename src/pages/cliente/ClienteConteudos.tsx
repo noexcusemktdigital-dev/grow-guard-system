@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FileText, Plus, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Sparkles, Copy, Lightbulb } from "lucide-react";
+import { FileText, Plus, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Sparkles, Copy, Lightbulb, ScrollText, Filter } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,7 @@ const AI_MOCK = {
 export default function ClienteConteudos() {
   const conteudos = useMemo(() => getClienteConteudos(), []);
   const plano = useMemo(() => getPlanoMarketing360(), []);
-  const [view, setView] = useState<"calendario" | "lista">("calendario");
+  const [view, setView] = useState<"calendario" | "lista" | "roteiros">("calendario");
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1)); // Feb 2026
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -114,6 +114,9 @@ export default function ClienteConteudos() {
               <Button variant={view === "lista" ? "default" : "ghost"} size="sm" className="rounded-none text-xs gap-1" onClick={() => setView("lista")}>
                 <List className="w-3.5 h-3.5" /> Lista
               </Button>
+              <Button variant={view === "roteiros" ? "default" : "ghost"} size="sm" className="rounded-none text-xs gap-1" onClick={() => setView("roteiros")}>
+                <ScrollText className="w-3.5 h-3.5" /> Roteiros
+              </Button>
             </div>
             <Button size="sm" onClick={() => openCreateForDate(format(new Date(), "yyyy-MM-dd"))}><Plus className="w-4 h-4 mr-1" /> Novo Conteúdo</Button>
           </div>
@@ -175,7 +178,7 @@ export default function ClienteConteudos() {
             </div>
           </CardContent>
         </Card>
-      ) : (
+      ) : view === "lista" ? (
         /* List View */
         <>
           <div className="flex gap-2 flex-wrap">
@@ -205,6 +208,50 @@ export default function ClienteConteudos() {
             ))}
           </div>
         </>
+      ) : (
+        /* Roteiros / Funil View */
+        <div className="space-y-6">
+          {(["Topo", "Meio", "Fundo"] as const).map(stage => {
+            const stageConteudos = conteudos.filter(c => c.funnelStage === stage);
+            const stageDescriptions: Record<string, { desc: string; tipos: string }> = {
+              Topo: { desc: "Atrair atenção e gerar interesse", tipos: "Posts educativos, Reels virais, Blog SEO" },
+              Meio: { desc: "Nutrir e qualificar leads", tipos: "Cases, Webinars, Email, Carrosséis" },
+              Fundo: { desc: "Converter em vendas", tipos: "Depoimentos, Ofertas, Landing Pages, Demos" },
+            };
+            return (
+              <Card key={stage}>
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Badge className={`${funnelColors[stage]}`}>{stage} de Funil</Badge>
+                    <span className="text-xs text-muted-foreground">{stageDescriptions[stage].desc}</span>
+                    <Badge variant="outline" className="text-[9px] ml-auto">{stageConteudos.length} conteúdos</Badge>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mb-3">Tipos sugeridos: {stageDescriptions[stage].tipos}</p>
+                  <div className="space-y-2">
+                    {stageConteudos.map(c => (
+                      <div key={c.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                        <ScrollText className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{c.title}</p>
+                          {c.copy && <p className="text-[10px] text-muted-foreground truncate">{c.copy}</p>}
+                        </div>
+                        <Badge variant="outline" className="text-[9px]">{c.format}</Badge>
+                        <Badge className={`text-[9px] ${networkColors[c.network] || ""}`}>{c.network}</Badge>
+                        <Badge variant="outline" className={`text-[9px] ${statusColors[c.status]}`}>{c.status}</Badge>
+                      </div>
+                    ))}
+                    {stageConteudos.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-4">Nenhum conteúdo nesta etapa. Crie um roteiro para {stage.toLowerCase()} de funil.</p>
+                    )}
+                  </div>
+                  <Button variant="outline" size="sm" className="mt-3 text-xs gap-1" onClick={() => { openCreateForDate(format(new Date(), "yyyy-MM-dd")); }}>
+                    <Sparkles className="w-3.5 h-3.5" /> Gerar Roteiro para {stage}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       {/* Create Dialog */}
