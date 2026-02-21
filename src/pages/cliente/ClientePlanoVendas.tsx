@@ -347,12 +347,15 @@ export default function ClientePlanoVendas() {
         {/* ===== MINHAS METAS ===== */}
         <TabsContent value="metas" className="space-y-5">
           {/* Informações Atuais */}
-          <Card className={infoAtualSalva ? "border-emerald-500/20" : ""}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-primary" /> Informações Atuais
-                {infoAtualSalva && <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px] ml-auto"><CheckCircle2 className="w-3 h-3 mr-1" />Salvo</Badge>}
-              </CardTitle>
+          <Card className={`overflow-hidden ${infoAtualSalva ? "border-emerald-500/20" : ""}`}>
+            <CardHeader className="pb-3 bg-gradient-to-r from-cyan-500/10 to-transparent border-b border-cyan-500/10">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-cyan-500/15"><BarChart3 className="w-4 h-4 text-cyan-500" /></div>
+                  Informações Atuais
+                </CardTitle>
+                {infoAtualSalva && <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" />Salvo</Badge>}
+              </div>
               <p className="text-xs text-muted-foreground">Antes de definir suas metas, precisamos entender onde você está hoje.</p>
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -392,7 +395,10 @@ export default function ClientePlanoVendas() {
             <>
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /> Metas Mensais</h3>
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-primary/15"><Calendar className="w-4 h-4 text-primary" /></div>
+                  Metas Mensais
+                </h3>
                   <p className="text-xs text-muted-foreground">Adicione metas a partir do mês atual. Cada meta fica salva como um card.</p>
                 </div>
               </div>
@@ -652,9 +658,12 @@ export default function ClientePlanoVendas() {
         <TabsContent value="diagnostico" className="space-y-5">
           {/* Histórico de avaliações */}
           {avaliacoesSalvas.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2"><History className="w-4 h-4 text-muted-foreground" /> Histórico de Avaliações</CardTitle>
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-3 bg-gradient-to-r from-slate-500/10 to-transparent border-b border-slate-500/10">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-slate-500/15"><History className="w-4 h-4 text-slate-400" /></div>
+                  Histórico de Avaliações
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {avaliacoesSalvas.map((av, i) => {
@@ -679,10 +688,13 @@ export default function ClientePlanoVendas() {
           {/* Formulário ou resultado */}
           {avaliacaoAtiva ? (
             <>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Avalie sua Maturidade Comercial (1 a 5)</CardTitle>
-                  <p className="text-xs text-muted-foreground">Responda com honestidade. A avaliação ficará salva e poderá ser refeita após 30 dias.</p>
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3 bg-gradient-to-r from-orange-500/10 to-transparent border-b border-orange-500/10">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-orange-500/15"><ClipboardCheck className="w-4 h-4 text-orange-500" /></div>
+                    Avalie sua Maturidade Comercial
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Responda com honestidade (1 a 5). A avaliação ficará salva e poderá ser refeita após 30 dias.</p>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   {(() => {
@@ -724,7 +736,13 @@ export default function ClientePlanoVendas() {
               {/* Resultado da última avaliação */}
               {ultimaAvaliacao && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
+                  <Card className="overflow-hidden">
+                    <CardHeader className="pb-3 bg-gradient-to-r from-rose-500/10 to-transparent border-b border-rose-500/10">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-rose-500/15"><Target className="w-4 h-4 text-rose-500" /></div>
+                        Score de Maturidade
+                      </CardTitle>
+                    </CardHeader>
                     <CardContent className="py-6 text-center space-y-3">
                       <p className="text-5xl font-black" style={{ color: nivelAvaliacao.cor }}>{scoreAvaliacao}%</p>
                       <Badge className="text-sm px-4 py-1 text-white" style={{ backgroundColor: nivelAvaliacao.cor }}>{nivelAvaliacao.label}</Badge>
@@ -737,8 +755,13 @@ export default function ClientePlanoVendas() {
                     </CardContent>
                   </Card>
                   {radarData.length > 0 && (
-                    <Card>
-                      <CardHeader className="pb-2"><CardTitle className="text-sm">Radar de Maturidade</CardTitle></CardHeader>
+                    <Card className="overflow-hidden">
+                      <CardHeader className="pb-2 bg-gradient-to-r from-indigo-500/10 to-transparent border-b border-indigo-500/10">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-indigo-500/15"><BarChart3 className="w-4 h-4 text-indigo-500" /></div>
+                          Radar de Maturidade
+                        </CardTitle>
+                      </CardHeader>
                       <CardContent>
                         <ResponsiveContainer width="100%" height={220}>
                           <RadarChart data={radarData}>
