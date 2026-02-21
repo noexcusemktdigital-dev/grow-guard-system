@@ -1,139 +1,87 @@
 
 
-# Redesign Completo do Modulo Marketing
+# Simplificar Upload - Funcionar como Drive Real
 
 ## Resumo
 
-Redesign UX/UI completo da aba Marketing: abas mais chamativas com icones grandes e contagem, botoes de criacao de pasta e upload dentro de cada aba, preview visual ao clicar em um arquivo (simulando thumbnail), e melhorias gerais de diagramacao e espacamento.
+Simplificar drasticamente o fluxo de criacao de pasta e upload de arquivo. Ao inves de pedir muitos metadados, o sistema deve funcionar como um Drive: criar pasta so pede o nome, upload de arquivo so pede o arquivo e titulo (o tipo de material ja e inferido pela aba ativa, e a pasta destino e a pasta atual). Campos extras ficam opcionais e recolhidos.
 
 ---
 
-## 1. Abas Visuais Chamativas (`Marketing.tsx`)
+## 1. Upload Simplificado (`MarketingUpload.tsx`)
 
-Substituir o `TabsList` padrao (cinza pequeno) por cards grandes e visuais, um para cada categoria. Cada card tera:
+### Antes (atual)
+O dialog pede 7 campos obrigatorios: titulo, tipo de material, formato, mes, ano, produto, arquivo. Muito atrito para um simples upload.
 
-- Icone grande (24px) com fundo colorido arredondado (cor unica por categoria)
-- Nome da categoria em negrito
-- Contagem de materiais da categoria (ex: "12 arquivos")
-- Borda inferior colorida ou fundo highlight quando ativo
-- Grid de 6 cards em linha no desktop, wrap no mobile
+### Depois
+- **Tipo de material**: pre-preenchido e travado (vem da aba ativa, nao precisa selecionar)
+- **Campos principais** (visíveis): Titulo + Arquivo (drag area ou input file)
+- **Campos extras** recolhiveis (Collapsible "Mais opcoes"): formato, mes/ano, produto, campanha, tags, versao
+  - Formato: auto-detectado pela extensao do arquivo quando possivel
+  - Mes/Ano: default para mes/ano atual
+  - Produto: default "Geral"
+- Botoes: "Salvar" (rascunho) e "Publicar"
 
-Cores por categoria:
-- Redes Sociais: azul (`blue-500`)
-- Campanhas por Produto: laranja (`orange-500`)
-- Embalde Mensal: roxo (`purple-500`)
-- Apresentacoes: verde (`emerald-500`)
-- Materiais da Marca: rosa/primary (`rose-500`)
-- Kit do Dia a Dia: amarelo (`amber-500`)
-
-### Filtros
-
-Mover os filtros para uma barra mais compacta com icone de funil e collapsible (mostrar/esconder filtros). Busca sempre visivel, filtros extras em linha recolhivel.
+### Props atualizadas
+- `defaultCategory` agora e obrigatorio (sempre vem da aba ativa)
+- Novo prop `currentFolder` (string) para saber a pasta destino
 
 ---
 
-## 2. Toolbar de Acoes Dentro do Drive (`MarketingDrive.tsx`)
+## 2. Criacao de Pasta (`MarketingDrive.tsx`)
 
-Adicionar uma barra de acoes contextual entre o breadcrumb e o conteudo:
-
-- Botao "Nova Pasta" (icone `FolderPlus`) -- abre dialog simples com campo nome
-- Botao "Upload de Arquivo" (icone `Upload`) -- abre o dialog de upload existente, pre-selecionando a categoria e pasta atual
-- Botao "Baixar pasta como ZIP" (quando dentro de subpasta)
-
-### Dialog "Nova Pasta"
-
-- Campo: Nome da pasta
-- A pasta e criada como filha da pasta atual (mock: toast de confirmacao)
+A criacao de pasta ja esta simples (so nome). Manter como esta -- dialog com campo de nome e botao Criar. Sem mudancas necessarias.
 
 ---
 
-## 3. Preview Visual ao Clicar no Arquivo (`MarketingDrive.tsx`)
+## 3. Area de Upload mais Visual
 
-Substituir o dialog simples de detalhes por um painel de preview mais rico:
-
-- Dialog maior (`max-w-2xl`)
-- Area de preview no topo:
-  - Imagens (png/jpg/svg/feed/story/reels/carrossel): placeholder visual colorido com icone grande e nome do formato (simula thumbnail)
-  - Videos (mp4): placeholder com icone Play central
-  - PDFs/Docs: placeholder com icone de documento e "Clique para abrir"
-  - ZIPs: placeholder com icone de arquivo e lista de conteudo simulada
-- Abaixo do preview: metadados em grid organizado
-- Barra de acoes no rodape: Download, Editar, Excluir
-- Tags como chips coloridos
+Substituir o `Input type="file"` basico por uma area de drag-and-drop visual:
+- Caixa tracejada com icone de upload
+- Texto "Arraste arquivos ou clique para selecionar"
+- Aceita multiplos arquivos
+- Mostra lista dos arquivos selecionados com nome + tamanho
 
 ---
 
-## 4. Melhorias de Design Geral
+## 4. Contexto Automatico
 
-### Header da pagina
-
-- Titulo maior com descricao curta abaixo ("Gerencie e distribua materiais de marketing para a rede")
-- Badge de perfil mais destacado
-- Botao "Novo Upload" com estilo primario mais proeminente
-
-### Cards de pasta (folder grid)
-
-- Cards maiores com padding maior
-- Icone de pasta com cor baseada na categoria (nao sempre amarelo)
-- Hover com leve elevacao (shadow) e scale
-- Contagem de arquivos + sub-itens
-
-### Cards de arquivo (asset list)
-
-- Redesign com mais espacamento e hierarquia visual
-- Thumbnail placeholder a esquerda (quadrado colorido com icone do formato, 48x48)
-- Titulo em fonte maior
-- Metadados (tamanho, versao, data) em linha cinza abaixo
-- Badges mais legveis com cores distintas por formato
-- Acoes em menu dropdown (tres pontos) ao inves de botoes soltos para visual mais limpo
-- Separador visual entre cada arquivo
-
-### Estado vazio
-
-- Ilustracao maior
-- Texto mais explicativo
-- Botao CTA "Fazer primeiro upload" ou "Criar pasta"
+Quando o usuario clica "Upload" dentro de uma pasta (ex: Redes Sociais > 2026 > 02 Fevereiro > Feed):
+- Categoria: "RedesSociais" (travada)
+- Pasta destino: "2026/02 Fevereiro/Feed" (informada no dialog)
+- Formato: sugerido automaticamente baseado na extensao
+- Mes: 2 (inferido do path "02 Fevereiro" quando possivel)
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos modificados
+### Arquivo modificado
 
 ```text
-src/pages/Marketing.tsx           -- abas visuais, header, filtros recolhiveis
-src/components/MarketingDrive.tsx  -- toolbar, nova pasta, preview, redesign cards
-src/data/marketingData.ts          -- adicionar campo de descricao por categoria e cores
+src/components/MarketingUpload.tsx  -- simplificar dialog, area de drag, campos recolhiveis
+src/components/MarketingDrive.tsx   -- passar currentFolder para onUpload
+src/pages/Marketing.tsx             -- passar categoria e pasta para MarketingUpload
 ```
 
-### Novas dependencias de icones (lucide-react, ja instalado)
+### MarketingUpload.tsx
 
-```text
-FolderPlus, Filter, MoreVertical, Play, ImageIcon, FileText, X
-```
+1. Receber `defaultCategory` (obrigatorio) e `currentFolder` (string opcional)
+2. Remover select de "Tipo de Material" -- mostrar como badge informativo travado
+3. Criar area de drag-and-drop com `onDragOver`/`onDrop` + input file hidden
+4. State `files: File[]` para arquivos selecionados, mostrar lista
+5. Mover formato, mes/ano, produto, campanha, tags, versao para dentro de `Collapsible` com label "Mais opcoes"
+6. Defaults automaticos: ano=2026, mes=mes atual, produto="Geral", versao="v1"
+7. Validacao minima: so precisa de titulo e pelo menos 1 arquivo
 
-### Alteracoes em Marketing.tsx
+### MarketingDrive.tsx
 
-1. Substituir `TabsList` por grid de cards clicaveis usando `Tabs` com value controlado
-2. Adicionar state `activeTab` controlado
-3. Filtros em `Collapsible` com botao "Filtros" toggle
-4. Header com subtitulo descritivo
+1. Alterar prop `onUpload` para `onUpload?: (folder: string) => void`
+2. Passar `pathString` ao chamar `onUpload`
 
-### Alteracoes em MarketingDrive.tsx
+### Marketing.tsx
 
-1. Adicionar state `newFolderOpen` + dialog de criacao de pasta
-2. Toolbar com botoes Nova Pasta, Upload, ZIP
-3. Prop `onUpload` para disparar o dialog de upload pre-configurado
-4. Preview dialog redesenhado com area visual grande
-5. Cards de arquivo redesenhados com thumbnail, dropdown de acoes
-6. Cards de pasta com hover elevado e cores por categoria
-
-### Alteracoes em marketingData.ts
-
-1. Adicionar `getCategoryColor(cat)` retornando classe Tailwind (ex: "blue-500")
-2. Adicionar `getCategoryDescription(cat)` com descricao curta
-
-### Upload pre-configurado
-
-O `MarketingDrive` recebera `onUpload(category, folder)` e ao clicar "Upload" dentro de uma pasta, abrira o dialog de upload ja com categoria e pasta pre-selecionados.
+1. State `uploadFolder` (string) para receber a pasta de contexto
+2. Ao receber `onUpload(folder)` do MarketingDrive, setar `uploadFolder` e abrir dialog
+3. Passar `currentFolder={uploadFolder}` e `defaultCategory={activeTab}` para MarketingUpload
 
