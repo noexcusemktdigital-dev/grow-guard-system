@@ -1,178 +1,94 @@
 
-
-# Reestruturacao Final do Modulo Financeiro
+# Ajustes no Modulo Financeiro
 
 ## Resumo
 
-Reorganizar o modulo Financeiro para a estrutura definitiva: 6 itens de menu (Dashboard, Despesas, Receitas, Repasse, Fechamentos, Configuracoes). Remover Impostos como pagina separada (vira categoria dentro de Despesas). Remover Projecao e Mes a Mes como menus. Remover Clientes como menu. Simplificar a Projecao no Dashboard (painel unico sem abas Trimestral/Semestral). Criar novo modulo Fechamentos (DRE por franqueado). Reorganizar Despesas com tabs por categoria (incluindo Impostos). Reorganizar Receitas com subabas por produto (Visao Geral, Assessoria, SaaS, Sistema, Venda de Franquia) + subaba Clientes.
+Tres alteracoes principais:
+1. **Receitas**: Remover aba "Clientes". Adicionar CRUD completo (adicionar, editar, excluir) em cada aba de produto (Assessoria, SaaS, Sistema, Venda de Franquia).
+2. **Dashboard**: Remover toda a secao de Simulacao/Projecao (Bloco B inteiro com sliders, tabela de projecao e graficos).
+3. **Fechamentos (DRE)**: Corrigir a logica de repasse — 20% vai para o franqueado (receita dele), 80% fica com a franqueadora. O documento DRE deve parecer uma planilha profissional que o franqueado baixa em PDF/Excel.
 
 ---
 
-## Alteracoes no Menu (Sidebar)
+## 1. Receitas — Remover aba Clientes + CRUD por produto
 
-Menu atual: Dashboard, Despesas, Receitas, Repasse, Impostos, Projecao, Mes a Mes, Clientes, Configuracoes
+### Remover
+- Remover a tab "Clientes" do TabsList e o TabsContent correspondente
+- Remover o componente `ClientesTab` inteiro (linhas 278-493)
 
-Menu final:
-- Dashboard (inclui Projecao dentro)
-- Despesas (inclui Impostos como categoria interna)
-- Receitas (inclui Clientes como subaba)
-- Repasse
-- Fechamentos (DRE) -- NOVO
-- Configuracoes
+### Adicionar CRUD em cada aba
+Cada aba (Assessoria, SaaS, Sistema, Venda de Franquia) tera:
+- Botao "+ Nova Receita" no topo
+- Botoes de Editar (icone lapiz) e Excluir (icone lixeira) em cada linha
+- Dialog/modal para criar e editar receita com campos relevantes ao produto
+- Campos do modal variam por produto:
+  - **Assessoria/SaaS**: Cliente, Valor, Origem, Status (A Receber/Recebido/Atrasado), NF emitida, Gera repasse, % repasse, Observacoes
+  - **Sistema**: Franqueado, Valor (R$250), Status pagamento
+  - **Venda de Franquia**: Franqueado, Valor, Status pagamento, Contrato, Data, Onboarding
 
-Remover do menu: Impostos, Projecao, Mes a Mes, Clientes
-
----
-
-## 1. Dashboard (`FinanceiroDashboard.tsx`) -- Reescrever
-
-### Bloco A -- Resumo (ja existe, manter e ajustar)
-- KPIs: Receita Bruta, Receita Liquida, Repasse Devido, Despesas Operacionais, Resultado, Caixa Atual, Runway, Clientes Ativos (por tipo)
-- Graficos: Receita Liquida x Despesas (linha), Despesas por categoria (pizza), Resultado mensal (barras)
-- Alertas: Receitas em atraso, Parcelas a vencer, Aumentos de folha, Meta clientes vs capacidade
-
-### Bloco B -- Projecao Inteligente (simplificar)
-- Remover abas Trimestral e Semestral
-- Manter apenas: painel Mes a Mes (realizado) + Simulacao (cenarios) como duas secoes
-- Projecao automatica 6 meses a frente (tabela + grafico de caixa projetado + lucro projetado)
-- Campos editaveis: Crescimento clientes/mes, Ticket medio, Franquias/mes, Ativar evento (on/off), Ativar contratacao (on/off)
-- Indicadores: "Pode investir?" + "Quando contratar?"
+### Visao Geral
+- Permanece somente leitura (dashboard de receita), sem CRUD
 
 ---
 
-## 2. Despesas (`FinanceiroDespesas.tsx`) -- Reorganizar
+## 2. Dashboard — Remover Simulacao
 
-Estrutura atual: filtros por categoria + status + tipo como botoes
-Nova estrutura:
-- Topo: Filtro por periodo (dropdown) + Botao "+ Nova Despesa"
-- KPIs internos (manter)
-- Tabs internas por categoria: Todas | Pessoas | Estrutura | Plataformas | Emprestimos | Investimentos | Impostos
-- A tab "Impostos" mostra despesas de imposto (base tributavel, NF emitidas, valor calculado, status pagamento)
-- Remover filtros complexos visiveis; usar botao "Filtrar" que abre modal simples (status, tipo fixa/variavel)
-- CRUD completo (ja existe, manter)
+Remover tudo a partir da linha 238 (`BLOCO B — PROJECAO INTELIGENTE`):
+- O separador, titulo "Projecao Inteligente" e o componente `<ProjecaoInteligente />`
+- Remover a funcao `ProjecaoInteligente` inteira (linhas 250-409)
+- Remover imports nao utilizados (`Slider`)
+- Remover chamadas a `getProjection`, `getBreakEven` que fiquem sem uso
 
-Para a categoria Impostos, ao gerar despesas do mes, adicionar automaticamente uma despesa com:
-- categoria: "Impostos"
-- subcategoria: "Imposto mensal (10%)"
-- valor: calculado pela regra (10% sobre NF + folha operacional, excluindo pro-labore)
-- status: Previsto
+O Dashboard ficara apenas com o Bloco A (Resumo: KPIs, graficos, alertas, top clientes, parcelas).
 
 ---
 
-## 3. Receitas (`FinanceiroReceitas.tsx`) -- Reorganizar
+## 3. Fechamentos (DRE) — Corrigir logica de repasse
 
-Estrutura atual: 2 tabs (Receitas, Clientes)
-Nova estrutura com subabas:
-- Visao Geral: Dashboard de receita (total por tipo, recorrente, unitaria, por origem, por produto) com graficos
-- Assessoria: Lista CRUD de clientes/receitas de assessoria. Filtros: Status, Origem, Gera repasse, Ticket
-- SaaS: Lista CRUD apenas clientes SaaS
-- Sistema: Lista franqueados que pagam sistema (R$250)
-- Venda de Franquia: Lista de franquias vendidas (nome franqueado, valor, status pagamento, contrato, data, onboarding vinculado). Preparada para integracao futura
-- Clientes: Cadastro CRUD de clientes (ja existe, manter). Adicionar campos placeholder para Asaas (ID cobranca, Tipo cobranca, Status cobranca)
+### Regra de negocio corrigida
+- Receita bruta do franqueado = soma dos clientes dele
+- O franqueado recebe 20% da receita dos clientes dele (esse e o repasse PARA o franqueado)
+- A franqueadora fica com 80%
+- Deducoes do franqueado: royalties 1%, imposto proporcional, sistema R$250
+- Resultado liquido do franqueado = (20% da receita bruta) - royalties - imposto proporcional - sistema
 
----
+### Atualizar `getDREFranqueado` em mockData.ts
+- `repasseFranqueado = receitaBruta * 0.20` (o que o franqueado recebe)
+- `retencaoFranqueadora = receitaBruta * 0.80` (o que fica com a matriz)
+- Resultado liquido do franqueado = repasseFranqueado - royalties - impostoProporcional - sistema
 
-## 4. Repasse (`FinanceiroRepasse.tsx`) -- Manter
+### Atualizar interface `DREFranqueado`
+- Renomear `repasseMatriz` para `retencaoFranqueadora` (80%)
+- Adicionar campo `repasseFranqueado` (20%)
 
-Ja esta bem estruturado com subtabs (Por Franqueado, Pendentes, Pagos, Historico). Sem alteracoes significativas.
-
----
-
-## 5. Fechamentos (DRE) -- NOVO (`FinanceiroFechamentos.tsx`)
-
-Duas subabas:
-- **Por Franqueado**: Selecionar franqueado, ver DRE gerado automaticamente
-- **Todos os Fechamentos**: Lista de todas DREs geradas por mes
-
-### DRE Automatico (por franqueado, por mes)
-Estrutura:
-- Clientes ativos do franqueado
-- Receita bruta
-- (-) 1% royalties
-- (-) Imposto proporcional
-- (-) Sistema (R$250)
-- (-) Repasse matriz (se houver)
-- = Resultado liquido do franqueado
-
-Botoes: Exportar Excel (placeholder) | Exportar PDF (placeholder)
-Design: Logo Skillzy (placeholder), layout limpo, resumo executivo no topo
-
-Nota: Exportacao real sera implementada em fase futura. Por ora, botoes mostram toast "Em breve".
-
----
-
-## 6. Configuracoes (`FinanceiroConfiguracoes.tsx`) -- Manter
-
-Ja esta completo. Sem alteracoes.
-
----
-
-## 7. Rotas e Sidebar
-
-### App.tsx
-- Remover rota: `/franqueadora/financeiro/impostos`
-- Remover rota: `/franqueadora/financeiro/projecao` (se existir)
-- Remover rota: `/franqueadora/financeiro/mes-a-mes` (se existir)  
-- Remover rota: `/franqueadora/financeiro/clientes` (se existir)
-- Adicionar rota: `/franqueadora/financeiro/fechamentos`
-
-### FranqueadoraSidebar.tsx
-- Remover do submenu Financeiro: Impostos, Projecao, Mes a Mes, Clientes
-- Adicionar ao submenu: Fechamentos (icone FileSpreadsheet)
-- Ordem final: Dashboard, Despesas, Receitas, Repasse, Fechamentos, Configuracoes
-
----
-
-## 8. Dados (`mockData.ts`)
-
-- Adicionar categoria "Impostos" ao tipo Despesa
-- Criar funcao `getImpostoDespesa(mes)` que retorna a despesa de imposto gerada automaticamente
-- Atualizar `getDespesasForMonth` para incluir imposto como despesa
-- Criar funcao `getDREFranqueado(franqueadoId, mes)` para gerar DRE automatico
-- Adicionar campo opcional `idCobrancaAsaas`, `tipoCobrancaAsaas`, `statusCobrancaAsaas` na interface Cliente
+### Atualizar visual do DRECard
+- Formato de planilha profissional com:
+  - Cabecalho: Logo Skillzy + nome franqueado + competencia
+  - Linha: Receita Bruta (100%)
+  - Linha: (-) Retencao Franqueadora (80%)
+  - Linha: = Repasse Franqueado (20%)
+  - Linha: (-) Royalties (1%)
+  - Linha: (-) Imposto proporcional
+  - Linha: (-) Sistema (R$250)
+  - Linha: = **Resultado Liquido do Franqueado**
+- Bordas e fundo alternado para parecer planilha
+- Botoes Excel e PDF mantidos
 
 ---
 
 ## Detalhes Tecnicos
 
 ### Arquivos modificados
-```text
-src/components/FranqueadoraSidebar.tsx  -- remover/adicionar itens menu
-src/App.tsx                             -- remover/adicionar rotas
-src/data/mockData.ts                    -- nova categoria Impostos, funcao DRE, campos Asaas
-src/pages/FinanceiroDashboard.tsx       -- simplificar projecao (remover tabs trim/sem)
-src/pages/FinanceiroDespesas.tsx        -- tabs por categoria, incluir Impostos
-src/pages/FinanceiroReceitas.tsx        -- subabas por produto + Clientes com campos Asaas
-```
 
-### Arquivos criados
 ```text
-src/pages/FinanceiroFechamentos.tsx     -- novo modulo DRE
-```
-
-### Arquivos removidos
-```text
-src/pages/FinanceiroImpostos.tsx        -- impostos migram para dentro de Despesas
-```
-
-### Funcao getDREFranqueado
-```text
-Para cada franqueado:
-  clientesDoFranqueado = clientes com franqueadoVinculado = franqueadoId
-  receitaBruta = soma dos valores
-  royalties = receitaBruta * 0.01
-  impostoProporcional = (receitaBruta / receitaTotalMes) * impostoTotalMes
-  sistema = 250
-  repasseMatriz = soma dos repasses
-  resultadoLiquido = receitaBruta - royalties - imposto - sistema - repasse
+src/pages/FinanceiroReceitas.tsx   -- remover ClientesTab, adicionar CRUD nas abas de produto
+src/pages/FinanceiroDashboard.tsx  -- remover Bloco B (Projecao Inteligente) e imports relacionados
+src/pages/FinanceiroFechamentos.tsx -- corrigir DRE com 80/20 e layout planilha
+src/data/mockData.ts               -- corrigir getDREFranqueado com logica 80/20
 ```
 
 ### Ordem de implementacao
-1. mockData.ts (novos tipos, funcoes DRE, campo Asaas)
-2. FinanceiroFechamentos.tsx (novo)
-3. FinanceiroDashboard.tsx (simplificar projecao)
-4. FinanceiroDespesas.tsx (tabs por categoria + Impostos)
-5. FinanceiroReceitas.tsx (subabas por produto)
-6. Sidebar + App.tsx (menu e rotas)
-7. Remover FinanceiroImpostos.tsx
-
+1. mockData.ts (corrigir DRE 80/20)
+2. FinanceiroFechamentos.tsx (novo layout planilha + logica corrigida)
+3. FinanceiroDashboard.tsx (remover simulacao)
+4. FinanceiroReceitas.tsx (remover Clientes, CRUD por aba)
