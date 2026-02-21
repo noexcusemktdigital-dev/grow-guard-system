@@ -33,7 +33,7 @@ interface MarketingDriveProps {
   filterCampaign: string;
   filterStatus: string;
   onEdit?: (asset: MarketingAsset) => void;
-  onUpload?: () => void;
+  onUpload?: (folder: string) => void;
 }
 
 const imageFormats: MarketingFormat[] = ["png", "jpg", "svg", "psd", "ai", "figma", "feed", "story", "reels", "carrossel"];
@@ -146,7 +146,7 @@ export function MarketingDrive({
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setNewFolderOpen(true)}>
             <FolderPlus className="w-3.5 h-3.5" /> Nova Pasta
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={onUpload}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => onUpload?.(pathString)}>
             <Upload className="w-3.5 h-3.5" /> Upload
           </Button>
           {currentPath.length > 0 && (
@@ -281,7 +281,7 @@ export function MarketingDrive({
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setNewFolderOpen(true)}>
               <FolderPlus className="w-3.5 h-3.5" /> Criar pasta
             </Button>
-            <Button size="sm" className="gap-1.5" onClick={onUpload}>
+            <Button size="sm" className="gap-1.5" onClick={() => onUpload?.(pathString)}>
               <Upload className="w-3.5 h-3.5" /> Fazer upload
             </Button>
           </div>
