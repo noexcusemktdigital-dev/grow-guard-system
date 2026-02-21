@@ -20,11 +20,11 @@ const principalSection: SidebarItem[] = [
   { label: "Suporte Matriz", icon: MessageSquare, path: "/franqueado/suporte" },
 ];
 
-const comercialAISection: SidebarItem[] = [
-  { label: "Prospecção IA", icon: Sparkles, path: "/franqueado/prospeccao" },
-  { label: "Diagnóstico Maiar", icon: ClipboardCheck, path: "/franqueado/diagnostico" },
-  { label: "Gerador de Propostas", icon: FileText, path: "/franqueado/propostas" },
+const comercialSection: SidebarItem[] = [
   { label: "CRM de Vendas", icon: Target, path: "/franqueado/crm" },
+  { label: "Prospecção IA", icon: Sparkles, path: "/franqueado/prospeccao" },
+  { label: "Diagnóstico NOE", icon: ClipboardCheck, path: "/franqueado/diagnostico" },
+  { label: "Gerador de Proposta", icon: FileText, path: "/franqueado/propostas" },
 ];
 
 const marketingSection: SidebarItem[] = [
@@ -100,7 +100,7 @@ export function FranqueadoSidebar() {
 
       <div className="flex-1 overflow-y-auto py-6">
         <SidebarSection title="Principal" items={principalSection} collapsed={collapsed} />
-        <SidebarSection title="Comercial AI" items={comercialAISection} collapsed={collapsed} />
+        <SidebarSection title="Comercial" items={comercialSection} collapsed={collapsed} />
         <SidebarSection title="Marketing" items={marketingSection} collapsed={collapsed} />
         <SidebarSection title="Gestão" items={gestaoSection} collapsed={collapsed} />
       </div>
