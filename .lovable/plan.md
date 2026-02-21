@@ -1,9 +1,10 @@
 
-# Home -- Dashboard Principal (Hub Inteligente)
+
+# Modulo Matriz -- Gestao de Usuarios da Franqueadora
 
 ## Resumo
 
-Criar a Home como dashboard principal que funciona como hub inteligente ao logar. Inclui: Saudacao + Acoes Rapidas, Mensagem do Dia (programavel), Comunicados ativos com destaque, Agenda (proximos eventos), Bloco Comercial (metas/ranking para franqueado, leads/chamados/unidades para franqueadora), Alertas/Acoes obrigatorias com widget "Hoje eu preciso de..." (3 prioridades do dia), e Atalhos rapidos. Personalizado por perfil (Franqueadora / Franqueado / Cliente final).
+Criar o modulo "Matriz" dentro da secao Rede do sidebar. Modulo exclusivo para gestao dos usuarios internos da franqueadora (equipe da matriz), com controle granular de permissoes por modulo, permissoes especiais estrategicas e perfis pre-configurados. Usuarios da Matriz NAO sao vinculados a unidades.
 
 ---
 
@@ -11,265 +12,267 @@ Criar a Home como dashboard principal que funciona como hub inteligente ao logar
 
 ```text
 CRIAR:
-src/data/homeData.ts                                -- tipos, mensagens do dia mock, helpers de alertas
-src/pages/Home.tsx                                  -- pagina principal do dashboard
-src/components/home/HomeMensagemDia.tsx              -- card mensagem do dia
-src/components/home/HomeComunicados.tsx              -- card comunicados ativos (top 3)
-src/components/home/HomeAgenda.tsx                   -- card proximos eventos
-src/components/home/HomeComercial.tsx                -- bloco comercial (muda por perfil)
-src/components/home/HomeAlertas.tsx                  -- alertas e acoes obrigatorias
-src/components/home/HomeHojePreciso.tsx              -- widget "Hoje eu preciso de..." (3 prioridades)
-src/components/home/HomeAtalhos.tsx                  -- grid de atalhos rapidos
-src/components/home/HomeMensagemAdmin.tsx            -- CRUD de mensagens do dia (admin franqueadora)
+src/data/matrizData.ts                              -- tipos, mock data, perfis, helpers
+src/pages/Matriz.tsx                                -- pagina principal (lista + detalhe/edicao)
+src/components/matriz/MatrizUserList.tsx             -- lista de usuarios com filtros
+src/components/matriz/MatrizUserForm.tsx             -- formulario de criacao/edicao de usuario
+src/components/matriz/MatrizPermissions.tsx          -- controle de permissoes por modulo
+src/components/matriz/MatrizSpecialPermissions.tsx   -- toggles de permissoes especiais
+src/components/matriz/MatrizProfiles.tsx             -- perfis pre-configurados
 
 MODIFICAR:
-src/components/FranqueadoraSidebar.tsx  -- ativar Dashboard (remover disabled)
-src/App.tsx                            -- adicionar rota /franqueadora/dashboard, mudar redirect padrao
-src/pages/Index.tsx                    -- mudar redirect padrao para /franqueadora/dashboard
+src/components/FranqueadoraSidebar.tsx  -- adicionar "Matriz" na secao Rede
+src/App.tsx                            -- adicionar rota /franqueadora/matriz
 ```
 
 ---
 
-## 1. Dados (homeData.ts)
+## 1. Dados (matrizData.ts)
 
 ### Tipos
 
 ```text
-MensagemCategoria = "Mentalidade" | "Vendas" | "Gestao" | "Marketing" | "Lideranca"
-MensagemStatus = "Ativo" | "Programado" | "Arquivado"
+MatrizArea = "Financeiro" | "Comercial" | "Juridico" | "Marketing" | "Operacoes" | "Direcao"
 
-MensagemDoDia:
-  id, texto, categoria (MensagemCategoria),
-  autor, publico (PublicoAlvo[]),
-  dataPublicacao, status (MensagemStatus),
-  criadoEm
+MatrizUserStatus = "Ativo" | "Inativo"
 
-AlertaHome:
-  id, tipo (string -- "chamado" | "prova" | "onboarding" | "contrato" | "fechamento" | "comunicado"),
-  titulo, descricao,
-  prioridade ("alta" | "media" | "baixa"),
-  link (rota do modulo),
-  moduloOrigem (string),
-  criadoEm
+NivelAcesso = "sem_acesso" | "visualizacao" | "edicao" | "admin"
 
-PrioridadeDoDia:
-  id, titulo, descricao,
-  tipo (igual AlertaHome.tipo),
-  link, urgencia (1 | 2 | 3)
+ModuloPermissao:
+  modulo (string)
+  nivel (NivelAcesso)
+
+MatrizUser:
+  id, nome, email, telefone, cargo, area (MatrizArea),
+  status (MatrizUserStatus), lastLogin (string),
+  permissoes: ModuloPermissao[],
+  permissoesEspeciais: PermissoesEspeciais,
+  perfilBase? (string -- id do perfil usado como base)
+
+PermissoesEspeciais:
+  podeVerFinanceiroCompleto (bool)
+  podeEditarRepasse (bool)
+  podeGerarDre (bool)
+  podeExcluirContratos (bool)
+  podeCriarCampanhas (bool)
+  podeEnviarComunicadoGlobal (bool)
+  podeAlterarPermissoes (bool)
+
+PerfilPreConfigurado:
+  id, nome, descricao, icone (string),
+  permissoes: ModuloPermissao[],
+  permissoesEspeciais: PermissoesEspeciais
 ```
 
-### Mock Data
+### Lista de Modulos (para permissoes)
 
-- 10-12 mensagens do dia variadas (distribuidas por categoria)
-- 1 mensagem ativa para hoje, 2-3 programadas, restante arquivadas
-- Mensagem padrao da semana como fallback
+Organizados por secao:
+
+- **Administrativo**: Financeiro, Contratos, Fechamentos (DRE)
+- **Comercial**: Marketing, Academy, Metas e Ranking
+- **Rede**: Unidades, CRM Expansao, Onboarding, Atendimento, Matriz
+- **Principal**: Comunicados, Agenda, Dashboard
+
+### Perfis Pre-Configurados Mock
+
+- **Super Admin**: Acesso total (admin em tudo, todas especiais ativas)
+- **Financeiro**: Admin em Financeiro/Contratos/Fechamentos, visualizacao em Comercial
+- **Comercial**: Admin em CRM Expansao/Metas/Marketing, visualizacao em restante
+- **CS / Operacoes**: Admin em Onboarding/Atendimento/Unidades
+- **Marketing**: Admin em Marketing/Comunicados/Agenda
+
+### Usuarios Mock (6-8)
+
+- Davi (Direcao, Super Admin)
+- Lucas (Financeiro, perfil Financeiro)
+- Amanda (Comercial, perfil Comercial)
+- Rafael (Operacoes, perfil CS)
+- Camila (Marketing, perfil Marketing)
+- Pedro (Juridico, custom -- Contratos admin + visualizacao financeiro)
+- 1-2 inativos
 
 ### Helpers
 
-- `getMensagemHoje(publico)` -- retorna mensagem ativa do dia ou fallback
-- `getAlertasFranqueadora()` -- agrega alertas de todos os modulos:
-  - Chamados abertos (de atendimentoData)
-  - Contratos vencendo (de contratosData)
-  - Provas pendentes (de academyData -- placeholder)
-  - Reunioes onboarding pendentes (de onboardingData)
-  - Comunicados criticos nao confirmados (de comunicadosData)
-- `getAlertasFranqueado()` -- versao filtrada para franqueado
-- `getPrioridadesDoDia(alertas)` -- seleciona top 3 alertas mais urgentes e retorna como PrioridadeDoDia
-- `getSaudacao()` -- retorna "Bom dia" / "Boa tarde" / "Boa noite" baseado na hora
-- `getQuickActions(perfil)` -- retorna acoes rapidas por perfil
+- `getModulosBySection()` -- retorna modulos agrupados por secao
+- `getPerfilById(id)` -- retorna perfil pre-configurado
+- `applyPerfil(user, perfilId)` -- aplica permissoes do perfil ao usuario
+- `getUserModulosHabilitados(user)` -- lista de modulos com acesso >= visualizacao
+- `getNivelAcessoLabel(nivel)` -- "Sem acesso" / "Visualizacao" / "Edicao" / "Admin"
+- `getNivelAcessoIcon(nivel)` -- icone correspondente
+- `getAreaColor(area)` -- cor do badge da area
 
 ---
 
-## 2. Pagina Principal (Home.tsx)
+## 2. Pagina Principal (Matriz.tsx)
 
-### Layout (grid responsivo)
+### State
 
-```text
-+--------------------------------------------------+
-| Header: Saudacao + Acoes rapidas                 |
-+--------------------------------------------------+
-| Hoje eu preciso de... (widget 3 prioridades)     |
-+--------------------------------------------------+
-| Mensagem do Dia      | Comunicados (top 3)        |
-| (card grande)        | (card)                     |
-+--------------------------------------------------+
-| Agenda (proximos)    | Comercial (metas/leads)    |
-| (card)               | (card)                     |
-+--------------------------------------------------+
-| Alertas / Acoes obrigatorias (lista completa)    |
-+--------------------------------------------------+
-| Atalhos rapidos (grid icones)                    |
-+--------------------------------------------------+
-```
+- `view`: "list" | "detail" | "create"
+- `selectedUserId`: null ou id
+- `users`: MatrizUser[] (state local com mock)
 
 ### Header
 
-- Saudacao: "Bom dia, Davi" (getSaudacao + nome do usuario)
-- Subtitulo: "Franqueadora | Sexta, 21 de Fevereiro"
-- Botao "Acoes rapidas" (dropdown):
-  - Novo chamado -> /franqueadora/atendimento
-  - Criar evento -> /franqueadora/agenda (abre form)
-  - Novo comunicado -> /franqueadora/comunicados
-  - Abrir CRM Expansao -> /franqueadora/crm
+- Icone Shield/Users + Titulo "Matriz"
+- Badge "Franqueadora"
+- Subtitulo: "Gestao de usuarios e permissoes da franqueadora"
+- Botao "Voltar" (quando em detail/create)
+- Botao "+ Novo Usuario" (na lista)
+
+### Renderizacao
+
+- list -> MatrizUserList
+- detail -> tabs (Dados, Permissoes por Modulo, Permissoes Especiais)
+- create -> MatrizUserForm
 
 ---
 
-## 3. Widget "Hoje eu preciso de..." (HomeHojePreciso.tsx)
+## 3. Lista de Usuarios (MatrizUserList.tsx)
 
-Card em destaque no topo (abaixo do header):
-- Titulo: "Hoje eu preciso de..."
-- 3 cards lado a lado, cada um com:
-  - Numero (1, 2, 3)
-  - Icone do tipo
-  - Titulo curto
-  - Descricao breve
-  - Botao "Resolver" (navega para o modulo)
-- Logica: pega os 3 alertas mais urgentes do dia
-- Se nao houver alertas: mostra "Tudo em dia! Nenhuma acao pendente."
-- Visual: fundo com gradiente sutil, badges de urgencia
+### Cards resumo (4)
 
----
+- Total usuarios ativos
+- Areas representadas
+- Super Admins (count)
+- Usuarios inativos
 
-## 4. Mensagem do Dia (HomeMensagemDia.tsx)
+### Filtros
 
-Card grande com:
-- Icone de aspas / citacao
-- Texto da mensagem (fonte maior, italico)
-- Badge da categoria (Mentalidade, Vendas, etc.)
-- Autor
-- Botao "Ver historico" (abre mini-modal com lista de mensagens anteriores)
-- Se admin: botao "Gerenciar mensagens" (abre HomeMensagemAdmin)
+- Area (Select)
+- Status (Select: Ativo/Inativo)
+- Nivel de acesso (Select: tem pelo menos 1 modulo com admin/edicao/visualizacao)
+- Busca por nome/email
+
+### Tabela
+
+Colunas: Nome, Email, Cargo, Area (badge cor), Status (badge), Ultimo login, Modulos habilitados (count + tooltip), Perfil base, Acoes (Ver, Editar)
 
 ---
 
-## 5. Comunicados (HomeComunicados.tsx)
+## 4. Formulario de Usuario (MatrizUserForm.tsx)
 
-Card com:
-- Titulo "Comunicados Ativos"
-- Top 3 comunicados mais relevantes (ordenados por prioridade)
-- Cada item: titulo, badge prioridade, badge tipo, data
-- Se critico: destaque vermelho + icone pulse
-- Botao "Ver todos" -> /franqueadora/comunicados
-- Dados: importa de comunicadosData, filtra status "Ativo" com mostrarDashboard true
+### Campos
 
----
+- Nome (Input obrigatorio)
+- Email (Input obrigatorio)
+- Telefone (Input)
+- Cargo (Input)
+- Area (Select: Financeiro, Comercial, Juridico, Marketing, Operacoes, Direcao)
+- Status (Select: Ativo/Inativo)
 
-## 6. Agenda (HomeAgenda.tsx)
+### Secao Perfil Base
 
-Card com:
-- Titulo "Proximos Compromissos"
-- Lista dos proximos 5 eventos (hoje + proximos dias)
-- Cada item: horario, titulo, badge do calendario (cor), tipo
-- Eventos de hoje em destaque
-- Botao "Ver agenda completa" -> /franqueadora/agenda
-- Dados: importa de agendaData, usa getEventsForDate e proximos dias
+- Select com perfis pre-configurados (Super Admin, Financeiro, Comercial, CS, Marketing)
+- Ao selecionar, pre-preenche permissoes (com aviso: "Permissoes aplicadas do perfil. Voce pode personalizar abaixo.")
+- Opcao "Personalizado" para configurar do zero
 
----
+### Botoes
 
-## 7. Bloco Comercial (HomeComercial.tsx)
-
-### Para Franqueadora (perfil atual)
-
-Card com:
-- Faturamento rede do mes (de mockData getMonthSummary)
-- Top 3 unidades no ranking (de metasRankingData)
-- Leads novos CRM Expansao (count de crmData com status "Novo Lead")
-- Chamados em aberto (count de atendimentoData com status != "Resolvido" e != "Encerrado")
-
-### Para Franqueado (futuro -- placeholder)
-
-- Meta do mes (barra de progresso)
-- Posicao no ranking
-- Campanha ativa
-- Proximas tarefas comerciais
+- Salvar
+- Cancelar
 
 ---
 
-## 8. Alertas (HomeAlertas.tsx)
+## 5. Permissoes por Modulo (MatrizPermissions.tsx)
 
-Card "Acoes Pendentes" com lista checklist:
-- Chamados aguardando resposta (de atendimentoData)
-- Provas pendentes na Academy (placeholder)
-- Reunioes onboarding pendentes (de onboardingData)
-- Contratos vencendo em 30 dias (de contratosData)
-- Comunicados criticos nao confirmados
-- Cada item: icone, titulo, descricao, modulo de origem, botao "Resolver" (navega)
-- Ordenados por urgencia
-- Badge com count total no titulo
+### Layout
 
----
+Secoes agrupadas (Administrativo, Comercial, Rede, Principal), cada uma com:
 
-## 9. Atalhos Rapidos (HomeAtalhos.tsx)
+Para cada modulo, uma linha com:
+- Nome do modulo
+- 4 opcoes radio/segmented: Sem acesso | Visualizacao | Edicao | Admin
+- Icones visuais para cada nivel
 
-Grid 4x2 de cards/icones:
-- Marketing -> /franqueadora/marketing
-- Treinamentos -> /franqueadora/treinamentos
-- Metas & Ranking -> /franqueadora/metas
-- Atendimento -> /franqueadora/atendimento
-- Agenda -> /franqueadora/agenda
-- Contratos -> /franqueadora/contratos
-- Financeiro -> /franqueadora/financeiro
-- Unidades -> /franqueadora/unidades
+### Visual
 
-Cada card: icone + label, hover effect, navegacao via useNavigate
+- Sem acesso: cinza, icone X
+- Visualizacao: azul, icone olho
+- Edicao: amarelo, icone lapis
+- Admin: verde, icone coroa
+
+### Botao "Aplicar Perfil"
+
+- Dropdown para aplicar um perfil pre-configurado rapidamente
+- Aviso: "Isso substituira as permissoes atuais"
 
 ---
 
-## 10. Gerenciamento Mensagem do Dia (HomeMensagemAdmin.tsx)
+## 6. Permissoes Especiais (MatrizSpecialPermissions.tsx)
 
-Dialog/Sheet com:
-- Lista de mensagens cadastradas (tabela simples)
-- Botao "Nova Mensagem"
-- Form: texto, categoria (Select), publico (checkboxes), data publicacao (Input date), status
-- Editar/Arquivar mensagens existentes
-- Regra: 1 mensagem ativa por dia por publico
+Lista de toggles (Switch) com descricao:
+
+- Pode visualizar dados financeiros completos
+- Pode editar repasse
+- Pode gerar DRE
+- Pode excluir contratos
+- Pode criar campanhas
+- Pode enviar comunicados globais
+- Pode alterar permissoes de outros usuarios
+
+Cada toggle com:
+- Label
+- Descricao curta explicando o impacto
+- Switch ativo/inativo
+- Icone de alerta em permissoes criticas (alterar permissoes, excluir contratos)
 
 ---
 
-## 11. Sidebar e Rotas
+## 7. Perfis Pre-Configurados (MatrizProfiles.tsx)
+
+### Cards dos perfis
+
+Grid com cards para cada perfil:
+- Icone + Nome + Descricao
+- Lista resumida dos modulos com acesso
+- Permissoes especiais ativas
+- Botao "Aplicar este perfil" (quando editando usuario)
+
+### Visualizacao standalone
+
+Quando acessado da lista, mostra os perfis como referencia (somente leitura).
+
+---
+
+## 8. Sidebar e Rotas
 
 ### FranqueadoraSidebar.tsx
 
-Remover `disabled: true` do item "Dashboard":
+Na secao `redeSection`, adicionar apos "Atendimento":
 ```text
-{ label: "Dashboard", icon: LayoutDashboard, path: "/franqueadora/dashboard" }
+{ label: "Matriz", icon: Shield, path: "/franqueadora/matriz" }
 ```
+
+Importar `Shield` de lucide-react.
 
 ### App.tsx
 
-- Adicionar rota: `<Route path="dashboard" element={<Home />} />`
-- Mudar redirects de `/franqueadora/financeiro` para `/franqueadora/dashboard`
-- Import Home
-
-### Index.tsx
-
-- Mudar navigate fallback de `/franqueadora/financeiro` para `/franqueadora/dashboard`
+Adicionar rota:
+```text
+import Matriz from "./pages/Matriz";
+<Route path="matriz" element={<Matriz />} />
+```
 
 ---
 
-## 12. Design
+## 9. Design
 
-- Saudacao: texto grande, peso bold, com hora do dia
-- Widget "Hoje eu preciso de...": fundo com gradiente sutil (primary/5), borda primary/20, cards com numeracao destaque
-- Mensagem do dia: fundo com aspas decorativas, fonte serif ou italico
-- Comunicados criticos: borda vermelha com pulse
-- Alertas: formato checklist com icones por modulo
-- Atalhos: grid uniforme com hover scale
-- Cores dos badges seguem padrao existente do projeto
-- Layout responsivo: em mobile, blocos empilham em coluna unica
+- Area badges: Financeiro (verde), Comercial (azul), Juridico (roxo), Marketing (laranja), Operacoes (teal), Direcao (vermelho)
+- Niveis de acesso: segmented control com cores (cinza/azul/amarelo/verde)
+- Permissoes especiais: switches com descricao, icone de alerta para criticas
+- Perfis: cards com icone grande e lista de permissoes
+- Status Ativo: badge verde, Inativo: badge cinza
 
 ---
 
-## 13. Ordem de Implementacao
+## 10. Ordem de Implementacao
 
-1. `homeData.ts` -- tipos, mensagens mock (10-12), helpers (getSaudacao, getMensagemHoje, getAlertasFranqueadora, getPrioridadesDoDia, getQuickActions)
-2. `HomeHojePreciso.tsx` -- widget "Hoje eu preciso de..." com 3 prioridades
-3. `HomeMensagemDia.tsx` -- card mensagem do dia com historico
-4. `HomeComunicados.tsx` -- card comunicados ativos (top 3)
-5. `HomeAgenda.tsx` -- card proximos eventos (5)
-6. `HomeComercial.tsx` -- bloco comercial (franqueadora: faturamento, ranking, leads, chamados)
-7. `HomeAlertas.tsx` -- lista de acoes pendentes com checklist
-8. `HomeAtalhos.tsx` -- grid de atalhos rapidos
-9. `HomeMensagemAdmin.tsx` -- CRUD mensagens do dia (dialog)
-10. `Home.tsx` -- pagina hub com layout grid, header com saudacao e acoes rapidas
-11. `FranqueadoraSidebar.tsx` + `App.tsx` + `Index.tsx` -- ativar rota e redirect
+1. `matrizData.ts` -- tipos, modulos, perfis pre-configurados (5), usuarios mock (6-8), helpers
+2. `MatrizUserList.tsx` -- lista com filtros, tabela, cards resumo
+3. `MatrizUserForm.tsx` -- formulario com selecao de perfil base
+4. `MatrizPermissions.tsx` -- controle de permissoes por modulo com segmented control
+5. `MatrizSpecialPermissions.tsx` -- toggles de permissoes especiais
+6. `MatrizProfiles.tsx` -- cards dos perfis pre-configurados
+7. `Matriz.tsx` -- pagina hub com tabs (Dados, Permissoes, Especiais) no detalhe
+8. `FranqueadoraSidebar.tsx` + `App.tsx` -- adicionar menu e rota
+
