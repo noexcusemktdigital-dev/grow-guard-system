@@ -1,12 +1,18 @@
-import { useState, useMemo } from "react";
-import { CheckSquare, Plus, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { CheckSquare, Plus, Sparkles, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { getChecklistItems, type ChecklistItem } from "@/data/clienteData";
+
+function getPriority(item: ChecklistItem): "high" | "medium" | "low" {
+  if (item.type === "Comercial") return "high";
+  if (item.type === "Marketing") return "medium";
+  return "low";
+}
 
 export default function ClienteChecklist() {
   const [items, setItems] = useState<ChecklistItem[]>(() => getChecklistItems());
@@ -32,6 +38,9 @@ export default function ClienteChecklist() {
     if (type === "Marketing") return "bg-purple-500/10 text-purple-500 border-purple-500/20";
     return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
   };
+
+  const pendingItems = items.filter(i => !i.done);
+  const doneItems = items.filter(i => i.done);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -70,23 +79,55 @@ export default function ClienteChecklist() {
         </Card>
       )}
 
-      {/* Tasks */}
-      <div className="space-y-2">
-        {items.map(item => (
-          <Card key={item.id} className={`transition-all duration-300 cursor-pointer hover:shadow-md ${item.done ? "opacity-60" : ""}`} onClick={() => toggleItem(item.id)}>
-            <CardContent className="py-3 flex items-center gap-4">
-              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${item.done ? "bg-primary border-primary scale-110" : "border-muted-foreground/30 hover:border-primary/50"}`}>
-                {item.done && <CheckSquare className="w-4 h-4 text-primary-foreground" />}
-              </div>
-              <span className={`text-sm flex-1 ${item.done ? "line-through text-muted-foreground" : ""}`}>{item.title}</span>
-              <div className="flex items-center gap-2">
-                {item.origin === "auto" && <Sparkles className="w-3 h-3 text-muted-foreground" />}
+      {/* Pending Tasks */}
+      {pendingItems.length === 0 ? (
+        <div className="text-center py-12">
+          <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-emerald-500" />
+          <p className="text-foreground font-medium">Nenhuma tarefa pendente!</p>
+          <p className="text-sm text-muted-foreground">Você está em dia com suas atividades. 🎉</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {pendingItems.map(item => {
+            const priority = getPriority(item);
+            return (
+              <Card key={item.id} className="transition-all duration-300 hover:shadow-md">
+                <CardContent className="py-3 flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    {priority === "high" ? (
+                      <AlertCircle className="w-5 h-5 text-destructive" />
+                    ) : (
+                      <Clock className="w-5 h-5 text-yellow-500" />
+                    )}
+                  </div>
+                  <span className="text-sm flex-1">{item.title}</span>
+                  <div className="flex items-center gap-2">
+                    {item.origin === "auto" && <Sparkles className="w-3 h-3 text-muted-foreground" />}
+                    <Badge variant="outline" className={`text-[9px] ${typeBadgeColor(item.type)}`}>{item.type}</Badge>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => toggleItem(item.id)}>Fazer</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Done Tasks */}
+      {doneItems.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Concluídas</p>
+          {doneItems.map(item => (
+            <Card key={item.id} className="opacity-60 transition-all duration-300 cursor-pointer" onClick={() => toggleItem(item.id)}>
+              <CardContent className="py-3 flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                <span className="text-sm flex-1 line-through text-muted-foreground">{item.title}</span>
                 <Badge variant="outline" className={`text-[9px] ${typeBadgeColor(item.type)}`}>{item.type}</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

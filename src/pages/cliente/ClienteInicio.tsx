@@ -1,13 +1,15 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Users, TrendingUp, Target, AlertTriangle, Rocket, CheckSquare, Calendar } from "lucide-react";
+import { DollarSign, Users, TrendingUp, Target, AlertTriangle, Rocket, CheckSquare, MessageCircle, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { KpiCard } from "@/components/KpiCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { getClienteDashboardKpis, getChecklistItems, getClienteCampanhas } from "@/data/clienteData";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useNavigate } from "react-router-dom";
 
 const revenueData = [
   { week: "Sem 1", receita: 8500 },
@@ -25,10 +27,23 @@ const leadsData = [
 
 const kpiIcons = [DollarSign, Users, TrendingUp, Target];
 
+const monthlyGoals = [
+  { label: "Vendas", current: 34200, target: 47500, format: "currency" as const },
+  { label: "Leads Qualificados", current: 89, target: 120, format: "number" as const },
+  { label: "Taxa de Conversão", current: 18, target: 25, format: "percent" as const },
+];
+
+function formatGoalValue(value: number, format: "currency" | "number" | "percent") {
+  if (format === "currency") return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(value);
+  if (format === "percent") return `${value}%`;
+  return value.toLocaleString("pt-BR");
+}
+
 export default function ClienteInicio() {
   const kpis = useMemo(() => getClienteDashboardKpis(), []);
   const checklist = useMemo(() => getChecklistItems(), []);
   const campanhas = useMemo(() => getClienteCampanhas().filter(c => c.status === "Ativa"), []);
+  const navigate = useNavigate();
 
   const hoje = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const hojeCapitalized = hoje.charAt(0).toUpperCase() + hoje.slice(1);
@@ -38,18 +53,41 @@ export default function ClienteInicio() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <PageHeader title="Bom dia, Empresa Demo" subtitle={`SaaS NoExcuse · ${hojeCapitalized}`} />
+      <PageHeader
+        title="Bom dia! 👋"
+        subtitle={`NOEXCUSE Gestão Comercial · ${hojeCapitalized} · ${pendingTasks.length} tarefas pendentes`}
+      />
 
-      {/* KPIs */}
+      {/* KPIs - Kivo-style StatsCards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi, i) => (
-          <KpiCard key={kpi.label} label={kpi.label} value={kpi.value} sublabel={kpi.sublabel} trend={kpi.trend} icon={kpiIcons[i]} delay={i} variant={i === 0 ? "accent" : "default"} />
-        ))}
+        {kpis.map((kpi, i) => {
+          const Icon = kpiIcons[i];
+          return (
+            <Card key={kpi.label} className="relative overflow-hidden hover-lift">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.label}</CardTitle>
+                <Icon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{kpi.value}</div>
+                {kpi.sublabel && (
+                  <div className="flex items-center gap-1 mt-1">
+                    {kpi.trend === "up" && <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />}
+                    {kpi.trend === "down" && <ArrowDownRight className="h-3.5 w-3.5 text-destructive" />}
+                    <span className={`text-xs ${kpi.trend === "up" ? "text-emerald-500" : kpi.trend === "down" ? "text-destructive" : "text-muted-foreground"}`}>
+                      {kpi.sublabel}
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      {/* Charts + Monthly Goals */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Receita Semanal</CardTitle>
           </CardHeader>
@@ -68,22 +106,31 @@ export default function ClienteInicio() {
           </CardContent>
         </Card>
 
+        {/* Monthly Goals - Kivo-inspired */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Leads por Semana</CardTitle>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold">Metas do Mês</CardTitle>
+            <CardDescription className="capitalize text-xs">
+              {format(new Date(), "MMMM yyyy", { locale: ptBR })}
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={leadsData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip />
-                  <Bar dataKey="leads" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="space-y-5">
+            {monthlyGoals.map((goal, i) => {
+              const pct = Math.min((goal.current / goal.target) * 100, 100);
+              return (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">{goal.label}</span>
+                    <span className="font-medium">{formatGoalValue(goal.current, goal.format)} / {formatGoalValue(goal.target, goal.format)}</span>
+                  </div>
+                  <Progress value={pct} className="h-2" />
+                  <p className="text-[10px] text-muted-foreground">{pct.toFixed(0)}% da meta</p>
+                </div>
+              );
+            })}
+            <Button className="w-full" size="sm" variant="outline" onClick={() => navigate("/cliente/plano-vendas")}>
+              Ver detalhes
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -130,6 +177,29 @@ export default function ClienteInicio() {
             ))}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Quick Actions - Kivo-inspired */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Abrir Chat", icon: MessageCircle, path: "/cliente/chat" },
+          { label: "Novo Lead", icon: Users, path: "/cliente/crm" },
+          { label: "Ver Relatórios", icon: BarChart3, path: "/cliente/relatorios" },
+          { label: "Plano de Vendas", icon: Target, path: "/cliente/plano-vendas" },
+        ].map(action => {
+          const Icon = action.icon;
+          return (
+            <Button
+              key={action.label}
+              variant="outline"
+              className="h-16 flex flex-col items-center gap-1.5 hover:bg-primary/5 hover:border-primary/30 transition-all"
+              onClick={() => navigate(action.path)}
+            >
+              <Icon className="w-5 h-5 text-primary" />
+              <span className="text-xs font-medium">{action.label}</span>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Alertas */}

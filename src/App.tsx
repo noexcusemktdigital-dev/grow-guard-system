@@ -60,6 +60,9 @@ import ClienteConteudos from "./pages/cliente/ClienteConteudos";
 import ClienteRedesSociais from "./pages/cliente/ClienteRedesSociais";
 import ClienteSites from "./pages/cliente/ClienteSites";
 import ClienteTrafegoPago from "./pages/cliente/ClienteTrafegoPago";
+import ClienteIntegracoes from "./pages/cliente/ClienteIntegracoes";
+import ClientePlanoCreditos from "./pages/cliente/ClientePlanoCreditos";
+import ClienteConfiguracoes from "./pages/cliente/ClienteConfiguracoes";
 
 const queryClient = new QueryClient();
 
@@ -130,6 +133,9 @@ const App = () => (
               <Route path="redes-sociais" element={<ClienteRedesSociais />} />
               <Route path="sites" element={<ClienteSites />} />
               <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
+              <Route path="integracoes" element={<ClienteIntegracoes />} />
+              <Route path="plano-creditos" element={<ClientePlanoCreditos />} />
+              <Route path="configuracoes" element={<ClienteConfiguracoes />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
