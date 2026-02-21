@@ -17,8 +17,8 @@ import { toast } from "@/hooks/use-toast";
 import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from "recharts";
 
 // ── Types ──
-interface MetaMensal { mes: string; faturamento: number; novosClientes: number; ticketMedio: number; salvo: boolean; }
-interface MetaPeriodica { faturamento: number; novosClientes: number; ticketMedio: number; }
+interface InfoAtual { receitaAtual: number; ticketMedio: number; clientesAtivos: number; conversaoMedia: number; }
+interface MetaMensal { mes: string; faturamento: number; novosClientes: number; salvo: boolean; }
 interface EstruturaComercial {
   qtdVendedores: number; qtdSDRs: number; qtdClosers: number; qtdCSs: number;
   canaisAquisicao: string[]; ferramentas: string[]; processoDocumentado: boolean;
@@ -64,9 +64,9 @@ export default function ClientePlanoVendas() {
   const [activeTab, setActiveTab] = useState("visao");
 
   // ── METAS STATE ──
-  const [metaAnual, setMetaAnual] = useState<MetaPeriodica>({ faturamento: 0, novosClientes: 0, ticketMedio: 0 });
-  const [metaSemestral, setMetaSemestral] = useState<MetaPeriodica>({ faturamento: 0, novosClientes: 0, ticketMedio: 0 });
-  const [metasMensais, setMetasMensais] = useState<MetaMensal[]>(MESES.map(m => ({ mes: m, faturamento: 0, novosClientes: 0, ticketMedio: 0, salvo: false })));
+  const [infoAtual, setInfoAtual] = useState<InfoAtual>({ receitaAtual: 0, ticketMedio: 0, clientesAtivos: 0, conversaoMedia: 0 });
+  const [infoAtualSalva, setInfoAtualSalva] = useState(false);
+  const [metasMensais, setMetasMensais] = useState<MetaMensal[]>(MESES.map(m => ({ mes: m, faturamento: 0, novosClientes: 0, salvo: false })));
   const [metasSalvas, setMetasSalvas] = useState(false);
 
   // ── ESTRUTURA STATE ──
@@ -87,7 +87,7 @@ export default function ClientePlanoVendas() {
   const toggleFerramenta = (f: string) => setEstrutura(prev => ({ ...prev, ferramentas: prev.ferramentas.includes(f) ? prev.ferramentas.filter(x => x !== f) : [...prev.ferramentas, f] }));
 
   // ── Checks for Visão Geral ──
-  const temMetas = metasSalvas || metaAnual.faturamento > 0;
+  const temMetas = metasSalvas;
   const temEstrutura = estruturaSalva;
   const temAvaliacao = avaliacoesSalvas.length > 0;
   const visaoDesbloqueada = temMetas && temEstrutura && temAvaliacao;
@@ -97,7 +97,8 @@ export default function ClientePlanoVendas() {
   const scoreAvaliacao = ultimaAvaliacao?.score ?? 0;
   const nivelAvaliacao = getNivel(scoreAvaliacao);
 
-  const metaFatMensal = metaAnual.faturamento > 0 ? Math.round(metaAnual.faturamento / 12) : 0;
+  const totalMetaAnual = metasMensais.reduce((s, m) => s + m.faturamento, 0);
+  const metaFatMensal = totalMetaAnual > 0 ? Math.round(totalMetaAnual / 12) : 0;
   const totalEquipe = estrutura.qtdVendedores + estrutura.qtdSDRs + estrutura.qtdClosers + estrutura.qtdCSs;
 
   // Radar data from last evaluation
@@ -124,10 +125,10 @@ export default function ClientePlanoVendas() {
     if (!estrutura.processoDocumentado) ins.push({ text: "Processo comercial não documentado. Isso reduz previsibilidade.", severity: "error" });
     if (estrutura.canaisAquisicao.length < 2) ins.push({ text: "Poucos canais de aquisição. Diversifique para reduzir risco.", severity: "warn" });
     if (estrutura.canaisAquisicao.length >= 4) ins.push({ text: "Boa diversificação de canais. Continue testando e otimizando.", severity: "info" });
-    if (metaAnual.faturamento > 0 && metaSemestral.faturamento > metaAnual.faturamento / 2) ins.push({ text: "Sua meta semestral é mais agressiva que a proporção anual. Atenção ao ritmo.", severity: "warn" });
+    if (infoAtual.conversaoMedia > 0 && infoAtual.conversaoMedia < 15) ins.push({ text: `Sua conversão atual (${infoAtual.conversaoMedia}%) está abaixo da média. Revise seu funil.`, severity: "warn" });
     if (estrutura.reuniaoRecorrente) ins.push({ text: "Reuniões recorrentes ajudam na previsibilidade. Mantenha a cadência.", severity: "success" });
     return ins;
-  }, [visaoDesbloqueada, scoreAvaliacao, totalEquipe, estrutura, metaAnual, metaSemestral]);
+  }, [visaoDesbloqueada, scoreAvaliacao, totalEquipe, estrutura, infoAtual]);
 
   const insightColors = {
     error: { border: "border-destructive/40", bg: "bg-destructive/5", icon: "text-destructive" },
@@ -153,8 +154,8 @@ export default function ClientePlanoVendas() {
   const prioridadeCores = { alta: "bg-destructive/10 text-destructive border-destructive/30", media: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/30", baixa: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30" };
 
   // Projeção
-  const projecaoData = metaAnual.faturamento > 0
-    ? MESES.map((m, i) => ({ mes: m, meta: Math.round(metaAnual.faturamento * ((i + 1) / 12)), realizado: Math.round(metaAnual.faturamento * ((i + 1) / 12) * (0.6 + Math.random() * 0.5)) }))
+  const projecaoData = totalMetaAnual > 0
+    ? MESES.map((m, i) => ({ mes: m, meta: Math.round(totalMetaAnual * ((i + 1) / 12)), realizado: Math.round(totalMetaAnual * ((i + 1) / 12) * (0.6 + Math.random() * 0.5)) }))
     : [];
 
   // Save metas
@@ -236,7 +237,8 @@ export default function ClientePlanoVendas() {
             <>
               {/* KPIs */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard label="Meta Anual" value={`R$ ${metaAnual.faturamento.toLocaleString()}`} variant="accent" />
+                <KpiCard label="Receita Atual" value={`R$ ${infoAtual.receitaAtual.toLocaleString()}`} />
+                <KpiCard label="Meta Acumulada" value={`R$ ${totalMetaAnual.toLocaleString()}`} variant="accent" />
                 <KpiCard label="Meta Mensal" value={`R$ ${metaFatMensal.toLocaleString()}`} />
                 <KpiCard label="Equipe" value={`${totalEquipe} pessoas`} sublabel={`${estrutura.qtdVendedores} vendedores`} />
                 <KpiCard label="Maturidade" value={`${scoreAvaliacao}%`} sublabel={nivelAvaliacao.label} />
@@ -327,7 +329,7 @@ export default function ClientePlanoVendas() {
               <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
                 <CardHeader className="pb-2"><CardTitle className="text-sm">Resumo Consolidado</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1 text-muted-foreground">
-                  <p><strong>Meta Anual:</strong> R$ {metaAnual.faturamento.toLocaleString()} | <strong>Semestral:</strong> R$ {metaSemestral.faturamento.toLocaleString()}</p>
+                  <p><strong>Receita Atual:</strong> R$ {infoAtual.receitaAtual.toLocaleString()} | <strong>Ticket Médio:</strong> R$ {infoAtual.ticketMedio.toLocaleString()} | <strong>Meta Total:</strong> R$ {totalMetaAnual.toLocaleString()}</p>
                   <p><strong>Equipe:</strong> {estrutura.qtdVendedores} vendedores, {estrutura.qtdSDRs} SDRs, {estrutura.qtdClosers} closers, {estrutura.qtdCSs} CS</p>
                   <p><strong>Canais:</strong> {estrutura.canaisAquisicao.join(", ") || "Nenhum"}</p>
                   <p><strong>Processo documentado:</strong> {estrutura.processoDocumentado ? "Sim" : "Não"} | <strong>Tempo fechamento:</strong> {estrutura.tempoMedioFechamento} dias</p>
@@ -340,47 +342,65 @@ export default function ClientePlanoVendas() {
 
         {/* ===== MINHAS METAS ===== */}
         <TabsContent value="metas" className="space-y-5">
-          {/* Meta Anual */}
-          <Card>
+          {/* Informações Atuais */}
+          <Card className={infoAtualSalva ? "border-emerald-500/20" : ""}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /> Meta Anual</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary" /> Informações Atuais
+                {infoAtualSalva && <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px] ml-auto"><CheckCircle2 className="w-3 h-3 mr-1" />Salvo</Badge>}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Antes de definir suas metas, precisamos entender onde você está hoje.</p>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div><Label className="text-xs text-muted-foreground">Faturamento (R$)</Label><Input type="number" value={metaAnual.faturamento || ""} onChange={e => setMetaAnual(p => ({ ...p, faturamento: Number(e.target.value) }))} placeholder="Ex: 780000" /></div>
-              <div><Label className="text-xs text-muted-foreground">Novos Clientes</Label><Input type="number" value={metaAnual.novosClientes || ""} onChange={e => setMetaAnual(p => ({ ...p, novosClientes: Number(e.target.value) }))} placeholder="Ex: 120" /></div>
-              <div><Label className="text-xs text-muted-foreground">Ticket Médio (R$)</Label><Input type="number" value={metaAnual.ticketMedio || ""} onChange={e => setMetaAnual(p => ({ ...p, ticketMedio: Number(e.target.value) }))} placeholder="Ex: 6500" /></div>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label className="text-xs text-muted-foreground">Receita Atual Mensal (R$)</Label>
+                <Input type="number" value={infoAtual.receitaAtual || ""} disabled={infoAtualSalva}
+                  onChange={e => setInfoAtual(p => ({ ...p, receitaAtual: Number(e.target.value) }))} placeholder="Ex: 47500" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Ticket Médio (R$)</Label>
+                <Input type="number" value={infoAtual.ticketMedio || ""} disabled={infoAtualSalva}
+                  onChange={e => setInfoAtual(p => ({ ...p, ticketMedio: Number(e.target.value) }))} placeholder="Ex: 4500" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Clientes Ativos</Label>
+                <Input type="number" value={infoAtual.clientesAtivos || ""} disabled={infoAtualSalva}
+                  onChange={e => setInfoAtual(p => ({ ...p, clientesAtivos: Number(e.target.value) }))} placeholder="Ex: 35" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Conversão Média (%)</Label>
+                <Input type="number" value={infoAtual.conversaoMedia || ""} disabled={infoAtualSalva}
+                  onChange={e => setInfoAtual(p => ({ ...p, conversaoMedia: Number(e.target.value) }))} placeholder="Ex: 20" step={0.1} />
+              </div>
             </CardContent>
-          </Card>
-
-          {/* Meta Semestral */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-500" /> Meta Semestral</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div><Label className="text-xs text-muted-foreground">Faturamento (R$)</Label><Input type="number" value={metaSemestral.faturamento || ""} onChange={e => setMetaSemestral(p => ({ ...p, faturamento: Number(e.target.value) }))} placeholder="Ex: 390000" /></div>
-              <div><Label className="text-xs text-muted-foreground">Novos Clientes</Label><Input type="number" value={metaSemestral.novosClientes || ""} onChange={e => setMetaSemestral(p => ({ ...p, novosClientes: Number(e.target.value) }))} placeholder="Ex: 60" /></div>
-              <div><Label className="text-xs text-muted-foreground">Ticket Médio (R$)</Label><Input type="number" value={metaSemestral.ticketMedio || ""} onChange={e => setMetaSemestral(p => ({ ...p, ticketMedio: Number(e.target.value) }))} placeholder="Ex: 6500" /></div>
-            </CardContent>
+            {!infoAtualSalva && (
+              <div className="px-6 pb-4">
+                <Button size="sm" onClick={() => { setInfoAtualSalva(true); toast({ title: "Informações atuais salvas!" }); }}
+                  disabled={infoAtual.receitaAtual === 0}>
+                  <Save className="w-3 h-3 mr-1" /> Salvar Informações
+                </Button>
+              </div>
+            )}
           </Card>
 
           {/* Metas Mensais */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-amber-500" /> Metas Mensais</CardTitle>
-              <p className="text-xs text-muted-foreground">Defina metas mês a mês. Cada mês fica salvo individualmente.</p>
+              <CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /> Metas Mensais</CardTitle>
+              <p className="text-xs text-muted-foreground">Defina suas metas mês a mês. Cada mês fica salvo individualmente.</p>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="grid grid-cols-[60px_1fr_1fr_auto] gap-2 mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span>Mês</span><span>Faturamento (R$)</span><span>Novos Clientes</span><span></span>
+              </div>
+              <div className="space-y-2">
                 {metasMensais.map((m, i) => (
-                  <div key={m.mes} className={`grid grid-cols-[60px_1fr_1fr_1fr_auto] gap-3 items-center p-3 rounded-lg ${m.salvo ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-muted/30"}`}>
+                  <div key={m.mes} className={`grid grid-cols-[60px_1fr_1fr_auto] gap-2 items-center p-3 rounded-lg ${m.salvo ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-muted/30"}`}>
                     <span className="text-sm font-bold text-muted-foreground">{m.mes}</span>
-                    <Input type="number" placeholder="Faturamento" value={m.faturamento || ""} disabled={m.salvo}
+                    <Input type="number" placeholder="0" value={m.faturamento || ""} disabled={m.salvo}
                       onChange={e => { const arr = [...metasMensais]; arr[i] = { ...arr[i], faturamento: Number(e.target.value) }; setMetasMensais(arr); }} className="h-8 text-sm" />
-                    <Input type="number" placeholder="Clientes" value={m.novosClientes || ""} disabled={m.salvo}
+                    <Input type="number" placeholder="0" value={m.novosClientes || ""} disabled={m.salvo}
                       onChange={e => { const arr = [...metasMensais]; arr[i] = { ...arr[i], novosClientes: Number(e.target.value) }; setMetasMensais(arr); }} className="h-8 text-sm" />
-                    <Input type="number" placeholder="Ticket" value={m.ticketMedio || ""} disabled={m.salvo}
-                      onChange={e => { const arr = [...metasMensais]; arr[i] = { ...arr[i], ticketMedio: Number(e.target.value) }; setMetasMensais(arr); }} className="h-8 text-sm" />
                     {m.salvo ? (
                       <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" />Salvo</Badge>
                     ) : (
@@ -392,11 +412,20 @@ export default function ClientePlanoVendas() {
                   </div>
                 ))}
               </div>
-              <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
-                <span>Cabeçalho: Faturamento | Novos Clientes | Ticket Médio</span>
-              </div>
             </CardContent>
           </Card>
+
+          {/* Resumo */}
+          {metasMensais.some(m => m.salvo) && (
+            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+              <CardContent className="py-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div><p className="text-xl font-black text-primary">R$ {totalMetaAnual.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total acumulado</p></div>
+                <div><p className="text-xl font-black">R$ {metaFatMensal.toLocaleString()}</p><p className="text-xs text-muted-foreground">Média / mês</p></div>
+                <div><p className="text-xl font-black">{metasMensais.reduce((s, m) => s + m.novosClientes, 0)}</p><p className="text-xs text-muted-foreground">Total clientes</p></div>
+                <div><p className="text-xl font-black">{metasMensais.filter(m => m.salvo).length}/12</p><p className="text-xs text-muted-foreground">Meses definidos</p></div>
+              </CardContent>
+            </Card>
+          )}
 
           <Button onClick={salvarMetas} className="w-full">
             <Save className="w-4 h-4 mr-2" /> Salvar Todas as Metas
