@@ -32,6 +32,8 @@ export default function ContratosGerador() {
   const [clienteDoc, setClienteDoc] = useState("");
   const [clienteEmail, setClienteEmail] = useState("");
   const [clienteTel, setClienteTel] = useState("");
+  const [clienteEndereco, setClienteEndereco] = useState("");
+  const [clienteRg, setClienteRg] = useState("");
 
   // Step 4
   const [recorrencia, setRecorrencia] = useState<ContratoRecorrencia>("Mensal");
@@ -41,6 +43,11 @@ export default function ContratosGerador() {
   const [dataFim, setDataFim] = useState("");
   const [proposta, setProposta] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [duracaoMeses, setDuracaoMeses] = useState(0);
+  const [qtdParcelas, setQtdParcelas] = useState(0);
+  const [valorParcela, setValorParcela] = useState(0);
+  const [servicosDescricao, setServicosDescricao] = useState("");
+  const [cidade, setCidade] = useState("");
 
   const templatesFiltered = mockTemplates.filter(t => t.tipo === tipo && t.aprovado);
   const selectedTemplate = mockTemplates.find(t => t.id === templateId);
@@ -52,14 +59,25 @@ export default function ContratosGerador() {
       .replace(/\{\{cliente_nome\}\}/g, clienteNome || "—")
       .replace(/\{\{cliente_documento\}\}/g, clienteDoc || "—")
       .replace(/\{\{cliente_email\}\}/g, clienteEmail || "—")
+      .replace(/\{\{cliente_endereco\}\}/g, clienteEndereco || "—")
+      .replace(/\{\{cliente_telefone\}\}/g, clienteTel || "—")
+      .replace(/\{\{cliente_rg\}\}/g, clienteRg || "—")
       .replace(/\{\{produto\}\}/g, tipo)
       .replace(/\{\{valor_mensal\}\}/g, valorMensal.toLocaleString("pt-BR"))
       .replace(/\{\{valor_total\}\}/g, valorTotal.toLocaleString("pt-BR"))
+      .replace(/\{\{valor_parcela\}\}/g, valorParcela.toLocaleString("pt-BR"))
+      .replace(/\{\{qtd_parcelas\}\}/g, qtdParcelas ? String(qtdParcelas) : "—")
+      .replace(/\{\{duracao_meses\}\}/g, duracaoMeses ? String(duracaoMeses) : "—")
       .replace(/\{\{recorrencia\}\}/g, recorrencia)
       .replace(/\{\{data_inicio\}\}/g, dataInicio || "—")
       .replace(/\{\{data_fim\}\}/g, dataFim || "—")
+      .replace(/\{\{data_cidade\}\}/g, cidade ? `${cidade}, ${new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}` : "—")
+      .replace(/\{\{servicos_descricao\}\}/g, servicosDescricao || "—")
       .replace(/\{\{franqueado_nome\}\}/g, franqueado?.nome || "—")
       .replace(/\{\{franqueado_unidade\}\}/g, franqueado?.nome || "—")
+      .replace(/\{\{contratada_nome\}\}/g, franqueado?.nome || "NOEXCUSE")
+      .replace(/\{\{contratada_cnpj\}\}/g, "XX.XXX.XXX/0001-XX")
+      .replace(/\{\{contratada_endereco\}\}/g, "—")
       .replace(/\{\{numero_contrato\}\}/g, "CTR-XXX")
       .replace(/\{\{data_geracao\}\}/g, new Date().toLocaleDateString("pt-BR"));
   }
@@ -69,7 +87,10 @@ export default function ContratosGerador() {
     toast({ title: asDraft ? "Rascunho salvo com sucesso!" : "Contrato gerado com sucesso!", description: `Status: ${asDraft ? "Rascunho" : "Gerado"}` });
     setStep(0);
     setClienteNome(""); setClienteDoc(""); setClienteEmail(""); setClienteTel("");
+    setClienteEndereco(""); setClienteRg("");
     setValorMensal(0); setValorTotal(0); setDataInicio(""); setDataFim("");
+    setDuracaoMeses(0); setQtdParcelas(0); setValorParcela(0);
+    setServicosDescricao(""); setCidade("");
   }
 
   return (
@@ -154,6 +175,8 @@ export default function ContratosGerador() {
               <div><Label>CPF/CNPJ</Label><Input value={clienteDoc} onChange={e => setClienteDoc(e.target.value)} /></div>
               <div><Label>Email</Label><Input type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} /></div>
               <div><Label>Telefone</Label><Input value={clienteTel} onChange={e => setClienteTel(e.target.value)} /></div>
+              <div><Label>RG</Label><Input value={clienteRg} onChange={e => setClienteRg(e.target.value)} placeholder="Ex: 12.345.678-9" /></div>
+              <div className="col-span-2"><Label>Endereço</Label><Input value={clienteEndereco} onChange={e => setClienteEndereco(e.target.value)} placeholder="Rua, número, bairro, cidade - UF" /></div>
             </div>
           </div>
         )}
@@ -172,10 +195,15 @@ export default function ContratosGerador() {
               </div>
               <div><Label>Valor Mensal</Label><Input type="number" value={valorMensal} onChange={e => setValorMensal(Number(e.target.value))} /></div>
               <div><Label>Valor Total</Label><Input type="number" value={valorTotal} onChange={e => setValorTotal(Number(e.target.value))} /></div>
+              <div><Label>Duração (meses)</Label><Input type="number" value={duracaoMeses} onChange={e => setDuracaoMeses(Number(e.target.value))} placeholder="Ex: 6" /></div>
+              <div><Label>Qtd. Parcelas</Label><Input type="number" value={qtdParcelas} onChange={e => setQtdParcelas(Number(e.target.value))} /></div>
+              <div><Label>Valor Parcela</Label><Input type="number" value={valorParcela} onChange={e => setValorParcela(Number(e.target.value))} /></div>
+              <div><Label>Cidade</Label><Input value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Ex: Maringá" /></div>
               <div><Label>Data Início</Label><Input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} /></div>
               <div><Label>Data Fim</Label><Input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} /></div>
               <div><Label>Vincular Proposta</Label><Input placeholder="ID da proposta (futuro)" value={proposta} onChange={e => setProposta(e.target.value)} /></div>
             </div>
+            <div><Label>Descrição dos Serviços</Label><Textarea rows={4} value={servicosDescricao} onChange={e => setServicosDescricao(e.target.value)} placeholder="Descreva os serviços contratados (ex: Gestão de Redes Sociais, Criação de Site, etc.)" /></div>
             <div><Label>Observações</Label><Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} /></div>
           </div>
         )}
@@ -190,10 +218,15 @@ export default function ContratosGerador() {
               <div><span className="text-muted-foreground">Cliente:</span> {clienteNome || "—"}</div>
               <div><span className="text-muted-foreground">Documento:</span> {clienteDoc || "—"}</div>
               <div><span className="text-muted-foreground">Email:</span> {clienteEmail || "—"}</div>
+              <div><span className="text-muted-foreground">RG:</span> {clienteRg || "—"}</div>
+              <div className="col-span-2"><span className="text-muted-foreground">Endereço:</span> {clienteEndereco || "—"}</div>
               <div><span className="text-muted-foreground">Recorrência:</span> {recorrencia}</div>
+              <div><span className="text-muted-foreground">Duração:</span> {duracaoMeses ? `${duracaoMeses} meses` : "—"}</div>
               <div><span className="text-muted-foreground">Valor Mensal:</span> R$ {valorMensal.toLocaleString("pt-BR")}</div>
               <div><span className="text-muted-foreground">Valor Total:</span> R$ {valorTotal.toLocaleString("pt-BR")}</div>
+              <div><span className="text-muted-foreground">Parcelas:</span> {qtdParcelas ? `${qtdParcelas}x de R$ ${valorParcela.toLocaleString("pt-BR")}` : "—"}</div>
               <div><span className="text-muted-foreground">Período:</span> {dataInicio || "—"} a {dataFim || "—"}</div>
+              <div><span className="text-muted-foreground">Cidade:</span> {cidade || "—"}</div>
               {franqueado && <div><span className="text-muted-foreground">Franqueado:</span> {franqueado.nome}</div>}
             </div>
 
