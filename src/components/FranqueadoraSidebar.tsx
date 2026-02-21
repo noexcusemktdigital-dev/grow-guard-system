@@ -50,7 +50,7 @@ const principalSection: SidebarItem[] = [
 const redeSection: SidebarItem[] = [
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
   { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm" },
-  { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding", disabled: true },
+  { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
   { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento", disabled: true },
 ];
 
