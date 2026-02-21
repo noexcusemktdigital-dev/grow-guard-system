@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, Lightbulb, Zap, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar, Plus, Lock, CheckCircle2, FileText, Phone, Mail, MessageSquare, Building2, UserCheck, Layers, BarChart3, History, DollarSign, UserPlus, Handshake, ShieldCheck, Receipt, BarChartHorizontal, Megaphone, Trash2, FolderOpen, ChevronDown, ChevronRight, Filter, Pencil, X, Check } from "lucide-react";
+import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, Lightbulb, Zap, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar, Plus, Lock, CheckCircle2, FileText, Phone, Mail, MessageSquare, Building2, UserCheck, Layers, BarChart3, History, DollarSign, UserPlus, Handshake, ShieldCheck, Receipt, BarChartHorizontal, Megaphone, Trash2, FolderOpen, ChevronDown, ChevronRight, Filter, Pencil, X, Check, HelpCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,7 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LineChart, Line } from "recharts";
+import { Tooltip as RechartsTooltip } from "recharts";
+import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, CartesianGrid, BarChart, Bar, LineChart, Line } from "recharts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ── Types ──
 interface InfoAtual {
@@ -48,7 +50,24 @@ type EscopoAvaliacao = "empresa" | "individual";
 interface Avaliacao { id: string; data: string; mesRef: string; respostas: number[]; score: number; escopo: EscopoAvaliacao; vendedor?: string; }
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const CANAIS_OPTIONS = ["Google Ads", "Instagram", "Facebook", "LinkedIn", "Indicação", "Site/SEO", "WhatsApp", "TikTok", "Cold Call", "Outro"];
+const CANAIS_OPTIONS: { label: string; help: string }[] = [
+  { label: "Google Ads", help: "Anúncios pagos no Google para captar leads via pesquisa e display" },
+  { label: "Instagram", help: "Prospecção e conteúdo orgânico/pago no Instagram" },
+  { label: "Facebook", help: "Anúncios e grupos no Facebook para geração de leads" },
+  { label: "LinkedIn", help: "Prospecção B2B, conteúdo e InMail no LinkedIn" },
+  { label: "Indicação", help: "Programa de indicação de clientes atuais para novos leads" },
+  { label: "Site/SEO", help: "Tráfego orgânico via otimização para motores de busca" },
+  { label: "WhatsApp", help: "Prospecção e atendimento via WhatsApp Business" },
+  { label: "TikTok", help: "Conteúdo e anúncios no TikTok para atrair público" },
+  { label: "Cold Call", help: "Ligações ativas para prospecção de novos clientes" },
+  { label: "Cold Email", help: "Envio de emails frios para prospecção de clientes" },
+  { label: "Eventos", help: "Participação em feiras, palestras e eventos do setor" },
+  { label: "Grupos de Negócios", help: "BNI, CDL, associações e grupos de networking presencial" },
+  { label: "Parcerias", help: "Acordos com empresas complementares para troca de indicações" },
+  { label: "YouTube", help: "Conteúdo em vídeo para atrair e educar potenciais clientes" },
+  { label: "Mídia Offline", help: "Rádio, TV, revistas e outdoors" },
+  { label: "Outro", help: "Outro canal de aquisição não listado" },
+];
 
 const TIPO_META_LABELS: Record<TipoMeta, string> = {
   faturamento: "Faturamento", novos_clientes: "Novos Clientes", contratos: "Contratos",
@@ -65,19 +84,28 @@ const TIPO_META_CONFIG: Record<TipoMeta, { label: string; icon: typeof Target; c
   leads: { label: "Leads Gerados", icon: Megaphone, color: "text-pink-500", bg: "bg-pink-500/15", gradient: "bg-gradient-to-r from-pink-400 to-pink-600" },
   reunioes: { label: "Reuniões", icon: Handshake, color: "text-cyan-500", bg: "bg-cyan-500/15", gradient: "bg-gradient-to-r from-cyan-400 to-cyan-600" },
 };
-const FERRAMENTAS_OPTIONS = ["CRM", "WhatsApp Business", "Email Marketing", "Telefone", "ERP", "Planilhas", "Automação (RD, HubSpot)", "Nenhuma"];
+const FERRAMENTAS_OPTIONS: { label: string; help: string }[] = [
+  { label: "CRM", help: "Software para gestão de relacionamento com clientes (Salesforce, Pipedrive, etc.)" },
+  { label: "WhatsApp Business", help: "Versão comercial do WhatsApp com catálogo e respostas rápidas" },
+  { label: "Email Marketing", help: "Plataforma para envio de campanhas e automações de email" },
+  { label: "Telefone", help: "Sistema de telefonia para ligações comerciais" },
+  { label: "ERP", help: "Sistema integrado de gestão empresarial (faturamento, estoque, etc.)" },
+  { label: "Planilhas", help: "Google Sheets ou Excel para controle manual de dados" },
+  { label: "Automação (RD, HubSpot)", help: "Ferramentas de automação de marketing e vendas" },
+  { label: "Nenhuma", help: "Não utiliza nenhuma ferramenta digital no processo comercial" },
+];
 
 const AVALIACAO_PERGUNTAS = [
-  { pergunta: "Seu processo de vendas está documentado e é seguido pela equipe?", bloco: "Processo" },
-  { pergunta: "Você acompanha taxa de conversão por etapa do funil?", bloco: "Processo" },
-  { pergunta: "Existe gestão ativa de leads com follow-up estruturado?", bloco: "Gestão de Leads" },
-  { pergunta: "Seus vendedores usam scripts ou roteiros padronizados?", bloco: "Gestão de Leads" },
-  { pergunta: "Suas metas são baseadas em dados históricos e projeções?", bloco: "Metas" },
-  { pergunta: "Você tem reuniões comerciais recorrentes com a equipe?", bloco: "Metas" },
-  { pergunta: "Você usa CRM integrado ao dia a dia da operação?", bloco: "Ferramentas" },
-  { pergunta: "Há automações no processo comercial (follow-up, nutrição)?", bloco: "Ferramentas" },
-  { pergunta: "Você mede ROI dos seus canais de aquisição?", bloco: "Performance" },
-  { pergunta: "Seus relatórios comerciais são gerados e analisados semanalmente?", bloco: "Performance" },
+  { pergunta: "Seu processo de vendas está documentado e é seguido pela equipe?", bloco: "Processo", help: "Um playbook com etapas claras do funil, scripts e critérios de qualificação que toda a equipe segue no dia a dia." },
+  { pergunta: "Você acompanha taxa de conversão por etapa do funil?", bloco: "Processo", help: "Medir quantos leads avançam de cada etapa (ex: 100 leads → 30 reuniões → 10 propostas → 3 vendas)." },
+  { pergunta: "Existe gestão ativa de leads com follow-up estruturado?", bloco: "Gestão de Leads", help: "Acompanhamento sistemático dos leads com cadência definida (ex: 1o contato, follow-up em 48h, 7 dias, etc.)." },
+  { pergunta: "Seus vendedores usam scripts ou roteiros padronizados?", bloco: "Gestão de Leads", help: "Roteiros de abordagem, qualificação e objeção que garantem consistência na comunicação." },
+  { pergunta: "Suas metas são baseadas em dados históricos e projeções?", bloco: "Metas", help: "Metas definidas com base no histórico de vendas, sazonalidade e crescimento projetado, não em achismos." },
+  { pergunta: "Você tem reuniões comerciais recorrentes com a equipe?", bloco: "Metas", help: "Reuniões semanais ou diárias para revisar pipeline, metas, gargalos e alinhar estratégias." },
+  { pergunta: "Você usa CRM integrado ao dia a dia da operação?", bloco: "Ferramentas", help: "CRM utilizado diariamente para registrar interações, movimentar leads e gerar relatórios automaticamente." },
+  { pergunta: "Há automações no processo comercial (follow-up, nutrição)?", bloco: "Ferramentas", help: "Sequências automáticas de email, WhatsApp ou tarefas que disparam sem ação manual." },
+  { pergunta: "Você mede ROI dos seus canais de aquisição?", bloco: "Performance", help: "Saber quanto cada canal (Google Ads, indicação, etc.) gera de receita comparado ao investimento." },
+  { pergunta: "Seus relatórios comerciais são gerados e analisados semanalmente?", bloco: "Performance", help: "Dashboards ou relatórios semanais com métricas-chave (leads, conversão, ticket, receita)." },
 ];
 const RADAR_LABELS = ["Processo", "Gestão de Leads", "Metas", "Ferramentas", "Performance"];
 
@@ -361,7 +389,7 @@ export default function ClientePlanoVendas() {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="semana" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                    <Tooltip />
+                    <RechartsTooltip />
                     <Bar dataKey="leads" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} name="Leads" />
                     <Bar dataKey="propostas" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} name="Propostas" />
                     <Bar dataKey="vendas" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} name="Vendas" />
@@ -482,7 +510,7 @@ export default function ClientePlanoVendas() {
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                       <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                      <RechartsTooltip formatter={(v: number) => fmtBRL(v)} />
                       <Area type="monotone" dataKey="meta" stroke="hsl(var(--primary))" fill="hsl(var(--primary)/0.15)" strokeWidth={2} name="Meta" />
                       <Area type="monotone" dataKey="realizado" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2)/0.15)" strokeWidth={2} name="Projeção" strokeDasharray="5 5" />
                     </AreaChart>
@@ -809,7 +837,7 @@ export default function ClientePlanoVendas() {
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                           <XAxis dataKey="nome" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} angle={-20} textAnchor="end" height={50} />
                           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
-                          <Tooltip formatter={(v: number) => fmtNum(v)} />
+                          <RechartsTooltip formatter={(v: number) => fmtNum(v)} />
                           <Bar dataKey="meta" fill="hsl(var(--muted-foreground)/0.3)" radius={[4, 4, 0, 0]} name="Meta" />
                           <Bar dataKey="realizado" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Realizado" />
                         </BarChart>
@@ -1391,7 +1419,7 @@ export default function ClientePlanoVendas() {
                 </CardHeader>
                 <CardContent className="pt-4 space-y-5">
                   <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-blue-500" /> Quantas pessoas trabalham no comercial?</Label>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-blue-500" /> Quantas pessoas trabalham no comercial? <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Inclua todas as pessoas envolvidas diretamente no processo de vendas: SDRs, closers, CS e gestores.</TooltipContent></Tooltip></TooltipProvider></Label>
                     <div className="flex flex-wrap gap-2">
                       {["Só eu", "2-3 pessoas", "4-7 pessoas", "8-15 pessoas", "16+ pessoas"].map(opt => (
                         <Button key={opt} size="sm" variant={estrutura.tamanhoEquipe === opt ? "default" : "outline"}
@@ -1442,7 +1470,7 @@ export default function ClientePlanoVendas() {
                 </CardHeader>
                 <CardContent className="pt-4 space-y-5">
                   <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-amber-500" /> Processo documentado?</Label>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-amber-500" /> Processo documentado? <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Se existe um playbook ou documento descrevendo cada etapa do processo de vendas da empresa.</TooltipContent></Tooltip></TooltipProvider></Label>
                     <div className="flex gap-2">
                       {["Sim, completo", "Parcialmente", "Não"].map(opt => (
                         <Button key={opt} size="sm" variant={estrutura.processoDocumentado === opt ? "default" : "outline"}
@@ -1451,7 +1479,7 @@ export default function ClientePlanoVendas() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-amber-500" /> Quais etapas existem no seu funil?</Label>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-amber-500" /> Quais etapas existem no seu funil? <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Selecione todas as etapas que um lead percorre até se tornar cliente na sua empresa.</TooltipContent></Tooltip></TooltipProvider></Label>
                     <div className="flex flex-wrap gap-2">
                       {["Prospecção", "Qualificação", "Apresentação", "Proposta", "Negociação", "Fechamento", "Pós-venda"].map(etapa => (
                         <Button key={etapa} size="sm" variant={estrutura.etapasProcesso.includes(etapa) ? "default" : "outline"}
@@ -1468,7 +1496,7 @@ export default function ClientePlanoVendas() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-amber-500" /> Tempo médio de fechamento</Label>
+                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-amber-500" /> Tempo médio de fechamento <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Tempo médio desde o primeiro contato com o lead até o fechamento do contrato.</TooltipContent></Tooltip></TooltipProvider></Label>
                       <div className="flex flex-wrap gap-2">
                         {["Até 7 dias", "7-15 dias", "15-30 dias", "30-60 dias", "60+ dias"].map(opt => (
                           <Button key={opt} size="sm" variant={estrutura.tempoMedioFechamento === opt ? "default" : "outline"}
@@ -1477,7 +1505,7 @@ export default function ClientePlanoVendas() {
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-amber-500" /> Reunião comercial recorrente?</Label>
+                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-amber-500" /> Reunião comercial recorrente? <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Encontros regulares com a equipe para revisar pipeline, resultados e definir próximas ações.</TooltipContent></Tooltip></TooltipProvider></Label>
                       <div className="flex gap-2">
                         {["Sim", "Não"].map(opt => (
                           <Button key={opt} size="sm" variant={(estrutura.reuniaoRecorrente && opt === "Sim") || (!estrutura.reuniaoRecorrente && opt === "Não") ? "default" : "outline"}
@@ -1507,11 +1535,18 @@ export default function ClientePlanoVendas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-3 flex flex-wrap gap-2">
-                    {CANAIS_OPTIONS.map(c => (
-                      <Button key={c} size="sm" variant={estrutura.canaisAquisicao.includes(c) ? "default" : "outline"}
-                        className={estrutura.canaisAquisicao.includes(c) ? "" : "border-dashed"}
-                        onClick={() => toggleCanal(c)}>{c}</Button>
-                    ))}
+                    <TooltipProvider delayDuration={200}>
+                      {CANAIS_OPTIONS.map(c => (
+                        <Tooltip key={c.label}>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant={estrutura.canaisAquisicao.includes(c.label) ? "default" : "outline"}
+                              className={estrutura.canaisAquisicao.includes(c.label) ? "" : "border-dashed"}
+                              onClick={() => toggleCanal(c.label)}>{c.label}</Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[200px] text-xs"><p>{c.help}</p></TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </TooltipProvider>
                   </CardContent>
                 </Card>
                 <Card className="overflow-hidden">
@@ -1522,11 +1557,18 @@ export default function ClientePlanoVendas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-3 flex flex-wrap gap-2">
-                    {FERRAMENTAS_OPTIONS.map(f => (
-                      <Button key={f} size="sm" variant={estrutura.ferramentas.includes(f) ? "default" : "outline"}
-                        className={estrutura.ferramentas.includes(f) ? "" : "border-dashed"}
-                        onClick={() => toggleFerramenta(f)}>{f}</Button>
-                    ))}
+                    <TooltipProvider delayDuration={200}>
+                      {FERRAMENTAS_OPTIONS.map(f => (
+                        <Tooltip key={f.label}>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant={estrutura.ferramentas.includes(f.label) ? "default" : "outline"}
+                              className={estrutura.ferramentas.includes(f.label) ? "" : "border-dashed"}
+                              onClick={() => toggleFerramenta(f.label)}>{f.label}</Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[200px] text-xs"><p>{f.help}</p></TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </TooltipProvider>
                   </CardContent>
                 </Card>
               </div>
@@ -1646,7 +1688,7 @@ export default function ClientePlanoVendas() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="data" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${v}%`} />
-                        <Tooltip content={({ active, payload }) => {
+                        <RechartsTooltip content={({ active, payload }: any) => {
                           if (!active || !payload?.length) return null;
                           const d = payload[0].payload;
                           return (
@@ -1869,7 +1911,17 @@ export default function ClientePlanoVendas() {
                             const idx = AVALIACAO_PERGUNTAS.indexOf(p);
                             return (
                               <div key={idx} className="space-y-1">
-                                <Label className="text-sm">{idx + 1}. {p.pergunta}</Label>
+                                <Label className="text-sm flex items-center gap-1.5">
+                                  {idx + 1}. {p.pergunta}
+                                  <TooltipProvider delayDuration={200}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help shrink-0" />
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-[250px] text-xs"><p>{p.help}</p></TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </Label>
                                 <div className="flex gap-2">
                                   {[1, 2, 3, 4, 5].map(v => (
                                     <Button key={v} size="sm" variant={respostasAvaliacao[idx] === v ? "default" : "outline"} className="w-10 h-10"
