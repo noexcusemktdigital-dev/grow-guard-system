@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   FileSignature, DollarSign, Clock, AlertTriangle, Download, ArrowLeft,
-  Upload, CheckCircle2, XCircle, Plus
+  Upload, CheckCircle2, XCircle, Plus, BarChart3
 } from "lucide-react";
 import {
   getFranqueadoContratos, getFranqueadoLeads, getFranqueadoPropostas,
@@ -34,6 +35,10 @@ function calcValorFranqueado(base: number, exc: number, emissor: "franqueado" | 
 }
 
 export default function FranqueadoContratos() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const novoId = searchParams.get("novo");
+
   const [contratos] = useState(() => getFranqueadoContratos());
   const leads = getFranqueadoLeads();
   const propostas = getFranqueadoPropostas();
@@ -41,6 +46,7 @@ export default function FranqueadoContratos() {
   const [activeTab, setActiveTab] = useState("lista");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [tipoFilter, setTipoFilter] = useState("todos");
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   // form state
   const [formCliente, setFormCliente] = useState("");
@@ -50,6 +56,15 @@ export default function FranqueadoContratos() {
   const [formEmissor, setFormEmissor] = useState<"franqueado" | "matriz">("franqueado");
   const [formPrazo, setFormPrazo] = useState("12");
   const [formTipo, setFormTipo] = useState<"Recorrente" | "Unitário">("Recorrente");
+
+  // Highlight novo contrato
+  useEffect(() => {
+    if (novoId) {
+      setHighlightId(novoId);
+      const timer = setTimeout(() => setHighlightId(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [novoId]);
 
   const selected = contratos.find(c => c.id === selectedId);
 
@@ -79,6 +94,10 @@ export default function FranqueadoContratos() {
     const p = propostas.find(x => x.id === id);
     if (p) {
       setFormValorBase(p.valor);
+      setFormExcedente(p.valorExcedente || 0);
+      setFormEmissor(p.emissorExcedente || "franqueado");
+      setFormTipo(p.tipo || "Recorrente");
+      setFormPrazo(p.prazo || "12");
       const lead = leads.find(l => l.nome === p.clienteNome);
       if (lead) setFormCliente(lead.id);
     }
@@ -128,9 +147,12 @@ export default function FranqueadoContratos() {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4 border-t border-border">
+            <div className="flex gap-2 pt-4 border-t border-border flex-wrap">
               <Button size="sm"><Download className="w-4 h-4 mr-1" /> Download PDF</Button>
               <Button size="sm" variant="outline"><Upload className="w-4 h-4 mr-1" /> Anexar Assinado</Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/franqueado/financeiro")}>
+                <BarChart3 className="w-4 h-4 mr-1" /> Ver Impacto Financeiro
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -202,7 +224,11 @@ export default function FranqueadoContratos() {
               </TableHeader>
               <TableBody>
                 {filtered.map(c => (
-                  <TableRow key={c.id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => { setSelectedId(c.id); }}>
+                  <TableRow
+                    key={c.id}
+                    className={`cursor-pointer hover:bg-muted/30 transition-all ${highlightId === c.id ? "ring-2 ring-primary animate-pulse" : ""}`}
+                    onClick={() => setSelectedId(c.id)}
+                  >
                     <TableCell className="font-medium">{c.clienteNome}</TableCell>
                     <TableCell><Badge variant="outline">{c.tipo}</Badge></TableCell>
                     <TableCell className="font-semibold">R$ {c.valorBase.toLocaleString()}</TableCell>

@@ -7,13 +7,15 @@ import { KpiCard } from "@/components/KpiCard";
 import { AlertCard } from "@/components/AlertCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
   DollarSign, ArrowRightLeft, Receipt, TrendingUp, Wallet, Calculator, CreditCard, BarChart3,
-  Download, FileSpreadsheet, Info
+  Download, FileSpreadsheet, Info, Eye
 } from "lucide-react";
 import {
   getFranqueadoFinanceiro, getFranqueadoEntradas, getFranqueadoSaidas,
-  getFranqueadoFechamentos, getFranqueadoAlertasFinanceiros, getFranqueadoReceitaMensal
+  getFranqueadoFechamentos, getFranqueadoAlertasFinanceiros, getFranqueadoReceitaMensal,
+  FranqueadoFechamento
 } from "@/data/franqueadoData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -28,9 +30,24 @@ export default function FranqueadoFinanceiro() {
   const receitaMensal = getFranqueadoReceitaMensal();
   const [catFilter, setCatFilter] = useState<string>("Todas");
 
+  // DRE Dialog
+  const [dreDialogOpen, setDreDialogOpen] = useState(false);
+  const [dreSelecionado, setDreSelecionado] = useState<FranqueadoFechamento | null>(null);
+
   const saidasFiltradas = catFilter === "Todas" ? saidas : saidas.filter(s => s.categoria === catFilter);
   const totalEntradas = entradas.reduce((s, e) => s + e.valorFinalFranqueado, 0);
   const totalSaidas = saidasFiltradas.reduce((s, e) => s + e.valor, 0);
+
+  function openDreDialog(f: FranqueadoFechamento) {
+    setDreSelecionado(f);
+    setDreDialogOpen(true);
+  }
+
+  // Find previous month for comparison
+  function getMesAnterior(f: FranqueadoFechamento) {
+    const idx = fechamentos.findIndex(x => x.id === f.id);
+    return idx < fechamentos.length - 1 ? fechamentos[idx + 1] : null;
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -236,6 +253,9 @@ export default function FranqueadoFinanceiro() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Visualizar DRE" onClick={() => openDreDialog(f)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" title="Download PDF">
                         <Download className="w-4 h-4" />
                       </Button>
@@ -250,6 +270,79 @@ export default function FranqueadoFinanceiro() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ── DIALOG: Visualização DRE ── */}
+      <Dialog open={dreDialogOpen} onOpenChange={setDreDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>📊 Fechamento — {dreSelecionado?.mes}</DialogTitle>
+            <DialogDescription>Demonstrativo de Resultado (DRE)</DialogDescription>
+          </DialogHeader>
+          {dreSelecionado && (() => {
+            const anterior = getMesAnterior(dreSelecionado);
+            return (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-3 rounded-lg bg-muted/30">
+                    <p className="text-xs text-muted-foreground">Receita Total</p>
+                    <p className="text-lg font-bold">R$ {dreSelecionado.receita.toLocaleString()}</p>
+                    {anterior && (
+                      <p className={`text-xs mt-1 ${dreSelecionado.receita >= anterior.receita ? "text-green-400" : "text-red-400"}`}>
+                        {dreSelecionado.receita >= anterior.receita ? "↑" : "↓"} {Math.abs(((dreSelecionado.receita - anterior.receita) / anterior.receita) * 100).toFixed(1)}% vs {anterior.mes}
+                      </p>
+                    )}
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/30">
+                    <p className="text-xs text-muted-foreground">Valor Líquido</p>
+                    <p className="text-lg font-bold text-primary">R$ {dreSelecionado.valorLiquido.toLocaleString()}</p>
+                    {anterior && (
+                      <p className={`text-xs mt-1 ${dreSelecionado.valorLiquido >= anterior.valorLiquido ? "text-green-400" : "text-red-400"}`}>
+                        {dreSelecionado.valorLiquido >= anterior.valorLiquido ? "↑" : "↓"} {Math.abs(((dreSelecionado.valorLiquido - anterior.valorLiquido) / anterior.valorLiquido) * 100).toFixed(1)}% vs {anterior.mes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between py-2 border-b border-border">
+                    <span className="text-muted-foreground">Repasse (20%)</span>
+                    <span className="font-semibold">R$ {dreSelecionado.repasse.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border">
+                    <span className="text-muted-foreground">Excedente Franqueado</span>
+                    <span className="font-semibold text-primary">R$ {dreSelecionado.excedenteFranqueado.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border">
+                    <span className="text-muted-foreground">(-) Royalties (1%)</span>
+                    <span className="font-semibold text-red-400">- R$ {dreSelecionado.royalties.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border">
+                    <span className="text-muted-foreground">(-) Sistema Mensalidade</span>
+                    <span className="font-semibold text-red-400">- R$ {dreSelecionado.sistema.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between py-2 bg-primary/5 px-3 rounded-lg">
+                    <span className="font-bold">Resultado Final</span>
+                    <span className="font-bold text-primary text-lg">R$ {dreSelecionado.valorLiquido.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <Badge variant="outline" className={
+                  dreSelecionado.status === "Pago" ? "bg-green-500/20 text-green-400 border-green-400/30" :
+                  dreSelecionado.status === "Disponível" ? "bg-blue-500/20 text-blue-400 border-blue-400/30" :
+                  "bg-yellow-500/20 text-yellow-400 border-yellow-400/30"
+                }>
+                  Status: {dreSelecionado.status}
+                </Badge>
+              </div>
+            );
+          })()}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm"><Download className="w-4 h-4 mr-1" /> PDF</Button>
+            <Button variant="outline" size="sm"><FileSpreadsheet className="w-4 h-4 mr-1" /> Excel</Button>
+            <Button size="sm" onClick={() => setDreDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
