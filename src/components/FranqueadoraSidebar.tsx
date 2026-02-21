@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ChevronDown,
   BarChart3,
+  Shield,
   Settings,
   Calendar,
   Megaphone,
@@ -52,6 +53,7 @@ const redeSection: SidebarItem[] = [
   { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
   { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
+  { label: "Matriz", icon: Shield, path: "/franqueadora/matriz" },
 ];
 
 const comercialSection: SidebarItem[] = [
