@@ -65,7 +65,7 @@ export default function Matriz() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">Matriz</h1>
+              <h1 className="page-header-title">Matriz</h1>
               <Badge variant="secondary">Franqueadora</Badge>
             </div>
             <p className="text-sm text-muted-foreground">

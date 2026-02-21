@@ -96,7 +96,7 @@ export default function ContratosGerador() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Criar Contratos</h1>
+        <h1 className="page-header-title">Criar Contratos</h1>
         <Badge variant="secondary" className="mt-1">Franqueadora (acesso total)</Badge>
       </div>
 

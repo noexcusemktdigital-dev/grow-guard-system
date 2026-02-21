@@ -68,13 +68,13 @@ export default function FinanceiroDashboard() {
   const totalRepassePendente = repassePendente.reduce((s, r) => s + r.valorRepasse, 0);
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-[1400px]">
+    <div className="space-y-6 max-w-[1400px]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Financeiro • Dashboard</h1>
+          <h1 className="page-header-title">Gestão Financeira</h1>
           <p className="text-sm text-muted-foreground mt-1">Resumo geral + Projeção Inteligente</p>
         </div>
-        <select value={mesSelecionado} onChange={(e) => setMesSelecionado(e.target.value)} className="bg-secondary text-foreground border border-border rounded-lg px-3 py-2 text-sm">
+        <select value={mesSelecionado} onChange={(e) => setMesSelecionado(e.target.value)} className="bg-secondary text-foreground border border-border rounded-xl px-3 py-2 text-sm">
           {mesesDisponiveis.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
         </select>
       </div>

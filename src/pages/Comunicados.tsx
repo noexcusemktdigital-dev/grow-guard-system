@@ -128,7 +128,7 @@ export default function Comunicados() {
           <Megaphone className="w-6 h-6 text-primary" />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">Comunicados</h1>
+              <h1 className="page-header-title">Comunicados</h1>
               <Badge variant="secondary" className="text-[10px]">Franqueadora</Badge>
             </div>
             <p className="text-sm text-muted-foreground">Central de comunicados e avisos da rede</p>

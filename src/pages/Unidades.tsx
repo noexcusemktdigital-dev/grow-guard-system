@@ -43,7 +43,7 @@ export default function Unidades() {
         <div>
           <div className="flex items-center gap-2">
             <Building2 className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold">{selected ? selected.nome : "Unidades"}</h1>
+            <h1 className="page-header-title">{selected ? selected.nome : "Unidades da Rede"}</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             {selected ? "Gerenciamento da unidade" : "Cadastro e gerenciamento das franquias da rede"}

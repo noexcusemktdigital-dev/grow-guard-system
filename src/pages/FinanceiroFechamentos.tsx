@@ -16,9 +16,9 @@ const mesesDisponiveis = [
 
 export default function FinanceiroFechamentos() {
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-[1400px]">
+    <div className="space-y-6 max-w-[1400px]">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Financeiro • Fechamentos (DRE)</h1>
+        <h1 className="page-header-title">Fechamentos (DRE)</h1>
         <p className="text-sm text-muted-foreground mt-1">Demonstrativo de Resultado por franqueado</p>
       </div>
 

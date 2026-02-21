@@ -115,7 +115,7 @@ export default function Academy() {
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl font-bold tracking-tight">NOE Academy</h1>
+                  <h1 className="page-header-title">NOE Academy</h1>
                   <Badge variant="secondary" className="text-[10px] font-semibold">Franqueadora</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">

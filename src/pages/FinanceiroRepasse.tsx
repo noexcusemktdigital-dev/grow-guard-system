@@ -136,13 +136,13 @@ export default function FinanceiroRepasse() {
   );
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-[1400px]">
+    <div className="space-y-6 max-w-[1400px]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Financeiro • Repasse</h1>
+          <h1 className="page-header-title">Repasse</h1>
           <p className="text-sm text-muted-foreground mt-1">Logbook CRUD — Franqueados e Parceiros</p>
         </div>
-        <select value={mes} onChange={(e) => setMes(e.target.value)} className="bg-secondary text-foreground border border-border rounded-lg px-3 py-2 text-sm">
+        <select value={mes} onChange={(e) => setMes(e.target.value)} className="bg-secondary text-foreground border border-border rounded-xl px-3 py-2 text-sm">
           <option value="2026-01">Jan/2026</option>
           <option value="2026-02">Fev/2026</option>
           <option value="2026-03">Mar/2026</option>

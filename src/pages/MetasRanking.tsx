@@ -30,7 +30,7 @@ export default function MetasRanking() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">Metas & Ranking</h1>
+              <h1 className="page-header-title">Metas & Ranking</h1>
               <Badge variant="secondary" className="text-[10px]">Franqueadora</Badge>
             </div>
             <p className="text-sm text-muted-foreground">Performance, gamificação e metas da rede</p>

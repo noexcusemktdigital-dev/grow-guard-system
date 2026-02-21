@@ -66,10 +66,10 @@ export default function Marketing() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight">Marketing</h1>
+            <h1 className="page-header-title">Marketing</h1>
             <Badge variant="secondary" className="text-xs font-medium">Franqueadora</Badge>
           </div>
           <p className="text-sm text-muted-foreground">

@@ -62,10 +62,10 @@ export default function FinanceiroConfiguracoes() {
   ];
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-[900px]">
+    <div className="space-y-6 max-w-[900px]">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Financeiro • Configurações</h1>
+          <h1 className="page-header-title">Configurações Financeiro</h1>
           <p className="text-sm text-muted-foreground mt-1">Motor do sistema — Regras e parâmetros</p>
         </div>
         <Button size="sm" className="gap-2">

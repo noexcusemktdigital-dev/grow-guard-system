@@ -43,7 +43,7 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ export default function Onboarding() {
           )}
           <div className="flex items-center gap-2">
             <Rocket className="w-5 h-5 text-primary" />
-            <h1 className="text-xl font-bold">Onboarding</h1>
+            <h1 className="page-header-title">Onboarding</h1>
             <Badge variant="outline" className="text-xs">Franqueadora</Badge>
           </div>
         </div>

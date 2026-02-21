@@ -25,7 +25,7 @@ export default function ContratosConfiguracoes() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Configurações de Contratos</h1>
+        <h1 className="page-header-title">Configurações de Contratos</h1>
         <Badge variant="secondary" className="mt-1">Franqueadora (acesso total)</Badge>
       </div>
 
