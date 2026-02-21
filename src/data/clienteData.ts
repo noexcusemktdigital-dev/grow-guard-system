@@ -489,3 +489,90 @@ export function getChatConversas() {
     messages: c.messages.map(m => ({ id: m.id, sender: m.senderName, text: m.text, time: m.time, avatar: m.avatar || "?" })),
   }));
 }
+
+// ===== AGENTES DE IA =====
+
+export interface IAAgent {
+  id: string;
+  type: "SDR" | "Closer" | "Suporte" | "Pós-venda";
+  name: string;
+  description: string;
+  active: boolean;
+  linkedAccountId: string | null;
+  linkedAccountName: string | null;
+  tags: string[];
+  tone: "formal" | "casual" | "tecnico" | "amigavel";
+  instructions: string;
+  workingHours: { start: string; end: string };
+  autoReply: boolean;
+  stats: {
+    conversationsToday: number;
+    resolved: number;
+    avgResponseTime: string;
+  };
+}
+
+export function getIAAgents(): IAAgent[] {
+  return [
+    {
+      id: "ag1",
+      type: "SDR",
+      name: "SDR — Qualificação de Leads",
+      description: "Aborda leads novos automaticamente, qualifica com perguntas-chave e agenda demonstrações com o time comercial.",
+      active: true,
+      linkedAccountId: "wa1",
+      linkedAccountName: "WA Comercial",
+      tags: ["Lead"],
+      tone: "amigavel",
+      instructions: "Cumprimente o lead pelo nome, pergunte qual o segmento da empresa, porte e principal necessidade. Se qualificado, ofereça agendamento de demo.",
+      workingHours: { start: "08:00", end: "18:00" },
+      autoReply: true,
+      stats: { conversationsToday: 12, resolved: 8, avgResponseTime: "15s" },
+    },
+    {
+      id: "ag2",
+      type: "Closer",
+      name: "Closer — Fechamento de Vendas",
+      description: "Envia propostas, quebra objeções comuns e conduz o lead até o fechamento com técnicas de negociação.",
+      active: true,
+      linkedAccountId: "wa1",
+      linkedAccountName: "WA Comercial",
+      tags: ["Lead", "Cliente"],
+      tone: "formal",
+      instructions: "Apresente a proposta de forma clara, destaque os diferenciais, use gatilhos de urgência e escassez. Ao detectar objeção, aplique técnica de contorno.",
+      workingHours: { start: "09:00", end: "19:00" },
+      autoReply: true,
+      stats: { conversationsToday: 6, resolved: 4, avgResponseTime: "22s" },
+    },
+    {
+      id: "ag3",
+      type: "Suporte",
+      name: "Suporte — Atendimento ao Cliente",
+      description: "Responde dúvidas de clientes ativos, resolve problemas técnicos e escala para humano quando necessário.",
+      active: true,
+      linkedAccountId: "wa2",
+      linkedAccountName: "WA Suporte",
+      tags: ["Cliente"],
+      tone: "tecnico",
+      instructions: "Identifique o problema do cliente, busque na base de conhecimento, ofereça solução passo a passo. Se não resolver em 3 tentativas, transfira para humano.",
+      workingHours: { start: "07:00", end: "22:00" },
+      autoReply: true,
+      stats: { conversationsToday: 18, resolved: 15, avgResponseTime: "8s" },
+    },
+    {
+      id: "ag4",
+      type: "Pós-venda",
+      name: "Pós-venda — Retenção e NPS",
+      description: "Realiza follow-up com clientes, coleta NPS, identifica risco de churn e propõe reativação.",
+      active: false,
+      linkedAccountId: null,
+      linkedAccountName: null,
+      tags: ["Pós-venda"],
+      tone: "casual",
+      instructions: "Envie mensagem de check-in após 7, 30 e 90 dias. Pergunte nível de satisfação (0-10). Se nota < 7, escale para gerente de contas.",
+      workingHours: { start: "09:00", end: "17:00" },
+      autoReply: false,
+      stats: { conversationsToday: 0, resolved: 0, avgResponseTime: "—" },
+    },
+  ];
+}
