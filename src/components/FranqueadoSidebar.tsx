@@ -28,8 +28,8 @@ const comercialAISection: SidebarItem[] = [
 ];
 
 const marketingSection: SidebarItem[] = [
-  { label: "Materiais da Marca", icon: FolderOpen, path: "/franqueado/materiais" },
-  { label: "Academy & Treinos", icon: GraduationCap, path: "/franqueado/academy" },
+  { label: "Marketing", icon: FolderOpen, path: "/franqueado/materiais" },
+  { label: "Academy e Treinamentos", icon: GraduationCap, path: "/franqueado/academy" },
 ];
 
 const gestaoSection: SidebarItem[] = [
@@ -101,7 +101,7 @@ export function FranqueadoSidebar() {
       <div className="flex-1 overflow-y-auto py-6">
         <SidebarSection title="Principal" items={principalSection} collapsed={collapsed} />
         <SidebarSection title="Comercial AI" items={comercialAISection} collapsed={collapsed} />
-        <SidebarSection title="Marketing Local" items={marketingSection} collapsed={collapsed} />
+        <SidebarSection title="Marketing" items={marketingSection} collapsed={collapsed} />
         <SidebarSection title="Gestão" items={gestaoSection} collapsed={collapsed} />
       </div>
 
