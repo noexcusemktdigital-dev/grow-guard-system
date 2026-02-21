@@ -1,10 +1,10 @@
 
 
-# Modulo Onboarding -- Implantacao e Acompanhamento de Franquias
+# Modulo Atendimento -- Sistema de Chamados + Chat Interno
 
 ## Resumo
 
-Criar o modulo "Onboarding" dentro da secao Rede do sidebar. O modulo gerencia a implantacao estruturada das franquias apos a venda, com checklist de fases, reunioes CS, indicadores iniciais (0-90 dias) e plano de acao. Sem CRM, sem contratos, sem treinamentos gravados -- foco exclusivo na jornada da unidade pos-venda.
+Criar o modulo "Atendimento" dentro da secao Rede do sidebar. Sistema completo de chamados para suporte ao franqueado com Kanban e Lista, pagina de detalhe com chat estilo WhatsApp, SLA automatico por prioridade, categorias editaveis e historico completo.
 
 ---
 
@@ -12,249 +12,264 @@ Criar o modulo "Onboarding" dentro da secao Rede do sidebar. O modulo gerencia a
 
 ```text
 CRIAR:
-src/data/onboardingData.ts                        -- tipos, interfaces, mock data, helpers
-src/pages/Onboarding.tsx                           -- pagina principal (lista + detalhe)
-src/components/onboarding/OnboardingList.tsx        -- tela geral com tabela/cards de unidades
-src/components/onboarding/OnboardingEtapas.tsx      -- aba 1: checklist de implantacao (4 fases)
-src/components/onboarding/OnboardingReunioes.tsx    -- aba 2: timeline de reunioes CS
-src/components/onboarding/OnboardingIndicadores.tsx -- aba 3: indicadores iniciais (90 dias)
-src/components/onboarding/OnboardingPlanoAcao.tsx   -- aba 4: tarefas estrategicas
+src/data/atendimentoData.ts                        -- tipos, categorias, mock data, helpers
+src/pages/Atendimento.tsx                          -- pagina principal (kanban/lista/detalhe/config)
+src/components/atendimento/AtendimentoKanban.tsx    -- visualizacao Kanban por status
+src/components/atendimento/AtendimentoList.tsx      -- visualizacao Lista (tabela)
+src/components/atendimento/AtendimentoDetail.tsx    -- detalhe do chamado com chat
+src/components/atendimento/AtendimentoConfig.tsx    -- configuracoes (categorias, SLA)
 
 MODIFICAR:
-src/components/FranqueadoraSidebar.tsx  -- remover disabled do item "Onboarding"
-src/App.tsx                            -- adicionar rota /franqueadora/onboarding
+src/components/FranqueadoraSidebar.tsx  -- remover disabled do item "Atendimento"
+src/App.tsx                            -- adicionar rota /franqueadora/atendimento
 ```
 
 ---
 
-## 1. Dados (`src/data/onboardingData.ts`)
+## 1. Dados (`src/data/atendimentoData.ts`)
 
 ### Tipos
 
 ```text
-OnboardingStatus = "Nao iniciado" | "Em implantacao" | "Em acompanhamento" | "Implantado com sucesso" | "Em risco" | "Encerrado"
+TicketStatus = "Aberto" | "Em analise" | "Em atendimento" | "Aguardando franqueado" | "Resolvido" | "Encerrado" | "Reaberto"
 
-OnboardingPhase = "Pre-Implantacao" | "Estruturacao" | "Primeiros Movimentos" | "Consolidacao"
+TicketPriority = "Baixa" | "Normal" | "Alta" | "Urgente"
 
-ChecklistItem:
-  id, phase (OnboardingPhase), descricao, concluido (bool), data?, responsavel?, observacao?
+TicketCategory = "Financeiro" | "Juridico" | "Clientes" | "Marketing" | "Comercial" | "Sistema" | "Academy" | "Onboarding" | "Geral"
 
-OnboardingUnit:
-  id, unidadeId, unidadeNome, responsavelCS, dataInicio, status (OnboardingStatus),
-  checklist (ChecklistItem[])
+SUBCATEGORIES (mapa categoria -> subcategorias[]):
+  Financeiro: Duvida de repasse, DRE, Cobranca, Sistema mensalidade, Nota fiscal
+  Juridico: Contrato, COF, Minuta, Clausulas, Documentacao
+  Clientes: Problemas com cliente, Cancelamento, Renovacao, Cobranca cliente, Escopo
+  Marketing: Material de campanha, Criativo, Estrategia, Meta Ads, Google Ads
+  Comercial: Proposta, Calculadora, Estrategia de venda, Objecao
+  Sistema: Erro no sistema, Acesso, Permissao, Bug, Integracao
+  Academy: Prova, Certificado, Modulo bloqueado
+  Onboarding: Etapa, Reuniao, Implantacao
+  Geral: Duvida, Sugestao, Reclamacao
 
-MeetingType = "Kickoff" | "Estrategica" | "Comercial" | "Performance" | "Revisao mensal"
-MeetingStatus = "Agendada" | "Realizada" | "Cancelada"
+SLA_DEADLINES (em horas):
+  Urgente: 4
+  Alta: 8
+  Normal: 24
+  Baixa: 48
 
-OnboardingMeeting:
-  id, onboardingId, tipo (MeetingType), data, status (MeetingStatus),
-  resumo, proximosPassos, anexo?
+Ticket:
+  id, numero (ex: "#001"), unidadeId, unidadeNome,
+  categoria, subcategoria, prioridade, status,
+  responsavelId, responsavelNome,
+  descricao, anexos (string[]),
+  slaDeadline (ISO datetime),
+  avaliacao? (1-5),
+  criadoEm, atualizadoEm
 
-OnboardingIndicators:
-  onboardingId, clientesAtivos, receita, propostasEnviadas, metaAtingidaPct, leadsGerados
-
-OnboardingTask:
-  id, onboardingId, tarefa, responsavel, prazo, status ("Aberta" | "Concluida" | "Atrasada"), observacao?
+TicketMessage:
+  id, chamadoId, autorTipo ("franqueado" | "suporte"),
+  autorNome, mensagem, anexo?,
+  criadoEm
 ```
-
-### Checklist Padrao por Fase
-
-**Fase 1 -- Pre-Implantacao:**
-- Assinatura contrato
-- Pagamento taxa
-- Acesso sistema liberado
-- Acesso Academy liberado
-
-**Fase 2 -- Estruturacao:**
-- Configuracao comercial
-- Definicao de metas
-- Treinamento inicial
-- Apresentacao dos produtos
-
-**Fase 3 -- Primeiros Movimentos:**
-- Primeiro lead gerado
-- Primeira proposta enviada
-- Primeiro contrato fechado
-- Primeira campanha ativa
-
-**Fase 4 -- Consolidacao (30-60 dias):**
-- Pipeline organizado
-- Metas ativas
-- Primeira DRE analisada
-- Ajustes estrategicos
 
 ### Mock Data
 
-- 4-5 onboardings vinculados a unidades existentes (usar unidadeId do mockUnidades)
-  - 1x "Em implantacao" (50-60% concluido)
-  - 1x "Em acompanhamento" (80% concluido)
-  - 1x "Implantado com sucesso" (100%)
-  - 1x "Em risco" (30%, sem atividade recente)
-  - 1x "Nao iniciado" (0%)
-- Responsaveis CS: "Davi", "Lucas", "Amanda"
-- 3-4 reunioes mock (Kickoff, Estrategica, etc.)
-- Indicadores mock para unidades ativas
-- 4-5 tarefas mock (incluindo atrasadas para alertas)
+- 8-10 chamados distribuidos entre unidades existentes (mockUnidades u1-u7)
+- Variedade de categorias, prioridades e status
+- 2 chamados com SLA estourado (para alertas)
+- 1 chamado "Resolvido" com avaliacao
+- 1 chamado "Encerrado"
+- 10-15 mensagens mock distribuidas entre 3-4 chamados (alternando franqueado/suporte)
+- Responsaveis internos: "Davi", "Lucas", "Amanda"
 
 ### Helpers
 
-- `getOnboardingProgress(checklist)` -- calcula % concluido
-- `getOnboardingAlerts(onboardings, tasks)` -- retorna alertas:
-  - Sem atividade ha 7 dias
-  - Kickoff nao realizado
-  - 60 dias sem cliente fechado
-  - Menos de 70% concluido apos prazo
-- `DEFAULT_CHECKLIST` -- array padrao de checklist para novas implantacoes
+- `getTicketsByStatus(status)` -- filtra chamados
+- `getMessagesForTicket(ticketId)` -- mensagens do chamado
+- `isSlaBreached(ticket)` -- verifica se SLA estourou
+- `getSlaRemaining(ticket)` -- tempo restante em horas/minutos
+- `getAtendimentoAlerts(tickets)` -- chamados com SLA estourado, sem resposta, etc.
+- `TICKET_STATUSES` -- array ordenado de status para Kanban
+- `CATEGORIES` -- array de categorias
+- `SUBCATEGORIES_MAP` -- mapa categoria -> subcategorias
 
 ---
 
-## 2. Pagina Principal (`src/pages/Onboarding.tsx`)
+## 2. Pagina Principal (`src/pages/Atendimento.tsx`)
 
-### Navegacao via state
+### Navegacao via state (mesmo padrao do CRM)
 
-- State `selectedOnboardingId`: null (lista) ou id (detalhe)
+- State `view`: "kanban" | "list" | "detail" | "config"
+- State `selectedTicketId`: null ou id
 
 ### Header
 
-- Titulo "Onboarding" com icone Rocket
+- Titulo "Atendimento" com icone MessageSquare
 - Badge "Franqueadora"
-- Subtitulo: "Implantacao e acompanhamento das franquias da rede"
-- Botao "Voltar" quando em detalhe
+- Subtitulo: "Central de suporte e chamados da rede"
 
-### Detalhe da Unidade
+### Barra de Controles
 
-Quando selecionada, exibir:
-- Header: nome da unidade, data de inicio, responsavel CS, status (badge), barra de progresso (%)
-- 4 abas (Tabs shadcn): Etapas, Reunioes, Indicadores, Plano de Acao
-
----
-
-## 3. Tela Geral (`src/components/onboarding/OnboardingList.tsx`)
-
-### Alertas no topo
-
-Cards com contagem de alertas (mesmo padrao do CRM):
-- Unidades sem atividade ha 7+ dias
-- Kickoff nao realizado
-- Unidades em risco
-- Media de progresso da rede
+- Toggle visualizacao: Kanban | Lista
+- Botao "Configuracoes" (abre config)
+- Botao "+ Novo Chamado" (Dialog)
 
 ### Filtros
 
 - Status (Select)
-- Responsavel CS (Select)
-- Periodo (Input date range simplificado)
+- Unidade (Select com mockUnidades)
+- Categoria (Select)
+- Prioridade (Select)
+- Responsavel (Select)
+- Busca por numero/descricao (Input)
+
+### Alertas no topo
+
+- Chamados com SLA estourado (vermelho)
+- Chamados abertos sem resposta (laranja)
+- Chamados aguardando franqueado ha 48h+ (amarelo)
+- Total de chamados abertos (azul)
+
+### Dialog Novo Chamado
+
+Formulario:
+- Unidade (Select)
+- Categoria (Select) -- ao selecionar, popula subcategorias
+- Subcategoria (Select dinamico)
+- Prioridade (Select: Baixa/Normal/Alta/Urgente)
+- Descricao (Textarea)
+- Responsavel (Select, opcional)
+- Calcula slaDeadline automaticamente com base na prioridade
+- Numero auto-incrementado (#001, #002...)
+
+---
+
+## 3. Kanban (`src/components/atendimento/AtendimentoKanban.tsx`)
+
+### Colunas
+
+6 colunas (status): Aberto, Em analise, Em atendimento, Aguardando franqueado, Resolvido, Encerrado
+
+### Header da Coluna
+
+- Nome do status
+- Contagem
+- Cor: Aberto=azul, Em analise=amarelo, Em atendimento=roxo, Aguardando=laranja, Resolvido=verde, Encerrado=cinza
+
+### Cards
+
+- Numero do chamado (#001)
+- Unidade (nome)
+- Categoria (badge)
+- Prioridade (badge colorido: Baixa=cinza, Normal=azul, Alta=laranja, Urgente=vermelho)
+- Responsavel
+- Ultima interacao (data relativa)
+- SLA: tempo restante ou tag "SLA Estourado" (vermelho, pulse)
+
+### Acoes
+
+- Clicar abre detalhe
+- Botao "Mover >" com Select para mudar status
+
+---
+
+## 4. Lista (`src/components/atendimento/AtendimentoList.tsx`)
 
 ### Tabela
 
 Colunas:
+- Numero
 - Unidade
-- Data inicio
-- Responsavel CS
-- Etapa atual (fase com mais itens pendentes)
-- % concluido (Progress bar)
-- Status (badge colorido)
+- Categoria
+- Prioridade (badge)
+- Responsavel
+- Status (badge)
+- SLA (tempo restante ou "Estourado")
+- Ultima atualizacao
 - Acoes: Abrir
 
-Cores do status:
-- Nao iniciado = cinza
-- Em implantacao = azul
-- Em acompanhamento = amarelo
-- Implantado com sucesso = verde
-- Em risco = vermelho
-- Encerrado = cinza escuro
+---
 
-### Botao "Iniciar Onboarding"
+## 5. Detalhe do Chamado (`src/components/atendimento/AtendimentoDetail.tsx`)
 
-Dialog para selecionar unidade (das existentes no mockUnidades que ainda nao tem onboarding), definir responsavel CS e data de inicio. Cria com checklist padrao e status "Em implantacao".
+### Layout em 2 colunas (grid ou flex)
+
+#### Lado Esquerdo -- Informacoes
+
+Card com:
+- Numero do chamado (grande)
+- Unidade
+- Categoria / Subcategoria
+- Prioridade (badge)
+- Responsavel (editavel via Select)
+- Status (editavel via Select)
+- Data de abertura
+- SLA: countdown ou "Estourado" (badge)
+- Descricao completa
+- Anexos (lista)
+- Botoes: Resolver, Encerrar, Reabrir (conforme status)
+- Se status "Encerrado": exibir avaliacao (1-5 estrelas, se existir) ou botao "Avaliar"
+
+#### Lado Direito -- Chat Interno
+
+Visual estilo WhatsApp:
+- Area de mensagens scrollavel (ScrollArea)
+- Mensagens alinhadas: suporte=esquerda (fundo cinza), franqueado=direita (fundo primario)
+- Cada mensagem: autorNome, texto, timestamp, anexo (se houver)
+- Identificacao visual: badge "Suporte" ou "Franqueado" em cada mensagem
+- Input de mensagem na parte inferior:
+  - Textarea (autosize)
+  - Botao enviar
+  - Botao anexo (placeholder)
+- Ao enviar: adiciona mensagem como "suporte", atualiza atualizadoEm do chamado
+
+### Fluxo de Resolucao
+
+- Botao "Resolver": muda status para "Resolvido", toast
+- Botao "Encerrar": muda para "Encerrado", dialog perguntando avaliacao (1-5 estrelas, opcional)
+- Botao "Reabrir": muda para "Reaberto" (so aparece se Resolvido/Encerrado)
 
 ---
 
-## 4. Aba 1 -- Etapas da Implantacao (`OnboardingEtapas.tsx`)
+## 6. Configuracoes (`src/components/atendimento/AtendimentoConfig.tsx`)
 
-### Layout
+### Categorias e Subcategorias
 
-4 fases em secoes colapsaveis (Collapsible):
-- Header da fase: nome, progresso da fase (ex: 3/4), badge se 100%
-- Dentro de cada fase, lista de itens de checklist
+Lista editavel de categorias com suas subcategorias (placeholder visual -- permite ver e simular edicao)
 
-### Cada item do checklist
+### SLA por Prioridade
 
-- Checkbox (concluido/nao)
-- Descricao
-- Data de conclusao (se concluido)
-- Responsavel (editavel, Input ou Select)
-- Observacao (Input, opcional)
-- Ao marcar checkbox: preenche data automaticamente com hoje
+Tabela editavel:
+- Urgente: 4h
+- Alta: 8h
+- Normal: 24h
+- Baixa: 48h
+(Campos editaveis com Input number)
 
-### Calculo automatico
+### Responsaveis
 
-- Progress bar geral no header atualiza em tempo real
-- % = itens concluidos / total de itens
+Lista de responsaveis disponiveis
 
----
+### Regras de Automacao (placeholder)
 
-## 5. Aba 2 -- Reunioes e Acompanhamentos (`OnboardingReunioes.tsx`)
-
-### Timeline vertical
-
-Lista cronologica com linha conectora vertical (igual atividades do CRM):
-- Icone por tipo de reuniao
-- Data
-- Status (badge: Agendada=azul, Realizada=verde, Cancelada=vermelho)
-- Resumo (texto)
-- Proximos passos
-- Anexo (nome, se houver)
-
-### Botao "+ Agendar Reuniao"
-
-Dialog com:
-- Tipo (Select: Kickoff, Estrategica, Comercial, Performance, Revisao mensal)
-- Data
-- Status (default: Agendada)
-- Resumo (Textarea)
-- Proximos passos (Input)
+- Atribuicao automatica por categoria (Select categoria -> responsavel)
+- Notificacao ao abrir chamado (toggle)
 
 ---
 
-## 6. Aba 3 -- Indicadores Iniciais (`OnboardingIndicadores.tsx`)
+## 7. Design
 
-### Cards KPI (padrao do projeto)
+### Cores
 
-5 cards:
-- Clientes ativos (numero)
-- Receita acumulada (R$)
-- Propostas enviadas (numero)
-- Meta atingida (% com Progress bar)
-- Leads gerados (numero)
+- Prioridade: Baixa=slate, Normal=blue, Alta=amber, Urgente=red
+- Status: Aberto=blue, Em analise=yellow, Em atendimento=purple, Aguardando=orange, Resolvido=green, Encerrado=gray, Reaberto=blue
+- SLA estourado: vermelho com animacao pulse
+- Chat suporte: bg-muted (esquerda)
+- Chat franqueado: bg-primary/10 (direita)
 
-### Nota informativa
+### Efeitos
 
-"Dados referentes aos primeiros 90 dias da unidade. Valores simulados -- integracao automatica em desenvolvimento."
-
-Dados vem do mock `OnboardingIndicators`.
-
----
-
-## 7. Aba 4 -- Plano de Acao (`OnboardingPlanoAcao.tsx`)
-
-### Tabela de tarefas
-
-Colunas:
-- Tarefa (descricao)
-- Responsavel (Franqueado ou CS)
-- Prazo (data)
-- Status (badge: Aberta=azul, Concluida=verde, Atrasada=vermelho)
-- Observacao
-- Acoes: Concluir (checkbox), Editar, Excluir
-
-### Botao "+ Nova Tarefa"
-
-Dialog com: Tarefa, Responsavel (Select), Prazo (Input date), Observacao.
-
-### Destaque visual
-
-Tarefas atrasadas (prazo < hoje e nao concluida) com fundo vermelho claro e badge "Atrasada".
+- Chat com scroll automatico para ultima mensagem
+- SLA com countdown visual (ex: "2h 30min restantes")
+- Alertas com pulse se critico
+- Cards Kanban com hover elevacao
 
 ---
 
@@ -262,44 +277,28 @@ Tarefas atrasadas (prazo < hoje e nao concluida) com fundo vermelho claro e badg
 
 ### FranqueadoraSidebar.tsx
 
-Na secao `redeSection`, remover `disabled: true` do item "Onboarding":
-
+Na secao `redeSection`, remover `disabled: true` do item "Atendimento":
 ```text
-{ label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" }
+{ label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" }
 ```
 
 ### App.tsx
 
 Importar e adicionar rota:
-
 ```text
-import Onboarding from "./pages/Onboarding";
-...
-<Route path="onboarding" element={<Onboarding />} />
+import Atendimento from "./pages/Atendimento";
+<Route path="atendimento" element={<Atendimento />} />
 ```
 
 ---
 
-## 9. Design
+## 9. Ordem de Implementacao
 
-- Seguir padrao visual existente (cards, badges, tabelas, dialogs)
-- Progress bars usando componente Progress do shadcn
-- Status com badges coloridos (mesmo padrao de Unidades e CRM)
-- Timeline de reunioes com linha vertical conectora e icones por tipo
-- Fases do checklist em Collapsible com chevron
-- Alertas no topo com icone + pulse se critico
-- Transicao fade-in entre lista e detalhe
-
----
-
-## 10. Ordem de Implementacao
-
-1. `onboardingData.ts` -- tipos, checklist padrao, mock data (5 onboardings), reunioes, indicadores, tarefas, helpers
-2. `OnboardingList.tsx` -- tela geral com tabela, filtros, alertas, dialog "Iniciar Onboarding"
-3. `OnboardingEtapas.tsx` -- checklist colapsavel com 4 fases e progresso automatico
-4. `OnboardingReunioes.tsx` -- timeline de reunioes com CRUD
-5. `OnboardingIndicadores.tsx` -- cards KPI dos 90 dias
-6. `OnboardingPlanoAcao.tsx` -- tarefas estrategicas com CRUD
-7. `Onboarding.tsx` -- pagina hub com lista/detalhe + abas
-8. `FranqueadoraSidebar.tsx` + `App.tsx` -- ativar menu e rota
+1. `atendimentoData.ts` -- tipos, categorias/subcategorias, SLA, mock chamados (8-10), mensagens (10-15), helpers
+2. `AtendimentoKanban.tsx` -- Kanban por status com cards e SLA visual
+3. `AtendimentoList.tsx` -- tabela operacional
+4. `AtendimentoDetail.tsx` -- detalhe split com info + chat WhatsApp
+5. `AtendimentoConfig.tsx` -- configuracoes admin
+6. `Atendimento.tsx` -- pagina hub com header, filtros, alertas, views
+7. `FranqueadoraSidebar.tsx` + `App.tsx` -- ativar menu e rota
 
