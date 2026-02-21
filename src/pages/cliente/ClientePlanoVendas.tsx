@@ -669,7 +669,7 @@ export default function ClientePlanoVendas() {
                   <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border ${prioridadeCores[acao.prioridade]}`}>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs font-bold w-5 h-5 rounded-full bg-foreground/10 flex items-center justify-center">{i + 1}</span>
-                      <Badge variant="outline" className="text-[10px]">{acao.prioridade === "alta" ? "🔴 Alta" : acao.prioridade === "media" ? "🟡 Média" : "🟢 Baixa"}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{acao.prioridade === "alta" ? "Alta" : acao.prioridade === "media" ? "Média" : "Baixa"}</Badge>
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{acao.titulo}</p>
@@ -969,10 +969,10 @@ export default function ClientePlanoVendas() {
 
                           <div className="flex flex-wrap gap-1.5">
                             <Badge variant="outline" className="text-[10px]">
-                              {m.escopo === "empresa" ? "🏢 Empresa" : m.escopo === "equipe" ? `👥 ${m.equipe}` : `👤 ${m.responsavel}`}
+                              {m.escopo === "empresa" ? "Empresa" : m.escopo === "equipe" ? m.equipe : m.responsavel}
                             </Badge>
                             <Badge variant="outline" className={`text-[10px] ${m.prioridade === "alta" ? "text-red-500 border-red-500/30" : m.prioridade === "media" ? "text-yellow-600 border-yellow-500/30" : "text-emerald-500 border-emerald-500/30"}`}>
-                              {m.prioridade === "alta" ? "🔴 Alta" : m.prioridade === "media" ? "🟡 Média" : "🟢 Baixa"}
+                              {m.prioridade === "alta" ? "Alta" : m.prioridade === "media" ? "Média" : "Baixa"}
                             </Badge>
                           </div>
                         </CardContent>
@@ -1012,14 +1012,14 @@ export default function ClientePlanoVendas() {
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo da meta</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {([
-                      { value: "faturamento" as TipoMeta, label: "Faturamento", icon: DollarSign, color: "text-emerald-500", emoji: "💰" },
-                      { value: "novos_clientes" as TipoMeta, label: "Novos Clientes", icon: UserPlus, color: "text-blue-500", emoji: "👥" },
-                      { value: "contratos" as TipoMeta, label: "Contratos", icon: FileText, color: "text-purple-500", emoji: "📑" },
-                      { value: "retencao" as TipoMeta, label: "Retenção", icon: ShieldCheck, color: "text-teal-500", emoji: "🛡️" },
-                      { value: "ticket_medio" as TipoMeta, label: "Ticket Médio", icon: Receipt, color: "text-orange-500", emoji: "🎫" },
-                      { value: "conversao" as TipoMeta, label: "Conversão (%)", icon: BarChartHorizontal, color: "text-indigo-500", emoji: "📊" },
-                      { value: "leads" as TipoMeta, label: "Leads Gerados", icon: Megaphone, color: "text-pink-500", emoji: "📣" },
-                      { value: "reunioes" as TipoMeta, label: "Reuniões", icon: Handshake, color: "text-cyan-500", emoji: "🤝" },
+                      { value: "faturamento" as TipoMeta, label: "Faturamento", icon: DollarSign, color: "text-emerald-500" },
+                      { value: "novos_clientes" as TipoMeta, label: "Novos Clientes", icon: UserPlus, color: "text-blue-500" },
+                      { value: "contratos" as TipoMeta, label: "Contratos", icon: FileText, color: "text-purple-500" },
+                      { value: "retencao" as TipoMeta, label: "Retenção", icon: ShieldCheck, color: "text-teal-500" },
+                      { value: "ticket_medio" as TipoMeta, label: "Ticket Médio", icon: Receipt, color: "text-orange-500" },
+                      { value: "conversao" as TipoMeta, label: "Conversão (%)", icon: BarChartHorizontal, color: "text-indigo-500" },
+                      { value: "leads" as TipoMeta, label: "Leads Gerados", icon: Megaphone, color: "text-pink-500" },
+                      { value: "reunioes" as TipoMeta, label: "Reuniões", icon: Handshake, color: "text-cyan-500" },
                     ]).map(opt => {
                       const selected = novaMeta.tipo === opt.value;
                       return (
@@ -1027,7 +1027,7 @@ export default function ClientePlanoVendas() {
                           className={`relative flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-md shadow-primary/10" : "border-border/50 hover:border-primary/30 hover:bg-muted/20"}`}
                           onClick={() => setNovaMeta(p => ({ ...p, tipo: opt.value }))}>
                           {selected && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="w-3 h-3 text-primary-foreground" /></div>}
-                          <span className="text-lg">{opt.emoji}</span>
+                          <opt.icon className={`w-4 h-4 ${opt.color}`} />
                           <span className="text-xs font-medium">{opt.label}</span>
                         </button>
                       );
@@ -1170,9 +1170,9 @@ export default function ClientePlanoVendas() {
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Prioridade</Label>
                   <div className="grid grid-cols-3 gap-2">
                     {([
-                      { value: "alta" as const, label: "Alta", emoji: "🔴", desc: "Urgente" },
-                      { value: "media" as const, label: "Média", emoji: "🟡", desc: "Importante" },
-                      { value: "baixa" as const, label: "Baixa", emoji: "🟢", desc: "Complementar" },
+                      { value: "alta" as const, label: "Alta", desc: "Urgente" },
+                      { value: "media" as const, label: "Média", desc: "Importante" },
+                      { value: "baixa" as const, label: "Baixa", desc: "Complementar" },
                     ]).map(opt => {
                       const selected = novaMeta.prioridade === opt.value;
                       return (
@@ -1180,7 +1180,7 @@ export default function ClientePlanoVendas() {
                           className={`relative p-3 rounded-xl border-2 text-center transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-sm" : "border-border/50 hover:border-primary/30 hover:bg-muted/20"}`}
                           onClick={() => setNovaMeta(p => ({ ...p, prioridade: opt.value }))}>
                           {selected && <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center"><Check className="w-2.5 h-2.5 text-primary-foreground" /></div>}
-                          <span className="text-sm block">{opt.emoji}</span>
+                          <span className="text-xs font-semibold block">{opt.label}</span>
                           <span className="text-xs font-medium block">{opt.label}</span>
                           <span className="text-[10px] text-muted-foreground">{opt.desc}</span>
                         </button>
@@ -1479,16 +1479,16 @@ export default function ClientePlanoVendas() {
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Funções na equipe</Label>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
-                        { key: "temSDR", label: "SDR / Pré-vendas", icon: "🎯", desc: "Prospecção e qualificação de leads", options: ["Sim", "Não", "Pretendo"], stateKey: "temSDR" as const, color: "blue" },
-                        { key: "temCloser", label: "Closer / Vendedor", icon: "🤝", desc: "Responsável pelo fechamento", options: ["Sim", "Não", "Eu mesmo"], stateKey: "temCloser" as const, color: "emerald" },
-                        { key: "temCS", label: "CS / Pós-venda", icon: "💎", desc: "Retenção e sucesso do cliente", options: ["Sim", "Não", "Pretendo"], stateKey: "temCS" as const, color: "purple" },
+                        { key: "temSDR", label: "SDR / Pré-vendas", desc: "Prospecção e qualificação de leads", options: ["Sim", "Não", "Pretendo"], stateKey: "temSDR" as const, color: "blue" },
+                        { key: "temCloser", label: "Closer / Vendedor", desc: "Responsável pelo fechamento", options: ["Sim", "Não", "Eu mesmo"], stateKey: "temCloser" as const, color: "emerald" },
+                        { key: "temCS", label: "CS / Pós-venda", desc: "Retenção e sucesso do cliente", options: ["Sim", "Não", "Pretendo"], stateKey: "temCS" as const, color: "purple" },
                       ].map(role => {
                         const currentVal = estrutura[role.stateKey];
                         return (
                           <div key={role.key} className={`p-4 rounded-xl border transition-all duration-200 ${currentVal ? "bg-muted/20 border-border" : "bg-muted/5 border-dashed border-border/50"}`}>
                             <div className="flex items-center gap-2 mb-3">
-                              <span className="text-lg">{role.icon}</span>
                               <div>
+                                <p className="text-xs font-semibold">{role.label}</p>
                                 <p className="text-xs font-semibold">{role.label}</p>
                                 <p className="text-[10px] text-muted-foreground">{role.desc}</p>
                               </div>
@@ -1532,9 +1532,9 @@ export default function ClientePlanoVendas() {
                     </Label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { opt: "Sim, completo", icon: "✅", desc: "Playbook completo" },
-                        { opt: "Parcialmente", icon: "📝", desc: "Existe parcialmente" },
-                        { opt: "Não", icon: "❌", desc: "Sem documentação" },
+                        { opt: "Sim, completo", desc: "Playbook completo" },
+                        { opt: "Parcialmente", desc: "Existe parcialmente" },
+                        { opt: "Não", desc: "Sem documentação" },
                       ].map(item => {
                         const selected = estrutura.processoDocumentado === item.opt;
                         return (
@@ -1542,7 +1542,7 @@ export default function ClientePlanoVendas() {
                             className={`relative group p-3 rounded-xl border-2 text-center transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-md shadow-primary/10" : "border-border/50 hover:border-primary/30 hover:bg-muted/30"}`}
                             onClick={() => setEstrutura(p => ({ ...p, processoDocumentado: item.opt }))}>
                             {selected && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="w-3 h-3 text-primary-foreground" /></div>}
-                            <span className="text-lg block mb-1">{item.icon}</span>
+                            <span className="text-xs font-semibold block">{item.opt}</span>
                             <span className="text-xs font-semibold block">{item.opt}</span>
                             <span className="text-[10px] text-muted-foreground">{item.desc}</span>
                           </button>
@@ -1558,13 +1558,13 @@ export default function ClientePlanoVendas() {
                     </Label>
                     <div className="flex flex-wrap gap-2">
                       {[
-                        { etapa: "Prospecção", icon: "🔍" },
-                        { etapa: "Qualificação", icon: "🎯" },
-                        { etapa: "Apresentação", icon: "📊" },
-                        { etapa: "Proposta", icon: "📄" },
-                        { etapa: "Negociação", icon: "🤝" },
-                        { etapa: "Fechamento", icon: "✅" },
-                        { etapa: "Pós-venda", icon: "💎" },
+                        { etapa: "Prospecção" },
+                        { etapa: "Qualificação" },
+                        { etapa: "Apresentação" },
+                        { etapa: "Proposta" },
+                        { etapa: "Negociação" },
+                        { etapa: "Fechamento" },
+                        { etapa: "Pós-venda" },
                       ].map(item => {
                         const selected = estrutura.etapasProcesso.includes(item.etapa);
                         return (
@@ -1575,7 +1575,7 @@ export default function ClientePlanoVendas() {
                               etapasProcesso: p.etapasProcesso.includes(item.etapa) ? p.etapasProcesso.filter(e => e !== item.etapa) : [...p.etapasProcesso, item.etapa]
                             }))}>
                             {selected && <Check className="w-3 h-3 text-primary" />}
-                            <span className="text-sm">{item.icon}</span>
+                            <span className="text-xs font-medium">{item.etapa}</span>
                             <span className="text-xs font-medium">{item.etapa}</span>
                           </button>
                         );
@@ -1757,8 +1757,8 @@ export default function ClientePlanoVendas() {
                     </Label>
                     <div className="grid grid-cols-2 gap-3">
                       {([
-                        { value: "empresa" as EscopoAvaliacao, label: "Empresa (Geral)", emoji: "🏢", desc: "Avaliação do comercial como um todo" },
-                        { value: "individual" as EscopoAvaliacao, label: "Vendedor Individual", emoji: "👤", desc: "Avaliação de desempenho individual" },
+                        { value: "empresa" as EscopoAvaliacao, label: "Empresa (Geral)", desc: "Avaliação do comercial como um todo" },
+                        { value: "individual" as EscopoAvaliacao, label: "Vendedor Individual", desc: "Avaliação de desempenho individual" },
                       ]).map(opt => {
                         const selected = avaliacaoEscopo === opt.value;
                         return (
@@ -1766,7 +1766,7 @@ export default function ClientePlanoVendas() {
                             className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-md shadow-primary/10" : "border-border/50 hover:border-primary/30 hover:bg-muted/20"}`}
                             onClick={() => { setAvaliacaoEscopo(opt.value); setAvaliacaoVendedor(""); }}>
                             {selected && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="w-3 h-3 text-primary-foreground" /></div>}
-                            <span className="text-2xl block mb-2">{opt.emoji}</span>
+                            <span className="text-sm font-semibold block">{opt.label}</span>
                             <span className="text-sm font-semibold block">{opt.label}</span>
                             <span className="text-[11px] text-muted-foreground">{opt.desc}</span>
                           </button>
@@ -2076,7 +2076,7 @@ export default function ClientePlanoVendas() {
               {(() => {
                 const blocos = [...new Set(AVALIACAO_PERGUNTAS.map(p => p.bloco))];
                 const SCORE_LABELS = ["", "Muito ruim", "Ruim", "Regular", "Bom", "Excelente"];
-                const SCORE_EMOJIS = ["", "😟", "😕", "😐", "🙂", "🤩"];
+                const SCORE_EMOJIS = ["", "", "", "", "", ""];
                 return blocos.map((bloco, blocoIdx) => (
                   <Card key={bloco} className="overflow-hidden border-0 shadow-md">
                     <CardHeader className="pb-3 bg-gradient-to-br from-orange-500/8 via-transparent to-transparent border-b border-orange-500/10">
@@ -2119,7 +2119,7 @@ export default function ClientePlanoVendas() {
                                   <button key={v}
                                     className={`flex-1 py-2.5 rounded-xl text-center transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105" : "bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground"}`}
                                     onClick={() => { const arr = [...respostasAvaliacao]; arr[idx] = v; setRespostasAvaliacao(arr); }}>
-                                    <span className="text-base block">{SCORE_EMOJIS[v]}</span>
+                                    <span className="text-xs font-bold block">{v}</span>
                                     <span className="text-[10px] font-medium block mt-0.5">{v}</span>
                                   </button>
                                 );

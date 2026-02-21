@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import {
   MessageCircle, Send, Search, Bot, User, Phone, Mail, ArrowLeft,
   Plus, Wifi, WifiOff, Filter, UserPlus, Link2, XCircle, ArrowRightLeft,
-  Smile, Paperclip, Info, ChevronRight, Clock, CheckCheck, Zap,
+  Paperclip, Info, ChevronRight, Clock, CheckCheck, Zap, Mic,
+  MoreVertical, Image, Camera, Video, FileText, Archive,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { KpiCard } from "@/components/KpiCard";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   getChatAccounts,
@@ -20,24 +22,17 @@ import {
   type ChatConversation,
 } from "@/data/clienteData";
 
-const statusBadge = (s: ChatConversation["attendanceStatus"]) => {
-  const map = {
-    ia: { label: "IA", cls: "bg-purple-500/15 text-purple-400 border-purple-500/30" },
-    humano: { label: "Humano", cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-    encerrado: { label: "Encerrado", cls: "bg-muted text-muted-foreground border-border" },
-    espera: { label: "Espera", cls: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30" },
-  };
-  const m = map[s];
-  return <Badge variant="outline" className={`text-[10px] ${m.cls}`}>{m.label}</Badge>;
+const statusConfig: Record<ChatConversation["attendanceStatus"], { label: string; dot: string; cls: string }> = {
+  ia: { label: "IA", dot: "bg-purple-500", cls: "text-purple-500" },
+  humano: { label: "Humano", dot: "bg-emerald-500", cls: "text-emerald-500" },
+  encerrado: { label: "Encerrado", dot: "bg-muted-foreground", cls: "text-muted-foreground" },
+  espera: { label: "Espera", dot: "bg-yellow-500", cls: "text-yellow-500" },
 };
 
-const tagBadge = (t: ChatConversation["tag"]) => {
-  const map = {
-    Lead: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-    Cliente: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-    "Pós-venda": "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  };
-  return <Badge variant="outline" className={`text-[10px] ${map[t]}`}>{t}</Badge>;
+const tagColors: Record<string, string> = {
+  Lead: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  Cliente: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+  "Pós-venda": "bg-orange-500/10 text-orange-600 border-orange-500/20",
 };
 
 export default function ClienteChat() {
@@ -48,6 +43,7 @@ export default function ClienteChat() {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterTag, setFilterTag] = useState<string>("all");
   const [showContactSheet, setShowContactSheet] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [showConnectDialog, setShowConnectDialog] = useState(false);
@@ -58,7 +54,8 @@ export default function ClienteChat() {
   const filteredConversations = conversations.filter(c => {
     if (selectedAccount !== "all" && c.accountId !== selectedAccount) return false;
     if (filterStatus !== "all" && c.attendanceStatus !== filterStatus) return false;
-    if (searchQuery && !c.contactName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (filterTag !== "all" && c.tag !== filterTag) return false;
+    if (searchQuery && !c.contactName.toLowerCase().includes(searchQuery.toLowerCase()) && !c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
@@ -106,86 +103,142 @@ export default function ClienteChat() {
     ));
   };
 
-  const activeCount = conversations.filter(c => c.attendanceStatus !== "encerrado").length;
-  const closedCount = conversations.filter(c => c.attendanceStatus === "encerrado").length;
+  const activeFilters = [filterStatus, filterTag, selectedAccount].filter(f => f !== "all").length;
+  const unreadTotal = conversations.reduce((s, c) => s + c.unread, 0);
 
   // === Conversations List ===
   const ConversationsList = () => (
     <div className="flex flex-col h-full border-r border-border bg-card">
-      {/* Account selector as dropdown */}
-      <div className="p-3 space-y-2 border-b border-border">
-        <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-          <SelectTrigger className="h-8 text-xs">
-            <Wifi className="w-3 h-3 mr-1" />
-            <SelectValue placeholder="Conta" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as contas</SelectItem>
-            {accounts.map(a => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.status === "connected" ? "🟢" : "🔴"} {a.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 h-8 text-xs" />
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold font-display">Conversas</h2>
+          <div className="flex items-center gap-1">
+            {unreadTotal > 0 && (
+              <Badge variant="destructive" className="text-[9px] h-4 min-w-4 px-1 justify-center">{unreadTotal}</Badge>
+            )}
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowConnectDialog(true)}>
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="h-7 text-[11px]">
-            <Filter className="w-3 h-3 mr-1" /><SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="ia">IA</SelectItem>
-            <SelectItem value="humano">Humano</SelectItem>
-            <SelectItem value="espera">Espera</SelectItem>
-            <SelectItem value="encerrado">Encerrado</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <ScrollArea className="flex-1">
-        <div className="p-1.5 space-y-0.5">
-          {filteredConversations.length === 0 && (
-            <div className="text-center py-8 text-sm text-muted-foreground">Nenhuma conversa</div>
-          )}
-          {filteredConversations.map(c => (
+
+        {/* Search */}
+        <div className="relative mb-2">
+          <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input placeholder="Buscar conversa ou mensagem..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 h-8 text-xs bg-muted/30 border-transparent focus:border-border" />
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex gap-1">
+          {[
+            { value: "all", label: "Todas" },
+            { value: "ia", label: "IA" },
+            { value: "humano", label: "Humano" },
+            { value: "espera", label: "Espera" },
+            { value: "encerrado", label: "Encerrado" },
+          ].map(f => (
             <button
-              key={c.id}
-              onClick={() => { setSelectedConversation(c.id); if (isMobile) setMobileView("chat"); }}
-              className={`w-full text-left p-2.5 rounded-lg transition-colors ${c.id === selectedConversation ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/30"}`}
+              key={f.value}
+              onClick={() => setFilterStatus(f.value)}
+              className={`text-[10px] font-medium px-2.5 py-1 rounded-full transition-all ${
+                filterStatus === f.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
             >
-              <div className="flex items-start gap-2">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                  {c.avatar}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-medium truncate">{c.contactName}</span>
-                    <span className="text-[9px] text-muted-foreground flex-shrink-0">{c.lastMessageTime}</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground truncate">{c.lastMessage}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    {statusBadge(c.attendanceStatus)}
-                    {tagBadge(c.tag)}
-                  </div>
-                </div>
-                {c.unread > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] flex items-center justify-center font-bold flex-shrink-0 mt-0.5">
-                    {c.unread}
-                  </span>
-                )}
-              </div>
+              {f.label}
             </button>
           ))}
         </div>
-      </ScrollArea>
-      <div className="p-2 border-t border-border">
-        <Button variant="outline" size="sm" className="w-full text-[11px] h-7 gap-1" onClick={() => setShowConnectDialog(true)}>
-          <Plus className="w-3 h-3" /> Conectar WhatsApp
-        </Button>
+
+        {/* Secondary filters */}
+        <div className="flex gap-2 mt-2">
+          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+            <SelectTrigger className="h-7 text-[10px] flex-1 bg-transparent">
+              <Wifi className="w-3 h-3 mr-1 shrink-0" />
+              <SelectValue placeholder="Conta" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todas contas</SelectItem>
+              {accounts.map(a => (
+                <SelectItem key={a.id} value={a.id}>
+                  <span className="flex items-center gap-1.5">
+                    <span className={`w-1.5 h-1.5 rounded-full ${a.status === "connected" ? "bg-emerald-500" : "bg-red-500"}`} />
+                    {a.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterTag} onValueChange={setFilterTag}>
+            <SelectTrigger className="h-7 text-[10px] flex-1 bg-transparent">
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todas tags</SelectItem>
+              <SelectItem value="Lead">Lead</SelectItem>
+              <SelectItem value="Cliente">Cliente</SelectItem>
+              <SelectItem value="Pós-venda">Pós-venda</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      {/* Conversation list */}
+      <ScrollArea className="flex-1">
+        <div className="py-1">
+          {filteredConversations.length === 0 && (
+            <div className="text-center py-12 text-sm text-muted-foreground">
+              <MessageCircle className="w-8 h-8 mx-auto opacity-20 mb-2" />
+              Nenhuma conversa
+            </div>
+          )}
+          {filteredConversations.map(c => {
+            const status = statusConfig[c.attendanceStatus];
+            const isActive = c.id === selectedConversation;
+            return (
+              <button
+                key={c.id}
+                onClick={() => { setSelectedConversation(c.id); if (isMobile) setMobileView("chat"); }}
+                className={`w-full text-left px-3 py-2.5 border-b border-border/30 transition-colors ${isActive ? "bg-primary/5" : "hover:bg-muted/30"}`}
+              >
+                <div className="flex items-start gap-2.5">
+                  <div className="relative shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xs font-semibold">
+                      {c.contactName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                    </div>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card ${status.dot}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-medium truncate">{c.contactName}</span>
+                      <span className={`text-[10px] shrink-0 ${c.unread > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>{c.lastMessageTime}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <p className={`text-[11px] truncate pr-2 ${c.unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                        {c.lastMessage}
+                      </p>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {c.unread > 0 && (
+                          <span className="w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
+                            {c.unread}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className={`text-[9px] font-medium ${status.cls}`}>{status.label}</span>
+                      <span className="text-[9px] text-muted-foreground">·</span>
+                      <Badge variant="outline" className={`text-[8px] px-1 py-0 h-3.5 border ${tagColors[c.tag] || ""}`}>{c.tag}</Badge>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </ScrollArea>
     </div>
   );
 
@@ -193,42 +246,48 @@ export default function ClienteChat() {
   const ActiveChat = () => {
     if (!active) {
       return (
-        <div className="flex-1 flex items-center justify-center bg-card text-muted-foreground">
-          <div className="text-center space-y-2">
-            <MessageCircle className="w-10 h-10 mx-auto opacity-20" />
-            <p className="text-sm">Selecione uma conversa</p>
+        <div className="flex-1 flex items-center justify-center bg-muted/10">
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mx-auto">
+              <MessageCircle className="w-7 h-7 text-muted-foreground/30" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Selecione uma conversa</p>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5">Escolha um contato para iniciar</p>
+            </div>
           </div>
         </div>
       );
     }
 
+    const status = statusConfig[active.attendanceStatus];
+
     return (
-      <div className="flex-1 flex flex-col bg-card overflow-hidden">
-        {/* Header */}
-        <div className="px-4 py-2.5 border-b border-border flex items-center gap-3">
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--muted) / 0.15) 100%)" }}>
+        {/* Chat Header */}
+        <div className="px-4 py-2 border-b border-border bg-card flex items-center gap-3">
           {isMobile && (
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileView("conversations")}>
               <ArrowLeft className="w-4 h-4" />
             </Button>
           )}
-          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-            {active.avatar}
+          <div className="relative shrink-0">
+            <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold">
+              {active.contactName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+            </div>
+            <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card ${status.dot}`} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold">{active.contactName}</span>
-              {statusBadge(active.attendanceStatus)}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground">{active.contactPhone}</span>
-              {active.attendanceStatus === "ia" && (
-                <span className="text-[10px] text-purple-400 flex items-center gap-0.5"><Bot className="w-3 h-3" /> IA</span>
-              )}
-            </div>
+            <p className="text-sm font-semibold truncate">{active.contactName}</p>
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+              <span className={status.cls}>{status.label}</span>
+              {active.attendanceStatus === "ia" && <Bot className="w-3 h-3 text-purple-500" />}
+              <span>· {active.contactPhone}</span>
+            </p>
           </div>
 
           <TooltipProvider>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               {active.attendanceStatus === "ia" && (
                 <Tooltip><TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatusChange(active.id, "humano")}><User className="w-4 h-4" /></Button>
@@ -268,34 +327,43 @@ export default function ClienteChat() {
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-2.5 max-w-2xl mx-auto">
-            {active.messages.map(m => {
+        <ScrollArea className="flex-1 px-4 py-3">
+          <div className="space-y-1.5 max-w-2xl mx-auto">
+            {active.messages.map((m, idx) => {
               if (m.sender === "system") {
                 return (
-                  <div key={m.id} className="flex justify-center">
-                    <span className="text-[10px] text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">{m.text}</span>
+                  <div key={m.id} className="flex justify-center py-1">
+                    <span className="text-[10px] text-muted-foreground bg-muted/60 px-3 py-0.5 rounded-md">{m.text}</span>
                   </div>
                 );
               }
               const isUser = m.sender === "user";
               const isIA = m.sender === "ia";
+              const showAvatar = idx === 0 || active.messages[idx - 1]?.sender !== m.sender;
+
               return (
-                <div key={m.id} className={`flex gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 ${isIA ? "bg-purple-500/20 text-purple-400" : "bg-muted"}`}>
-                    {isIA ? <Bot className="w-3 h-3" /> : (m.avatar || (isUser ? "V" : "?"))}
-                  </div>
-                  <div className={`max-w-[75%] ${isUser ? "text-right" : ""}`}>
-                    <div className={`flex items-center gap-1 mb-0.5 ${isUser ? "justify-end" : ""}`}>
-                      <span className={`text-[10px] font-semibold ${isIA ? "text-purple-400" : ""}`}>{m.senderName}</span>
-                      <span className="text-[9px] text-muted-foreground">{m.time}</span>
-                    </div>
-                    <div className={`inline-block p-2.5 rounded-2xl text-sm leading-relaxed ${
-                      isUser ? "bg-primary text-primary-foreground rounded-tr-sm" :
-                      isIA ? "bg-purple-500/10 border border-purple-500/20 rounded-tl-sm" :
-                      "bg-muted/50 rounded-tl-sm"
+                <div key={m.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[78%] ${!showAvatar ? (isUser ? "mr-0" : "ml-8") : ""}`}>
+                    {showAvatar && !isUser && (
+                      <div className="flex items-center gap-1.5 mb-0.5 ml-1">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold ${isIA ? "bg-purple-500/15 text-purple-500" : "bg-muted text-muted-foreground"}`}>
+                          {isIA ? <Bot className="w-3 h-3" /> : (m.avatar || "?")}
+                        </div>
+                        <span className={`text-[10px] font-medium ${isIA ? "text-purple-500" : "text-muted-foreground"}`}>{m.senderName}</span>
+                      </div>
+                    )}
+                    <div className={`px-3 py-2 text-[13px] leading-relaxed ${
+                      isUser
+                        ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
+                        : isIA
+                          ? "bg-purple-500/8 border border-purple-500/15 rounded-2xl rounded-bl-md"
+                          : "bg-card border border-border rounded-2xl rounded-bl-md"
                     }`}>
-                      {m.text}
+                      <p>{m.text}</p>
+                      <div className={`flex items-center gap-1 mt-0.5 ${isUser ? "justify-end" : ""}`}>
+                        <span className={`text-[9px] ${isUser ? "text-primary-foreground/50" : "text-muted-foreground/60"}`}>{m.time}</span>
+                        {isUser && <CheckCheck className={`w-3 h-3 ${isUser ? "text-primary-foreground/50" : "text-muted-foreground/40"}`} />}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -305,64 +373,89 @@ export default function ClienteChat() {
           </div>
         </ScrollArea>
 
-        {/* Quick replies */}
+        {/* Input area */}
         {active.attendanceStatus !== "encerrado" && (
-          <>
-            <div className="px-4 pt-2 flex gap-1.5 flex-wrap">
+          <div className="border-t border-border bg-card">
+            {/* Quick replies */}
+            <div className="px-3 pt-2 flex gap-1.5 overflow-x-auto">
               {["Olá! Como posso ajudar?", "Vou verificar para você", "Obrigado pelo contato!"].map(reply => (
-                <Button key={reply} variant="outline" size="sm" className="text-[10px] h-6 px-2" onClick={() => setMessageInput(reply)}>
+                <button key={reply} className="text-[10px] text-muted-foreground bg-muted/40 hover:bg-muted px-2.5 py-1 rounded-full whitespace-nowrap transition-colors" onClick={() => setMessageInput(reply)}>
                   {reply}
-                </Button>
+                </button>
               ))}
             </div>
-            <div className="p-3 border-t border-border flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-muted-foreground"><Smile className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-muted-foreground"><Paperclip className="w-4 h-4" /></Button>
-              <Input
-                placeholder="Digite sua mensagem..."
-                value={messageInput}
-                onChange={e => setMessageInput(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSendMessage()}
-                className="h-8 text-sm"
-              />
-              <Button size="icon" className="h-8 w-8 flex-shrink-0" onClick={handleSendMessage}>
-                <Send className="w-4 h-4" />
-              </Button>
+            <div className="p-2 flex items-end gap-1.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground rounded-full"><Plus className="w-5 h-5" /></Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2 bg-popover z-50" align="start" side="top">
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-blue-500"><Image className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-purple-500"><Camera className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-red-500"><Video className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-orange-500"><FileText className="w-4 h-4" /></Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <div className="flex-1 relative">
+                <Input
+                  placeholder="Digite uma mensagem..."
+                  value={messageInput}
+                  onChange={e => setMessageInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleSendMessage()}
+                  className="h-9 text-sm pr-10 rounded-full bg-muted/30 border-transparent focus:border-border"
+                />
+                <Button variant="ghost" size="icon" className="absolute right-1 top-0.5 h-8 w-8 text-muted-foreground rounded-full"><Paperclip className="w-4 h-4" /></Button>
+              </div>
+              {messageInput.trim() ? (
+                <Button size="icon" className="h-9 w-9 shrink-0 rounded-full" onClick={handleSendMessage}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground rounded-full">
+                  <Mic className="w-4 h-4" />
+                </Button>
+              )}
             </div>
-          </>
+          </div>
         )}
       </div>
     );
   };
 
-  // === Contact Sheet (instead of fixed panel) ===
+  // === Contact Sheet ===
   const ContactSheet = () => (
     <Sheet open={showContactSheet} onOpenChange={setShowContactSheet}>
       <SheetContent side="right" className="w-80 p-5">
         <SheetHeader className="pb-4">
-          <SheetTitle>Contato</SheetTitle>
+          <SheetTitle className="font-display">Contato</SheetTitle>
         </SheetHeader>
         {active && (
           <div className="space-y-4">
             <div className="flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-lg font-bold">
-                {active.avatar}
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-lg font-bold">
+                {active.contactName.split(" ").map(n => n[0]).join("").slice(0, 2)}
               </div>
               <p className="text-sm font-semibold">{active.contactName}</p>
-              {tagBadge(active.tag)}
+              <Badge variant="outline" className={`text-[10px] ${tagColors[active.tag] || ""}`}>{active.tag}</Badge>
             </div>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-3 h-3" /> {active.contactPhone}</div>
-              {active.contactEmail && <div className="flex items-center gap-2 text-muted-foreground"><Mail className="w-3 h-3" /> {active.contactEmail}</div>}
+            <Separator />
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center gap-2.5"><Phone className="w-3.5 h-3.5 text-muted-foreground" /><span>{active.contactPhone}</span></div>
+              {active.contactEmail && <div className="flex items-center gap-2.5"><Mail className="w-3.5 h-3.5 text-muted-foreground" /><span>{active.contactEmail}</span></div>}
             </div>
             {active.crmLinked && (
-              <div className="space-y-2 pt-3 border-t border-border">
-                <h5 className="text-[10px] font-bold uppercase text-muted-foreground">CRM</h5>
-                <div className="space-y-1 text-xs">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Etapa</span><span className="font-medium">{active.crmStage}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Responsável</span><span className="font-medium">{active.crmResponsible}</span></div>
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h5 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CRM</h5>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Etapa</span><span className="font-medium">{active.crmStage}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Responsável</span><span className="font-medium">{active.crmResponsible}</span></div>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
             {!active.crmLinked && (
               <Button variant="outline" size="sm" className="w-full text-xs gap-1 mt-2">
@@ -379,10 +472,6 @@ export default function ClienteChat() {
   if (isMobile) {
     return (
       <div className="h-[calc(100vh-120px)] flex flex-col">
-        <div className="grid grid-cols-2 gap-2 p-3">
-          <KpiCard label="Ativas" value={String(activeCount)} icon={MessageCircle} />
-          <KpiCard label="Fechadas" value={String(closedCount)} icon={CheckCheck} />
-        </div>
         {mobileView === "conversations" && <ConversationsList />}
         {mobileView === "chat" && <ActiveChat />}
         <ContactSheet />
@@ -391,21 +480,13 @@ export default function ClienteChat() {
     );
   }
 
-  // === DESKTOP — 2 columns ===
+  // === DESKTOP — 2 columns, no KPI cards ===
   return (
-    <div className="space-y-3 h-[calc(100vh-120px)] flex flex-col">
-      <div className="grid grid-cols-4 gap-3 flex-shrink-0">
-        <KpiCard label="Conversas Ativas" value={String(activeCount)} icon={MessageCircle} />
-        <KpiCard label="Tempo Médio" value="2m 45s" icon={Clock} />
-        <KpiCard label="Fechadas Hoje" value={String(closedCount)} icon={CheckCheck} />
-        <KpiCard label="Taxa Resposta" value="94%" icon={Zap} trend="up" />
-      </div>
-
+    <div className="h-[calc(100vh-120px)] flex flex-col">
       <div className="flex-1 flex rounded-xl border border-border overflow-hidden bg-card">
-        <div className="w-[300px] flex-shrink-0"><ConversationsList /></div>
+        <div className="w-[320px] flex-shrink-0"><ConversationsList /></div>
         <ActiveChat />
       </div>
-
       <ContactSheet />
       <Dialogs />
     </div>
@@ -417,11 +498,11 @@ export default function ClienteChat() {
         <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Conectar WhatsApp</DialogTitle>
+              <DialogTitle className="font-display">Conectar WhatsApp</DialogTitle>
               <DialogDescription>Integre um novo número de WhatsApp à plataforma.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="flex items-center gap-2 p-4 rounded-xl bg-muted/50 border border-border">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 border border-border">
                 <Zap className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-sm font-medium">Integração em breve</p>
@@ -435,10 +516,10 @@ export default function ClienteChat() {
         <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Transferir Conversa</DialogTitle>
+              <DialogTitle className="font-display">Transferir Conversa</DialogTitle>
               <DialogDescription>Selecione o atendente.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-2 py-4">
+            <div className="space-y-1 py-4">
               {["Ana Costa", "Carlos Mendes", "Pedro Lima"].map(name => (
                 <button
                   key={name}
@@ -459,7 +540,7 @@ export default function ClienteChat() {
                     setShowTransferDialog(false);
                   }}
                 >
-                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold">
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold">
                     {name.split(" ").map(n => n[0]).join("")}
                   </div>
                   <span className="text-sm font-medium flex-1">{name}</span>

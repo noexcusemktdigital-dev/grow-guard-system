@@ -56,9 +56,9 @@ export default function FinanceiroDashboard() {
   clientesAtivos.forEach(c => { clientesPorProduto[c.produto] = (clientesPorProduto[c.produto] || 0) + 1; });
 
   const signalConfig = {
-    green: { label: "🟢 Pode Investir", bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-500" },
-    yellow: { label: "🟡 Cuidado", bg: "bg-yellow-500/10 border-yellow-500/30", text: "text-yellow-500" },
-    red: { label: "🔴 Não Recomendado", bg: "bg-red-500/10 border-red-500/30", text: "text-red-500" },
+    green: { label: "Pode Investir", bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-500" },
+    yellow: { label: "Cuidado", bg: "bg-yellow-500/10 border-yellow-500/30", text: "text-yellow-500" },
+    red: { label: "Não Recomendado", bg: "bg-red-500/10 border-red-500/30", text: "text-red-500" },
   };
   const sc = signalConfig[signal];
 
