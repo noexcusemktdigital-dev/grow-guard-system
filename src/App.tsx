@@ -55,7 +55,7 @@ import ClienteScripts from "./pages/cliente/ClienteScripts";
 import ClienteDisparos from "./pages/cliente/ClienteDisparos";
 import ClienteRelatorios from "./pages/cliente/ClienteRelatorios";
 import ClientePlanoMarketing from "./pages/cliente/ClientePlanoMarketing";
-import ClienteCampanhas from "./pages/cliente/ClienteCampanhas";
+
 import ClienteConteudos from "./pages/cliente/ClienteConteudos";
 import ClienteRedesSociais from "./pages/cliente/ClienteRedesSociais";
 import ClienteSites from "./pages/cliente/ClienteSites";
@@ -128,7 +128,7 @@ const App = () => (
               <Route path="disparos" element={<ClienteDisparos />} />
               <Route path="relatorios" element={<ClienteRelatorios />} />
               <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
-              <Route path="campanhas" element={<ClienteCampanhas />} />
+              
               <Route path="conteudos" element={<ClienteConteudos />} />
               <Route path="redes-sociais" element={<ClienteRedesSociais />} />
               <Route path="sites" element={<ClienteSites />} />

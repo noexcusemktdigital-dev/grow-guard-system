@@ -1,347 +1,358 @@
 import { useState } from "react";
-import { Palette, Plus, Sparkles, Image, Film, Layout, Download, Eye, Copy, Trash2, Search, Filter } from "lucide-react";
+import {
+  Palette, Save, Edit3, Check, Plus, Sparkles, Copy, Download,
+  Eye, Image, Upload, Calendar as CalendarIcon, ChevronLeft,
+  ChevronRight, CheckCircle2, Instagram, Facebook, Layout,
+  Film, BookOpen, Hash,
+} from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-interface DesignPiece {
+/* ── Base de Conhecimento ── */
+interface KBSection {
   id: string;
   title: string;
-  format: string;
-  size: string;
-  style: string;
-  status: "Rascunho" | "Finalizado" | "Aprovado";
-  createdAt: string;
-  category: "Post" | "Story" | "Anúncio" | "Carrossel" | "Banner" | "Apresentação";
-  description?: string;
+  icon: React.ReactNode;
+  fields: { key: string; label: string; type: "text" | "textarea" | "upload"; value: string }[];
 }
 
-const FORMATS = [
-  { name: "Post Feed", size: "1080x1080", icon: <Layout className="w-5 h-5" />, category: "Post" },
-  { name: "Story / Reels", size: "1080x1920", icon: <Film className="w-5 h-5" />, category: "Story" },
-  { name: "Carrossel", size: "1080x1080 (multi)", icon: <Copy className="w-5 h-5" />, category: "Carrossel" },
-  { name: "Anúncio Meta", size: "1200x628", icon: <Image className="w-5 h-5" />, category: "Anúncio" },
-  { name: "Banner Web", size: "1920x600", icon: <Layout className="w-5 h-5" />, category: "Banner" },
-  { name: "Apresentação", size: "1920x1080", icon: <Layout className="w-5 h-5" />, category: "Apresentação" },
+const initialSections: KBSection[] = [
+  {
+    id: "identidade", title: "Identidade Visual", icon: <Palette className="w-4 h-4" />,
+    fields: [
+      { key: "paleta", label: "Paleta de Cores", type: "text", value: "#E63946, #1D3557, #F1FAEE, #A8DADC" },
+      { key: "fontes", label: "Fontes", type: "text", value: "Inter (títulos), DM Sans (corpo)" },
+      { key: "estilo", label: "Estilo Visual Preferido", type: "text", value: "Moderno, Minimalista, Bold" },
+      { key: "logo", label: "Logo", type: "upload", value: "" },
+    ],
+  },
+  {
+    id: "referencias", title: "Referências Visuais", icon: <Eye className="w-4 h-4" />,
+    fields: [
+      { key: "refs", label: "Links e Perfis de Referência", type: "textarea", value: "@rockcontent — identidade clean\n@resultadosdigitais — infográficos\n@hubspot — carrosséis educativos" },
+    ],
+  },
+  {
+    id: "concorrencia", title: "Concorrência Visual", icon: <Layout className="w-4 h-4" />,
+    fields: [
+      { key: "conc", label: "Exemplos Visuais de Concorrentes", type: "textarea", value: "FranquiaTech: visual corporativo azul\nRedeGrow: visual jovem e colorido" },
+    ],
+  },
+  {
+    id: "tom", title: "Tom e Linguagem Visual", icon: <BookOpen className="w-4 h-4" />,
+    fields: [
+      { key: "tom", label: "Como a marca se comunica visualmente", type: "textarea", value: "Profissional mas acessível. Uso de ícones e dados visuais. Evitar excesso de texto nos criativos." },
+    ],
+  },
+  {
+    id: "banco", title: "Banco de Imagens", icon: <Image className="w-4 h-4" />,
+    fields: [
+      { key: "fotos", label: "Fotos de produtos, equipe, espaço", type: "upload", value: "" },
+    ],
+  },
 ];
 
-const STYLES = ["Moderno", "Minimalista", "Bold / Impactante", "Elegante", "Divertido", "Corporativo", "Luxo"];
+/* ── Generated arts ── */
+interface ArtPiece {
+  id: string;
+  title: string;
+  type: "Feed" | "Story" | "Carrossel";
+  caption: string;
+  hashtags: string;
+  approved: boolean;
+  date: string;
+}
 
-const mockPieces: DesignPiece[] = [
-  { id: "1", title: "Promo Fevereiro - Feed", format: "Post Feed", size: "1080x1080", style: "Bold / Impactante", status: "Finalizado", createdAt: "2026-02-17", category: "Post", description: "Post promocional com destaque em oferta exclusiva" },
-  { id: "2", title: "Story Lançamento Produto", format: "Story / Reels", size: "1080x1920", style: "Moderno", status: "Aprovado", createdAt: "2026-02-18", category: "Story" },
-  { id: "3", title: "Carrossel 5 Dicas Vendas", format: "Carrossel", size: "1080x1080 (multi)", style: "Elegante", status: "Finalizado", createdAt: "2026-02-19", category: "Carrossel", description: "5 slides com dicas de vendas para redes sociais" },
-  { id: "4", title: "Anúncio Meta - Captação", format: "Anúncio Meta", size: "1200x628", style: "Corporativo", status: "Rascunho", createdAt: "2026-02-20", category: "Anúncio" },
-  { id: "5", title: "Banner Site Institucional", format: "Banner Web", size: "1920x600", style: "Minimalista", status: "Finalizado", createdAt: "2026-02-21", category: "Banner" },
-  { id: "6", title: "Apresentação Comercial", format: "Apresentação", size: "1920x1080", style: "Corporativo", status: "Rascunho", createdAt: "2026-02-22", category: "Apresentação", description: "Deck comercial para reuniões de vendas" },
-  { id: "7", title: "Post Autoridade - Resultados", format: "Post Feed", size: "1080x1080", style: "Moderno", status: "Aprovado", createdAt: "2026-02-16", category: "Post" },
-  { id: "8", title: "Reels Bastidores", format: "Story / Reels", size: "1080x1920", style: "Divertido", status: "Rascunho", createdAt: "2026-02-22", category: "Story" },
+const mockArts: ArtPiece[] = [
+  { id: "1", title: "Promo Fevereiro — 20% Off", type: "Feed", caption: "Aproveite a promoção exclusiva de fevereiro! 20% de desconto no plano anual. Transforme a gestão da sua franquia.", hashtags: "#franquia #gestao #marketing #desconto", approved: true, date: "2026-02-03" },
+  { id: "2", title: "5 Dicas de Marketing para Franquias", type: "Carrossel", caption: "Descubra 5 estratégias comprovadas para impulsionar o marketing da sua rede de franquias.", hashtags: "#marketing #franquias #dicas #crescimento", approved: true, date: "2026-02-05" },
+  { id: "3", title: "Bastidores da Equipe", type: "Story", caption: "Conheça quem está por trás das soluções que transformam franquias!", hashtags: "#equipe #bastidores #cultura", approved: false, date: "2026-02-07" },
+  { id: "4", title: "Case de Sucesso — Rede FastFood", type: "Feed", caption: "A Rede FastFood triplicou seus leads em 3 meses usando nossa plataforma. Veja como!", hashtags: "#case #sucesso #resultados #franquia", approved: false, date: "2026-02-10" },
+  { id: "5", title: "Checklist Marketing Digital", type: "Carrossel", caption: "Baixe nosso checklist gratuito e organize o marketing da sua franquia.", hashtags: "#checklist #marketing #organizacao", approved: true, date: "2026-02-12" },
+  { id: "6", title: "Depoimento de Cliente", type: "Story", caption: "'A NoExcuse mudou completamente nossa gestão comercial' — João, franqueado.", hashtags: "#depoimento #cliente #satisfacao", approved: false, date: "2026-02-14" },
+  { id: "7", title: "Tendências 2026", type: "Feed", caption: "As 3 maiores tendências de marketing para franquias em 2026. Você está preparado?", hashtags: "#tendencias #2026 #marketing #futuro", approved: false, date: "2026-02-17" },
+  { id: "8", title: "CTA — Agende Sua Demo", type: "Story", caption: "Pronto para transformar sua franquia? Agende uma demo gratuita agora!", hashtags: "#demo #gratuita #franquia #gestao", approved: false, date: "2026-02-20" },
 ];
 
-const statusColors: Record<string, string> = {
-  Rascunho: "bg-muted text-muted-foreground",
-  Finalizado: "bg-emerald-500/10 text-emerald-500",
-  Aprovado: "bg-blue-500/10 text-blue-500",
-};
-
-const categoryColors: Record<string, string> = {
-  Post: "bg-purple-500/10 text-purple-500",
+const typeColors: Record<string, string> = {
+  Feed: "bg-purple-500/10 text-purple-500",
   Story: "bg-pink-500/10 text-pink-500",
-  Anúncio: "bg-orange-500/10 text-orange-500",
   Carrossel: "bg-indigo-500/10 text-indigo-500",
-  Banner: "bg-teal-500/10 text-teal-500",
-  Apresentação: "bg-amber-500/10 text-amber-500",
 };
+
+const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 export default function ClienteRedesSociais() {
-  const [activeTab, setActiveTab] = useState("biblioteca");
-  const [createOpen, setCreateOpen] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState("");
-  const [filterCategory, setFilterCategory] = useState("Todos");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [sections, setSections] = useState(initialSections);
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [arts, setArts] = useState(mockArts);
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
 
-  const filteredPieces = mockPieces.filter(p => {
-    const matchCategory = filterCategory === "Todos" || p.category === filterCategory;
-    const matchSearch = !searchTerm || p.title.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchCategory && matchSearch;
-  });
+  // Briefing
+  const [briefPromocoes, setBriefPromocoes] = useState("20% off plano anual");
+  const [briefDestaques, setBriefDestaques] = useState("Lançamento módulo IA");
+  const [briefEventos, setBriefEventos] = useState("Dia do Empreendedor");
+  const [briefTemas, setBriefTemas] = useState("Crescimento, Resultados, Tecnologia");
 
-  const handleCreate = () => {
-    toast({ title: "Peça criada!", description: "Sua arte foi adicionada à biblioteca." });
-    setCreateOpen(false);
-    setSelectedFormat("");
+  // Package config
+  const [feedQty, setFeedQty] = useState(10);
+  const [storyQty, setStoryQty] = useState(12);
+  const [carrosselQty, setCarrosselQty] = useState(8);
+  const totalPackage = feedQty + storyQty + carrosselQty;
+
+  const approvedCount = arts.filter(a => a.approved).length;
+
+  const updateField = (sectionId: string, fieldKey: string, value: string) => {
+    setSections(prev => prev.map(s => s.id === sectionId ? { ...s, fields: s.fields.map(f => f.key === fieldKey ? { ...f, value } : f) } : s));
   };
 
-  const handleGenerateAI = () => {
-    toast({ title: "IA gerando arte...", description: "Aguarde enquanto criamos sua peça publicitária." });
+  const toggleApprove = (id: string) => {
+    setArts(prev => prev.map(a => a.id === id ? { ...a, approved: !a.approved } : a));
   };
+
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const startPadding = (getDay(monthStart) + 6) % 7;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
         title="Redes Sociais"
-        subtitle="Crie posts, artes e peças publicitárias para suas redes"
+        subtitle="Base visual, pacote mensal de artes e calendário"
         icon={<Palette className="w-5 h-5 text-primary" />}
-        actions={
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Nova Peça
-          </Button>
-        }
       />
 
-      {/* KPIs de produção */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-2xl font-bold">{mockPieces.length}</p>
-            <p className="text-[10px] text-muted-foreground">Total de Peças</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-2xl font-bold text-emerald-500">{mockPieces.filter(p => p.status === "Finalizado").length}</p>
-            <p className="text-[10px] text-muted-foreground">Finalizadas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-2xl font-bold text-blue-500">{mockPieces.filter(p => p.status === "Aprovado").length}</p>
-            <p className="text-[10px] text-muted-foreground">Aprovadas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-2xl font-bold text-muted-foreground">{mockPieces.filter(p => p.status === "Rascunho").length}</p>
-            <p className="text-[10px] text-muted-foreground">Rascunhos</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs defaultValue="base">
         <TabsList>
-          <TabsTrigger value="biblioteca" className="text-xs">Biblioteca de Peças</TabsTrigger>
-          <TabsTrigger value="gerador" className="text-xs">Gerador com IA</TabsTrigger>
+          <TabsTrigger value="base" className="text-xs gap-1.5"><BookOpen className="w-3.5 h-3.5" /> Base de Conhecimento</TabsTrigger>
+          <TabsTrigger value="pacote" className="text-xs gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Pacote Mensal</TabsTrigger>
+          <TabsTrigger value="calendario" className="text-xs gap-1.5"><CalendarIcon className="w-3.5 h-3.5" /> Calendário</TabsTrigger>
         </TabsList>
 
-        {/* Biblioteca */}
-        <TabsContent value="biblioteca" className="space-y-4 mt-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar peça..."
-                className="pl-9 text-xs"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
+        {/* ═══ BASE ═══ */}
+        <TabsContent value="base" className="space-y-5 mt-4">
+          {sections.map(section => {
+            const isEditing = editingSection === section.id;
+            return (
+              <Card key={section.id} className="glass-card">
+                <CardContent className="py-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary">{section.icon}</div>
+                      <p className="text-sm font-bold">{section.title}</p>
+                    </div>
+                    <Button
+                      variant={isEditing ? "default" : "outline"}
+                      size="sm"
+                      className="text-xs gap-1"
+                      onClick={() => {
+                        if (isEditing) toast({ title: "Salvo!" });
+                        setEditingSection(isEditing ? null : section.id);
+                      }}
+                    >
+                      {isEditing ? <><Check className="w-3.5 h-3.5" /> Salvar</> : <><Edit3 className="w-3.5 h-3.5" /> Editar</>}
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {section.fields.map(field => (
+                      <div key={field.key}>
+                        <Label className="text-[11px] text-muted-foreground">{field.label}</Label>
+                        {field.type === "upload" ? (
+                          <div className="mt-1 border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:bg-muted/30 transition-colors">
+                            <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                            <p className="text-xs text-muted-foreground">Arraste ou clique para fazer upload</p>
+                          </div>
+                        ) : isEditing ? (
+                          field.type === "textarea" ? (
+                            <Textarea value={field.value} onChange={e => updateField(section.id, field.key, e.target.value)} rows={3} className="mt-1" />
+                          ) : (
+                            <Input value={field.value} onChange={e => updateField(section.id, field.key, e.target.value)} className="mt-1" />
+                          )
+                        ) : (
+                          <p className="text-sm mt-1 whitespace-pre-line">{field.value || <span className="text-muted-foreground italic">Não preenchido</span>}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </TabsContent>
+
+        {/* ═══ PACOTE MENSAL ═══ */}
+        <TabsContent value="pacote" className="space-y-5 mt-4">
+          {/* Briefing */}
+          <Card className="glass-card border-primary/20 bg-primary/5">
+            <CardContent className="py-5">
+              <p className="section-label mb-3">BRIEFING MENSAL</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="space-y-2"><Label className="text-xs">Promoções</Label><Input value={briefPromocoes} onChange={e => setBriefPromocoes(e.target.value)} /></div>
+                <div className="space-y-2"><Label className="text-xs">Destaques</Label><Input value={briefDestaques} onChange={e => setBriefDestaques(e.target.value)} /></div>
+                <div className="space-y-2"><Label className="text-xs">Eventos</Label><Input value={briefEventos} onChange={e => setBriefEventos(e.target.value)} /></div>
+                <div className="space-y-2"><Label className="text-xs">Temas Visuais</Label><Input value={briefTemas} onChange={e => setBriefTemas(e.target.value)} /></div>
+              </div>
+
+              <p className="section-label mb-3">CONFIGURAÇÃO DO PACOTE</p>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Posts Feed</Label>
+                  <Input type="number" value={feedQty} onChange={e => setFeedQty(Number(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Stories</Label>
+                  <Input type="number" value={storyQty} onChange={e => setStoryQty(Number(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Carrosséis</Label>
+                  <Input type="number" value={carrosselQty} onChange={e => setCarrosselQty(Number(e.target.value))} />
+                </div>
+              </div>
+
+              <Button className="w-full gap-2" onClick={() => toast({ title: "Pacote gerado!", description: `${totalPackage} artes criadas para o mês.` })}>
+                <Sparkles className="w-4 h-4" /> Gerar Pacote do Mês
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Progress */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="text-xs gap-1">
+                <CheckCircle2 className="w-3 h-3 text-chart-green" /> {approvedCount} aprovadas
+              </Badge>
+              <Badge variant="outline" className="text-xs">{arts.length}/{totalPackage} geradas</Badge>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {["Todos", "Post", "Story", "Carrossel", "Anúncio", "Banner", "Apresentação"].map(cat => (
-                <Button
-                  key={cat}
-                  variant={filterCategory === cat ? "default" : "outline"}
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => setFilterCategory(cat)}
-                >
-                  {cat}
-                </Button>
-              ))}
-            </div>
+            <Progress value={(arts.length / totalPackage) * 100} className="w-32 h-2" />
           </div>
 
+          {/* Arts grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPieces.map(p => (
-              <Card key={p.id} className="hover:shadow-md transition-all hover:-translate-y-0.5 group">
+            {arts.map(art => (
+              <Card key={art.id} className={`glass-card hover-lift group ${art.approved ? "border-chart-green/30" : ""}`}>
                 <CardContent className="py-4 space-y-3">
-                  {/* Preview placeholder com formato visual */}
-                  <div className={`rounded-lg flex items-center justify-center bg-gradient-to-br from-muted to-muted/50 ${
-                    p.format.includes("Story") ? "h-44" : p.format.includes("Banner") ? "h-20" : "h-32"
+                  {/* Visual placeholder */}
+                  <div className={`rounded-xl flex items-center justify-center bg-gradient-to-br from-primary/10 to-muted border border-dashed border-muted-foreground/20 ${
+                    art.type === "Story" ? "h-44" : "h-32"
                   }`}>
                     <div className="text-center">
                       <Palette className="w-8 h-8 text-muted-foreground/30 mx-auto" />
-                      <span className="text-[9px] text-muted-foreground mt-1 block">{p.size}</span>
+                      <span className="text-[9px] text-muted-foreground mt-1 block">{art.type}</span>
                     </div>
                   </div>
+
                   <div className="flex items-center justify-between">
-                    <Badge className={`text-[9px] ${statusColors[p.status]}`}>{p.status}</Badge>
-                    <Badge className={`text-[9px] ${categoryColors[p.category]}`}>{p.category}</Badge>
+                    <Badge className={`text-[9px] ${typeColors[art.type]}`}>{art.type}</Badge>
+                    {art.approved && <Badge className="text-[9px] bg-chart-green/10 text-chart-green">Aprovada</Badge>}
                   </div>
-                  <p className="text-sm font-semibold">{p.title}</p>
-                  {p.description && (
-                    <p className="text-[10px] text-muted-foreground line-clamp-2">{p.description}</p>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground">{p.format} · {p.style}</span>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><Eye className="w-3.5 h-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><Download className="w-3.5 h-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
-                    </div>
+
+                  <p className="text-sm font-semibold">{art.title}</p>
+                  <p className="text-[10px] text-muted-foreground line-clamp-2">{art.caption}</p>
+                  <p className="text-[9px] text-primary">{art.hashtags}</p>
+
+                  <div className="flex gap-1.5">
+                    <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8 gap-1" onClick={() => toast({ title: "Download iniciado!" })}>
+                      <Download className="w-3 h-3" /> Baixar
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8 gap-1" onClick={() => { navigator.clipboard.writeText(art.caption + "\n\n" + art.hashtags); toast({ title: "Legenda copiada!" }); }}>
+                      <Copy className="w-3 h-3" /> Legenda
+                    </Button>
+                    <Button
+                      variant={art.approved ? "default" : "outline"}
+                      size="sm"
+                      className="text-[10px] h-8 gap-1"
+                      onClick={() => toggleApprove(art.id)}
+                    >
+                      <Check className="w-3 h-3" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-
-          {filteredPieces.length === 0 && (
-            <div className="text-center py-12">
-              <Palette className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhuma peça encontrada</p>
-            </div>
-          )}
         </TabsContent>
 
-        {/* Gerador com IA */}
-        <TabsContent value="gerador" className="space-y-4 mt-4">
-          <Card className="border-primary/20 bg-primary/5">
+        {/* ═══ CALENDÁRIO ═══ */}
+        <TabsContent value="calendario" className="space-y-5 mt-4">
+          {/* Legend */}
+          <div className="flex items-center gap-3">
+            {Object.entries(typeColors).map(([type, cls]) => (
+              <Badge key={type} className={`text-[9px] ${cls}`}>{type}</Badge>
+            ))}
+          </div>
+
+          <Card className="glass-card">
             <CardContent className="py-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold">Gerador de Artes com IA</span>
+              <div className="flex items-center justify-between mb-4">
+                <Button variant="ghost" size="sm" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="w-4 h-4" /></Button>
+                <span className="text-sm font-semibold capitalize">{format(currentMonth, "MMMM yyyy", { locale: ptBR })}</span>
+                <Button variant="ghost" size="sm" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="w-4 h-4" /></Button>
               </div>
-              <p className="text-xs text-muted-foreground mb-4">Selecione o formato, descreva sua peça e a IA cria a arte pronta para download.</p>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-                {FORMATS.map(f => (
-                  <div
-                    key={f.name}
-                    className={`p-3 border rounded-lg cursor-pointer transition-all text-center ${selectedFormat === f.name ? "border-primary bg-primary/10 shadow-sm" : "hover:bg-muted/30"}`}
-                    onClick={() => setSelectedFormat(f.name)}
-                  >
-                    <div className="flex justify-center mb-1">{f.icon}</div>
-                    <p className="text-[11px] font-medium">{f.name}</p>
-                    <p className="text-[9px] text-muted-foreground">{f.size}</p>
-                  </div>
-                ))}
+              <div className="grid grid-cols-7 gap-1 mb-1">
+                {WEEKDAYS.map(d => <div key={d} className="text-center text-[10px] font-medium text-muted-foreground py-1">{d}</div>)}
               </div>
-
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>O que você precisa?</Label>
-                  <Textarea placeholder="Ex: Post de promoção com fundo azul, logo no topo, texto 'OFERTA EXCLUSIVA' em destaque, foto de produto ao centro..." rows={3} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="space-y-2">
-                    <Label>Cores</Label>
-                    <Input placeholder="Azul, branco, dourado" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Estilo Visual</Label>
-                    <Select defaultValue="Moderno">
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {STYLES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Texto Principal</Label>
-                    <Input placeholder="OFERTA EXCLUSIVA" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Texto Secundário</Label>
-                    <Input placeholder="Até 50% de desconto" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>CTA (botão/chamada)</Label>
-                    <Input placeholder="Saiba Mais" />
-                  </div>
-                </div>
-                <Button className="w-full gap-2" onClick={handleGenerateAI}>
-                  <Sparkles className="w-4 h-4" /> Gerar Arte com IA
-                </Button>
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: startPadding }).map((_, i) => <div key={`p-${i}`} className="h-20" />)}
+                {days.map(day => {
+                  const dateStr = format(day, "yyyy-MM-dd");
+                  const dayArts = arts.filter(a => a.date === dateStr);
+                  return (
+                    <div key={dateStr} className={`h-20 border rounded-md p-1 ${isSameDay(day, new Date()) ? "border-primary/50 bg-primary/5" : "border-border"}`}>
+                      <span className="text-[10px] font-medium text-muted-foreground">{format(day, "d")}</span>
+                      <div className="space-y-0.5 mt-0.5 overflow-hidden">
+                        {dayArts.slice(0, 2).map(a => (
+                          <div key={a.id} className={`text-[7px] px-1 py-0.5 rounded truncate ${typeColors[a.type]}`}>
+                            {a.title.slice(0, 16)}
+                          </div>
+                        ))}
+                        {dayArts.length > 2 && <span className="text-[7px] text-muted-foreground">+{dayArts.length - 2}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
 
-          {/* Peças geradas recentemente */}
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Peças Geradas Recentemente</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="aspect-square bg-gradient-to-br from-primary/10 to-muted rounded-lg flex flex-col items-center justify-center gap-2 border border-dashed border-muted-foreground/20">
-                    <Palette className="w-8 h-8 text-muted-foreground/30" />
-                    <span className="text-[10px] text-muted-foreground">Arte #{i}</span>
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm" className="text-[10px] h-6"><Download className="w-3 h-3 mr-1" /> Baixar</Button>
-                      <Button variant="ghost" size="sm" className="text-[10px] h-6"><Eye className="w-3 h-3" /></Button>
+          {/* Compact week view */}
+          <Card className="glass-card">
+            <CardContent className="py-5">
+              <p className="section-label mb-3">VISÃO SEMANAL COMPACTA</p>
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map(week => {
+                  const weekArts = arts.filter(a => {
+                    const d = new Date(a.date);
+                    return Math.ceil(d.getDate() / 7) === week;
+                  });
+                  return (
+                    <div key={week} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border">
+                      <Badge variant="outline" className="text-[9px] shrink-0">Sem {week}</Badge>
+                      <div className="flex gap-1.5 flex-wrap flex-1">
+                        {weekArts.map(a => (
+                          <Badge key={a.id} className={`text-[8px] ${typeColors[a.type]}`}>{a.title.slice(0, 20)}</Badge>
+                        ))}
+                        {weekArts.length === 0 && <span className="text-[10px] text-muted-foreground">Nenhuma arte</span>}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0">{weekArts.length} peças</span>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Dialog Criar Peça Manual */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Nova Peça Publicitária</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Formato</Label>
-                <Select>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {FORMATS.map(f => <SelectItem key={f.name} value={f.name}>{f.name} ({f.size})</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {["Post", "Story", "Carrossel", "Anúncio", "Banner", "Apresentação"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2"><Label>Título da Peça</Label><Input placeholder="Ex: Promo Março - Feed" /></div>
-            <div className="space-y-2"><Label>Descrição / Briefing</Label><Textarea placeholder="Descreva o que essa peça precisa comunicar..." rows={3} /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Estilo Visual</Label>
-                <Select>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {STYLES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select defaultValue="Rascunho">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Rascunho">Rascunho</SelectItem>
-                    <SelectItem value="Finalizado">Finalizado</SelectItem>
-                    <SelectItem value="Aprovado">Aprovado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button variant="outline" className="w-full gap-1" onClick={() => toast({ title: "IA gerando sugestão de arte..." })}>
-              <Sparkles className="w-4 h-4" /> Gerar com IA
-            </Button>
-            <Button className="w-full" onClick={handleCreate}>Criar Peça</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

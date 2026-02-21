@@ -1,268 +1,262 @@
-import { useState, useMemo } from "react";
-import { Globe, Plus, ExternalLink, GripVertical, Type, Image, MessageSquare, HelpCircle, Award, ArrowDown, Sparkles, Eye, Trash2 } from "lucide-react";
+import { useState } from "react";
+import {
+  Globe, Save, Edit3, Check, Sparkles, Download, ExternalLink,
+  Eye, Code, Upload, BookOpen, Target, MessageSquare, Phone,
+  Palette, Link, Award, Clock, CheckCircle2,
+} from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { KpiCard } from "@/components/KpiCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { getClienteSites } from "@/data/clienteData";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 
-interface LPBlock {
-  id: string;
-  type: "hero" | "benefits" | "social_proof" | "cta" | "form" | "faq" | "footer";
+/* ── Knowledge Base ── */
+interface KBField {
+  key: string;
   label: string;
-  icon: React.ReactNode;
+  type: "text" | "textarea" | "select" | "upload" | "checklist";
+  value: string;
+  options?: string[];
 }
 
-const AVAILABLE_BLOCKS: LPBlock[] = [
-  { id: "hero", type: "hero", label: "Hero / Banner", icon: <Type className="w-4 h-4" /> },
-  { id: "benefits", type: "benefits", label: "Benefícios", icon: <Award className="w-4 h-4" /> },
-  { id: "social_proof", type: "social_proof", label: "Prova Social", icon: <MessageSquare className="w-4 h-4" /> },
-  { id: "cta", type: "cta", label: "CTA", icon: <ArrowDown className="w-4 h-4" /> },
-  { id: "form", type: "form", label: "Formulário", icon: <MessageSquare className="w-4 h-4" /> },
-  { id: "faq", type: "faq", label: "FAQ", icon: <HelpCircle className="w-4 h-4" /> },
-  { id: "footer", type: "footer", label: "Rodapé", icon: <Type className="w-4 h-4" /> },
+const initialFields: KBField[] = [
+  { key: "objetivo", label: "Qual o objetivo do site?", type: "select", value: "Captura de Leads", options: ["Captura de Leads", "Institucional", "Vendas / E-commerce", "Portfólio"] },
+  { key: "servicos", label: "Quais serviços/produtos oferece?", type: "textarea", value: "Plataforma de gestão comercial para franquias\nCRM integrado\nAutomação de marketing\nIA para vendas" },
+  { key: "diferencial", label: "Qual o diferencial da empresa?", type: "textarea", value: "Única plataforma que integra vendas + marketing + IA para redes de franquias" },
+  { key: "depoimentos", label: "Depoimentos de clientes", type: "textarea", value: "\"A NoExcuse triplicou nossos leads em 3 meses\" — João, Franqueado\n\"Melhor plataforma de gestão que já usamos\" — Maria, CEO" },
+  { key: "contato", label: "Informações de contato", type: "textarea", value: "contato@noexcuse.com.br\n(11) 99999-0000\nAv. Paulista, 1000 — São Paulo/SP" },
+  { key: "imagens", label: "Possui imagens próprias?", type: "upload", value: "" },
+  { key: "cores", label: "Cores e estilo visual preferido", type: "text", value: "Vermelho (#E63946), Azul escuro (#1D3557), Branco" },
+  { key: "referencias", label: "Referência de sites que gosta (links)", type: "textarea", value: "https://www.hubspot.com\nhttps://www.salesforce.com\nhttps://www.pipedrive.com" },
 ];
 
-const BLOCK_PREVIEWS: Record<string, React.ReactNode> = {
-  hero: (
-    <div className="bg-gradient-to-r from-primary/20 to-primary/5 p-6 rounded-lg text-center space-y-2">
-      <h3 className="text-lg font-bold">Título Principal</h3>
-      <p className="text-xs text-muted-foreground">Subtítulo com proposta de valor</p>
-      <Button size="sm" className="text-xs mt-2">CTA Principal</Button>
-    </div>
-  ),
-  benefits: (
-    <div className="grid grid-cols-3 gap-3 p-4">
-      {["Benefício 1", "Benefício 2", "Benefício 3"].map(b => (
-        <div key={b} className="text-center p-3 bg-muted/30 rounded-lg">
-          <Award className="w-5 h-5 mx-auto mb-1 text-primary" />
-          <p className="text-[10px] font-medium">{b}</p>
-        </div>
-      ))}
-    </div>
-  ),
-  social_proof: (
-    <div className="p-4 space-y-2">
-      <p className="text-xs font-medium text-center">Depoimentos</p>
-      <div className="flex gap-2">
-        {[1, 2].map(i => (
-          <div key={i} className="flex-1 p-2 bg-muted/30 rounded-lg">
-            <p className="text-[10px] italic">"Excelente serviço!"</p>
-            <p className="text-[9px] text-muted-foreground mt-1">— Cliente {i}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  ),
-  cta: (
-    <div className="bg-primary/10 p-6 text-center rounded-lg space-y-2">
-      <p className="text-sm font-bold">Pronto para começar?</p>
-      <Button size="sm" className="text-xs">Fale Conosco</Button>
-    </div>
-  ),
-  form: (
-    <div className="p-4 space-y-2 max-w-xs mx-auto">
-      <div className="h-7 bg-muted/50 rounded border" />
-      <div className="h-7 bg-muted/50 rounded border" />
-      <div className="h-7 bg-muted/50 rounded border" />
-      <Button size="sm" className="w-full text-xs">Enviar</Button>
-    </div>
-  ),
-  faq: (
-    <div className="p-4 space-y-2">
-      {["Pergunta 1?", "Pergunta 2?", "Pergunta 3?"].map(q => (
-        <div key={q} className="p-2 bg-muted/30 rounded flex items-center justify-between">
-          <span className="text-[10px]">{q}</span>
-          <ArrowDown className="w-3 h-3" />
-        </div>
-      ))}
-    </div>
-  ),
-  footer: (
-    <div className="bg-muted/30 p-4 text-center rounded-lg">
-      <p className="text-[10px] text-muted-foreground">© 2026 Empresa · Termos · Privacidade</p>
-    </div>
-  ),
-};
+/* ── Generated sites history ── */
+interface GeneratedSite {
+  id: string;
+  name: string;
+  status: "Rascunho" | "Publicado";
+  createdAt: string;
+  url?: string;
+}
+
+const mockSites: GeneratedSite[] = [
+  { id: "1", name: "LP Captura — Promo Março", status: "Publicado", createdAt: "2026-02-15", url: "https://noexcuse.com.br/promo-marco" },
+  { id: "2", name: "Site Institucional v2", status: "Rascunho", createdAt: "2026-02-20" },
+];
 
 export default function ClienteSites() {
-  const sites = useMemo(() => getClienteSites(), []);
-  const totalLeads = sites.reduce((s, site) => s + site.leads, 0);
-  const [builderOpen, setBuilderOpen] = useState(false);
-  const [selectedBlocks, setSelectedBlocks] = useState<LPBlock[]>([
-    AVAILABLE_BLOCKS[0], AVAILABLE_BLOCKS[1], AVAILABLE_BLOCKS[3], AVAILABLE_BLOCKS[4],
-  ]);
-  const [lpName, setLpName] = useState("");
+  const [fields, setFields] = useState(initialFields);
+  const [isEditing, setIsEditing] = useState(false);
+  const [sites, setSites] = useState(mockSites);
+  const [generating, setGenerating] = useState(false);
+  const [generatedPreview, setGeneratedPreview] = useState(false);
 
-  const addBlock = (block: LPBlock) => {
-    setSelectedBlocks(prev => [...prev, { ...block, id: `${block.type}-${Date.now()}` }]);
+  const filledCount = fields.filter(f => f.value.trim() && f.type !== "upload").length;
+  const totalCount = fields.filter(f => f.type !== "upload").length;
+  const progress = Math.round((filledCount / totalCount) * 100);
+
+  const updateField = (key: string, value: string) => {
+    setFields(prev => prev.map(f => f.key === key ? { ...f, value } : f));
   };
 
-  const removeBlock = (id: string) => {
-    setSelectedBlocks(prev => prev.filter(b => b.id !== id));
-  };
-
-  const moveBlock = (idx: number, dir: -1 | 1) => {
-    const newBlocks = [...selectedBlocks];
-    const targetIdx = idx + dir;
-    if (targetIdx < 0 || targetIdx >= newBlocks.length) return;
-    [newBlocks[idx], newBlocks[targetIdx]] = [newBlocks[targetIdx], newBlocks[idx]];
-    setSelectedBlocks(newBlocks);
+  const handleGenerate = () => {
+    setGenerating(true);
+    setTimeout(() => {
+      setGenerating(false);
+      setGeneratedPreview(true);
+      toast({ title: "Site gerado com sucesso!", description: "Revise o preview e publique quando estiver pronto." });
+    }, 2000);
   };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
         title="Sites & Landing Pages"
-        subtitle="Crie landing pages de captura integradas ao CRM"
+        subtitle="Base de conhecimento e criação de sites com IA"
         icon={<Globe className="w-5 h-5 text-primary" />}
-        actions={<Button size="sm" onClick={() => setBuilderOpen(true)}><Plus className="w-4 h-4 mr-1" /> Nova Landing Page</Button>}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total de Páginas" value={sites.length.toString()} />
-        <KpiCard label="Leads Gerados" value={totalLeads.toString()} trend="up" variant="accent" />
-        <KpiCard label="Ativos" value={sites.filter(s => s.status === "Ativo").length.toString()} />
-        <KpiCard label="Conversão Média" value={`${(sites.reduce((s, x) => s + x.conversion, 0) / sites.length).toFixed(1)}%`} trend="up" />
-      </div>
+      <Tabs defaultValue="base">
+        <TabsList>
+          <TabsTrigger value="base" className="text-xs gap-1.5"><BookOpen className="w-3.5 h-3.5" /> Base de Conhecimento</TabsTrigger>
+          <TabsTrigger value="gerar" className="text-xs gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Gerar Site</TabsTrigger>
+        </TabsList>
 
-      <div className="space-y-3">
-        {sites.map(s => (
-          <Card key={s.id} className="hover:shadow-md transition-all">
-            <CardContent className="py-4 flex items-center gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold">{s.name}</span>
-                  <Badge variant={s.status === "Ativo" ? "default" : "outline"} className="text-[9px]">{s.status}</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <ExternalLink className="w-3 h-3" /> {s.url}
-                </p>
+        {/* ═══ BASE ═══ */}
+        <TabsContent value="base" className="space-y-5 mt-4">
+          <Card className="glass-card">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Preenchimento da Base</span>
+                <span className="text-xs text-muted-foreground">{filledCount}/{totalCount} campos</span>
               </div>
-              <div className="text-center">
-                <p className="text-lg font-bold text-primary">{s.leads}</p>
-                <p className="text-[10px] text-muted-foreground">leads</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-bold">{s.conversion}%</p>
-                <p className="text-[10px] text-muted-foreground">conversão</p>
-              </div>
-              <Button variant="ghost" size="sm" className="text-xs"><Eye className="w-3.5 h-3.5" /></Button>
+              <Progress value={progress} className="h-2" />
             </CardContent>
           </Card>
-        ))}
-      </div>
 
-      {/* Builder Side-by-Side Sheet */}
-      <Sheet open={builderOpen} onOpenChange={setBuilderOpen}>
-        <SheetContent className="sm:max-w-4xl w-full overflow-y-auto p-0">
-          <div className="p-6 border-b">
-            <SheetHeader>
-              <SheetTitle>Construtor de Landing Page</SheetTitle>
-            </SheetHeader>
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="space-y-2">
-                <Label>Nome da Página</Label>
-                <Input value={lpName} onChange={e => setLpName(e.target.value)} placeholder="Ex: LP Promoção Março" />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select defaultValue="captura">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="captura">Página de Captura</SelectItem>
-                    <SelectItem value="institucional">Institucional</SelectItem>
-                    <SelectItem value="vendas">Página de Vendas</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* Side-by-side layout */}
-          <div className="flex h-[calc(100vh-220px)]">
-            {/* Left: Block palette + selected blocks */}
-            <div className="w-72 border-r flex flex-col">
-              {/* Block palette */}
-              <div className="p-4 border-b">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Blocos Disponíveis</p>
-                <div className="space-y-1">
-                  {AVAILABLE_BLOCKS.map(block => (
-                    <div
-                      key={block.id}
-                      className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-muted/30 transition-colors"
-                      onClick={() => addBlock(block)}
-                    >
-                      {block.icon}
-                      <span className="text-xs">{block.label}</span>
-                      <Plus className="w-3 h-3 ml-auto text-muted-foreground" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Selected blocks */}
-              <div className="p-4 flex-1 overflow-y-auto">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Estrutura da Página</p>
-                <div className="space-y-2">
-                  {selectedBlocks.map((block, idx) => (
-                    <div key={block.id} className="flex items-center gap-2 p-2 border rounded-lg bg-background">
-                      <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab shrink-0" />
-                      {block.icon}
-                      <span className="text-xs flex-1 truncate">{block.label}</span>
-                      <div className="flex gap-0.5 shrink-0">
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => moveBlock(idx, -1)} disabled={idx === 0}>↑</Button>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => moveBlock(idx, 1)} disabled={idx === selectedBlocks.length - 1}>↓</Button>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => removeBlock(block.id)}><Trash2 className="w-3 h-3" /></Button>
-                      </div>
-                    </div>
-                  ))}
-                  {selectedBlocks.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-8">Adicione blocos da paleta acima</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Live preview */}
-            <div className="flex-1 overflow-y-auto bg-muted/10 p-6">
-              <div className="max-w-md mx-auto">
-                <p className="text-xs font-medium text-muted-foreground mb-3 text-center">Preview ao Vivo</p>
-                <div className="border rounded-xl overflow-hidden bg-background shadow-lg">
-                  {selectedBlocks.length > 0 ? (
-                    selectedBlocks.map(block => (
-                      <div key={block.id}>
-                        {BLOCK_PREVIEWS[block.type]}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="h-64 flex items-center justify-center">
-                      <p className="text-xs text-muted-foreground">Adicione blocos para ver o preview</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="p-4 border-t">
-            <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/10 mb-4">
-              <Sparkles className="w-4 h-4 text-primary shrink-0" />
-              <span className="text-xs">O formulário será integrado automaticamente ao CRM. Leads captados entrarão como "Novo Lead" com origem "Landing Page".</span>
-            </div>
-            <Button className="w-full" onClick={() => { toast({ title: "Landing page criada!", description: `"${lpName || 'Nova LP'}" publicada com sucesso.` }); setBuilderOpen(false); }}>
-              Publicar Landing Page
+          <div className="flex justify-end">
+            <Button
+              variant={isEditing ? "default" : "outline"}
+              size="sm"
+              className="text-xs gap-1"
+              onClick={() => {
+                if (isEditing) toast({ title: "Base salva!" });
+                setIsEditing(!isEditing);
+              }}
+            >
+              {isEditing ? <><Check className="w-3.5 h-3.5" /> Salvar</> : <><Edit3 className="w-3.5 h-3.5" /> Editar Base</>}
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+
+          <div className="space-y-4">
+            {fields.map(field => (
+              <Card key={field.key} className="glass-card">
+                <CardContent className="py-4">
+                  <Label className="text-xs font-medium">{field.label}</Label>
+                  {!isEditing ? (
+                    field.type === "upload" ? (
+                      <div className="mt-2 border-2 border-dashed border-border rounded-xl p-6 text-center">
+                        <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground">Nenhuma imagem enviada</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm mt-1.5 whitespace-pre-line">{field.value || <span className="text-muted-foreground italic">Não preenchido</span>}</p>
+                    )
+                  ) : field.type === "select" ? (
+                    <Select value={field.value} onValueChange={v => updateField(field.key, v)}>
+                      <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {field.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : field.type === "textarea" ? (
+                    <Textarea value={field.value} onChange={e => updateField(field.key, e.target.value)} rows={3} className="mt-1.5" />
+                  ) : field.type === "upload" ? (
+                    <div className="mt-2 border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:bg-muted/30 transition-colors">
+                      <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">Arraste ou clique para upload</p>
+                    </div>
+                  ) : (
+                    <Input value={field.value} onChange={e => updateField(field.key, e.target.value)} className="mt-1.5" />
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* ═══ GERAR SITE ═══ */}
+        <TabsContent value="gerar" className="space-y-5 mt-4">
+          {/* Summary of KB */}
+          <Card className="glass-card border-primary/20 bg-primary/5">
+            <CardContent className="py-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-4 h-4 text-primary" />
+                <p className="text-sm font-bold">Resumo da Base de Conhecimento</p>
+                <Badge variant="outline" className="text-[9px] ml-auto">{progress}% preenchido</Badge>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {fields.filter(f => f.type !== "upload" && f.value).map(f => (
+                  <div key={f.key} className="p-3 rounded-xl bg-background border">
+                    <p className="text-[10px] text-muted-foreground font-medium">{f.label}</p>
+                    <p className="text-xs mt-1 line-clamp-2">{f.value}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button className="w-full gap-2" size="lg" onClick={handleGenerate} disabled={generating}>
+            <Sparkles className="w-4 h-4" />
+            {generating ? "Gerando site..." : "Gerar Site com IA"}
+          </Button>
+
+          {/* Generated preview */}
+          {generatedPreview && (
+            <Card className="glass-card overflow-hidden">
+              <CardContent className="p-0">
+                {/* Mock preview */}
+                <div className="bg-gradient-to-b from-primary/10 to-background">
+                  <div className="max-w-2xl mx-auto py-12 px-6 text-center space-y-6">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/20 mx-auto flex items-center justify-center">
+                      <span className="text-xl font-black text-primary">N</span>
+                    </div>
+                    <h2 className="text-2xl font-black tracking-tight">Gestão Completa para Sua Franquia</h2>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                      Única plataforma que integra vendas + marketing + IA para redes de franquias. Triplique seus leads em 3 meses.
+                    </p>
+                    <Button className="gap-2"><Sparkles className="w-4 h-4" /> Agende Sua Demo Gratuita</Button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 px-6 pb-8 max-w-2xl mx-auto">
+                    {["CRM Integrado", "Marketing com IA", "Relatórios"].map(b => (
+                      <div key={b} className="p-4 rounded-xl bg-card border text-center">
+                        <Award className="w-5 h-5 text-primary mx-auto mb-2" />
+                        <p className="text-xs font-medium">{b}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-6 pb-8 max-w-2xl mx-auto">
+                    <div className="p-4 rounded-xl bg-muted/30 border text-center">
+                      <p className="text-xs italic text-muted-foreground">"A NoExcuse triplicou nossos leads em 3 meses"</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">— João, Franqueado</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="p-5 border-t space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <Button className="w-full gap-2" onClick={() => toast({ title: "Site publicado!", description: "Seu site está no ar." })}>
+                      <ExternalLink className="w-4 h-4" /> Publicar Site
+                    </Button>
+                    <Button variant="outline" className="w-full gap-2" onClick={() => toast({ title: "Código baixado!" })}>
+                      <Download className="w-4 h-4" /> Baixar Código
+                    </Button>
+                    <Button variant="outline" className="w-full gap-2">
+                      <Edit3 className="w-4 h-4" /> Editar
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* History */}
+          <div>
+            <p className="section-label mb-3">HISTÓRICO DE SITES</p>
+            <div className="space-y-3">
+              {sites.map(s => (
+                <Card key={s.id} className="glass-card">
+                  <CardContent className="py-4 flex items-center gap-4">
+                    <Globe className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold">{s.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant={s.status === "Publicado" ? "default" : "outline"} className="text-[9px]">{s.status}</Badge>
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {s.createdAt}
+                        </span>
+                      </div>
+                    </div>
+                    {s.url && (
+                      <Button variant="ghost" size="sm" className="text-xs gap-1">
+                        <ExternalLink className="w-3.5 h-3.5" /> Ver
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
