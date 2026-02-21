@@ -996,135 +996,153 @@ export default function ClientePlanoVendas() {
 
           {/* Dialog Nova Meta */}
           <Dialog open={novaMetaOpen} onOpenChange={setNovaMetaOpen}>
-            <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-amber-500/15"><Plus className="w-4 h-4 text-amber-500" /></div>
-                  Criar Nova Meta
+            <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto p-0">
+              <DialogHeader className="p-6 pb-4 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-b border-amber-500/10">
+                <DialogTitle className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-amber-500/15 shadow-inner"><Target className="w-5 h-5 text-amber-500" /></div>
+                  <div>
+                    <span className="text-base">Criar Nova Meta</span>
+                    <p className="text-xs text-muted-foreground font-normal mt-0.5">Defina uma meta mensal para acompanhar seu desempenho</p>
+                  </div>
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-5">
+              <div className="p-6 space-y-6">
                 {/* Tipo */}
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block">Tipo da meta</Label>
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo da meta</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {([
-                      { value: "faturamento" as TipoMeta, label: "Faturamento", icon: DollarSign, color: "text-emerald-500" },
-                      { value: "novos_clientes" as TipoMeta, label: "Novos Clientes", icon: UserPlus, color: "text-blue-500" },
-                      { value: "contratos" as TipoMeta, label: "Contratos", icon: FileText, color: "text-purple-500" },
-                      { value: "retencao" as TipoMeta, label: "Retenção", icon: ShieldCheck, color: "text-teal-500" },
-                      { value: "ticket_medio" as TipoMeta, label: "Ticket Médio", icon: Receipt, color: "text-orange-500" },
-                      { value: "conversao" as TipoMeta, label: "Conversão (%)", icon: BarChartHorizontal, color: "text-indigo-500" },
-                      { value: "leads" as TipoMeta, label: "Leads Gerados", icon: Megaphone, color: "text-pink-500" },
-                      { value: "reunioes" as TipoMeta, label: "Reuniões", icon: Handshake, color: "text-cyan-500" },
+                      { value: "faturamento" as TipoMeta, label: "Faturamento", icon: DollarSign, color: "text-emerald-500", emoji: "💰" },
+                      { value: "novos_clientes" as TipoMeta, label: "Novos Clientes", icon: UserPlus, color: "text-blue-500", emoji: "👥" },
+                      { value: "contratos" as TipoMeta, label: "Contratos", icon: FileText, color: "text-purple-500", emoji: "📑" },
+                      { value: "retencao" as TipoMeta, label: "Retenção", icon: ShieldCheck, color: "text-teal-500", emoji: "🛡️" },
+                      { value: "ticket_medio" as TipoMeta, label: "Ticket Médio", icon: Receipt, color: "text-orange-500", emoji: "🎫" },
+                      { value: "conversao" as TipoMeta, label: "Conversão (%)", icon: BarChartHorizontal, color: "text-indigo-500", emoji: "📊" },
+                      { value: "leads" as TipoMeta, label: "Leads Gerados", icon: Megaphone, color: "text-pink-500", emoji: "📣" },
+                      { value: "reunioes" as TipoMeta, label: "Reuniões", icon: Handshake, color: "text-cyan-500", emoji: "🤝" },
                     ]).map(opt => {
-                      const Icon = opt.icon;
                       const selected = novaMeta.tipo === opt.value;
                       return (
-                        <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
-                          className={`justify-start gap-2 h-auto py-2 px-3 ${!selected ? "border-dashed" : ""}`}
+                        <button key={opt.value}
+                          className={`relative flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-md shadow-primary/10" : "border-border/50 hover:border-primary/30 hover:bg-muted/20"}`}
                           onClick={() => setNovaMeta(p => ({ ...p, tipo: opt.value }))}>
-                          <Icon className={`w-4 h-4 ${selected ? "" : opt.color}`} />
-                          <span className="text-xs">{opt.label}</span>
-                        </Button>
+                          {selected && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="w-3 h-3 text-primary-foreground" /></div>}
+                          <span className="text-lg">{opt.emoji}</span>
+                          <span className="text-xs font-medium">{opt.label}</span>
+                        </button>
                       );
                     })}
                   </div>
                 </div>
 
                 {/* Nome */}
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block">Nome da meta</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nome da meta</Label>
                   <Input value={novaMeta.nome} onChange={e => setNovaMeta(p => ({ ...p, nome: e.target.value }))}
-                    placeholder="Ex: Meta de Faturamento Q1..." />
+                    placeholder="Ex: Meta de Faturamento Q1..." className="h-10" />
                 </div>
 
                 {/* Mês */}
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block">Mês de referência</Label>
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mês de referência</Label>
+                  <div className="grid grid-cols-6 gap-1.5">
                     {MESES_COMPLETOS.map((mes, i) => {
                       const valor = `${mes}/${anoAtual}`;
                       const valorProx = `${mes}/${anoAtual + 1}`;
                       const selected = novaMeta.mesRef === valor || novaMeta.mesRef === valorProx;
                       return (
-                        <Button key={mes} size="sm" variant={selected ? "default" : "outline"}
-                          className={`text-xs h-7 px-2 ${!selected ? "border-dashed" : ""}`}
+                        <button key={mes}
+                          className={`py-2 rounded-lg text-xs font-medium transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                           onClick={() => setNovaMeta(p => ({ ...p, mesRef: i >= new Date().getMonth() ? valor : valorProx }))}>
                           {MESES[i]}
-                        </Button>
+                        </button>
                       );
                     })}
                   </div>
                 </div>
 
                 {/* Escopo */}
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block">Para quem?</Label>
-                  <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Para quem?</Label>
+                  <div className="grid grid-cols-3 gap-2">
                     {([
-                      { value: "empresa" as EscopoMeta, label: "Empresa", icon: Building2 },
-                      { value: "equipe" as EscopoMeta, label: "Equipe", icon: Users },
-                      { value: "individual" as EscopoMeta, label: "Individual", icon: UserCheck },
+                      { value: "empresa" as EscopoMeta, label: "Empresa", icon: "🏢", desc: "Meta geral" },
+                      { value: "equipe" as EscopoMeta, label: "Equipe", icon: "👥", desc: "Por time" },
+                      { value: "individual" as EscopoMeta, label: "Individual", icon: "👤", desc: "Por pessoa" },
                     ]).map(opt => {
-                      const Icon = opt.icon;
+                      const selected = novaMeta.escopo === opt.value;
                       return (
-                        <Button key={opt.value} variant={novaMeta.escopo === opt.value ? "default" : "outline"} size="sm"
-                          className={`gap-1.5 ${novaMeta.escopo !== opt.value ? "border-dashed" : ""}`}
+                        <button key={opt.value}
+                          className={`relative p-3 rounded-xl border-2 text-center transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-sm" : "border-border/50 hover:border-primary/30 hover:bg-muted/20"}`}
                           onClick={() => setNovaMeta(p => ({ ...p, escopo: opt.value, equipe: "", responsavel: "" }))}>
-                          <Icon className="w-3.5 h-3.5" /> {opt.label}
-                        </Button>
+                          {selected && <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center"><Check className="w-2.5 h-2.5 text-primary-foreground" /></div>}
+                          <span className="text-lg block">{opt.icon}</span>
+                          <span className="text-xs font-medium block">{opt.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{opt.desc}</span>
+                        </button>
                       );
                     })}
                   </div>
                 </div>
 
                 {novaMeta.escopo === "equipe" && (
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block">Qual equipe?</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {["Vendas", "Pré-vendas (SDR)", "Pós-venda (CS)", "Marketing", "Prospecção"].map(opt => (
-                        <Button key={opt} size="sm" variant={novaMeta.equipe === opt ? "default" : "outline"}
-                          className={`text-xs ${novaMeta.equipe !== opt ? "border-dashed" : ""}`}
-                          onClick={() => setNovaMeta(p => ({ ...p, equipe: opt }))}>{opt}</Button>
-                      ))}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Qual equipe?</Label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {["Vendas", "Pré-vendas (SDR)", "Pós-venda (CS)", "Marketing", "Prospecção"].map(opt => {
+                        const selected = novaMeta.equipe === opt;
+                        return (
+                          <button key={opt}
+                            className={`py-2 px-3 rounded-lg text-xs font-medium transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            onClick={() => setNovaMeta(p => ({ ...p, equipe: opt }))}>{opt}</button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
                 {novaMeta.escopo === "individual" && (
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block">Responsável</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Lima"].map(opt => (
-                        <Button key={opt} size="sm" variant={novaMeta.responsavel === opt ? "default" : "outline"}
-                          className={`text-xs ${novaMeta.responsavel !== opt ? "border-dashed" : ""}`}
-                          onClick={() => setNovaMeta(p => ({ ...p, responsavel: opt }))}>{opt}</Button>
-                      ))}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Responsável</Label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Lima"].map(opt => {
+                        const selected = novaMeta.responsavel === opt;
+                        return (
+                          <button key={opt}
+                            className={`flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            onClick={() => setNovaMeta(p => ({ ...p, responsavel: opt }))}>
+                            <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold">{opt.charAt(0)}</div>
+                            {opt}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
                 {/* Período */}
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block">Período</Label>
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Período</Label>
+                  <div className="grid grid-cols-4 gap-1.5">
                     {([
                       { value: "mensal" as PeriodoMeta, label: "Mensal" },
                       { value: "trimestral" as PeriodoMeta, label: "Trimestral" },
                       { value: "semestral" as PeriodoMeta, label: "Semestral" },
                       { value: "anual" as PeriodoMeta, label: "Anual" },
-                    ]).map(opt => (
-                      <Button key={opt.value} size="sm" variant={novaMeta.periodo === opt.value ? "default" : "outline"}
-                        className={`text-xs ${novaMeta.periodo !== opt.value ? "border-dashed" : ""}`}
-                        onClick={() => setNovaMeta(p => ({ ...p, periodo: opt.value }))}>{opt.label}</Button>
-                    ))}
+                    ]).map(opt => {
+                      const selected = novaMeta.periodo === opt.value;
+                      return (
+                        <button key={opt.value}
+                          className={`py-2 rounded-lg text-xs font-medium transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, periodo: opt.value }))}>{opt.label}</button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Valor */}
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block">Valor alvo</Label>
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Valor alvo</Label>
+                  <div className="grid grid-cols-3 gap-1.5">
                     {(novaMeta.tipo === "faturamento" || novaMeta.tipo === "ticket_medio"
                       ? ["R$ 10.000", "R$ 25.000", "R$ 50.000", "R$ 100.000", "R$ 200.000", "R$ 500.000"]
                       : novaMeta.tipo === "conversao" || novaMeta.tipo === "retencao"
@@ -1132,37 +1150,46 @@ export default function ClientePlanoVendas() {
                       : ["5", "10", "20", "50", "100", "200"]
                     ).map(opt => {
                       const numVal = Number(opt.replace(/[^0-9]/g, ""));
+                      const selected = novaMeta.valorAlvo === numVal;
                       return (
-                        <Button key={opt} size="sm" variant={novaMeta.valorAlvo === numVal ? "default" : "outline"}
-                          className={`text-xs ${novaMeta.valorAlvo !== numVal ? "border-dashed" : ""}`}
-                          onClick={() => setNovaMeta(p => ({ ...p, valorAlvo: numVal }))}>{opt}</Button>
+                        <button key={opt}
+                          className={`py-2 rounded-lg text-xs font-medium transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, valorAlvo: numVal }))}>{opt}</button>
                       );
                     })}
                   </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Ou:</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">Personalizado:</span>
                     <Input type="number" className="w-32 h-8 text-xs" value={novaMeta.valorAlvo || ""}
-                      onChange={e => setNovaMeta(p => ({ ...p, valorAlvo: Number(e.target.value) }))} placeholder="Personalizado" />
+                      onChange={e => setNovaMeta(p => ({ ...p, valorAlvo: Number(e.target.value) }))} placeholder="Valor" />
                   </div>
                 </div>
 
                 {/* Prioridade */}
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block">Prioridade</Label>
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Prioridade</Label>
+                  <div className="grid grid-cols-3 gap-2">
                     {([
-                      { value: "alta" as const, label: "🔴 Alta" },
-                      { value: "media" as const, label: "🟡 Média" },
-                      { value: "baixa" as const, label: "🟢 Baixa" },
-                    ]).map(opt => (
-                      <Button key={opt.value} size="sm" variant={novaMeta.prioridade === opt.value ? "default" : "outline"}
-                        className={novaMeta.prioridade !== opt.value ? "border-dashed" : ""}
-                        onClick={() => setNovaMeta(p => ({ ...p, prioridade: opt.value }))}>{opt.label}</Button>
-                    ))}
+                      { value: "alta" as const, label: "Alta", emoji: "🔴", desc: "Urgente" },
+                      { value: "media" as const, label: "Média", emoji: "🟡", desc: "Importante" },
+                      { value: "baixa" as const, label: "Baixa", emoji: "🟢", desc: "Complementar" },
+                    ]).map(opt => {
+                      const selected = novaMeta.prioridade === opt.value;
+                      return (
+                        <button key={opt.value}
+                          className={`relative p-3 rounded-xl border-2 text-center transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-sm" : "border-border/50 hover:border-primary/30 hover:bg-muted/20"}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, prioridade: opt.value }))}>
+                          {selected && <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center"><Check className="w-2.5 h-2.5 text-primary-foreground" /></div>}
+                          <span className="text-sm block">{opt.emoji}</span>
+                          <span className="text-xs font-medium block">{opt.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{opt.desc}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <Button className="w-full gap-2" disabled={novaMeta.valorAlvo === 0 || !novaMeta.mesRef || (novaMeta.escopo === "equipe" && !novaMeta.equipe) || (novaMeta.escopo === "individual" && !novaMeta.responsavel)} onClick={() => {
+                <Button className="w-full h-11 gap-2 font-semibold shadow-lg shadow-primary/20" disabled={novaMeta.valorAlvo === 0 || !novaMeta.mesRef || (novaMeta.escopo === "equipe" && !novaMeta.equipe) || (novaMeta.escopo === "individual" && !novaMeta.responsavel)} onClick={() => {
                   const nova: MetaMensal = {
                     id: `meta-${Date.now()}`, nome: novaMeta.nome || TIPO_META_LABELS[novaMeta.tipo], mesRef: novaMeta.mesRef,
                     tipo: novaMeta.tipo, escopo: novaMeta.escopo, periodo: novaMeta.periodo,
@@ -1409,115 +1436,207 @@ export default function ClientePlanoVendas() {
                 </div>
               )}
               {/* Equipe */}
-              <Card className="overflow-hidden">
-                <CardHeader className="pb-3 bg-gradient-to-r from-blue-500/10 to-transparent border-b border-blue-500/10">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-blue-500/15"><Users className="w-4 h-4 text-blue-500" /></div>
-                    Equipe Comercial
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground">Quem faz parte da sua operação de vendas</p>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-5">
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-blue-500" /> Quantas pessoas trabalham no comercial? <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Inclua todas as pessoas envolvidas diretamente no processo de vendas: SDRs, closers, CS e gestores.</TooltipContent></Tooltip></TooltipProvider></Label>
-                    <div className="flex flex-wrap gap-2">
-                      {["Só eu", "2-3 pessoas", "4-7 pessoas", "8-15 pessoas", "16+ pessoas"].map(opt => (
-                        <Button key={opt} size="sm" variant={estrutura.tamanhoEquipe === opt ? "default" : "outline"}
-                          onClick={() => setEstrutura(p => ({ ...p, tamanhoEquipe: opt }))}>{opt}</Button>
-                      ))}
+              <Card className="overflow-hidden border-0 shadow-md">
+                <CardHeader className="pb-4 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border-b border-blue-500/10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-2xl bg-blue-500/15 shadow-inner"><Users className="w-5 h-5 text-blue-500" /></div>
+                    <div>
+                      <CardTitle className="text-base">Equipe Comercial</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">Quem faz parte da sua operação de vendas</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-3 rounded-xl bg-muted/30 space-y-2">
-                      <Label className="text-xs font-semibold block">SDR / Pré-vendas</Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {["Sim", "Não", "Pretendo"].map(opt => (
-                          <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temSDR === opt ? "default" : "outline"}
-                            onClick={() => setEstrutura(p => ({ ...p, temSDR: opt }))}>{opt}</Button>
-                        ))}
-                      </div>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-7">
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <UserCheck className="w-3.5 h-3.5 text-blue-500" /> Tamanho da equipe
+                      <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Inclua todas as pessoas envolvidas diretamente no processo de vendas.</TooltipContent></Tooltip></TooltipProvider>
+                    </Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {[
+                        { opt: "Só eu", icon: "👤", desc: "Operação solo" },
+                        { opt: "2-3 pessoas", icon: "👥", desc: "Equipe micro" },
+                        { opt: "4-7 pessoas", icon: "🏢", desc: "Equipe pequena" },
+                        { opt: "8-15 pessoas", icon: "🏗️", desc: "Equipe média" },
+                        { opt: "16+ pessoas", icon: "🏭", desc: "Equipe grande" },
+                      ].map(item => {
+                        const selected = estrutura.tamanhoEquipe === item.opt;
+                        return (
+                          <button key={item.opt}
+                            className={`relative group p-3 rounded-xl border-2 text-center transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-md shadow-primary/10 scale-[1.02]" : "border-border/50 hover:border-primary/30 hover:bg-muted/30 hover:shadow-sm"}`}
+                            onClick={() => setEstrutura(p => ({ ...p, tamanhoEquipe: item.opt }))}>
+                            {selected && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="w-3 h-3 text-primary-foreground" /></div>}
+                            <span className="text-xl block mb-1">{item.icon}</span>
+                            <span className="text-xs font-semibold block">{item.opt}</span>
+                            <span className="text-[10px] text-muted-foreground">{item.desc}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <div className="p-3 rounded-xl bg-muted/30 space-y-2">
-                      <Label className="text-xs font-semibold block">Closer / Vendedor</Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {["Sim", "Não", "Eu mesmo"].map(opt => (
-                          <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temCloser === opt ? "default" : "outline"}
-                            onClick={() => setEstrutura(p => ({ ...p, temCloser: opt }))}>{opt}</Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-muted/30 space-y-2">
-                      <Label className="text-xs font-semibold block">CS / Pós-venda</Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {["Sim", "Não", "Pretendo"].map(opt => (
-                          <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temCS === opt ? "default" : "outline"}
-                            onClick={() => setEstrutura(p => ({ ...p, temCS: opt }))}>{opt}</Button>
-                        ))}
-                      </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Funções na equipe</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {[
+                        { key: "temSDR", label: "SDR / Pré-vendas", icon: "🎯", desc: "Prospecção e qualificação de leads", options: ["Sim", "Não", "Pretendo"], stateKey: "temSDR" as const, color: "blue" },
+                        { key: "temCloser", label: "Closer / Vendedor", icon: "🤝", desc: "Responsável pelo fechamento", options: ["Sim", "Não", "Eu mesmo"], stateKey: "temCloser" as const, color: "emerald" },
+                        { key: "temCS", label: "CS / Pós-venda", icon: "💎", desc: "Retenção e sucesso do cliente", options: ["Sim", "Não", "Pretendo"], stateKey: "temCS" as const, color: "purple" },
+                      ].map(role => {
+                        const currentVal = estrutura[role.stateKey];
+                        return (
+                          <div key={role.key} className={`p-4 rounded-xl border transition-all duration-200 ${currentVal ? "bg-muted/20 border-border" : "bg-muted/5 border-dashed border-border/50"}`}>
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="text-lg">{role.icon}</span>
+                              <div>
+                                <p className="text-xs font-semibold">{role.label}</p>
+                                <p className="text-[10px] text-muted-foreground">{role.desc}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-1.5">
+                              {role.options.map(opt => {
+                                const sel = currentVal === opt;
+                                return (
+                                  <button key={opt}
+                                    className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-medium transition-all duration-200 ${sel ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                                    onClick={() => setEstrutura(p => ({ ...p, [role.stateKey]: opt }))}>
+                                    {opt}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Processo */}
-              <Card className="overflow-hidden">
-                <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/10">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-amber-500/15"><Layers className="w-4 h-4 text-amber-500" /></div>
-                    Processo Comercial
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground">Como funciona sua operação de vendas hoje</p>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-5">
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-amber-500" /> Processo documentado? <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Se existe um playbook ou documento descrevendo cada etapa do processo de vendas da empresa.</TooltipContent></Tooltip></TooltipProvider></Label>
-                    <div className="flex gap-2">
-                      {["Sim, completo", "Parcialmente", "Não"].map(opt => (
-                        <Button key={opt} size="sm" variant={estrutura.processoDocumentado === opt ? "default" : "outline"}
-                          onClick={() => setEstrutura(p => ({ ...p, processoDocumentado: opt }))}>{opt}</Button>
-                      ))}
+              <Card className="overflow-hidden border-0 shadow-md">
+                <CardHeader className="pb-4 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-b border-amber-500/10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-2xl bg-amber-500/15 shadow-inner"><Layers className="w-5 h-5 text-amber-500" /></div>
+                    <div>
+                      <CardTitle className="text-base">Processo Comercial</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">Como funciona sua operação de vendas hoje</p>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-amber-500" /> Quais etapas existem no seu funil? <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Selecione todas as etapas que um lead percorre até se tornar cliente na sua empresa.</TooltipContent></Tooltip></TooltipProvider></Label>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-7">
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-amber-500" /> Processo documentado?
+                      <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Se existe um playbook ou documento descrevendo cada etapa do processo de vendas.</TooltipContent></Tooltip></TooltipProvider>
+                    </Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { opt: "Sim, completo", icon: "✅", desc: "Playbook completo" },
+                        { opt: "Parcialmente", icon: "📝", desc: "Existe parcialmente" },
+                        { opt: "Não", icon: "❌", desc: "Sem documentação" },
+                      ].map(item => {
+                        const selected = estrutura.processoDocumentado === item.opt;
+                        return (
+                          <button key={item.opt}
+                            className={`relative group p-3 rounded-xl border-2 text-center transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-md shadow-primary/10" : "border-border/50 hover:border-primary/30 hover:bg-muted/30"}`}
+                            onClick={() => setEstrutura(p => ({ ...p, processoDocumentado: item.opt }))}>
+                            {selected && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="w-3 h-3 text-primary-foreground" /></div>}
+                            <span className="text-lg block mb-1">{item.icon}</span>
+                            <span className="text-xs font-semibold block">{item.opt}</span>
+                            <span className="text-[10px] text-muted-foreground">{item.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-amber-500" /> Etapas do funil
+                      <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Selecione todas as etapas que um lead percorre até se tornar cliente.</TooltipContent></Tooltip></TooltipProvider>
+                    </Label>
                     <div className="flex flex-wrap gap-2">
-                      {["Prospecção", "Qualificação", "Apresentação", "Proposta", "Negociação", "Fechamento", "Pós-venda"].map(etapa => (
-                        <Button key={etapa} size="sm" variant={estrutura.etapasProcesso.includes(etapa) ? "default" : "outline"}
-                          className={estrutura.etapasProcesso.includes(etapa) ? "" : "border-dashed"}
-                          onClick={() => setEstrutura(p => ({
-                            ...p,
-                            etapasProcesso: p.etapasProcesso.includes(etapa) ? p.etapasProcesso.filter(e => e !== etapa) : [...p.etapasProcesso, etapa]
-                          }))}>{etapa}</Button>
-                      ))}
+                      {[
+                        { etapa: "Prospecção", icon: "🔍" },
+                        { etapa: "Qualificação", icon: "🎯" },
+                        { etapa: "Apresentação", icon: "📊" },
+                        { etapa: "Proposta", icon: "📄" },
+                        { etapa: "Negociação", icon: "🤝" },
+                        { etapa: "Fechamento", icon: "✅" },
+                        { etapa: "Pós-venda", icon: "💎" },
+                      ].map(item => {
+                        const selected = estrutura.etapasProcesso.includes(item.etapa);
+                        return (
+                          <button key={item.etapa}
+                            className={`flex items-center gap-1.5 py-2 px-3 rounded-xl border-2 transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-sm" : "border-dashed border-border/50 hover:border-primary/30 hover:bg-muted/20"}`}
+                            onClick={() => setEstrutura(p => ({
+                              ...p,
+                              etapasProcesso: p.etapasProcesso.includes(item.etapa) ? p.etapasProcesso.filter(e => e !== item.etapa) : [...p.etapasProcesso, item.etapa]
+                            }))}>
+                            {selected && <Check className="w-3 h-3 text-primary" />}
+                            <span className="text-sm">{item.icon}</span>
+                            <span className="text-xs font-medium">{item.etapa}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                     {estrutura.etapasProcesso.length > 0 && (
-                      <p className="text-[10px] text-muted-foreground mt-1.5">{estrutura.etapasProcesso.length} etapas selecionadas: {estrutura.etapasProcesso.join(" → ")}</p>
+                      <div className="flex items-center gap-1 mt-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
+                        <Layers className="w-3 h-3 text-primary shrink-0" />
+                        <p className="text-[11px] text-primary font-medium">{estrutura.etapasProcesso.join(" → ")}</p>
+                      </div>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-amber-500" /> Tempo médio de fechamento <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Tempo médio desde o primeiro contato com o lead até o fechamento do contrato.</TooltipContent></Tooltip></TooltipProvider></Label>
-                      <div className="flex flex-wrap gap-2">
-                        {["Até 7 dias", "7-15 dias", "15-30 dias", "30-60 dias", "60+ dias"].map(opt => (
-                          <Button key={opt} size="sm" variant={estrutura.tempoMedioFechamento === opt ? "default" : "outline"}
-                            onClick={() => setEstrutura(p => ({ ...p, tempoMedioFechamento: opt }))}>{opt}</Button>
-                        ))}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-amber-500" /> Tempo de fechamento
+                        <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Tempo médio do primeiro contato até o fechamento.</TooltipContent></Tooltip></TooltipProvider>
+                      </Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        {["Até 7 dias", "7-15 dias", "15-30 dias", "30-60 dias", "60+ dias"].map(opt => {
+                          const selected = estrutura.tempoMedioFechamento === opt;
+                          return (
+                            <button key={opt}
+                              className={`py-2 px-2.5 rounded-lg text-xs font-medium transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                              onClick={() => setEstrutura(p => ({ ...p, tempoMedioFechamento: opt }))}>
+                              {opt}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div>
-                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-amber-500" /> Reunião comercial recorrente? <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Encontros regulares com a equipe para revisar pipeline, resultados e definir próximas ações.</TooltipContent></Tooltip></TooltipProvider></Label>
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-amber-500" /> Reunião recorrente?
+                        <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help" /></TooltipTrigger><TooltipContent className="max-w-[220px] text-xs">Encontros regulares para revisar pipeline e metas.</TooltipContent></Tooltip></TooltipProvider>
+                      </Label>
                       <div className="flex gap-2">
-                        {["Sim", "Não"].map(opt => (
-                          <Button key={opt} size="sm" variant={(estrutura.reuniaoRecorrente && opt === "Sim") || (!estrutura.reuniaoRecorrente && opt === "Não") ? "default" : "outline"}
-                            onClick={() => setEstrutura(p => ({ ...p, reuniaoRecorrente: opt === "Sim" }))}>{opt}</Button>
-                        ))}
+                        {["Sim", "Não"].map(opt => {
+                          const selected = (estrutura.reuniaoRecorrente && opt === "Sim") || (!estrutura.reuniaoRecorrente && opt === "Não");
+                          return (
+                            <button key={opt}
+                              className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                              onClick={() => setEstrutura(p => ({ ...p, reuniaoRecorrente: opt === "Sim" }))}>
+                              {opt === "Sim" ? "✅ Sim" : "❌ Não"}
+                            </button>
+                          );
+                        })}
                       </div>
                       {estrutura.reuniaoRecorrente && (
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {["Diária", "Semanal", "Quinzenal", "Mensal"].map(opt => (
-                            <Button key={opt} size="sm" className="text-xs h-7" variant={estrutura.frequenciaReuniao === opt ? "default" : "outline"}
-                              onClick={() => setEstrutura(p => ({ ...p, frequenciaReuniao: opt }))}>{opt}</Button>
-                          ))}
+                        <div className="grid grid-cols-4 gap-1.5 mt-1">
+                          {["Diária", "Semanal", "Quinzenal", "Mensal"].map(opt => {
+                            const selected = estrutura.frequenciaReuniao === opt;
+                            return (
+                              <button key={opt}
+                                className={`py-1.5 rounded-lg text-[11px] font-medium transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 text-muted-foreground hover:bg-muted"}`}
+                                onClick={() => setEstrutura(p => ({ ...p, frequenciaReuniao: opt }))}>
+                                {opt}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -1527,54 +1646,90 @@ export default function ClientePlanoVendas() {
 
               {/* Canais e Ferramentas */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="overflow-hidden">
-                  <CardHeader className="pb-3 bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-emerald-500/10">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-emerald-500/15"><TrendingUp className="w-4 h-4 text-emerald-500" /></div>
-                      Canais de Aquisição
-                    </CardTitle>
+                <Card className="overflow-hidden border-0 shadow-md">
+                  <CardHeader className="pb-3 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border-b border-emerald-500/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-2xl bg-emerald-500/15"><TrendingUp className="w-4 h-4 text-emerald-500" /></div>
+                        <div>
+                          <CardTitle className="text-sm">Canais de Aquisição</CardTitle>
+                          <p className="text-[10px] text-muted-foreground">{estrutura.canaisAquisicao.length} selecionado(s)</p>
+                        </div>
+                      </div>
+                      {estrutura.canaisAquisicao.length > 0 && (
+                        <Badge className="text-[10px]">{estrutura.canaisAquisicao.length}</Badge>
+                      )}
+                    </div>
                   </CardHeader>
-                  <CardContent className="pt-3 flex flex-wrap gap-2">
-                    <TooltipProvider delayDuration={200}>
-                      {CANAIS_OPTIONS.map(c => (
-                        <Tooltip key={c.label}>
-                          <TooltipTrigger asChild>
-                            <Button size="sm" variant={estrutura.canaisAquisicao.includes(c.label) ? "default" : "outline"}
-                              className={estrutura.canaisAquisicao.includes(c.label) ? "" : "border-dashed"}
-                              onClick={() => toggleCanal(c.label)}>{c.label}</Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[200px] text-xs"><p>{c.help}</p></TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </TooltipProvider>
+                  <CardContent className="pt-3">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <TooltipProvider delayDuration={200}>
+                        {CANAIS_OPTIONS.map(c => {
+                          const selected = estrutura.canaisAquisicao.includes(c.label);
+                          return (
+                            <Tooltip key={c.label}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  className={`flex items-center gap-2 p-2 rounded-lg text-left transition-all duration-200 ${selected ? "bg-emerald-500/10 border border-emerald-500/30 text-foreground" : "bg-muted/20 border border-transparent hover:bg-muted/40 text-muted-foreground hover:text-foreground"}`}
+                                  onClick={() => toggleCanal(c.label)}>
+                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${selected ? "border-emerald-500 bg-emerald-500" : "border-muted-foreground/30"}`}>
+                                    {selected && <Check className="w-2.5 h-2.5 text-white" />}
+                                  </div>
+                                  <span className="text-xs font-medium">{c.label}</span>
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[200px] text-xs"><p>{c.help}</p></TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </TooltipProvider>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card className="overflow-hidden">
-                  <CardHeader className="pb-3 bg-gradient-to-r from-purple-500/10 to-transparent border-b border-purple-500/10">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-purple-500/15"><Zap className="w-4 h-4 text-purple-500" /></div>
-                      Ferramentas Utilizadas
-                    </CardTitle>
+                <Card className="overflow-hidden border-0 shadow-md">
+                  <CardHeader className="pb-3 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent border-b border-purple-500/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-2xl bg-purple-500/15"><Zap className="w-4 h-4 text-purple-500" /></div>
+                        <div>
+                          <CardTitle className="text-sm">Ferramentas Utilizadas</CardTitle>
+                          <p className="text-[10px] text-muted-foreground">{estrutura.ferramentas.length} selecionada(s)</p>
+                        </div>
+                      </div>
+                      {estrutura.ferramentas.length > 0 && (
+                        <Badge variant="secondary" className="text-[10px]">{estrutura.ferramentas.length}</Badge>
+                      )}
+                    </div>
                   </CardHeader>
-                  <CardContent className="pt-3 flex flex-wrap gap-2">
-                    <TooltipProvider delayDuration={200}>
-                      {FERRAMENTAS_OPTIONS.map(f => (
-                        <Tooltip key={f.label}>
-                          <TooltipTrigger asChild>
-                            <Button size="sm" variant={estrutura.ferramentas.includes(f.label) ? "default" : "outline"}
-                              className={estrutura.ferramentas.includes(f.label) ? "" : "border-dashed"}
-                              onClick={() => toggleFerramenta(f.label)}>{f.label}</Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[200px] text-xs"><p>{f.help}</p></TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </TooltipProvider>
+                  <CardContent className="pt-3">
+                    <div className="grid grid-cols-1 gap-1.5">
+                      <TooltipProvider delayDuration={200}>
+                        {FERRAMENTAS_OPTIONS.map(f => {
+                          const selected = estrutura.ferramentas.includes(f.label);
+                          return (
+                            <Tooltip key={f.label}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  className={`flex items-center gap-2 p-2 rounded-lg text-left transition-all duration-200 ${selected ? "bg-purple-500/10 border border-purple-500/30 text-foreground" : "bg-muted/20 border border-transparent hover:bg-muted/40 text-muted-foreground hover:text-foreground"}`}
+                                  onClick={() => toggleFerramenta(f.label)}>
+                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${selected ? "border-purple-500 bg-purple-500" : "border-muted-foreground/30"}`}>
+                                    {selected && <Check className="w-2.5 h-2.5 text-white" />}
+                                  </div>
+                                  <span className="text-xs font-medium">{f.label}</span>
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[200px] text-xs"><p>{f.help}</p></TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </TooltipProvider>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
 
-              <Button onClick={() => { salvarEstrutura(); setEditandoEstrutura(false); }} className="w-full">
-                <Save className="w-4 h-4 mr-2" /> Salvar Estrutura Comercial
+              <Button onClick={() => { salvarEstrutura(); setEditandoEstrutura(false); }} className="w-full h-11 font-semibold gap-2 shadow-lg shadow-primary/20">
+                <Save className="w-4 h-4" /> Salvar Estrutura Comercial
               </Button>
             </>
           )}
@@ -1584,37 +1739,37 @@ export default function ClientePlanoVendas() {
           {!avaliacaoAtiva ? (
             <>
               {/* Botão Nova Avaliação */}
-              <Card className="overflow-hidden">
-                <CardHeader className="pb-3 bg-gradient-to-r from-orange-500/10 to-transparent border-b border-orange-500/10">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-orange-500/15"><ClipboardCheck className="w-4 h-4 text-orange-500" /></div>
-                    Nova Avaliação de Desempenho
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground">Avalie o desempenho comercial da empresa ou de um vendedor específico a qualquer momento.</p>
+              <Card className="overflow-hidden border-0 shadow-md">
+                <CardHeader className="pb-4 bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent border-b border-orange-500/10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-2xl bg-orange-500/15 shadow-inner"><ClipboardCheck className="w-5 h-5 text-orange-500" /></div>
+                    <div>
+                      <CardTitle className="text-base">Nova Avaliação de Desempenho</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">Avalie o desempenho comercial da empresa ou de um vendedor específico</p>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="pt-4 space-y-5">
+                <CardContent className="pt-6 space-y-6">
                   {/* Escopo */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                       <Target className="w-3.5 h-3.5 text-orange-500" /> Quem será avaliado?
                     </Label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       {([
-                        { value: "empresa" as EscopoAvaliacao, label: "Empresa (Geral)", icon: Building2, desc: "Avaliação do comercial como um todo" },
-                        { value: "individual" as EscopoAvaliacao, label: "Vendedor Individual", icon: UserCheck, desc: "Avaliação de desempenho individual" },
+                        { value: "empresa" as EscopoAvaliacao, label: "Empresa (Geral)", emoji: "🏢", desc: "Avaliação do comercial como um todo" },
+                        { value: "individual" as EscopoAvaliacao, label: "Vendedor Individual", emoji: "👤", desc: "Avaliação de desempenho individual" },
                       ]).map(opt => {
-                        const Icon = opt.icon;
                         const selected = avaliacaoEscopo === opt.value;
                         return (
-                          <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
-                            className={`gap-2 h-auto py-2.5 px-4 ${!selected ? "border-dashed" : ""}`}
+                          <button key={opt.value}
+                            className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-md shadow-primary/10" : "border-border/50 hover:border-primary/30 hover:bg-muted/20"}`}
                             onClick={() => { setAvaliacaoEscopo(opt.value); setAvaliacaoVendedor(""); }}>
-                            <Icon className="w-4 h-4" />
-                            <div className="text-left">
-                              <span className="text-xs font-medium block">{opt.label}</span>
-                              <span className="text-[10px] opacity-70">{opt.desc}</span>
-                            </div>
-                          </Button>
+                            {selected && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="w-3 h-3 text-primary-foreground" /></div>}
+                            <span className="text-2xl block mb-2">{opt.emoji}</span>
+                            <span className="text-sm font-semibold block">{opt.label}</span>
+                            <span className="text-[11px] text-muted-foreground">{opt.desc}</span>
+                          </button>
                         );
                       })}
                     </div>
@@ -1622,43 +1777,56 @@ export default function ClientePlanoVendas() {
 
                   {/* Vendedor (condicional) */}
                   {avaliacaoEscopo === "individual" && (
-                    <div>
-                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                         <Users className="w-3.5 h-3.5 text-blue-500" /> Selecione o vendedor
                       </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {VENDEDORES_MOCK.map(v => (
-                          <Button key={v} size="sm" variant={avaliacaoVendedor === v ? "default" : "outline"}
-                            className={`text-xs ${avaliacaoVendedor !== v ? "border-dashed" : ""}`}
-                            onClick={() => setAvaliacaoVendedor(v)}>{v}</Button>
-                        ))}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {VENDEDORES_MOCK.map(v => {
+                          const selected = avaliacaoVendedor === v;
+                          return (
+                            <button key={v}
+                              className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all duration-200 ${selected ? "border-primary bg-primary/5 shadow-sm" : "border-border/50 hover:border-primary/30 hover:bg-muted/20"}`}
+                              onClick={() => setAvaliacaoVendedor(v)}>
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                                {v.charAt(0)}
+                              </div>
+                              <span className="text-xs font-medium">{v}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
                   {/* Mês de Referência */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-violet-500" /> Mês de referência da avaliação
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-violet-500" /> Mês de referência
                     </Label>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="grid grid-cols-6 gap-1.5">
                       {MESES_COMPLETOS.map((mes, i) => {
                         const valor = `${mes}/${anoAtual}`;
                         const valorProx = `${mes}/${anoAtual + 1}`;
                         const selected = avaliacaoMesRef === valor || avaliacaoMesRef === valorProx;
                         return (
-                          <Button key={mes} size="sm" variant={selected ? "default" : "outline"}
-                            className={`text-xs h-8 px-2.5 ${!selected ? "border-dashed" : ""}`}
+                          <button key={mes}
+                            className={`py-2.5 rounded-xl text-xs font-medium transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             onClick={() => setAvaliacaoMesRef(i >= new Date().getMonth() ? valor : valorProx)}>
                             {MESES[i]}
-                          </Button>
+                          </button>
                         );
                       })}
                     </div>
-                    {avaliacaoMesRef && <p className="text-[10px] text-muted-foreground mt-1">📅 {avaliacaoMesRef}</p>}
+                    {avaliacaoMesRef && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-primary/5 border border-primary/10">
+                        <Calendar className="w-3 h-3 text-primary" />
+                        <p className="text-[11px] text-primary font-medium">{avaliacaoMesRef}</p>
+                      </div>
+                    )}
                   </div>
 
-                  <Button className="w-full gap-2"
+                  <Button className="w-full h-11 gap-2 font-semibold shadow-lg shadow-primary/20"
                     disabled={(avaliacaoEscopo === "individual" && !avaliacaoVendedor) || !avaliacaoMesRef}
                     onClick={() => { setAvaliacaoAtiva(true); setRespostasAvaliacao(new Array(AVALIACAO_PERGUNTAS.length).fill(0)); }}>
                     <ClipboardCheck className="w-4 h-4" /> Iniciar Avaliação
@@ -1876,73 +2044,102 @@ export default function ClientePlanoVendas() {
           ) : (
             <>
               {/* Cabeçalho da avaliação em andamento */}
-              <Card className="overflow-hidden border-orange-500/20">
-                <CardContent className="py-3 flex items-center justify-between">
+              <Card className="overflow-hidden border-0 shadow-md border-orange-500/20">
+                <CardContent className="py-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <ClipboardCheck className="w-5 h-5 text-orange-500" />
+                    <div className="p-2.5 rounded-2xl bg-orange-500/15 shadow-inner">
+                      <ClipboardCheck className="w-5 h-5 text-orange-500" />
+                    </div>
                     <div>
                       <p className="text-sm font-semibold">Avaliação em andamento</p>
                       <p className="text-xs text-muted-foreground">
                         {avaliacaoEscopo === "empresa" ? "🏢 Empresa (Geral)" : `👤 ${avaliacaoVendedor}`}
+                        {avaliacaoMesRef && ` · ${avaliacaoMesRef}`}
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setAvaliacaoAtiva(false)}>Cancelar</Button>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Progresso</p>
+                      <p className="text-sm font-bold text-primary">{respostasAvaliacao.filter(r => r > 0).length}/{AVALIACAO_PERGUNTAS.length}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setAvaliacaoAtiva(false)}>Cancelar</Button>
+                  </div>
                 </CardContent>
+                {/* Progress bar */}
+                <div className="h-1 bg-muted">
+                  <div className="h-full bg-primary transition-all duration-500" style={{ width: `${(respostasAvaliacao.filter(r => r > 0).length / AVALIACAO_PERGUNTAS.length) * 100}%` }} />
+                </div>
               </Card>
 
-              {/* Formulário */}
-              <Card className="overflow-hidden">
-                <CardHeader className="pb-3 bg-gradient-to-r from-orange-500/10 to-transparent border-b border-orange-500/10">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-orange-500/15"><ClipboardCheck className="w-4 h-4 text-orange-500" /></div>
-                    {avaliacaoEscopo === "empresa" ? "Avaliação do Comercial — Empresa" : `Avaliação Individual — ${avaliacaoVendedor}`}
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground">Responda de 1 (muito ruim) a 5 (excelente). Seja honesto na avaliação.</p>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  {(() => {
-                    const blocos = [...new Set(AVALIACAO_PERGUNTAS.map(p => p.bloco))];
-                    return blocos.map(bloco => (
-                      <div key={bloco}>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-primary mb-3">{bloco}</h4>
-                        <div className="space-y-3">
-                          {AVALIACAO_PERGUNTAS.filter(p => p.bloco === bloco).map(p => {
-                            const idx = AVALIACAO_PERGUNTAS.indexOf(p);
-                            return (
-                              <div key={idx} className="space-y-1">
-                                <Label className="text-sm flex items-center gap-1.5">
-                                  {idx + 1}. {p.pergunta}
-                                  <TooltipProvider delayDuration={200}>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-primary cursor-help shrink-0" />
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" className="max-w-[250px] text-xs"><p>{p.help}</p></TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                </Label>
-                                <div className="flex gap-2">
-                                  {[1, 2, 3, 4, 5].map(v => (
-                                    <Button key={v} size="sm" variant={respostasAvaliacao[idx] === v ? "default" : "outline"} className="w-10 h-10"
-                                      onClick={() => { const arr = [...respostasAvaliacao]; arr[idx] = v; setRespostasAvaliacao(arr); }}>
-                                      {v}
-                                    </Button>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
+              {/* Formulário Premium */}
+              {(() => {
+                const blocos = [...new Set(AVALIACAO_PERGUNTAS.map(p => p.bloco))];
+                const SCORE_LABELS = ["", "Muito ruim", "Ruim", "Regular", "Bom", "Excelente"];
+                const SCORE_EMOJIS = ["", "😟", "😕", "😐", "🙂", "🤩"];
+                return blocos.map((bloco, blocoIdx) => (
+                  <Card key={bloco} className="overflow-hidden border-0 shadow-md">
+                    <CardHeader className="pb-3 bg-gradient-to-br from-orange-500/8 via-transparent to-transparent border-b border-orange-500/10">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <span className="text-xs font-black text-primary">{blocoIdx + 1}</span>
+                        </div>
+                        <div>
+                          <CardTitle className="text-sm">{bloco}</CardTitle>
+                          <p className="text-[10px] text-muted-foreground">{AVALIACAO_PERGUNTAS.filter(p => p.bloco === bloco).length} perguntas</p>
                         </div>
                       </div>
-                    ));
-                  })()}
-                </CardContent>
-              </Card>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      {AVALIACAO_PERGUNTAS.filter(p => p.bloco === bloco).map((p, qIdx) => {
+                        const idx = AVALIACAO_PERGUNTAS.indexOf(p);
+                        const val = respostasAvaliacao[idx];
+                        return (
+                          <div key={idx} className={`p-4 rounded-xl border transition-all duration-200 ${val > 0 ? "bg-muted/10 border-border" : "bg-transparent border-dashed border-border/40"}`}>
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <div className="flex items-start gap-2.5">
+                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold transition-all ${val > 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                                  {val > 0 ? <Check className="w-3 h-3" /> : idx + 1}
+                                </div>
+                                <p className="text-sm font-medium leading-snug">{p.pergunta}</p>
+                              </div>
+                              <TooltipProvider delayDuration={200}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <HelpCircle className="w-4 h-4 text-muted-foreground/40 hover:text-primary cursor-help shrink-0 mt-0.5" />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-[260px] text-xs"><p>{p.help}</p></TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <div className="flex gap-2">
+                              {[1, 2, 3, 4, 5].map(v => {
+                                const selected = val === v;
+                                return (
+                                  <button key={v}
+                                    className={`flex-1 py-2.5 rounded-xl text-center transition-all duration-200 ${selected ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105" : "bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground"}`}
+                                    onClick={() => { const arr = [...respostasAvaliacao]; arr[idx] = v; setRespostasAvaliacao(arr); }}>
+                                    <span className="text-base block">{SCORE_EMOJIS[v]}</span>
+                                    <span className="text-[10px] font-medium block mt-0.5">{v}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {val > 0 && (
+                              <p className="text-[10px] text-primary font-medium mt-2 text-center">{SCORE_LABELS[val]}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                ));
+              })()}
 
-              <Button onClick={finalizarAvaliacao} className="w-full" size="lg"
+              <Button onClick={finalizarAvaliacao} className="w-full h-12 text-sm font-semibold gap-2 shadow-lg shadow-primary/20"
                 disabled={respostasAvaliacao.some(r => r === 0)}>
-                <ClipboardCheck className="w-4 h-4 mr-2" /> Finalizar Avaliação
+                <ClipboardCheck className="w-4 h-4" /> Finalizar Avaliação
+                <Badge variant="secondary" className="text-[10px] ml-1">{respostasAvaliacao.filter(r => r > 0).length}/{AVALIACAO_PERGUNTAS.length}</Badge>
               </Button>
             </>
           )}
