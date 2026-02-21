@@ -22,6 +22,7 @@ import MetasRanking from "./pages/MetasRanking";
 import Unidades from "./pages/Unidades";
 import CrmExpansao from "./pages/CrmExpansao";
 import Onboarding from "./pages/Onboarding";
+import Atendimento from "./pages/Atendimento";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="unidades" element={<Unidades />} />
               <Route path="crm" element={<CrmExpansao />} />
               <Route path="onboarding" element={<Onboarding />} />
+              <Route path="atendimento" element={<Atendimento />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
