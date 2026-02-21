@@ -1,151 +1,333 @@
 
-# Modulo Principal Franqueado -- Design Identico a Matriz
+
+# Area do Cliente Final (SaaS NOEXCUSE) -- Terceiro Nivel
 
 ## Resumo
 
-Redesenhar os 4 modulos do bloco Principal do franqueado (Dashboard, Agenda, Comunicados, Suporte) para seguir exatamente o mesmo padrao visual da matriz, mas com dados filtrados exclusivamente pela unidade logada.
+Criar toda a area do Cliente Final como terceiro nivel do ecossistema, seguindo os mesmos padroes visuais (dark premium, sidebar colapsavel, PageHeader, KpiCards, transicoes suaves) mas com identidade propria de SaaS operacional. O cliente nao ve nada de franquia ou rede -- apenas suas ferramentas de trabalho.
 
 ---
 
-## 1. Dashboard do Franqueado
+## Estrutura de Navegacao (Sidebar)
 
-### Estado atual
-O dashboard ja existe com KPIs, metas, ranking, comunicados recentes, eventos e chamados. Porem falta:
-- Secao "Hoje eu preciso de..." no estilo da matriz (cards de prioridade com urgencia 1/2/3)
-- Resumo financeiro detalhado (projecao, repasse estimado, contratos ativos)
-- Alertas de unidade (contratos a vencer, propostas sem retorno, diagnosticos pendentes)
-- Componentes reutilizaveis da home da matriz (HomeHojePreciso, HomeAlertas, HomeMensagemDia, HomeAgenda, HomeComunicados)
+Conforme o print de referencia, 3 secoes:
 
-### O que sera feito
-- Reescrever `FranqueadoDashboard.tsx` usando a mesma estrutura composicional de `Home.tsx` (matriz)
-- Criar componentes de alertas da unidade reutilizando o padrao `HomeAlertas` e `HomeHojePreciso`
-- Adicionar secao de Resumo Financeiro com cards: Receita do Mes, Projecao, Repasse Estimado, Contratos Ativos
-- Adicionar secao Comercial: Leads Ativos, Propostas em Aberto, Vendas do Mes, Meta do Mes
-- Manter secoes existentes: Comunicados Recentes, Proximos Eventos, Chamados Abertos
-- Adicionar alertas dinamicos: contratos vencendo, propostas sem retorno, diagnosticos pendentes
-- Layout: PageHeader + HojePreciso + MensagemDia/Comunicados (grid 2col) + KPIs financeiros + Comercial + Agenda/Alertas
+**PRINCIPAL**
+- Inicio (Dashboard)
+- Checklist do Dia
+- Notificacoes
+- Gamificacao
 
----
+**VENDAS**
+- Plano de Vendas
+- Chat
+- CRM
+- Agentes de IA
+- Scripts e Playbooks
+- Disparos
+- Relatorios
 
-## 2. Agenda do Franqueado
-
-### Estado atual
-Cards simples em grid com filtro de visibilidade. Nao tem calendario, navegacao temporal, nem sidebar.
-
-### O que sera feito
-- Redesenhar `FranqueadoAgenda.tsx` para usar o mesmo layout da `Agenda.tsx` da matriz:
-  - Header com navegacao (anterior/hoje/proximo) e seletor de visao (Mes/Semana/Dia/Lista)
-  - Sidebar com mini-calendario e filtros de visibilidade (Pessoal/Unidade/Rede)
-  - Reutilizar componentes `AgendaCalendar`, `AgendaListView`, `AgendaSidebar`
-- Adaptar dados: converter `FranqueadoEvento` para o formato `AgendaEvent` usado pelos componentes da matriz
-- Criar funcao `getFranqueadoAgendaEvents()` em `franqueadoData.ts` que retorna eventos no formato `AgendaEvent`
-- Criar calendarios mock para o franqueado (Pessoal, Unidade, Rede) no formato `AgendaCalendar`
-- Manter badge "Somente leitura" para eventos da rede
-- Permitir criacao de eventos pessoais e da unidade (formulario `AgendaEventForm`)
-- Layout full-height identico a matriz: header fixo + sidebar + area principal
+**MARKETING**
+- Plano de Marketing
+- Campanhas
+- Conteudos
+- Redes Sociais
+- Sites
+- Trafego Pago
 
 ---
 
-## 3. Comunicados do Franqueado
+## Arquivos a Criar
 
-### Estado atual
-Lista funcional com filtros e detalhe. Ja esta bem implementado mas com layout diferente da matriz.
+### Infraestrutura (3 arquivos)
 
-### O que sera feito
-- Alinhar o header com o padrao da matriz: icone + titulo + badge "Unidade" + subtitulo
-- Adicionar indicador visual de comunicados criticos (destaque vermelho com icone pulsante)
-- Manter logica existente: filtros por prioridade e status, detalhe com "Li e concordo"
-- Adicionar exibicao inteligente: comunicados marcados como "Importante" aparecem com destaque visual diferenciado no topo da lista
-- O franqueado continua sem poder criar/editar comunicados (somente leitura + confirmar leitura)
-- Layout final muito similar ao atual, com ajustes cosmeticos no header
+```
+src/components/ClienteLayout.tsx        -- Layout wrapper (igual FranqueadoLayout)
+src/components/ClienteSidebar.tsx        -- Sidebar com secoes Principal/Vendas/Marketing
+src/data/clienteData.ts                  -- Dados mock e helpers do cliente
+```
+
+### Paginas Principal (4 arquivos)
+
+```
+src/pages/cliente/ClienteInicio.tsx       -- Dashboard com metricas resumidas
+src/pages/cliente/ClienteChecklist.tsx    -- Checklist do dia com marcacao animada
+src/pages/cliente/ClienteNotificacoes.tsx -- Central de alertas filtravei
+src/pages/cliente/ClienteGamificacao.tsx  -- Pontos, niveis, medalhas, ranking
+```
+
+### Paginas Vendas (7 arquivos)
+
+```
+src/pages/cliente/ClientePlanoVendas.tsx   -- Documento estrategico editavel
+src/pages/cliente/ClienteChat.tsx          -- Chat interno da equipe
+src/pages/cliente/ClienteCRM.tsx           -- Funil simples (5 colunas)
+src/pages/cliente/ClienteAgentesIA.tsx     -- IA por categoria (Vendas/Marketing/Gestao)
+src/pages/cliente/ClienteScripts.tsx       -- Biblioteca de scripts e playbooks
+src/pages/cliente/ClienteDisparos.tsx      -- Ferramenta de envio (email/mensagem)
+src/pages/cliente/ClienteRelatorios.tsx    -- Relatorios com graficos dinamicos
+```
+
+### Paginas Marketing (6 arquivos)
+
+```
+src/pages/cliente/ClientePlanoMarketing.tsx -- Estrategia mensal
+src/pages/cliente/ClienteCampanhas.tsx      -- Gerenciamento de campanhas
+src/pages/cliente/ClienteConteudos.tsx      -- Planejamento editorial/calendario
+src/pages/cliente/ClienteRedesSociais.tsx   -- Dashboard redes (futuro)
+src/pages/cliente/ClienteSites.tsx          -- Gestao de landing pages
+src/pages/cliente/ClienteTrafegoPago.tsx    -- Painel de trafego simplificado
+```
+
+**Total: 20 novos arquivos**
 
 ---
 
-## 4. Suporte do Franqueado
+## Detalhamento por Pagina
 
-### Estado atual
-Lista simples de chamados com chat basico. Falta:
-- Alertas de SLA no topo (como a matriz)
-- Filtros por status/categoria/prioridade
-- Chat estilo WhatsApp mais rico (com badges Suporte/Franqueado, timestamps, anexos)
-- Categorias expandidas (Financeiro, Juridico, Comercial, Marketing, Treinamentos, Sistema, Duvidas gerais)
-- Campo de descricao e prioridade no formulario de criacao
-- Status expandidos: Aberto, Em analise, Respondido, Resolvido
+### 1. Inicio (Dashboard)
 
-### O que sera feito
-- Redesenhar `FranqueadoSuporte.tsx` seguindo o padrao visual do `Atendimento.tsx` da matriz
-- Adicionar cards de alerta no topo: Chamados Abertos, Em Analise, Respondidos, Resolvidos
-- Adicionar filtros por status e categoria (Select inline)
-- Expandir categorias para: Financeiro, Juridico, Comercial, Marketing, Treinamentos, Sistema, Duvidas gerais
-- Expandir status para: Aberto, Em analise, Respondido, Resolvido
-- Adicionar campo de prioridade (Baixa/Normal/Alta/Urgente) e descricao no formulario de criacao
-- Chat redesenhado: layout split (info a esquerda, chat a direita) como `AtendimentoDetail`
-- Badge "Suporte"/"Franqueado" nas mensagens, timestamps formatados, botao de anexo
-- Manter regra: franqueado ve apenas seus chamados, sem visibilidade de outras unidades
+Cards grandes com:
+- Receita estimada do mes
+- Leads do mes
+- Taxa de conversao
+- Meta vs Realizado
+
+Secoes:
+- Campanhas ativas (cards resumidos)
+- Tarefas pendentes (lista com badges)
+- Alertas coloridos (contratos, metas, leads)
+- Graficos simples (AreaChart de receita, BarChart de leads)
+
+### 2. Checklist do Dia
+
+Lista de tarefas operacionais com:
+- Checkbox animado (scale + checkmark)
+- Origem (automatico do plano ou manual)
+- Badge de tipo (Comercial/Marketing/Gestao)
+- Barra de progresso geral no topo
+- Botao "Adicionar tarefa"
+- Tarefas sugeridas: Ligar para leads, Postar conteudo, Ajustar campanha, Responder mensagens
+
+### 3. Notificacoes
+
+Central de alertas com:
+- Filtro por tipo (Leads/Chat/Campanhas/Metas)
+- Lista cronologica com icones coloridos
+- Marcacao de lido/nao lido
+- Badge de contagem no topo
+
+### 4. Gamificacao
+
+Sistema de pontos:
+- Pontuacao total com animacao
+- Nivel atual com barra de progresso
+- Medalhas conquistadas (grid de badges)
+- Ranking interno da empresa (tabela)
+- Criterios: Tarefas concluidas, Leads atendidos, Postagens, Metas atingidas
+
+### 5. Plano de Vendas
+
+Documento editavel com:
+- Meta mensal (editavel)
+- Ticket medio
+- Projecao automatica (leads necessarios = meta / ticket / conversao)
+- Taxa de conversao
+- KPIs calculados em tempo real
+- Botao "Salvar alteracoes"
+
+### 6. Chat
+
+Chat interno simples:
+- Lista de conversas (sidebar esquerda)
+- Area de mensagens (direita)
+- Input com envio
+- Mensagens com avatar, nome, timestamp
+- Badge "Em breve: Chat com leads"
+
+### 7. CRM
+
+Funil Kanban com 5 colunas:
+- Novo Lead | Contato | Proposta | Fechado | Perdido
+- Cards arrastaveies com nome, telefone, valor, temperatura
+- Detalhe do lead com historico, tarefas, observacoes, responsavel
+- Botao "Novo Lead"
+
+### 8. Agentes de IA
+
+3 categorias em tabs:
+- Vendas (gerar mensagens, responder objecoes)
+- Marketing (criar copy, legendas, headlines)
+- Gestao (criar estrategias, planos)
+
+Cada agente: input de prompt + area de resultado + botao copiar
+Placeholder para integracao futura com Lovable AI
+
+### 9. Scripts e Playbooks
+
+Biblioteca organizada em tabs:
+- Scripts de Vendas
+- Roteiros de Ligacao
+- Modelos de Proposta
+- Estrategias
+
+Cada item: titulo, descricao, conteudo expandivel, botao editar/copiar
+Cliente pode criar novos scripts
+
+### 10. Disparos
+
+Interface de envio:
+- Tipo: Email / Mensagem / Campanha interna
+- Destinatarios (selecao de contatos do CRM)
+- Assunto / Conteudo
+- Agendar ou enviar agora
+- Badge "Em breve: WhatsApp API"
+- Historico de disparos
+
+### 11. Relatorios
+
+Dashboard analitico com:
+- Filtro de periodo (7d/30d/90d)
+- Graficos: Vendas por periodo, Conversao, Receita acumulada, Performance equipe
+- Tabela resumo exportavel
+- Recharts (AreaChart, BarChart, PieChart)
+
+### 12. Plano de Marketing
+
+Documento estrategico:
+- Canais ativos (checkboxes)
+- Frequencia de postagem por canal
+- Objetivo do mes
+- Orcamento alocado
+- Editavel e salvavel
+
+### 13. Campanhas
+
+Gerenciamento em tabela/cards:
+- Nome, Objetivo, Status (Ativa/Pausada/Finalizada), Orcamento, Resultado
+- Filtros por status
+- Criar nova campanha (dialog)
+- Detalhe com metricas
+
+### 14. Conteudos
+
+Planejamento editorial:
+- Calendario visual (grade semanal)
+- Cards de postagem: titulo, rede, status (Rascunho/Agendado/Publicado), arquivo
+- Criar novo conteudo
+- Filtro por rede social
+
+### 15. Redes Sociais
+
+Dashboard placeholder para integracao futura:
+- Cards para Instagram, Facebook, LinkedIn
+- Metricas mock (seguidores, engajamento, alcance)
+- Badge "Integracao em breve"
+
+### 16. Sites
+
+Gestao de landing pages:
+- Lista de sites/paginas
+- Status (Ativo/Inativo)
+- Leads gerados
+- Taxa de conversao
+- Criar nova pagina (placeholder)
+
+### 17. Trafego Pago
+
+Painel simplificado:
+- KPIs: Investimento, CPC, CPL, Leads, Conversao
+- Grafico de investimento vs leads (LineChart)
+- Tabela de campanhas ativas
+- Filtro por periodo e plataforma
 
 ---
 
 ## Secao Tecnica
 
-### Arquivos modificados
+### Routing (App.tsx)
+
+Adicionar terceiro bloco de rotas dentro do Index Route:
 
 ```
-src/pages/franqueado/FranqueadoDashboard.tsx  -- reescrever com composicao igual a Home.tsx
-src/pages/franqueado/FranqueadoAgenda.tsx      -- redesenhar com calendario completo
-src/pages/franqueado/FranqueadoComunicados.tsx -- ajustes cosmeticos no header e destaques
-src/pages/franqueado/FranqueadoSuporte.tsx     -- redesenhar com layout split, alertas e filtros
-src/data/franqueadoData.ts                     -- adicionar helpers para agenda e alertas da unidade
+<Route path="cliente" element={<ClienteLayout />}>
+  <Route index element={<Navigate to="/cliente/inicio" replace />} />
+  <Route path="inicio" element={<ClienteInicio />} />
+  <Route path="checklist" element={<ClienteChecklist />} />
+  <Route path="notificacoes" element={<ClienteNotificacoes />} />
+  <Route path="gamificacao" element={<ClienteGamificacao />} />
+  <Route path="plano-vendas" element={<ClientePlanoVendas />} />
+  <Route path="chat" element={<ClienteChat />} />
+  <Route path="crm" element={<ClienteCRM />} />
+  <Route path="agentes-ia" element={<ClienteAgentesIA />} />
+  <Route path="scripts" element={<ClienteScripts />} />
+  <Route path="disparos" element={<ClienteDisparos />} />
+  <Route path="relatorios" element={<ClienteRelatorios />} />
+  <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
+  <Route path="campanhas" element={<ClienteCampanhas />} />
+  <Route path="conteudos" element={<ClienteConteudos />} />
+  <Route path="redes-sociais" element={<ClienteRedesSociais />} />
+  <Route path="sites" element={<ClienteSites />} />
+  <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
+</Route>
 ```
 
-### Novos helpers em franqueadoData.ts
+### Index.tsx -- TopSwitch
 
-```
-getFranqueadoAlertasUnidade() -- gera alertas da unidade (contratos vencendo, propostas sem retorno, diagnosticos pendentes)
-getFranqueadoPrioridadesUnidade() -- top 3 prioridades para "Hoje eu preciso de..."
-getFranqueadoAgendaEvents() -- converte FranqueadoEvento para formato AgendaEvent
-getFranqueadoCalendars() -- mock de calendarios (Pessoal, Unidade, Rede)
-```
+Atualizar o handleLevelChange para navegar para `/cliente/inicio` quando "CLIENTE FINAL" for selecionado. Atualizar o useEffect para sincronizar o nivel quando a URL comecar com `/cliente`.
 
-### Dashboard -- Estrutura de componentes
+### ClienteSidebar.tsx
 
-Reutilizar componentes existentes da home da matriz adaptados para dados da unidade:
-- `HomeHojePreciso` com prioridades da unidade
-- `HomeMensagemDia` com mensagem do dia
-- KpiCards para financeiro (Receita, Projecao, Repasse, Contratos)
-- KpiCards para comercial (Leads, Propostas, Vendas, Meta)
-- Cards de comunicados e agenda (inline, sem componentes externos)
-- `HomeAlertas` com alertas da unidade
+Mesmo padrao do FranqueadoSidebar:
+- Colapsavel
+- 3 secoes: PRINCIPAL, VENDAS, MARKETING
+- Icones em vermelho/primary
+- Pill indicator ativo
+- Label "SaaS NoExcuse" no header
+- Usuario logado no footer
 
-### Agenda -- Reutilizacao de componentes
+### ClienteLayout.tsx
 
-Reutilizar diretamente:
-- `AgendaCalendar` (mes/semana/dia)
-- `AgendaListView`
-- `AgendaSidebar` (mini-calendario + filtros)
-- `AgendaEventForm` (criar/editar evento)
-- `AgendaEventDetail` (detalhe do evento)
+Identico ao FranqueadoLayout: sidebar + main com Outlet e animacao slide-up.
 
-Adaptacao necessaria: criar funcao que mapeia `FranqueadoEvento[]` para `AgendaEvent[]` com calendarIds correspondentes.
+### clienteData.ts
 
-### Suporte -- Estrutura redesenhada
+Dados mock para:
+- Dashboard KPIs (receita, leads, conversao, metas)
+- Checklist items (com tipo e origem)
+- Notificacoes (com tipo e timestamp)
+- Gamificacao (pontos, niveis, medalhas, ranking)
+- CRM leads (funil simplificado de 5 estagios)
+- Campanhas, conteudos, disparos
+- Plano de vendas e marketing
 
-```
-Vista lista:
-  - 4 cards de alerta (Abertos | Em analise | Respondidos | Resolvidos)
-  - Filtros inline (status + categoria + busca)
-  - Lista de chamados com badges de status/prioridade
+### Ordem de Implementacao
 
-Vista detalhe:
-  - Grid 2/3: info do chamado (esquerda) + chat (direita)
-  - Info: numero, categoria, status, prioridade, data abertura, descricao
-  - Chat: ScrollArea com mensagens bubble, badges Suporte/Franqueado, timestamps
-  - Input com botao de anexo e enviar
-```
+Devido ao volume (20 arquivos), sera implementado em 3 blocos:
 
-### Ordem de implementacao
+**Bloco 1 -- Infraestrutura + Principal**
+1. `clienteData.ts` (dados mock)
+2. `ClienteSidebar.tsx` + `ClienteLayout.tsx`
+3. `App.tsx` + `Index.tsx` (routing e TopSwitch)
+4. `ClienteInicio.tsx` (dashboard)
+5. `ClienteChecklist.tsx`
+6. `ClienteNotificacoes.tsx`
+7. `ClienteGamificacao.tsx`
 
-1. Atualizar `franqueadoData.ts` com novos helpers
-2. Redesenhar `FranqueadoDashboard.tsx`
-3. Redesenhar `FranqueadoAgenda.tsx`
-4. Ajustar `FranqueadoComunicados.tsx`
-5. Redesenhar `FranqueadoSuporte.tsx`
+**Bloco 2 -- Vendas**
+8. `ClientePlanoVendas.tsx`
+9. `ClienteChat.tsx`
+10. `ClienteCRM.tsx`
+11. `ClienteAgentesIA.tsx`
+12. `ClienteScripts.tsx`
+13. `ClienteDisparos.tsx`
+14. `ClienteRelatorios.tsx`
+
+**Bloco 3 -- Marketing**
+15. `ClientePlanoMarketing.tsx`
+16. `ClienteCampanhas.tsx`
+17. `ClienteConteudos.tsx`
+18. `ClienteRedesSociais.tsx`
+19. `ClienteSites.tsx`
+20. `ClienteTrafegoPago.tsx`
+
