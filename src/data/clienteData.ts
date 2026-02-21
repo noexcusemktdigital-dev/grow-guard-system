@@ -39,6 +39,30 @@ export interface GamificacaoRanking {
   avatar: string;
 }
 
+// ===== CRM EXPANDIDO =====
+
+export interface TimelineEntry {
+  id: string;
+  type: "message" | "stage_change" | "note" | "task" | "call";
+  description: string;
+  date: string;
+  icon: string;
+}
+
+export interface LeadTask {
+  id: string;
+  title: string;
+  status: "pendente" | "feita" | "atrasada";
+  dueDate: string;
+}
+
+export interface LeadNote {
+  id: string;
+  text: string;
+  createdAt: string;
+  author: string;
+}
+
 export interface CrmLead {
   id: string;
   name: string;
@@ -50,6 +74,17 @@ export interface CrmLead {
   responsible: string;
   notes: string;
   createdAt: string;
+  // campos expandidos
+  origin: string;
+  tags: string[];
+  diagnosticoDone: boolean;
+  propostaEnviada: boolean;
+  propostaAceita: boolean;
+  lastInteraction: string;
+  linkedConversationId: string | null;
+  timeline: TimelineEntry[];
+  tasks: LeadTask[];
+  leadNotes: LeadNote[];
 }
 
 export interface ClienteCampanha {
@@ -100,6 +135,35 @@ export interface ClienteSite {
   status: "Ativo" | "Inativo";
   leads: number;
   conversion: number;
+}
+
+// ===== DISPAROS WHATSAPP =====
+
+export interface WhatsAppDisparo {
+  id: string;
+  type: "unica" | "campanha" | "followup";
+  name: string;
+  segment: string[];
+  funnelStage: string | null;
+  temperature: string | null;
+  accountId: string;
+  accountName: string;
+  message: string;
+  recipients: number;
+  status: "enviado" | "agendado" | "rascunho" | "andamento";
+  deliveryRate?: number;
+  responseRate?: number;
+  sentAt?: string;
+  scheduledAt?: string;
+}
+
+export interface FollowUpRule {
+  id: string;
+  name: string;
+  daysNoResponse: number;
+  message: string;
+  active: boolean;
+  segment: string[];
 }
 
 // ===== GETTERS =====
@@ -165,14 +229,132 @@ export function getGamificacaoData() {
 
 export function getCrmLeads(): CrmLead[] {
   return [
-    { id: "1", name: "João Silva", phone: "(11) 99999-1111", email: "joao@email.com", value: 5000, temperature: "Quente", stage: "novo", responsible: "Você", notes: "Indicação do Google", createdAt: "2026-02-20" },
-    { id: "2", name: "Maria Oliveira", phone: "(11) 99999-2222", email: "maria@email.com", value: 12000, temperature: "Quente", stage: "contato", responsible: "Você", notes: "Retornar ligação", createdAt: "2026-02-18" },
-    { id: "3", name: "Carlos Mendes", phone: "(11) 99999-3333", email: "carlos@email.com", value: 8000, temperature: "Morno", stage: "proposta", responsible: "Ana", notes: "Aguardando aprovação", createdAt: "2026-02-15" },
-    { id: "4", name: "Ana Costa", phone: "(11) 99999-4444", email: "ana@email.com", value: 15000, temperature: "Quente", stage: "fechado", responsible: "Você", notes: "Contrato assinado", createdAt: "2026-02-10" },
-    { id: "5", name: "Pedro Lima", phone: "(11) 99999-5555", email: "pedro@email.com", value: 3000, temperature: "Frio", stage: "perdido", responsible: "Carlos", notes: "Sem orçamento", createdAt: "2026-02-08" },
-    { id: "6", name: "Fernanda Souza", phone: "(11) 99999-6666", email: "fernanda@email.com", value: 7500, temperature: "Morno", stage: "novo", responsible: "Você", notes: "Veio do Instagram", createdAt: "2026-02-21" },
-    { id: "7", name: "Ricardo Alves", phone: "(11) 99999-7777", email: "ricardo@email.com", value: 20000, temperature: "Quente", stage: "contato", responsible: "Ana", notes: "Grande potencial", createdAt: "2026-02-19" },
-    { id: "8", name: "Patrícia Nunes", phone: "(11) 99999-8888", email: "patricia@email.com", value: 6000, temperature: "Frio", stage: "proposta", responsible: "Você", notes: "Comparando concorrentes", createdAt: "2026-02-14" },
+    {
+      id: "1", name: "João Silva", phone: "(11) 99999-1111", email: "joao@email.com", value: 5000, temperature: "Quente", stage: "novo", responsible: "Você", notes: "Indicação do Google", createdAt: "2026-02-20",
+      origin: "Google Ads", tags: ["Lead Quente", "Decisor"], diagnosticoDone: false, propostaEnviada: false, propostaAceita: false,
+      lastInteraction: "2026-02-21 14:25", linkedConversationId: "c1",
+      timeline: [
+        { id: "t1", type: "message", description: "Lead entrou via Google Ads", date: "2026-02-20 10:00", icon: "search" },
+        { id: "t2", type: "message", description: "IA SDR iniciou atendimento no WhatsApp", date: "2026-02-20 10:01", icon: "bot" },
+        { id: "t3", type: "stage_change", description: "Movido para Novo Lead", date: "2026-02-20 10:05", icon: "arrow-right" },
+        { id: "t4", type: "message", description: "João respondeu no WhatsApp: 'Quero saber sobre o plano empresarial'", date: "2026-02-21 14:25", icon: "message-circle" },
+      ],
+      tasks: [
+        { id: "tk1", title: "Ligar para qualificar", status: "pendente", dueDate: "2026-02-22" },
+        { id: "tk2", title: "Enviar material institucional", status: "feita", dueDate: "2026-02-20" },
+      ],
+      leadNotes: [
+        { id: "n1", text: "Lead veio do Google Ads, campanha 'Produto X'. Demonstrou interesse no plano empresarial.", createdAt: "2026-02-20 10:05", author: "Sistema" },
+      ],
+    },
+    {
+      id: "2", name: "Maria Oliveira", phone: "(11) 99999-2222", email: "maria@email.com", value: 12000, temperature: "Quente", stage: "contato", responsible: "Você", notes: "Retornar ligação", createdAt: "2026-02-18",
+      origin: "Instagram", tags: ["Lead Quente", "Orçamento Alto"], diagnosticoDone: true, propostaEnviada: false, propostaAceita: false,
+      lastInteraction: "2026-02-21 13:50", linkedConversationId: "c2",
+      timeline: [
+        { id: "t1", type: "message", description: "Lead captada via Instagram DM", date: "2026-02-18 09:00", icon: "instagram" },
+        { id: "t2", type: "stage_change", description: "Movida para Contato", date: "2026-02-18 14:00", icon: "arrow-right" },
+        { id: "t3", type: "call", description: "Ligação de qualificação realizada — 8 min", date: "2026-02-19 10:30", icon: "phone" },
+        { id: "t4", type: "note", description: "Diagnóstico realizado: empresa de médio porte, 15 funcionários", date: "2026-02-19 11:00", icon: "clipboard" },
+        { id: "t5", type: "message", description: "Maria enviou mensagem no WhatsApp", date: "2026-02-21 13:40", icon: "message-circle" },
+      ],
+      tasks: [
+        { id: "tk1", title: "Enviar proposta comercial", status: "pendente", dueDate: "2026-02-22" },
+        { id: "tk2", title: "Agendar demo do produto", status: "atrasada", dueDate: "2026-02-19" },
+      ],
+      leadNotes: [
+        { id: "n1", text: "Empresa de serviços digitais, 15 funcionários. Busca CRM + automação.", createdAt: "2026-02-19 11:00", author: "Você" },
+        { id: "n2", text: "Pediu para retornar ligação após reunião interna.", createdAt: "2026-02-20 16:00", author: "Você" },
+      ],
+    },
+    {
+      id: "3", name: "Carlos Mendes", phone: "(11) 99999-3333", email: "carlos@email.com", value: 8000, temperature: "Morno", stage: "proposta", responsible: "Ana", notes: "Aguardando aprovação", createdAt: "2026-02-15",
+      origin: "WhatsApp", tags: ["Decisor"], diagnosticoDone: true, propostaEnviada: true, propostaAceita: false,
+      lastInteraction: "2026-02-21 12:35", linkedConversationId: "c3",
+      timeline: [
+        { id: "t1", type: "message", description: "Lead entrou via WhatsApp direto", date: "2026-02-15 08:30", icon: "message-circle" },
+        { id: "t2", type: "stage_change", description: "Movido para Contato", date: "2026-02-16 09:00", icon: "arrow-right" },
+        { id: "t3", type: "call", description: "Ligação de diagnóstico — 12 min", date: "2026-02-17 14:00", icon: "phone" },
+        { id: "t4", type: "stage_change", description: "Movido para Proposta", date: "2026-02-18 10:00", icon: "arrow-right" },
+        { id: "t5", type: "task", description: "Proposta enviada por e-mail", date: "2026-02-18 11:00", icon: "file-text" },
+      ],
+      tasks: [
+        { id: "tk1", title: "Follow-up sobre proposta", status: "pendente", dueDate: "2026-02-23" },
+      ],
+      leadNotes: [
+        { id: "n1", text: "Pediu proposta customizada para 3 unidades.", createdAt: "2026-02-17 15:00", author: "Ana" },
+      ],
+    },
+    {
+      id: "4", name: "Ana Costa", phone: "(11) 99999-4444", email: "ana@email.com", value: 15000, temperature: "Quente", stage: "fechado", responsible: "Você", notes: "Contrato assinado", createdAt: "2026-02-10",
+      origin: "Indicação", tags: ["Cliente", "Orçamento Alto"], diagnosticoDone: true, propostaEnviada: true, propostaAceita: true,
+      lastInteraction: "2026-02-21 11:35", linkedConversationId: "c4",
+      timeline: [
+        { id: "t1", type: "message", description: "Lead indicada por cliente existente", date: "2026-02-10 09:00", icon: "users" },
+        { id: "t2", type: "stage_change", description: "Movida para Fechado ✅", date: "2026-02-20 11:30", icon: "check-circle" },
+      ],
+      tasks: [],
+      leadNotes: [
+        { id: "n1", text: "Contrato assinado. Onboarding agendado para 25/02.", createdAt: "2026-02-20 12:00", author: "Você" },
+      ],
+    },
+    {
+      id: "5", name: "Pedro Lima", phone: "(11) 99999-5555", email: "pedro@email.com", value: 3000, temperature: "Frio", stage: "perdido", responsible: "Carlos", notes: "Sem orçamento", createdAt: "2026-02-08",
+      origin: "Site", tags: [], diagnosticoDone: false, propostaEnviada: false, propostaAceita: false,
+      lastInteraction: "2026-02-12 09:00", linkedConversationId: null,
+      timeline: [
+        { id: "t1", type: "message", description: "Lead captado via formulário do site", date: "2026-02-08 14:00", icon: "globe" },
+        { id: "t2", type: "stage_change", description: "Movido para Perdido", date: "2026-02-12 09:00", icon: "x-circle" },
+      ],
+      tasks: [],
+      leadNotes: [
+        { id: "n1", text: "Sem orçamento no momento. Recontatar em 3 meses.", createdAt: "2026-02-12 09:00", author: "Carlos" },
+      ],
+    },
+    {
+      id: "6", name: "Fernanda Souza", phone: "(11) 99999-6666", email: "fernanda@email.com", value: 7500, temperature: "Morno", stage: "novo", responsible: "Você", notes: "Veio do Instagram", createdAt: "2026-02-21",
+      origin: "Instagram", tags: ["Lead"], diagnosticoDone: false, propostaEnviada: false, propostaAceita: false,
+      lastInteraction: "2026-02-21 08:00", linkedConversationId: null,
+      timeline: [
+        { id: "t1", type: "message", description: "Lead captada via Instagram", date: "2026-02-21 08:00", icon: "instagram" },
+      ],
+      tasks: [
+        { id: "tk1", title: "Primeiro contato", status: "pendente", dueDate: "2026-02-22" },
+      ],
+      leadNotes: [],
+    },
+    {
+      id: "7", name: "Ricardo Alves", phone: "(11) 99999-7777", email: "ricardo@email.com", value: 20000, temperature: "Quente", stage: "contato", responsible: "Ana", notes: "Grande potencial", createdAt: "2026-02-19",
+      origin: "Instagram", tags: ["Lead Quente", "Decisor", "Orçamento Alto"], diagnosticoDone: false, propostaEnviada: false, propostaAceita: false,
+      lastInteraction: "2026-02-21 11:05", linkedConversationId: "c7",
+      timeline: [
+        { id: "t1", type: "message", description: "Lead entrou via Instagram", date: "2026-02-19 11:00", icon: "instagram" },
+        { id: "t2", type: "stage_change", description: "Movido para Contato", date: "2026-02-19 15:00", icon: "arrow-right" },
+        { id: "t3", type: "message", description: "Ricardo perguntou sobre demo no WhatsApp", date: "2026-02-21 11:05", icon: "message-circle" },
+      ],
+      tasks: [
+        { id: "tk1", title: "Agendar demonstração", status: "pendente", dueDate: "2026-02-22" },
+      ],
+      leadNotes: [
+        { id: "n1", text: "Grande potencial. Empresa com 50+ funcionários.", createdAt: "2026-02-19 15:00", author: "Ana" },
+      ],
+    },
+    {
+      id: "8", name: "Patrícia Nunes", phone: "(11) 99999-8888", email: "patricia@email.com", value: 6000, temperature: "Frio", stage: "proposta", responsible: "Você", notes: "Comparando concorrentes", createdAt: "2026-02-14",
+      origin: "Google Ads", tags: [], diagnosticoDone: true, propostaEnviada: true, propostaAceita: false,
+      lastInteraction: "2026-02-20 16:00", linkedConversationId: null,
+      timeline: [
+        { id: "t1", type: "message", description: "Lead via Google Ads", date: "2026-02-14 10:00", icon: "search" },
+        { id: "t2", type: "stage_change", description: "Movida para Proposta", date: "2026-02-18 09:00", icon: "arrow-right" },
+        { id: "t3", type: "task", description: "Proposta enviada", date: "2026-02-18 09:30", icon: "file-text" },
+      ],
+      tasks: [
+        { id: "tk1", title: "Follow-up proposta", status: "atrasada", dueDate: "2026-02-20" },
+      ],
+      leadNotes: [
+        { id: "n1", text: "Está comparando com 2 concorrentes. Preço é fator decisivo.", createdAt: "2026-02-18 10:00", author: "Você" },
+      ],
+    },
   ];
 }
 
@@ -214,6 +396,55 @@ export function getClienteDisparos(): ClienteDisparo[] {
   ];
 }
 
+// ===== DISPAROS WHATSAPP =====
+
+export function getWhatsAppDisparos(): WhatsAppDisparo[] {
+  return [
+    {
+      id: "wd1", type: "campanha", name: "Promoção Fevereiro", segment: ["Lead Quente", "Decisor"], funnelStage: "contato", temperature: "Quente",
+      accountId: "wa1", accountName: "WA Comercial", message: "🔥 Oferta exclusiva! Contrate nosso plano empresarial até sexta e ganhe 20% de desconto. Responda SIM para saber mais!",
+      recipients: 45, status: "enviado", deliveryRate: 96, responseRate: 34, sentAt: "2026-02-20 10:00",
+    },
+    {
+      id: "wd2", type: "unica", name: "Follow-up Propostas Pendentes", segment: ["Decisor"], funnelStage: "proposta", temperature: null,
+      accountId: "wa1", accountName: "WA Comercial", message: "Olá! Vi que sua proposta está em análise. Tem alguma dúvida que posso esclarecer? Estou à disposição 😊",
+      recipients: 12, status: "enviado", deliveryRate: 100, responseRate: 58, sentAt: "2026-02-19 14:00",
+    },
+    {
+      id: "wd3", type: "campanha", name: "Lançamento Produto X", segment: ["Lead", "Lead Quente"], funnelStage: null, temperature: null,
+      accountId: "wa1", accountName: "WA Comercial", message: "🚀 Novidade! Acabamos de lançar o Produto X. Quer conhecer? Responda DEMO para agendar uma apresentação gratuita.",
+      recipients: 120, status: "agendado", scheduledAt: "2026-02-23 09:00",
+    },
+    {
+      id: "wd4", type: "followup", name: "Reativação Leads Frios", segment: [], funnelStage: "perdido", temperature: "Frio",
+      accountId: "wa1", accountName: "WA Comercial", message: "Olá! Faz um tempo que não conversamos. Temos novidades que podem te interessar. Posso te contar?",
+      recipients: 28, status: "rascunho",
+    },
+    {
+      id: "wd5", type: "followup", name: "NPS Pós-venda", segment: ["Cliente"], funnelStage: "fechado", temperature: null,
+      accountId: "wa2", accountName: "WA Suporte", message: "Olá! De 0 a 10, o quanto você recomendaria nossos serviços? Sua opinião é muito importante para nós! 🙏",
+      recipients: 35, status: "andamento", deliveryRate: 91, responseRate: 42, sentAt: "2026-02-21 08:00",
+    },
+  ];
+}
+
+export function getFollowUpRules(): FollowUpRule[] {
+  return [
+    { id: "fr1", name: "Lead sem resposta 3 dias", daysNoResponse: 3, message: "Olá! Notei que não conseguimos conversar. Posso te ajudar com alguma dúvida?", active: true, segment: ["Lead", "Lead Quente"] },
+    { id: "fr2", name: "Proposta sem retorno 5 dias", daysNoResponse: 5, message: "Sua proposta ainda está disponível! Tem alguma dúvida que posso esclarecer?", active: true, segment: ["Decisor"] },
+    { id: "fr3", name: "Cliente inativo 30 dias", daysNoResponse: 30, message: "Faz tempo! Como estão as coisas por aí? Temos novidades que podem te interessar 😊", active: false, segment: ["Cliente", "Pós-venda"] },
+  ];
+}
+
+export function getDisparosKpis() {
+  return [
+    { label: "Enviadas Hoje", value: "328", trend: "up" as const },
+    { label: "Taxa de Entrega", value: "96,2%", trend: "up" as const },
+    { label: "Taxa de Resposta", value: "34,8%", trend: "up" as const },
+    { label: "Campanhas Ativas", value: "3", trend: "neutral" as const },
+  ];
+}
+
 export function getClienteSites(): ClienteSite[] {
   return [
     { id: "1", name: "Landing Page Principal", url: "empresa.com/lp", status: "Ativo", leads: 89, conversion: 4.2 },
@@ -224,37 +455,30 @@ export function getClienteSites(): ClienteSite[] {
 
 export function getPlanoVendasDefaults() {
   return {
-    // Aba 1 — Visão Geral
     periodo: "mensal" as const,
     receitaAtual: 47500,
     receitaDesejada: 65000,
     mercado: "Serviços digitais",
     tipoVenda: "B2B" as const,
-    // Aba 2 — Meta Financeira
     metaFaturamento: 65000,
     ticketMedio: 4500,
     conversaoVenda: 20,
     conversaoProposta: 30,
-    // Aba 3 — Estrutura Comercial
     vendedores: 3,
     canais: ["Google Ads", "Instagram", "Indicação"] as string[],
     ferramentas: ["CRM", "WhatsApp", "Email"] as string[],
     tempoFechamento: 15,
     processoEstruturado: true,
-    // Aba 4 — Mercado
     concorrentes: ["Concorrente A", "Concorrente B", ""] as string[],
     diferenciais: "Atendimento personalizado e resultados comprovados",
     posicionamento: "Na média",
     saturacao: 5,
-    // Aba 5 — Diagnóstico
     respostasDiagnostico: [4, 3, 3, 2, 4] as number[],
-    // extras
     vendasRealizadas: 34200,
     leadsAtivos: 134,
   };
 }
 
-// backward compat
 export function getPlanoVendasData() {
   const d = getPlanoVendasDefaults();
   return {
@@ -483,7 +707,6 @@ export function getChatConversations(): ChatConversation[] {
 }
 
 export function getChatConversas() {
-  // backward compat
   return getChatConversations().slice(0, 3).map(c => ({
     id: c.id, name: c.contactName, lastMessage: c.lastMessage, time: c.lastMessageTime,
     messages: c.messages.map(m => ({ id: m.id, sender: m.senderName, text: m.text, time: m.time, avatar: m.avatar || "?" })),
@@ -515,63 +738,39 @@ export interface IAAgent {
 export function getIAAgents(): IAAgent[] {
   return [
     {
-      id: "ag1",
-      type: "SDR",
-      name: "SDR — Qualificação de Leads",
+      id: "ag1", type: "SDR", name: "SDR — Qualificação de Leads",
       description: "Aborda leads novos automaticamente, qualifica com perguntas-chave e agenda demonstrações com o time comercial.",
-      active: true,
-      linkedAccountId: "wa1",
-      linkedAccountName: "WA Comercial",
-      tags: ["Lead"],
-      tone: "amigavel",
+      active: true, linkedAccountId: "wa1", linkedAccountName: "WA Comercial",
+      tags: ["Lead"], tone: "amigavel",
       instructions: "Cumprimente o lead pelo nome, pergunte qual o segmento da empresa, porte e principal necessidade. Se qualificado, ofereça agendamento de demo.",
-      workingHours: { start: "08:00", end: "18:00" },
-      autoReply: true,
+      workingHours: { start: "08:00", end: "18:00" }, autoReply: true,
       stats: { conversationsToday: 12, resolved: 8, avgResponseTime: "15s" },
     },
     {
-      id: "ag2",
-      type: "Closer",
-      name: "Closer — Fechamento de Vendas",
+      id: "ag2", type: "Closer", name: "Closer — Fechamento de Vendas",
       description: "Envia propostas, quebra objeções comuns e conduz o lead até o fechamento com técnicas de negociação.",
-      active: true,
-      linkedAccountId: "wa1",
-      linkedAccountName: "WA Comercial",
-      tags: ["Lead", "Cliente"],
-      tone: "formal",
+      active: true, linkedAccountId: "wa1", linkedAccountName: "WA Comercial",
+      tags: ["Lead", "Cliente"], tone: "formal",
       instructions: "Apresente a proposta de forma clara, destaque os diferenciais, use gatilhos de urgência e escassez. Ao detectar objeção, aplique técnica de contorno.",
-      workingHours: { start: "09:00", end: "19:00" },
-      autoReply: true,
+      workingHours: { start: "09:00", end: "19:00" }, autoReply: true,
       stats: { conversationsToday: 6, resolved: 4, avgResponseTime: "22s" },
     },
     {
-      id: "ag3",
-      type: "Suporte",
-      name: "Suporte — Atendimento ao Cliente",
+      id: "ag3", type: "Suporte", name: "Suporte — Atendimento ao Cliente",
       description: "Responde dúvidas de clientes ativos, resolve problemas técnicos e escala para humano quando necessário.",
-      active: true,
-      linkedAccountId: "wa2",
-      linkedAccountName: "WA Suporte",
-      tags: ["Cliente"],
-      tone: "tecnico",
+      active: true, linkedAccountId: "wa2", linkedAccountName: "WA Suporte",
+      tags: ["Cliente"], tone: "tecnico",
       instructions: "Identifique o problema do cliente, busque na base de conhecimento, ofereça solução passo a passo. Se não resolver em 3 tentativas, transfira para humano.",
-      workingHours: { start: "07:00", end: "22:00" },
-      autoReply: true,
+      workingHours: { start: "07:00", end: "22:00" }, autoReply: true,
       stats: { conversationsToday: 18, resolved: 15, avgResponseTime: "8s" },
     },
     {
-      id: "ag4",
-      type: "Pós-venda",
-      name: "Pós-venda — Retenção e NPS",
+      id: "ag4", type: "Pós-venda", name: "Pós-venda — Retenção e NPS",
       description: "Realiza follow-up com clientes, coleta NPS, identifica risco de churn e propõe reativação.",
-      active: false,
-      linkedAccountId: null,
-      linkedAccountName: null,
-      tags: ["Pós-venda"],
-      tone: "casual",
+      active: false, linkedAccountId: null, linkedAccountName: null,
+      tags: ["Pós-venda"], tone: "casual",
       instructions: "Envie mensagem de check-in após 7, 30 e 90 dias. Pergunte nível de satisfação (0-10). Se nota < 7, escale para gerente de contas.",
-      workingHours: { start: "09:00", end: "17:00" },
-      autoReply: false,
+      workingHours: { start: "09:00", end: "17:00" }, autoReply: false,
       stats: { conversationsToday: 0, resolved: 0, avgResponseTime: "—" },
     },
   ];
