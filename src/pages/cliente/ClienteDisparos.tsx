@@ -101,7 +101,7 @@ export default function ClienteDisparos() {
         {disparos.map((d, i) => (
           <Card
             key={d.id}
-            className="overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer group"
+            className="relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer group"
             style={{ animationDelay: `${i * 60}ms` }}
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${typeColors[d.type]} opacity-50`} />
