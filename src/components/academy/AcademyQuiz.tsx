@@ -61,7 +61,7 @@ export function AcademyQuiz({ quizId, onBack, onViewCertificate }: Props) {
     setPhase("result");
     forceUpdate((n) => n + 1);
     if (attempt.status === "passed") {
-      toast({ title: "Parabéns! 🎉", description: `Você foi aprovado com ${score}%!` });
+      toast({ title: "Parabéns! Aprovado!", description: `Você foi aprovado com ${score}%!` });
     }
   };
 
@@ -226,7 +226,7 @@ export function AcademyQuiz({ quizId, onBack, onViewCertificate }: Props) {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold">{isPassed ? "Aprovado! 🎉" : "Reprovado"}</h2>
+          <h2 className="text-2xl font-bold">{isPassed ? "Aprovado!" : "Reprovado"}</h2>
           <p className="text-sm text-muted-foreground mt-1">
             {isPassed ? "Parabéns! Você atingiu a nota mínima." : `Nota mínima: ${quiz.passingScore}%. Tente novamente.`}
           </p>

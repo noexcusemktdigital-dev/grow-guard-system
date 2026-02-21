@@ -419,12 +419,12 @@ export function getGamificacaoData() {
     levelName: "Estrategista",
     nextLevel: 3000,
     medals: [
-      { id: "1", name: "Primeiro Lead", emoji: "🎯", description: "Captou o primeiro lead", unlocked: true },
-      { id: "2", name: "Vendedor Nato", emoji: "💰", description: "10 vendas fechadas", unlocked: true },
-      { id: "3", name: "Maratonista", emoji: "🏃", description: "30 dias seguidos de checklist completo", unlocked: true },
-      { id: "4", name: "Influencer", emoji: "📱", description: "50 posts publicados", unlocked: true },
-      { id: "5", name: "Mestre do CRM", emoji: "📊", description: "100 leads gerenciados", unlocked: false },
-      { id: "6", name: "Top Closer", emoji: "🏆", description: "R$ 100k em vendas", unlocked: false },
+      { id: "1", name: "Primeiro Lead", emoji: "lead", description: "Captou o primeiro lead", unlocked: true },
+      { id: "2", name: "Vendedor Nato", emoji: "sales", description: "10 vendas fechadas", unlocked: true },
+      { id: "3", name: "Maratonista", emoji: "streak", description: "30 dias seguidos de checklist completo", unlocked: true },
+      { id: "4", name: "Influencer", emoji: "social", description: "50 posts publicados", unlocked: true },
+      { id: "5", name: "Mestre do CRM", emoji: "crm", description: "100 leads gerenciados", unlocked: false },
+      { id: "6", name: "Top Closer", emoji: "closer", description: "R$ 100k em vendas", unlocked: false },
     ] as GamificacaoMedalha[],
     ranking: [
       { position: 1, name: "Carlos Mendes", points: 3200, avatar: "CM" },
@@ -500,7 +500,7 @@ export function getCrmLeads(): CrmLead[] {
       lastInteraction: "2026-02-21 11:35", linkedConversationId: "c4",
       timeline: [
         { id: "t1", type: "message", description: "Lead indicada por cliente existente", date: "2026-02-10 09:00", icon: "users" },
-        { id: "t2", type: "stage_change", description: "Movida para Fechado ✅", date: "2026-02-20 11:30", icon: "check-circle" },
+        { id: "t2", type: "stage_change", description: "Movida para Fechado", date: "2026-02-20 11:30", icon: "check-circle" },
       ],
       tasks: [],
       leadNotes: [
@@ -578,11 +578,11 @@ export function getClienteCampanhas(): CampanhaMarketing[] {
 
 export function getClienteConteudos(): ConteudoMarketing[] {
   return [
-    { id: "1", title: "5 Dicas de produtividade para PMEs", network: "Instagram", format: "Carrossel", funnelStage: "Topo", status: "Publicado", date: "2026-02-17", description: "Carrossel com dicas práticas de produtividade", copy: "Sua equipe poderia render 2x mais com essas 5 mudanças simples 👇", cta: "Salve para aplicar hoje!", hashtags: ["#produtividade", "#gestão", "#pme"], campaignId: "1" },
+    { id: "1", title: "5 Dicas de produtividade para PMEs", network: "Instagram", format: "Carrossel", funnelStage: "Topo", status: "Publicado", date: "2026-02-17", description: "Carrossel com dicas práticas de produtividade", copy: "Sua equipe poderia render 2x mais com essas 5 mudanças simples", cta: "Salve para aplicar hoje!", hashtags: ["#produtividade", "#gestão", "#pme"], campaignId: "1" },
     { id: "2", title: "Bastidores: nosso processo de onboarding", network: "Instagram", format: "Story", funnelStage: "Meio", status: "Publicado", date: "2026-02-18", description: "Mostrar como funciona o onboarding", campaignId: "1" },
-    { id: "3", title: "Case: como a empresa X triplicou vendas", network: "LinkedIn", format: "Feed", funnelStage: "Fundo", status: "Publicado", date: "2026-02-19", description: "Case de sucesso com dados reais", copy: "A empresa X estava faturando R$ 30k/mês. Em 6 meses, chegou a R$ 95k. Como? 🧵", cta: "Agende uma consultoria gratuita", hashtags: ["#casesucesso", "#vendas", "#crescimento"] },
+    { id: "3", title: "Case: como a empresa X triplicou vendas", network: "LinkedIn", format: "Feed", funnelStage: "Fundo", status: "Publicado", date: "2026-02-19", description: "Case de sucesso com dados reais", copy: "A empresa X estava faturando R$ 30k/mês. Em 6 meses, chegou a R$ 95k. Como?", cta: "Agende uma consultoria gratuita", hashtags: ["#casesucesso", "#vendas", "#crescimento"] },
     { id: "4", title: "Tutorial: configurando seu CRM", network: "Instagram", format: "Reels", funnelStage: "Meio", status: "Agendado", date: "2026-02-22", description: "Video tutorial passo a passo", campaignId: "1" },
-    { id: "5", title: "Promoção relâmpago de fevereiro", network: "Facebook", format: "Feed", funnelStage: "Fundo", status: "Publicado", date: "2026-02-19", description: "Post de oferta com urgência", copy: "🔥 Só até sexta! Plano anual com 30% OFF.", cta: "Garanta agora!", hashtags: ["#promoção", "#desconto"] },
+    { id: "5", title: "Promoção relâmpago de fevereiro", network: "Facebook", format: "Feed", funnelStage: "Fundo", status: "Publicado", date: "2026-02-19", description: "Post de oferta com urgência", copy: "Só até sexta! Plano anual com 30% OFF.", cta: "Garanta agora!", hashtags: ["#promoção", "#desconto"] },
     { id: "6", title: "Tendências de marketing 2026", network: "LinkedIn", format: "Carrossel", funnelStage: "Topo", status: "Rascunho", date: "2026-02-25", description: "As 7 tendências que vão dominar o marketing digital" },
     { id: "7", title: "Depoimento cliente Maria", network: "Instagram", format: "Reels", funnelStage: "Fundo", status: "Agendado", date: "2026-02-24", description: "Video depoimento de cliente satisfeita", campaignId: "1" },
     { id: "8", title: "Checklist: sua empresa está pronta?", network: "Instagram", format: "Carrossel", funnelStage: "Topo", status: "Agendado", date: "2026-02-26", description: "Checklist interativo para diagnóstico" },

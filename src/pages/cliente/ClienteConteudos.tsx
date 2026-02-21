@@ -37,7 +37,7 @@ const funnelColors: Record<string, string> = {
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 const AI_MOCK = {
-  copy: "🚀 Você sabia que 80% das empresas que automatizam seu marketing crescem 3x mais rápido? Descubra como nossa plataforma pode transformar seus resultados!",
+  copy: "Você sabia que 80% das empresas que automatizam seu marketing crescem 3x mais rápido? Descubra como nossa plataforma pode transformar seus resultados!",
   titulo: "Transforme seus resultados com automação",
   cta: "Agende uma demo gratuita agora →",
   hashtags: ["#marketingdigital", "#automação", "#vendas", "#crescimento", "#resultados"],
