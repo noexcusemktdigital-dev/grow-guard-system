@@ -14,6 +14,8 @@ import { Progress } from "@/components/ui/progress";
 import { getClienteDashboardKpis, getChecklistItems, getClienteCampanhas } from "@/data/clienteData";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
+import { TaskListCard } from "@/components/premium/TaskListCard";
+import { ProgressCtaCard } from "@/components/premium/ProgressCtaCard";
 
 const revenueData = [
   { week: "Sem 1", receita: 8500 },
@@ -139,6 +141,30 @@ export default function ClienteInicio() {
           );
         })}
       </div>
+
+      <ProgressCtaCard
+        title="MEU PROGRESSO DE VENDAS"
+        level="NÍVEL PRO"
+        metaLabel="META MENSAL"
+        metaDescription="Faltam R$ 12.000 para o bônus de performance."
+        percent={82}
+        ctaTitle="AÇÃO NECESSÁRIA"
+        ctaSubtitle="PRÓXIMA BLITZ DE CONTEÚDO"
+        ctaDescription="Prepare 3 stories com o novo roteiro No Excuse até as 14h de amanhã."
+        ctaButtonLabel="VER ROTEIRO"
+        onCtaClick={() => navigate("/cliente/conteudos")}
+      />
+
+      <TaskListCard
+        title="TAREFAS OPERACIONAIS"
+        tasks={[
+          { id: "ct1", title: "Revisão de Leads Pendentes (CRM)", description: "Garantir que todos os leads de ontem receberam o primeiro contato.", time: "09:00", done: true },
+          { id: "ct2", title: "Blitz de Engajamento Instagram", description: "Interagir com 10 stories de potenciais clientes via DM.", time: "10:30" },
+          { id: "ct3", title: "Postagem de Prova Social", description: "Subir vídeo de depoimento no Feed com a legenda oficial.", time: "11:30" },
+          { id: "ct4", title: "Follow-up WhatsApp", description: "Enviar mensagem de acompanhamento para leads quentes.", time: "14:00" },
+        ]}
+        onTaskClick={() => navigate("/cliente/checklist")}
+      />
 
       {/* Main 2-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
