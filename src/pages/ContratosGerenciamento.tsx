@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Plus, Pencil, Trash2, Eye, LayoutGrid, List, X, Upload,
+  Plus, Pencil, Trash2, Eye, LayoutGrid, List, X, Upload, FolderOpen, Paperclip,
 } from "lucide-react";
+import ContratosRepositorio from "@/components/ContratosRepositorio";
 import {
   Contrato, ContratoStatus, ContratoTipo, ContratoDono, ContratoRecorrencia,
   mockContratos, CONTRATO_STATUS_LIST, CONTRATO_STATUS_COLORS,
@@ -138,6 +139,7 @@ export default function ContratosGerenciamento() {
         <TabsList>
           <TabsTrigger value="kanban"><LayoutGrid className="w-4 h-4 mr-1" />Kanban</TabsTrigger>
           <TabsTrigger value="lista"><List className="w-4 h-4 mr-1" />Lista</TabsTrigger>
+          <TabsTrigger value="repositorio"><FolderOpen className="w-4 h-4 mr-1" />Repositório</TabsTrigger>
         </TabsList>
 
         <TabsContent value="kanban">
@@ -158,9 +160,12 @@ export default function ContratosGerenciamento() {
                           <Badge variant="outline" className="text-[10px] h-5">{c.produto}</Badge>
                         </div>
                         <p className="text-sm font-medium truncate">{c.clienteNome}</p>
-                        <div className="flex justify-between text-xs text-muted-foreground">
+                        <div className="flex justify-between items-center text-xs text-muted-foreground">
                           <span>R$ {c.valorMensal > 0 ? c.valorMensal.toLocaleString("pt-BR") + "/m" : c.valorTotal.toLocaleString("pt-BR")}</span>
-                          <span>{c.dataInicio}</span>
+                          <div className="flex items-center gap-1">
+                            {c.arquivoUrl && <Paperclip className="w-3 h-3" />}
+                            <span>{c.dataInicio}</span>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -211,6 +216,15 @@ export default function ContratosGerenciamento() {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="repositorio">
+          <ContratosRepositorio
+            contratos={filtered}
+            onView={(c) => { setViewContrato(c); setDetailOpen(true); }}
+            onEdit={openEdit}
+            onDelete={setDeleteId}
+          />
         </TabsContent>
       </Tabs>
 
