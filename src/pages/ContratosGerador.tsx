@@ -84,7 +84,7 @@ export default function ContratosGerador() {
 
   function handleGerar(asDraft: boolean) {
     if (!clienteNome) { toast({ title: "Preencha o nome do cliente", variant: "destructive" }); return; }
-    toast({ title: asDraft ? "Rascunho salvo com sucesso!" : "Contrato gerado com sucesso!", description: `Status: ${asDraft ? "Rascunho" : "Gerado"}` });
+    toast({ title: asDraft ? "Rascunho salvo com sucesso!" : "Contrato criado com sucesso!", description: `Status: ${asDraft ? "Rascunho" : "Gerado"}` });
     setStep(0);
     setClienteNome(""); setClienteDoc(""); setClienteEmail(""); setClienteTel("");
     setClienteEndereco(""); setClienteRg("");
@@ -96,7 +96,7 @@ export default function ContratosGerador() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Gerador de Contratos</h1>
+        <h1 className="text-2xl font-bold">Criar Contratos</h1>
         <Badge variant="secondary" className="mt-1">Franqueadora (acesso total)</Badge>
       </div>
 
@@ -238,7 +238,7 @@ export default function ContratosGerador() {
             )}
 
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => handleGerar(false)}>Gerar Contrato</Button>
+              <Button onClick={() => handleGerar(false)}>Criar Contrato</Button>
               <Button variant="outline" onClick={() => handleGerar(true)}>Salvar Rascunho</Button>
               <Button variant="secondary" onClick={() => toast({ title: "Exportar PDF", description: "Em breve" })}><FileDown className="w-4 h-4 mr-1" />PDF</Button>
               <Button variant="secondary" onClick={() => toast({ title: "Exportar DOCX", description: "Em breve" })}><FileDown className="w-4 h-4 mr-1" />DOCX</Button>

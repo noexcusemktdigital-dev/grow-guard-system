@@ -64,8 +64,8 @@ const adminSection: SidebarItem[] = [
   {
     label: "Contratos", icon: FileText, path: "/franqueadora/contratos",
     children: [
+      { label: "Criar Contratos", icon: FilePlus, path: "/franqueadora/contratos/criar" },
       { label: "Gerenciamento", icon: FileText, path: "/franqueadora/contratos" },
-      { label: "Gerador", icon: FilePlus, path: "/franqueadora/contratos/gerador" },
       { label: "Templates", icon: Copy, path: "/franqueadora/contratos/templates" },
       { label: "Configurações", icon: Settings, path: "/franqueadora/contratos/configuracoes" },
     ],

@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Plus, Pencil, Trash2, Eye, LayoutGrid, List, X, Upload, FolderOpen, Paperclip,
+  Plus, Pencil, Trash2, Eye, LayoutGrid, List, X, Upload, FolderOpen, Paperclip, ChevronDown, Folder,
 } from "lucide-react";
 import ContratosRepositorio from "@/components/ContratosRepositorio";
 import {
@@ -19,6 +20,98 @@ import {
   mockContratos, CONTRATO_STATUS_LIST, CONTRATO_STATUS_COLORS,
   FRANQUEADOS_LIST, getNextContratoNumero,
 } from "@/data/contratosData";
+
+const FOLDER_COLORS: Record<string, string> = {
+  "Assessoria": "text-blue-600 dark:text-blue-400",
+  "SaaS": "text-purple-600 dark:text-purple-400",
+  "Sistema": "text-amber-600 dark:text-amber-400",
+  "Franquia": "text-emerald-600 dark:text-emerald-400",
+  "Ativos": "text-green-600 dark:text-green-400",
+  "Em andamento": "text-yellow-600 dark:text-yellow-400",
+  "Inativos": "text-red-600 dark:text-red-400",
+  "Internos": "text-muted-foreground",
+};
+
+type GroupBy = "franqueado" | "tipo" | "status";
+
+function groupContratos(contratos: Contrato[], groupBy: GroupBy): Record<string, Contrato[]> {
+  const groups: Record<string, Contrato[]> = {};
+  contratos.forEach(c => {
+    let key: string;
+    if (groupBy === "franqueado") {
+      key = c.franqueadoNome || "Internos";
+    } else if (groupBy === "tipo") {
+      key = c.tipo;
+    } else {
+      if (c.status === "Assinado") key = "Ativos";
+      else if (["Vencido", "Cancelado"].includes(c.status)) key = "Inativos";
+      else key = "Em andamento";
+    }
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  });
+  return groups;
+}
+
+function PastasView({ contratos, onView, onEdit, onDelete }: {
+  contratos: Contrato[];
+  onView: (c: Contrato) => void;
+  onEdit: (c: Contrato) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [groupBy, setGroupBy] = useState<GroupBy>("franqueado");
+  const groups = groupContratos(contratos, groupBy);
+  const sortedKeys = Object.keys(groups).sort((a, b) => a === "Internos" ? 1 : b === "Internos" ? -1 : a.localeCompare(b));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Label className="text-sm whitespace-nowrap">Agrupar por:</Label>
+        <Select value={groupBy} onValueChange={v => setGroupBy(v as GroupBy)}>
+          <SelectTrigger className="w-[180px] h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="franqueado">Franqueado</SelectItem>
+            <SelectItem value="tipo">Tipo</SelectItem>
+            <SelectItem value="status">Status</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        {sortedKeys.map(key => (
+          <Collapsible key={key} defaultOpen>
+            <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 rounded-lg border border-border/50 bg-card hover:bg-accent/50 transition-colors">
+              <ChevronDown className="w-4 h-4 transition-transform data-[state=closed]:-rotate-90" />
+              <Folder className={`w-4 h-4 ${FOLDER_COLORS[key] || "text-muted-foreground"}`} />
+              <span className="font-medium text-sm">{key}</span>
+              <Badge variant="secondary" className="ml-auto text-[10px]">{groups[key].length}</Badge>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-2 pl-6">
+                {groups[key].map(c => (
+                  <div key={c.id} className="bg-card border border-border/50 rounded-lg p-3 space-y-1.5 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-primary">{c.numero}</span>
+                      <Badge className={`text-[10px] ${CONTRATO_STATUS_COLORS[c.status]}`}>{c.status}</Badge>
+                    </div>
+                    <p className="text-sm font-medium truncate">{c.clienteNome}</p>
+                    <p className="text-xs text-muted-foreground">{c.tipo} • R$ {(c.valorMensal || c.valorTotal).toLocaleString("pt-BR")}</p>
+                    <div className="flex gap-1 pt-1">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onView(c)}><Eye className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(c)}><Pencil className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onDelete(c.id)}><Trash2 className="w-3 h-3" /></Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        ))}
+        {sortedKeys.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhum contrato encontrado</p>}
+      </div>
+    </div>
+  );
+}
 
 const emptyContrato = (): Partial<Contrato> => ({
   tipo: "Assessoria", dono: "Interno", produto: "Assessoria", recorrencia: "Mensal",
@@ -140,6 +233,7 @@ export default function ContratosGerenciamento() {
           <TabsTrigger value="kanban"><LayoutGrid className="w-4 h-4 mr-1" />Kanban</TabsTrigger>
           <TabsTrigger value="lista"><List className="w-4 h-4 mr-1" />Lista</TabsTrigger>
           <TabsTrigger value="repositorio"><FolderOpen className="w-4 h-4 mr-1" />Repositório</TabsTrigger>
+          <TabsTrigger value="pastas"><Folder className="w-4 h-4 mr-1" />Pastas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="kanban">
@@ -220,6 +314,15 @@ export default function ContratosGerenciamento() {
 
         <TabsContent value="repositorio">
           <ContratosRepositorio
+            contratos={filtered}
+            onView={(c) => { setViewContrato(c); setDetailOpen(true); }}
+            onEdit={openEdit}
+            onDelete={setDeleteId}
+          />
+        </TabsContent>
+
+        <TabsContent value="pastas">
+          <PastasView
             contratos={filtered}
             onView={(c) => { setViewContrato(c); setDetailOpen(true); }}
             onEdit={openEdit}
