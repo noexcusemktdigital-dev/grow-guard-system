@@ -1,13 +1,29 @@
-import { Ticket, TICKET_STATUSES, isSlaBreached, getSlaRemaining } from "@/data/atendimentoData";
+import { Ticket, TicketStatus, TICKET_STATUSES, isSlaBreached, getSlaRemaining } from "@/data/atendimentoData";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Clock, AlertTriangle, User } from "lucide-react";
+import { Clock, AlertTriangle, User, GripVertical } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+  useDroppable,
+} from "@dnd-kit/core";
+import { useDraggable } from "@dnd-kit/core";
+import { useState } from "react";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Props {
   tickets: Ticket[];
   onSelectTicket: (id: string) => void;
+  onMoveTicket: (ticketId: string, newStatus: TicketStatus) => void;
 }
 
 const statusColors: Record<string, string> = {
@@ -35,64 +51,137 @@ const priorityColors: Record<string, string> = {
   "Urgente": "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
 };
 
-export function AtendimentoKanban({ tickets, onSelectTicket }: Props) {
+function TicketCard({ ticket, onSelectTicket }: { ticket: Ticket; onSelectTicket: (id: string) => void }) {
+  const breached = isSlaBreached(ticket);
+  const sla = getSlaRemaining(ticket);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: ticket.id });
+
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    opacity: isDragging ? 0.3 : 1,
+  };
+
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
-      {TICKET_STATUSES.map(status => {
-        const col = tickets.filter(t => t.status === status);
-        return (
-          <div key={status} className="min-w-[280px] flex-shrink-0">
-            <div className={`rounded-lg border p-3 mb-3 ${statusColors[status]}`}>
-              <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${statusDotColors[status]}`} />
-                <span className="text-sm font-medium">{status}</span>
-                <Badge variant="secondary" className="ml-auto text-xs">{col.length}</Badge>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              {col.map(ticket => {
-                const breached = isSlaBreached(ticket);
-                const sla = getSlaRemaining(ticket);
-                return (
-                  <Card
-                    key={ticket.id}
-                    className="p-3 cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => onSelectTicket(ticket.id)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-mono font-bold text-muted-foreground">{ticket.numero}</span>
-                      <Badge className={`text-[10px] ${priorityColors[ticket.prioridade]}`}>
-                        {ticket.prioridade}
-                      </Badge>
-                    </div>
-                    <p className="text-sm font-medium mb-1 line-clamp-1">{ticket.unidadeNome}</p>
-                    <Badge variant="outline" className="text-[10px] mb-2">{ticket.categoria}</Badge>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                      <User className="w-3 h-3" />
-                      <span>{ticket.responsavelNome}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{formatDistanceToNow(new Date(ticket.atualizadoEm), { addSuffix: true, locale: ptBR })}</span>
-                      {breached ? (
-                        <span className="flex items-center gap-1 text-red-500 font-medium animate-pulse">
-                          <AlertTriangle className="w-3 h-3" /> SLA Estourado
-                        </span>
-                      ) : sla !== "—" ? (
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {sla}
-                        </span>
-                      ) : null}
-                    </div>
-                  </Card>
-                );
-              })}
-              {col.length === 0 && (
-                <div className="text-xs text-muted-foreground/50 text-center py-8">Nenhum chamado</div>
-              )}
-            </div>
-          </div>
-        );
-      })}
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className="p-3 cursor-pointer hover:shadow-md transition-shadow"
+      onClick={() => onSelectTicket(ticket.id)}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground -ml-1 p-0.5"
+            onClick={e => e.stopPropagation()}
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </button>
+          <span className="text-xs font-mono font-bold text-muted-foreground">{ticket.numero}</span>
+        </div>
+        <Badge className={`text-[10px] ${priorityColors[ticket.prioridade]}`}>{ticket.prioridade}</Badge>
+      </div>
+      <p className="text-sm font-medium mb-1 line-clamp-1">{ticket.unidadeNome}</p>
+      <Badge variant="outline" className="text-[10px] mb-2">{ticket.categoria}</Badge>
+      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+        <User className="w-3 h-3" />
+        <span>{ticket.responsavelNome}</span>
+      </div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{formatDistanceToNow(new Date(ticket.atualizadoEm), { addSuffix: true, locale: ptBR })}</span>
+        {breached ? (
+          <span className="flex items-center gap-1 text-red-500 font-medium animate-pulse">
+            <AlertTriangle className="w-3 h-3" /> SLA Estourado
+          </span>
+        ) : sla !== "—" ? (
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" /> {sla}
+          </span>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
+function OverlayCard({ ticket }: { ticket: Ticket }) {
+  const breached = isSlaBreached(ticket);
+  const sla = getSlaRemaining(ticket);
+  return (
+    <Card className="p-3 shadow-xl border-primary/30 w-[280px] rotate-2">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-mono font-bold text-muted-foreground">{ticket.numero}</span>
+        <Badge className={`text-[10px] ${priorityColors[ticket.prioridade]}`}>{ticket.prioridade}</Badge>
+      </div>
+      <p className="text-sm font-medium mb-1 line-clamp-1">{ticket.unidadeNome}</p>
+      <Badge variant="outline" className="text-[10px] mb-2">{ticket.categoria}</Badge>
+    </Card>
+  );
+}
+
+function DroppableColumn({ status, tickets, onSelectTicket }: { status: TicketStatus; tickets: Ticket[]; onSelectTicket: (id: string) => void }) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+
+  return (
+    <div key={status} className="min-w-[280px] flex-shrink-0">
+      <div className={`rounded-lg border p-3 mb-3 ${statusColors[status]}`}>
+        <div className="flex items-center gap-2">
+          <div className={`w-2.5 h-2.5 rounded-full ${statusDotColors[status]}`} />
+          <span className="text-sm font-medium">{status}</span>
+          <Badge variant="secondary" className="ml-auto text-xs">{tickets.length}</Badge>
+        </div>
+      </div>
+      <div
+        ref={setNodeRef}
+        className={`flex flex-col gap-2 min-h-[60px] rounded-lg transition-colors p-1 ${isOver ? "bg-primary/5 ring-2 ring-primary/20" : ""}`}
+      >
+        {tickets.map(ticket => (
+          <TicketCard key={ticket.id} ticket={ticket} onSelectTicket={onSelectTicket} />
+        ))}
+        {tickets.length === 0 && (
+          <div className="text-xs text-muted-foreground/50 text-center py-8">Nenhum chamado</div>
+        )}
+      </div>
     </div>
+  );
+}
+
+export function AtendimentoKanban({ tickets, onSelectTicket, onMoveTicket }: Props) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const activeTicket = activeId ? tickets.find(t => t.id === activeId) : null;
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over) return;
+    const ticketId = active.id as string;
+    const newStatus = over.id as TicketStatus;
+    const ticket = tickets.find(t => t.id === ticketId);
+    if (ticket && TICKET_STATUSES.includes(newStatus) && ticket.status !== newStatus) {
+      onMoveTicket(ticketId, newStatus);
+    }
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {TICKET_STATUSES.map(status => (
+          <DroppableColumn
+            key={status}
+            status={status}
+            tickets={tickets.filter(t => t.status === status)}
+            onSelectTicket={onSelectTicket}
+          />
+        ))}
+      </div>
+      <DragOverlay>
+        {activeTicket ? <OverlayCard ticket={activeTicket} /> : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

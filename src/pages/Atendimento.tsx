@@ -4,6 +4,7 @@ import {
   mockTickets, CATEGORIES, SUBCATEGORIES_MAP, RESPONSAVEIS, TICKET_STATUSES,
   getAtendimentoAlerts, calculateSlaDeadline,
 } from "@/data/atendimentoData";
+import { useToast } from "@/hooks/use-toast";
 import { AtendimentoKanban } from "@/components/atendimento/AtendimentoKanban";
 import { AtendimentoList } from "@/components/atendimento/AtendimentoList";
 import { AtendimentoDetail } from "@/components/atendimento/AtendimentoDetail";
@@ -19,7 +20,6 @@ import {
   MessageSquare, LayoutGrid, List, Settings, Plus, ArrowLeft,
   AlertTriangle, Clock, Inbox, Timer,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 type View = "kanban" | "list" | "detail" | "config";
 
@@ -230,7 +230,13 @@ export default function Atendimento() {
       )}
 
       {/* Views */}
-      {view === "kanban" && <AtendimentoKanban tickets={filteredTickets} onSelectTicket={handleSelectTicket} />}
+      {view === "kanban" && <AtendimentoKanban tickets={filteredTickets} onSelectTicket={handleSelectTicket} onMoveTicket={(ticketId, newStatus) => {
+        const ticket = tickets.find(t => t.id === ticketId);
+        if (ticket) {
+          handleUpdateTicket({ ...ticket, status: newStatus, atualizadoEm: new Date().toISOString() });
+          toast({ title: `Chamado ${ticket.numero} movido para "${newStatus}"` });
+        }
+      }} />}
       {view === "list" && <AtendimentoList tickets={filteredTickets} onSelectTicket={handleSelectTicket} />}
       {view === "detail" && selectedTicket && <AtendimentoDetail ticket={selectedTicket} onUpdateTicket={handleUpdateTicket} />}
       {view === "config" && <AtendimentoConfig />}
