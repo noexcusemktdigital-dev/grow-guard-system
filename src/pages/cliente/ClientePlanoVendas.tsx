@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, Lightbulb, Zap, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar, Plus, Lock, CheckCircle2, FileText, Phone, Mail, MessageSquare, Building2, UserCheck, Layers, BarChart3, History, DollarSign, UserPlus, Handshake, ShieldCheck, Receipt, BarChartHorizontal, Megaphone, Trash2, FolderOpen, ChevronDown, ChevronRight, Filter, Pencil, X, Check } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { KpiCard } from "@/components/KpiCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,7 @@ export default function ClientePlanoVendas() {
   const [infoAtualSalva, setInfoAtualSalva] = useState(false);
   const [metasMensais, setMetasMensais] = useState<MetaMensal[]>([]);
   const [metasSalvas, setMetasSalvas] = useState(false);
+  const [novaMetaOpen, setNovaMetaOpen] = useState(false);
   const [novaMeta, setNovaMeta] = useState<{ nome: string; mesRef: string; tipo: TipoMeta; escopo: EscopoMeta; periodo: PeriodoMeta; valorAlvo: number; equipe: string; responsavel: string; prioridade: "alta" | "media" | "baixa" }>({ nome: "", mesRef: "", tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
   const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const anoAtual = new Date().getFullYear();
@@ -399,228 +401,28 @@ export default function ClientePlanoVendas() {
 
         {/* ===== MINHAS METAS ===== */}
         <TabsContent value="metas" className="space-y-5">
-          {/* Criar Nova Meta */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/10">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-500/15"><Plus className="w-4 h-4 text-amber-500" /></div>
-                Criar Nova Meta
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Selecione tipo, escopo e período para definir sua meta.</p>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-5">
-              {/* Tipo de Meta */}
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <Target className="w-3.5 h-3.5 text-amber-500" /> Qual o tipo da meta?
-                </Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {([
-                    { value: "faturamento" as TipoMeta, label: "Faturamento", icon: DollarSign, color: "text-emerald-500" },
-                    { value: "novos_clientes" as TipoMeta, label: "Novos Clientes", icon: UserPlus, color: "text-blue-500" },
-                    { value: "contratos" as TipoMeta, label: "Contratos", icon: FileText, color: "text-purple-500" },
-                    { value: "retencao" as TipoMeta, label: "Retenção", icon: ShieldCheck, color: "text-teal-500" },
-                    { value: "ticket_medio" as TipoMeta, label: "Ticket Médio", icon: Receipt, color: "text-orange-500" },
-                    { value: "conversao" as TipoMeta, label: "Conversão (%)", icon: BarChartHorizontal, color: "text-indigo-500" },
-                    { value: "leads" as TipoMeta, label: "Leads Gerados", icon: Megaphone, color: "text-pink-500" },
-                    { value: "reunioes" as TipoMeta, label: "Reuniões", icon: Handshake, color: "text-cyan-500" },
-                  ]).map(opt => {
-                    const Icon = opt.icon;
-                    const selected = novaMeta.tipo === opt.value;
-                    return (
-                      <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
-                        className={`justify-start gap-2 h-auto py-2.5 px-3 ${!selected ? "border-dashed" : ""}`}
-                        onClick={() => setNovaMeta(p => ({ ...p, tipo: opt.value }))}>
-                        <Icon className={`w-4 h-4 ${selected ? "" : opt.color}`} />
-                        <span className="text-xs">{opt.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
+          {/* Header com botão */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Acompanhamento de Metas</h3>
+              <p className="text-sm text-muted-foreground">{metasMensais.length} meta(s) cadastrada(s)</p>
+            </div>
+            <Button className="gap-2" onClick={() => setNovaMetaOpen(true)}>
+              <Plus className="w-4 h-4" /> Nova Meta
+            </Button>
+          </div>
 
-              {/* Nome da Meta */}
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-slate-500" /> Dê um nome para essa meta
-                </Label>
-                <Input value={novaMeta.nome} className="max-w-md"
-                  onChange={e => setNovaMeta(p => ({ ...p, nome: e.target.value }))}
-                  placeholder="Ex: Meta de Faturamento Q1, Expansão Novos Clientes..." />
-              </div>
-
-              {/* Mês de Referência */}
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-violet-500" /> Mês de referência
-                </Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {MESES_COMPLETOS.map((mes, i) => {
-                    const valor = `${mes}/${anoAtual}`;
-                    const valorProx = `${mes}/${anoAtual + 1}`;
-                    const selected = novaMeta.mesRef === valor || novaMeta.mesRef === valorProx;
-                    return (
-                      <Button key={mes} size="sm" variant={selected ? "default" : "outline"}
-                        className={`text-xs h-8 px-2.5 ${!selected ? "border-dashed" : ""}`}
-                        onClick={() => setNovaMeta(p => ({ ...p, mesRef: i >= new Date().getMonth() ? valor : valorProx }))}>
-                        {MESES[i]}
-                      </Button>
-                    );
-                  })}
-                </div>
-                {novaMeta.mesRef && <p className="text-[10px] text-muted-foreground mt-1">📅 {novaMeta.mesRef}</p>}
-              </div>
-
-              {/* Escopo */}
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-blue-500" /> Essa meta é para quem?
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {([
-                    { value: "empresa" as EscopoMeta, label: "Empresa inteira", icon: Building2, desc: "Meta macro para toda a empresa" },
-                    { value: "equipe" as EscopoMeta, label: "Por equipe", icon: Users, desc: "Meta específica por time" },
-                    { value: "individual" as EscopoMeta, label: "Individual", icon: UserCheck, desc: "Meta para pessoa específica" },
-                  ]).map(opt => {
-                    const Icon = opt.icon;
-                    const selected = novaMeta.escopo === opt.value;
-                    return (
-                      <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
-                        className={`gap-2 h-auto py-2.5 px-4 ${!selected ? "border-dashed" : ""}`}
-                        onClick={() => setNovaMeta(p => ({ ...p, escopo: opt.value, equipe: "", responsavel: "" }))}>
-                        <Icon className="w-4 h-4" />
-                        <div className="text-left">
-                          <span className="text-xs font-medium block">{opt.label}</span>
-                          <span className="text-[10px] opacity-70">{opt.desc}</span>
-                        </div>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Equipe / Responsável (condicional) */}
-              {novaMeta.escopo === "equipe" && (
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-purple-500" /> Qual equipe?
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Vendas", "Pré-vendas (SDR)", "Pós-venda (CS)", "Marketing", "Prospecção"].map(opt => (
-                      <Button key={opt} size="sm" variant={novaMeta.equipe === opt ? "default" : "outline"}
-                        className={`text-xs ${novaMeta.equipe !== opt ? "border-dashed" : ""}`}
-                        onClick={() => setNovaMeta(p => ({ ...p, equipe: opt }))}>{opt}</Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {novaMeta.escopo === "individual" && (
-                <div>
-                  <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5 text-purple-500" /> Quem é o responsável?
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Lima"].map(opt => (
-                      <Button key={opt} size="sm" variant={novaMeta.responsavel === opt ? "default" : "outline"}
-                        className={`text-xs ${novaMeta.responsavel !== opt ? "border-dashed" : ""}`}
-                        onClick={() => setNovaMeta(p => ({ ...p, responsavel: opt }))}>{opt}</Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Período */}
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-green-500" /> Qual o período da meta?
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {([
-                    { value: "mensal" as PeriodoMeta, label: "Mensal" },
-                    { value: "trimestral" as PeriodoMeta, label: "Trimestral" },
-                    { value: "semestral" as PeriodoMeta, label: "Semestral" },
-                    { value: "anual" as PeriodoMeta, label: "Anual" },
-                  ]).map(opt => (
-                    <Button key={opt.value} size="sm" variant={novaMeta.periodo === opt.value ? "default" : "outline"}
-                      className={`text-xs ${novaMeta.periodo !== opt.value ? "border-dashed" : ""}`}
-                      onClick={() => setNovaMeta(p => ({ ...p, periodo: opt.value }))}>{opt.label}</Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Valor Alvo */}
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <Target className="w-3.5 h-3.5 text-red-500" /> Qual o valor alvo?
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {(novaMeta.tipo === "faturamento" || novaMeta.tipo === "ticket_medio"
-                    ? ["R$ 10.000", "R$ 25.000", "R$ 50.000", "R$ 100.000", "R$ 200.000", "R$ 500.000"]
-                    : novaMeta.tipo === "conversao" || novaMeta.tipo === "retencao"
-                    ? ["10%", "20%", "30%", "50%", "70%", "90%"]
-                    : ["5", "10", "20", "50", "100", "200"]
-                  ).map(opt => {
-                    const numVal = Number(opt.replace(/[^0-9]/g, ""));
-                    const selected = novaMeta.valorAlvo === numVal;
-                    return (
-                      <Button key={opt} size="sm" variant={selected ? "default" : "outline"}
-                        className={`text-xs ${!selected ? "border-dashed" : ""}`}
-                        onClick={() => setNovaMeta(p => ({ ...p, valorAlvo: numVal }))}>{opt}</Button>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Ou digite:</span>
-                  <Input type="number" className="w-32 h-8 text-xs" value={novaMeta.valorAlvo || ""}
-                    onChange={e => setNovaMeta(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
-                    placeholder="Valor personalizado" />
-                </div>
-              </div>
-
-              {/* Prioridade */}
-              <div>
-                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-yellow-500" /> Prioridade dessa meta
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {([
-                    { value: "alta" as const, label: "🔴 Alta", desc: "Crítica para o resultado" },
-                    { value: "media" as const, label: "🟡 Média", desc: "Importante mas não urgente" },
-                    { value: "baixa" as const, label: "🟢 Baixa", desc: "Desejável, secundária" },
-                  ]).map(opt => (
-                    <Button key={opt.value} size="sm" variant={novaMeta.prioridade === opt.value ? "default" : "outline"}
-                      className={`gap-2 h-auto py-2 px-3 ${novaMeta.prioridade !== opt.value ? "border-dashed" : ""}`}
-                      onClick={() => setNovaMeta(p => ({ ...p, prioridade: opt.value }))}>
-                      <div className="text-left">
-                        <span className="text-xs font-medium block">{opt.label}</span>
-                        <span className="text-[10px] opacity-70">{opt.desc}</span>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Botão Criar */}
-              <Button className="w-full gap-2" disabled={novaMeta.valorAlvo === 0 || !novaMeta.mesRef || (novaMeta.escopo === "equipe" && !novaMeta.equipe) || (novaMeta.escopo === "individual" && !novaMeta.responsavel)} onClick={() => {
-                const nova: MetaMensal = {
-                  id: `meta-${Date.now()}`, nome: novaMeta.nome || TIPO_META_LABELS[novaMeta.tipo], mesRef: novaMeta.mesRef,
-                  tipo: novaMeta.tipo, escopo: novaMeta.escopo, periodo: novaMeta.periodo,
-                  valorAlvo: novaMeta.valorAlvo, equipe: novaMeta.equipe, responsavel: novaMeta.responsavel,
-                  prioridade: novaMeta.prioridade,
-                };
-                setMetasMensais(prev => [...prev, nova]);
-                setNovaMeta({ nome: "", mesRef: "", tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
-                setMetasSalvas(true);
-                toast({ title: `Meta "${nova.nome}" adicionada!` });
-              }}>
-                <Plus className="w-4 h-4" /> Criar Meta
-              </Button>
-            </CardContent>
-          </Card>
-
-           {/* Metas Salvas com Acompanhamento */}
-          {metasMensais.length > 0 && (() => {
-            // Simulate progress for each meta
+          {metasMensais.length === 0 ? (
+            <Card className="border-dashed border-2">
+              <CardContent className="py-16 text-center space-y-3">
+                <Target className="w-10 h-10 mx-auto text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">Nenhuma meta criada ainda.</p>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setNovaMetaOpen(true)}>
+                  <Plus className="w-4 h-4" /> Criar primeira meta
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (() => {
             const metasComProgresso = metasMensais.map((m, i) => {
               const seed = m.id.charCodeAt(m.id.length - 1) + i;
               const progressPercent = Math.min(((seed * 17 + 23) % 85) + 15, 100);
@@ -734,12 +536,11 @@ export default function ClientePlanoVendas() {
                           </div>
                         );
                       })}
-                      {tipoAgrupado.length === 0 && <p className="text-xs text-muted-foreground text-center py-6">Nenhuma meta criada ainda.</p>}
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Metas Cards with Progress */}
+                {/* Metas Cards */}
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-emerald-500/15"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></div>
@@ -809,7 +610,6 @@ export default function ClientePlanoVendas() {
                             </div>
                           </div>
 
-                          {/* Progress Section */}
                           {editingMetaId === m.id ? (
                             <div className="flex items-center gap-2">
                               <Input type="number" value={editDraft.valorAlvo || ""} onChange={e => setEditDraft(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
@@ -863,6 +663,193 @@ export default function ClientePlanoVendas() {
               </>
             );
           })()}
+
+          {/* Dialog Nova Meta */}
+          <Dialog open={novaMetaOpen} onOpenChange={setNovaMetaOpen}>
+            <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-500/15"><Plus className="w-4 h-4 text-amber-500" /></div>
+                  Criar Nova Meta
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-5">
+                {/* Tipo */}
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block">Tipo da meta</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { value: "faturamento" as TipoMeta, label: "Faturamento", icon: DollarSign, color: "text-emerald-500" },
+                      { value: "novos_clientes" as TipoMeta, label: "Novos Clientes", icon: UserPlus, color: "text-blue-500" },
+                      { value: "contratos" as TipoMeta, label: "Contratos", icon: FileText, color: "text-purple-500" },
+                      { value: "retencao" as TipoMeta, label: "Retenção", icon: ShieldCheck, color: "text-teal-500" },
+                      { value: "ticket_medio" as TipoMeta, label: "Ticket Médio", icon: Receipt, color: "text-orange-500" },
+                      { value: "conversao" as TipoMeta, label: "Conversão (%)", icon: BarChartHorizontal, color: "text-indigo-500" },
+                      { value: "leads" as TipoMeta, label: "Leads Gerados", icon: Megaphone, color: "text-pink-500" },
+                      { value: "reunioes" as TipoMeta, label: "Reuniões", icon: Handshake, color: "text-cyan-500" },
+                    ]).map(opt => {
+                      const Icon = opt.icon;
+                      const selected = novaMeta.tipo === opt.value;
+                      return (
+                        <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
+                          className={`justify-start gap-2 h-auto py-2 px-3 ${!selected ? "border-dashed" : ""}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, tipo: opt.value }))}>
+                          <Icon className={`w-4 h-4 ${selected ? "" : opt.color}`} />
+                          <span className="text-xs">{opt.label}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Nome */}
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block">Nome da meta</Label>
+                  <Input value={novaMeta.nome} onChange={e => setNovaMeta(p => ({ ...p, nome: e.target.value }))}
+                    placeholder="Ex: Meta de Faturamento Q1..." />
+                </div>
+
+                {/* Mês */}
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block">Mês de referência</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MESES_COMPLETOS.map((mes, i) => {
+                      const valor = `${mes}/${anoAtual}`;
+                      const valorProx = `${mes}/${anoAtual + 1}`;
+                      const selected = novaMeta.mesRef === valor || novaMeta.mesRef === valorProx;
+                      return (
+                        <Button key={mes} size="sm" variant={selected ? "default" : "outline"}
+                          className={`text-xs h-7 px-2 ${!selected ? "border-dashed" : ""}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, mesRef: i >= new Date().getMonth() ? valor : valorProx }))}>
+                          {MESES[i]}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Escopo */}
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block">Para quem?</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      { value: "empresa" as EscopoMeta, label: "Empresa", icon: Building2 },
+                      { value: "equipe" as EscopoMeta, label: "Equipe", icon: Users },
+                      { value: "individual" as EscopoMeta, label: "Individual", icon: UserCheck },
+                    ]).map(opt => {
+                      const Icon = opt.icon;
+                      return (
+                        <Button key={opt.value} variant={novaMeta.escopo === opt.value ? "default" : "outline"} size="sm"
+                          className={`gap-1.5 ${novaMeta.escopo !== opt.value ? "border-dashed" : ""}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, escopo: opt.value, equipe: "", responsavel: "" }))}>
+                          <Icon className="w-3.5 h-3.5" /> {opt.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {novaMeta.escopo === "equipe" && (
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block">Qual equipe?</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Vendas", "Pré-vendas (SDR)", "Pós-venda (CS)", "Marketing", "Prospecção"].map(opt => (
+                        <Button key={opt} size="sm" variant={novaMeta.equipe === opt ? "default" : "outline"}
+                          className={`text-xs ${novaMeta.equipe !== opt ? "border-dashed" : ""}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, equipe: opt }))}>{opt}</Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {novaMeta.escopo === "individual" && (
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block">Responsável</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Lima"].map(opt => (
+                        <Button key={opt} size="sm" variant={novaMeta.responsavel === opt ? "default" : "outline"}
+                          className={`text-xs ${novaMeta.responsavel !== opt ? "border-dashed" : ""}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, responsavel: opt }))}>{opt}</Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Período */}
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block">Período</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {([
+                      { value: "mensal" as PeriodoMeta, label: "Mensal" },
+                      { value: "trimestral" as PeriodoMeta, label: "Trimestral" },
+                      { value: "semestral" as PeriodoMeta, label: "Semestral" },
+                      { value: "anual" as PeriodoMeta, label: "Anual" },
+                    ]).map(opt => (
+                      <Button key={opt.value} size="sm" variant={novaMeta.periodo === opt.value ? "default" : "outline"}
+                        className={`text-xs ${novaMeta.periodo !== opt.value ? "border-dashed" : ""}`}
+                        onClick={() => setNovaMeta(p => ({ ...p, periodo: opt.value }))}>{opt.label}</Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Valor */}
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block">Valor alvo</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(novaMeta.tipo === "faturamento" || novaMeta.tipo === "ticket_medio"
+                      ? ["R$ 10.000", "R$ 25.000", "R$ 50.000", "R$ 100.000", "R$ 200.000", "R$ 500.000"]
+                      : novaMeta.tipo === "conversao" || novaMeta.tipo === "retencao"
+                      ? ["10%", "20%", "30%", "50%", "70%", "90%"]
+                      : ["5", "10", "20", "50", "100", "200"]
+                    ).map(opt => {
+                      const numVal = Number(opt.replace(/[^0-9]/g, ""));
+                      return (
+                        <Button key={opt} size="sm" variant={novaMeta.valorAlvo === numVal ? "default" : "outline"}
+                          className={`text-xs ${novaMeta.valorAlvo !== numVal ? "border-dashed" : ""}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, valorAlvo: numVal }))}>{opt}</Button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Ou:</span>
+                    <Input type="number" className="w-32 h-8 text-xs" value={novaMeta.valorAlvo || ""}
+                      onChange={e => setNovaMeta(p => ({ ...p, valorAlvo: Number(e.target.value) }))} placeholder="Personalizado" />
+                  </div>
+                </div>
+
+                {/* Prioridade */}
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block">Prioridade</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {([
+                      { value: "alta" as const, label: "🔴 Alta" },
+                      { value: "media" as const, label: "🟡 Média" },
+                      { value: "baixa" as const, label: "🟢 Baixa" },
+                    ]).map(opt => (
+                      <Button key={opt.value} size="sm" variant={novaMeta.prioridade === opt.value ? "default" : "outline"}
+                        className={novaMeta.prioridade !== opt.value ? "border-dashed" : ""}
+                        onClick={() => setNovaMeta(p => ({ ...p, prioridade: opt.value }))}>{opt.label}</Button>
+                    ))}
+                  </div>
+                </div>
+
+                <Button className="w-full gap-2" disabled={novaMeta.valorAlvo === 0 || !novaMeta.mesRef || (novaMeta.escopo === "equipe" && !novaMeta.equipe) || (novaMeta.escopo === "individual" && !novaMeta.responsavel)} onClick={() => {
+                  const nova: MetaMensal = {
+                    id: `meta-${Date.now()}`, nome: novaMeta.nome || TIPO_META_LABELS[novaMeta.tipo], mesRef: novaMeta.mesRef,
+                    tipo: novaMeta.tipo, escopo: novaMeta.escopo, periodo: novaMeta.periodo,
+                    valorAlvo: novaMeta.valorAlvo, equipe: novaMeta.equipe, responsavel: novaMeta.responsavel,
+                    prioridade: novaMeta.prioridade,
+                  };
+                  setMetasMensais(prev => [...prev, nova]);
+                  setNovaMeta({ nome: "", mesRef: "", tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
+                  setMetasSalvas(true);
+                  setNovaMetaOpen(false);
+                  toast({ title: `Meta "${nova.nome}" adicionada!` });
+                }}>
+                  <Plus className="w-4 h-4" /> Criar Meta
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* ===== ESTRUTURA COMERCIAL ===== */}
