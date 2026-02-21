@@ -7,9 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Copy, RefreshCw, Plus, Lightbulb, Target, MessageSquare, Megaphone } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles, Copy, RefreshCw, Plus, Lightbulb, Target, MessageSquare, Megaphone, History, Save, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { getFranqueadoLeads } from "@/data/franqueadoData";
 import { toast } from "sonner";
+
+interface ProspeccaoHistorico {
+  id: string;
+  tipo: "plano" | "script";
+  data: string;
+  params: Record<string, string>;
+  conteudo: string;
+}
 
 const mockPlano = {
   ideias: [
@@ -68,6 +77,10 @@ export default function FranqueadoProspeccaoIA() {
   const [gerandoScript, setGerandoScript] = useState(false);
   const [leadVinculado, setLeadVinculado] = useState("");
 
+  // Histórico
+  const [historico, setHistorico] = useState<ProspeccaoHistorico[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const gerarPlano = () => {
     setGerandoPlano(true);
     setTimeout(() => { setPlanoGerado(true); setGerandoPlano(false); }, 800);
@@ -83,14 +96,47 @@ export default function FranqueadoProspeccaoIA() {
     toast.success("Script copiado!");
   };
 
+  const salvarPlanoHistorico = () => {
+    const novo: ProspeccaoHistorico = {
+      id: Date.now().toString(),
+      tipo: "plano",
+      data: new Date().toLocaleDateString("pt-BR"),
+      params: { regiao, nicho, metaMensal, produtoFoco, ticketMedio, tipoAbordagem },
+      conteudo: `Ideias: ${mockPlano.ideias.join(" | ")}\n\nPlano: ${mockPlano.planoAcao.join(" | ")}\n\nCanais: ${mockPlano.canais.join(", ")}\n\nAbordagens: ${mockPlano.abordagens.join(" | ")}`,
+    };
+    setHistorico(prev => [novo, ...prev]);
+    toast.success("Plano salvo no histórico!");
+  };
+
+  const salvarScriptHistorico = () => {
+    const novo: ProspeccaoHistorico = {
+      id: Date.now().toString(),
+      tipo: "script",
+      data: new Date().toLocaleDateString("pt-BR"),
+      params: { perfilCliente, canalContato, objecoesComuns },
+      conteudo: `Script: ${mockScript.scriptInicial}\n\nPerguntas: ${mockScript.perguntas.join(" | ")}\n\nObjeções: ${mockScript.objecoes.map(o => `"${o.objecao}" → ${o.resposta}`).join(" | ")}\n\nCTA: ${mockScript.ctaFinal}`,
+    };
+    setHistorico(prev => [novo, ...prev]);
+    toast.success("Script salvo no histórico!");
+  };
+
+  const removerHistorico = (id: string) => {
+    setHistorico(prev => prev.filter(h => h.id !== id));
+    toast.success("Removido do histórico");
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <PageHeader title="Prospecção IA" subtitle="Planeje prospecções e gere scripts comerciais com IA" />
 
       <Tabs defaultValue="planejamento">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="planejamento"><Lightbulb className="w-4 h-4 mr-1" /> Planejamento</TabsTrigger>
           <TabsTrigger value="script"><MessageSquare className="w-4 h-4 mr-1" /> Script Comercial</TabsTrigger>
+          <TabsTrigger value="historico">
+            <History className="w-4 h-4 mr-1" /> Histórico
+            {historico.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">{historico.length}</Badge>}
+          </TabsTrigger>
         </TabsList>
 
         {/* ── ABA PLANEJAMENTO ── */}
@@ -129,25 +175,30 @@ export default function FranqueadoProspeccaoIA() {
           </Card>
 
           {planoGerado && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">💡 Ideias de Prospecção</CardTitle></CardHeader>
-                <CardContent><ul className="space-y-2">{mockPlano.ideias.map((i, idx) => <li key={idx} className="text-sm flex gap-2"><span className="text-primary font-bold">{idx + 1}.</span>{i}</li>)}</ul></CardContent>
-              </Card>
-              <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">📋 Plano de Ação</CardTitle></CardHeader>
-                <CardContent><ul className="space-y-2">{mockPlano.planoAcao.map((p, idx) => <li key={idx} className="text-sm">{p}</li>)}</ul></CardContent>
-              </Card>
-              <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">📡 Canais Recomendados</CardTitle></CardHeader>
-                <CardContent><div className="flex flex-wrap gap-2">{mockPlano.canais.map(c => <span key={c} className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">{c}</span>)}</div></CardContent>
-              </Card>
-              <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">🎯 Abordagens Sugeridas</CardTitle></CardHeader>
-                <CardContent><ul className="space-y-2">{mockPlano.abordagens.map((a, idx) => <li key={idx} className="text-sm flex gap-2"><Megaphone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />{a}</li>)}</ul></CardContent>
-              </Card>
-              <div className="md:col-span-2">
-                <Button onClick={() => navigate("/franqueado/crm")} className="w-full">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="glass-card">
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">💡 Ideias de Prospecção</CardTitle></CardHeader>
+                  <CardContent><ul className="space-y-2">{mockPlano.ideias.map((i, idx) => <li key={idx} className="text-sm flex gap-2"><span className="text-primary font-bold">{idx + 1}.</span>{i}</li>)}</ul></CardContent>
+                </Card>
+                <Card className="glass-card">
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">📋 Plano de Ação</CardTitle></CardHeader>
+                  <CardContent><ul className="space-y-2">{mockPlano.planoAcao.map((p, idx) => <li key={idx} className="text-sm">{p}</li>)}</ul></CardContent>
+                </Card>
+                <Card className="glass-card">
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">📡 Canais Recomendados</CardTitle></CardHeader>
+                  <CardContent><div className="flex flex-wrap gap-2">{mockPlano.canais.map(c => <span key={c} className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">{c}</span>)}</div></CardContent>
+                </Card>
+                <Card className="glass-card">
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">🎯 Abordagens Sugeridas</CardTitle></CardHeader>
+                  <CardContent><ul className="space-y-2">{mockPlano.abordagens.map((a, idx) => <li key={idx} className="text-sm flex gap-2"><Megaphone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />{a}</li>)}</ul></CardContent>
+                </Card>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={salvarPlanoHistorico} variant="outline" className="flex-1">
+                  <Save className="w-4 h-4 mr-1" /> Salvar no Histórico
+                </Button>
+                <Button onClick={() => navigate("/franqueado/crm")} className="flex-1">
                   <Plus className="w-4 h-4 mr-1" /> Criar Lead no CRM
                 </Button>
               </div>
@@ -228,21 +279,76 @@ export default function FranqueadoProspeccaoIA() {
                 <CardContent><p className="text-sm bg-primary/10 rounded-xl p-4 font-medium">{mockScript.ctaFinal}</p></CardContent>
               </Card>
 
-              <Card className="glass-card">
+              <div className="flex gap-2">
+                <Button onClick={salvarScriptHistorico} variant="outline" className="flex-1">
+                  <Save className="w-4 h-4 mr-1" /> Salvar no Histórico
+                </Button>
+                <Card className="glass-card flex-1">
+                  <CardContent className="p-3">
+                    <div className="flex gap-2">
+                      <Select value={leadVinculado} onValueChange={setLeadVinculado}>
+                        <SelectTrigger className="flex-1"><SelectValue placeholder="Vincular ao lead..." /></SelectTrigger>
+                        <SelectContent>
+                          {leads.map(l => <SelectItem key={l.id} value={l.id}>{l.nome} — {l.empresa || "Sem empresa"}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" disabled={!leadVinculado} onClick={() => { toast.success("Script salvo no lead!"); }}>Salvar</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── ABA HISTÓRICO ── */}
+        <TabsContent value="historico" className="space-y-6">
+          {historico.length === 0 ? (
+            <Card className="glass-card">
+              <CardContent className="p-12 text-center">
+                <History className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-muted-foreground font-medium">Nenhuma prospecção salva</p>
+                <p className="text-xs text-muted-foreground mt-1">Gere um plano ou script e clique em "Salvar no Histórico"</p>
+              </CardContent>
+            </Card>
+          ) : (
+            historico.map(item => (
+              <Card key={item.id} className="glass-card">
                 <CardContent className="p-4">
-                  <label className="text-xs font-medium text-muted-foreground mb-2 block">Salvar vinculado ao lead:</label>
-                  <div className="flex gap-2">
-                    <Select value={leadVinculado} onValueChange={setLeadVinculado}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione um lead..." /></SelectTrigger>
-                      <SelectContent>
-                        {leads.map(l => <SelectItem key={l.id} value={l.id}>{l.nome} — {l.empresa || "Sem empresa"}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button size="sm" disabled={!leadVinculado} onClick={() => { toast.success("Script salvo no lead!"); }}>Salvar</Button>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={item.tipo === "plano" ? "default" : "secondary"} className="text-[10px]">
+                        {item.tipo === "plano" ? "📋 Plano" : "📝 Script"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{item.data}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}>
+                        {expandedId === item.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => removerHistorico(item.id)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {Object.entries(item.params).filter(([, v]) => v).map(([k, v]) => (
+                      <span key={k} className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                        {v}
+                      </span>
+                    ))}
+                  </div>
+                  {expandedId !== item.id && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">{item.conteudo.slice(0, 150)}...</p>
+                  )}
+                  {expandedId === item.id && (
+                    <div className="bg-muted/30 rounded-xl p-4 text-sm whitespace-pre-wrap leading-relaxed mt-2">
+                      {item.conteudo}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            </div>
+            ))
           )}
         </TabsContent>
       </Tabs>
