@@ -17,6 +17,10 @@ export interface Cliente {
   notaFiscalEmitida: boolean;
   pago: boolean;
   observacoes: string;
+  // Asaas placeholders
+  idCobrancaAsaas?: string;
+  tipoCobrancaAsaas?: "Assinatura" | "Unitária";
+  statusCobrancaAsaas?: string;
 }
 
 export interface Receita {
@@ -42,7 +46,7 @@ export interface Receita {
 export interface Despesa {
   id: string;
   mes: string;
-  categoria: "Pessoas" | "Plataformas" | "Estrutura" | "Empréstimos" | "Investimentos" | "Eventos" | "Treinamentos";
+  categoria: "Pessoas" | "Plataformas" | "Estrutura" | "Empréstimos" | "Investimentos" | "Eventos" | "Treinamentos" | "Impostos";
   subcategoria: string;
   recorrente: boolean;
   valor: number;
@@ -126,7 +130,7 @@ export const clientes: Cliente[] = [
   // 🔴 VENDA UNITÁRIA – FRANQUEADO
   { id: "c17", nome: "Mecfilter", valor: 2800, status: "Ativo", tipoReceita: "Unitária", origem: "Franqueado", produto: "Assessoria Noexcuse", geraRepasse: true, percentualRepasse: 20, franqueadoVinculado: "f1", inicio: "2026-02-01", notaFiscalEmitida: true, pago: true, observacoes: "" },
 
-  // ⚪ CLASSIFICAÇÃO: RECORRENTE – VENDA INTERNA (conforme resposta do usuário)
+  // ⚪ CLASSIFICAÇÃO: RECORRENTE – VENDA INTERNA
   { id: "c18", nome: "Massago", valor: 1800, status: "Ativo", tipoReceita: "Recorrente", origem: "Venda Interna", produto: "Assessoria Noexcuse", geraRepasse: false, percentualRepasse: 0, inicio: "2025-11-01", notaFiscalEmitida: true, pago: true, observacoes: "" },
   { id: "c19", nome: "Massaru", valor: 1680, status: "Ativo", tipoReceita: "Recorrente", origem: "Venda Interna", produto: "Assessoria Noexcuse", geraRepasse: false, percentualRepasse: 0, inicio: "2025-12-01", notaFiscalEmitida: true, pago: true, observacoes: "" },
   { id: "c20", nome: "Moreira", valor: 0, status: "Ativo", tipoReceita: "Recorrente", origem: "Venda Interna", produto: "Assessoria Noexcuse", geraRepasse: false, percentualRepasse: 0, inicio: "2026-01-01", notaFiscalEmitida: false, pago: false, observacoes: "Valor a definir" },
@@ -177,7 +181,6 @@ export function getActiveClientsForMonth(mes: string): Cliente[] {
   return clientes.filter(c => {
     if (c.status === "Cancelado") return false;
     if (c.status === "Pausado") return false;
-    // Unitárias só aparecem no mês do início
     if (c.tipoReceita === "Unitária") {
       return c.inicio.substring(0, 7) === mes;
     }
@@ -290,7 +293,7 @@ export function getDespesasForMonth(mes: string): Despesa[] {
     if (p.inicio > mes + "-31") return;
     const cat = p.tipo === "Empréstimo" ? "Empréstimos" : "Investimentos";
     despesas.push({
-      id: `d-parc-${p.id}-${mes}`, mes, categoria: cat, subcategoria: p.nome,
+      id: `d-parc-${p.id}-${mes}`, mes, categoria: cat as Despesa["categoria"], subcategoria: p.nome,
       recorrente: true, valor: p.valorMensal, vencimento: 15, status: "Pago", notas: `${p.parcelaAtual}/${p.totalParcelas}`,
     });
   });
@@ -301,7 +304,33 @@ export function getDespesasForMonth(mes: string): Despesa[] {
     despesas.push({ id: `d-tr-${mes}`, mes, categoria: "Treinamentos", subcategoria: "Treinamento equipe", recorrente: true, valor: 2000, vencimento: 25, status: "Previsto", notas: "" });
   }
 
+  // Impostos (gerado automaticamente)
+  const impostoInfo = getImpostoDespesa(mes);
+  despesas.push(impostoInfo);
+
   return despesas;
+}
+
+// ── IMPOSTO COMO DESPESA ──
+
+export function getImpostoDespesa(mes: string): Despesa {
+  const receitas = getReceitasForMonth(mes);
+  const folha = getFolhaForMonth(mes);
+  const faturamentoComNF = receitas.filter(r => r.notaFiscalEmitida).reduce((sum, r) => sum + r.valorBruto, 0);
+  const baseCalculo = faturamentoComNF + folha.operacional;
+  const valorImposto = baseCalculo * 0.10;
+
+  return {
+    id: `d-imp-${mes}`,
+    mes,
+    categoria: "Impostos",
+    subcategoria: "Imposto mensal (10%)",
+    recorrente: true,
+    valor: valorImposto,
+    vencimento: 20,
+    status: mes <= "2026-02" ? "Pago" : "Previsto",
+    notas: `Base: ${faturamentoComNF.toFixed(0)} (NF) + ${folha.operacional.toFixed(0)} (folha op.)`,
+  };
 }
 
 // ── RESUMO MENSAL ──
@@ -318,7 +347,7 @@ export function getMonthSummary(mes: string) {
 
   const custosDespesas = despesas.reduce((sum, d) => sum + d.valor, 0);
 
-  // Imposto: 10% sobre (Faturamento com NF emitida + Folha Operacional), excluindo pró-labore
+  // Imposto já está incluído nas despesas agora
   const faturamentoComNF = receitas.filter(r => r.notaFiscalEmitida).reduce((sum, r) => sum + r.valorBruto, 0);
   const baseImposto = faturamentoComNF + folha.operacional;
   const impostos = baseImposto * 0.10;
@@ -327,7 +356,7 @@ export function getMonthSummary(mes: string) {
     .filter(p => p.status === "Ativo" && p.tipo === "Investimento" && p.inicio <= mes + "-31")
     .reduce((s, p) => s + p.valorMensal, 0);
 
-  const custosTotal = custosDespesas + impostos;
+  const custosTotal = custosDespesas;
   const resultado = receitaLiquida - custosTotal;
 
   const caixaInicial = mesData?.caixaInicial || 0;
@@ -345,6 +374,13 @@ export function getMonthSummary(mes: string) {
   const receitaPorTipo: Record<string, number> = {};
   receitas.forEach(r => {
     receitaPorTipo[r.tipo] = (receitaPorTipo[r.tipo] || 0) + r.valorBruto;
+  });
+
+  // Receita por produto
+  const clientesAtivos = getActiveClientsForMonth(mes);
+  const receitaPorProduto: Record<string, number> = {};
+  clientesAtivos.forEach(c => {
+    receitaPorProduto[c.produto] = (receitaPorProduto[c.produto] || 0) + c.valor;
   });
 
   // Alertas
@@ -367,6 +403,7 @@ export function getMonthSummary(mes: string) {
     folha,
     despesasPorCategoria,
     receitaPorTipo,
+    receitaPorProduto,
     totalClientes: receitas.length,
     clientesCapacidade: 30,
     nfNaoEmitidas,
@@ -397,9 +434,8 @@ export function getHistoricalData() {
 // ── PROJEÇÃO (CAMADA 3) ──
 
 export function getProjection(mesesFuturos: number): { mes: string; label: string; receitaRecorrente: number; folha: number; parcelas: number; eventos: number; impostos: number; resultado: number }[] {
-  const baseMonth = "2026-02";
   const baseYear = 2026;
-  const baseM = 2; // fevereiro
+  const baseM = 2;
 
   const results: ReturnType<typeof getProjection> = [];
 
@@ -411,7 +447,6 @@ export function getProjection(mesesFuturos: number): { mes: string; label: strin
     const labels = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const label = `${labels[month]}/${String(year).slice(2)}`;
 
-    // Receita recorrente: clientes ativos recorrentes
     const activeClients = clientes.filter(c => {
       if (c.status !== "Ativo") return false;
       if (c.tipoReceita !== "Recorrente" && c.tipoReceita !== "Sistema") return false;
@@ -420,49 +455,30 @@ export function getProjection(mesesFuturos: number): { mes: string; label: strin
     const receitaRecorrente = activeClients.reduce((s, c) => s + c.valor, 0)
       + franqueados.filter(f => f.status === "Ativo").reduce((s, f) => s + f.mensalidadeSistema, 0);
 
-    // Folha projetada com reajustes
     const folha = getFolhaForMonth(mesStr);
 
-    // Parcelas ativas (removendo encerradas)
     const parcelasAtivas = parcelas.filter(p => {
       if (p.status === "Encerrado") return false;
       if (p.inicio > mesStr + "-31") return false;
-      // Estimar se já encerrou
       const parcelasRestantes = p.totalParcelas - p.parcelaAtual;
-      const mesesDesdeBase = i;
-      return mesesDesdeBase <= parcelasRestantes;
+      return i <= parcelasRestantes;
     });
     const totalParcelas = parcelasAtivas.reduce((s, p) => s + p.valorMensal, 0);
 
-    // Eventos e treinamento (a partir de abril)
     const eventos = mesStr >= "2026-04" ? 5000 : 0;
-
-    // Plataformas + Estrutura (fixos)
     const fixos = plataformas.reduce((s, p) => s + p.valor, 0) + estrutura.reduce((s, e) => s + e.valor, 0);
 
     const custoTotal = folha.total + totalParcelas + eventos + fixos;
 
-    // Imposto: 10% sobre (receita recorrente com NF + folha operacional)
     const faturamentoComNF = activeClients.filter(c => c.notaFiscalEmitida).reduce((s, c) => s + c.valor, 0)
       + franqueados.filter(f => f.status === "Ativo").reduce((s, f) => s + f.mensalidadeSistema, 0);
     const impostos = (faturamentoComNF + folha.operacional) * 0.10;
 
-    // Repasse
     const totalRepasse = activeClients.filter(c => c.geraRepasse).reduce((s, c) => s + c.valor * (c.percentualRepasse / 100), 0);
-
     const receitaLiquida = receitaRecorrente - totalRepasse;
     const resultado = receitaLiquida - custoTotal - impostos;
 
-    results.push({
-      mes: mesStr,
-      label,
-      receitaRecorrente,
-      folha: folha.total,
-      parcelas: totalParcelas,
-      eventos,
-      impostos,
-      resultado,
-    });
+    results.push({ mes: mesStr, label, receitaRecorrente, folha: folha.total, parcelas: totalParcelas, eventos, impostos, resultado });
   }
 
   return results;
@@ -485,4 +501,59 @@ export function getInvestmentSignal(mes: string = "2026-02"): "green" | "yellow"
   if (margemLucro > 0.15 && runway > 3) return "green";
   if (margemLucro > 0.05 && runway > 2) return "yellow";
   return "red";
+}
+
+// ── DRE POR FRANQUEADO ──
+
+export interface DREFranqueado {
+  franqueadoId: string;
+  franqueadoNome: string;
+  mes: string;
+  clientesAtivos: { nome: string; valor: number }[];
+  receitaBruta: number;
+  royalties: number;
+  impostoProporcional: number;
+  sistema: number;
+  repasseMatriz: number;
+  resultadoLiquido: number;
+}
+
+export function getDREFranqueado(franqueadoId: string, mes: string): DREFranqueado | null {
+  const franqueado = franqueados.find(f => f.id === franqueadoId);
+  if (!franqueado) return null;
+
+  const clientesDoFranqueado = clientes.filter(c =>
+    c.franqueadoVinculado === franqueadoId && c.status === "Ativo"
+  );
+
+  const receitaBruta = clientesDoFranqueado.reduce((s, c) => s + c.valor, 0);
+  const royalties = receitaBruta * 0.01;
+
+  // Imposto proporcional
+  const receitasDoMes = getReceitasForMonth(mes);
+  const receitaTotalMes = receitasDoMes.reduce((s, r) => s + r.valorBruto, 0);
+  const summary = getMonthSummary(mes);
+  const impostoTotalMes = summary.impostos;
+  const impostoProporcional = receitaTotalMes > 0 ? (receitaBruta / receitaTotalMes) * impostoTotalMes : 0;
+
+  const sistema = franqueado.mensalidadeSistema;
+
+  const repasseMatriz = clientesDoFranqueado
+    .filter(c => c.geraRepasse)
+    .reduce((s, c) => s + c.valor * (c.percentualRepasse / 100), 0);
+
+  const resultadoLiquido = receitaBruta - royalties - impostoProporcional - sistema - repasseMatriz;
+
+  return {
+    franqueadoId,
+    franqueadoNome: franqueado.nomeUnidade,
+    mes,
+    clientesAtivos: clientesDoFranqueado.map(c => ({ nome: c.nome, valor: c.valor })),
+    receitaBruta,
+    royalties,
+    impostoProporcional,
+    sistema,
+    repasseMatriz,
+    resultadoLiquido,
+  };
 }

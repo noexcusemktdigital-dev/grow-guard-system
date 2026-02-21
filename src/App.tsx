@@ -11,7 +11,7 @@ import FinanceiroConfiguracoes from "./pages/FinanceiroConfiguracoes";
 import FinanceiroDespesas from "./pages/FinanceiroDespesas";
 import FinanceiroReceitas from "./pages/FinanceiroReceitas";
 import FinanceiroRepasse from "./pages/FinanceiroRepasse";
-import FinanceiroImpostos from "./pages/FinanceiroImpostos";
+import FinanceiroFechamentos from "./pages/FinanceiroFechamentos";
 
 const queryClient = new QueryClient();
 
@@ -30,7 +30,7 @@ const App = () => (
               <Route path="financeiro/despesas" element={<FinanceiroDespesas />} />
               <Route path="financeiro/receitas" element={<FinanceiroReceitas />} />
               <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
-              <Route path="financeiro/impostos" element={<FinanceiroImpostos />} />
+              <Route path="financeiro/fechamentos" element={<FinanceiroFechamentos />} />
               <Route path="financeiro/configuracoes" element={<FinanceiroConfiguracoes />} />
             </Route>
           </Route>
