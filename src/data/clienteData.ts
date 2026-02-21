@@ -224,7 +224,7 @@ export interface CrmLead {
   email: string;
   value: number;
   temperature: "Quente" | "Morno" | "Frio";
-  stage: "novo" | "contato" | "proposta" | "fechado" | "perdido";
+  stage: string;
   responsible: string;
   notes: string;
   createdAt: string;
