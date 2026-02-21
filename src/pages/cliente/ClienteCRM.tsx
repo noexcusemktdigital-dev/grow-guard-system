@@ -7,7 +7,7 @@ import {
   Filter, DollarSign, Target, AlertTriangle, ChevronDown,
   Zap, BarChart3, X, Save, Palette, CirclePlus, CircleDot,
   Crosshair, Handshake, ShieldCheck, Ban, Sparkles, Star,
-  PhoneOutgoing, SearchCheck
+  PhoneOutgoing, SearchCheck, Copy, MoreHorizontal
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +34,13 @@ interface FunnelStage {
   key: string;
   label: string;
   color: string;
-  icon: string; // lucide icon key
+  icon: string;
+}
+
+interface Funnel {
+  id: string;
+  name: string;
+  stages: FunnelStage[];
 }
 
 const STAGE_ICONS: Record<string, React.ReactNode> = {
@@ -77,6 +83,21 @@ const DEFAULT_STAGES: FunnelStage[] = [
   { key: "negociacao", label: "Negociação", color: "orange", icon: "handshake" },
   { key: "fechado", label: "Fechado", color: "emerald", icon: "shield-check" },
   { key: "perdido", label: "Perdido", color: "red", icon: "ban" },
+];
+
+const DEFAULT_FUNNELS: Funnel[] = [
+  { id: "default", name: "Funil Padrão", stages: DEFAULT_STAGES },
+  {
+    id: "inbound",
+    name: "Inbound Marketing",
+    stages: [
+      { key: "visitante", label: "Visitante", color: "blue", icon: "circle-dot" },
+      { key: "lead_mql", label: "MQL", color: "cyan", icon: "search-check" },
+      { key: "lead_sql", label: "SQL", color: "purple", icon: "target" },
+      { key: "oportunidade", label: "Oportunidade", color: "orange", icon: "sparkles" },
+      { key: "cliente_inb", label: "Cliente", color: "emerald", icon: "shield-check" },
+    ],
+  },
 ];
 
 const tempColors: Record<string, string> = {
@@ -364,6 +385,174 @@ function StageEditorDialog({ open, onClose, stages, onSave }: {
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={() => { onSave(editStages); onClose(); }}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ===== Funnel Manager Dialog =====
+
+function FunnelManagerDialog({ open, onClose, funnels, activeFunnelId, onSave, onSelect }: {
+  open: boolean; onClose: () => void; funnels: Funnel[]; activeFunnelId: string;
+  onSave: (funnels: Funnel[]) => void; onSelect: (id: string) => void;
+}) {
+  const [editFunnels, setEditFunnels] = useState<Funnel[]>(funnels);
+  const [newName, setNewName] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  const addFunnel = () => {
+    if (!newName.trim() || editFunnels.length >= 10) return;
+    const f: Funnel = {
+      id: `funnel_${Date.now()}`,
+      name: newName.trim(),
+      stages: [
+        { key: `novo_${Date.now()}`, label: "Novo Lead", color: "blue", icon: "circle-plus" },
+        { key: `fechado_${Date.now()}`, label: "Fechado", color: "emerald", icon: "shield-check" },
+      ],
+    };
+    setEditFunnels([...editFunnels, f]);
+    setNewName("");
+  };
+
+  const duplicateFunnel = (funnel: Funnel) => {
+    if (editFunnels.length >= 10) return;
+    const dup: Funnel = {
+      id: `funnel_${Date.now()}`,
+      name: `${funnel.name} (cópia)`,
+      stages: funnel.stages.map(s => ({ ...s, key: `${s.key}_dup_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` })),
+    };
+    setEditFunnels([...editFunnels, dup]);
+  };
+
+  const removeFunnel = (id: string) => {
+    if (editFunnels.length <= 1) return;
+    setEditFunnels(editFunnels.filter(f => f.id !== id));
+  };
+
+  const startRename = (f: Funnel) => { setRenamingId(f.id); setRenameValue(f.name); };
+  const saveRename = () => {
+    if (!renamingId || !renameValue.trim()) return;
+    setEditFunnels(editFunnels.map(f => f.id === renamingId ? { ...f, name: renameValue.trim() } : f));
+    setRenamingId(null);
+  };
+
+  const moveFunnel = (idx: number, dir: -1 | 1) => {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= editFunnels.length) return;
+    const arr = [...editFunnels];
+    [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+    setEditFunnels(arr);
+  };
+
+  const handleSave = () => {
+    onSave(editFunnels);
+    // If active funnel was removed, select first
+    if (!editFunnels.find(f => f.id === activeFunnelId) && editFunnels.length > 0) {
+      onSelect(editFunnels[0].id);
+    }
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 font-display">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            Gerenciar Funis
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">Crie, duplique e reordene funis de vendas. Máximo 10.</p>
+        </DialogHeader>
+
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          {editFunnels.map((funnel, idx) => {
+            const isActive = funnel.id === activeFunnelId;
+            return (
+              <div key={funnel.id} className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${isActive ? "border-primary/40 bg-primary/5 ring-1 ring-primary/10" : "border-border hover:bg-muted/30"}`}>
+                <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {funnel.stages.slice(0, 4).map(s => {
+                    const cs = getColorStyle(s.color);
+                    return <div key={s.key} className={`w-2 h-2 rounded-full ${cs.dot}`} />;
+                  })}
+                  {funnel.stages.length > 4 && <span className="text-[9px] text-muted-foreground">+{funnel.stages.length - 4}</span>}
+                </div>
+
+                {renamingId === funnel.id ? (
+                  <div className="flex items-center gap-1 flex-1">
+                    <Input value={renameValue} onChange={e => setRenameValue(e.target.value)} className="h-7 text-sm" autoFocus onKeyDown={e => e.key === "Enter" && saveRename()} />
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={saveRename}><Save className="w-3.5 h-3.5" /></Button>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setRenamingId(null)}><X className="w-3.5 h-3.5" /></Button>
+                  </div>
+                ) : (
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{funnel.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{funnel.stages.length} etapas</p>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-0.5 shrink-0">
+                  {!isActive && (
+                    <Button size="sm" variant="outline" className="h-7 text-[10px] px-2" onClick={() => { onSelect(funnel.id); onSave(editFunnels); onClose(); }}>
+                      Usar
+                    </Button>
+                  )}
+                  {isActive && <Badge variant="default" className="text-[9px] h-5">Ativo</Badge>}
+
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0"><MoreHorizontal className="w-3.5 h-3.5" /></Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-36 p-1" align="end">
+                      <button className="w-full flex items-center gap-2 text-sm px-2 py-1.5 rounded hover:bg-muted transition-colors" onClick={() => startRename(funnel)}>
+                        <Pencil className="w-3.5 h-3.5" /> Renomear
+                      </button>
+                      <button className="w-full flex items-center gap-2 text-sm px-2 py-1.5 rounded hover:bg-muted transition-colors" onClick={() => duplicateFunnel(funnel)}>
+                        <Copy className="w-3.5 h-3.5" /> Duplicar
+                      </button>
+                      <button className="w-full flex items-center gap-2 text-sm px-2 py-1.5 rounded hover:bg-muted transition-colors" onClick={() => moveFunnel(idx, -1)} disabled={idx === 0}>
+                        <ChevronDown className="w-3.5 h-3.5 rotate-180" /> Mover acima
+                      </button>
+                      <button className="w-full flex items-center gap-2 text-sm px-2 py-1.5 rounded hover:bg-muted transition-colors" onClick={() => moveFunnel(idx, 1)} disabled={idx === editFunnels.length - 1}>
+                        <ChevronDown className="w-3.5 h-3.5" /> Mover abaixo
+                      </button>
+                      {editFunnels.length > 1 && (
+                        <>
+                          <Separator className="my-1" />
+                          <button className="w-full flex items-center gap-2 text-sm px-2 py-1.5 rounded hover:bg-destructive/10 text-destructive transition-colors" onClick={() => removeFunnel(funnel.id)}>
+                            <Trash2 className="w-3.5 h-3.5" /> Excluir
+                          </button>
+                        </>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {editFunnels.length < 10 && (
+          <>
+            <Separator />
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Novo funil ({editFunnels.length}/10)</Label>
+              <div className="flex gap-2">
+                <Input placeholder="Nome do funil..." value={newName} onChange={e => setNewName(e.target.value)} className="h-9 text-sm flex-1" onKeyDown={e => e.key === "Enter" && addFunnel()} />
+                <Button size="sm" className="h-9" onClick={addFunnel} disabled={!newName.trim()}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -841,14 +1030,20 @@ function FunnelVisualization({ leads, stages }: { leads: CrmLead[]; stages: Funn
 
 export default function ClienteCRM() {
   const [leads, setLeads] = useState<CrmLead[]>(() => getCrmLeads());
-  const [stages, setStages] = useState<FunnelStage[]>(DEFAULT_STAGES);
+  const [funnels, setFunnels] = useState<Funnel[]>(DEFAULT_FUNNELS);
+  const [activeFunnelId, setActiveFunnelId] = useState<string>("default");
+  const activeFunnel = funnels.find(f => f.id === activeFunnelId) || funnels[0];
+  const stages = activeFunnel.stages;
+  const setStages = (newStages: FunnelStage[]) => {
+    setFunnels(prev => prev.map(f => f.id === activeFunnelId ? { ...f, stages: newStages } : f));
+  };
   const [selected, setSelected] = useState<CrmLead | null>(null);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showStageEditor, setShowStageEditor] = useState(false);
   const [showNewLead, setShowNewLead] = useState(false);
-  const [showFunnel, setShowFunnel] = useState(false);
+  const [showFunnelManager, setShowFunnelManager] = useState(false);
 
   const [filterTemp, setFilterTemp] = useState<string>("all");
   const [filterOrigin, setFilterOrigin] = useState<string>("all");
@@ -896,8 +1091,8 @@ export default function ClienteCRM() {
         icon={<Users className="w-5 h-5 text-primary" />}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowFunnel(!showFunnel)} className={showFunnel ? "bg-muted" : ""}>
-              <BarChart3 className="w-4 h-4 mr-1" /> Funil
+            <Button variant="outline" size="sm" onClick={() => setShowFunnelManager(true)}>
+              <BarChart3 className="w-4 h-4 mr-1" /> Funis
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowStageEditor(true)}>
               <Settings2 className="w-4 h-4 mr-1" /> Etapas
@@ -911,7 +1106,16 @@ export default function ClienteCRM() {
 
       <CrmKpiBar leads={filteredLeads} stages={stages} />
 
-      {showFunnel && <FunnelVisualization leads={filteredLeads} stages={stages} />}
+      {/* Active funnel indicator */}
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="text-xs gap-1.5 py-1 px-2.5">
+          <BarChart3 className="w-3 h-3 text-primary" />
+          {activeFunnel.name}
+          <span className="text-muted-foreground">· {stages.length} etapas</span>
+        </Badge>
+      </div>
+
+      <FunnelVisualization leads={filteredLeads} stages={stages} />
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -1084,6 +1288,7 @@ export default function ClienteCRM() {
       <LeadDetailSheet lead={selected} open={!!selected} onClose={() => setSelected(null)} stages={stages} onUpdate={(updated) => { setLeads(prev => prev.map(l => l.id === updated.id ? updated : l)); setSelected(updated); }} />
       <StageEditorDialog open={showStageEditor} onClose={() => setShowStageEditor(false)} stages={stages} onSave={setStages} />
       <NewLeadDialog open={showNewLead} onClose={() => setShowNewLead(false)} stages={stages} onSave={handleAddLead} />
+      <FunnelManagerDialog open={showFunnelManager} onClose={() => setShowFunnelManager(false)} funnels={funnels} activeFunnelId={activeFunnelId} onSave={setFunnels} onSelect={setActiveFunnelId} />
     </div>
   );
 }
