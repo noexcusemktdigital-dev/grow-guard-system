@@ -99,6 +99,20 @@ export const categoryGradients: Record<AcademyModuleCategory, string> = {
   Produtos: "from-orange-500 to-orange-700",
 };
 
+export const categoryIcons: Record<AcademyModuleCategory, string> = {
+  Comercial: "TrendingUp",
+  Estrategia: "Target",
+  Institucional: "Building2",
+  Produtos: "Package",
+};
+
+export const categoryDescriptions: Record<AcademyModuleCategory, string> = {
+  Comercial: "Vendas e negociação",
+  Estrategia: "Planejamento e gestão",
+  Institucional: "Cultura e valores",
+  Produtos: "Conhecimento técnico",
+};
+
 // ===== MOCK DATA =====
 
 export const mockModules: AcademyModule[] = [
@@ -341,4 +355,8 @@ export function submitQuizAttempt(quizId: string, score: number, userId = "user-
   }
 
   return attempt;
+}
+
+export function getCategoryModuleCount(cat: AcademyModuleCategory): number {
+  return mockModules.filter(m => m.category === cat && m.status === "published").length;
 }

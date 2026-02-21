@@ -1,19 +1,25 @@
 import { useState } from "react";
-import { BookOpen, Clock, Play, ArrowRight } from "lucide-react";
+import { BookOpen, Clock, Play, ArrowRight, TrendingUp, Target, Building2, Package, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
-  type AcademyModule,
   type AcademyModuleCategory,
   mockModules,
   getModuleProgress,
   categoryGradients,
   categoryColors,
+  getCategoryModuleCount,
 } from "@/data/academyData";
 
 const categoryFilters: (AcademyModuleCategory | "Todos")[] = ["Todos", "Comercial", "Estrategia", "Institucional", "Produtos"];
+
+const categoryIcons: Record<string, React.ElementType> = {
+  Comercial: TrendingUp,
+  Estrategia: Target,
+  Institucional: Building2,
+  Produtos: Package,
+};
 
 const chipColors: Record<string, string> = {
   Todos: "bg-muted text-foreground",
@@ -40,45 +46,62 @@ export function AcademyModules({ onSelectModule }: Props) {
   const filtered = filter === "Todos" ? mockModules.filter(m => m.status === "published") : mockModules.filter((m) => m.category === filter && m.status === "published");
 
   return (
-    <div className="space-y-5">
-      {/* Filter chips */}
+    <div className="space-y-5 animate-fade-in">
+      {/* Filter pills with icon + count */}
       <div className="flex gap-2 flex-wrap">
-        {categoryFilters.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setFilter(cat)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-              filter === cat ? chipColors[cat] + " ring-1 ring-current" : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+        {categoryFilters.map((cat) => {
+          const count = cat === "Todos" ? mockModules.filter(m => m.status === "published").length : getCategoryModuleCount(cat);
+          const CatIcon = cat !== "Todos" ? categoryIcons[cat] : null;
+          return (
+            <button
+              key={cat}
+              onClick={() => setFilter(cat)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                filter === cat ? chipColors[cat] + " ring-1 ring-current shadow-sm" : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {CatIcon && <CatIcon className="w-3.5 h-3.5" />}
+              {cat}
+              <span className="text-[10px] opacity-70">({count})</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Modules grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Modules — horizontal cards */}
+      <div className="space-y-3">
         {filtered.map((mod) => {
           const progress = getModuleProgress(mod.id);
           const color = categoryColors[mod.category];
           const gradient = categoryGradients[mod.category];
+          const CatIcon = categoryIcons[mod.category] || BookOpen;
+          const isComplete = progress === 100;
 
           return (
             <Card
               key={mod.id}
-              className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.01] group"
+              className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.005] group flex flex-col md:flex-row"
               onClick={() => onSelectModule(mod.id)}
             >
-              {/* Cover gradient */}
-              <div className={`h-28 bg-gradient-to-br ${gradient} relative flex items-end p-4`}>
-                <Badge className={`absolute top-3 right-3 ${badgeColors[color]} border text-[10px]`}>
+              {/* Left gradient panel with icon */}
+              <div className={`relative w-full md:w-44 h-28 md:h-auto bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0`}>
+                <CatIcon className="w-10 h-10 text-white/80" />
+                {isComplete && (
+                  <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                <Badge className={`absolute top-2 left-2 ${badgeColors[color]} border text-[10px]`}>
                   {mod.category}
                 </Badge>
-                <h3 className="text-white font-bold text-lg leading-tight drop-shadow-sm">{mod.title}</h3>
               </div>
 
-              <div className="p-4 space-y-3">
-                <p className="text-sm text-muted-foreground line-clamp-2">{mod.description}</p>
+              {/* Right content */}
+              <div className="flex-1 p-4 flex flex-col justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-base leading-tight mb-1">{mod.title}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{mod.description}</p>
+                </div>
 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> {mod.lessonsCount} aulas</span>
@@ -86,25 +109,30 @@ export function AcademyModules({ onSelectModule }: Props) {
                   <span>{mod.version}</span>
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Progresso</span>
-                    <span className="font-medium">{progress}%</span>
+                <div className="flex items-center gap-3">
+                  {/* Progress circle */}
+                  <div className="relative w-10 h-10 flex-shrink-0">
+                    <svg className="w-10 h-10 -rotate-90" viewBox="0 0 40 40">
+                      <circle cx="20" cy="20" r="16" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
+                      <circle cx="20" cy="20" r="16" fill="none" stroke={isComplete ? "hsl(142, 71%, 45%)" : "hsl(var(--primary))"} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(progress / 100) * 100.5} 100.5`} className="transition-all duration-500" />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">{progress}%</span>
                   </div>
-                  <Progress value={progress} className="h-1.5" />
-                </div>
 
-                <Button
-                  size="sm"
-                  className="w-full gap-2 group-hover:gap-3 transition-all"
-                  variant={progress > 0 ? "default" : "outline"}
-                >
-                  {progress > 0 ? (
-                    <><Play className="w-3.5 h-3.5" /> Continuar</>
-                  ) : (
-                    <><ArrowRight className="w-3.5 h-3.5" /> Iniciar</>
-                  )}
-                </Button>
+                  <div className="flex-1" />
+
+                  <Button
+                    size="sm"
+                    className="gap-2 group-hover:gap-3 transition-all"
+                    variant={progress > 0 ? "default" : "outline"}
+                  >
+                    {progress > 0 ? (
+                      <><Play className="w-3.5 h-3.5" /> Continuar</>
+                    ) : (
+                      <><ArrowRight className="w-3.5 h-3.5" /> Iniciar</>
+                    )}
+                  </Button>
+                </div>
               </div>
             </Card>
           );
