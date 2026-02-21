@@ -1,96 +1,76 @@
 
 
-# Atualizar Templates de Contrato com Base nos Documentos Reais
+# Repositorio Drive + Indicador de Anexo no Kanban
 
 ## Resumo
 
-Atualizar o template de contrato de Assessoria e criar um template de Proposta Comercial baseados nos documentos reais da NOEXCUSE. O contrato real possui 7 clausulas estruturadas (Objeto, Alteracoes, Entregas, Prazo, Pagamento, Rescisao, LGPD, Foro) e a proposta tem um layout com servicos selecionados, resumo financeiro e forma de pagamento.
+Adicionar uma terceira aba **"Repositorio"** estilo drive/pasta de arquivos na pagina de Gerenciamento, agrupando contratos por situacao (Ativos, Em andamento, Inativos). Tambem adicionar indicador visual de PDF/anexo nos cards do Kanban.
 
 ---
 
-## Alteracoes
+## 1. Indicador de Anexo no Kanban
 
-### 1. Novos placeholders (`contratosData.ts`)
+Nos cards do Kanban, adicionar um pequeno icone de clipe/arquivo (`Paperclip`) quando o contrato tiver `arquivoUrl` preenchido. Ficara ao lado do valor/data, indicando visualmente que o contrato ja tem documento anexado.
 
-Adicionar variaveis que existem nos documentos reais mas faltam no sistema:
+---
 
-- `{{cliente_endereco}}` -- endereco completo do contratante
-- `{{cliente_telefone}}` -- telefone do contratante
-- `{{cliente_rg}}` -- RG/CI do contratante
-- `{{duracao_meses}}` -- duracao em meses (ex: "06 (seis)")
-- `{{qtd_parcelas}}` -- numero de parcelas
-- `{{valor_parcela}}` -- valor de cada parcela
-- `{{servicos_descricao}}` -- descricao dos servicos contratados (tabela de produtos)
-- `{{data_cidade}}` -- cidade e data por extenso (ex: "Maringa 16 de fevereiro de 2026")
-- `{{contratada_nome}}` -- nome da empresa contratada (franqueado/unidade)
-- `{{contratada_cnpj}}` -- CNPJ da contratada
-- `{{contratada_endereco}}` -- endereco da contratada
+## 2. Nova aba: Repositorio
 
-### 2. Template de Assessoria -- reescrever (`tpl-1`)
+### Estrutura
 
-Substituir o conteudo generico atual pelo contrato real estruturado com todas as 7 clausulas:
+Terceira aba nas Tabs existentes com icone `FolderOpen` e label "Repositorio".
 
-- Cabecalho com identificacao das partes (CONTRATANTE e CONTRATADA)
-- CLAUSULA PRIMEIRA -- DO OBJETO (servicos conforme tabela de produtos)
-- CLAUSULA SEGUNDA -- DAS ALTERACOES (prazo para aprovacao, grupos de alteracao)
-- CLAUSULA TERCEIRA -- DAS ENTREGAS (prazos, prorrogacao, penalidades)
-- CLAUSULA QUARTA -- DO PRAZO (duracao contratual, renovacao por aditivo)
-- CLAUSULA QUINTA -- DO PAGAMENTO (valor total, parcelas, juros 2%/mes, protesto, condicoes)
-- CLAUSULA SEXTA -- DA RESCISAO (inatividade 60 dias, notificacao 30 dias, quitacao)
-- CLAUSULA SETIMA -- DA LGPD (conformidade Lei 13.709/2018, sigilo, notificacao 24h)
-- CLAUSULA OITAVA -- DO FORO
-- Bloco de assinaturas (contratante, contratada, 2 testemunhas)
+### Tres secoes colapsaveis
 
-### 3. Novo template: Proposta Comercial (`tpl-5`)
+| Secao | Status incluidos | Cor do icone |
+|-------|-----------------|--------------|
+| Ativos | Assinado | Verde |
+| Em andamento | Rascunho, Gerado, Enviado, Aguardando Assinatura | Amarelo |
+| Inativos | Vencido, Cancelado | Cinza/Vermelho |
 
-Criar template baseado na proposta real:
+Cada secao tera um cabecalho clicavel com icone de pasta, nome da categoria e badge com contagem. Ao expandir, mostra os contratos em grid responsivo.
 
-- Cabecalho: "Proposta Comercial" + data
-- "Preparado para:" + nome do cliente
-- "Duracao do Projeto:" + duracao
-- Secao "Servicos Selecionados" com tabela (Servico | Tipo | Qtd | Valor)
-- "Resumo Financeiro" (Total Unitario | Total Mensal)
-- "Investimento em Marketing" com forma de pagamento e valores por periodo
-- Rodape: "Proposta gerada automaticamente" + validade 30 dias
+### Card estilo arquivo
 
-### 4. Atualizar Gerador (`ContratosGerador.tsx`)
+Cada contrato aparece como um "arquivo" contendo:
+- Icone de documento com cor baseada no status
+- Numero do contrato (CTR-001) em destaque
+- Nome do cliente
+- Badges de tipo/produto e status
+- Valor (mensal ou total)
+- Periodo (inicio - fim)
+- Icone de clipe se tem anexo (`arquivoUrl`)
+- Botoes: Ver detalhes, Editar, Excluir
 
-- Adicionar campos no Step 3 (Dados do Cliente): Endereco, RG
-- Adicionar campos no Step 4 (Contratacao): Duracao em meses, Qtd parcelas, Valor parcela, Descricao dos servicos (textarea)
-- Atualizar `getPreview()` para substituir os novos placeholders
-- Adicionar campo "Cidade" no Step 4
-
-### 5. Atualizar Templates page (`ContratosTemplates.tsx`)
-
-- Atualizar o painel lateral de placeholders com as novas variaveis
+### Funcionalidades
+- Filtros do topo se aplicam tambem nessa aba
+- Clicar em "Ver" abre o Dialog de detalhes ja existente
+- Grid responsivo: 3 colunas desktop, 2 tablet, 1 mobile
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos modificados
+### Arquivo modificado
 
 ```text
-src/data/contratosData.ts        -- novos placeholders, reescrever tpl-1, criar tpl-5
-src/pages/ContratosGerador.tsx   -- novos campos no wizard, atualizar getPreview
-src/pages/ContratosTemplates.tsx -- atualizar painel de placeholders
+src/pages/ContratosGerenciamento.tsx
 ```
 
-### Interface Contrato -- novos campos opcionais
+### Alteracoes
+
+1. Adicionar imports: `FolderOpen`, `Paperclip`, `ChevronDown`, `ChevronRight`, `FileText` (como icone de arquivo)
+2. Adicionar state `openSections` para controlar quais secoes estao expandidas (default: todas abertas)
+3. Adicionar `TabsTrigger` "Repositorio" com icone `FolderOpen`
+4. Adicionar `TabsContent` com tres secoes colapsaveis, cada uma filtrando `filtered` pelo grupo de status
+5. No Kanban, adicionar icone `Paperclip` condicional no card quando `c.arquivoUrl` existe
+6. Reutilizar `setViewContrato` / `setDetailOpen` e `openEdit` / `setDeleteId` nos cards do repositorio
+
+### Agrupamento
 
 ```text
-clienteEndereco?: string
-clienteRg?: string
-clienteTelefone?: string  (ja existe no Gerador mas nao no tipo)
-duracaoMeses?: number
-qtdParcelas?: number
-valorParcela?: number
-servicosDescricao?: string
-cidade?: string
+const ativos = filtered.filter(c => c.status === "Assinado");
+const emAndamento = filtered.filter(c => ["Rascunho","Gerado","Enviado","Aguardando Assinatura"].includes(c.status));
+const inativos = filtered.filter(c => ["Vencido","Cancelado"].includes(c.status));
 ```
-
-### Ordem de implementacao
-1. contratosData.ts (placeholders, templates, interface)
-2. ContratosGerador.tsx (novos campos + preview)
-3. ContratosTemplates.tsx (painel atualizado)
 
