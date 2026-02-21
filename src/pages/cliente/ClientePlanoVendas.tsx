@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, Lightbulb, Zap, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar, Plus, Lock, CheckCircle2, FileText, Phone, Mail, MessageSquare, Building2, UserCheck, Layers, BarChart3, History, DollarSign, UserPlus, Handshake, ShieldCheck, Receipt, BarChartHorizontal, Megaphone, Trash2 } from "lucide-react";
+import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, Lightbulb, Zap, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar, Plus, Lock, CheckCircle2, FileText, Phone, Mail, MessageSquare, Building2, UserCheck, Layers, BarChart3, History, DollarSign, UserPlus, Handshake, ShieldCheck, Receipt, BarChartHorizontal, Megaphone, Trash2, FolderOpen, ChevronDown, ChevronRight, Filter } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/KpiCard";
@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from "recharts";
+import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LineChart, Line } from "recharts";
 
 // ── Types ──
 interface InfoAtual { receitaAtual: number; ticketMedio: number; clientesAtivos: number; conversaoMedia: number; }
@@ -111,6 +111,8 @@ export default function ClientePlanoVendas() {
   const [avaliacaoAtiva, setAvaliacaoAtiva] = useState(false);
   const [avaliacaoEscopo, setAvaliacaoEscopo] = useState<EscopoAvaliacao>("empresa");
   const [avaliacaoVendedor, setAvaliacaoVendedor] = useState("");
+  const [historicoFiltro, setHistoricoFiltro] = useState<"todos" | "empresa" | "individual">("todos");
+  const [pastasAbertas, setPastasAbertas] = useState<Record<string, boolean>>({});
 
   const toggleCanal = (c: string) => setEstrutura(prev => ({ ...prev, canaisAquisicao: prev.canaisAquisicao.includes(c) ? prev.canaisAquisicao.filter(x => x !== c) : [...prev.canaisAquisicao, c] }));
   const toggleFerramenta = (f: string) => setEstrutura(prev => ({ ...prev, ferramentas: prev.ferramentas.includes(f) ? prev.ferramentas.filter(x => x !== f) : [...prev.ferramentas, f] }));
@@ -911,41 +913,135 @@ export default function ClientePlanoVendas() {
                 </CardContent>
               </Card>
 
-              {/* Histórico */}
-              {avaliacoesSalvas.length > 0 && (
+              {/* Gráfico de Evolução */}
+              {avaliacoesSalvas.length >= 2 && (
                 <Card className="overflow-hidden">
-                  <CardHeader className="pb-3 bg-gradient-to-r from-slate-500/10 to-transparent border-b border-slate-500/10">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-emerald-500/10">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-slate-500/15"><History className="w-4 h-4 text-slate-400" /></div>
-                      Histórico de Avaliações ({avaliacoesSalvas.length})
+                      <div className="p-1.5 rounded-lg bg-emerald-500/15"><TrendingUp className="w-4 h-4 text-emerald-500" /></div>
+                      Evolução dos Scores
                     </CardTitle>
+                    <p className="text-xs text-muted-foreground">Comparativo visual de todas as avaliações ao longo do tempo</p>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    {avaliacoesSalvas.map((av, i) => {
-                      const nvl = getNivel(av.score);
-                      return (
-                        <div key={av.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="text-xs">#{i + 1}</Badge>
-                            <div>
-                              <span className="text-sm font-medium">{av.data}</span>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <Badge variant="secondary" className="text-[10px]">
-                                  {av.escopo === "empresa" ? "🏢 Empresa" : `👤 ${av.vendedor}`}
-                                </Badge>
-                              </div>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={avaliacoesSalvas.map((av, i) => ({
+                        nome: av.escopo === "empresa" ? `Empresa #${i + 1}` : `${av.vendedor} #${i + 1}`,
+                        score: av.score,
+                        data: av.data,
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="data" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${v}%`} />
+                        <Tooltip content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0].payload;
+                          return (
+                            <div className="bg-popover border rounded-lg p-2 shadow-lg text-xs">
+                              <p className="font-semibold">{d.nome}</p>
+                              <p className="text-muted-foreground">{d.data}</p>
+                              <p className="font-bold text-primary">{d.score}%</p>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold" style={{ color: nvl.cor }}>{av.score}%</span>
-                            <Badge style={{ backgroundColor: nvl.cor }} className="text-white text-[10px]">{nvl.label}</Badge>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        }} />
+                        <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 5, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--background))" }} activeDot={{ r: 7 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </CardContent>
                 </Card>
               )}
+
+              {/* Histórico Organizado */}
+              {avaliacoesSalvas.length > 0 && (() => {
+                const filtradas = avaliacoesSalvas.filter(av =>
+                  historicoFiltro === "todos" ? true : av.escopo === historicoFiltro
+                );
+
+                // Agrupar por pasta: Empresa e por vendedor
+                const grupos: Record<string, Avaliacao[]> = {};
+                filtradas.forEach(av => {
+                  const key = av.escopo === "empresa" ? "🏢 Empresa (Geral)" : `👤 ${av.vendedor}`;
+                  if (!grupos[key]) grupos[key] = [];
+                  grupos[key].push(av);
+                });
+
+                return (
+                  <Card className="overflow-hidden">
+                    <CardHeader className="pb-3 bg-gradient-to-r from-slate-500/10 to-transparent border-b border-slate-500/10">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-slate-500/15"><FolderOpen className="w-4 h-4 text-slate-400" /></div>
+                          Histórico de Avaliações ({filtradas.length})
+                        </CardTitle>
+                        <div className="flex gap-1">
+                          {(["todos", "empresa", "individual"] as const).map(f => (
+                            <Button key={f} size="sm" variant={historicoFiltro === f ? "default" : "ghost"} className="text-[10px] h-7 px-2"
+                              onClick={() => setHistoricoFiltro(f)}>
+                              {f === "todos" ? "Todos" : f === "empresa" ? "🏢 Empresa" : "👤 Individual"}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {Object.entries(grupos).map(([pasta, avaliacoes]) => {
+                        const aberta = pastasAbertas[pasta] !== false; // aberta por padrão
+                        return (
+                          <div key={pasta} className="border rounded-lg overflow-hidden">
+                            <button
+                              className="w-full flex items-center justify-between p-3 bg-muted/20 hover:bg-muted/40 transition-colors text-left"
+                              onClick={() => setPastasAbertas(prev => ({ ...prev, [pasta]: !aberta }))}
+                            >
+                              <div className="flex items-center gap-2">
+                                {aberta ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                                <FolderOpen className="w-4 h-4 text-primary" />
+                                <span className="text-sm font-medium">{pasta}</span>
+                                <Badge variant="secondary" className="text-[10px]">{avaliacoes.length} avaliação(ões)</Badge>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {(() => {
+                                  const ultima = avaliacoes[avaliacoes.length - 1];
+                                  const nvl = getNivel(ultima.score);
+                                  return <Badge style={{ backgroundColor: nvl.cor }} className="text-white text-[10px]">{ultima.score}% — {nvl.label}</Badge>;
+                                })()}
+                              </div>
+                            </button>
+                            {aberta && (
+                              <div className="divide-y">
+                                {avaliacoes.map((av, i) => {
+                                  const nvl = getNivel(av.score);
+                                  const anterior = i > 0 ? avaliacoes[i - 1].score : null;
+                                  const diff = anterior !== null ? av.score - anterior : null;
+                                  return (
+                                    <div key={av.id} className="flex items-center justify-between p-3 hover:bg-muted/10 transition-colors">
+                                      <div className="flex items-center gap-3">
+                                        <Badge variant="outline" className="text-[10px] w-8 justify-center">#{i + 1}</Badge>
+                                        <div>
+                                          <span className="text-sm">{av.data}</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {diff !== null && (
+                                          <span className={`text-[10px] font-medium flex items-center gap-0.5 ${diff > 0 ? "text-emerald-500" : diff < 0 ? "text-red-500" : "text-muted-foreground"}`}>
+                                            {diff > 0 ? <ArrowUpRight className="w-3 h-3" /> : diff < 0 ? <ArrowDownRight className="w-3 h-3" /> : null}
+                                            {diff > 0 ? "+" : ""}{diff}%
+                                          </span>
+                                        )}
+                                        <span className="text-lg font-bold" style={{ color: nvl.cor }}>{av.score}%</span>
+                                        <Badge style={{ backgroundColor: nvl.cor }} className="text-white text-[10px]">{nvl.label}</Badge>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               {/* Último resultado */}
               {ultimaAvaliacao && (
