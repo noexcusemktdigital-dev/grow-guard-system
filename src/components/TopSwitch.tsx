@@ -7,15 +7,15 @@ const levels = ["FRANQUEADORA", "FRANQUEADO", "CLIENTE FINAL"];
 
 export function TopSwitch({ active, onChange }: TopSwitchProps) {
   return (
-    <div className="flex items-center gap-1 rounded-full bg-secondary p-1">
+    <div className="flex items-center gap-0.5 rounded-full bg-muted/60 p-1 border border-border/50">
       {levels.map((level) => (
         <button
           key={level}
           onClick={() => onChange(level)}
           className={`
-            px-5 py-2 rounded-full text-xs font-semibold tracking-wider transition-all duration-200
+            relative px-4 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all duration-300
             ${active === level
-              ? "bg-foreground text-background shadow-lg"
+              ? "bg-foreground text-background shadow-md"
               : "text-muted-foreground hover:text-foreground"
             }
           `}

@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { mockSubscription, mockWallet, getTrialDaysRemaining } from "@/data/clienteData";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
 
@@ -49,40 +50,67 @@ const sistemaSection: SidebarItem[] = [
   { label: "Configurações", icon: Settings, path: "/cliente/configuracoes" },
 ];
 
-function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed: boolean }) {
+function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: boolean; isGated: boolean }) {
   const location = useLocation();
+  const Icon = item.icon;
+  const isActive = location.pathname.startsWith(item.path);
+
+  const link = (
+    <RouterNavLink
+      to={item.path}
+      className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
+        ${collapsed ? "justify-center px-2 mx-1" : ""}
+        ${isGated ? "opacity-40 pointer-events-auto" : ""}
+        ${isActive
+          ? "bg-sidebar-primary/15 text-white font-medium"
+          : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
+        }
+      `}
+    >
+      <div className="relative">
+        <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
+          isActive ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
+        }`} />
+        {isActive && (
+          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-sidebar-primary" />
+        )}
+      </div>
+      {!collapsed && (
+        <>
+          <span className="truncate flex-1">{item.label}</span>
+          {isGated && <Lock className="w-3 h-3 text-sidebar-muted" />}
+        </>
+      )}
+    </RouterNavLink>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" className="text-xs font-medium">
+          {item.label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return link;
+}
+
+function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed: boolean }) {
   const { getGateReason } = useFeatureGate();
 
   return (
-    <nav className="flex flex-col gap-px">
-      {items.map((item) => {
-        const Icon = item.icon;
-        const isActive = location.pathname.startsWith(item.path);
-        const isGated = !!getGateReason(item.path);
-        return (
-          <RouterNavLink
-            key={item.path}
-            to={item.path}
-            className={`flex items-center gap-2.5 px-3 py-2 text-[13px] transition-all duration-150 rounded-lg mx-1.5
-              ${collapsed ? "justify-center px-2" : ""}
-              ${isGated ? "opacity-50" : ""}
-              ${isActive
-                ? "bg-sidebar-primary/15 text-sidebar-primary-foreground font-semibold border-l-[3px] border-sidebar-primary ml-0 pl-2.5"
-                : "text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-white/5"
-              }
-            `}
-            title={collapsed ? item.label : undefined}
-          >
-            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-sidebar-primary" : "text-sidebar-muted"}`} />
-            {!collapsed && (
-              <>
-                <span className="truncate flex-1">{item.label}</span>
-                {isGated && <Lock className="w-3 h-3 text-sidebar-muted" />}
-              </>
-            )}
-          </RouterNavLink>
-        );
-      })}
+    <nav className="flex flex-col gap-[2px]">
+      {items.map((item) => (
+        <NavItem
+          key={item.path}
+          item={item}
+          collapsed={collapsed}
+          isGated={!!getGateReason(item.path)}
+        />
+      ))}
     </nav>
   );
 }
@@ -93,20 +121,24 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
   const [isOpen, setIsOpen] = useState(defaultOpen || isActive);
 
   if (collapsed) {
-    return <SidebarNavItems items={items} collapsed={collapsed} />;
+    return (
+      <div className="py-1">
+        <SidebarNavItems items={items} collapsed={collapsed} />
+      </div>
+    );
   }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="w-full">
-        <div className="flex items-center justify-between cursor-pointer hover:bg-white/5 rounded-md px-3 py-1.5 transition-colors mx-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-muted">
+        <div className="flex items-center justify-between cursor-pointer hover:bg-white/[0.03] rounded-md px-3 py-1.5 transition-colors mx-1.5 group">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-muted group-hover:text-sidebar-foreground transition-colors">
             {title}
           </span>
-          <ChevronDown className={`h-3 w-3 text-sidebar-muted transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`} />
+          <ChevronDown className={`h-3 w-3 text-sidebar-muted transition-transform duration-300 ${isOpen ? "rotate-0" : "-rotate-90"}`} />
         </div>
       </CollapsibleTrigger>
-      <CollapsibleContent className="mt-0.5">
+      <CollapsibleContent className="mt-0.5 animate-accordion-down">
         <SidebarNavItems items={items} collapsed={collapsed} />
       </CollapsibleContent>
     </Collapsible>
@@ -121,29 +153,33 @@ export function ClienteSidebar() {
   const trialUrgent = trialDays <= 3;
   const { simulateTrialExpired, setSimulateTrialExpired, simulateNoCredits, setSimulateNoCredits } = useFeatureGate();
 
+  const creditPercent = (mockWallet.currentBalance / mockWallet.totalIncluded) * 100;
+
   return (
     <aside
-      className={`h-[calc(100vh-49px)] bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 sticky top-[49px] ${collapsed ? "w-[60px]" : "w-60"}`}
+      className={`h-[calc(100vh-56px)] bg-sidebar flex flex-col transition-all duration-300 ease-out sticky top-14 ${collapsed ? "w-[60px]" : "w-[240px]"}`}
     >
       {/* Logo */}
       <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary flex-shrink-0">
-            <span className="text-sm font-bold text-primary-foreground">N</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 flex-shrink-0 shadow-lg shadow-primary/20">
+            <span className="text-sm font-black text-primary-foreground">N</span>
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-bold text-sidebar-primary-foreground tracking-tight">NOEXCUSE</span>
-              <span className="text-[9px] text-sidebar-muted -mt-0.5">Gestão Comercial</span>
+              <span className="text-[13px] font-bold text-white tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                NOEXCUSE
+              </span>
+              <span className="text-[9px] text-sidebar-muted -mt-0.5 tracking-wide">Gestão Comercial</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Menu */}
-      <div className="flex-1 overflow-y-auto py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto py-3 space-y-4">
         <SidebarNavItems items={globalSection} collapsed={collapsed} />
-        <div className="mx-3 border-t border-sidebar-border" />
+        <div className="mx-3 border-t border-sidebar-border/60" />
         <CollapsibleSection title="Vendas" items={vendasSection} collapsed={collapsed} defaultOpen />
         <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
         <CollapsibleSection title="Sistema" items={sistemaSection} collapsed={collapsed} />
@@ -152,36 +188,46 @@ export function ClienteSidebar() {
       {/* Trial Banner */}
       {isTrialing && !collapsed && (
         <div
-          className={`mx-2 mb-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+          className={`mx-2.5 mb-2 p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:scale-[1.01] ${
             trialUrgent
-              ? "bg-destructive/5 border-destructive/20"
-              : "bg-amber-500/5 border-amber-500/20"
+              ? "bg-red-500/8 border-red-500/15"
+              : "bg-amber-500/8 border-amber-500/15"
           }`}
           onClick={() => navigate("/cliente/plano-creditos")}
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className={`text-[11px] font-semibold ${trialUrgent ? "text-destructive" : "text-amber-600 dark:text-amber-400"}`}>
-              Trial · {trialDays} dias
+          <div className="flex items-center justify-between mb-1.5">
+            <span className={`text-[11px] font-semibold ${trialUrgent ? "text-red-400" : "text-amber-400"}`}>
+              Trial · {trialDays} dias restantes
             </span>
           </div>
-          <Progress value={((14 - trialDays) / 14) * 100} className={`h-1 ${trialUrgent ? "[&>div]:bg-destructive" : "[&>div]:bg-amber-500"}`} />
-          <p className={`text-[9px] mt-1 ${trialUrgent ? "text-destructive/70" : "text-amber-600/70 dark:text-amber-400/70"}`}>
+          <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${trialUrgent ? "bg-red-400" : "bg-amber-400"}`}
+              style={{ width: `${((14 - trialDays) / 14) * 100}%` }}
+            />
+          </div>
+          <p className={`text-[9px] mt-1.5 ${trialUrgent ? "text-red-400/60" : "text-amber-400/60"}`}>
             Ver planos →
           </p>
         </div>
       )}
       {isTrialing && collapsed && (
-        <div className="flex justify-center py-2" title={`Trial: ${trialDays} dias`}>
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${trialUrgent ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"}`}>
-            {trialDays}
-          </div>
-        </div>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <div className="flex justify-center py-2 cursor-pointer" onClick={() => navigate("/cliente/plano-creditos")}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${trialUrgent ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-400"}`}>
+                {trialDays}
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right">Trial: {trialDays} dias</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Demo Toggles */}
       {!collapsed && (
-        <div className="mx-2 mb-2 p-2.5 rounded-lg border border-dashed border-sidebar-border bg-white/5 space-y-2">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-sidebar-muted">Demo</span>
+        <div className="mx-2.5 mb-2 p-2.5 rounded-lg border border-dashed border-sidebar-border bg-white/[0.02] space-y-2">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-sidebar-muted/70">Demo</span>
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-sidebar-foreground">Trial expirado</span>
             <Switch checked={simulateTrialExpired} onCheckedChange={setSimulateTrialExpired} className="scale-75" />
@@ -193,28 +239,49 @@ export function ClienteSidebar() {
         </div>
       )}
 
-      {/* Footer */}
+      {/* Footer — Credits */}
       {!collapsed ? (
-        <div className="px-3 py-2.5 border-t border-sidebar-border">
-          <div className="flex items-center justify-between text-[11px] mb-1">
+        <div className="px-3 py-3 border-t border-sidebar-border">
+          <div className="flex items-center justify-between text-[11px] mb-1.5">
             <span className="text-sidebar-muted">Créditos</span>
-            <span className="font-medium text-sidebar-primary-foreground">{mockWallet.currentBalance.toLocaleString("pt-BR")}/{mockWallet.totalIncluded.toLocaleString("pt-BR")}</span>
+            <span className="font-medium text-white/90 tabular-nums">
+              {mockWallet.currentBalance.toLocaleString("pt-BR")}/{mockWallet.totalIncluded.toLocaleString("pt-BR")}
+            </span>
           </div>
-          <Progress value={(mockWallet.currentBalance / mockWallet.totalIncluded) * 100} className="h-1 [&>div]:bg-sidebar-primary" />
-          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 gap-1 mt-1.5 border-sidebar-border text-sidebar-foreground">
-            <Zap className="w-2.5 h-2.5" />
-            {mockSubscription.planName}{isTrialing && " · Trial"}
-          </Badge>
+          <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-sidebar-primary transition-all duration-500"
+              style={{ width: `${creditPercent}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-1.5 mt-2">
+            <Badge variant="outline" className="text-[9px] px-2 py-0 h-[18px] gap-1 border-sidebar-border text-sidebar-foreground rounded-full">
+              <Zap className="w-2.5 h-2.5 text-sidebar-primary" />
+              {mockSubscription.planName}{isTrialing && " · Trial"}
+            </Badge>
+          </div>
         </div>
       ) : (
-        <div className="flex justify-center py-2.5 border-t border-sidebar-border" title="Créditos">
-          <CreditCard className="h-3.5 w-3.5 text-sidebar-muted" />
-        </div>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <div className="flex justify-center py-3 border-t border-sidebar-border cursor-default">
+              <div className="relative">
+                <CreditCard className="h-3.5 w-3.5 text-sidebar-muted" />
+                {creditPercent < 25 && (
+                  <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-400" />
+                )}
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            Créditos: {mockWallet.currentBalance}/{mockWallet.totalIncluded}
+          </TooltipContent>
+        </Tooltip>
       )}
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-10 border-t border-sidebar-border text-sidebar-muted hover:text-sidebar-primary-foreground transition-colors"
+        className="flex items-center justify-center h-10 border-t border-sidebar-border text-sidebar-muted hover:text-white hover:bg-white/[0.03] transition-all duration-200"
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>

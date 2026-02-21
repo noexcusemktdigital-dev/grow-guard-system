@@ -12,17 +12,21 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle, badge, icon, actions, backButton }: PageHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-4 flex-wrap">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3.5">
         {backButton}
         {icon && (
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/5">
             {icon}
           </div>
         )}
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <h1 className="page-header-title">{title}</h1>
-            {badge && <Badge variant="secondary" className="text-[10px] font-semibold">{badge}</Badge>}
+            {badge && (
+              <Badge variant="secondary" className="text-[10px] font-semibold rounded-full px-2.5">
+                {badge}
+              </Badge>
+            )}
           </div>
           {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>

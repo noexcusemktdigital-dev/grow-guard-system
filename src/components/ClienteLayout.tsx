@@ -11,7 +11,7 @@ export function ClienteLayout() {
       <div className="flex min-h-screen w-full">
         <ClienteSidebar />
         <main className="flex-1 overflow-x-hidden relative">
-          <div key={location.pathname} className="animate-slide-up p-6 lg:p-8">
+          <div key={location.pathname} className="page-enter p-6 lg:p-8">
             <Outlet />
           </div>
           <FeatureGateOverlay />
