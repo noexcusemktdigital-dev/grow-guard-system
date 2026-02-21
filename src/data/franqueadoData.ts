@@ -37,6 +37,10 @@ export interface FranqueadoLead {
   criadoEm: string;
   ultimoContato: string;
   notas?: string;
+  diagnosticoId?: string;
+  contratoId?: string;
+  propostaId?: string;
+  tarefas?: { id: string; titulo: string; concluida: boolean; data: string }[];
 }
 
 export interface FranqueadoProposta {
@@ -217,13 +221,13 @@ export const etapasCRM = [
 
 export function getFranqueadoLeads(): FranqueadoLead[] {
   return [
-    { id: "L-1", nome: "Carlos Mendes", email: "carlos@empresa.com", telefone: "(41) 99999-1111", empresa: "Tech Solutions", etapa: "Proposta", valor: 4500, origem: "Indicação", criadoEm: "2026-02-01", ultimoContato: "2026-02-20" },
-    { id: "L-2", nome: "Ana Beatriz", email: "ana@startup.io", telefone: "(41) 99999-2222", empresa: "StartUp.io", etapa: "Diagnóstico", valor: 3200, origem: "Site", criadoEm: "2026-02-05", ultimoContato: "2026-02-19" },
+    { id: "L-1", nome: "Carlos Mendes", email: "carlos@empresa.com", telefone: "(41) 99999-1111", empresa: "Tech Solutions", etapa: "Proposta", valor: 4500, origem: "Indicação", criadoEm: "2026-02-01", ultimoContato: "2026-02-20", propostaId: "P-1", tarefas: [{ id: "T-1", titulo: "Enviar proposta atualizada", concluida: false, data: "2026-02-22" }] },
+    { id: "L-2", nome: "Ana Beatriz", email: "ana@startup.io", telefone: "(41) 99999-2222", empresa: "StartUp.io", etapa: "Diagnóstico", valor: 3200, origem: "Site", criadoEm: "2026-02-05", ultimoContato: "2026-02-19", diagnosticoId: "D-2" },
     { id: "L-3", nome: "Roberto Lima", email: "roberto@corp.com", telefone: "(41) 99999-3333", empresa: "Corp Brasil", etapa: "Primeiro Contato", origem: "Evento", criadoEm: "2026-02-15", ultimoContato: "2026-02-18" },
     { id: "L-4", nome: "Juliana Costa", email: "ju@digital.com", telefone: "(41) 99999-4444", empresa: "Digital Co", etapa: "Follow-up", valor: 2800, origem: "LinkedIn", criadoEm: "2026-02-10", ultimoContato: "2026-02-20" },
     { id: "L-5", nome: "Fernando Alves", email: "fer@agency.com", telefone: "(41) 99999-5555", empresa: "Agency Pro", etapa: "Novo Lead", origem: "Indicação", criadoEm: "2026-02-20", ultimoContato: "2026-02-20" },
-    { id: "L-6", nome: "Patricia Rocha", email: "pat@loja.com", telefone: "(41) 99999-6666", empresa: "Loja Express", etapa: "Estratégia", valor: 5000, origem: "Google Ads", criadoEm: "2026-01-28", ultimoContato: "2026-02-17" },
-    { id: "L-7", nome: "Marcos Silva", email: "marcos@ind.com", telefone: "(41) 99999-7777", empresa: "Indústria MS", etapa: "Venda", valor: 6200, origem: "Indicação", criadoEm: "2026-01-15", ultimoContato: "2026-02-15" },
+    { id: "L-6", nome: "Patricia Rocha", email: "pat@loja.com", telefone: "(41) 99999-6666", empresa: "Loja Express", etapa: "Estratégia", valor: 5000, origem: "Google Ads", criadoEm: "2026-01-28", ultimoContato: "2026-02-17", propostaId: "P-2" },
+    { id: "L-7", nome: "Marcos Silva", email: "marcos@ind.com", telefone: "(41) 99999-7777", empresa: "Indústria MS", etapa: "Venda", valor: 6200, origem: "Indicação", criadoEm: "2026-01-15", ultimoContato: "2026-02-15", diagnosticoId: "D-1", propostaId: "P-3", contratoId: "CT-1", tarefas: [{ id: "T-2", titulo: "Reunião de kickoff", concluida: true, data: "2026-02-16" }, { id: "T-3", titulo: "Enviar onboarding", concluida: false, data: "2026-02-25" }] },
     { id: "L-8", nome: "Camila Duarte", email: "camila@rest.com", telefone: "(41) 99999-8888", etapa: "Perdido", valor: 1500, origem: "Site", criadoEm: "2026-01-20", ultimoContato: "2026-02-05" },
   ];
 }
@@ -371,15 +375,69 @@ export function getFranqueadoComunicadosUnidade(): FranqueadoComunicado[] {
   ];
 }
 
-export function getDiagnosticoPerguntas() {
+export interface DiagnosticoNOEPergunta {
+  id: number;
+  bloco: string;
+  pergunta: string;
+  tipo: "sim_nao" | "selecao" | "numero";
+  opcoes?: string[];
+  peso: number;
+}
+
+export interface DiagnosticoNOEResultado {
+  id: string;
+  leadId: string;
+  leadNome: string;
+  empresa: string;
+  pontuacao: number;
+  nivel: "Inicial" | "Intermediário" | "Avançado";
+  gargalos: string[];
+  recomendacoes: string[];
+  respostas: Record<number, string>;
+  criadoEm: string;
+}
+
+export function getDiagnosticoPerguntas(): DiagnosticoNOEPergunta[] {
   return [
-    { id: 1, secao: "Presença Digital", pergunta: "A empresa possui site atualizado?", tipo: "sim_nao" as const },
-    { id: 2, secao: "Presença Digital", pergunta: "Quais redes sociais utiliza?", tipo: "multipla" as const, opcoes: ["Instagram", "Facebook", "LinkedIn", "TikTok", "YouTube", "Nenhuma"] },
-    { id: 3, secao: "Presença Digital", pergunta: "Frequência de postagens?", tipo: "selecao" as const, opcoes: ["Diário", "Semanal", "Quinzenal", "Mensal", "Irregular", "Não posta"] },
-    { id: 4, secao: "Marketing", pergunta: "Investe em tráfego pago?", tipo: "sim_nao" as const },
-    { id: 5, secao: "Marketing", pergunta: "Orçamento mensal de marketing?", tipo: "selecao" as const, opcoes: ["Até R$500", "R$500-2.000", "R$2.000-5.000", "R$5.000-10.000", "Acima de R$10.000", "Não investe"] },
-    { id: 6, secao: "Vendas", pergunta: "Possui processo de vendas estruturado?", tipo: "sim_nao" as const },
-    { id: 7, secao: "Vendas", pergunta: "Utiliza CRM?", tipo: "sim_nao" as const },
-    { id: 8, secao: "Vendas", pergunta: "Faturamento mensal médio?", tipo: "selecao" as const, opcoes: ["Até R$10k", "R$10k-50k", "R$50k-100k", "R$100k-500k", "Acima de R$500k"] },
+    // Marketing
+    { id: 1, bloco: "Marketing", pergunta: "Investimento atual em marketing?", tipo: "selecao", opcoes: ["Não investe", "Até R$ 500", "R$ 500 - R$ 2.000", "R$ 2.000 - R$ 5.000", "R$ 5.000 - R$ 10.000", "Acima de R$ 10.000"], peso: 3 },
+    { id: 2, bloco: "Marketing", pergunta: "Canais ativos de marketing?", tipo: "selecao", opcoes: ["Nenhum", "1-2 canais", "3-4 canais", "5+ canais"], peso: 2 },
+    { id: 3, bloco: "Marketing", pergunta: "Volume de leads mensal?", tipo: "selecao", opcoes: ["Nenhum", "1-10", "11-30", "31-50", "51-100", "100+"], peso: 3 },
+    { id: 4, bloco: "Marketing", pergunta: "CAC estimado?", tipo: "selecao", opcoes: ["Não sabe", "Até R$ 50", "R$ 50 - R$ 150", "R$ 150 - R$ 300", "Acima de R$ 300"], peso: 2 },
+    // Comercial
+    { id: 5, bloco: "Comercial", pergunta: "Possui processo de vendas estruturado?", tipo: "sim_nao", peso: 3 },
+    { id: 6, bloco: "Comercial", pergunta: "Taxa de conversão estimada?", tipo: "selecao", opcoes: ["Não sabe", "Até 5%", "5% - 15%", "15% - 30%", "Acima de 30%"], peso: 3 },
+    { id: 7, bloco: "Comercial", pergunta: "Tamanho da equipe comercial?", tipo: "selecao", opcoes: ["Somente o dono", "1-2 pessoas", "3-5 pessoas", "6-10 pessoas", "10+"], peso: 2 },
+    { id: 8, bloco: "Comercial", pergunta: "Estrutura de atendimento?", tipo: "selecao", opcoes: ["Informal", "WhatsApp apenas", "Multicanal sem CRM", "Multicanal com CRM", "Estrutura completa"], peso: 2 },
+    // Receita
+    { id: 9, bloco: "Receita", pergunta: "Receita mensal atual?", tipo: "selecao", opcoes: ["Até R$ 10k", "R$ 10k - R$ 50k", "R$ 50k - R$ 100k", "R$ 100k - R$ 500k", "Acima de R$ 500k"], peso: 3 },
+    { id: 10, bloco: "Receita", pergunta: "Ticket médio?", tipo: "selecao", opcoes: ["Até R$ 500", "R$ 500 - R$ 2.000", "R$ 2.000 - R$ 5.000", "R$ 5.000 - R$ 10.000", "Acima de R$ 10.000"], peso: 2 },
+    { id: 11, bloco: "Receita", pergunta: "Quantidade de clientes ativos?", tipo: "selecao", opcoes: ["0-5", "6-15", "16-30", "31-50", "50+"], peso: 2 },
+    { id: 12, bloco: "Receita", pergunta: "Tamanho do time interno?", tipo: "selecao", opcoes: ["1-3", "4-10", "11-20", "21-50", "50+"], peso: 1 },
+    // Objetivos
+    { id: 13, bloco: "Objetivos", pergunta: "Meta de crescimento?", tipo: "selecao", opcoes: ["Até 10%", "10% - 30%", "30% - 50%", "50% - 100%", "Acima de 100%"], peso: 2 },
+    { id: 14, bloco: "Objetivos", pergunta: "Prazo para atingir meta?", tipo: "selecao", opcoes: ["3 meses", "6 meses", "12 meses", "18 meses", "24+ meses"], peso: 1 },
+    { id: 15, bloco: "Objetivos", pergunta: "Meta de faturamento mensal?", tipo: "selecao", opcoes: ["Até R$ 20k", "R$ 20k - R$ 50k", "R$ 50k - R$ 100k", "R$ 100k - R$ 300k", "Acima de R$ 300k"], peso: 2 },
+  ];
+}
+
+export function getDiagnosticosNOE(): DiagnosticoNOEResultado[] {
+  return [
+    {
+      id: "D-1", leadId: "L-7", leadNome: "Marcos Silva", empresa: "Indústria MS",
+      pontuacao: 72, nivel: "Avançado",
+      gargalos: ["CAC elevado para o segmento", "Equipe comercial pequena para a demanda"],
+      recomendacoes: ["Implementar automação de marketing para reduzir CAC", "Estruturar funil de vendas com CRM", "Investir em tráfego pago segmentado", "Criar processo de nutrição de leads"],
+      respostas: { 1: "R$ 5.000 - R$ 10.000", 2: "3-4 canais", 3: "31-50", 4: "R$ 150 - R$ 300", 5: "Sim", 6: "15% - 30%", 7: "3-5 pessoas", 8: "Multicanal com CRM", 9: "R$ 100k - R$ 500k", 10: "R$ 5.000 - R$ 10.000", 11: "31-50", 12: "11-20", 13: "30% - 50%", 14: "12 meses", 15: "R$ 100k - R$ 300k" },
+      criadoEm: "2026-01-20",
+    },
+    {
+      id: "D-2", leadId: "L-2", leadNome: "Ana Beatriz", empresa: "StartUp.io",
+      pontuacao: 35, nivel: "Inicial",
+      gargalos: ["Sem processo de vendas estruturado", "Baixo investimento em marketing", "Sem CRM ou automação", "Volume de leads insuficiente"],
+      recomendacoes: ["Definir persona e ICP antes de investir", "Começar com tráfego pago de baixo ticket", "Implementar CRM básico", "Criar landing page otimizada", "Estruturar script de vendas"],
+      respostas: { 1: "Até R$ 500", 2: "1-2 canais", 3: "1-10", 4: "Não sabe", 5: "Não", 6: "Até 5%", 7: "Somente o dono", 8: "WhatsApp apenas", 9: "Até R$ 10k", 10: "Até R$ 500", 11: "0-5", 12: "1-3", 13: "50% - 100%", 14: "6 meses", 15: "R$ 20k - R$ 50k" },
+      criadoEm: "2026-02-10",
+    },
   ];
 }
