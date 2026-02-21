@@ -282,9 +282,9 @@ export default function ClienteAgentesIA() {
       </div>
 
       {/* Main layout: cards + playground */}
-      <div className={`grid gap-6 transition-all duration-300 ${selectedAgent ? "grid-cols-1 lg:grid-cols-5" : "grid-cols-1"}`}>
+      <div className="grid gap-6 grid-cols-1">
         {/* Agent cards */}
-        <div className={`space-y-4 ${selectedAgent ? "lg:col-span-2" : ""}`}>
+        <div className="space-y-4">
           {agents.length === 0 && (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -298,15 +298,15 @@ export default function ClienteAgentesIA() {
             </Card>
           )}
 
-          <div className={`grid gap-4 ${selectedAgent ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"}`}>
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
             {agents.map((agent, i) => (
               <Card
                 key={agent.id}
-                className={`relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer group ${
+                className={`relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
                   agent.active ? "" : "opacity-50"
-                } ${selectedAgent === agent.id ? "ring-2 ring-primary shadow-lg" : ""}`}
+                }`}
                 style={{ animationDelay: `${i * 80}ms` }}
-                onClick={() => agent.active && openPlayground(agent.id)}
+                onClick={() => {}}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${agentGradients[agent.type]} opacity-60`} />
 
@@ -369,111 +369,12 @@ export default function ClienteAgentesIA() {
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
-                    <Button
-                      size="sm"
-                      className="flex-1 text-xs"
-                      disabled={!agent.active}
-                      onClick={(e) => { e.stopPropagation(); openPlayground(agent.id); }}
-                    >
-                      <Sparkles className="w-3 h-3 mr-1" /> Testar
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         </div>
-
-        {/* Playground panel */}
-        {selectedAgent && currentAgent && (
-          <div className="lg:col-span-3 animate-fade-in">
-            <Card className="h-[600px] flex flex-col overflow-hidden">
-              <div className={`flex items-center justify-between px-5 py-3 border-b bg-gradient-to-r ${agentGradients[currentAgent.type]}`}>
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${agentAccent[currentAgent.type]} bg-background/60`}>
-                    {(() => { const AgIcon = agentIcons[currentAgent.type]; return <AgIcon className="w-4 h-4" />; })()}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">{currentAgent.name}</h3>
-                    <p className="text-[10px] text-muted-foreground">Playground de teste • {currentAgent.tone}</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedAgent(null)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <ScrollArea className="flex-1 p-4">
-                {chatMessages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-16">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                      {(() => { const AgIcon = agentIcons[currentAgent.type]; return <AgIcon className="w-8 h-8 text-primary" />; })()}
-                    </div>
-                    <p className="text-sm font-medium">Teste o agente {currentAgent.name}</p>
-                    <p className="text-xs mt-1 max-w-xs">Envie uma mensagem para simular como o agente responderia.</p>
-                    <div className="flex flex-wrap gap-2 mt-4 justify-center">
-                      {["Quero saber sobre preços", "Agendar uma demo", "Suporte técnico"].map(s => (
-                        <Button key={s} variant="outline" size="sm" className="text-[10px] h-7" onClick={() => setChatInput(s)}>
-                          {s}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      {msg.role === "assistant" && (
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                          <Bot className="w-3.5 h-3.5 text-primary" />
-                        </div>
-                      )}
-                      <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground rounded-br-md"
-                          : "bg-muted/50 border rounded-bl-md"
-                      }`}>
-                        {msg.content}
-                      </div>
-                      {msg.role === "user" && (
-                        <div className="w-7 h-7 rounded-full bg-foreground/10 flex items-center justify-center shrink-0 mt-1">
-                          <User className="w-3.5 h-3.5" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {isTyping && (
-                    <div className="flex gap-2 items-center">
-                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Bot className="w-3.5 h-3.5 text-primary" />
-                      </div>
-                      <div className="bg-muted/50 border rounded-2xl rounded-bl-md px-4 py-3 flex gap-1">
-                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                      </div>
-                    </div>
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
-              </ScrollArea>
-
-              <div className="border-t p-3 flex gap-2">
-                <Input
-                  placeholder="Simule uma mensagem do cliente..."
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                  className="flex-1 text-sm"
-                />
-                <Button size="icon" onClick={sendMessage} disabled={!chatInput.trim() || isTyping}>
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )}
       </div>
 
       {/* Config Sheet — 6 abas */}
