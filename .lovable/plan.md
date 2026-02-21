@@ -1,157 +1,347 @@
 
+# Modulo Metas & Ranking -- Gamificado e Integrado
 
-# Redesign UX/UI do NOE Academy -- Visual, Didatico e Moderno
+## Resumo
 
-## Problemas Identificados
-
-1. **Header repetitivo**: O header "NOE Academy" com progresso aparece sempre, mesmo nas sub-telas (aula, quiz), ocupando espaco sem necessidade
-2. **Abas confusas**: As 6 abas sao pequenas, sem descricao do que cada uma faz, e parecem "soltas" sem hierarquia clara
-3. **Cards de modulo monotonos**: Os gradientes sao cores chapadas sem textura, sem icone representativo, sem indicacao visual clara do status
-4. **Detalhe do modulo**: A lista de aulas e flat demais -- aulas concluidas com strikethrough parecem "apagadas" ao inves de "completas com orgulho"
-5. **Tela de aula**: O video ocupa a tela inteira sem sidebar de navegacao, breadcrumb simples demais, botao "Marcar como Concluida" sem destaque visual
-6. **Minha Jornada**: KPIs genericos sem visualizacao atraente, cards de modulo sem hierarquia visual
-7. **Quiz**: Tela pre-prova sem apelo visual, questoes sem numeracao contextual destacada
-8. **Certificados**: Card simples demais, preview do certificado sem impacto visual
+Criar o modulo "Metas & Ranking" dentro da secao Comercial, integrado aos dados reais do Financeiro (mockData.ts) e Contratos (contratosData.ts). O modulo sera 100% automatico, gamificado, visualmente forte e usavel tanto pela franqueadora quanto pelo franqueado. Tudo com mock data, usando os dados ja existentes como fonte de verdade.
 
 ---
 
-## 1. Header Contextual (`Academy.tsx`)
-
-### Na tela principal (com abas)
-- Header com gradiente sutil, titulo "NOE Academy" grande com icone animado (GraduationCap)
-- Subtitulo descritivo
-- Barra de progresso circular (ring) ao inves de barra linear fina
-- Contadores rapidos: "X modulos concluidos", "Y certificados"
-
-### Nas sub-telas (modulo, aula, quiz)
-- Header compacto: apenas breadcrumb estilizado + mini progresso
-- Esconder as abas e o header grande
-
----
-
-## 2. Abas Visuais Melhoradas (`Academy.tsx`)
-
-- Cards maiores com **descricao curta** abaixo do nome (ex: "Veja todas as trilhas disponiveis")
-- Contagem de itens dentro de cada aba (ex: "4 trilhas", "2 certificados")
-- Efeito de hover com elevacao + brilho sutil
-- Aba ativa com borda lateral grossa (nao apenas bottom line fina)
-- Separar abas de usuario e admin visualmente (divisor com label "Administracao")
-
----
-
-## 3. Grid de Modulos Redesenhado (`AcademyModules.tsx`)
-
-- Cards com layout horizontal no desktop (imagem/gradiente a esquerda, conteudo a direita) para melhor escaneabilidade
-- Icone tematico por categoria dentro do gradiente (nao so cor chapada)
-- Badge de progresso mais visual: circulo com % ao inves de barra fina
-- Status visual claro: checkmark grande verde se 100%, indicador de "em andamento" pulsante
-- Botao "Continuar" ou "Iniciar" com seta animada no hover
-- Filtros de categoria como pills com icone + contagem
-
----
-
-## 4. Detalhe do Modulo Redesenhado (`AcademyModuleDetail.tsx`)
-
-- Header com gradiente + icone grande da categoria + stats em cards inline (aulas, horas, versao)
-- Lista de aulas como "timeline vertical" com linha conectora entre os itens
-- Aulas concluidas: icone check verde com fundo, titulo normal (sem strikethrough), badge "Concluida"
-- Aula atual/em progresso: highlight com borda colorida + badge "Em andamento"
-- Aulas pendentes: numeracao sutil, aparencia mais clara
-- Card da prova com visual mais impactante: gradiente, icone Trophy grande, call-to-action claro
-- Sidebar lateral (desktop) com mini-mapa das aulas para navegacao rapida
-
----
-
-## 5. Player de Aula Melhorado (`AcademyLesson.tsx`)
-
-- Layout com sidebar lateral no desktop: video (70%) + painel lateral (30%)
-  - Painel lateral: lista de aulas do modulo com status visual, navegacao direta
-- Video com cantos arredondados e sombra
-- Abaixo do video: card com titulo, descricao, duracao, materiais
-- Botao "Marcar como Concluida" mais visual: grande, verde, com animacao de confetti ao clicar
-- Barra de progresso do modulo no topo (mini, contextual)
-- Navegacao inferior mais visual: cards compactos com preview da proxima/anterior aula
-
----
-
-## 6. Minha Jornada Visual (`AcademyJourney.tsx`)
-
-- KPIs no topo com icones grandes, cores vibrantes, e animacao de contagem
-- Card "Continue de onde parou" mais visual: thumbnail do modulo, titulo da aula, botao CTA grande
-- Progress por modulo em cards visuais com:
-  - Mini gradiente da categoria no topo
-  - Barra de progresso estilizada com marcadores
-  - Proxima aula recomendada como link direto
-  - Indicadores visuais: estrela para aprovado, relogio para em andamento
-
----
-
-## 7. Quiz Melhorado (`AcademyQuiz.tsx`)
-
-### Pre-prova
-- Card visual grande com gradiente, icone Trophy, informacoes claras em grid
-- Historico de tentativas em timeline visual (nao tabela)
-- Botao CTA destacado com contagem regressiva visual das tentativas
-
-### Prova ativa
-- Questao com numero grande e destaque visual
-- Opcoes como cards clicaveis (nao radio buttons soltos)
-- Barra de progresso com indicadores de questoes respondidas/pendentes
-- Timer mais visual (se aplicavel)
-
-### Resultado
-- Tela de resultado com animacao (confetti se aprovado)
-- Score em circulo grande animado
-- Detalhamento em acordeao (nao tudo aberto)
-
----
-
-## 8. Certificados Premium (`AcademyCertificates.tsx`)
-
-- Cards com miniatura visual do certificado (simulada)
-- Preview do certificado mais elaborado:
-  - Borda dupla decorativa
-  - Selo/stamp visual
-  - Tipografia mais sofisticada
-  - Fundo com pattern sutil
-  - Gradiente dourado
-
----
-
-## 9. Efeitos e Animacoes Gerais
-
-- Transicoes entre telas com fade-in suave (classe `animate-fade-in`)
-- Cards com hover: elevacao + brilho sutil
-- Botoes com transicao de gap/scale no hover
-- Progresso com animacao de fill
-- Icones de status com micro-animacao (pulse no "em andamento")
-- Loading skeleton enquanto troca de tela
-
----
-
-## Detalhes Tecnicos
-
-### Arquivos modificados
+## Arquitetura de Arquivos
 
 ```text
-src/pages/Academy.tsx                        -- header contextual, abas melhoradas, separador admin
-src/components/academy/AcademyModules.tsx     -- grid horizontal, filtros com icone, progress circular
-src/components/academy/AcademyModuleDetail.tsx -- timeline de aulas, sidebar mini-mapa, visual prova
-src/components/academy/AcademyLesson.tsx      -- layout com sidebar, video estilizado, botao animado
-src/components/academy/AcademyJourney.tsx     -- KPIs visuais, card CTA, progress cards
-src/components/academy/AcademyQuiz.tsx        -- opcoes como cards, resultado animado, historico visual
-src/components/academy/AcademyCertificates.tsx -- miniatura visual, preview premium
-src/components/academy/AcademyReports.tsx     -- KPIs coloridos, tabela com barras visuais
-src/data/academyData.ts                       -- adicionar icone e descricao por categoria
+CRIAR:
+src/data/metasRankingData.ts                -- tipos, interfaces, mock data, helpers de integracao
+src/pages/MetasRanking.tsx                  -- pagina principal com abas internas e navegacao
+src/components/metas/MetasDashboard.tsx     -- dashboard geral (franqueadora + franqueado)
+src/components/metas/MetasGoals.tsx         -- configuracao e visualizacao de metas
+src/components/metas/MetasRanking.tsx       -- ranking dinamico com podio e lista completa
+src/components/metas/MetasCampaigns.tsx     -- campanhas & premiacoes
+src/components/metas/MetasConfig.tsx        -- configuracao admin (pesos, niveis, regras)
+
+MODIFICAR:
+src/components/FranqueadoraSidebar.tsx       -- remover disabled do item Metas & Ranking
+src/App.tsx                                 -- adicionar rota /franqueadora/metas
 ```
 
-### Estrategia de Implementacao
+---
 
-Implementar em 3 etapas por causa do tamanho:
+## 1. Dados e Integracao (`src/data/metasRankingData.ts`)
 
-**Etapa 1**: Academy.tsx (header + abas) + AcademyModules.tsx (grid redesenhado) + academyData.ts (helpers extras)
+### Integracao com Financeiro e Contratos
 
-**Etapa 2**: AcademyModuleDetail.tsx (timeline) + AcademyLesson.tsx (layout sidebar) + AcademyJourney.tsx (visual)
+O modulo puxa dados automaticamente das fontes existentes:
 
-**Etapa 3**: AcademyQuiz.tsx (cards clicaveis) + AcademyCertificates.tsx (premium) + AcademyReports.tsx (polish)
+- **Receita real**: `getReceitasForMonth(mes)` e `getMonthSummary(mes)` de `mockData.ts`
+- **Contratos ativos**: `mockContratos` de `contratosData.ts`, filtrados por status "Assinado"
+- **Franqueados**: `franqueados` de `mockData.ts`
+- **Receita por produto**: campo `receitaPorProduto` do `getMonthSummary()`
 
+### Tipos e Interfaces
+
+```text
+GoalType = "revenue" | "contracts" | "franchise" | "saas" | "custom"
+GoalAppliesTo = "all" | "unit"
+FranchiseLevel = "Iniciante" | "Crescimento" | "Ouro" | "Elite" | "Platinum"
+CampaignStatus = "active" | "upcoming" | "finished"
+
+Goal:
+  id, name, type, targetValue, month, appliesTo,
+  unitId (opcional), weight, rewardDescription
+
+FranchiseScore:
+  franchiseId, franchiseName, month,
+  revenue, contracts, points, goalPercent,
+  growthPercent, level, levelProgress
+
+Campaign:
+  id, name, periodStart, periodEnd, goalType,
+  targetValue, rewardDescription, status
+
+PointsConfig:
+  revenuePerPoint (ex: cada R$1000 = 10 pts)
+  contractPoints (ex: cada contrato = 50 pts)
+  franchiseSalePoints (ex: cada franquia = 500 pts)
+  goalBonusPoints (ex: meta batida = 200 pts)
+
+LevelThreshold:
+  level, minPoints, icon, color, gradient
+```
+
+### Helpers de Calculo Automatico
+
+- `calculateFranchiseRevenue(franchiseId, month)` -- usa `getReceitasForMonth` filtrando por `franqueadoId`
+- `calculateFranchiseContracts(franchiseId, month)` -- filtra `mockContratos` por `franqueadoId` + status + periodo
+- `calculatePoints(franchiseId, month)` -- aplica formula de pontuacao sobre receita + contratos
+- `calculateGoalProgress(goal, franchiseId?)` -- retorna % atingido
+- `getFranchiseLevel(totalPoints)` -- retorna nivel atual baseado em thresholds
+- `getRankingForMonth(month)` -- retorna array de FranchiseScore ordenado por pontos
+- `getNetworkTotals(month)` -- faturamento total da rede, contratos totais, meta da rede
+- `getEvolutionData(franchiseId?, months?)` -- dados para graficos de evolucao (6 meses)
+
+### Mock Data
+
+- 3-4 franquias com dados variados (usando as 2 de `mockData.ts` + 1-2 extras para ranking mais interessante)
+- Metas mensais mock: meta de faturamento da rede R$80.000, meta de contratos 10/mes
+- 1 campanha ativa: "Desafio Fevereiro -- Foco Assessoria"
+- 1 campanha finalizada com resultado
+- Config de pontuacao: R$1000 = 10pts, contrato = 50pts, franquia vendida = 500pts, meta batida = 200pts bonus
+- 5 niveis com thresholds: Iniciante (0), Crescimento (500), Ouro (1500), Elite (3000), Platinum (6000)
+
+---
+
+## 2. Pagina Principal (`src/pages/MetasRanking.tsx`)
+
+### Estrutura
+
+Seguir o padrao visual do `Academy.tsx` (header contextual + abas como cards coloridos).
+
+### Header
+
+- Titulo "Metas & Ranking" com icone Trophy
+- Badge "Franqueadora"
+- Subtitulo: "Performance, gamificacao e metas da rede"
+- Mini KPIs no header: faturamento do mes, % meta atingida, posicao no ranking (para franqueado)
+
+### Abas Internas
+
+1. **Dashboard** (icone BarChart3, cor azul) -- visao geral estrategica
+2. **Metas** (icone Target, cor emerald) -- metas configuradas e progresso
+3. **Ranking** (icone Trophy, cor amber/dourado) -- ranking gamificado
+4. **Campanhas** (icone Zap, cor purple) -- campanhas & premiacoes
+5. **Configuracao** (icone Settings, cor rose) -- admin, pesos e niveis
+
+### Navegacao
+
+State `activeTab` controla a aba visivel. Sem sub-views complexas (diferente do Academy).
+
+---
+
+## 3. Dashboard Geral (`src/components/metas/MetasDashboard.tsx`)
+
+### Visao Franqueadora (padrao)
+
+**KPI Cards (topo, 4-5 cards)**:
+- Faturamento total da rede (valor + icone DollarSign + cor verde)
+- Meta da rede (barra de progresso circular com %)
+- Contratos fechados no mes (numero grande)
+- Novos clientes (numero + trend)
+- Certificados/Premiacoes emitidos
+
+**Grafico: Meta vs Real** (BarChart, recharts):
+- Barras lado a lado: meta (cinza transparente) vs real (cor primaria)
+- Por produto: Assessoria, SaaS, Sistema, Franquia
+
+**Grafico: Evolucao 6 meses** (LineChart, recharts):
+- Linhas por franquia, mostrando faturamento mensal
+- Tooltip com detalhes
+
+**Top 3 do Mes** (cards visuais):
+- Podio simplificado: 1o, 2o, 3o lugar com medalhas coloridas
+- Nome da franquia + faturamento + % meta + pontos
+
+**Receita por Produto** (PieChart ou barras horizontais):
+- Assessoria, SaaS, Sistema, Franquia com cores distintas
+
+### Visao Franqueado (alternativa -- controlada por toggle ou deteccao futura)
+
+- Minha meta do mes (barra de progresso animada grande)
+- Valor faturado vs meta
+- Contratos fechados
+- Posicao no ranking (destaque visual)
+- Proximo nivel (barra + nome do nivel)
+- Badge atual (Ouro, Prata, etc.)
+- Historico 3 meses (mini grafico)
+
+---
+
+## 4. Metas (`src/components/metas/MetasGoals.tsx`)
+
+### Lista de Metas Ativas
+
+Cards visuais por meta, cada um com:
+- Nome + tipo (badge colorido por tipo)
+- Barra de progresso com % e valores (atual / alvo)
+- Periodo (mes)
+- Aplicacao: "Toda a rede" ou "Unidade X"
+- Peso e premiacao vinculada
+- Status visual: verde (batida), amarelo (em andamento), vermelho (abaixo de 50%)
+
+### Criar/Editar Meta (Dialog)
+
+- Nome (Input)
+- Tipo (Select: Faturamento, Contratos, Franquia, SaaS, Personalizada)
+- Valor alvo (Input numerico)
+- Mes (Select)
+- Aplica a (Select: Todas unidades / Unidade especifica)
+- Peso (Slider 1-5)
+- Premiacao (Textarea)
+
+### Metas por Franquia (accordion/tabela)
+
+- Expandir cada franquia para ver o progresso individual em cada meta
+- Barras de progresso inline
+
+---
+
+## 5. Ranking Gamificado (`src/components/metas/MetasRanking.tsx`)
+
+### Podio Top 3
+
+Visual impactante no topo:
+- 3 cards grandes, o do meio (1o lugar) mais alto
+- Medalha animada: ouro (1o), prata (2o), bronze (3o)
+- Nome da franquia
+- Pontuacao grande
+- Faturamento + % meta
+- Nivel/badge da franquia
+- Gradiente de fundo por posicao (dourado, prateado, bronze)
+
+### Lista Completa (abaixo do podio)
+
+Tabela estilizada com:
+- Posicao (numero grande + indicador de subida/descida)
+- Franquia (nome + badge de nivel)
+- Faturamento do mes (formatado BRL)
+- % meta atingida (barra mini inline)
+- Pontos (numero em destaque)
+- Crescimento % (vs mes anterior, com seta verde/vermelha)
+
+### Filtros
+
+- Mes (Select)
+- Tipo de meta (Select: Geral, Faturamento, Contratos)
+- Produto (Select: Todos, Assessoria, SaaS, etc.)
+
+### Sistema de Niveis (lateral ou secao inferior)
+
+Cards visuais dos 5 niveis com:
+- Nome + icone + cor/gradiente
+- Pontuacao minima
+- Indicador de qual nivel a franquia esta
+- Barra de progresso para o proximo nivel
+
+```text
+Niveis e cores:
+Iniciante   -- cinza, icone Shield
+Crescimento -- azul, icone TrendingUp
+Ouro        -- dourado/amber, icone Star
+Elite       -- roxo, icone Crown
+Platinum    -- gradiente especial, icone Gem
+```
+
+---
+
+## 6. Campanhas & Premiacoes (`src/components/metas/MetasCampaigns.tsx`)
+
+### Campanha Ativa (destaque)
+
+Card grande no topo com:
+- Nome da campanha
+- Periodo (data inicio -- data fim)
+- Dias restantes (countdown visual)
+- Meta especial + progresso da rede
+- Premiacao descrita
+- Mini ranking da campanha (top 3)
+- Gradiente de fundo vibrante
+
+### Historico de Campanhas
+
+Cards menores, lista de campanhas passadas:
+- Nome + periodo
+- Vencedor
+- Resultado
+- Badge "Finalizada"
+
+### Criar Campanha (Dialog -- admin)
+
+- Nome (Input)
+- Periodo (DatePicker inicio/fim)
+- Tipo de meta (Select)
+- Valor alvo (Input)
+- Premiacao (Textarea)
+- Opcoes de premiacao sugeridas: Dinheiro, Desconto royalties, Curso gratuito, Destaque na rede, Trofeu virtual
+
+---
+
+## 7. Configuracao Admin (`src/components/metas/MetasConfig.tsx`)
+
+### Pesos de Pontuacao
+
+Cards editaveis:
+- Cada R$ X faturado = Y pontos (Inputs)
+- Cada novo contrato = Z pontos
+- Cada franquia vendida = W pontos
+- Bonus por meta batida = V pontos
+
+### Niveis de Franquia
+
+Tabela editavel:
+- Nivel, pontuacao minima, icone, cor
+- Dialog para editar thresholds
+
+### Regras Gerais
+
+- Periodo de calculo (mensal)
+- Criterios de desempate
+- Visibilidade do ranking para franqueados (toggle)
+
+---
+
+## 8. Design e Efeitos Visuais
+
+### Paleta de cores por secao
+
+- Dashboard: azul dominante
+- Metas: verde/emerald
+- Ranking: dourado/amber
+- Campanhas: roxo/purple
+- Config: rose
+
+### Efeitos
+
+- KPI cards com hover elevacao + brilho sutil
+- Barras de progresso com animacao de fill (transition-all duration-700)
+- Podio com scale-in animado (animate-scale-in com delay por posicao)
+- Medalhas com leve brilho/pulse
+- Cards de nivel com gradiente sutil
+- Numeros grandes com font-bold e tamanho destacado
+- Graficos recharts com animacao padrao
+- Cards de campanha ativa com borda pulsante
+
+### Dark Mode
+
+- Gradientes escuros para podio
+- Medalhas com brilho mais sutil
+- Cards com glass-card (ja definido no CSS)
+
+---
+
+## 9. Integracao com Sidebar e Rotas
+
+### FranqueadoraSidebar.tsx
+
+Remover `disabled: true` do item "Metas & Ranking":
+```text
+{ label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" }
+```
+
+### App.tsx
+
+Adicionar rota:
+```text
+<Route path="metas" element={<MetasRanking />} />
+```
+
+---
+
+## 10. Ordem de Implementacao
+
+1. `metasRankingData.ts` -- tipos, integracao com mockData/contratosData, helpers de calculo, mock data
+2. `MetasDashboard.tsx` -- KPIs, graficos recharts, top 3, receita por produto
+3. `MetasGoals.tsx` -- lista de metas com progresso, dialog CRUD
+4. `MetasRanking.tsx` -- podio top 3, lista completa, niveis, filtros
+5. `MetasCampaigns.tsx` -- campanha ativa, historico, dialog criar
+6. `MetasConfig.tsx` -- pesos, niveis, regras
+7. `MetasRanking.tsx` (pagina) -- hub com abas e header
+8. `FranqueadoraSidebar.tsx` + `App.tsx` -- ativar menu e rota
