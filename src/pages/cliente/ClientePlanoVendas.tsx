@@ -20,10 +20,10 @@ import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRad
 interface InfoAtual { receitaAtual: number; ticketMedio: number; clientesAtivos: number; conversaoMedia: number; }
 interface MetaMensal { id: string; mes: string; ano: number; faturamento: number; novosClientes: number; }
 interface EstruturaComercial {
-  qtdVendedores: number; qtdSDRs: number; qtdClosers: number; qtdCSs: number;
+  tamanhoEquipe: string; temSDR: string; temCloser: string; temCS: string;
   canaisAquisicao: string[]; ferramentas: string[]; processoDocumentado: boolean;
-  etapasProcesso: string; tempoMedioFechamento: number; reuniaoRecorrente: boolean;
-  frequenciaReuniao: string; observacoes: string;
+  etapasProcesso: string[]; tempoMedioFechamento: string; reuniaoRecorrente: boolean;
+  frequenciaReuniao: string;
 }
 interface Avaliacao { id: string; data: string; respostas: number[]; score: number; }
 
@@ -74,10 +74,10 @@ export default function ClientePlanoVendas() {
 
   // ── ESTRUTURA STATE ──
   const [estrutura, setEstrutura] = useState<EstruturaComercial>({
-    qtdVendedores: 0, qtdSDRs: 0, qtdClosers: 0, qtdCSs: 0,
+    tamanhoEquipe: "", temSDR: "", temCloser: "", temCS: "",
     canaisAquisicao: [], ferramentas: [], processoDocumentado: false,
-    etapasProcesso: "", tempoMedioFechamento: 0, reuniaoRecorrente: false,
-    frequenciaReuniao: "", observacoes: "",
+    etapasProcesso: [], tempoMedioFechamento: "", reuniaoRecorrente: false,
+    frequenciaReuniao: "",
   });
   const [estruturaSalva, setEstruturaSalva] = useState(false);
 
@@ -102,7 +102,8 @@ export default function ClientePlanoVendas() {
 
   const totalMetaAnual = metasMensais.reduce((s, m) => s + m.faturamento, 0);
   const metaFatMensal = totalMetaAnual > 0 ? Math.round(totalMetaAnual / 12) : 0;
-  const totalEquipe = estrutura.qtdVendedores + estrutura.qtdSDRs + estrutura.qtdClosers + estrutura.qtdCSs;
+  const EQUIPE_MAP: Record<string, number> = { "Só eu": 1, "2-3 pessoas": 2, "4-7 pessoas": 5, "8-15 pessoas": 10, "16+ pessoas": 20 };
+  const totalEquipe = EQUIPE_MAP[estrutura.tamanhoEquipe] || 0;
 
   // Radar data from last evaluation
   const radarData = useMemo(() => {
@@ -243,7 +244,7 @@ export default function ClientePlanoVendas() {
                 <KpiCard label="Receita Atual" value={`R$ ${infoAtual.receitaAtual.toLocaleString()}`} />
                 <KpiCard label="Meta Acumulada" value={`R$ ${totalMetaAnual.toLocaleString()}`} variant="accent" />
                 <KpiCard label="Meta Mensal" value={`R$ ${metaFatMensal.toLocaleString()}`} />
-                <KpiCard label="Equipe" value={`${totalEquipe} pessoas`} sublabel={`${estrutura.qtdVendedores} vendedores`} />
+                <KpiCard label="Equipe" value={estrutura.tamanhoEquipe || "—"} sublabel={`SDR: ${estrutura.temSDR} | Closer: ${estrutura.temCloser}`} />
                 <KpiCard label="Maturidade" value={`${scoreAvaliacao}%`} sublabel={nivelAvaliacao.label} />
               </div>
 
@@ -333,7 +334,7 @@ export default function ClientePlanoVendas() {
                 <CardHeader className="pb-2"><CardTitle className="text-sm">Resumo Consolidado</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1 text-muted-foreground">
                   <p><strong>Receita Atual:</strong> R$ {infoAtual.receitaAtual.toLocaleString()} | <strong>Ticket Médio:</strong> R$ {infoAtual.ticketMedio.toLocaleString()} | <strong>Meta Total:</strong> R$ {totalMetaAnual.toLocaleString()}</p>
-                  <p><strong>Equipe:</strong> {estrutura.qtdVendedores} vendedores, {estrutura.qtdSDRs} SDRs, {estrutura.qtdClosers} closers, {estrutura.qtdCSs} CS</p>
+                  <p><strong>Equipe:</strong> {estrutura.tamanhoEquipe} | <strong>SDR:</strong> {estrutura.temSDR} | <strong>Closer:</strong> {estrutura.temCloser} | <strong>CS:</strong> {estrutura.temCS}</p>
                   <p><strong>Canais:</strong> {estrutura.canaisAquisicao.join(", ") || "Nenhum"}</p>
                   <p><strong>Processo documentado:</strong> {estrutura.processoDocumentado ? "Sim" : "Não"} | <strong>Tempo fechamento:</strong> {estrutura.tempoMedioFechamento} dias</p>
                   <p><strong>Maturidade:</strong> {scoreAvaliacao}% — {nivelAvaliacao.label}</p>
@@ -496,40 +497,102 @@ export default function ClientePlanoVendas() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Equipe Comercial</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div><Label className="text-xs text-muted-foreground">Vendedores</Label><Input type="number" value={estrutura.qtdVendedores || ""} onChange={e => setEstrutura(p => ({ ...p, qtdVendedores: Number(e.target.value) }))} /></div>
-              <div><Label className="text-xs text-muted-foreground">SDRs (Pré-vendas)</Label><Input type="number" value={estrutura.qtdSDRs || ""} onChange={e => setEstrutura(p => ({ ...p, qtdSDRs: Number(e.target.value) }))} /></div>
-              <div><Label className="text-xs text-muted-foreground">Closers</Label><Input type="number" value={estrutura.qtdClosers || ""} onChange={e => setEstrutura(p => ({ ...p, qtdClosers: Number(e.target.value) }))} /></div>
-              <div><Label className="text-xs text-muted-foreground">CS / Pós-venda</Label><Input type="number" value={estrutura.qtdCSs || ""} onChange={e => setEstrutura(p => ({ ...p, qtdCSs: Number(e.target.value) }))} /></div>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Quantas pessoas trabalham no comercial?</Label>
+                <div className="flex flex-wrap gap-2">
+                  {["Só eu", "2-3 pessoas", "4-7 pessoas", "8-15 pessoas", "16+ pessoas"].map(opt => (
+                    <Button key={opt} size="sm" variant={estrutura.tamanhoEquipe === opt ? "default" : "outline"}
+                      onClick={() => setEstrutura(p => ({ ...p, tamanhoEquipe: opt }))}>{opt}</Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Tem SDR / Pré-vendas?</Label>
+                <div className="flex gap-2">
+                  {["Sim", "Não", "Pretendo contratar"].map(opt => (
+                    <Button key={opt} size="sm" variant={estrutura.temSDR === opt ? "default" : "outline"}
+                      onClick={() => setEstrutura(p => ({ ...p, temSDR: opt }))}>{opt}</Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Tem Closer / Vendedor dedicado?</Label>
+                <div className="flex gap-2">
+                  {["Sim", "Não", "Eu mesmo fecho"].map(opt => (
+                    <Button key={opt} size="sm" variant={estrutura.temCloser === opt ? "default" : "outline"}
+                      onClick={() => setEstrutura(p => ({ ...p, temCloser: opt }))}>{opt}</Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Tem CS / Pós-venda?</Label>
+                <div className="flex gap-2">
+                  {["Sim", "Não", "Pretendo implantar"].map(opt => (
+                    <Button key={opt} size="sm" variant={estrutura.temCS === opt ? "default" : "outline"}
+                      onClick={() => setEstrutura(p => ({ ...p, temCS: opt }))}>{opt}</Button>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           {/* Processo */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2"><Layers className="w-4 h-4 text-blue-500" /> Processo Comercial</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2"><Layers className="w-4 h-4 text-primary" /> Processo Comercial</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Processo comercial documentado?</Label>
-                <Switch checked={estrutura.processoDocumentado} onCheckedChange={v => setEstrutura(p => ({ ...p, processoDocumentado: v }))} />
-              </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Descreva as etapas do seu processo comercial</Label>
-                <Textarea value={estrutura.etapasProcesso} onChange={e => setEstrutura(p => ({ ...p, etapasProcesso: e.target.value }))} placeholder="Ex: Prospecção → Qualificação → Apresentação → Proposta → Negociação → Fechamento" rows={3} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><Label className="text-xs text-muted-foreground">Tempo médio de fechamento (dias)</Label><Input type="number" value={estrutura.tempoMedioFechamento || ""} onChange={e => setEstrutura(p => ({ ...p, tempoMedioFechamento: Number(e.target.value) }))} /></div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Reunião comercial recorrente?</Label>
-                    <Switch checked={estrutura.reuniaoRecorrente} onCheckedChange={v => setEstrutura(p => ({ ...p, reuniaoRecorrente: v }))} />
-                  </div>
-                  {estrutura.reuniaoRecorrente && (
-                    <Input value={estrutura.frequenciaReuniao} onChange={e => setEstrutura(p => ({ ...p, frequenciaReuniao: e.target.value }))} placeholder="Ex: Semanal, às segundas 9h" />
-                  )}
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Seu processo comercial é documentado?</Label>
+                <div className="flex gap-2">
+                  {["Sim, completo", "Parcialmente", "Não"].map(opt => (
+                    <Button key={opt} size="sm" variant={(estrutura.processoDocumentado && opt === "Sim, completo") || (!estrutura.processoDocumentado && opt === "Não") ? "default" : "outline"}
+                      onClick={() => setEstrutura(p => ({ ...p, processoDocumentado: opt === "Sim, completo" }))}>{opt}</Button>
+                  ))}
                 </div>
               </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Quais etapas existem no seu funil?</Label>
+                <div className="flex flex-wrap gap-2">
+                  {["Prospecção", "Qualificação", "Apresentação", "Proposta", "Negociação", "Fechamento", "Pós-venda"].map(etapa => (
+                    <Button key={etapa} size="sm" variant={estrutura.etapasProcesso.includes(etapa) ? "default" : "outline"}
+                      onClick={() => setEstrutura(p => ({
+                        ...p,
+                        etapasProcesso: p.etapasProcesso.includes(etapa) ? p.etapasProcesso.filter(e => e !== etapa) : [...p.etapasProcesso, etapa]
+                      }))}>{etapa}</Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Tempo médio de fechamento</Label>
+                <div className="flex flex-wrap gap-2">
+                  {["Até 7 dias", "7-15 dias", "15-30 dias", "30-60 dias", "60+ dias"].map(opt => (
+                    <Button key={opt} size="sm" variant={estrutura.tempoMedioFechamento === opt ? "default" : "outline"}
+                      onClick={() => setEstrutura(p => ({ ...p, tempoMedioFechamento: opt }))}>{opt}</Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Faz reunião comercial recorrente?</Label>
+                <div className="flex gap-2">
+                  {["Sim", "Não"].map(opt => (
+                    <Button key={opt} size="sm" variant={(estrutura.reuniaoRecorrente && opt === "Sim") || (!estrutura.reuniaoRecorrente && opt === "Não") ? "default" : "outline"}
+                      onClick={() => setEstrutura(p => ({ ...p, reuniaoRecorrente: opt === "Sim" }))}>{opt}</Button>
+                  ))}
+                </div>
+              </div>
+              {estrutura.reuniaoRecorrente && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Com qual frequência?</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["Diária", "Semanal", "Quinzenal", "Mensal"].map(opt => (
+                      <Button key={opt} size="sm" variant={estrutura.frequenciaReuniao === opt ? "default" : "outline"}
+                        onClick={() => setEstrutura(p => ({ ...p, frequenciaReuniao: opt }))}>{opt}</Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -537,35 +600,23 @@ export default function ClientePlanoVendas() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader className="pb-3"><CardTitle className="text-sm">Canais de Aquisição</CardTitle></CardHeader>
-              <CardContent className="flex flex-wrap gap-3">
+              <CardContent className="flex flex-wrap gap-2">
                 {CANAIS_OPTIONS.map(c => (
-                  <label key={c} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={estrutura.canaisAquisicao.includes(c)} onCheckedChange={() => toggleCanal(c)} />
-                    {c}
-                  </label>
+                  <Button key={c} size="sm" variant={estrutura.canaisAquisicao.includes(c) ? "default" : "outline"}
+                    onClick={() => toggleCanal(c)}>{c}</Button>
                 ))}
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-3"><CardTitle className="text-sm">Ferramentas Utilizadas</CardTitle></CardHeader>
-              <CardContent className="flex flex-wrap gap-3">
+              <CardContent className="flex flex-wrap gap-2">
                 {FERRAMENTAS_OPTIONS.map(f => (
-                  <label key={f} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={estrutura.ferramentas.includes(f)} onCheckedChange={() => toggleFerramenta(f)} />
-                    {f}
-                  </label>
+                  <Button key={f} size="sm" variant={estrutura.ferramentas.includes(f) ? "default" : "outline"}
+                    onClick={() => toggleFerramenta(f)}>{f}</Button>
                 ))}
               </CardContent>
             </Card>
           </div>
-
-          {/* Observações */}
-          <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Observações Gerais</CardTitle></CardHeader>
-            <CardContent>
-              <Textarea value={estrutura.observacoes} onChange={e => setEstrutura(p => ({ ...p, observacoes: e.target.value }))} placeholder="Alguma observação sobre a estrutura comercial atual..." rows={3} />
-            </CardContent>
-          </Card>
 
           <Button onClick={salvarEstrutura} className="w-full">
             <Save className="w-4 h-4 mr-2" /> Salvar Estrutura Comercial
