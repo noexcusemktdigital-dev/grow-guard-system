@@ -2,7 +2,7 @@ import { DollarSign, Target, FileText, Users, TrendingUp, TrendingDown, Trophy, 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getNetworkTotals, getEvolutionData, getRevenueByProduct, getRankingForMonth, formatBRL, levelThresholds } from "@/data/metasRankingData";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 
 const MONTH = "2026-02";
 
@@ -138,18 +138,16 @@ export default function MetasDashboard() {
             <CardTitle className="text-base">Receita por Produto</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[250px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={productData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={4} strokeWidth={0}>
-                    {productData.map((entry, i) => (
-                      <Cell key={i} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent formatter={(v) => formatBRL(v as number)} />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <ChartContainer config={Object.fromEntries(productData.map(p => [p.name, { label: p.name, color: p.fill }]))} className="h-[250px]">
+              <PieChart>
+                <Pie data={productData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={4} strokeWidth={0}>
+                  {productData.map((entry, i) => (
+                    <Cell key={i} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent formatter={(v) => formatBRL(v as number)} />} />
+              </PieChart>
+            </ChartContainer>
             <div className="flex flex-wrap gap-3 justify-center mt-2">
               {productData.map((p) => (
                 <div key={p.name} className="flex items-center gap-1.5 text-xs">
