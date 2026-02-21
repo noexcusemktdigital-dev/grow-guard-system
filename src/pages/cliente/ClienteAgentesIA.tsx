@@ -1,13 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  Bot, Settings, MessageSquare, Pause, Play, Copy, Send,
-  Sparkles, Clock, CheckCircle2, Zap, ChevronDown, User,
-  Phone, Tag, Volume2, X, ArrowRight, BookOpen, Brain,
-  Database, Code2, Stethoscope, FileText, Plus, Trash2,
-  AlertTriangle, Activity, Target, DollarSign, Wrench, RefreshCw
+  Bot, Settings, MessageSquare, Send, Sparkles, Clock, CheckCircle2,
+  Zap, User, Phone, Volume2, X, BookOpen, Brain, Database, Code2,
+  Stethoscope, FileText, Plus, Trash2, AlertTriangle, Activity, Target,
+  DollarSign, Wrench, RefreshCw, Pencil, Copy, GripVertical
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { KpiCard } from "@/components/KpiCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +18,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
 } from "@/components/ui/sheet";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
@@ -53,22 +54,157 @@ interface ChatMessage {
   content: string;
 }
 
+// ===== Create/Edit Agent Dialog =====
+
+function AgentFormDialog({ open, onClose, agent, onSave }: {
+  open: boolean; onClose: () => void; agent: IAAgent | null; onSave: (agent: IAAgent) => void;
+}) {
+  const isNew = !agent;
+  const [name, setName] = useState(agent?.name || "");
+  const [type, setType] = useState<IAAgent["type"]>(agent?.type || "SDR");
+  const [description, setDescription] = useState(agent?.description || "");
+  const [tone, setTone] = useState(agent?.tone || "amigavel");
+  const [instructions, setInstructions] = useState(agent?.instructions || "Você é um assistente comercial da empresa. Seja cordial e objetivo.");
+
+  useEffect(() => {
+    if (open) {
+      setName(agent?.name || "");
+      setType(agent?.type || "SDR");
+      setDescription(agent?.description || "");
+      setTone(agent?.tone || "amigavel");
+      setInstructions(agent?.instructions || "Você é um assistente comercial da empresa. Seja cordial e objetivo.");
+    }
+  }, [open, agent]);
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    const saved: IAAgent = agent ? {
+      ...agent,
+      name: name.trim(),
+      type,
+      description: description.trim(),
+      tone,
+      instructions,
+    } : {
+      id: `agent_${Date.now()}`,
+      name: name.trim(),
+      type,
+      description: description.trim(),
+      tone,
+      instructions,
+      active: false,
+      autoReply: true,
+      linkedAccountId: null,
+      linkedAccountName: null,
+      workingHours: { start: "08:00", end: "18:00" },
+      tags: [],
+      stats: { conversationsToday: 0, resolved: 0, avgResponseTime: "—" },
+    };
+    onSave(saved);
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {isNew ? <Plus className="w-5 h-5 text-primary" /> : <Pencil className="w-5 h-5 text-primary" />}
+            {isNew ? "Criar Agente" : "Editar Agente"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Nome do Agente *</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: SDR Principal" className="h-9 text-sm mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Tipo / Função</Label>
+              <Select value={type} onValueChange={v => setType(v as IAAgent["type"])}>
+                <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SDR">SDR — Prospecção</SelectItem>
+                  <SelectItem value="Closer">Closer — Fechamento</SelectItem>
+                  <SelectItem value="Suporte">Suporte — Atendimento</SelectItem>
+                  <SelectItem value="Pós-venda">Pós-venda — Retenção</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Descrição</Label>
+            <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className="text-sm mt-1" placeholder="Descreva o papel deste agente..." />
+          </div>
+          <div>
+            <Label className="text-xs">Tom de voz</Label>
+            <Select value={tone} onValueChange={v => setTone(v as any)}>
+              <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="formal">Formal</SelectItem>
+                <SelectItem value="casual">Casual</SelectItem>
+                <SelectItem value="tecnico">Técnico</SelectItem>
+                <SelectItem value="amigavel">Amigável</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Instruções principais</Label>
+            <Textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={4} className="text-sm font-mono mt-1" placeholder="Defina o comportamento do agente..." />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={!name.trim()}>
+            {isNew ? "Criar Agente" : "Salvar Alterações"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ===== Delete Confirm Dialog =====
+
+function DeleteAgentDialog({ open, onClose, agentName, onConfirm }: {
+  open: boolean; onClose: () => void; agentName: string; onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="w-5 h-5" /> Excluir Agente
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Tem certeza que deseja excluir o agente <strong>{agentName}</strong>? Esta ação não pode ser desfeita.
+        </p>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="destructive" onClick={() => { onConfirm(); onClose(); }}>Excluir</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ClienteAgentesIA() {
   const [agents, setAgents] = useState<IAAgent[]>(getIAAgents());
   const accounts = getChatAccounts();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [configAgent, setConfigAgent] = useState<string | null>(null);
 
+  // CRUD dialogs
+  const [showCreateEdit, setShowCreateEdit] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<IAAgent | null>(null);
+  const [deleteAgent, setDeleteAgent] = useState<IAAgent | null>(null);
+
   // Playground state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
-
-  const activeCount = agents.filter(a => a.active).length;
-  const totalConversations = agents.reduce((s, a) => s + a.stats.conversationsToday, 0);
-  const totalResolved = agents.reduce((s, a) => s + a.stats.resolved, 0);
-  const resolutionRate = totalConversations > 0 ? Math.round((totalResolved / totalConversations) * 100) : 0;
 
   const currentAgent = agents.find(a => a.id === selectedAgent);
   const currentConfig = agents.find(a => a.id === configAgent);
@@ -88,6 +224,22 @@ export default function ClienteAgentesIA() {
   const openPlayground = (agentId: string) => {
     setSelectedAgent(agentId);
     setChatMessages([]);
+  };
+
+  const handleSaveAgent = (agent: IAAgent) => {
+    setAgents(prev => {
+      const exists = prev.find(a => a.id === agent.id);
+      if (exists) return prev.map(a => a.id === agent.id ? agent : a);
+      return [...prev, agent];
+    });
+    toast({ title: editingAgent ? "Agente atualizado!" : "Agente criado!" });
+  };
+
+  const handleDeleteAgent = (id: string) => {
+    setAgents(prev => prev.filter(a => a.id !== id));
+    if (selectedAgent === id) setSelectedAgent(null);
+    if (configAgent === id) setConfigAgent(null);
+    toast({ title: "Agente excluído!" });
   };
 
   const sendMessage = () => {
@@ -111,23 +263,41 @@ export default function ClienteAgentesIA() {
     <div className="max-w-7xl mx-auto space-y-6">
       <PageHeader
         title="Agentes de IA"
-        subtitle="Gerencie agentes inteligentes integrados ao Chat e CRM"
+        subtitle="Crie, edite e gerencie seus agentes inteligentes"
         icon={<Bot className="w-5 h-5 text-primary" />}
-        badge="Beta"
+        actions={
+          <Button size="sm" onClick={() => { setEditingAgent(null); setShowCreateEdit(true); }}>
+            <Plus className="w-4 h-4 mr-1" /> Novo Agente
+          </Button>
+        }
       />
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Agentes Ativos" value={`${activeCount}/${agents.length}`} icon={Bot} trend="neutral" delay={0} />
-        <KpiCard label="Conversas IA Hoje" value={String(totalConversations)} icon={MessageSquare} trend="up" delay={1} />
-        <KpiCard label="Taxa de Resolução" value={`${resolutionRate}%`} icon={CheckCircle2} trend="up" delay={2} />
-        <KpiCard label="Tempo Médio Resp." value="14s" icon={Clock} trend="down" delay={3} />
+      {/* Agent count summary */}
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <Badge variant="outline" className="gap-1.5 py-1">
+          <Bot className="w-3 h-3" />
+          {agents.length} agente{agents.length !== 1 ? "s" : ""}
+          <span className="text-primary font-medium ml-1">{agents.filter(a => a.active).length} ativo{agents.filter(a => a.active).length !== 1 ? "s" : ""}</span>
+        </Badge>
       </div>
 
       {/* Main layout: cards + playground */}
       <div className={`grid gap-6 transition-all duration-300 ${selectedAgent ? "grid-cols-1 lg:grid-cols-5" : "grid-cols-1"}`}>
         {/* Agent cards */}
         <div className={`space-y-4 ${selectedAgent ? "lg:col-span-2" : ""}`}>
+          {agents.length === 0 && (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <Bot className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                <p className="text-sm font-medium">Nenhum agente criado</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">Crie seu primeiro agente de IA para automatizar o atendimento.</p>
+                <Button size="sm" onClick={() => { setEditingAgent(null); setShowCreateEdit(true); }}>
+                  <Plus className="w-4 h-4 mr-1" /> Criar Agente
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           <div className={`grid gap-4 ${selectedAgent ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"}`}>
             {agents.map((agent, i) => (
               <Card
@@ -138,7 +308,6 @@ export default function ClienteAgentesIA() {
                 style={{ animationDelay: `${i * 80}ms` }}
                 onClick={() => agent.active && openPlayground(agent.id)}
               >
-                {/* Gradient accent */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${agentGradients[agent.type]} opacity-60`} />
 
                 <CardContent className="relative p-5 space-y-4">
@@ -155,26 +324,12 @@ export default function ClienteAgentesIA() {
                     </div>
                     <Switch
                       checked={agent.active}
-                      onCheckedChange={(e) => { e; toggleAgent(agent.id); }}
+                      onCheckedChange={() => toggleAgent(agent.id)}
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
 
                   <p className="text-xs text-muted-foreground line-clamp-2">{agent.description}</p>
-
-                  {/* Mini stats */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { v: agent.stats.conversationsToday, l: "Conversas" },
-                      { v: agent.stats.resolved, l: "Resolvidas" },
-                      { v: agent.stats.conversationsToday > 0 ? `${Math.round((agent.stats.resolved / agent.stats.conversationsToday) * 100)}%` : "—", l: "Taxa" },
-                    ].map(s => (
-                      <div key={s.l} className="text-center p-2 rounded-lg bg-background/40 backdrop-blur-sm">
-                        <p className="text-base font-bold">{s.v}</p>
-                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider">{s.l}</p>
-                      </div>
-                    ))}
-                  </div>
 
                   {/* Tags row */}
                   <div className="flex flex-wrap gap-1.5 text-xs">
@@ -200,6 +355,22 @@ export default function ClienteAgentesIA() {
                     </Button>
                     <Button
                       size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={(e) => { e.stopPropagation(); setEditingAgent(agent); setShowCreateEdit(true); }}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs text-destructive hover:text-destructive"
+                      onClick={(e) => { e.stopPropagation(); setDeleteAgent(agent); }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="sm"
                       className="flex-1 text-xs"
                       disabled={!agent.active}
                       onClick={(e) => { e.stopPropagation(); openPlayground(agent.id); }}
@@ -217,7 +388,6 @@ export default function ClienteAgentesIA() {
         {selectedAgent && currentAgent && (
           <div className="lg:col-span-3 animate-fade-in">
             <Card className="h-[600px] flex flex-col overflow-hidden">
-              {/* Playground header */}
               <div className={`flex items-center justify-between px-5 py-3 border-b bg-gradient-to-r ${agentGradients[currentAgent.type]}`}>
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${agentAccent[currentAgent.type]} bg-background/60`}>
@@ -233,7 +403,6 @@ export default function ClienteAgentesIA() {
                 </Button>
               </div>
 
-              {/* Chat area */}
               <ScrollArea className="flex-1 p-4">
                 {chatMessages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-16">
@@ -241,16 +410,10 @@ export default function ClienteAgentesIA() {
                       {(() => { const AgIcon = agentIcons[currentAgent.type]; return <AgIcon className="w-8 h-8 text-primary" />; })()}
                     </div>
                     <p className="text-sm font-medium">Teste o agente {currentAgent.name}</p>
-                    <p className="text-xs mt-1 max-w-xs">Envie uma mensagem para simular como o agente responderia aos seus clientes.</p>
+                    <p className="text-xs mt-1 max-w-xs">Envie uma mensagem para simular como o agente responderia.</p>
                     <div className="flex flex-wrap gap-2 mt-4 justify-center">
                       {["Quero saber sobre preços", "Agendar uma demo", "Suporte técnico"].map(s => (
-                        <Button
-                          key={s}
-                          variant="outline"
-                          size="sm"
-                          className="text-[10px] h-7"
-                          onClick={() => { setChatInput(s); }}
-                        >
+                        <Button key={s} variant="outline" size="sm" className="text-[10px] h-7" onClick={() => setChatInput(s)}>
                           {s}
                         </Button>
                       ))}
@@ -266,13 +429,11 @@ export default function ClienteAgentesIA() {
                           <Bot className="w-3.5 h-3.5 text-primary" />
                         </div>
                       )}
-                      <div
-                        className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap ${
-                          msg.role === "user"
-                            ? "bg-primary text-primary-foreground rounded-br-md"
-                            : "bg-muted/50 border rounded-bl-md"
-                        }`}
-                      >
+                      <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-br-md"
+                          : "bg-muted/50 border rounded-bl-md"
+                      }`}>
                         {msg.content}
                       </div>
                       {msg.role === "user" && (
@@ -298,7 +459,6 @@ export default function ClienteAgentesIA() {
                 </div>
               </ScrollArea>
 
-              {/* Input */}
               <div className="border-t p-3 flex gap-2">
                 <Input
                   placeholder="Simule uma mensagem do cliente..."
@@ -345,26 +505,6 @@ export default function ClienteAgentesIA() {
 
               {/* === IDENTIDADE === */}
               <TabsContent value="identidade" className="p-5 space-y-5 mt-0">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Nome do Agente</Label>
-                  <Input value={currentConfig.name} onChange={e => updateAgentConfig("name", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Tipo / Função</Label>
-                  <Select value={currentConfig.type} onValueChange={v => updateAgentConfig("type", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SDR">SDR — Prospecção</SelectItem>
-                      <SelectItem value="Closer">Closer — Fechamento</SelectItem>
-                      <SelectItem value="Suporte">Suporte — Atendimento</SelectItem>
-                      <SelectItem value="Pós-venda">Pós-venda — Retenção</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Descrição</Label>
-                  <Textarea value={currentConfig.description} onChange={e => updateAgentConfig("description", e.target.value)} rows={2} />
-                </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Conta WhatsApp vinculada</Label>
                   <Select
@@ -435,35 +575,12 @@ export default function ClienteAgentesIA() {
               {/* === PERSONA === */}
               <TabsContent value="persona" className="p-5 space-y-5 mt-0">
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium">Tom de voz</Label>
-                  <Select value={currentConfig.tone} onValueChange={v => updateAgentConfig("tone", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="formal">Formal</SelectItem>
-                      <SelectItem value="casual">Casual</SelectItem>
-                      <SelectItem value="tecnico">Técnico</SelectItem>
-                      <SelectItem value="amigavel">Amigável</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
                   <Label className="text-xs font-medium">Personalidade</Label>
-                  <Textarea rows={3} placeholder="Descreva a personalidade do agente. Ex: Objetivo, empático, persuasivo..." defaultValue="Profissional, empático e orientado a resultados. Sempre busca entender a dor do cliente antes de oferecer soluções." />
+                  <Textarea rows={3} placeholder="Descreva a personalidade do agente..." defaultValue="Profissional, empático e orientado a resultados." />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Mensagem de boas-vindas</Label>
-                  <Textarea rows={2} placeholder="Primeira mensagem ao iniciar conversa..." defaultValue={`Olá! Sou o ${currentConfig.name}, assistente virtual da empresa. Como posso te ajudar hoje?`} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Idioma</Label>
-                  <Select defaultValue="pt-BR">
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pt-BR">Português (BR)</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Español</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Textarea rows={2} placeholder="Primeira mensagem ao iniciar conversa..." defaultValue={`Olá! Sou o ${currentConfig.name}, assistente virtual. Como posso te ajudar?`} />
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
@@ -507,23 +624,8 @@ export default function ClienteAgentesIA() {
                   <Button variant="outline" size="sm" className="w-full text-xs"><Plus className="w-3 h-3 mr-1" /> Upload de documento</Button>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium">URLs de referência</Label>
-                  <div className="space-y-2">
-                    {["https://minhaempresa.com/produtos", "https://minhaempresa.com/faq"].map(url => (
-                      <div key={url} className="flex items-center gap-2 p-2 rounded-lg border bg-background">
-                        <p className="text-xs flex-1 truncate text-muted-foreground">{url}</p>
-                        <Button variant="ghost" size="icon" className="h-6 w-6"><Trash2 className="w-3 h-3 text-muted-foreground" /></Button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input placeholder="https://..." className="flex-1 text-xs" />
-                    <Button variant="outline" size="sm" className="text-xs"><Plus className="w-3 h-3 mr-1" /> Adicionar</Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Informações adicionais (texto livre)</Label>
-                  <Textarea rows={3} placeholder="Adicione informações extras que o agente deve saber: preços, políticas, regras de negócio..." />
+                  <Label className="text-xs font-medium">Informações adicionais</Label>
+                  <Textarea rows={3} placeholder="Adicione informações extras..." />
                 </div>
               </TabsContent>
 
@@ -531,71 +633,31 @@ export default function ClienteAgentesIA() {
               <TabsContent value="prompt" className="p-5 space-y-5 mt-0">
                 <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 flex gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-muted-foreground">Área avançada. Alterações no prompt afetam diretamente o comportamento do agente.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">System Prompt (instruções principais)</Label>
-                  <Textarea
-                    value={currentConfig.instructions}
-                    onChange={e => updateAgentConfig("instructions", e.target.value)}
-                    rows={6}
-                    className="font-mono text-xs"
-                    placeholder="Defina o comportamento principal do agente..."
-                  />
+                  <p className="text-[11px] text-muted-foreground">Área avançada. Alterações no prompt afetam o comportamento do agente.</p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Regras de comportamento</Label>
-                  <Textarea rows={4} className="font-mono text-xs" defaultValue={`- Nunca invente informações que não estão na base de conhecimento\n- Sempre pergunte o nome do cliente no início\n- Se não souber a resposta, ofereça transferir para um humano\n- Nunca compartilhe informações de outros clientes`} />
+                  <Textarea rows={4} className="font-mono text-xs" defaultValue={`- Nunca invente informações\n- Sempre pergunte o nome do cliente\n- Se não souber, ofereça transferir para humano\n- Nunca compartilhe dados de outros clientes`} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Gatilhos de escalamento</Label>
-                  <Textarea rows={3} className="font-mono text-xs" defaultValue={`- Cliente insatisfeito ou irritado → transferir para humano\n- Pedido de cancelamento → transferir para retenção\n- Dúvida técnica complexa → transferir para suporte N2`} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Temperatura (criatividade)</Label>
-                  <div className="flex items-center gap-3">
-                    <Input type="number" min={0} max={1} step={0.1} defaultValue={0.7} className="w-24 text-xs" />
-                    <p className="text-[10px] text-muted-foreground">0 = determinístico, 1 = criativo</p>
-                  </div>
+                  <Textarea rows={3} className="font-mono text-xs" defaultValue={`- Cliente insatisfeito → transferir para humano\n- Pedido de cancelamento → transferir para retenção\n- Dúvida técnica complexa → suporte N2`} />
                 </div>
               </TabsContent>
 
               {/* === SIMULADOR === */}
               <TabsContent value="simulador" className="p-5 space-y-4 mt-0">
                 <div className="p-4 rounded-xl border bg-muted/10 text-center space-y-3">
-                   <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-                     {(() => { const AgIcon = agentIcons[currentConfig.type]; return <AgIcon className="w-6 h-6 text-primary" />; })()}
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                    {(() => { const AgIcon = agentIcons[currentConfig.type]; return <AgIcon className="w-6 h-6 text-primary" />; })()}
                   </div>
                   <div>
                     <p className="text-sm font-medium">Simulador do {currentConfig.name}</p>
-                    <p className="text-xs text-muted-foreground">Teste as configurações em tempo real sem afetar conversas reais</p>
+                    <p className="text-xs text-muted-foreground">Teste em tempo real sem afetar conversas reais</p>
                   </div>
                   <Button size="sm" onClick={() => { setConfigAgent(null); openPlayground(currentConfig.id); }}>
                     <Sparkles className="w-3.5 h-3.5 mr-1" /> Abrir Playground
                   </Button>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Cenários de teste rápido</Label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {[
-                      { label: "Lead novo perguntando preço", msg: "Oi, quanto custa o plano empresarial?" },
-                      { label: "Cliente reclamando", msg: "Estou insatisfeito com o atendimento, quero cancelar." },
-                      { label: "Dúvida técnica", msg: "Como faço para integrar com meu sistema atual?" },
-                      { label: "Pedido de demo", msg: "Quero agendar uma demonstração do produto." },
-                    ].map(s => (
-                      <button
-                        key={s.label}
-                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors text-left"
-                        onClick={() => { setConfigAgent(null); openPlayground(currentConfig.id); setChatInput(s.msg); }}
-                      >
-                        <MessageSquare className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium">{s.label}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{s.msg}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </TabsContent>
 
@@ -618,24 +680,6 @@ export default function ClienteAgentesIA() {
                   ))}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium">Últimos erros / escalamentos</Label>
-                  <div className="space-y-2">
-                    {[
-                      { type: "escalamento", msg: "Cliente pediu cancelamento — transferido para retenção", time: "Há 2h" },
-                      { type: "erro", msg: "Agente não encontrou resposta na base de conhecimento", time: "Há 5h" },
-                      { type: "escalamento", msg: "Dúvida técnica complexa — transferido para suporte N2", time: "Ontem" },
-                    ].map((log, i) => (
-                      <div key={i} className={`flex items-start gap-2 p-2.5 rounded-lg border ${log.type === "erro" ? "border-red-500/20 bg-red-500/5" : "border-amber-500/20 bg-amber-500/5"}`}>
-                        <AlertTriangle className={`w-3 h-3 mt-0.5 shrink-0 ${log.type === "erro" ? "text-red-400" : "text-amber-400"}`} />
-                        <div className="flex-1">
-                          <p className="text-xs">{log.msg}</p>
-                          <p className="text-[10px] text-muted-foreground">{log.time}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
                   <Label className="text-xs font-medium">Saúde do Agente</Label>
                   <div className="p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
@@ -652,15 +696,32 @@ export default function ClienteAgentesIA() {
                 <Button variant="outline" className="flex-1" onClick={() => setConfigAgent(null)}>Cancelar</Button>
                 <Button className="flex-1" onClick={() => {
                   setConfigAgent(null);
-                  toast({ title: "Agente atualizado!", description: "Configurações salvas com sucesso." });
+                  toast({ title: "Configurações salvas!" });
                 }}>
-                  Salvar Configurações
+                  Salvar
                 </Button>
               </div>
             </Tabs>
           )}
         </SheetContent>
       </Sheet>
+
+      {/* CRUD Dialogs */}
+      <AgentFormDialog
+        open={showCreateEdit}
+        onClose={() => { setShowCreateEdit(false); setEditingAgent(null); }}
+        agent={editingAgent}
+        onSave={handleSaveAgent}
+      />
+
+      {deleteAgent && (
+        <DeleteAgentDialog
+          open={!!deleteAgent}
+          onClose={() => setDeleteAgent(null)}
+          agentName={deleteAgent.name}
+          onConfirm={() => handleDeleteAgent(deleteAgent.id)}
+        />
+      )}
     </div>
   );
 }
