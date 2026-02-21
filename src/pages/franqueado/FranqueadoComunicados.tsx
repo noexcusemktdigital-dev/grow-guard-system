@@ -2,7 +2,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, ArrowLeft, Mail, MailOpen } from "lucide-react";
+import { Check, ArrowLeft, Mail, MailOpen, MessageSquare, AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { getFranqueadoComunicadosUnidade, type FranqueadoComunicado } from "@/data/franqueadoData";
 import { format } from "date-fns";
@@ -17,14 +17,22 @@ export default function FranqueadoComunicados() {
   const [detalhe, setDetalhe] = useState<FranqueadoComunicado | null>(null);
 
   const naoLidos = comunicados.filter(c => !c.lido).length;
+  const criticos = comunicados.filter(c => c.prioridade === "Crítica" && !c.lido);
 
   const filtrados = useMemo(() => {
-    return comunicados.filter(c => {
+    let list = comunicados.filter(c => {
       if (filtroPrioridade !== "Todas" && c.prioridade !== filtroPrioridade) return false;
       if (filtroStatus === "Não lidos" && c.lido) return false;
       if (filtroStatus === "Lidos" && !c.lido) return false;
       return true;
     });
+    // Important (Crítica) non-read items first
+    list = [...list].sort((a, b) => {
+      if (a.prioridade === "Crítica" && !a.lido && !(b.prioridade === "Crítica" && !b.lido)) return -1;
+      if (b.prioridade === "Crítica" && !b.lido && !(a.prioridade === "Crítica" && !a.lido)) return 1;
+      return 0;
+    });
+    return list;
   }, [comunicados, filtroPrioridade, filtroStatus]);
 
   const marcarLido = (id: string) => {
@@ -62,7 +70,7 @@ export default function FranqueadoComunicados() {
                 onClick={() => { marcarLido(detalhe.id); setDetalhe({ ...detalhe, lido: true }); }}
                 className="mt-4"
               >
-                <Check className="w-4 h-4 mr-1" /> Confirmar leitura
+                <Check className="w-4 h-4 mr-1" /> Li e concordo
               </Button>
             )}
           </CardContent>
@@ -73,11 +81,35 @@ export default function FranqueadoComunicados() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <PageHeader
-        title="Comunicados da Matriz"
-        subtitle="Avisos e comunicados direcionados à sua unidade"
-        badge={naoLidos > 0 ? `${naoLidos} não lidos` : undefined}
-      />
+      {/* Header alinhado com a matriz */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary" />
+            <h1 className="page-header-title">Comunicados da Matriz</h1>
+            <Badge variant="outline" className="text-[10px]">Unidade</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">Avisos e comunicados direcionados à sua unidade</p>
+        </div>
+        {naoLidos > 0 && (
+          <Badge variant="destructive" className="animate-pulse">{naoLidos} não lidos</Badge>
+        )}
+      </div>
+
+      {/* Alerta de comunicados críticos */}
+      {criticos.length > 0 && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-destructive animate-pulse flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-destructive">
+                {criticos.length} comunicado(s) crítico(s) pendente(s) de leitura
+              </p>
+              <p className="text-xs text-muted-foreground">Leia e confirme para ficar em dia com a matriz</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-4">
@@ -103,7 +135,7 @@ export default function FranqueadoComunicados() {
         {filtrados.map(c => (
           <Card
             key={c.id}
-            className={`glass-card hover-lift transition-all cursor-pointer ${c.lido ? "opacity-60" : ""}`}
+            className={`glass-card hover-lift transition-all cursor-pointer ${c.lido ? "opacity-60" : ""} ${c.prioridade === "Crítica" && !c.lido ? "border-destructive/40 bg-destructive/5" : ""}`}
             onClick={() => setDetalhe(c)}
           >
             <CardContent className="p-5">
