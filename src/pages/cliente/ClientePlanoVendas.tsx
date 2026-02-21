@@ -35,7 +35,7 @@ function fmtNum(v: number) { return v.toLocaleString("pt-BR"); }
 function fmtPct(v: number) { return `${v.toLocaleString("pt-BR")}%`; }
 interface EstruturaComercial {
   tamanhoEquipe: string; temSDR: string; temCloser: string; temCS: string;
-  canaisAquisicao: string[]; ferramentas: string[]; processoDocumentado: boolean;
+  canaisAquisicao: string[]; ferramentas: string[]; processoDocumentado: string;
   etapasProcesso: string[]; tempoMedioFechamento: string; reuniaoRecorrente: boolean;
   frequenciaReuniao: string;
 }
@@ -106,11 +106,12 @@ export default function ClientePlanoVendas() {
   // ── ESTRUTURA STATE ──
   const [estrutura, setEstrutura] = useState<EstruturaComercial>({
     tamanhoEquipe: "", temSDR: "", temCloser: "", temCS: "",
-    canaisAquisicao: [], ferramentas: [], processoDocumentado: false,
+    canaisAquisicao: [], ferramentas: [], processoDocumentado: "",
     etapasProcesso: [], tempoMedioFechamento: "", reuniaoRecorrente: false,
     frequenciaReuniao: "",
   });
   const [estruturaSalva, setEstruturaSalva] = useState(false);
+  const [estruturaDataSalva, setEstruturaDataSalva] = useState("");
 
   // ── AVALIAÇÃO STATE ──
   const [respostasAvaliacao, setRespostasAvaliacao] = useState<number[]>(new Array(AVALIACAO_PERGUNTAS.length).fill(0));
@@ -162,7 +163,7 @@ export default function ClientePlanoVendas() {
     if (scoreAvaliacao > 75) ins.push({ text: "Seu comercial está em Alta Performance! Foque em escalar e otimizar margem.", severity: "success" });
     if (totalEquipe === 0) ins.push({ text: "Nenhum membro na equipe comercial. Considere contratar ou terceirizar.", severity: "error" });
     if (totalEquipe > 0 && totalEquipe < 3) ins.push({ text: "Equipe enxuta. Considere contratar SDRs para aumentar geração de leads.", severity: "warn" });
-    if (!estrutura.processoDocumentado) ins.push({ text: "Processo comercial não documentado. Isso reduz previsibilidade.", severity: "error" });
+    if (estrutura.processoDocumentado === "Não" || !estrutura.processoDocumentado) ins.push({ text: "Processo comercial não documentado. Isso reduz previsibilidade.", severity: "error" });
     if (estrutura.canaisAquisicao.length < 2) ins.push({ text: "Poucos canais de aquisição. Diversifique para reduzir risco.", severity: "warn" });
     if (estrutura.canaisAquisicao.length >= 4) ins.push({ text: "Boa diversificação de canais. Continue testando e otimizando.", severity: "info" });
     const conv = Number(infoAtual.conversaoMedia) || 0;
@@ -183,7 +184,7 @@ export default function ClientePlanoVendas() {
   const planoDeAcao = useMemo(() => {
     if (!visaoDesbloqueada) return [];
     const acoes: { titulo: string; descricao: string; prioridade: "alta" | "media" | "baixa" }[] = [];
-    if (!estrutura.processoDocumentado) acoes.push({ titulo: "Documentar processo comercial", descricao: "Crie um playbook com cada etapa do funil, scripts e critérios de qualificação.", prioridade: "alta" });
+    if (estrutura.processoDocumentado === "Não" || !estrutura.processoDocumentado) acoes.push({ titulo: "Documentar processo comercial", descricao: "Crie um playbook com cada etapa do funil, scripts e critérios de qualificação.", prioridade: "alta" });
     if (totalEquipe < 3) acoes.push({ titulo: "Expandir equipe comercial", descricao: `Você tem ${totalEquipe} pessoa(s). Considere contratar SDRs para acelerar prospecção.`, prioridade: "media" });
     if (estrutura.canaisAquisicao.length < 3) acoes.push({ titulo: "Diversificar canais de aquisição", descricao: "Teste pelo menos 3 canais diferentes para reduzir dependência.", prioridade: "media" });
     if (scoreAvaliacao <= 50) acoes.push({ titulo: "Implantar rotina de CRM", descricao: "Garanta que 100% dos leads são registrados e acompanhados no CRM diariamente.", prioridade: "alta" });
@@ -201,7 +202,7 @@ export default function ClientePlanoVendas() {
 
   // Save metas
   const salvarMetas = () => { setMetasSalvas(true); toast({ title: "Metas salvas com sucesso!" }); };
-  const salvarEstrutura = () => { setEstruturaSalva(true); toast({ title: "Estrutura comercial salva!" }); };
+  const salvarEstrutura = () => { setEstruturaSalva(true); setEstruturaDataSalva(new Date().toLocaleDateString("pt-BR")); toast({ title: "Estrutura comercial salva!" }); };
   const finalizarAvaliacao = () => {
     const total = respostasAvaliacao.reduce((a, b) => a + b, 0);
     const max = AVALIACAO_PERGUNTAS.length * 5;
@@ -386,7 +387,7 @@ export default function ClientePlanoVendas() {
                   <p><strong>Receita Atual:</strong> {fmtBRL(Number(infoAtual.receitaMensal) || 0)} | <strong>Ticket Médio:</strong> {fmtBRL(Number(infoAtual.ticketMedio) || 0)} | <strong>Meta Total:</strong> {fmtBRL(totalMetaAnual)}</p>
                   <p><strong>Equipe:</strong> {estrutura.tamanhoEquipe} | <strong>SDR:</strong> {estrutura.temSDR} | <strong>Closer:</strong> {estrutura.temCloser} | <strong>CS:</strong> {estrutura.temCS}</p>
                   <p><strong>Canais:</strong> {estrutura.canaisAquisicao.join(", ") || "Nenhum"}</p>
-                  <p><strong>Processo documentado:</strong> {estrutura.processoDocumentado ? "Sim" : "Não"} | <strong>Tempo fechamento:</strong> {estrutura.tempoMedioFechamento}</p>
+                  <p><strong>Processo documentado:</strong> {estrutura.processoDocumentado || "Não informado"} | <strong>Tempo fechamento:</strong> {estrutura.tempoMedioFechamento}</p>
                   <p><strong>Maturidade:</strong> {fmtPct(scoreAvaliacao)} — {nivelAvaliacao.label}</p>
                 </CardContent>
               </Card>
@@ -890,8 +891,8 @@ export default function ClientePlanoVendas() {
                 <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-amber-500" /> Processo documentado?</Label>
                 <div className="flex gap-2">
                   {["Sim, completo", "Parcialmente", "Não"].map(opt => (
-                    <Button key={opt} size="sm" variant={(estrutura.processoDocumentado && opt === "Sim, completo") || (!estrutura.processoDocumentado && opt === "Não") ? "default" : "outline"}
-                      onClick={() => setEstrutura(p => ({ ...p, processoDocumentado: opt === "Sim, completo" }))}>{opt}</Button>
+                    <Button key={opt} size="sm" variant={estrutura.processoDocumentado === opt ? "default" : "outline"}
+                      onClick={() => setEstrutura(p => ({ ...p, processoDocumentado: opt }))}>{opt}</Button>
                   ))}
                 </div>
               </div>
@@ -976,9 +977,23 @@ export default function ClientePlanoVendas() {
             </Card>
           </div>
 
-          <Button onClick={salvarEstrutura} className="w-full">
-            <Save className="w-4 h-4 mr-2" /> Salvar Estrutura Comercial
-          </Button>
+          {estruturaSalva ? (
+            <Card className="border-emerald-500/20 bg-emerald-500/5">
+              <CardContent className="py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span className="text-sm font-medium">Estrutura salva em {estruturaDataSalva}</span>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => { setEstruturaSalva(false); setEstruturaDataSalva(""); }}>
+                  <Pencil className="w-3 h-3 mr-1" /> Editar
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Button onClick={salvarEstrutura} className="w-full">
+              <Save className="w-4 h-4 mr-2" /> Salvar Estrutura Comercial
+            </Button>
+          )}
         </TabsContent>
 
         {/* ===== AVALIAR MEU COMERCIAL ===== */}
