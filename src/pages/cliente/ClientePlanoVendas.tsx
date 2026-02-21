@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, Lightbulb, Zap, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar, Plus, Lock, CheckCircle2, FileText, Phone, Mail, MessageSquare, Building2, UserCheck, Layers, BarChart3, History } from "lucide-react";
+import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, Lightbulb, Zap, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar, Plus, Lock, CheckCircle2, FileText, Phone, Mail, MessageSquare, Building2, UserCheck, Layers, BarChart3, History, DollarSign, UserPlus, Handshake, ShieldCheck, Receipt, BarChartHorizontal, Megaphone, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/KpiCard";
@@ -18,7 +18,14 @@ import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRad
 
 // ── Types ──
 interface InfoAtual { receitaAtual: number; ticketMedio: number; clientesAtivos: number; conversaoMedia: number; }
-interface MetaMensal { id: string; mes: string; ano: number; faturamento: number; novosClientes: number; }
+type TipoMeta = "faturamento" | "novos_clientes" | "contratos" | "retencao" | "ticket_medio" | "conversao" | "leads" | "reunioes";
+type EscopoMeta = "empresa" | "equipe" | "individual";
+type PeriodoMeta = "mensal" | "trimestral" | "semestral" | "anual";
+interface MetaMensal {
+  id: string; mes: string; ano: number; tipo: TipoMeta; escopo: EscopoMeta;
+  periodo: PeriodoMeta; valorAlvo: number; equipe?: string; responsavel?: string;
+  prioridade: "alta" | "media" | "baixa";
+}
 interface EstruturaComercial {
   tamanhoEquipe: string; temSDR: string; temCloser: string; temCS: string;
   canaisAquisicao: string[]; ferramentas: string[]; processoDocumentado: boolean;
@@ -29,6 +36,22 @@ interface Avaliacao { id: string; data: string; respostas: number[]; score: numb
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const CANAIS_OPTIONS = ["Google Ads", "Instagram", "Facebook", "LinkedIn", "Indicação", "Site/SEO", "WhatsApp", "TikTok", "Cold Call", "Outro"];
+
+const TIPO_META_LABELS: Record<TipoMeta, string> = {
+  faturamento: "Faturamento", novos_clientes: "Novos Clientes", contratos: "Contratos",
+  retencao: "Retenção", ticket_medio: "Ticket Médio", conversao: "Conversão",
+  leads: "Leads Gerados", reunioes: "Reuniões",
+};
+const TIPO_META_CONFIG: Record<TipoMeta, { label: string; icon: typeof Target; color: string; bg: string; gradient: string }> = {
+  faturamento: { label: "Faturamento", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/15", gradient: "bg-gradient-to-r from-emerald-400 to-emerald-600" },
+  novos_clientes: { label: "Novos Clientes", icon: UserPlus, color: "text-blue-500", bg: "bg-blue-500/15", gradient: "bg-gradient-to-r from-blue-400 to-blue-600" },
+  contratos: { label: "Contratos", icon: FileText, color: "text-purple-500", bg: "bg-purple-500/15", gradient: "bg-gradient-to-r from-purple-400 to-purple-600" },
+  retencao: { label: "Retenção", icon: ShieldCheck, color: "text-teal-500", bg: "bg-teal-500/15", gradient: "bg-gradient-to-r from-teal-400 to-teal-600" },
+  ticket_medio: { label: "Ticket Médio", icon: Receipt, color: "text-orange-500", bg: "bg-orange-500/15", gradient: "bg-gradient-to-r from-orange-400 to-orange-600" },
+  conversao: { label: "Conversão", icon: BarChartHorizontal, color: "text-indigo-500", bg: "bg-indigo-500/15", gradient: "bg-gradient-to-r from-indigo-400 to-indigo-600" },
+  leads: { label: "Leads Gerados", icon: Megaphone, color: "text-pink-500", bg: "bg-pink-500/15", gradient: "bg-gradient-to-r from-pink-400 to-pink-600" },
+  reunioes: { label: "Reuniões", icon: Handshake, color: "text-cyan-500", bg: "bg-cyan-500/15", gradient: "bg-gradient-to-r from-cyan-400 to-cyan-600" },
+};
 const FERRAMENTAS_OPTIONS = ["CRM", "WhatsApp Business", "Email Marketing", "Telefone", "ERP", "Planilhas", "Automação (RD, HubSpot)", "Nenhuma"];
 
 const AVALIACAO_PERGUNTAS = [
@@ -68,7 +91,7 @@ export default function ClientePlanoVendas() {
   const [infoAtualSalva, setInfoAtualSalva] = useState(false);
   const [metasMensais, setMetasMensais] = useState<MetaMensal[]>([]);
   const [metasSalvas, setMetasSalvas] = useState(false);
-  const [novaMeta, setNovaMeta] = useState<{ faturamento: number; novosClientes: number }>({ faturamento: 0, novosClientes: 0 });
+  const [novaMeta, setNovaMeta] = useState<{ tipo: TipoMeta; escopo: EscopoMeta; periodo: PeriodoMeta; valorAlvo: number; equipe: string; responsavel: string; prioridade: "alta" | "media" | "baixa" }>({ tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
   const mesAtualIdx = new Date().getMonth(); // 0-based
   const anoAtual = new Date().getFullYear();
 
@@ -100,8 +123,9 @@ export default function ClientePlanoVendas() {
   const scoreAvaliacao = ultimaAvaliacao?.score ?? 0;
   const nivelAvaliacao = getNivel(scoreAvaliacao);
 
-  const totalMetaAnual = metasMensais.reduce((s, m) => s + m.faturamento, 0);
-  const metaFatMensal = totalMetaAnual > 0 ? Math.round(totalMetaAnual / 12) : 0;
+  const metasFaturamento = metasMensais.filter(m => m.tipo === "faturamento");
+  const totalMetaAnual = metasFaturamento.reduce((s, m) => s + m.valorAlvo, 0);
+  const metaFatMensal = totalMetaAnual > 0 ? Math.round(totalMetaAnual / metasFaturamento.length) : 0;
   const EQUIPE_MAP: Record<string, number> = { "Só eu": 1, "2-3 pessoas": 2, "4-7 pessoas": 5, "8-15 pessoas": 10, "16+ pessoas": 20 };
   const totalEquipe = EQUIPE_MAP[estrutura.tamanhoEquipe] || 0;
 
@@ -390,99 +414,265 @@ export default function ClientePlanoVendas() {
             )}
           </Card>
 
-          {/* Metas Mensais - Cards */}
+          {/* Criar Nova Meta */}
           {infoAtualSalva && (
             <>
-              <div className="flex items-center justify-between">
-                <div>
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-primary/15"><Calendar className="w-4 h-4 text-primary" /></div>
-                  Metas Mensais
-                </h3>
-                  <p className="text-xs text-muted-foreground">Adicione metas a partir do mês atual. Cada meta fica salva como um card.</p>
-                </div>
-              </div>
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/10">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-amber-500/15"><Plus className="w-4 h-4 text-amber-500" /></div>
+                    Criar Nova Meta
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Selecione tipo, escopo e período para definir sua meta.</p>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-5">
+                  {/* Tipo de Meta */}
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-amber-500" /> Qual o tipo da meta?
+                    </Label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {([
+                        { value: "faturamento" as TipoMeta, label: "Faturamento", icon: DollarSign, color: "text-emerald-500" },
+                        { value: "novos_clientes" as TipoMeta, label: "Novos Clientes", icon: UserPlus, color: "text-blue-500" },
+                        { value: "contratos" as TipoMeta, label: "Contratos", icon: FileText, color: "text-purple-500" },
+                        { value: "retencao" as TipoMeta, label: "Retenção", icon: ShieldCheck, color: "text-teal-500" },
+                        { value: "ticket_medio" as TipoMeta, label: "Ticket Médio", icon: Receipt, color: "text-orange-500" },
+                        { value: "conversao" as TipoMeta, label: "Conversão (%)", icon: BarChartHorizontal, color: "text-indigo-500" },
+                        { value: "leads" as TipoMeta, label: "Leads Gerados", icon: Megaphone, color: "text-pink-500" },
+                        { value: "reunioes" as TipoMeta, label: "Reuniões", icon: Handshake, color: "text-cyan-500" },
+                      ]).map(opt => {
+                        const Icon = opt.icon;
+                        const selected = novaMeta.tipo === opt.value;
+                        return (
+                          <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
+                            className={`justify-start gap-2 h-auto py-2.5 px-3 ${!selected ? "border-dashed" : ""}`}
+                            onClick={() => setNovaMeta(p => ({ ...p, tipo: opt.value }))}>
+                            <Icon className={`w-4 h-4 ${selected ? "" : opt.color}`} />
+                            <span className="text-xs">{opt.label}</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-              {/* Cards de metas salvas */}
+                  {/* Escopo */}
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-blue-500" /> Essa meta é para quem?
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { value: "empresa" as EscopoMeta, label: "Empresa inteira", icon: Building2, desc: "Meta macro para toda a empresa" },
+                        { value: "equipe" as EscopoMeta, label: "Por equipe", icon: Users, desc: "Meta específica por time" },
+                        { value: "individual" as EscopoMeta, label: "Individual", icon: UserCheck, desc: "Meta para pessoa específica" },
+                      ]).map(opt => {
+                        const Icon = opt.icon;
+                        const selected = novaMeta.escopo === opt.value;
+                        return (
+                          <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
+                            className={`gap-2 h-auto py-2.5 px-4 ${!selected ? "border-dashed" : ""}`}
+                            onClick={() => setNovaMeta(p => ({ ...p, escopo: opt.value, equipe: "", responsavel: "" }))}>
+                            <Icon className="w-4 h-4" />
+                            <div className="text-left">
+                              <span className="text-xs font-medium block">{opt.label}</span>
+                              <span className="text-[10px] opacity-70">{opt.desc}</span>
+                            </div>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Equipe / Responsável (condicional) */}
+                  {novaMeta.escopo === "equipe" && (
+                    <div>
+                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-purple-500" /> Qual equipe?
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {["Vendas", "Pré-vendas (SDR)", "Pós-venda (CS)", "Marketing", "Prospecção"].map(opt => (
+                          <Button key={opt} size="sm" variant={novaMeta.equipe === opt ? "default" : "outline"}
+                            className={`text-xs ${novaMeta.equipe !== opt ? "border-dashed" : ""}`}
+                            onClick={() => setNovaMeta(p => ({ ...p, equipe: opt }))}>{opt}</Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {novaMeta.escopo === "individual" && (
+                    <div>
+                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5 text-purple-500" /> Quem é o responsável?
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Lima"].map(opt => (
+                          <Button key={opt} size="sm" variant={novaMeta.responsavel === opt ? "default" : "outline"}
+                            className={`text-xs ${novaMeta.responsavel !== opt ? "border-dashed" : ""}`}
+                            onClick={() => setNovaMeta(p => ({ ...p, responsavel: opt }))}>{opt}</Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Período */}
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-green-500" /> Qual o período da meta?
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { value: "mensal" as PeriodoMeta, label: "Mensal" },
+                        { value: "trimestral" as PeriodoMeta, label: "Trimestral" },
+                        { value: "semestral" as PeriodoMeta, label: "Semestral" },
+                        { value: "anual" as PeriodoMeta, label: "Anual" },
+                      ]).map(opt => (
+                        <Button key={opt.value} size="sm" variant={novaMeta.periodo === opt.value ? "default" : "outline"}
+                          className={`text-xs ${novaMeta.periodo !== opt.value ? "border-dashed" : ""}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, periodo: opt.value }))}>{opt.label}</Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Valor Alvo */}
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-red-500" /> Qual o valor alvo?
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {(novaMeta.tipo === "faturamento" || novaMeta.tipo === "ticket_medio"
+                        ? ["R$ 10.000", "R$ 25.000", "R$ 50.000", "R$ 100.000", "R$ 200.000", "R$ 500.000"]
+                        : novaMeta.tipo === "conversao" || novaMeta.tipo === "retencao"
+                        ? ["10%", "20%", "30%", "50%", "70%", "90%"]
+                        : ["5", "10", "20", "50", "100", "200"]
+                      ).map(opt => {
+                        const numVal = Number(opt.replace(/[^0-9]/g, ""));
+                        const selected = novaMeta.valorAlvo === numVal;
+                        return (
+                          <Button key={opt} size="sm" variant={selected ? "default" : "outline"}
+                            className={`text-xs ${!selected ? "border-dashed" : ""}`}
+                            onClick={() => setNovaMeta(p => ({ ...p, valorAlvo: numVal }))}>{opt}</Button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Ou digite:</span>
+                      <Input type="number" className="w-32 h-8 text-xs" value={novaMeta.valorAlvo || ""}
+                        onChange={e => setNovaMeta(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
+                        placeholder="Valor personalizado" />
+                    </div>
+                  </div>
+
+                  {/* Prioridade */}
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-yellow-500" /> Prioridade dessa meta
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { value: "alta" as const, label: "🔴 Alta", desc: "Crítica para o resultado" },
+                        { value: "media" as const, label: "🟡 Média", desc: "Importante mas não urgente" },
+                        { value: "baixa" as const, label: "🟢 Baixa", desc: "Desejável, secundária" },
+                      ]).map(opt => (
+                        <Button key={opt.value} size="sm" variant={novaMeta.prioridade === opt.value ? "default" : "outline"}
+                          className={`gap-2 h-auto py-2 px-3 ${novaMeta.prioridade !== opt.value ? "border-dashed" : ""}`}
+                          onClick={() => setNovaMeta(p => ({ ...p, prioridade: opt.value }))}>
+                          <div className="text-left">
+                            <span className="text-xs font-medium block">{opt.label}</span>
+                            <span className="text-[10px] opacity-70">{opt.desc}</span>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botão Criar */}
+                  <Button className="w-full gap-2" disabled={novaMeta.valorAlvo === 0 || (novaMeta.escopo === "equipe" && !novaMeta.equipe) || (novaMeta.escopo === "individual" && !novaMeta.responsavel)} onClick={() => {
+                    const mesesUsados = metasMensais.map(m => `${m.mes}-${m.ano}`);
+                    let proximoMesIdx = mesAtualIdx;
+                    let proximoAno = anoAtual;
+                    while (mesesUsados.includes(`${MESES[proximoMesIdx]}-${proximoAno}`)) {
+                      proximoMesIdx++;
+                      if (proximoMesIdx > 11) { proximoMesIdx = 0; proximoAno++; }
+                      if (proximoAno > anoAtual + 1) break;
+                    }
+                    const nova: MetaMensal = {
+                      id: `meta-${Date.now()}`, mes: MESES[proximoMesIdx], ano: proximoAno,
+                      tipo: novaMeta.tipo, escopo: novaMeta.escopo, periodo: novaMeta.periodo,
+                      valorAlvo: novaMeta.valorAlvo, equipe: novaMeta.equipe, responsavel: novaMeta.responsavel,
+                      prioridade: novaMeta.prioridade,
+                    };
+                    setMetasMensais(prev => [...prev, nova]);
+                    setNovaMeta({ tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
+                    setMetasSalvas(true);
+                    toast({ title: `Meta de ${TIPO_META_LABELS[novaMeta.tipo]} adicionada!` });
+                  }}>
+                    <Plus className="w-4 h-4" /> Criar Meta
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Metas Salvas */}
               {metasMensais.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {metasMensais.map(m => (
-                    <Card key={m.id} className="border-emerald-500/20 bg-emerald-500/5">
-                      <CardContent className="p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Badge className="text-xs bg-primary/10 text-primary border-primary/20" variant="outline">{m.mes}/{m.ano}</Badge>
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Faturamento</p>
-                            <p className="text-lg font-bold">R$ {m.faturamento.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Novos Clientes</p>
-                            <p className="text-lg font-bold">{m.novosClientes}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                <>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-emerald-500/15"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></div>
+                      Metas Definidas ({metasMensais.length})
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {metasMensais.map(m => {
+                      const tipoConfig = TIPO_META_CONFIG[m.tipo];
+                      const Icon = tipoConfig.icon;
+                      const isMoney = m.tipo === "faturamento" || m.tipo === "ticket_medio";
+                      const isPercent = m.tipo === "conversao" || m.tipo === "retencao";
+                      const prioridadeColors = { alta: "border-red-500/30 bg-red-500/5", media: "border-yellow-500/30 bg-yellow-500/5", baixa: "border-emerald-500/30 bg-emerald-500/5" };
+                      return (
+                        <Card key={m.id} className={`overflow-hidden ${prioridadeColors[m.prioridade]}`}>
+                          <div className={`h-1 ${tipoConfig.gradient}`} />
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className={`p-1.5 rounded-lg ${tipoConfig.bg}`}>
+                                  <Icon className={`w-3.5 h-3.5 ${tipoConfig.color}`} />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold">{tipoConfig.label}</p>
+                                  <p className="text-[10px] text-muted-foreground">{m.mes}/{m.ano} · {m.periodo}</p>
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => { setMetasMensais(prev => prev.filter(x => x.id !== m.id)); toast({ title: "Meta removida." }); }}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <p className="text-xl font-black">
+                              {isMoney ? `R$ ${m.valorAlvo.toLocaleString()}` : isPercent ? `${m.valorAlvo}%` : m.valorAlvo}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              <Badge variant="outline" className="text-[10px]">
+                                {m.escopo === "empresa" ? "🏢 Empresa" : m.escopo === "equipe" ? `👥 ${m.equipe}` : `👤 ${m.responsavel}`}
+                              </Badge>
+                              <Badge variant="outline" className={`text-[10px] ${m.prioridade === "alta" ? "text-red-500 border-red-500/30" : m.prioridade === "media" ? "text-yellow-600 border-yellow-500/30" : "text-emerald-500 border-emerald-500/30"}`}>
+                                {m.prioridade === "alta" ? "🔴 Alta" : m.prioridade === "media" ? "🟡 Média" : "🟢 Baixa"}
+                              </Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
 
-              {/* Adicionar nova meta */}
-              {(() => {
-                // Determina próximo mês disponível
-                const mesesUsados = metasMensais.map(m => `${m.mes}-${m.ano}`);
-                let proximoMesIdx = mesAtualIdx;
-                let proximoAno = anoAtual;
-                // Avança até encontrar mês não usado
-                while (mesesUsados.includes(`${MESES[proximoMesIdx]}-${proximoAno}`)) {
-                  proximoMesIdx++;
-                  if (proximoMesIdx > 11) { proximoMesIdx = 0; proximoAno++; }
-                  if (proximoAno > anoAtual + 1) break; // Limite de 2 anos
-                }
-                const proximoMes = MESES[proximoMesIdx];
-
-                return (
-                  <Card className="border-dashed border-2">
-                    <CardContent className="p-4 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Plus className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-semibold">Nova meta — {proximoMes}/{proximoAno}</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Faturamento (R$)</Label>
-                          <Input type="number" value={novaMeta.faturamento || ""} onChange={e => setNovaMeta(p => ({ ...p, faturamento: Number(e.target.value) }))} placeholder="Ex: 65000" />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Novos Clientes</Label>
-                          <Input type="number" value={novaMeta.novosClientes || ""} onChange={e => setNovaMeta(p => ({ ...p, novosClientes: Number(e.target.value) }))} placeholder="Ex: 10" />
-                        </div>
-                      </div>
-                      <Button size="sm" disabled={novaMeta.faturamento === 0} onClick={() => {
-                        const nova: MetaMensal = { id: `meta-${Date.now()}`, mes: proximoMes, ano: proximoAno, faturamento: novaMeta.faturamento, novosClientes: novaMeta.novosClientes };
-                        setMetasMensais(prev => [...prev, nova]);
-                        setNovaMeta({ faturamento: 0, novosClientes: 0 });
-                        setMetasSalvas(true);
-                        toast({ title: `Meta de ${proximoMes}/${proximoAno} adicionada!` });
-                      }}>
-                        <Plus className="w-3 h-3 mr-1" /> Adicionar Meta
-                      </Button>
+                  {/* Resumo */}
+                  <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                    <CardContent className="py-4 grid grid-cols-4 gap-4 text-center">
+                      <div><p className="text-xl font-black text-primary">{metasMensais.length}</p><p className="text-xs text-muted-foreground">Total metas</p></div>
+                      <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "empresa").length}</p><p className="text-xs text-muted-foreground">Empresa</p></div>
+                      <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "equipe").length}</p><p className="text-xs text-muted-foreground">Por equipe</p></div>
+                      <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "individual").length}</p><p className="text-xs text-muted-foreground">Individuais</p></div>
                     </CardContent>
                   </Card>
-                );
-              })()}
-
-              {/* Resumo */}
-              {metasMensais.length > 0 && (
-                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                  <CardContent className="py-4 grid grid-cols-3 gap-4 text-center">
-                    <div><p className="text-xl font-black text-primary">R$ {totalMetaAnual.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total acumulado</p></div>
-                    <div><p className="text-xl font-black">{metasMensais.reduce((s, m) => s + m.novosClientes, 0)}</p><p className="text-xs text-muted-foreground">Total clientes</p></div>
-                    <div><p className="text-xl font-black">{metasMensais.length}</p><p className="text-xs text-muted-foreground">Meses definidos</p></div>
-                  </CardContent>
-                </Card>
+                </>
               )}
             </>
           )}
