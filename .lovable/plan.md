@@ -1,128 +1,87 @@
 
-
-# Prospeccao com Historico + Diagnostico Termometro Estrategico
+# Modulo Principal Franqueado -- Design Identico a Matriz
 
 ## Resumo
 
-Duas melhorias no fluxo comercial do franqueado:
-
-1. **Prospeccao IA -- Aba Historico**: Salvar planos e scripts gerados em lista persistente com visualizacao
-2. **Diagnostico -- Termometro de Maturidade**: Redesenhar resultado com 4 niveis (Caotico, Reativo, Estruturado, Analitico), grafico radar por area, estrategia em 3 fases (Estruturacao, Coleta de Dados, Escala), e conexao com a calculadora de propostas
+Redesenhar os 4 modulos do bloco Principal do franqueado (Dashboard, Agenda, Comunicados, Suporte) para seguir exatamente o mesmo padrao visual da matriz, mas com dados filtrados exclusivamente pela unidade logada.
 
 ---
 
-## 1. Prospeccao IA -- Historico
+## 1. Dashboard do Franqueado
 
-### O que muda
+### Estado atual
+O dashboard ja existe com KPIs, metas, ranking, comunicados recentes, eventos e chamados. Porem falta:
+- Secao "Hoje eu preciso de..." no estilo da matriz (cards de prioridade com urgencia 1/2/3)
+- Resumo financeiro detalhado (projecao, repasse estimado, contratos ativos)
+- Alertas de unidade (contratos a vencer, propostas sem retorno, diagnosticos pendentes)
+- Componentes reutilizaveis da home da matriz (HomeHojePreciso, HomeAlertas, HomeMensagemDia, HomeAgenda, HomeComunicados)
 
-Adicionar uma terceira aba "Historico" na pagina de Prospeccao IA:
-
-- **Aba Planejamento**: igual ao atual
-- **Aba Script Comercial**: igual ao atual
-- **Aba Historico** (nova): lista de prospeccoes salvas
-
-Ao gerar um plano ou script, um botao "Salvar no Historico" adiciona o resultado na lista com:
-- Data de criacao
-- Tipo (Plano ou Script)
-- Parametros usados (regiao/nicho ou perfil/canal)
-- Preview resumido do conteudo
-- Opcao de expandir para ver detalhes completos
-
-Estado gerenciado via useState com lista acumulativa (persiste na sessao).
-
-### Mudancas tecnicas
-
-```text
-src/pages/franqueado/FranqueadoProspeccaoIA.tsx
-```
-
-- Adicionar estado: `const [historico, setHistorico] = useState<ProspeccaoHistorico[]>([])`
-- Interface `ProspeccaoHistorico { id, tipo, data, params, conteudo }`
-- TabsList de 2 para 3 colunas
-- Nova TabsContent "historico" com lista de cards expansiveis
-- Botao "Salvar no Historico" apos gerar plano/script
+### O que sera feito
+- Reescrever `FranqueadoDashboard.tsx` usando a mesma estrutura composicional de `Home.tsx` (matriz)
+- Criar componentes de alertas da unidade reutilizando o padrao `HomeAlertas` e `HomeHojePreciso`
+- Adicionar secao de Resumo Financeiro com cards: Receita do Mes, Projecao, Repasse Estimado, Contratos Ativos
+- Adicionar secao Comercial: Leads Ativos, Propostas em Aberto, Vendas do Mes, Meta do Mes
+- Manter secoes existentes: Comunicados Recentes, Proximos Eventos, Chamados Abertos
+- Adicionar alertas dinamicos: contratos vencendo, propostas sem retorno, diagnosticos pendentes
+- Layout: PageHeader + HojePreciso + MensagemDia/Comunicados (grid 2col) + KPIs financeiros + Comercial + Agenda/Alertas
 
 ---
 
-## 2. Diagnostico -- Termometro de Maturidade
+## 2. Agenda do Franqueado
 
-### Conceito estrategico
+### Estado atual
+Cards simples em grid com filtro de visibilidade. Nao tem calendario, navegacao temporal, nem sidebar.
 
-O diagnostico e a ferramenta de venda mais importante: oferecemos uma estrategia gratuita que mostra ao cliente exatamente onde ele esta e o que precisa fazer. O resultado precisa ser visualmente impactante e estrategicamente solido.
+### O que sera feito
+- Redesenhar `FranqueadoAgenda.tsx` para usar o mesmo layout da `Agenda.tsx` da matriz:
+  - Header com navegacao (anterior/hoje/proximo) e seletor de visao (Mes/Semana/Dia/Lista)
+  - Sidebar com mini-calendario e filtros de visibilidade (Pessoal/Unidade/Rede)
+  - Reutilizar componentes `AgendaCalendar`, `AgendaListView`, `AgendaSidebar`
+- Adaptar dados: converter `FranqueadoEvento` para o formato `AgendaEvent` usado pelos componentes da matriz
+- Criar funcao `getFranqueadoAgendaEvents()` em `franqueadoData.ts` que retorna eventos no formato `AgendaEvent`
+- Criar calendarios mock para o franqueado (Pessoal, Unidade, Rede) no formato `AgendaCalendar`
+- Manter badge "Somente leitura" para eventos da rede
+- Permitir criacao de eventos pessoais e da unidade (formulario `AgendaEventForm`)
+- Layout full-height identico a matriz: header fixo + sidebar + area principal
 
-### 4 Niveis de Maturidade (conforme imagem de referencia)
+---
 
-Em vez dos 3 niveis atuais (Inicial/Intermediario/Avancado), usar 4 niveis com identidade visual forte:
+## 3. Comunicados do Franqueado
 
-| Pontuacao | Nivel | Cor | Descricao |
-|-----------|-------|-----|-----------|
-| 0-25% | 01 CAOTICO | Vermelho escuro | Tudo e feito no improviso |
-| 26-50% | 02 REATIVO | Vermelho/Laranja | Acoes pontuais sem continuidade |
-| 51-75% | 03 ESTRUTURADO | Amarelo/Verde | Tem base, falta otimizacao |
-| 76-100% | 04 ANALITICO | Verde | Sabe o que da resultado, falta escala |
+### Estado atual
+Lista funcional com filtros e detalhe. Ja esta bem implementado mas com layout diferente da matriz.
 
-Cada nivel tem:
-- Sinais comuns (bullets descritivos)
-- Problema principal identificado
+### O que sera feito
+- Alinhar o header com o padrao da matriz: icone + titulo + badge "Unidade" + subtitulo
+- Adicionar indicador visual de comunicados criticos (destaque vermelho com icone pulsante)
+- Manter logica existente: filtros por prioridade e status, detalhe com "Li e concordo"
+- Adicionar exibicao inteligente: comunicados marcados como "Importante" aparecem com destaque visual diferenciado no topo da lista
+- O franqueado continua sem poder criar/editar comunicados (somente leitura + confirmar leitura)
+- Layout final muito similar ao atual, com ajustes cosmeticos no header
 
-### Termometro Visual
+---
 
-Componente visual com gradiente horizontal (vermelho -> amarelo -> verde) e ponteiro indicando a posicao exata da pontuacao. Abaixo, os 4 niveis com marcadores verticais.
+## 4. Suporte do Franqueado
 
-### Grafico Radar (Spider Chart)
+### Estado atual
+Lista simples de chamados com chat basico. Falta:
+- Alertas de SLA no topo (como a matriz)
+- Filtros por status/categoria/prioridade
+- Chat estilo WhatsApp mais rico (com badges Suporte/Franqueado, timestamps, anexos)
+- Categorias expandidas (Financeiro, Juridico, Comercial, Marketing, Treinamentos, Sistema, Duvidas gerais)
+- Campo de descricao e prioridade no formulario de criacao
+- Status expandidos: Aberto, Em analise, Respondido, Resolvido
 
-Usar RadarChart do Recharts para mostrar pontuacao por bloco:
-- Marketing
-- Comercial
-- Receita
-- Objetivos
-
-Visualizacao clara de onde estao os gaps (areas com pontuacao baixa ficam evidentes).
-
-### Estrategia em 3 Fases (conforme imagem de referencia)
-
-Substituir as recomendacoes genericas por 3 fases estrategicas adaptadas ao nivel:
-
-**Fase 01 -- ESTRUTURACAO**
-- Diagnostico completo do funil de vendas e comunicacao
-- Mapeamento de produto e jornada de compra
-- Criacao/revisao de identidade de marca e presenca digital
-- Linha editorial estrategica e calendario de conteudo
-- Implantacao tecnica de canais digitais
-- Padronizacao de processos comerciais
-- Criacao e integracao de CRM
-- Treinamento da equipe comercial
-
-**Fase 02 -- COLETA DE DADOS**
-- Campanhas de trafego pago (Meta + Google + LinkedIn)
-- Criacao de dashboards e relatorios
-- Otimizacao de funil e jornada
-- Testes A/B continuos
-- Calculo e padronizacao de indicadores financeiros
-- Implementacao de benchmark interno
-- Criacao de plano de retencao e recompra
-
-**Fase 03 -- ESCALA**
-- Planejamento de escala e redistribuicao de midia
-- Criacao e otimizacao de estrategias de monetizacao
-- Fluxos de remarketing e reativacao
-- Retencao e aumento de LTV
-- Expansao comercial e treinamento de escala
-- Implementacao de growth loops
-
-As fases mostradas dependem do nivel:
-- Caotico: destaque na Fase 1 (precisa estruturar tudo)
-- Reativo: Fases 1 e 2 (estruturar + comecar a medir)
-- Estruturado: Fases 2 e 3 (medir + escalar)
-- Analitico: Fase 3 (escalar)
-
-### Entregas recomendadas vinculadas a servicos
-
-As entregas recomendadas ja existentes serao mantidas, mas com uma conexao mais clara com os servicos da calculadora. O botao "Gerar Proposta" navegara para a calculadora com query params indicando o nivel, para facilitar a selecao de servicos.
-
-### Projecao de resultados
-
-Manter a tabela de projecao (1, 3, 6, 12 meses) mas adaptar os valores conforme o nivel do termometro.
+### O que sera feito
+- Redesenhar `FranqueadoSuporte.tsx` seguindo o padrao visual do `Atendimento.tsx` da matriz
+- Adicionar cards de alerta no topo: Chamados Abertos, Em Analise, Respondidos, Resolvidos
+- Adicionar filtros por status e categoria (Select inline)
+- Expandir categorias para: Financeiro, Juridico, Comercial, Marketing, Treinamentos, Sistema, Duvidas gerais
+- Expandir status para: Aberto, Em analise, Respondido, Resolvido
+- Adicionar campo de prioridade (Baixa/Normal/Alta/Urgente) e descricao no formulario de criacao
+- Chat redesenhado: layout split (info a esquerda, chat a direita) como `AtendimentoDetail`
+- Badge "Suporte"/"Franqueado" nas mensagens, timestamps formatados, botao de anexo
+- Manter regra: franqueado ve apenas seus chamados, sem visibilidade de outras unidades
 
 ---
 
@@ -130,56 +89,63 @@ Manter a tabela de projecao (1, 3, 6, 12 meses) mas adaptar os valores conforme 
 
 ### Arquivos modificados
 
-```text
-src/pages/franqueado/FranqueadoProspeccaoIA.tsx
-  - Adicionar aba Historico (3a aba)
-  - Estado para lista de prospeccoes salvas
-  - Botao salvar apos gerar plano/script
-
-src/pages/franqueado/FranqueadoDiagnostico.tsx
-  - Mudar de 3 niveis para 4 (Caotico/Reativo/Estruturado/Analitico)
-  - Adicionar componente termometro visual com gradiente
-  - Adicionar RadarChart do Recharts por bloco
-  - Redesenhar resultado com fases estrategicas
-
-src/components/diagnostico/DiagnosticoEstrategia.tsx
-  - Reescrever com 3 fases (Estruturacao/Coleta de Dados/Escala)
-  - Mostrar fases relevantes conforme nivel
-  - Cards visuais para cada fase com bullets
-  - Manter projecao e entregas adaptadas ao nivel
+```
+src/pages/franqueado/FranqueadoDashboard.tsx  -- reescrever com composicao igual a Home.tsx
+src/pages/franqueado/FranqueadoAgenda.tsx      -- redesenhar com calendario completo
+src/pages/franqueado/FranqueadoComunicados.tsx -- ajustes cosmeticos no header e destaques
+src/pages/franqueado/FranqueadoSuporte.tsx     -- redesenhar com layout split, alertas e filtros
+src/data/franqueadoData.ts                     -- adicionar helpers para agenda e alertas da unidade
 ```
 
-### Dados do termometro (4 niveis)
+### Novos helpers em franqueadoData.ts
 
-```text
-getNivelTermometro(pontuacao):
-  0-25  -> { id: 1, label: "Caotico",      cor: "#dc2626", desc: "Tudo e feito no improviso" }
-  26-50 -> { id: 2, label: "Reativo",       cor: "#ea580c", desc: "Acoes pontuais sem continuidade" }
-  51-75 -> { id: 3, label: "Estruturado",   cor: "#eab308", desc: "Tem base, falta otimizacao" }
-  76-100-> { id: 4, label: "Analitico",     cor: "#16a34a", desc: "Sabe o que da resultado, falta escala" }
+```
+getFranqueadoAlertasUnidade() -- gera alertas da unidade (contratos vencendo, propostas sem retorno, diagnosticos pendentes)
+getFranqueadoPrioridadesUnidade() -- top 3 prioridades para "Hoje eu preciso de..."
+getFranqueadoAgendaEvents() -- converte FranqueadoEvento para formato AgendaEvent
+getFranqueadoCalendars() -- mock de calendarios (Pessoal, Unidade, Rede)
 ```
 
-### Sinais comuns por nivel
+### Dashboard -- Estrutura de componentes
 
-Cada nivel tera uma lista de sinais comuns e problema principal exibidos no resultado, conforme a imagem de referencia.
+Reutilizar componentes existentes da home da matriz adaptados para dados da unidade:
+- `HomeHojePreciso` com prioridades da unidade
+- `HomeMensagemDia` com mensagem do dia
+- KpiCards para financeiro (Receita, Projecao, Repasse, Contratos)
+- KpiCards para comercial (Leads, Propostas, Vendas, Meta)
+- Cards de comunicados e agenda (inline, sem componentes externos)
+- `HomeAlertas` com alertas da unidade
 
-### Grafico Radar
+### Agenda -- Reutilizacao de componentes
 
-Usar `RadarChart`, `PolarGrid`, `PolarAngleAxis`, `Radar` do Recharts (ja instalado):
+Reutilizar diretamente:
+- `AgendaCalendar` (mes/semana/dia)
+- `AgendaListView`
+- `AgendaSidebar` (mini-calendario + filtros)
+- `AgendaEventForm` (criar/editar evento)
+- `AgendaEventDetail` (detalhe do evento)
 
-```text
-data = blocos.map(bloco => ({
-  area: bloco,
-  pontuacao: calcularPontuacao(respostas, perguntasDoBloco),
-  fullMark: 100
-}))
+Adaptacao necessaria: criar funcao que mapeia `FranqueadoEvento[]` para `AgendaEvent[]` com calendarIds correspondentes.
+
+### Suporte -- Estrutura redesenhada
+
+```
+Vista lista:
+  - 4 cards de alerta (Abertos | Em analise | Respondidos | Resolvidos)
+  - Filtros inline (status + categoria + busca)
+  - Lista de chamados com badges de status/prioridade
+
+Vista detalhe:
+  - Grid 2/3: info do chamado (esquerda) + chat (direita)
+  - Info: numero, categoria, status, prioridade, data abertura, descricao
+  - Chat: ScrollArea com mensagens bubble, badges Suporte/Franqueado, timestamps
+  - Input com botao de anexo e enviar
 ```
 
 ### Ordem de implementacao
 
-1. Prospeccao IA -- adicionar aba Historico e logica de salvar
-2. Diagnostico -- refatorar niveis para 4 com termometro visual
-3. Diagnostico -- adicionar RadarChart por area
-4. DiagnosticoEstrategia -- reescrever com 3 fases estrategicas
-5. Conectar botao "Gerar Proposta" com nivel do diagnostico
-
+1. Atualizar `franqueadoData.ts` com novos helpers
+2. Redesenhar `FranqueadoDashboard.tsx`
+3. Redesenhar `FranqueadoAgenda.tsx`
+4. Ajustar `FranqueadoComunicados.tsx`
+5. Redesenhar `FranqueadoSuporte.tsx`
