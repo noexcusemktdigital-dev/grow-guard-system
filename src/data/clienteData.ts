@@ -327,28 +327,165 @@ export function getRelatorioDashboardData() {
   };
 }
 
-export function getChatConversas() {
+// ===== CHAT HUB — WhatsApp =====
+
+export interface WhatsAppAccount {
+  id: string;
+  name: string;
+  phone: string;
+  status: "connected" | "disconnected";
+  agentType: "SDR" | "Closer" | "Suporte" | "Pós-venda" | null;
+  unreadCount: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: "contact" | "user" | "ia" | "system";
+  senderName: string;
+  text: string;
+  time: string;
+  avatar?: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  accountId: string;
+  contactName: string;
+  contactPhone: string;
+  contactEmail?: string;
+  avatar: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unread: number;
+  attendanceStatus: "ia" | "humano" | "encerrado" | "espera";
+  attendant?: string;
+  tag: "Lead" | "Cliente" | "Pós-venda";
+  crmLinked: boolean;
+  crmStage?: string;
+  crmResponsible?: string;
+  messages: ChatMessage[];
+}
+
+export function getChatAccounts(): WhatsAppAccount[] {
+  return [
+    { id: "wa1", name: "WA Comercial", phone: "(11) 99900-0001", status: "connected", agentType: "SDR", unreadCount: 5 },
+    { id: "wa2", name: "WA Suporte", phone: "(11) 99900-0002", status: "connected", agentType: "Suporte", unreadCount: 2 },
+    { id: "wa3", name: "WA Pessoal", phone: "(11) 99900-0003", status: "disconnected", agentType: null, unreadCount: 0 },
+  ];
+}
+
+export function getChatConversations(): ChatConversation[] {
   return [
     {
-      id: "1", name: "Canal Vendas", lastMessage: "Carlos: Fechei o cliente ABC!", time: "10:32",
+      id: "c1", accountId: "wa1", contactName: "João Silva", contactPhone: "(11) 99999-1111", contactEmail: "joao@email.com",
+      avatar: "JS", lastMessage: "Olá, quero saber sobre o plano empresarial", lastMessageTime: "10m",
+      unread: 2, attendanceStatus: "ia", tag: "Lead", crmLinked: true, crmStage: "Proposta", crmResponsible: "Você",
       messages: [
-        { id: "m1", sender: "Carlos", text: "Pessoal, alguém tem o contato do João?", time: "10:15", avatar: "CM" },
-        { id: "m2", sender: "Você", text: "Tenho sim, vou enviar por aqui", time: "10:18", avatar: "VS" },
-        { id: "m3", sender: "Carlos", text: "Fechei o cliente ABC!", time: "10:32", avatar: "CM" },
+        { id: "m1", sender: "contact", senderName: "João Silva", text: "Oi, boa tarde!", time: "14:20", avatar: "JS" },
+        { id: "m2", sender: "ia", senderName: "IA (SDR)", text: "Olá João! Bem-vindo 🤖 Como posso te ajudar hoje?", time: "14:20" },
+        { id: "m3", sender: "contact", senderName: "João Silva", text: "Quero saber sobre o plano empresarial, valores e o que inclui", time: "14:22", avatar: "JS" },
+        { id: "m4", sender: "ia", senderName: "IA (SDR)", text: "Claro! Nosso plano empresarial inclui CRM completo, automação de marketing e suporte dedicado. Posso agendar uma demonstração para você?", time: "14:22" },
+        { id: "m5", sender: "contact", senderName: "João Silva", text: "Olá, quero saber sobre o plano empresarial", time: "14:25", avatar: "JS" },
       ],
     },
     {
-      id: "2", name: "Canal Marketing", lastMessage: "Ana: Post agendado para amanhã", time: "09:45",
+      id: "c2", accountId: "wa1", contactName: "Maria Oliveira", contactPhone: "(11) 99999-2222", contactEmail: "maria@email.com",
+      avatar: "MO", lastMessage: "Obrigada pelo retorno!", lastMessageTime: "25m",
+      unread: 0, attendanceStatus: "humano", attendant: "Você", tag: "Cliente", crmLinked: true, crmStage: "Fechado", crmResponsible: "Você",
       messages: [
-        { id: "m1", sender: "Ana", text: "Criei o conteúdo para o reels", time: "09:30", avatar: "AC" },
-        { id: "m2", sender: "Ana", text: "Post agendado para amanhã", time: "09:45", avatar: "AC" },
+        { id: "m1", sender: "contact", senderName: "Maria Oliveira", text: "Preciso de ajuda com a integração", time: "13:40", avatar: "MO" },
+        { id: "m2", sender: "system", senderName: "Sistema", text: "Conversa assumida por Você", time: "13:42" },
+        { id: "m3", sender: "user", senderName: "Você", text: "Oi Maria! Claro, vou te ajudar. Qual integração está com problema?", time: "13:43" },
+        { id: "m4", sender: "contact", senderName: "Maria Oliveira", text: "É a integração com o Google Ads, não está sincronizando", time: "13:45", avatar: "MO" },
+        { id: "m5", sender: "user", senderName: "Você", text: "Entendi, vou verificar agora. Pode me enviar o ID da conta?", time: "13:46" },
+        { id: "m6", sender: "contact", senderName: "Maria Oliveira", text: "Obrigada pelo retorno!", time: "13:50", avatar: "MO" },
       ],
     },
     {
-      id: "3", name: "Equipe Geral", lastMessage: "Pedro: Reunião às 14h confirmada", time: "Ontem",
+      id: "c3", accountId: "wa1", contactName: "Carlos Mendes", contactPhone: "(11) 99999-3333",
+      avatar: "CM", lastMessage: "Preciso de ajuda com proposta", lastMessageTime: "1h",
+      unread: 1, attendanceStatus: "espera", tag: "Lead", crmLinked: false,
       messages: [
-        { id: "m1", sender: "Pedro", text: "Reunião às 14h confirmada", time: "17:00", avatar: "PL" },
+        { id: "m1", sender: "contact", senderName: "Carlos Mendes", text: "Bom dia, vocês fazem proposta customizada?", time: "12:30", avatar: "CM" },
+        { id: "m2", sender: "ia", senderName: "IA (SDR)", text: "Bom dia Carlos! Sim, fazemos propostas 100% personalizadas. Vou transferir para um especialista.", time: "12:30" },
+        { id: "m3", sender: "system", senderName: "Sistema", text: "IA transferiu para fila de espera", time: "12:31" },
+        { id: "m4", sender: "contact", senderName: "Carlos Mendes", text: "Preciso de ajuda com proposta", time: "12:35", avatar: "CM" },
+      ],
+    },
+    {
+      id: "c4", accountId: "wa1", contactName: "Ana Costa", contactPhone: "(11) 99999-4444", contactEmail: "ana@email.com",
+      avatar: "AC", lastMessage: "Contrato assinado! ✅", lastMessageTime: "2h",
+      unread: 0, attendanceStatus: "encerrado", attendant: "Você", tag: "Cliente", crmLinked: true, crmStage: "Fechado", crmResponsible: "Você",
+      messages: [
+        { id: "m1", sender: "user", senderName: "Você", text: "Ana, segue o contrato para assinatura", time: "10:00" },
+        { id: "m2", sender: "contact", senderName: "Ana Costa", text: "Recebi! Vou revisar e assinar hoje", time: "10:15", avatar: "AC" },
+        { id: "m3", sender: "contact", senderName: "Ana Costa", text: "Contrato assinado! ✅", time: "11:30", avatar: "AC" },
+        { id: "m4", sender: "system", senderName: "Sistema", text: "Conversa encerrada por Você", time: "11:35" },
+      ],
+    },
+    {
+      id: "c5", accountId: "wa2", contactName: "Pedro Lima", contactPhone: "(11) 99999-5555",
+      avatar: "PL", lastMessage: "O sistema está lento hoje", lastMessageTime: "15m",
+      unread: 3, attendanceStatus: "ia", tag: "Cliente", crmLinked: true, crmStage: "Fechado", crmResponsible: "Carlos",
+      messages: [
+        { id: "m1", sender: "contact", senderName: "Pedro Lima", text: "Olá, estou com problema no acesso", time: "14:00", avatar: "PL" },
+        { id: "m2", sender: "ia", senderName: "IA (Suporte)", text: "Olá Pedro! Vou verificar seu acesso. Pode me informar seu e-mail cadastrado?", time: "14:00" },
+        { id: "m3", sender: "contact", senderName: "Pedro Lima", text: "pedro@email.com", time: "14:02", avatar: "PL" },
+        { id: "m4", sender: "ia", senderName: "IA (Suporte)", text: "Encontrei sua conta. Parece que houve uma atualização recente. Tente limpar o cache do navegador.", time: "14:03" },
+        { id: "m5", sender: "contact", senderName: "Pedro Lima", text: "O sistema está lento hoje", time: "14:10", avatar: "PL" },
+      ],
+    },
+    {
+      id: "c6", accountId: "wa2", contactName: "Fernanda Souza", contactPhone: "(11) 99999-6666", contactEmail: "fernanda@email.com",
+      avatar: "FS", lastMessage: "Resolvido, obrigada!", lastMessageTime: "45m",
+      unread: 0, attendanceStatus: "encerrado", attendant: "Ana", tag: "Cliente", crmLinked: true, crmStage: "Fechado", crmResponsible: "Ana",
+      messages: [
+        { id: "m1", sender: "contact", senderName: "Fernanda Souza", text: "Oi, não consigo emitir a nota fiscal", time: "13:00", avatar: "FS" },
+        { id: "m2", sender: "ia", senderName: "IA (Suporte)", text: "Olá Fernanda! Vou transferir para um atendente especializado.", time: "13:00" },
+        { id: "m3", sender: "system", senderName: "Sistema", text: "Conversa assumida por Ana", time: "13:05" },
+        { id: "m4", sender: "user", senderName: "Ana", text: "Oi Fernanda, já corrigi o problema. Tente novamente.", time: "13:10" },
+        { id: "m5", sender: "contact", senderName: "Fernanda Souza", text: "Resolvido, obrigada!", time: "13:15", avatar: "FS" },
+        { id: "m6", sender: "system", senderName: "Sistema", text: "Conversa encerrada por Ana", time: "13:20" },
+      ],
+    },
+    {
+      id: "c7", accountId: "wa1", contactName: "Ricardo Alves", contactPhone: "(11) 99999-7777", contactEmail: "ricardo@email.com",
+      avatar: "RA", lastMessage: "Quando posso agendar a demo?", lastMessageTime: "3h",
+      unread: 1, attendanceStatus: "ia", tag: "Lead", crmLinked: true, crmStage: "Contato", crmResponsible: "Ana",
+      messages: [
+        { id: "m1", sender: "contact", senderName: "Ricardo Alves", text: "Vi vocês no Instagram, quero conhecer", time: "11:00", avatar: "RA" },
+        { id: "m2", sender: "ia", senderName: "IA (SDR)", text: "Oi Ricardo! Que legal! Temos planos a partir de R$ 297/mês. Quer agendar uma demonstração gratuita?", time: "11:00" },
+        { id: "m3", sender: "contact", senderName: "Ricardo Alves", text: "Quando posso agendar a demo?", time: "11:05", avatar: "RA" },
+      ],
+    },
+    {
+      id: "c8", accountId: "wa2", contactName: "Patrícia Nunes", contactPhone: "(11) 99999-8888",
+      avatar: "PN", lastMessage: "Gostaria de renovar meu plano", lastMessageTime: "5h",
+      unread: 0, attendanceStatus: "humano", attendant: "Carlos", tag: "Pós-venda", crmLinked: true, crmStage: "Fechado", crmResponsible: "Carlos",
+      messages: [
+        { id: "m1", sender: "contact", senderName: "Patrícia Nunes", text: "Olá, meu plano vence semana que vem", time: "09:00", avatar: "PN" },
+        { id: "m2", sender: "ia", senderName: "IA (Suporte)", text: "Oi Patrícia! Vou direcionar para nosso time de renovações.", time: "09:00" },
+        { id: "m3", sender: "system", senderName: "Sistema", text: "Conversa assumida por Carlos", time: "09:05" },
+        { id: "m4", sender: "user", senderName: "Carlos", text: "Oi Patrícia! Vou preparar uma proposta especial de renovação para você.", time: "09:10" },
+        { id: "m5", sender: "contact", senderName: "Patrícia Nunes", text: "Gostaria de renovar meu plano", time: "09:15", avatar: "PN" },
+      ],
+    },
+    {
+      id: "c9", accountId: "wa3", contactName: "Lucas Ferreira", contactPhone: "(11) 99999-9999",
+      avatar: "LF", lastMessage: "Mensagem não entregue", lastMessageTime: "1d",
+      unread: 0, attendanceStatus: "espera", tag: "Lead", crmLinked: false,
+      messages: [
+        { id: "m1", sender: "contact", senderName: "Lucas Ferreira", text: "Tenho interesse nos serviços", time: "Ontem", avatar: "LF" },
+        { id: "m2", sender: "system", senderName: "Sistema", text: "WhatsApp desconectado — mensagem não entregue", time: "Ontem" },
       ],
     },
   ];
+}
+
+export function getChatConversas() {
+  // backward compat
+  return getChatConversations().slice(0, 3).map(c => ({
+    id: c.id, name: c.contactName, lastMessage: c.lastMessage, time: c.lastMessageTime,
+    messages: c.messages.map(m => ({ id: m.id, sender: m.senderName, text: m.text, time: m.time, avatar: m.avatar || "?" })),
+  }));
 }
