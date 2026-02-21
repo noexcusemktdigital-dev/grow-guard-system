@@ -1,5 +1,159 @@
 // ===== DADOS MOCK — CLIENTE FINAL (SaaS NOEXCUSE) =====
 
+// ===== SaaS ACCESS SYSTEM =====
+
+export interface Organization {
+  id: string;
+  name: string;
+  cnpj: string;
+  plan: string;
+  status: "ativo" | "trial" | "suspenso" | "cancelado";
+  createdAt: string;
+  maxUsers: number;
+  segmento: string;
+  fusoHorario: string;
+}
+
+export interface Subscription {
+  id: string;
+  organizationId: string;
+  planId: string;
+  planName: string;
+  status: "active" | "trial" | "expired" | "cancelled";
+  startDate: string;
+  renewalDate: string;
+  trialEndsAt: string | null;
+  price: number;
+  creditsIncluded: number;
+}
+
+export interface Wallet {
+  organizationId: string;
+  currentBalance: number;
+  totalIncluded: number;
+  renewalDate: string;
+}
+
+export interface CreditTransaction {
+  id: string;
+  type: "consumo" | "recarga" | "compra_extra" | "bonus";
+  amount: number;
+  date: string;
+  module: string;
+  description: string;
+}
+
+export interface SaasPlan {
+  id: string;
+  name: string;
+  price: number;
+  credits: number;
+  maxUsers: number;
+  features: string[];
+  popular: boolean;
+}
+
+export type UserRole = "admin" | "gestor_comercial" | "marketing" | "operador";
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: "ativo" | "convidado" | "inativo";
+  lastLogin: string;
+}
+
+export const mockOrganization: Organization = {
+  id: "org-1",
+  name: "Minha Empresa Ltda",
+  cnpj: "12.345.678/0001-90",
+  plan: "pro",
+  status: "trial",
+  createdAt: "2026-02-07",
+  maxUsers: 5,
+  segmento: "Serviços Digitais",
+  fusoHorario: "America/Sao_Paulo",
+};
+
+export const mockSubscription: Subscription = {
+  id: "sub-1",
+  organizationId: "org-1",
+  planId: "pro",
+  planName: "Pro",
+  status: "trial",
+  startDate: "2026-02-07",
+  renewalDate: "2026-03-07",
+  trialEndsAt: "2026-03-03",
+  price: 397,
+  creditsIncluded: 2000,
+};
+
+export const mockWallet: Wallet = {
+  organizationId: "org-1",
+  currentBalance: 500,
+  totalIncluded: 2000,
+  renewalDate: "2026-03-07",
+};
+
+export const mockTransactions: CreditTransaction[] = [
+  { id: "tx1", type: "recarga", amount: 2000, date: "2026-02-07", module: "Sistema", description: "Créditos do plano Pro — Fev/2026" },
+  { id: "tx2", type: "consumo", amount: -350, date: "2026-02-10", module: "IA Comercial", description: "Geração de scripts e respostas automáticas" },
+  { id: "tx3", type: "consumo", amount: -200, date: "2026-02-12", module: "IA Marketing", description: "Criação de 5 posts com IA" },
+  { id: "tx4", type: "consumo", amount: -150, date: "2026-02-14", module: "Disparos", description: "Campanha WhatsApp — 150 mensagens" },
+  { id: "tx5", type: "consumo", amount: -300, date: "2026-02-16", module: "Geração de Sites", description: "Landing page gerada por IA" },
+  { id: "tx6", type: "compra_extra", amount: 500, date: "2026-02-17", module: "Sistema", description: "Compra de 500 créditos extras" },
+  { id: "tx7", type: "consumo", amount: -250, date: "2026-02-18", module: "IA Comercial", description: "Qualificação automática de 12 leads" },
+  { id: "tx8", type: "consumo", amount: -180, date: "2026-02-19", module: "IA Marketing", description: "Geração de carrossel + copy" },
+  { id: "tx9", type: "bonus", amount: 100, date: "2026-02-20", module: "Sistema", description: "Bônus — indicação de cliente" },
+  { id: "tx10", type: "consumo", amount: -170, date: "2026-02-21", module: "Disparos", description: "Follow-up automático — 85 mensagens" },
+];
+
+export const mockPlans: SaasPlan[] = [
+  {
+    id: "starter", name: "Starter", price: 197, credits: 1000, maxUsers: 2, popular: false,
+    features: ["CRM completo", "Chat WhatsApp (1 número)", "Scripts de vendas", "Relatórios básicos", "1.000 créditos/mês"],
+  },
+  {
+    id: "pro", name: "Pro", price: 397, credits: 2000, maxUsers: 5, popular: true,
+    features: ["Tudo do Starter", "IA Comercial + Marketing", "Disparos em massa", "Geração de sites", "Campanhas avançadas", "2.000 créditos/mês", "5 usuários"],
+  },
+  {
+    id: "enterprise", name: "Enterprise", price: 797, credits: 5000, maxUsers: 15, popular: false,
+    features: ["Tudo do Pro", "API personalizada", "Gerente de conta dedicado", "Onboarding assistido", "Relatórios avançados", "5.000 créditos/mês", "15 usuários"],
+  },
+];
+
+export const mockTeamMembers: TeamMember[] = [
+  { id: "u1", name: "Você (Admin)", email: "admin@minhaempresa.com", role: "admin", status: "ativo", lastLogin: "2026-02-21 14:30" },
+  { id: "u2", name: "Carlos Mendes", email: "carlos@minhaempresa.com", role: "gestor_comercial", status: "ativo", lastLogin: "2026-02-21 11:20" },
+  { id: "u3", name: "Julia Santos", email: "julia@minhaempresa.com", role: "marketing", status: "convidado", lastLogin: "—" },
+];
+
+export const roleDescriptions: Record<UserRole, { label: string; description: string; color: string }> = {
+  admin: { label: "Admin", description: "Acesso total, gerencia plano, compra créditos, conecta WhatsApp", color: "bg-primary text-primary-foreground" },
+  gestor_comercial: { label: "Gestor Comercial", description: "CRM, Chat, Scripts, Relatórios", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  marketing: { label: "Marketing", description: "Conteúdos, Sites, Tráfego, Campanhas", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
+  operador: { label: "Operador", description: "Apenas CRM e Chat", color: "bg-muted text-muted-foreground" },
+};
+
+export function getTrialDaysRemaining(): number {
+  if (!mockSubscription.trialEndsAt) return 0;
+  const now = new Date("2026-02-21");
+  const end = new Date(mockSubscription.trialEndsAt);
+  const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, diff);
+}
+
+export function getCreditConsumptionByModule() {
+  return [
+    { name: "IA Comercial", value: 600, fill: "hsl(355, 78%, 50%)" },
+    { name: "IA Marketing", value: 380, fill: "hsl(262, 60%, 55%)" },
+    { name: "Disparos", value: 320, fill: "hsl(200, 70%, 50%)" },
+    { name: "Geração de Sites", value: 300, fill: "hsl(142, 71%, 40%)" },
+  ];
+}
+
 export interface ClienteKpi {
   label: string;
   value: string;
