@@ -52,20 +52,67 @@ export interface FranqueadoProposta {
 export interface FranqueadoContrato {
   id: string;
   clienteNome: string;
-  valor: number;
-  status: "ativo" | "encerrado" | "pendente";
+  valorBase: number;
+  valorExcedente: number;
+  emissorExcedente: "franqueado" | "matriz" | null;
+  status: "ativo" | "encerrado" | "pendente" | "vencendo";
   inicioEm: string;
   fimEm: string;
-  tipo: string;
+  tipo: "Recorrente" | "Unitário";
+  assinado: boolean;
+  propostaId?: string;
 }
 
 export interface FranqueadoFinanceiroResumo {
-  clientesAtivos: number;
-  receitaMes: number;
+  receitaBruta: number;
   repasse: number;
+  excedenteGerado: number;
+  excedenteEmitido: number;
+  valorLiquidoEstimado: number;
   royalties: number;
   sistemaMensalidade: number;
-  dreDisponivel: boolean;
+  resultadoEstimado: number;
+}
+
+export interface FranqueadoEntrada {
+  id: string;
+  clienteNome: string;
+  tipo: "Recorrente" | "Unitário" | "SaaS" | "Excedente";
+  valorContrato: number;
+  repasseValor: number;
+  excedente: number;
+  emissorExcedente: "franqueado" | "matriz" | null;
+  valorFinalFranqueado: number;
+  statusCobranca: string;
+  recebido: boolean;
+  data: string;
+}
+
+export interface FranqueadoSaida {
+  id: string;
+  descricao: string;
+  tipo: string;
+  valor: number;
+  categoria: "Pessoas" | "Estrutura" | "Marketing" | "Ferramentas" | "Outros";
+  mes: string;
+  status: "Pago" | "Pendente" | "Agendado";
+}
+
+export interface FranqueadoFechamento {
+  id: string;
+  mes: string;
+  receita: number;
+  repasse: number;
+  excedenteFranqueado: number;
+  royalties: number;
+  sistema: number;
+  valorLiquido: number;
+  status: "Disponível" | "Pago" | "Pendente";
+}
+
+export interface FranqueadoAlertaFinanceiro {
+  tipo: "warning" | "info" | "clock";
+  mensagem: string;
 }
 
 export interface MaterialCategoria {
@@ -74,6 +121,33 @@ export interface MaterialCategoria {
   descricao: string;
   arquivos: number;
   icone: string;
+}
+
+export interface FranqueadoMensagemDia {
+  categoria: string;
+  texto: string;
+  autor: string;
+}
+
+export interface FranqueadoEvento {
+  id: string;
+  titulo: string;
+  data: string;
+  hora: string;
+  tipo: string;
+  visibilidade: "pessoal" | "unidade" | "rede";
+  editavel: boolean;
+}
+
+export interface FranqueadoComunicado {
+  id: string;
+  titulo: string;
+  conteudo: string;
+  prioridade: "Crítica" | "Alta" | "Normal";
+  autorNome: string;
+  criadoEm: string;
+  destinatario: "rede" | "unidade";
+  lido: boolean;
 }
 
 // ── Helpers ──
@@ -158,26 +232,92 @@ export function getFranqueadoPropostas(): FranqueadoProposta[] {
   ];
 }
 
+// ── Contratos (versão expandida com excedente) ──
+
+function calcularValorFranqueado(valorBase: number, valorExcedente: number, emissor: "franqueado" | "matriz" | null): number {
+  const base20 = valorBase * 0.2;
+  if (!emissor || valorExcedente === 0) return base20;
+  if (emissor === "franqueado") return base20 + valorExcedente;
+  return base20 + valorExcedente * 0.2;
+}
+
 export function getFranqueadoContratos(): FranqueadoContrato[] {
   return [
-    { id: "CT-1", clienteNome: "Marcos Silva", valor: 6200, status: "ativo", inicioEm: "2026-02-15", fimEm: "2027-02-15", tipo: "Anual" },
-    { id: "CT-2", clienteNome: "Tech Solutions", valor: 3800, status: "ativo", inicioEm: "2026-01-01", fimEm: "2026-07-01", tipo: "Semestral" },
-    { id: "CT-3", clienteNome: "Digital Agency", valor: 2500, status: "ativo", inicioEm: "2025-12-01", fimEm: "2026-06-01", tipo: "Semestral" },
-    { id: "CT-4", clienteNome: "Loja Express", valor: 4000, status: "pendente", inicioEm: "2026-03-01", fimEm: "2027-03-01", tipo: "Anual" },
-    { id: "CT-5", clienteNome: "StartUp ABC", valor: 1800, status: "encerrado", inicioEm: "2025-06-01", fimEm: "2025-12-01", tipo: "Semestral" },
+    { id: "CT-1", clienteNome: "Marcos Silva", valorBase: 6200, valorExcedente: 1200, emissorExcedente: "franqueado", status: "ativo", inicioEm: "2026-02-15", fimEm: "2027-02-15", tipo: "Recorrente", assinado: true, propostaId: "P-3" },
+    { id: "CT-2", clienteNome: "Tech Solutions", valorBase: 3800, valorExcedente: 500, emissorExcedente: "matriz", status: "ativo", inicioEm: "2026-01-01", fimEm: "2026-07-01", tipo: "Recorrente", assinado: true },
+    { id: "CT-3", clienteNome: "Digital Agency", valorBase: 2500, valorExcedente: 0, emissorExcedente: null, status: "vencendo", inicioEm: "2025-12-01", fimEm: "2026-03-10", tipo: "Recorrente", assinado: true },
+    { id: "CT-4", clienteNome: "Loja Express", valorBase: 4000, valorExcedente: 800, emissorExcedente: "franqueado", status: "pendente", inicioEm: "2026-03-01", fimEm: "2027-03-01", tipo: "Recorrente", assinado: false },
+    { id: "CT-5", clienteNome: "StartUp ABC", valorBase: 1800, valorExcedente: 0, emissorExcedente: null, status: "encerrado", inicioEm: "2025-06-01", fimEm: "2025-12-01", tipo: "Unitário", assinado: true },
+    { id: "CT-6", clienteNome: "Corp Brasil", valorBase: 5500, valorExcedente: 1500, emissorExcedente: "matriz", status: "ativo", inicioEm: "2026-01-15", fimEm: "2027-01-15", tipo: "Recorrente", assinado: true },
   ];
 }
 
+// ── Financeiro expandido ──
+
 export function getFranqueadoFinanceiro(): FranqueadoFinanceiroResumo {
   return {
-    clientesAtivos: 47,
-    receitaMes: 38500,
+    receitaBruta: 38500,
     repasse: 7700,
+    excedenteGerado: 4000,
+    excedenteEmitido: 2000,
+    valorLiquidoEstimado: 28415,
     royalties: 385,
     sistemaMensalidade: 250,
-    dreDisponivel: true,
+    resultadoEstimado: 28415,
   };
 }
+
+export function getFranqueadoEntradas(): FranqueadoEntrada[] {
+  return [
+    { id: "E-1", clienteNome: "Marcos Silva", tipo: "Recorrente", valorContrato: 6200, repasseValor: 1240, excedente: 1200, emissorExcedente: "franqueado", valorFinalFranqueado: calcularValorFranqueado(6200, 1200, "franqueado"), statusCobranca: "Emitido pelo Franqueado", recebido: true, data: "2026-02-05" },
+    { id: "E-2", clienteNome: "Tech Solutions", tipo: "Recorrente", valorContrato: 3800, repasseValor: 760, excedente: 500, emissorExcedente: "matriz", valorFinalFranqueado: calcularValorFranqueado(3800, 500, "matriz"), statusCobranca: "Emitido pela Matriz", recebido: true, data: "2026-02-03" },
+    { id: "E-3", clienteNome: "Corp Brasil", tipo: "Recorrente", valorContrato: 5500, repasseValor: 1100, excedente: 1500, emissorExcedente: "matriz", valorFinalFranqueado: calcularValorFranqueado(5500, 1500, "matriz"), statusCobranca: "Emitido pela Matriz", recebido: false, data: "2026-02-10" },
+    { id: "E-4", clienteNome: "Digital Agency", tipo: "Recorrente", valorContrato: 2500, repasseValor: 500, excedente: 0, emissorExcedente: null, valorFinalFranqueado: calcularValorFranqueado(2500, 0, null), statusCobranca: "Emitido pelo Franqueado", recebido: true, data: "2026-02-01" },
+    { id: "E-5", clienteNome: "Loja Express", tipo: "SaaS", valorContrato: 800, repasseValor: 160, excedente: 0, emissorExcedente: null, valorFinalFranqueado: calcularValorFranqueado(800, 0, null), statusCobranca: "Emitido pelo Franqueado", recebido: false, data: "2026-02-15" },
+  ];
+}
+
+export function getFranqueadoSaidas(): FranqueadoSaida[] {
+  return [
+    { id: "S-1", descricao: "Aluguel do escritório", tipo: "Fixo", valor: 3500, categoria: "Estrutura", mes: "Fev/2026", status: "Pago" },
+    { id: "S-2", descricao: "Salários equipe comercial", tipo: "Fixo", valor: 8200, categoria: "Pessoas", mes: "Fev/2026", status: "Pago" },
+    { id: "S-3", descricao: "Google Ads local", tipo: "Variável", valor: 1200, categoria: "Marketing", mes: "Fev/2026", status: "Pago" },
+    { id: "S-4", descricao: "Licença CRM", tipo: "Fixo", valor: 350, categoria: "Ferramentas", mes: "Fev/2026", status: "Agendado" },
+    { id: "S-5", descricao: "Material de escritório", tipo: "Variável", valor: 280, categoria: "Outros", mes: "Fev/2026", status: "Pendente" },
+  ];
+}
+
+export function getFranqueadoFechamentos(): FranqueadoFechamento[] {
+  return [
+    { id: "F-1", mes: "Fevereiro 2026", receita: 38500, repasse: 7700, excedenteFranqueado: 2000, royalties: 385, sistema: 250, valorLiquido: 32165, status: "Pendente" },
+    { id: "F-2", mes: "Janeiro 2026", receita: 34200, repasse: 6840, excedenteFranqueado: 1500, royalties: 342, sistema: 250, valorLiquido: 28268, status: "Pago" },
+    { id: "F-3", mes: "Dezembro 2025", receita: 41000, repasse: 8200, excedenteFranqueado: 2500, royalties: 410, sistema: 250, valorLiquido: 34640, status: "Pago" },
+    { id: "F-4", mes: "Novembro 2025", receita: 36800, repasse: 7360, excedenteFranqueado: 1800, royalties: 368, sistema: 250, valorLiquido: 30622, status: "Pago" },
+    { id: "F-5", mes: "Outubro 2025", receita: 33500, repasse: 6700, excedenteFranqueado: 1200, royalties: 335, sistema: 250, valorLiquido: 27415, status: "Disponível" },
+  ];
+}
+
+export function getFranqueadoAlertasFinanceiros(): FranqueadoAlertaFinanceiro[] {
+  return [
+    { tipo: "warning", mensagem: "Contrato CT-3 (Digital Agency) vence em 17 dias" },
+    { tipo: "clock", mensagem: "Cobrança de Corp Brasil ainda não recebida (R$ 5.500)" },
+    { tipo: "info", mensagem: "Fechamento de Janeiro 2026 disponível para download" },
+    { tipo: "warning", mensagem: "DRE de Fevereiro 2026 aguardando confirmação da matriz" },
+  ];
+}
+
+export function getFranqueadoReceitaMensal() {
+  return [
+    { mes: "Set/25", receita: 29800, repasse: 5960 },
+    { mes: "Out/25", receita: 33500, repasse: 6700 },
+    { mes: "Nov/25", receita: 36800, repasse: 7360 },
+    { mes: "Dez/25", receita: 41000, repasse: 8200 },
+    { mes: "Jan/26", receita: 34200, repasse: 6840 },
+    { mes: "Fev/26", receita: 38500, repasse: 7700 },
+  ];
+}
+
+// ── Materiais ──
 
 export function getMateriaisCategorias(): MaterialCategoria[] {
   return [
@@ -191,33 +331,6 @@ export function getMateriaisCategorias(): MaterialCategoria[] {
 }
 
 // ── Dados independentes da unidade ──
-
-export interface FranqueadoMensagemDia {
-  categoria: string;
-  texto: string;
-  autor: string;
-}
-
-export interface FranqueadoEvento {
-  id: string;
-  titulo: string;
-  data: string;
-  hora: string;
-  tipo: string;
-  visibilidade: "pessoal" | "unidade" | "rede";
-  editavel: boolean;
-}
-
-export interface FranqueadoComunicado {
-  id: string;
-  titulo: string;
-  conteudo: string;
-  prioridade: "Crítica" | "Alta" | "Normal";
-  autorNome: string;
-  criadoEm: string;
-  destinatario: "rede" | "unidade";
-  lido: boolean;
-}
 
 export function getFranqueadoMensagemDia(): FranqueadoMensagemDia {
   return {
