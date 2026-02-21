@@ -16,11 +16,11 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 const stages = [
-  { key: "novo", label: "Novo Lead", color: "bg-blue-500" },
-  { key: "contato", label: "Contato", color: "bg-yellow-500" },
-  { key: "proposta", label: "Proposta", color: "bg-purple-500" },
-  { key: "fechado", label: "Fechado", color: "bg-emerald-500" },
-  { key: "perdido", label: "Perdido", color: "bg-destructive" },
+  { key: "novo", label: "Novo Lead", color: "bg-blue-500", gradient: "from-blue-500/15 to-blue-600/5", border: "border-blue-500/30", text: "text-blue-400", dot: "bg-blue-500" },
+  { key: "contato", label: "Contato", color: "bg-amber-500", gradient: "from-amber-500/15 to-amber-600/5", border: "border-amber-500/30", text: "text-amber-400", dot: "bg-amber-500" },
+  { key: "proposta", label: "Proposta", color: "bg-purple-500", gradient: "from-purple-500/15 to-purple-600/5", border: "border-purple-500/30", text: "text-purple-400", dot: "bg-purple-500" },
+  { key: "fechado", label: "Fechado", color: "bg-emerald-500", gradient: "from-emerald-500/15 to-emerald-600/5", border: "border-emerald-500/30", text: "text-emerald-400", dot: "bg-emerald-500" },
+  { key: "perdido", label: "Perdido", color: "bg-red-500", gradient: "from-red-500/15 to-red-600/5", border: "border-red-500/30", text: "text-red-400", dot: "bg-red-500" },
 ] as const;
 
 const tempColors: Record<string, string> = {
@@ -58,10 +58,10 @@ const taskStatusColors: Record<string, string> = {
   atrasada: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
-function DroppableColumn({ stageKey, children }: { stageKey: string; children: React.ReactNode }) {
+function DroppableColumn({ stageKey, stageColor, children }: { stageKey: string; stageColor: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: stageKey });
   return (
-    <div ref={setNodeRef} className={`min-h-[100px] space-y-2 pr-1 transition-colors rounded-lg ${isOver ? "bg-primary/5" : ""}`}>
+    <div ref={setNodeRef} className={`min-h-[100px] space-y-2 pr-1 transition-all duration-200 rounded-lg p-1.5 ${isOver ? `${stageColor} bg-opacity-10` : ""}`}>
       {children}
     </div>
   );
@@ -312,23 +312,29 @@ export default function ClienteCRM() {
               const stageLeads = filteredLeads.filter(l => l.stage === stage.key);
               const total = stageLeads.reduce((s, l) => s + l.value, 0);
               return (
-                <div key={stage.key} className="space-y-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${stage.color}`} />
-                    <span className="text-[11px] font-bold uppercase tracking-wider">{stage.label}</span>
-                    <Badge variant="outline" className="text-[9px] ml-auto">{stageLeads.length}</Badge>
+                <div key={stage.key} className={`rounded-xl border ${stage.border} bg-gradient-to-b ${stage.gradient} overflow-hidden`}>
+                  {/* Column header */}
+                  <div className="px-3 py-2.5 border-b border-border/50">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full ${stage.dot} shadow-sm`} />
+                      <span className={`text-[11px] font-bold uppercase tracking-wider ${stage.text}`}>{stage.label}</span>
+                      <Badge variant="outline" className={`text-[9px] ml-auto ${stage.border} ${stage.text}`}>{stageLeads.length}</Badge>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-medium mt-0.5">R$ {total.toLocaleString()}</p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground font-medium">R$ {total.toLocaleString()}</p>
-                  <ScrollArea className="h-[calc(100vh-320px)]">
-                    <DroppableColumn stageKey={stage.key}>
-                      {stageLeads.length === 0 ? (
-                        <div className="border-2 border-dashed border-muted rounded-lg p-4 text-center">
-                          <p className="text-[10px] text-muted-foreground">Arraste leads aqui</p>
-                        </div>
-                      ) : stageLeads.map(lead => (
-                        <DraggableLeadCard key={lead.id} lead={lead} onClick={() => setSelected(lead)} />
-                      ))}
-                    </DroppableColumn>
+                  {/* Column body */}
+                  <ScrollArea className="h-[calc(100vh-340px)]">
+                    <div className="p-2">
+                      <DroppableColumn stageKey={stage.key} stageColor={stage.color}>
+                        {stageLeads.length === 0 ? (
+                          <div className={`border-2 border-dashed ${stage.border} rounded-lg p-4 text-center`}>
+                            <p className="text-[10px] text-muted-foreground">Arraste leads aqui</p>
+                          </div>
+                        ) : stageLeads.map(lead => (
+                          <DraggableLeadCard key={lead.id} lead={lead} onClick={() => setSelected(lead)} />
+                        ))}
+                      </DroppableColumn>
+                    </div>
                   </ScrollArea>
                 </div>
               );
