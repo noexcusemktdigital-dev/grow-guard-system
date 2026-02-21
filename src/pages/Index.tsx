@@ -11,7 +11,6 @@ const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Sync level with current path
   useEffect(() => {
     if (location.pathname.startsWith("/cliente")) {
       setLevel("CLIENTE FINAL");
@@ -25,31 +24,25 @@ const Index = () => {
   const handleLevelChange = (newLevel: string) => {
     setLevel(newLevel);
     if (newLevel === "FRANQUEADORA") {
-      if (!location.pathname.startsWith("/franqueadora")) {
-        navigate("/franqueadora/dashboard");
-      }
+      if (!location.pathname.startsWith("/franqueadora")) navigate("/franqueadora/dashboard");
     } else if (newLevel === "FRANQUEADO") {
-      if (!location.pathname.startsWith("/franqueado")) {
-        navigate("/franqueado/dashboard");
-      }
+      if (!location.pathname.startsWith("/franqueado")) navigate("/franqueado/dashboard");
     } else if (newLevel === "CLIENTE FINAL") {
-      if (!location.pathname.startsWith("/cliente")) {
-        navigate("/cliente/inicio");
-      }
+      if (!location.pathname.startsWith("/cliente")) navigate("/cliente/inicio");
     }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-between py-3 px-4">
+      <header className="sticky top-0 z-50 border-b border-border/60 bg-card/80 backdrop-blur-xl">
+        <div className="flex items-center justify-between h-14 px-4">
           <div className="flex-1 flex items-center">
             <GlobalSearch />
           </div>
           <div className="flex items-center justify-center">
             <TopSwitch active={level} onChange={handleLevelChange} />
           </div>
-          <div className="flex-1 flex items-center justify-end gap-1">
+          <div className="flex-1 flex items-center justify-end gap-1.5">
             <NotificationBell />
             <UserMenu level={level} />
             <ThemeToggle />
