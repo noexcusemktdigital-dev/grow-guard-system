@@ -1,10 +1,10 @@
 
 
-# Modulo Comercial 360 -- Integracao Completa
+# Modulo Marketing 360 -- Sistema Estrategico + Operacional
 
 ## Resumo
 
-Transformar os 7 modulos do pilar Vendas (CRM, Chat, Agentes IA, Plano de Vendas, Scripts, Disparos, Relatorios) em um sistema integrado e coeso. Atualmente cada modulo funciona isoladamente com dados desconectados. A proposta e criar referencias cruzadas de dados, enriquecer o CRM como nucleo central, preparar Disparos para WhatsApp/Z-API, conectar Scripts ao Plano de Vendas e adicionar metricas de IA/WhatsApp aos Relatorios.
+Transformar os 6 modulos do pilar Marketing (Plano de Marketing, Campanhas, Conteudos, Redes Sociais, Sites, Trafego Pago) de paginas informativas simples em um sistema integrado de execucao estrategica de marketing. O Plano de Marketing se torna o cerebro que alimenta todos os outros modulos. Cada modulo ganha capacidade de execucao real (criar posts, montar landing pages, configurar campanhas pagas) com dados integrados ao CRM comercial.
 
 ---
 
@@ -12,150 +12,148 @@ Transformar os 7 modulos do pilar Vendas (CRM, Chat, Agentes IA, Plano de Vendas
 
 | Modulo | Hoje | Desejado |
 |--------|------|----------|
-| CRM | Kanban basico, detalhe simples | Detalhe rico com historico WhatsApp, diagnostico, proposta, timeline, tags, origem |
-| Chat | 3 colunas funcionando | Botao "Criar Lead" funcional que adiciona ao CRM, referencia bidirecional |
-| Agentes IA | Cards + config + teste | Regras de acionamento por etapa do funil, metricas vindas do Chat |
-| Plano de Vendas | 6 abas completas | Sem mudanca (ja esta robusto) -- apenas referenciado pelos outros modulos |
-| Scripts | Lista simples com 4 categorias | Categorias alinhadas ao funil (Prospeccao, Diagnostico, Fechamento, Objecoes), badge "Usado pela IA" |
-| Disparos | Lista de emails generica | Reposicionar para WhatsApp via Z-API, segmentacao por tag CRM, campanhas, follow-ups |
-| Relatorios | Graficos basicos de vendas | Adicionar aba WhatsApp/IA com metricas de conversas, taxa resposta IA, tempo medio |
+| Plano de Marketing | 3 KPIs + input objetivo + lista canais | Diagnostico completo com 6 secoes (Posicionamento, Objetivo, Canais, Orcamento, Funil, Plano de Acao automatico) |
+| Campanhas | Cards simples com KPIs basicos | Hub de organizacao com dialog de criacao, entregaveis vinculados (conteudos, anuncios, LPs) |
+| Conteudos | Grid de cards com filtro por rede | Calendario editorial visual + criador de conteudo com IA (copy, titulo, CTA, hashtags) |
+| Redes Sociais | 3 cards estaticos com badge "em breve" | Dashboard por rede com metricas + biblioteca de posts criados |
+| Sites | Lista simples de 3 sites | Construtor de landing pages com blocos prontos (Hero, CTA, Formulario, FAQ) |
+| Trafego Pago | Grafico + lista de campanhas | Criador de campanha paga + dashboard de performance com CPC/CTR/CPA/ROI |
 
 ---
 
-## 1. CRM -- Detalhe Enriquecido do Lead
+## Divisao em 2 Etapas
 
-O detalhe do lead (ao clicar no card) sera expandido de um card simples para uma pagina completa com abas:
+Devido ao tamanho, a implementacao sera dividida:
 
-**Aba Resumo:**
-- Dados do lead (nome, telefone, email, valor, temperatura)
-- Etapa atual do funil com badge colorido
-- Responsavel
-- Origem (Google Ads, Instagram, WhatsApp, Indicacao, Site)
-- Tags editaveis (Lead Quente, Decisor, Orcamento Alto)
-- Data de criacao + ultima interacao
+**Etapa 1 (esta implementacao):**
+1. Expandir `clienteData.ts` com todos os novos tipos e dados mock
+2. Reescrever Plano de Marketing com 6 secoes estrategicas
+3. Reescrever Campanhas com dialog de criacao e entregaveis vinculados
+4. Reescrever Conteudos com calendario editorial + criador de conteudo IA
 
-**Aba Historico:**
-- Timeline de atividades (mensagens, mudancas de etapa, notas)
-- Cada entrada com icone, timestamp e descricao
-- Formato visual: linha vertical com pontos coloridos
-
-**Aba WhatsApp:**
-- Ultimas mensagens do chat vinculado (referencia aos dados do Chat)
-- Se vinculado: mostra preview das mensagens
-- Se nao vinculado: botao "Vincular conversa"
-- Indicador se foi atendido por IA ou humano
-
-**Aba Notas:**
-- Textarea para notas livres
-- Historico de notas salvas com data
-
-**Aba Tarefas:**
-- Lista de tarefas vinculadas ao lead
-- Botao adicionar tarefa
-- Status: Pendente, Feita, Atrasada
-
-Campos adicionais no tipo CrmLead:
-- origin: string (canal de aquisicao)
-- tags: string[]
-- diagnosticoDone: boolean
-- propostaEnviada: boolean
-- propostaAceita: boolean
-- lastInteraction: string
-- linkedConversationId: string | null
-- timeline: TimelineEntry[]
-- tasks: LeadTask[]
-- notes: LeadNote[]
+**Etapa 2 (proxima implementacao):**
+5. Reescrever Redes Sociais com dashboard de metricas e biblioteca
+6. Reescrever Sites com construtor de landing pages por blocos
+7. Reescrever Trafego Pago com criador de campanha e dashboard avancado
 
 ---
 
-## 2. Disparos -- Reposicionar para WhatsApp Z-API
+## 1. Plano de Marketing -- Cerebro Estrategico (6 Secoes)
 
-Reformular completamente o modulo Disparos:
+Formato: Accordion ou Tabs verticais com 6 secoes sequenciais. Barra de progresso no topo indicando quantas secoes estao preenchidas.
 
-**Header:** "Disparos WhatsApp" com badge "Z-API"
+### Secao 1: Posicionamento
+- Textarea: Publico-alvo
+- Textarea: Persona (nome, idade, dor, desejo)
+- Input: Ticket medio
+- Textarea: Diferenciais
+- Textarea: Concorrentes (ate 3)
+- Input: Mercado de atuacao
+- Badge "IA pode auxiliar" com botao placeholder "Sugestao de Posicionamento"
 
-**KPIs no topo:**
-- Mensagens enviadas hoje
-- Taxa de entrega
-- Taxa de resposta
-- Campanhas ativas
+### Secao 2: Objetivo
+- Select: Tipo de objetivo (Reconhecimento, Geracao de Leads, Vendas Diretas, Autoridade)
+- Input: Meta de leads/mes
+- Input: Meta de vendas/mes
+- Input: ROI esperado (%)
 
-**Novo formulario de disparo:**
-- Tipo: Mensagem unica / Campanha / Follow-up automatico
-- Segmentacao: por tag CRM (multi-select com tags do CRM)
-- Filtro por etapa do funil
-- Filtro por temperatura
-- Conta WhatsApp de envio (select com contas conectadas)
-- Mensagem com preview
+### Secao 3: Canais
+- Grid de checkboxes com icones: Instagram, Facebook, Google, YouTube, TikTok, WhatsApp, Site
+- Ao ativar canal, sistema registra e pode ativar modulos correspondentes
+- Badge de frequencia sugerida por canal
 
-**Lista de disparos com colunas:**
-- Nome/assunto
-- Tipo (WhatsApp)
-- Segmento (tags)
-- Destinatarios
-- Status (Enviado, Agendado, Rascunho, Em andamento)
-- Taxa entrega / Taxa resposta
-- Data
+### Secao 4: Orcamento
+- Input: Orcamento organico
+- Input: Orcamento pago (trafego)
+- Input: Orcamento producao (criativos, video)
+- KPI: Total do orcamento (soma)
+- Grafico pizza simples com distribuicao
 
-**Secao Follow-ups automaticos:**
-- Regras configuráveis: "Se lead nao respondeu em X dias, enviar mensagem Y"
-- Lista de follow-ups ativos
+### Secao 5: Funil de Marketing
+- Visual de funil com 3 camadas (Topo, Meio, Fundo)
+- Cada camada com:
+  - Descricao do estagio
+  - Tipo de conteudo sugerido
+  - Metrica-alvo
+- Funil desenhado visualmente com CSS (trapezoid shapes ou barras decrescentes)
 
----
-
-## 3. Scripts -- Alinhados ao Funil + IA
-
-Reestruturar categorias e adicionar conexao com IA:
-
-**Novas categorias (alinhadas ao funil):**
-- Prospeccao (abordagem inicial)
-- Diagnostico (perguntas de qualificacao)
-- Fechamento (proposta e negociacao)
-- Quebra de Objecoes (respostas para objecoes comuns)
-
-**Cada script ganha:**
-- Badge "Usado pela IA" se vinculado a um agente
-- Badge da etapa do funil correspondente
-- Botao "Enviar para Agente IA" (vincula script como instrucao do agente)
-- Contagem de uso (quantas vezes foi copiado/usado)
-
-**Secao "Gerar Script com IA":**
-- Collapsible no topo
-- Inputs: etapa do funil, tom de voz, objetivo
-- Botao "Gerar" (mock -- gera template pre-definido baseado nos inputs)
-- Resultado editavel
+### Secao 6: Plano de Acao Automatico
+- Gerado com base nas respostas das secoes anteriores
+- Mostra:
+  - Quantidade de posts semanais sugerida
+  - Tipos de conteudo por dia da semana
+  - Estrategia de trafego sugerida
+  - Campanhas recomendadas
+  - Estrutura de landing page sugerida
+- Botao "Aplicar Plano" que exibe toast de confirmacao (mock -- no futuro alimentaria os outros modulos)
 
 ---
 
-## 4. Relatorios -- Adicionar metricas WhatsApp/IA
+## 2. Campanhas -- Hub de Organizacao
 
-Adicionar aba ou secao dedicada:
+### Header com KPIs (existentes, mantidos)
 
-**Novas metricas:**
-- Conversas WhatsApp (total, por periodo)
-- Taxa de resposta por canal
-- Performance da IA (conversas resolvidas, taxa resolucao, tempo medio)
-- Conversao por etapa do funil (funil visual)
-- ROI comercial (receita / investimento em ads)
-- Tempo medio de resposta (humano vs IA)
+### Dialog "Nova Campanha"
+Ao clicar "Nova Campanha", abre dialog com:
+- Input: Nome da campanha
+- Select: Objetivo (Gerar Leads, Vendas, Brand Awareness, Lancamento)
+- Select: Canal principal (Instagram, Facebook, Google, Multi-canal)
+- Textarea: Publico-alvo
+- Date range: Periodo (inicio e fim)
+- Input: Orcamento (R$)
+- Select: Status (Ativa, Pausada, Rascunho)
 
-**Novos graficos:**
-- BarChart: Conversas por status (IA, Humano, Encerrado)
-- LineChart: Taxa de resposta ao longo do tempo
-- PieChart: Distribuicao de leads por origem
+### Cards de campanha expandidos
+Cada card agora mostra:
+- Secao de entregaveis vinculados (badges):
+  - X conteudos
+  - X anuncios
+  - X landing pages
+  - X disparos
+- Barra de progresso do orcamento (gasto/total)
+- Botao "Ver detalhes" que expande card com lista dos entregaveis
+
+### Detalhe da Campanha (expansivel)
+Ao clicar "Ver detalhes":
+- Tabs: Resumo | Conteudos | Anuncios | Landing Pages
+- Cada tab mostra lista dos itens vinculados (mock)
 
 ---
 
-## 5. Agentes IA -- Regras de Acionamento
+## 3. Conteudos -- Producao Inteligente
 
-Adicionar secao de regras no dialog de configuracao:
+### Duas views: Calendario | Lista
+Toggle no topo para alternar entre visao de calendario mensal e grid de cards (atual).
 
-**Regras configuráveis:**
-- "Se lead na etapa [select etapa] -> acionar este agente"
-- "Se tag = [select tag] -> acionar este agente"
-- "Se horario fora do expediente -> acionar este agente"
+### Calendario Editorial
+- Grid 7 colunas (Seg-Dom) x semanas do mes
+- Cada celula mostra mini-badges dos posts agendados
+- Ao clicar na celula, abre dialog de criacao
+- Navegacao de mes (setas prev/next)
 
-Interface: lista de regras com botao adicionar, cada regra com condicao + acao.
+### Dialog "Criar Conteudo"
+Ao clicar "Novo Conteudo" ou em uma celula do calendario:
+- Select: Formato (Feed, Story, Reels, Carrossel, Blog, Email)
+- Select: Rede social (Instagram, Facebook, LinkedIn, TikTok)
+- Select: Etapa do funil (Topo, Meio, Fundo)
+- Input: Titulo
+- Textarea: Descricao/Briefing
+- Date picker: Data de publicacao
+
+### Secao "Gerar com IA" (dentro do dialog)
+- Botao "Gerar Copy com IA"
+- Ao clicar, preenche automaticamente (mock):
+  - Copy sugerida
+  - Titulo sugerido
+  - CTA sugerido
+  - Hashtags sugeridas
+- Campos editaveis apos geracao
+- Botao "Copiar tudo"
+
+### Integracao com Plano
+- Se plano de marketing definiu "3 posts por semana", mostrar banner:
+  "Seu plano sugere: Segunda (Autoridade), Quarta (Prova Social), Sexta (Oferta)"
+- Indicador visual de meta de posts vs realizado
 
 ---
 
@@ -164,96 +162,137 @@ Interface: lista de regras com botao adicionar, cada regra com condicao + acao.
 ### Arquivos modificados
 
 ```
-src/data/clienteData.ts              -- Expandir CrmLead com campos novos, novos mocks para disparos WhatsApp, scripts alinhados ao funil, dados de relatorio expandidos
-src/pages/cliente/ClienteCRM.tsx     -- Detalhe do lead com abas (Resumo, Historico, WhatsApp, Notas, Tarefas)
-src/pages/cliente/ClienteDisparos.tsx -- Reescrever como hub de disparos WhatsApp com segmentacao CRM
-src/pages/cliente/ClienteScripts.tsx  -- Novas categorias, badges IA, secao gerar script
-src/pages/cliente/ClienteRelatorios.tsx -- Adicionar metricas WhatsApp/IA com novos graficos
-src/pages/cliente/ClienteAgentesIA.tsx -- Adicionar regras de acionamento no dialog de config
+src/data/clienteData.ts                     -- Expandir com novos tipos e dados mock para marketing 360
+src/pages/cliente/ClientePlanoMarketing.tsx  -- Reescrever com 6 secoes estrategicas (Accordion)
+src/pages/cliente/ClienteCampanhas.tsx       -- Reescrever com dialog de criacao e entregaveis vinculados
+src/pages/cliente/ClienteConteudos.tsx       -- Reescrever com calendario editorial + criador IA
 ```
 
-### Novos tipos
+### Novos tipos em clienteData.ts
 
 ```typescript
-interface TimelineEntry {
-  id: string;
-  type: "message" | "stage_change" | "note" | "task" | "call";
-  description: string;
-  date: string;
-  icon: string;
+interface PlanoMarketing {
+  posicionamento: {
+    publicoAlvo: string;
+    persona: string;
+    ticketMedio: number;
+    diferenciais: string;
+    concorrentes: string[];
+    mercado: string;
+  };
+  objetivo: {
+    tipo: "reconhecimento" | "leads" | "vendas" | "autoridade";
+    metaLeads: number;
+    metaVendas: number;
+    roiEsperado: number;
+  };
+  canais: { name: string; active: boolean; icon: string; frequenciaSugerida: string }[];
+  orcamento: {
+    organico: number;
+    pago: number;
+    producao: number;
+  };
+  funil: {
+    topo: { descricao: string; conteudo: string; metrica: string };
+    meio: { descricao: string; conteudo: string; metrica: string };
+    fundo: { descricao: string; conteudo: string; metrica: string };
+  };
+  planoAcao: {
+    postsSemanais: number;
+    cronograma: { dia: string; tipo: string }[];
+    estrategiaTrafego: string;
+    campanhasSugeridas: string[];
+    landingPageSugerida: string;
+  };
 }
 
-interface LeadTask {
+interface CampanhaMarketing {
+  id: string;
+  name: string;
+  objective: string;
+  channel: string;
+  audience: string;
+  startDate: string;
+  endDate: string;
+  budget: number;
+  spent: number;
+  status: "Ativa" | "Pausada" | "Finalizada" | "Rascunho";
+  leads: number;
+  conversions: number;
+  entregaveis: {
+    conteudos: number;
+    anuncios: number;
+    landingPages: number;
+    disparos: number;
+  };
+}
+
+interface ConteudoMarketing {
   id: string;
   title: string;
-  status: "pendente" | "feita" | "atrasada";
-  dueDate: string;
-}
-
-interface LeadNote {
-  id: string;
-  text: string;
-  createdAt: string;
-  author: string;
-}
-
-// CrmLead expandido
-interface CrmLead {
-  // ... campos existentes ...
-  origin: string;
-  tags: string[];
-  diagnosticoDone: boolean;
-  propostaEnviada: boolean;
-  propostaAceita: boolean;
-  lastInteraction: string;
-  linkedConversationId: string | null;
-  timeline: TimelineEntry[];
-  tasks: LeadTask[];
-  notes: LeadNote[];
-}
-
-// Disparo WhatsApp
-interface WhatsAppDisparo {
-  id: string;
-  type: "unica" | "campanha" | "followup";
-  name: string;
-  segment: string[];
-  funnelStage: string | null;
-  temperature: string | null;
-  accountId: string;
-  message: string;
-  recipients: number;
-  status: "enviado" | "agendado" | "rascunho" | "andamento";
-  deliveryRate?: number;
-  responseRate?: number;
-  sentAt?: string;
-  scheduledAt?: string;
-}
-
-// Regra de acionamento IA
-interface IARule {
-  id: string;
-  condition: "stage" | "tag" | "offhours";
-  value: string;
-  action: string;
+  network: string;
+  format: "Feed" | "Story" | "Reels" | "Carrossel" | "Blog" | "Email";
+  funnelStage: "Topo" | "Meio" | "Fundo";
+  status: "Rascunho" | "Agendado" | "Publicado";
+  date: string;
+  description: string;
+  copy?: string;
+  cta?: string;
+  hashtags?: string[];
+  campaignId?: string;
 }
 ```
+
+### Estado dos componentes
+
+**PlanoMarketing:**
+```
+activeSection: number (0-5, controla accordion aberto)
+plano: PlanoMarketing (state editavel)
+progress: number (calculado: secoes preenchidas / 6)
+```
+
+**Campanhas:**
+```
+campanhas: CampanhaMarketing[]
+filter: string
+createOpen: boolean (dialog)
+detailId: string | null (campanha expandida)
+newCampanha: partial CampanhaMarketing (form state)
+```
+
+**Conteudos:**
+```
+view: "calendario" | "lista"
+currentMonth: Date
+conteudos: ConteudoMarketing[]
+createOpen: boolean
+selectedDate: string | null
+newConteudo: partial ConteudoMarketing
+aiGenerated: boolean
+```
+
+### Componentes utilizados
+
+- Accordion (secoes do plano)
+- Card, Badge, Button, Input, Textarea, Select
+- Checkbox (canais)
+- Dialog (criacao de campanha/conteudo)
+- Progress (barra do plano)
+- KpiCard (metricas)
+- PieChart (orcamento)
+- Collapsible (gerar com IA)
+- Calendar-style grid (conteudos -- CSS grid customizado, nao o componente calendar)
+
+### Responsividade
+
+- Desktop: layouts normais
+- Mobile: Accordion empilhado, calendario vira lista semanal, dialogs full-width
 
 ### Ordem de implementacao
 
-Devido ao tamanho, dividir em 2 etapas:
-
-**Etapa 1 (esta implementacao):**
-1. Expandir `clienteData.ts` com todos os novos tipos e dados mock
-2. Reescrever CRM com detalhe enriquecido (abas)
-3. Reescrever Disparos como hub WhatsApp
-
-**Etapa 2 (proxima implementacao):**
-4. Reestruturar Scripts com categorias do funil + geracao IA
-5. Expandir Relatorios com metricas WhatsApp/IA
-6. Adicionar regras de acionamento nos Agentes IA
-
-### Dependencias
-
-Nenhuma nova -- todas as libs necessarias ja estao instaladas (recharts, dnd-kit, radix components).
+1. Expandir `clienteData.ts` com tipos e dados mock do marketing 360
+2. Reescrever `ClientePlanoMarketing.tsx` com 6 secoes (Accordion)
+3. Reescrever `ClienteCampanhas.tsx` com dialog de criacao e entregaveis
+4. Reescrever `ClienteConteudos.tsx` com calendario + criador IA
 
