@@ -139,14 +139,17 @@ function DraggableLeadCard({ lead, onClick, stageColor }: { lead: CrmLead; onCli
   const pendingTasks = lead.tasks.filter(t => t.status === "pendente" || t.status === "atrasada").length;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style}>
       <Card
-        className={`cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${colorStyle.border}`}
-        onClick={(e) => { if (!isDragging) onClick(); }}
+        className={`cursor-pointer hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${colorStyle.border}`}
+        onClick={() => { if (!isDragging) onClick(); }}
       >
         <CardContent className="p-3 space-y-2">
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
+            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing pt-0.5 -ml-1 px-1 touch-none">
+              <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50" />
+            </div>
+            <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold truncate leading-tight">{lead.name}</p>
               <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                 <Phone className="w-3 h-3 shrink-0" /> {lead.phone}
@@ -464,9 +467,11 @@ function NewLeadDialog({ open, onClose, stages, onSave }: {
 
 // ===== Lead Detail Sheet =====
 
-function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null; open: boolean; onClose: () => void; stages: FunnelStage[] }) {
+function LeadDetailSheet({ lead, open, onClose, stages, onUpdate }: { lead: CrmLead | null; open: boolean; onClose: () => void; stages: FunnelStage[]; onUpdate: (lead: CrmLead) => void }) {
   const [noteText, setNoteText] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const [editData, setEditData] = useState<Partial<CrmLead>>({});
   const conversations = useMemo(() => getChatConversations(), []);
 
   if (!lead) return null;
@@ -475,8 +480,66 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
   const stageInfo = stages.find(s => s.key === lead.stage);
   const colorStyle = stageInfo ? getColorStyle(stageInfo.color) : getColorStyle("blue");
 
+  const startEdit = () => {
+    setEditMode(true);
+    setEditData({ name: lead.name, phone: lead.phone, email: lead.email, value: lead.value, temperature: lead.temperature, stage: lead.stage, notes: lead.notes, responsible: lead.responsible });
+  };
+
+  const saveEdit = () => {
+    const updated: CrmLead = {
+      ...lead,
+      ...editData,
+      timeline: [
+        { id: `t_${Date.now()}`, type: "edit", description: "Lead editado", date: new Date().toLocaleString("pt-BR"), icon: "check-circle" },
+        ...lead.timeline,
+      ],
+    };
+    onUpdate(updated);
+    setEditMode(false);
+  };
+
+  const addNote = () => {
+    if (!noteText.trim()) return;
+    const updated: CrmLead = {
+      ...lead,
+      leadNotes: [{ id: `n_${Date.now()}`, text: noteText.trim(), author: "Você", createdAt: new Date().toLocaleString("pt-BR") }, ...lead.leadNotes],
+      timeline: [{ id: `t_${Date.now()}`, type: "note", description: `Nota adicionada: "${noteText.trim().slice(0, 40)}..."`, date: new Date().toLocaleString("pt-BR"), icon: "clipboard" }, ...lead.timeline],
+    };
+    onUpdate(updated);
+    setNoteText("");
+  };
+
+  const addTask = () => {
+    if (!taskTitle.trim()) return;
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 3);
+    const updated: CrmLead = {
+      ...lead,
+      tasks: [...lead.tasks, { id: `task_${Date.now()}`, title: taskTitle.trim(), status: "pendente", dueDate: dueDate.toISOString().split("T")[0] }],
+      timeline: [{ id: `t_${Date.now()}`, type: "task", description: `Tarefa criada: "${taskTitle.trim()}"`, date: new Date().toLocaleString("pt-BR"), icon: "clipboard" }, ...lead.timeline],
+    };
+    onUpdate(updated);
+    setTaskTitle("");
+  };
+
+  const toggleTask = (taskId: string) => {
+    const updated: CrmLead = {
+      ...lead,
+      tasks: lead.tasks.map(t => t.id === taskId ? { ...t, status: t.status === "feita" ? "pendente" : "feita" } : t),
+    };
+    onUpdate(updated);
+  };
+
+  const deleteTask = (taskId: string) => {
+    const updated: CrmLead = {
+      ...lead,
+      tasks: lead.tasks.filter(t => t.id !== taskId),
+    };
+    onUpdate(updated);
+  };
+
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+    <Sheet open={open} onOpenChange={(v) => { if (!v) { onClose(); setEditMode(false); } }}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
         <SheetHeader className="px-5 pt-5 pb-4 border-b border-border">
           <div className="space-y-3">
@@ -497,6 +560,9 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
                   </Badge>
                 </div>
               </div>
+              <Button variant="outline" size="sm" onClick={editMode ? saveEdit : startEdit} className="shrink-0">
+                {editMode ? <><Save className="w-3.5 h-3.5 mr-1" /> Salvar</> : <><Pencil className="w-3.5 h-3.5 mr-1" /> Editar</>}
+              </Button>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-muted/40 rounded-lg p-2 text-center">
@@ -527,42 +593,80 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
               </TabsList>
 
               <TabsContent value="resumo" className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Telefone", value: lead.phone, icon: <Phone className="w-3 h-3 text-primary" /> },
-                    { label: "E-mail", value: lead.email, icon: <Mail className="w-3 h-3 text-primary" /> },
-                    { label: "Responsável", value: lead.responsible },
-                    { label: "Origem", value: lead.origin, icon: originIcons[lead.origin] },
-                    { label: "Última interação", value: lead.lastInteraction },
-                    { label: "Criado em", value: lead.createdAt },
-                  ].map(item => (
-                    <div key={item.label} className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                      <p className="text-[10px] text-muted-foreground mb-0.5">{item.label}</p>
-                      <p className="text-sm font-medium flex items-center gap-1">{item.icon} {item.value}</p>
+                {editMode ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><Label className="text-xs">Nome</Label><Input value={editData.name || ""} onChange={e => setEditData({ ...editData, name: e.target.value })} className="h-9 text-sm mt-1" /></div>
+                      <div><Label className="text-xs">Telefone</Label><Input value={editData.phone || ""} onChange={e => setEditData({ ...editData, phone: e.target.value })} className="h-9 text-sm mt-1" /></div>
                     </div>
-                  ))}
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Status</p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {lead.diagnosticoDone && <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30 bg-emerald-500/5"><CheckCircle className="w-3 h-3 mr-0.5" /> Diagnóstico</Badge>}
-                    {lead.propostaEnviada && <Badge variant="outline" className="text-[9px] text-blue-600 border-blue-500/30 bg-blue-500/5"><FileText className="w-3 h-3 mr-0.5" /> Proposta Enviada</Badge>}
-                    {lead.propostaAceita && <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30 bg-emerald-500/5"><CheckCircle className="w-3 h-3 mr-0.5" /> Aceita</Badge>}
-                    {!lead.diagnosticoDone && !lead.propostaEnviada && <span className="text-xs text-muted-foreground">Nenhum progresso</span>}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><Label className="text-xs">E-mail</Label><Input value={editData.email || ""} onChange={e => setEditData({ ...editData, email: e.target.value })} className="h-9 text-sm mt-1" /></div>
+                      <div><Label className="text-xs">Valor (R$)</Label><Input type="number" value={editData.value || 0} onChange={e => setEditData({ ...editData, value: Number(e.target.value) })} className="h-9 text-sm mt-1" /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Etapa</Label>
+                        <Select value={editData.stage} onValueChange={v => setEditData({ ...editData, stage: v })}>
+                          <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>{stages.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Temperatura</Label>
+                        <div className="flex gap-1 mt-1">
+                          {(["Quente", "Morno", "Frio"] as const).map(t => (
+                            <button key={t} className={`flex-1 text-[10px] font-medium py-1.5 rounded-lg border transition-all ${editData.temperature === t ? tempColors[t] + " border-current" : "border-border hover:bg-muted/50"}`} onClick={() => setEditData({ ...editData, temperature: t })}>
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Observações</Label>
+                      <Textarea value={editData.notes || ""} onChange={e => setEditData({ ...editData, notes: e.target.value })} className="text-sm mt-1 min-h-[60px]" />
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Tags</p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {lead.tags.map(tag => <Badge key={tag} variant="secondary" className="text-[10px] gap-1"><Tag className="w-2.5 h-2.5" /> {tag}</Badge>)}
-                    {lead.tags.length === 0 && <span className="text-xs text-muted-foreground">Nenhuma tag</span>}
-                  </div>
-                </div>
-                {lead.notes && (
-                  <div>
-                    <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Observações</p>
-                    <p className="text-sm bg-muted/30 p-3 rounded-lg border border-border/50">{lead.notes}</p>
-                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: "Telefone", value: lead.phone, icon: <Phone className="w-3 h-3 text-primary" /> },
+                        { label: "E-mail", value: lead.email, icon: <Mail className="w-3 h-3 text-primary" /> },
+                        { label: "Responsável", value: lead.responsible },
+                        { label: "Origem", value: lead.origin, icon: originIcons[lead.origin] },
+                        { label: "Última interação", value: lead.lastInteraction },
+                        { label: "Criado em", value: lead.createdAt },
+                      ].map(item => (
+                        <div key={item.label} className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-[10px] text-muted-foreground mb-0.5">{item.label}</p>
+                          <p className="text-sm font-medium flex items-center gap-1">{item.icon} {item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Status</p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {lead.diagnosticoDone && <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30 bg-emerald-500/5"><CheckCircle className="w-3 h-3 mr-0.5" /> Diagnóstico</Badge>}
+                        {lead.propostaEnviada && <Badge variant="outline" className="text-[9px] text-blue-600 border-blue-500/30 bg-blue-500/5"><FileText className="w-3 h-3 mr-0.5" /> Proposta Enviada</Badge>}
+                        {lead.propostaAceita && <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30 bg-emerald-500/5"><CheckCircle className="w-3 h-3 mr-0.5" /> Aceita</Badge>}
+                        {!lead.diagnosticoDone && !lead.propostaEnviada && <span className="text-xs text-muted-foreground">Nenhum progresso</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Tags</p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {lead.tags.map(tag => <Badge key={tag} variant="secondary" className="text-[10px] gap-1"><Tag className="w-2.5 h-2.5" /> {tag}</Badge>)}
+                        {lead.tags.length === 0 && <span className="text-xs text-muted-foreground">Nenhuma tag</span>}
+                      </div>
+                    </div>
+                    {lead.notes && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Observações</p>
+                        <p className="text-sm bg-muted/30 p-3 rounded-lg border border-border/50">{lead.notes}</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </TabsContent>
 
@@ -618,7 +722,7 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
               <TabsContent value="notas" className="space-y-3">
                 <div className="flex gap-2">
                   <Textarea placeholder="Nova nota..." value={noteText} onChange={e => setNoteText(e.target.value)} className="min-h-[50px] text-sm" />
-                  <Button size="sm" className="self-end" disabled={!noteText.trim()}>Salvar</Button>
+                  <Button size="sm" className="self-end" disabled={!noteText.trim()} onClick={addNote}>Salvar</Button>
                 </div>
                 {lead.leadNotes.map(note => (
                   <div key={note.id} className="bg-muted/30 p-3 rounded-lg border border-border/50">
@@ -631,17 +735,20 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
 
               <TabsContent value="tarefas" className="space-y-3">
                 <div className="flex gap-2">
-                  <Input placeholder="Nova tarefa..." value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="text-sm" />
-                  <Button size="sm" disabled={!taskTitle.trim()}>Adicionar</Button>
+                  <Input placeholder="Nova tarefa..." value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="text-sm" onKeyDown={e => e.key === "Enter" && addTask()} />
+                  <Button size="sm" disabled={!taskTitle.trim()} onClick={addTask}>Adicionar</Button>
                 </div>
                 {lead.tasks.map(task => (
                   <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 bg-muted/20">
-                    <Checkbox checked={task.status === "feita"} />
+                    <Checkbox checked={task.status === "feita"} onCheckedChange={() => toggleTask(task.id)} />
                     <div className="flex-1">
                       <p className={`text-sm ${task.status === "feita" ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
                       <p className="text-[10px] text-muted-foreground">Prazo: {task.dueDate}</p>
                     </div>
                     <Badge variant="outline" className={`text-[9px] ${taskStatusColors[task.status]}`}>{task.status}</Badge>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive" onClick={() => deleteTask(task.id)}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
                   </div>
                 ))}
                 {lead.tasks.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Nenhuma tarefa</p>}
@@ -974,7 +1081,7 @@ export default function ClienteCRM() {
         </Card>
       )}
 
-      <LeadDetailSheet lead={selected} open={!!selected} onClose={() => setSelected(null)} stages={stages} />
+      <LeadDetailSheet lead={selected} open={!!selected} onClose={() => setSelected(null)} stages={stages} onUpdate={(updated) => { setLeads(prev => prev.map(l => l.id === updated.id ? updated : l)); setSelected(updated); }} />
       <StageEditorDialog open={showStageEditor} onClose={() => setShowStageEditor(false)} stages={stages} onSave={setStages} />
       <NewLeadDialog open={showNewLead} onClose={() => setShowNewLead(false)} stages={stages} onSave={handleAddLead} />
     </div>

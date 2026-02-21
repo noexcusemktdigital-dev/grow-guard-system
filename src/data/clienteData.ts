@@ -197,7 +197,7 @@ export interface GamificacaoRanking {
 
 export interface TimelineEntry {
   id: string;
-  type: "message" | "stage_change" | "note" | "task" | "call";
+  type: "message" | "stage_change" | "note" | "task" | "call" | "edit";
   description: string;
   date: string;
   icon: string;
