@@ -421,6 +421,75 @@ export function getDiagnosticoPerguntas(): DiagnosticoNOEPergunta[] {
   ];
 }
 
+// ── Helpers para Dashboard e Agenda do Franqueado ──
+
+export interface FranqueadoAlertaUnidade {
+  id: string;
+  tipo: "contrato" | "proposta" | "diagnostico" | "chamado";
+  titulo: string;
+  descricao: string;
+  prioridade: "alta" | "media" | "baixa";
+  link: string;
+  moduloOrigem: string;
+}
+
+export interface FranqueadoPrioridadeUnidade {
+  id: string;
+  titulo: string;
+  descricao: string;
+  tipo: string;
+  link: string;
+  urgencia: 1 | 2 | 3;
+}
+
+export function getFranqueadoAlertasUnidade(): FranqueadoAlertaUnidade[] {
+  const contratos = getFranqueadoContratos();
+  const propostas = getFranqueadoPropostas();
+  const alertas: FranqueadoAlertaUnidade[] = [];
+
+  contratos.filter(c => c.status === "vencendo").forEach(c => {
+    alertas.push({ id: `a-ct-${c.id}`, tipo: "contrato", titulo: `Contrato ${c.id} vencendo`, descricao: `${c.clienteNome} — ${c.fimEm}`, prioridade: "alta", link: "/franqueado/contratos", moduloOrigem: "Contratos" });
+  });
+
+  propostas.filter(p => p.status === "enviada").forEach(p => {
+    alertas.push({ id: `a-pp-${p.id}`, tipo: "proposta", titulo: `Proposta ${p.id} sem retorno`, descricao: `${p.clienteNome} — enviada em ${p.criadaEm}`, prioridade: "media", link: "/franqueado/propostas", moduloOrigem: "Propostas" });
+  });
+
+  alertas.push({ id: "a-diag-1", tipo: "diagnostico", titulo: "Diagnóstico pendente", descricao: "Ana Beatriz — StartUp.io aguarda estratégia", prioridade: "media", link: "/franqueado/diagnostico", moduloOrigem: "Diagnóstico" });
+
+  return alertas;
+}
+
+export function getFranqueadoPrioridadesUnidade(): FranqueadoPrioridadeUnidade[] {
+  const alertas = getFranqueadoAlertasUnidade();
+  return alertas.slice(0, 3).map((a, i) => ({
+    id: a.id, titulo: a.titulo, descricao: a.descricao, tipo: a.tipo, link: a.link,
+    urgencia: (i + 1) as 1 | 2 | 3,
+  }));
+}
+
+export function getFranqueadoAgendaEvents(): import("./agendaData").AgendaEvent[] {
+  const eventos = getFranqueadoEventos();
+  const calMap: Record<string, string> = { pessoal: "fcal-1", unidade: "fcal-2", rede: "fcal-3" };
+  const nivelMap: Record<string, import("./agendaData").CalendarLevel> = { pessoal: "usuario", unidade: "unidade", rede: "rede" };
+  return eventos.map(e => ({
+    id: e.id, titulo: e.titulo, descricao: "", inicio: `${e.data}T${e.hora}:00`, fim: `${e.data}T${String(Number(e.hora.split(":")[0]) + 1).padStart(2, "0")}:${e.hora.split(":")[1]}:00`,
+    allDay: false, calendarId: calMap[e.visibilidade], nivel: nivelMap[e.visibilidade],
+    tipo: (e.tipo === "Reunião" || e.tipo === "Comercial" ? e.tipo : e.tipo === "Treinamento" ? "Treinamento" : "Evento") as import("./agendaData").EventType,
+    status: "Confirmado" as const, visibilidade: e.visibilidade === "pessoal" ? "Privado" as const : e.visibilidade === "unidade" ? "Interno unidade" as const : "Rede" as const,
+    recorrencia: "none" as const, participantes: [], criadoPor: "u-davi", criadoPorNome: "Davi",
+    criadoEm: `${e.data}T00:00:00`, atualizadoEm: `${e.data}T00:00:00`,
+  }));
+}
+
+export function getFranqueadoCalendars(): import("./agendaData").CalendarConfig[] {
+  return [
+    { id: "fcal-1", nome: "Minha Agenda", nivel: "usuario", cor: "#3B82F6", ownerId: "u-davi", ownerNome: "Davi", compartilharComUnidade: false, compartilharComFranqueadora: false, mostrarDetalhes: true },
+    { id: "fcal-2", nome: "Agenda Curitiba", nivel: "unidade", cor: "#10B981", ownerId: "u-davi", ownerNome: "Davi", unidadeId: "u1", compartilharComUnidade: true, compartilharComFranqueadora: true, mostrarDetalhes: true },
+    { id: "fcal-3", nome: "Agenda da Rede", nivel: "rede", cor: "#8B5CF6", ownerId: "u-admin", ownerNome: "Admin Franqueadora", compartilharComUnidade: true, compartilharComFranqueadora: true, mostrarDetalhes: true },
+  ];
+}
+
 export function getDiagnosticosNOE(): DiagnosticoNOEResultado[] {
   return [
     {

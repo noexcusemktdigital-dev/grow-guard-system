@@ -3,220 +3,194 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Trophy, TrendingUp, Users, DollarSign, FileText, Target,
-  MessageSquare, Calendar, BarChart3, UserPlus, Headphones,
-  FileSignature, LayoutGrid,
+  Plus, ChevronDown, MessageSquare, Calendar, TrendingUp,
+  UserPlus, Headphones, FileSignature, LayoutGrid,
+  DollarSign, FileText, Target, Users, AlertCircle,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
+import { HomeHojePreciso } from "@/components/home/HomeHojePreciso";
+import { HomeAlertas } from "@/components/home/HomeAlertas";
 import {
-  getFranqueadoIndicadores, getFranqueadoMetas, getFranqueadoRanking,
-  getFranqueadoChamados, getFranqueadoMensagemDia, getFranqueadoEventos,
-  getFranqueadoComunicadosUnidade, getFranqueadoContratos, getFranqueadoFinanceiro,
+  getFranqueadoFinanceiro, getFranqueadoLeads, getFranqueadoPropostas,
+  getFranqueadoContratos, getFranqueadoMensagemDia, getFranqueadoEventos,
+  getFranqueadoComunicadosUnidade, getFranqueadoChamados,
+  getFranqueadoPrioridadesUnidade, getFranqueadoAlertasUnidade,
+  getFranqueadoMetas,
 } from "@/data/franqueadoData";
+import { getSaudacao } from "@/data/homeData";
+import type { PrioridadeDoDia, AlertaHome } from "@/data/homeData";
+
+const quickActionIcons: Record<string, React.ElementType> = { UserPlus, Headphones, FileSignature, LayoutGrid };
 
 export default function FranqueadoDashboard() {
   const navigate = useNavigate();
-  const indicadores = useMemo(() => getFranqueadoIndicadores(), []);
-  const metas = useMemo(() => getFranqueadoMetas(), []);
-  const ranking = getFranqueadoRanking();
-  const chamados = useMemo(() => getFranqueadoChamados().filter(c => c.status !== "resolvido"), []);
-  const mensagem = getFranqueadoMensagemDia();
-  const eventos = useMemo(() => getFranqueadoEventos().slice(0, 3), []);
-  const comunicados = useMemo(() => getFranqueadoComunicadosUnidade().slice(0, 3), []);
-
-  // New contract indicator
-  const contratos = useMemo(() => getFranqueadoContratos(), []);
   const fin = useMemo(() => getFranqueadoFinanceiro(), []);
-  const contratosAtivos = contratos.filter(c => c.status === "ativo").length;
-  const contratosRecentes = contratos.filter(c => c.status === "ativo" && c.inicioEm >= "2026-02-01").length;
+  const leads = useMemo(() => getFranqueadoLeads(), []);
+  const propostas = useMemo(() => getFranqueadoPropostas(), []);
+  const contratos = useMemo(() => getFranqueadoContratos(), []);
+  const metas = useMemo(() => getFranqueadoMetas(), []);
+  const mensagem = getFranqueadoMensagemDia();
+  const eventos = useMemo(() => getFranqueadoEventos().slice(0, 5), []);
+  const comunicados = useMemo(() => getFranqueadoComunicadosUnidade().slice(0, 3), []);
+  const chamados = useMemo(() => getFranqueadoChamados().filter(c => c.status !== "resolvido"), []);
 
+  const prioridadesRaw = useMemo(() => getFranqueadoPrioridadesUnidade(), []);
+  const alertasRaw = useMemo(() => getFranqueadoAlertasUnidade(), []);
+
+  // Convert to HomeHojePreciso format
+  const prioridades: PrioridadeDoDia[] = prioridadesRaw.map(p => ({
+    id: p.id, titulo: p.titulo, descricao: p.descricao,
+    tipo: p.tipo as PrioridadeDoDia["tipo"], link: p.link, urgencia: p.urgencia,
+  }));
+
+  const alertas: AlertaHome[] = alertasRaw.map(a => ({
+    id: a.id, titulo: a.titulo, descricao: a.descricao,
+    tipo: a.tipo as AlertaHome["tipo"], prioridade: a.prioridade,
+    link: a.link, moduloOrigem: a.moduloOrigem, criadoEm: new Date().toISOString(),
+  }));
+
+  const saudacao = getSaudacao();
   const hoje = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const hojeCapitalized = hoje.charAt(0).toUpperCase() + hoje.slice(1);
 
-  const atalhos = [
-    { label: "Criar Lead", icon: UserPlus, rota: "/franqueado/crm" },
-    { label: "Abrir Chamado", icon: Headphones, rota: "/franqueado/suporte" },
-    { label: "Ver Propostas", icon: FileSignature, rota: "/franqueado/propostas" },
-    { label: "Acessar CRM", icon: LayoutGrid, rota: "/franqueado/crm" },
+  const contratosAtivos = contratos.filter(c => c.status === "ativo").length;
+  const leadsAtivos = leads.filter(l => l.etapa !== "Perdido" && l.etapa !== "Venda").length;
+  const propostasAbertas = propostas.filter(p => p.status === "enviada" || p.status === "rascunho").length;
+  const vendasMes = propostas.filter(p => p.status === "aceita").length;
+
+  const quickActions = [
+    { label: "Criar Lead", path: "/franqueado/crm", icon: "UserPlus" },
+    { label: "Abrir Chamado", path: "/franqueado/suporte", icon: "Headphones" },
+    { label: "Ver Propostas", path: "/franqueado/propostas", icon: "FileSignature" },
+    { label: "Acessar CRM", path: "/franqueado/crm", icon: "LayoutGrid" },
   ];
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <PageHeader title="Dashboard" subtitle={`Unidade Curitiba · ${hojeCapitalized}`} />
-
-      {/* Mensagem do dia */}
-      <Card className="glass-card border-primary/20">
-        <CardContent className="py-4 px-6">
-          <p className="text-xs uppercase tracking-wider text-primary font-semibold mb-1">{mensagem.categoria}</p>
-          <p className="text-sm text-foreground/90 italic">"{mensagem.texto}"</p>
-          <p className="text-xs text-muted-foreground mt-1">— {mensagem.autor}</p>
-        </CardContent>
-      </Card>
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {indicadores.map((ind, i) => (
-          <KpiCard
-            key={ind.label}
-            label={ind.label}
-            value={ind.valor}
-            sublabel={ind.trend}
-            icon={[Users, DollarSign, FileText, Target][i]}
-            delay={i}
-            variant={i === 1 ? "accent" : "default"}
-          />
-        ))}
-      </div>
-
-      {/* Novo contrato indicator */}
-      {contratosRecentes > 0 && (
-        <Card className="glass-card border-green-500/20 bg-green-500/5 hover-lift cursor-pointer" onClick={() => navigate("/franqueado/contratos")}>
-          <CardContent className="py-4 px-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <FileSignature className="w-5 h-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">+{contratosRecentes} novo(s) contrato(s) ativo(s) este mês</p>
-                <p className="text-xs text-muted-foreground">Impacto estimado: R$ {fin.resultadoEstimado.toLocaleString()}/mês</p>
-              </div>
-            </div>
-            <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-400/30">
-              {contratosAtivos} ativos
-            </Badge>
-          </CardContent>
-        </Card>
-      )}
+      <PageHeader
+        title={`${saudacao}, Davi`}
+        subtitle={`Unidade Curitiba · ${hojeCapitalized}`}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Plus className="w-4 h-4 mr-1" /> Ações rápidas <ChevronDown className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {quickActions.map(a => {
+                const Icon = quickActionIcons[a.icon] || Plus;
+                return (
+                  <DropdownMenuItem key={a.path + a.label} onClick={() => navigate(a.path)}>
+                    <Icon className="w-4 h-4 mr-2" /> {a.label}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
 
       {/* Hoje eu preciso de... */}
-      <Card className="glass-card hover-lift">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold uppercase tracking-wider">
-            🎯 Hoje eu preciso de...
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {atalhos.map(a => (
-              <Button
-                key={a.label}
-                variant="outline"
-                className="h-auto py-4 flex flex-col items-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all"
-                onClick={() => navigate(a.rota)}
-              >
-                <a.icon className="w-5 h-5 text-primary" />
-                <span className="text-xs font-medium">{a.label}</span>
-              </Button>
+      <HomeHojePreciso prioridades={prioridades} />
+
+      {/* Mensagem do dia + Comunicados */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Mensagem do dia */}
+        <div className="glass-card p-6 flex flex-col h-full">
+          <div className="flex items-start justify-between mb-4">
+            <span className="text-2xl text-primary/30">"</span>
+            <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-400">{mensagem.categoria}</Badge>
+          </div>
+          <p className="text-lg italic text-foreground leading-relaxed flex-1">"{mensagem.texto}"</p>
+          <span className="text-xs text-muted-foreground mt-4">— {mensagem.autor}</span>
+        </div>
+
+        {/* Comunicados */}
+        <div className="glass-card p-6 flex flex-col h-full">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Comunicados da Matriz</h3>
+            <Badge variant="outline">{comunicados.length}</Badge>
+          </div>
+          <div className="flex-1 space-y-3">
+            {comunicados.map(c => (
+              <div key={c.id} className={`p-3 rounded-lg border transition-colors cursor-pointer hover:bg-muted/50 ${c.prioridade === "Crítica" ? "border-destructive/50 bg-destructive/5" : "border-border"}`} onClick={() => navigate("/franqueado/comunicados")}>
+                <div className="flex items-start gap-2">
+                  {c.prioridade === "Crítica" && <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5 animate-pulse" />}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium line-clamp-1">{c.titulo}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={c.prioridade === "Crítica" ? "destructive" : "secondary"} className="text-[10px]">{c.prioridade}</Badge>
+                      <span className="text-[10px] text-muted-foreground">{c.autorNome} · {format(new Date(c.criadoEm), "dd MMM", { locale: ptBR })}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Metas + Ranking */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="glass-card hover-lift">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" /> Metas do Mês
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {metas.map(m => (
-              <div key={m.label}>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-muted-foreground">{m.label}</span>
-                  <span className="font-semibold">{m.unidade === "R$" ? `R$ ${m.atual.toLocaleString()}` : m.atual} / {m.unidade === "R$" ? `R$ ${m.objetivo.toLocaleString()}` : m.objetivo}</span>
-                </div>
-                <Progress value={(m.atual / m.objetivo) * 100} className="h-2" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card hover-lift">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-primary" /> Ranking da Rede
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border-2 border-yellow-500/50 flex items-center justify-center">
-                <span className="text-2xl font-black text-yellow-500">{ranking.posicao}º</span>
-              </div>
-              <div>
-                <p className="text-lg font-bold">{ranking.pontos} pts</p>
-                <Badge variant="outline" className="border-yellow-500/50 text-yellow-500 mt-1">{ranking.nivel}</Badge>
-                <p className="text-xs text-muted-foreground mt-1">de {ranking.total} unidades</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <Button variant="ghost" size="sm" className="mt-3 text-xs w-full" onClick={() => navigate("/franqueado/comunicados")}>
+            Ver todos →
+          </Button>
+        </div>
       </div>
 
-      {/* Comunicados + Agenda */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="glass-card hover-lift">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-primary" /> Comunicados Recentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {comunicados.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum comunicado recente.</p>
-            ) : comunicados.map(c => (
-              <div key={c.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate("/franqueado/comunicados")}>
-                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${c.prioridade === "Crítica" ? "bg-destructive" : c.prioridade === "Alta" ? "bg-yellow-500" : "bg-blue-500"}`} />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{c.titulo}</p>
-                  <p className="text-xs text-muted-foreground">{c.autorNome} · {format(new Date(c.criadoEm), "dd/MM/yyyy")}</p>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+      {/* KPIs Financeiros */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard label="Receita do Mês" value={`R$ ${fin.receitaBruta.toLocaleString()}`} sublabel="Receita bruta" icon={DollarSign} delay={0} variant="accent" />
+        <KpiCard label="Projeção" value={`R$ ${Math.round(fin.receitaBruta * 1.15).toLocaleString()}`} sublabel="+15% estimado" icon={TrendingUp} delay={1} />
+        <KpiCard label="Repasse Estimado" value={`R$ ${fin.repasse.toLocaleString()}`} sublabel="20% da receita" icon={FileText} delay={2} />
+        <KpiCard label="Contratos Ativos" value={String(contratosAtivos)} sublabel={`${contratos.length} total`} icon={FileSignature} delay={3} />
+      </div>
 
-        <Card className="glass-card hover-lift">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-primary" /> Próximos Eventos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {eventos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum evento próximo.</p>
-            ) : eventos.map(e => (
-              <div key={e.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate("/franqueado/agenda")}>
+      {/* KPIs Comerciais */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard label="Leads Ativos" value={String(leadsAtivos)} sublabel={`${leads.length} total`} icon={Users} delay={0} />
+        <KpiCard label="Propostas em Aberto" value={String(propostasAbertas)} sublabel="Enviadas + rascunho" icon={Target} delay={1} />
+        <KpiCard label="Vendas do Mês" value={String(vendasMes)} sublabel="Propostas aceitas" icon={TrendingUp} delay={2} variant="accent" />
+        <KpiCard label="Meta do Mês" value={`R$ ${metas[0]?.objetivo?.toLocaleString() || "0"}`} sublabel={`${Math.round((metas[0]?.atual / metas[0]?.objetivo) * 100) || 0}% atingido`} icon={Target} delay={3} />
+      </div>
+
+      {/* Agenda + Alertas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="glass-card p-6 flex flex-col h-full">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Próximos Compromissos</h3>
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1 space-y-2">
+            {eventos.map(e => (
+              <div key={e.id} className="flex items-center gap-3 p-2.5 rounded-lg transition-colors cursor-pointer hover:bg-muted/50" onClick={() => navigate("/franqueado/agenda")}>
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
                   <span className="text-[10px] text-primary font-bold">{format(new Date(e.data), "dd")}</span>
                   <span className="text-[8px] text-muted-foreground uppercase">{format(new Date(e.data), "MMM", { locale: ptBR })}</span>
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{e.titulo}</p>
-                  <p className="text-xs text-muted-foreground">{e.tipo}</p>
+                  <p className="text-[10px] text-muted-foreground">{e.hora} · {e.tipo}</p>
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          <Button variant="ghost" size="sm" className="mt-3 text-xs w-full" onClick={() => navigate("/franqueado/agenda")}>
+            Ver agenda completa →
+          </Button>
+        </div>
 
-      {/* Chamados abertos */}
-      {chamados.length > 0 && (
-        <Card className="glass-card hover-lift">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-primary" /> Chamados em Aberto
+        {alertas.length > 0 && <HomeAlertas alertas={alertas} />}
+
+        {/* Chamados abertos */}
+        {chamados.length > 0 && alertas.length === 0 && (
+          <div className="glass-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <MessageSquare className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Chamados em Aberto</h3>
               <Badge variant="secondary" className="ml-auto">{chamados.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </div>
             <div className="space-y-2">
               {chamados.map(ch => (
                 <div key={ch.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate("/franqueado/suporte")}>
@@ -230,9 +204,9 @@ export default function FranqueadoDashboard() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
