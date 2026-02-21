@@ -109,7 +109,7 @@ export default function Agenda() {
           )}
           {page === "config" && <AgendaConfig onBack={() => setPage("calendar")} />}
           {page === "calendar" && view !== "list" && (
-            <AgendaCalendar view={view} currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={handleSelectEvent} onSelectDate={handleSelectDate} />
+            <AgendaCalendar view={view} currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={handleSelectEvent} onSelectDate={handleSelectDate} onCreateEvent={(date) => { setFormDefaultDate(date); setEditingEvent(null); setShowEventForm(true); }} />
           )}
           {page === "calendar" && view === "list" && (
             <AgendaListView currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={handleSelectEvent} />
