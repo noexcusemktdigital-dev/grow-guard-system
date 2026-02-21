@@ -1,145 +1,103 @@
 
 
-# Atualizar Calculadora NOE com Valores Exatos e Proposta PDF
+# Corrigir Pagamento da Calculadora (Logica da Calculadora NOE)
 
 ## Resumo
 
-Duas grandes mudancas:
-1. Substituir todos os valores, nomes, descricoes e tipos de quantidade dos servicos na calculadora para ficarem identicos ao projeto "calculadora NOE" de referencia
-2. Adicionar geracao de proposta em PDF no formato identico ao anexo (com logo NOEXCUSE, tabela Servico/Tipo/Qtd/Valor, Resumo Financeiro, forma de pagamento, duracao do projeto)
+Alinhar completamente a logica de pagamento, duracao e resumo financeiro com o projeto "calculadora NOE" de referencia. As principais mudancas:
 
-## O que muda
+1. **Adicionar duracao "1 Mes"** -- para projetos de entrega unica (so unitario)
+2. **Remover "Total do Projeto"** -- nao existe na referencia, so mostra Total Unitario + Total Mensal separados
+3. **Corrigir logica de parcelamento** -- o parcelamento dilui o unitario dentro do mensal (nao divide o total geral)
+4. **Pagamento so aparece quando duracao > 1** -- se for 1 mes, nao tem opcao de pagamento
+5. **Permitir contratar so unitario** -- cliente pode selecionar apenas servicos unitarios e pagar a vista
 
-### 1. Dados dos servicos (valores, tipos de quantidade, pacotes)
+---
 
-O modelo atual usa tipo simples (unitario/mensal com quantidade generica). O projeto de referencia usa tipos mais ricos:
+## O que muda na interface
 
-- `single` -- sem quantidade (ex: Logo + Manual = R$ 2.500)
-- `quantity` -- quantidade livre com min/max (ex: Material de Marca = R$ 200/peca)
-- `package` -- pacotes fixos como 2, 4, 6, 8, 10, 12 (ex: Artes = R$ 85/arte)
-- `youtube_time` -- tempo em minutos com preco calculado (ex: Edicao YouTube = R$ 250 por 2 min)
-- `toggle` -- liga/desliga simples
+### Step 2 - Duracao
 
-**Exemplos de correcoes de preco:**
-- Artes (Criativos Organicos): R$ 1.500 atualmente, correto = R$ 85/arte (pacote 2-12)
-- Videos (Reels): R$ 2.000 atualmente, correto = R$ 150/video (pacote 2-12)
-- Gestao de Trafego Meta: R$ 2.000 atualmente, correto = R$ 900/conta
-- Logo + Manual de Marca: R$ 3.500 atualmente, correto = R$ 2.500
-- E todos os demais servicos ajustados conforme dados da calculadora
+Adicionar opcao "01 Mes" (entrega unica) alem de 6 e 12 meses:
 
-### 2. Proposta PDF
+```text
+[01 Mes]  [Semestral]  [Anual]
+ Entrega    6 meses    12 meses
+  unica    de projeto  de projeto
+```
 
-No Step 3 (Resumo), ao clicar "Gerar Proposta", alem de salvar na lista, gera um preview da proposta no estilo do PDF anexado, com botao "Baixar PDF" usando `html2pdf.js`:
+### Step 2 - Pagamento
 
-- Cabecalho: logo NOEXCUSE + "Proposta Comercial" + data
-- "Preparado para:" + nome do cliente
-- "Duracao do Projeto" (6 ou 12 meses)
-- Servicos agrupados por modulo com tabela: Servico | Tipo | Qtd | Valor
-- Resumo Financeiro: Total Unitario + Total Mensal
-- Investimento: forma de pagamento (A Vista, 3x, 6x) com simulacao de parcelas
-- Rodape: "Proposta gerada automaticamente pela Calculadora NOEXCUSE / Valida por 30 dias"
+- So aparece se duracao > 1 mes
+- Cards mostram valores diluidos (unitario + mensal juntos), nao parcelas do total:
 
-### 3. Wizard atualizado
+```text
+A Vista:     Mes 1: R$ (unitario + mensal) | Mes 2+: R$ mensal
+3x:          Mes 1-3: R$ (mensal + unitario/3) | Mes 4+: R$ mensal
+6x:          Mes 1-6: R$ (mensal + unitario/6) | Mes 7+: R$ mensal
+```
 
-- **Step 1**: Selecao de servicos com suporte a pacotes (2,4,6,8,10,12), quantidade com min/max, e YouTube time
-- **Step 2**: Duracao do projeto (6 ou 12 meses) + forma de pagamento (A Vista, 3x, 6x) -- substitui os campos de excedente/emissor/recorrencia que sao internos da franquia
-- **Step 3**: Resumo + preview da proposta + nome do cliente + Baixar PDF
+- Se nao tem mensal (so unitario): mostra "Pagamento unico" / "Sem mensalidade apos"
+
+### Step 2 - Simulacao
+
+- Remover "Total do Projeto" e "parcelas x de R$ valor"
+- Mostrar apenas: Total Unitario | Total Mensal | Forma de pagamento com meses diluidos
+
+### Step 3 - Preview/PDF
+
+- Resumo Financeiro: so Total Unitario (Setup) e Total Mensal (Recorrencia), sem total do projeto
+- Investimento: mostrar "Mes 1: R$ X | Mes 2+: R$ Y" em vez de "Nx de R$ valor"
+
+### Mini resumo (Step 1)
+
+- Manter Total Unitario + Total Mensal separados, remover totalGeral
 
 ---
 
 ## Secao Tecnica
 
-### Arquivos modificados
-
-```
-src/pages/franqueado/FranqueadoPropostas.tsx  -- reescrever modulosNOE, tipos, wizard steps, adicionar geracao PDF
-```
-
-### Estrutura de dados atualizada
+### Arquivo modificado
 
 ```text
-ServicoNOE {
-  id, nome, descricao, preco: number,
-  tipo: 'unitario' | 'mensal',
-  tipoQuantidade: 'single' | 'quantity' | 'package' | 'youtube_time',
-  pacotes?: number[],        // ex: [2,4,6,8,10,12]
-  minQuantidade?: number,
-  maxQuantidade?: number,
-  unidade?: string,           // ex: 'arte', 'conta', 'pagina'
-}
+src/pages/franqueado/FranqueadoPropostas.tsx
 ```
 
-### Todos os servicos com valores corretos (copiados da referencia)
+### Mudancas especificas
 
-**Branding:**
-- Logo + Manual de Marca: R$ 2.500 (single, unitario)
-- Material de Marca: R$ 200/peca (quantity 1-50, unitario)
-- Midia Off: R$ 200/peca (quantity 1-50, unitario)
-- Naming: R$ 1.500 (single, unitario)
-- Registro INPI: R$ 3.500 (single, unitario)
-- Ebook: R$ 0 (single, unitario)
-- Apresentacao Comercial: R$ 0 (single, unitario)
+**1. Tipo de duracao** -- mudar de `"6" | "12"` para `1 | 6 | 12`:
+```text
+const [duracao, setDuracao] = useState<1 | 6 | 12>(12);
+```
 
-**Social Media:**
-- Artes (Criativos Organicos): R$ 85/arte (package [2,4,6,8,10,12], mensal)
-- Videos (Reels): R$ 150/video (package [2,4,6,8,10,12], mensal)
-- Programacao Meta: R$ 100/conta (quantity 1-10, mensal)
-- Programacao LinkedIn: R$ 100/conta (quantity 1-10, mensal)
-- Programacao TikTok: R$ 100/conta (quantity 1-10, mensal)
-- Programacao YouTube: R$ 100/conta (quantity 1-10, mensal)
-- Capa de Destaques: R$ 100 (single, unitario)
-- Criacao de Avatar: R$ 20 (single, unitario)
-- Template Canva: R$ 100 (single, unitario)
-- Edicao de Video YouTube: preco calculado por tempo (youtube_time, unitario)
+**2. Remover totalProjeto e totalGeral** -- essas variaveis nao existem na referencia:
+```text
+// REMOVER:
+const totalGeral = totalUnitario + totalMensal;
+const totalProjeto = totalUnitario + totalMensal * Number(duracao);
+```
 
-**Performance:**
-- Gestao de Trafego Meta: R$ 900/conta (quantity 1-10, mensal)
-- Gestao de Trafego Google (inclui YouTube): R$ 900/conta (quantity 1-10, mensal)
-- Gestao de Trafego LinkedIn: R$ 900/conta (quantity 1-10, mensal)
-- Gestao de Trafego TikTok: R$ 900/conta (quantity 1-10, mensal)
-- Configuracao Google Meu Negocio: R$ 450 (single, unitario)
-- Artes de Campanha: R$ 85/arte (package [2,4,6,8,10,12], mensal)
-- Videos de Campanha: R$ 150/video (package [2,4,6,8,10,12], mensal)
+**3. Reescrever parcelaInfo** -- usar logica de diluicao:
+```text
+getDilutedMonthly(installments) = totalMensal + (totalUnitario / installments)
 
-**Web:**
-- Pagina de Site + SEO: R$ 850/pagina (quantity 3-20, unitario)
-- Landing Page Link na Bio: R$ 800 (single, unitario)
-- Landing Page VSL: R$ 1.800 (single, unitario)
-- Landing Page Vendas: R$ 1.600 (single, unitario)
-- Landing Page Captura: R$ 1.600/LP (quantity 1-10, unitario)
-- Landing Page Ebook: R$ 1.600 (single, unitario)
-- Alterar Contato: R$ 50/alteracao (quantity 1-20, unitario)
-- Alterar Secao: R$ 120/alteracao (quantity 1-20, unitario)
-- E-commerce WooCommerce: R$ 4.500 (single, unitario)
+getPaymentDetails():
+  avista -> { firstMonths: "Mes 1: R$ (unitario+mensal)", afterMonths: "Mes 2+: R$ mensal" }
+  3x     -> { firstMonths: "Mes 1-3: R$ getDiluted(3)", afterMonths: "Mes 4+: R$ mensal" }
+  6x     -> { firstMonths: "Mes 1-6: R$ getDiluted(6)", afterMonths: "Mes 7+: R$ mensal" }
 
-**Dados / CRM:**
-- Configuracao CRM + Acompanhamento (RD Station): R$ 1.000 (single, unitario)
-- Fluxo/Funil (Etapas de venda + roteiro comercial): R$ 600 (single, unitario)
+  Se totalMensal === 0: afterMonths = "Pagamento unico" / "Sem mensalidade apos"
+```
 
-### Wizard redesenhado
+**4. Step 2 - Duracao**: grid de 3 colunas com opcao 1/6/12 meses
 
-**Step 1 - Servicos**: Igual ao atual, mas com suporte a pacotes (Select com opcoes 2/4/6/8/10/12), quantidade com min/max, e YouTube time selector
+**5. Step 2 - Pagamento**: so renderizar se `duracao > 1`. Cards mostram firstMonths + afterMonths (nao parcelas)
 
-**Step 2 - Investimento**: 
-- Duracao: 6 ou 12 meses (botoes)
-- Forma de pagamento: A Vista / 3x / 6x (cards visuais)
-- Preview: simulacao de valores por mes
+**6. Step 2 - Simulacao**: remover Total Projeto e campo de parcelas. Mostrar so: Total Unitario | Total Mensal | Forma de pagamento diluida
 
-**Step 3 - Proposta**:
-- Input nome do cliente
-- Preview visual da proposta (estilo PDF)
-- Botao "Baixar PDF" (usando html2pdf.js)
-- Botao "Salvar Proposta" (adiciona na lista)
+**7. Mini resumo (Step 1)**: trocar `R$ totalGeral` por mostrar unitario e mensal separados
 
-### Dependencia
+**8. Step 3 - Preview PDF**: atualizar Resumo Financeiro (remover Total do Projeto) e Investimento (usar firstMonths/afterMonths)
 
-Instalar `html2pdf.js` para geracao de PDF no navegador.
-
-### Ordem de implementacao
-
-1. Atualizar tipos e dados dos servicos com valores exatos
-2. Atualizar componente ServicoItem para suportar pacotes/quantity/youtube_time
-3. Redesenhar Step 2 (duracao + pagamento)
-4. Criar Step 3 com preview de proposta e geracao PDF
-5. Testar fluxo completo
+**9. handleSalvarProposta**: salvar `valor: totalUnitario + totalMensal` (soma base, nao projeto total)
 
