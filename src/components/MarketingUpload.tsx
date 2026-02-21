@@ -19,9 +19,10 @@ import {
 interface MarketingUploadProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultCategory?: MarketingCategory;
 }
 
-export function MarketingUpload({ open, onOpenChange }: MarketingUploadProps) {
+export function MarketingUpload({ open, onOpenChange, defaultCategory }: MarketingUploadProps) {
   const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<MarketingCategory | "">("");
