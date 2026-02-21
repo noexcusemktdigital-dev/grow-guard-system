@@ -4,12 +4,14 @@ import {
   LayoutDashboard, CheckSquare, ChevronLeft, ChevronRight,
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
-  ChevronDown, Link, CreditCard, Settings, Zap,
+  ChevronDown, Link, CreditCard, Settings, Zap, Lock,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { mockSubscription, mockWallet, getTrialDaysRemaining } from "@/data/clienteData";
+import { useFeatureGate } from "@/contexts/FeatureGateContext";
 
 interface SidebarItem {
   label: string;
@@ -49,17 +51,21 @@ const sistemaSection: SidebarItem[] = [
 
 function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed: boolean }) {
   const location = useLocation();
+  const { getGateReason } = useFeatureGate();
+
   return (
     <nav className="flex flex-col gap-px">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname.startsWith(item.path);
+        const isGated = !!getGateReason(item.path);
         return (
           <RouterNavLink
             key={item.path}
             to={item.path}
             className={`flex items-center gap-2.5 px-3 py-2 text-[13px] transition-all duration-150 rounded-lg mx-1.5
               ${collapsed ? "justify-center px-2" : ""}
+              ${isGated ? "opacity-50" : ""}
               ${isActive
                 ? "bg-primary/10 text-foreground font-semibold border-l-[3px] border-primary ml-0 pl-2.5"
                 : "text-sidebar-foreground hover:text-foreground hover:bg-muted/50"
@@ -68,7 +74,12 @@ function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed
             title={collapsed ? item.label : undefined}
           >
             <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-            {!collapsed && <span className="truncate">{item.label}</span>}
+            {!collapsed && (
+              <>
+                <span className="truncate flex-1">{item.label}</span>
+                {isGated && <Lock className="w-3 h-3 text-muted-foreground" />}
+              </>
+            )}
           </RouterNavLink>
         );
       })}
@@ -108,6 +119,7 @@ export function ClienteSidebar() {
   const trialDays = getTrialDaysRemaining();
   const isTrialing = mockSubscription.status === "trial";
   const trialUrgent = trialDays <= 3;
+  const { simulateTrialExpired, setSimulateTrialExpired, simulateNoCredits, setSimulateNoCredits } = useFeatureGate();
 
   return (
     <aside
@@ -130,11 +142,8 @@ export function ClienteSidebar() {
 
       {/* Menu */}
       <div className="flex-1 overflow-y-auto py-3 space-y-3">
-        {/* Global items — no section header */}
         <SidebarNavItems items={globalSection} collapsed={collapsed} />
-
         <div className="mx-3 border-t border-sidebar-border" />
-
         <CollapsibleSection title="Vendas" items={vendasSection} collapsed={collapsed} defaultOpen />
         <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
         <CollapsibleSection title="Sistema" items={sistemaSection} collapsed={collapsed} />
@@ -165,6 +174,21 @@ export function ClienteSidebar() {
         <div className="flex justify-center py-2" title={`Trial: ${trialDays} dias`}>
           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${trialUrgent ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"}`}>
             {trialDays}
+          </div>
+        </div>
+      )}
+
+      {/* Demo Toggles */}
+      {!collapsed && (
+        <div className="mx-2 mb-2 p-2.5 rounded-lg border border-dashed border-border bg-muted/30 space-y-2">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Demo</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-muted-foreground">Trial expirado</span>
+            <Switch checked={simulateTrialExpired} onCheckedChange={setSimulateTrialExpired} className="scale-75" />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-muted-foreground">Sem créditos</span>
+            <Switch checked={simulateNoCredits} onCheckedChange={setSimulateNoCredits} className="scale-75" />
           </div>
         </div>
       )}
