@@ -42,7 +42,7 @@ interface SidebarItem {
 }
 
 const principalSection: SidebarItem[] = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/franqueadora/dashboard", disabled: true },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/franqueadora/dashboard" },
   { label: "Agenda", icon: Calendar, path: "/franqueadora/agenda" },
   { label: "Comunicados", icon: Megaphone, path: "/franqueadora/comunicados" },
 ];
