@@ -32,7 +32,8 @@ interface EstruturaComercial {
   etapasProcesso: string[]; tempoMedioFechamento: string; reuniaoRecorrente: boolean;
   frequenciaReuniao: string;
 }
-interface Avaliacao { id: string; data: string; respostas: number[]; score: number; }
+type EscopoAvaliacao = "empresa" | "individual";
+interface Avaliacao { id: string; data: string; respostas: number[]; score: number; escopo: EscopoAvaliacao; vendedor?: string; }
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const CANAIS_OPTIONS = ["Google Ads", "Instagram", "Facebook", "LinkedIn", "Indicação", "Site/SEO", "WhatsApp", "TikTok", "Cold Call", "Outro"];
@@ -107,7 +108,9 @@ export default function ClientePlanoVendas() {
   // ── AVALIAÇÃO STATE ──
   const [respostasAvaliacao, setRespostasAvaliacao] = useState<number[]>(new Array(AVALIACAO_PERGUNTAS.length).fill(0));
   const [avaliacoesSalvas, setAvaliacoesSalvas] = useState<Avaliacao[]>([]);
-  const [avaliacaoAtiva, setAvaliacaoAtiva] = useState(true); // true = formulário aberto
+  const [avaliacaoAtiva, setAvaliacaoAtiva] = useState(false);
+  const [avaliacaoEscopo, setAvaliacaoEscopo] = useState<EscopoAvaliacao>("empresa");
+  const [avaliacaoVendedor, setAvaliacaoVendedor] = useState("");
 
   const toggleCanal = (c: string) => setEstrutura(prev => ({ ...prev, canaisAquisicao: prev.canaisAquisicao.includes(c) ? prev.canaisAquisicao.filter(x => x !== c) : [...prev.canaisAquisicao, c] }));
   const toggleFerramenta = (f: string) => setEstrutura(prev => ({ ...prev, ferramentas: prev.ferramentas.includes(f) ? prev.ferramentas.filter(x => x !== f) : [...prev.ferramentas, f] }));
@@ -193,18 +196,15 @@ export default function ClientePlanoVendas() {
     const total = respostasAvaliacao.reduce((a, b) => a + b, 0);
     const max = AVALIACAO_PERGUNTAS.length * 5;
     const score = Math.round((total / max) * 100);
-    const nova: Avaliacao = { id: `av-${Date.now()}`, data: new Date().toLocaleDateString("pt-BR"), respostas: [...respostasAvaliacao], score };
+    const nova: Avaliacao = { id: `av-${Date.now()}`, data: new Date().toLocaleDateString("pt-BR"), respostas: [...respostasAvaliacao], score, escopo: avaliacaoEscopo, vendedor: avaliacaoEscopo === "individual" ? avaliacaoVendedor : undefined };
     setAvaliacoesSalvas(prev => [...prev, nova]);
     setAvaliacaoAtiva(false);
     setRespostasAvaliacao(new Array(AVALIACAO_PERGUNTAS.length).fill(0));
+    setAvaliacaoVendedor("");
     toast({ title: `Avaliação concluída! Score: ${score}%` });
   };
 
-  const podeNovaAvaliacao = useMemo(() => {
-    if (avaliacoesSalvas.length === 0) return true;
-    // Simula cooldown de 30 dias
-    return false; // In real app, check date diff
-  }, [avaliacoesSalvas]);
+  const VENDEDORES_MOCK = ["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Lima"];
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -846,91 +846,115 @@ export default function ClientePlanoVendas() {
 
         {/* ===== AVALIAR MEU COMERCIAL ===== */}
         <TabsContent value="diagnostico" className="space-y-5">
-          {/* Histórico de avaliações */}
-          {avaliacoesSalvas.length > 0 && (
-            <Card className="overflow-hidden">
-              <CardHeader className="pb-3 bg-gradient-to-r from-slate-500/10 to-transparent border-b border-slate-500/10">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-slate-500/15"><History className="w-4 h-4 text-slate-400" /></div>
-                  Histórico de Avaliações
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {avaliacoesSalvas.map((av, i) => {
-                  const nvl = getNivel(av.score);
-                  return (
-                    <div key={av.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="text-xs">#{i + 1}</Badge>
-                        <span className="text-sm">{av.data}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold" style={{ color: nvl.cor }}>{av.score}%</span>
-                        <Badge style={{ backgroundColor: nvl.cor }} className="text-white text-[10px]">{nvl.label}</Badge>
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Formulário ou resultado */}
-          {avaliacaoAtiva ? (
+          {/* Iniciar avaliação ou histórico */}
+          {!avaliacaoAtiva ? (
             <>
+              {/* Botão Nova Avaliação */}
               <Card className="overflow-hidden">
                 <CardHeader className="pb-3 bg-gradient-to-r from-orange-500/10 to-transparent border-b border-orange-500/10">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-orange-500/15"><ClipboardCheck className="w-4 h-4 text-orange-500" /></div>
-                    Avalie sua Maturidade Comercial
+                    Nova Avaliação de Desempenho
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">Responda com honestidade (1 a 5). A avaliação ficará salva e poderá ser refeita após 30 dias.</p>
+                  <p className="text-xs text-muted-foreground">Avalie o desempenho comercial da empresa ou de um vendedor específico a qualquer momento.</p>
                 </CardHeader>
-                <CardContent className="space-y-5">
-                  {(() => {
-                    const blocos = [...new Set(AVALIACAO_PERGUNTAS.map(p => p.bloco))];
-                    return blocos.map(bloco => (
-                      <div key={bloco}>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-primary mb-3">{bloco}</h4>
-                        <div className="space-y-3">
-                          {AVALIACAO_PERGUNTAS.filter(p => p.bloco === bloco).map(p => {
-                            const idx = AVALIACAO_PERGUNTAS.indexOf(p);
-                            return (
-                              <div key={idx} className="space-y-1">
-                                <Label className="text-sm">{idx + 1}. {p.pergunta}</Label>
-                                <div className="flex gap-2">
-                                  {[1, 2, 3, 4, 5].map(v => (
-                                    <Button key={v} size="sm" variant={respostasAvaliacao[idx] === v ? "default" : "outline"} className="w-10 h-10"
-                                      onClick={() => { const arr = [...respostasAvaliacao]; arr[idx] = v; setRespostasAvaliacao(arr); }}>
-                                      {v}
-                                    </Button>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                <CardContent className="pt-4 space-y-5">
+                  {/* Escopo */}
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-orange-500" /> Quem será avaliado?
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { value: "empresa" as EscopoAvaliacao, label: "Empresa (Geral)", icon: Building2, desc: "Avaliação do comercial como um todo" },
+                        { value: "individual" as EscopoAvaliacao, label: "Vendedor Individual", icon: UserCheck, desc: "Avaliação de desempenho individual" },
+                      ]).map(opt => {
+                        const Icon = opt.icon;
+                        const selected = avaliacaoEscopo === opt.value;
+                        return (
+                          <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
+                            className={`gap-2 h-auto py-2.5 px-4 ${!selected ? "border-dashed" : ""}`}
+                            onClick={() => { setAvaliacaoEscopo(opt.value); setAvaliacaoVendedor(""); }}>
+                            <Icon className="w-4 h-4" />
+                            <div className="text-left">
+                              <span className="text-xs font-medium block">{opt.label}</span>
+                              <span className="text-[10px] opacity-70">{opt.desc}</span>
+                            </div>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Vendedor (condicional) */}
+                  {avaliacaoEscopo === "individual" && (
+                    <div>
+                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-blue-500" /> Selecione o vendedor
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {VENDEDORES_MOCK.map(v => (
+                          <Button key={v} size="sm" variant={avaliacaoVendedor === v ? "default" : "outline"}
+                            className={`text-xs ${avaliacaoVendedor !== v ? "border-dashed" : ""}`}
+                            onClick={() => setAvaliacaoVendedor(v)}>{v}</Button>
+                        ))}
                       </div>
-                    ));
-                  })()}
+                    </div>
+                  )}
+
+                  <Button className="w-full gap-2"
+                    disabled={avaliacaoEscopo === "individual" && !avaliacaoVendedor}
+                    onClick={() => { setAvaliacaoAtiva(true); setRespostasAvaliacao(new Array(AVALIACAO_PERGUNTAS.length).fill(0)); }}>
+                    <ClipboardCheck className="w-4 h-4" /> Iniciar Avaliação
+                    {avaliacaoEscopo === "individual" && avaliacaoVendedor && <span className="text-xs opacity-80">— {avaliacaoVendedor}</span>}
+                  </Button>
                 </CardContent>
               </Card>
 
-              <Button onClick={finalizarAvaliacao} className="w-full" size="lg"
-                disabled={respostasAvaliacao.some(r => r === 0)}>
-                <ClipboardCheck className="w-4 h-4 mr-2" /> Finalizar Avaliação
-              </Button>
-            </>
-          ) : (
-            <>
-              {/* Resultado da última avaliação */}
+              {/* Histórico */}
+              {avaliacoesSalvas.length > 0 && (
+                <Card className="overflow-hidden">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-slate-500/10 to-transparent border-b border-slate-500/10">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-slate-500/15"><History className="w-4 h-4 text-slate-400" /></div>
+                      Histórico de Avaliações ({avaliacoesSalvas.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {avaliacoesSalvas.map((av, i) => {
+                      const nvl = getNivel(av.score);
+                      return (
+                        <div key={av.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="text-xs">#{i + 1}</Badge>
+                            <div>
+                              <span className="text-sm font-medium">{av.data}</span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {av.escopo === "empresa" ? "🏢 Empresa" : `👤 ${av.vendedor}`}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold" style={{ color: nvl.cor }}>{av.score}%</span>
+                            <Badge style={{ backgroundColor: nvl.cor }} className="text-white text-[10px]">{nvl.label}</Badge>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Último resultado */}
               {ultimaAvaliacao && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="overflow-hidden">
                     <CardHeader className="pb-3 bg-gradient-to-r from-rose-500/10 to-transparent border-b border-rose-500/10">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <div className="p-1.5 rounded-lg bg-rose-500/15"><Target className="w-4 h-4 text-rose-500" /></div>
-                        Score de Maturidade
+                        Último Score — {ultimaAvaliacao.escopo === "empresa" ? "Empresa" : ultimaAvaliacao.vendedor}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="py-6 text-center space-y-3">
@@ -968,46 +992,96 @@ export default function ClientePlanoVendas() {
               )}
 
               {/* Recomendações */}
-              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent relative overflow-hidden">
-                <Badge className="absolute top-3 right-3 text-[10px]" variant="secondary"><Brain className="w-3 h-3 mr-1" /> IA</Badge>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Recomendações</CardTitle></CardHeader>
-                <CardContent className="space-y-2">
-                  {scoreAvaliacao <= 25 && <>
-                    <p className="text-sm text-muted-foreground">• Comece documentando seu processo de vendas passo a passo.</p>
-                    <p className="text-sm text-muted-foreground">• Implante um CRM e registre todas as interações com leads.</p>
-                    <p className="text-sm text-muted-foreground">• Defina metas semanais simples e acompanhe diariamente.</p>
-                  </>}
-                  {scoreAvaliacao > 25 && scoreAvaliacao <= 50 && <>
-                    <p className="text-sm text-muted-foreground">• Estruture um funil de vendas com etapas claras e mensuráveis.</p>
-                    <p className="text-sm text-muted-foreground">• Automatize follow-ups para leads sem resposta em 48h.</p>
-                    <p className="text-sm text-muted-foreground">• Invista em scripts de vendas para padronizar a abordagem.</p>
-                  </>}
-                  {scoreAvaliacao > 50 && scoreAvaliacao <= 75 && <>
-                    <p className="text-sm text-muted-foreground">• Otimize taxas de conversão por etapa do funil.</p>
-                    <p className="text-sm text-muted-foreground">• Implante relatórios semanais de performance por vendedor.</p>
-                    <p className="text-sm text-muted-foreground">• Considere escalar com novos canais de aquisição.</p>
-                  </>}
-                  {scoreAvaliacao > 75 && <>
-                    <p className="text-sm text-muted-foreground">• Foque em previsibilidade: forecast semanal com precisão acima de 85%.</p>
-                    <p className="text-sm text-muted-foreground">• Implante upselling e cross-selling para aumentar ticket médio.</p>
-                    <p className="text-sm text-muted-foreground">• Automatize processos repetitivos com IA.</p>
-                  </>}
+              {ultimaAvaliacao && (
+                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent relative overflow-hidden">
+                  <Badge className="absolute top-3 right-3 text-[10px]" variant="secondary"><Brain className="w-3 h-3 mr-1" /> IA</Badge>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Recomendações</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {scoreAvaliacao <= 25 && <>
+                      <p className="text-sm text-muted-foreground">• Comece documentando seu processo de vendas passo a passo.</p>
+                      <p className="text-sm text-muted-foreground">• Implante um CRM e registre todas as interações com leads.</p>
+                      <p className="text-sm text-muted-foreground">• Defina metas semanais simples e acompanhe diariamente.</p>
+                    </>}
+                    {scoreAvaliacao > 25 && scoreAvaliacao <= 50 && <>
+                      <p className="text-sm text-muted-foreground">• Estruture um funil de vendas com etapas claras e mensuráveis.</p>
+                      <p className="text-sm text-muted-foreground">• Automatize follow-ups para leads sem resposta em 48h.</p>
+                      <p className="text-sm text-muted-foreground">• Invista em scripts de vendas para padronizar a abordagem.</p>
+                    </>}
+                    {scoreAvaliacao > 50 && scoreAvaliacao <= 75 && <>
+                      <p className="text-sm text-muted-foreground">• Otimize taxas de conversão por etapa do funil.</p>
+                      <p className="text-sm text-muted-foreground">• Implante relatórios semanais de performance por vendedor.</p>
+                      <p className="text-sm text-muted-foreground">• Considere escalar com novos canais de aquisição.</p>
+                    </>}
+                    {scoreAvaliacao > 75 && <>
+                      <p className="text-sm text-muted-foreground">• Foque em previsibilidade: forecast semanal com precisão acima de 85%.</p>
+                      <p className="text-sm text-muted-foreground">• Implante upselling e cross-selling para aumentar ticket médio.</p>
+                      <p className="text-sm text-muted-foreground">• Automatize processos repetitivos com IA.</p>
+                    </>}
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Cabeçalho da avaliação em andamento */}
+              <Card className="overflow-hidden border-orange-500/20">
+                <CardContent className="py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <ClipboardCheck className="w-5 h-5 text-orange-500" />
+                    <div>
+                      <p className="text-sm font-semibold">Avaliação em andamento</p>
+                      <p className="text-xs text-muted-foreground">
+                        {avaliacaoEscopo === "empresa" ? "🏢 Empresa (Geral)" : `👤 ${avaliacaoVendedor}`}
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setAvaliacaoAtiva(false)}>Cancelar</Button>
                 </CardContent>
               </Card>
 
-              {/* Nova avaliação */}
-              <Card className="border-dashed">
-                <CardContent className="py-6 text-center space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {podeNovaAvaliacao
-                      ? "Você pode criar uma nova avaliação."
-                      : "Próxima avaliação disponível em 30 dias."}
-                  </p>
-                  <Button variant="outline" disabled={!podeNovaAvaliacao} onClick={() => setAvaliacaoAtiva(true)}>
-                    <Plus className="w-4 h-4 mr-1" /> Nova Avaliação
-                  </Button>
+              {/* Formulário */}
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3 bg-gradient-to-r from-orange-500/10 to-transparent border-b border-orange-500/10">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-orange-500/15"><ClipboardCheck className="w-4 h-4 text-orange-500" /></div>
+                    {avaliacaoEscopo === "empresa" ? "Avaliação do Comercial — Empresa" : `Avaliação Individual — ${avaliacaoVendedor}`}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Responda de 1 (muito ruim) a 5 (excelente). Seja honesto na avaliação.</p>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {(() => {
+                    const blocos = [...new Set(AVALIACAO_PERGUNTAS.map(p => p.bloco))];
+                    return blocos.map(bloco => (
+                      <div key={bloco}>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-primary mb-3">{bloco}</h4>
+                        <div className="space-y-3">
+                          {AVALIACAO_PERGUNTAS.filter(p => p.bloco === bloco).map(p => {
+                            const idx = AVALIACAO_PERGUNTAS.indexOf(p);
+                            return (
+                              <div key={idx} className="space-y-1">
+                                <Label className="text-sm">{idx + 1}. {p.pergunta}</Label>
+                                <div className="flex gap-2">
+                                  {[1, 2, 3, 4, 5].map(v => (
+                                    <Button key={v} size="sm" variant={respostasAvaliacao[idx] === v ? "default" : "outline"} className="w-10 h-10"
+                                      onClick={() => { const arr = [...respostasAvaliacao]; arr[idx] = v; setRespostasAvaliacao(arr); }}>
+                                      {v}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
                 </CardContent>
               </Card>
+
+              <Button onClick={finalizarAvaliacao} className="w-full" size="lg"
+                disabled={respostasAvaliacao.some(r => r === 0)}>
+                <ClipboardCheck className="w-4 h-4 mr-2" /> Finalizar Avaliação
+              </Button>
             </>
           )}
         </TabsContent>
