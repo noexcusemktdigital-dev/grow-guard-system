@@ -1,278 +1,256 @@
 
 
-# Modulo Matriz -- Gestao de Usuarios da Franqueadora
+# Design System Global -- Dark Premium + Animacoes Inteligentes
 
 ## Resumo
 
-Criar o modulo "Matriz" dentro da secao Rede do sidebar. Modulo exclusivo para gestao dos usuarios internos da franqueadora (equipe da matriz), com controle granular de permissoes por modulo, permissoes especiais estrategicas e perfis pre-configurados. Usuarios da Matriz NAO sao vinculados a unidades.
+Padronizar o design de todo o sistema seguindo a referencia visual dos anexos: dark premium com accent vermelho, sidebar com secoes categoricas e item ativo em "pill" com barra vermelha, cards com fundo translucido, tipografia com hierarquia forte, espacamento generoso. Adicionar animacoes e transicoes inteligentes em todo o sistema (navegacao, hover, carregamento, graficos).
 
 ---
 
-## Arquivos
+## Escopo de Mudancas
+
+Este e um refactor visual global. Nenhuma funcionalidade muda -- apenas aparencia, consistencia e microinteracoes.
+
+---
+
+## Fase 1 -- Tokens e Fundacao CSS
+
+### Arquivo: `src/index.css`
+
+Ajustar os tokens dark para ficarem mais "premium" (mais escuros, melhor contraste):
+
+- `--background`: de `0 0% 4%` para `220 15% 4%` (leve tom azulado no preto, como o anexo)
+- `--card`: de `0 0% 7%` para `220 10% 6%` (cards mais escuros e translucidos)
+- `--popover`: `220 10% 7%`
+- `--border`: de `0 0% 16%` para `0 0% 12%` (bordas mais sutis)
+- `--muted`: de `0 0% 14%` para `220 8% 12%`
+- `--sidebar-background`: de `0 0% 5%` para `220 15% 5%`
+- `--radius`: de `0.75rem` para `1rem` (radius maior = mais pills/arredondado)
+
+Adicionar novas utility classes:
 
 ```text
-CRIAR:
-src/data/matrizData.ts                              -- tipos, mock data, perfis, helpers
-src/pages/Matriz.tsx                                -- pagina principal (lista + detalhe/edicao)
-src/components/matriz/MatrizUserList.tsx             -- lista de usuarios com filtros
-src/components/matriz/MatrizUserForm.tsx             -- formulario de criacao/edicao de usuario
-src/components/matriz/MatrizPermissions.tsx          -- controle de permissoes por modulo
-src/components/matriz/MatrizSpecialPermissions.tsx   -- toggles de permissoes especiais
-src/components/matriz/MatrizProfiles.tsx             -- perfis pre-configurados
+.glass-card (dark) -- melhorar para:
+  background: rgba(255,255,255,0.04)
+  border: 1px solid rgba(255,255,255,0.08)
+  border-radius: 1rem (20px)
+  backdrop-filter: blur(8px)
 
-MODIFICAR:
-src/components/FranqueadoraSidebar.tsx  -- adicionar "Matriz" na secao Rede
-src/App.tsx                            -- adicionar rota /franqueadora/matriz
+.hover-lift -- transicao hover com elevacao:
+  transition: transform 200ms, box-shadow 200ms
+  hover: translateY(-2px) + shadow sutil
+
+.animate-slide-up -- entrada de conteudo
+.animate-scale-in -- entrada de modais
+.animate-bar-grow -- para graficos
+
+.sidebar-item-active -- reformular:
+  background: primary/12
+  border-left: 3px solid primary
+  border-radius: 0 12px 12px 0 (pill shape)
+  color: foreground (nao primary-foreground)
+  icone: text-primary
+```
+
+### Arquivo: `tailwind.config.ts`
+
+Adicionar keyframes e animations novos:
+
+```text
+keyframes:
+  slide-up: translateY(12px) opacity 0 -> translateY(0) opacity 1
+  slide-down: inverso
+  scale-in: scale(0.96) opacity 0 -> scale(1) opacity 1
+  bar-grow: scaleY(0) -> scaleY(1) (origin bottom)
+  line-draw: strokeDashoffset 100% -> 0
+  pulse-dot: scale 1 -> 1.15 -> 1
+
+animation:
+  slide-up: slide-up 0.3s ease-out
+  scale-in: scale-in 0.2s ease-out
+  bar-grow: bar-grow 0.6s ease-out
+  pulse-dot: pulse-dot 2s infinite
 ```
 
 ---
 
-## 1. Dados (matrizData.ts)
+## Fase 2 -- Sidebar Redesign
 
-### Tipos
+### Arquivo: `src/components/FranqueadoraSidebar.tsx`
+
+Redesign para ficar como nos anexos:
+
+- Icones: `text-primary/70` no estado normal (vermelho sutil), `text-primary` no ativo
+- Item ativo: pill arredondada (rounded-xl) + barra vermelha esquerda 3px + fundo primary/10 + texto foreground
+- Hover: fundo sutil + icone brilha levemente (transition opacity/color 150ms)
+- Secoes: labels uppercase tracking-wider (ja existe section-label, manter)
+- Separador visual entre secoes (nao borda grossa, apenas spacing)
+- Bottom: area de usuario com avatar, nome e unidade (como no anexo "SOCIO NO EXCUSE / UNIDADE CURITIBA")
+- Collapse: transicao suave 300ms (ja existe, manter)
+
+### Arquivo: `src/components/FranqueadoraLayout.tsx`
+
+Adicionar transicao de conteudo:
+
+- Wrapper do `<Outlet />` com classe `animate-fade-in` ou `animate-slide-up`
+- Key baseada em `location.pathname` para re-trigger da animacao ao mudar de pagina
+
+---
+
+## Fase 3 -- Componentes Padrao Reutilizaveis
+
+### CRIAR: `src/components/PageHeader.tsx`
+
+Componente padrao para header de todas as paginas:
+- Titulo (h1, bold, uppercase tracking-wide -- como "GESTAO FINANCEIRA", "UNIDADES DA REDE" nos anexos)
+- Subtitulo (descricao em muted-foreground)
+- Breadcrumbs (opcional)
+- Area de acoes (slot para botoes no canto direito)
+- Badge de contexto (ex: "Franqueadora")
+
+### CRIAR: `src/components/SectionHeader.tsx`
+
+- Titulo menor (h2/h3, bold, uppercase tracking)
+- Descricao curta
+- Acoes opcionais (toggle view, filtros)
+
+### Atualizar: `src/components/KpiCard.tsx`
+
+- Redesign para match do anexo:
+  - Card com fundo translucido (glass-card)
+  - Label em uppercase tracking-wider (ja tem)
+  - Valor grande e bold
+  - Trend icon + sublabel
+  - Variante "accent" com fundo gradiente vermelho (como "SALDO CONSOLIDADO" e "POS-TREINAMENTO" nos anexos)
+  - Hover: hover-lift
+  - Animacao: animate-fade-in com delay escalonado (staggered)
+
+### Atualizar: `src/components/AlertCard.tsx`
+
+- Manter estrutura
+- Adicionar hover-lift
+- Melhorar border-radius para rounded-xl
+
+### Atualizar: `src/components/TopSwitch.tsx`
+
+- Radius maior (rounded-full ja tem)
+- Transicao mais suave no toggle (200ms)
+- Fundo do ativo: foreground com sombra
+
+---
+
+## Fase 4 -- Paginas (aplicar design)
+
+### Todas as paginas precisam de:
+
+1. Trocar header manual por `<PageHeader>` padrao
+2. Trocar h2/h3 de secoes por `<SectionHeader>`
+3. Cards: classe `glass-card hover-lift`
+4. Tabelas: hover na linha com `hover:bg-muted/30 transition-colors`
+5. Badges: manter consistencia de cores por status
+6. Animacao de entrada: container com `animate-fade-in` ou staggered delays
+
+### Paginas a atualizar (todas):
+
+- `Home.tsx` -- header com PageHeader, cards com hover-lift
+- `FinanceiroDashboard.tsx` -- PageHeader uppercase "GESTAO FINANCEIRA", KpiCards accent, graficos com animacao de entrada
+- `FinanceiroDespesas.tsx` -- PageHeader, tabela com hover
+- `FinanceiroReceitas.tsx` -- idem
+- `FinanceiroRepasse.tsx` -- idem
+- `FinanceiroFechamentos.tsx` -- idem
+- `FinanceiroConfiguracoes.tsx` -- idem
+- `ContratosGerenciamento.tsx` -- PageHeader, tabela
+- `ContratosGerador.tsx` -- PageHeader
+- `ContratosTemplates.tsx` -- PageHeader
+- `ContratosConfiguracoes.tsx` -- PageHeader
+- `Marketing.tsx` -- PageHeader
+- `Academy.tsx` -- PageHeader "TREINAMENTOS e ACADEMY", KpiCards
+- `MetasRanking.tsx` -- PageHeader, ranking com hover
+- `Unidades.tsx` -- PageHeader "UNIDADES DA REDE", tabela
+- `CrmExpansao.tsx` -- PageHeader, kanban
+- `Onboarding.tsx` -- PageHeader
+- `Atendimento.tsx` -- PageHeader "CENTRAL DE ATENDIMENTO", chat com animacoes
+- `Comunicados.tsx` -- PageHeader
+- `Agenda.tsx` -- PageHeader
+- `Matriz.tsx` -- PageHeader
+
+---
+
+## Fase 5 -- Microinteracoes e Animacoes
+
+### Sidebar
+
+- Hover item: `transition-all duration-150` (ja tem) + icone muda opacity
+- Item ativo: pill com barra vermelha (transition background/border 150ms)
+
+### Cards e Listas
+
+- Cards: `hover-lift` (translateY(-2px) + shadow)
+- Tabelas: `hover:bg-muted/30` na linha
+- Chips/filtros: toggle com `transition-colors duration-200`
+
+### Navegacao entre paginas
+
+- `FranqueadoraLayout.tsx`: wrapper com key={pathname} + animate-slide-up
+- Fade de 200-300ms, sem exagero
+
+### Graficos (recharts)
+
+- Propriedade `isAnimationActive={true}` nos componentes recharts
+- `animationBegin={0}` `animationDuration={800}` `animationEasing="ease-out"`
+- Apenas na primeira renderizacao
+
+### Skeleton loaders
+
+- Ja existe `src/components/ui/skeleton.tsx`
+- Usar em paginas que carregam dados (placeholder: simular delay 0ms, skeleton visual pronto)
+
+### Toasts
+
+- Ja existem, manter consistencia (sonner)
+
+---
+
+## Fase 6 -- Bottom Sidebar (usuario)
+
+### Arquivo: `src/components/FranqueadoraSidebar.tsx`
+
+Adicionar secao no fundo (antes do botao collapse):
 
 ```text
-MatrizArea = "Financeiro" | "Comercial" | "Juridico" | "Marketing" | "Operacoes" | "Direcao"
-
-MatrizUserStatus = "Ativo" | "Inativo"
-
-NivelAcesso = "sem_acesso" | "visualizacao" | "edicao" | "admin"
-
-ModuloPermissao:
-  modulo (string)
-  nivel (NivelAcesso)
-
-MatrizUser:
-  id, nome, email, telefone, cargo, area (MatrizArea),
-  status (MatrizUserStatus), lastLogin (string),
-  permissoes: ModuloPermissao[],
-  permissoesEspeciais: PermissoesEspeciais,
-  perfilBase? (string -- id do perfil usado como base)
-
-PermissoesEspeciais:
-  podeVerFinanceiroCompleto (bool)
-  podeEditarRepasse (bool)
-  podeGerarDre (bool)
-  podeExcluirContratos (bool)
-  podeCriarCampanhas (bool)
-  podeEnviarComunicadoGlobal (bool)
-  podeAlterarPermissoes (bool)
-
-PerfilPreConfigurado:
-  id, nome, descricao, icone (string),
-  permissoes: ModuloPermissao[],
-  permissoesEspeciais: PermissoesEspeciais
++---------------------------+
+| [Avatar] SOCIO NO EXCUSE  |
+|          Unidade Curitiba  |
++---------------------------+
+| [<>] Collapse             |
++---------------------------+
 ```
 
-### Lista de Modulos (para permissoes)
-
-Organizados por secao:
-
-- **Administrativo**: Financeiro, Contratos, Fechamentos (DRE)
-- **Comercial**: Marketing, Academy, Metas e Ranking
-- **Rede**: Unidades, CRM Expansao, Onboarding, Atendimento, Matriz
-- **Principal**: Comunicados, Agenda, Dashboard
-
-### Perfis Pre-Configurados Mock
-
-- **Super Admin**: Acesso total (admin em tudo, todas especiais ativas)
-- **Financeiro**: Admin em Financeiro/Contratos/Fechamentos, visualizacao em Comercial
-- **Comercial**: Admin em CRM Expansao/Metas/Marketing, visualizacao em restante
-- **CS / Operacoes**: Admin em Onboarding/Atendimento/Unidades
-- **Marketing**: Admin em Marketing/Comunicados/Agenda
-
-### Usuarios Mock (6-8)
-
-- Davi (Direcao, Super Admin)
-- Lucas (Financeiro, perfil Financeiro)
-- Amanda (Comercial, perfil Comercial)
-- Rafael (Operacoes, perfil CS)
-- Camila (Marketing, perfil Marketing)
-- Pedro (Juridico, custom -- Contratos admin + visualizacao financeiro)
-- 1-2 inativos
-
-### Helpers
-
-- `getModulosBySection()` -- retorna modulos agrupados por secao
-- `getPerfilById(id)` -- retorna perfil pre-configurado
-- `applyPerfil(user, perfilId)` -- aplica permissoes do perfil ao usuario
-- `getUserModulosHabilitados(user)` -- lista de modulos com acesso >= visualizacao
-- `getNivelAcessoLabel(nivel)` -- "Sem acesso" / "Visualizacao" / "Edicao" / "Admin"
-- `getNivelAcessoIcon(nivel)` -- icone correspondente
-- `getAreaColor(area)` -- cor do badge da area
+- Avatar circular (placeholder com iniciais)
+- Nome em bold, unidade em muted
+- So aparece quando sidebar expandida
 
 ---
 
-## 2. Pagina Principal (Matriz.tsx)
+## Ordem de Implementacao
 
-### State
-
-- `view`: "list" | "detail" | "create"
-- `selectedUserId`: null ou id
-- `users`: MatrizUser[] (state local com mock)
-
-### Header
-
-- Icone Shield/Users + Titulo "Matriz"
-- Badge "Franqueadora"
-- Subtitulo: "Gestao de usuarios e permissoes da franqueadora"
-- Botao "Voltar" (quando em detail/create)
-- Botao "+ Novo Usuario" (na lista)
-
-### Renderizacao
-
-- list -> MatrizUserList
-- detail -> tabs (Dados, Permissoes por Modulo, Permissoes Especiais)
-- create -> MatrizUserForm
+1. `src/index.css` -- tokens dark premium, utility classes (glass-card, hover-lift, animacoes)
+2. `tailwind.config.ts` -- novos keyframes e animations
+3. `src/components/PageHeader.tsx` -- componente padrao (CRIAR)
+4. `src/components/SectionHeader.tsx` -- componente padrao (CRIAR)
+5. `src/components/KpiCard.tsx` -- redesign com accent variant e hover
+6. `src/components/AlertCard.tsx` -- hover-lift e radius
+7. `src/components/TopSwitch.tsx` -- polish visual
+8. `src/components/FranqueadoraSidebar.tsx` -- redesign: icones vermelhos, pill ativo, area usuario, hover premium
+9. `src/components/FranqueadoraLayout.tsx` -- transicao de pagina com animate
+10. Todas as 20 paginas -- trocar headers por PageHeader, aplicar glass-card, hover-lift, tabela hover, staggered animations
 
 ---
 
-## 3. Lista de Usuarios (MatrizUserList.tsx)
+## Nao muda
 
-### Cards resumo (4)
-
-- Total usuarios ativos
-- Areas representadas
-- Super Admins (count)
-- Usuarios inativos
-
-### Filtros
-
-- Area (Select)
-- Status (Select: Ativo/Inativo)
-- Nivel de acesso (Select: tem pelo menos 1 modulo com admin/edicao/visualizacao)
-- Busca por nome/email
-
-### Tabela
-
-Colunas: Nome, Email, Cargo, Area (badge cor), Status (badge), Ultimo login, Modulos habilitados (count + tooltip), Perfil base, Acoes (Ver, Editar)
-
----
-
-## 4. Formulario de Usuario (MatrizUserForm.tsx)
-
-### Campos
-
-- Nome (Input obrigatorio)
-- Email (Input obrigatorio)
-- Telefone (Input)
-- Cargo (Input)
-- Area (Select: Financeiro, Comercial, Juridico, Marketing, Operacoes, Direcao)
-- Status (Select: Ativo/Inativo)
-
-### Secao Perfil Base
-
-- Select com perfis pre-configurados (Super Admin, Financeiro, Comercial, CS, Marketing)
-- Ao selecionar, pre-preenche permissoes (com aviso: "Permissoes aplicadas do perfil. Voce pode personalizar abaixo.")
-- Opcao "Personalizado" para configurar do zero
-
-### Botoes
-
-- Salvar
-- Cancelar
-
----
-
-## 5. Permissoes por Modulo (MatrizPermissions.tsx)
-
-### Layout
-
-Secoes agrupadas (Administrativo, Comercial, Rede, Principal), cada uma com:
-
-Para cada modulo, uma linha com:
-- Nome do modulo
-- 4 opcoes radio/segmented: Sem acesso | Visualizacao | Edicao | Admin
-- Icones visuais para cada nivel
-
-### Visual
-
-- Sem acesso: cinza, icone X
-- Visualizacao: azul, icone olho
-- Edicao: amarelo, icone lapis
-- Admin: verde, icone coroa
-
-### Botao "Aplicar Perfil"
-
-- Dropdown para aplicar um perfil pre-configurado rapidamente
-- Aviso: "Isso substituira as permissoes atuais"
-
----
-
-## 6. Permissoes Especiais (MatrizSpecialPermissions.tsx)
-
-Lista de toggles (Switch) com descricao:
-
-- Pode visualizar dados financeiros completos
-- Pode editar repasse
-- Pode gerar DRE
-- Pode excluir contratos
-- Pode criar campanhas
-- Pode enviar comunicados globais
-- Pode alterar permissoes de outros usuarios
-
-Cada toggle com:
-- Label
-- Descricao curta explicando o impacto
-- Switch ativo/inativo
-- Icone de alerta em permissoes criticas (alterar permissoes, excluir contratos)
-
----
-
-## 7. Perfis Pre-Configurados (MatrizProfiles.tsx)
-
-### Cards dos perfis
-
-Grid com cards para cada perfil:
-- Icone + Nome + Descricao
-- Lista resumida dos modulos com acesso
-- Permissoes especiais ativas
-- Botao "Aplicar este perfil" (quando editando usuario)
-
-### Visualizacao standalone
-
-Quando acessado da lista, mostra os perfis como referencia (somente leitura).
-
----
-
-## 8. Sidebar e Rotas
-
-### FranqueadoraSidebar.tsx
-
-Na secao `redeSection`, adicionar apos "Atendimento":
-```text
-{ label: "Matriz", icon: Shield, path: "/franqueadora/matriz" }
-```
-
-Importar `Shield` de lucide-react.
-
-### App.tsx
-
-Adicionar rota:
-```text
-import Matriz from "./pages/Matriz";
-<Route path="matriz" element={<Matriz />} />
-```
-
----
-
-## 9. Design
-
-- Area badges: Financeiro (verde), Comercial (azul), Juridico (roxo), Marketing (laranja), Operacoes (teal), Direcao (vermelho)
-- Niveis de acesso: segmented control com cores (cinza/azul/amarelo/verde)
-- Permissoes especiais: switches com descricao, icone de alerta para criticas
-- Perfis: cards com icone grande e lista de permissoes
-- Status Ativo: badge verde, Inativo: badge cinza
-
----
-
-## 10. Ordem de Implementacao
-
-1. `matrizData.ts` -- tipos, modulos, perfis pre-configurados (5), usuarios mock (6-8), helpers
-2. `MatrizUserList.tsx` -- lista com filtros, tabela, cards resumo
-3. `MatrizUserForm.tsx` -- formulario com selecao de perfil base
-4. `MatrizPermissions.tsx` -- controle de permissoes por modulo com segmented control
-5. `MatrizSpecialPermissions.tsx` -- toggles de permissoes especiais
-6. `MatrizProfiles.tsx` -- cards dos perfis pre-configurados
-7. `Matriz.tsx` -- pagina hub com tabs (Dados, Permissoes, Especiais) no detalhe
-8. `FranqueadoraSidebar.tsx` + `App.tsx` -- adicionar menu e rota
+- Funcionalidade / logica / dados
+- Estrutura de rotas
+- Modo claro (mantido, mas tokens light tambem serao levemente ajustados para consistencia)
 
