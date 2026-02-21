@@ -87,27 +87,82 @@ export interface CrmLead {
   leadNotes: LeadNote[];
 }
 
-export interface ClienteCampanha {
+// ===== MARKETING 360 =====
+
+export interface PlanoMarketingData {
+  posicionamento: {
+    publicoAlvo: string;
+    persona: string;
+    ticketMedio: number;
+    diferenciais: string;
+    concorrentes: string[];
+    mercado: string;
+  };
+  objetivo: {
+    tipo: "reconhecimento" | "leads" | "vendas" | "autoridade";
+    metaLeads: number;
+    metaVendas: number;
+    roiEsperado: number;
+  };
+  canais: { name: string; active: boolean; icon: string; frequenciaSugerida: string }[];
+  orcamento: {
+    organico: number;
+    pago: number;
+    producao: number;
+  };
+  funil: {
+    topo: { descricao: string; conteudo: string; metrica: string };
+    meio: { descricao: string; conteudo: string; metrica: string };
+    fundo: { descricao: string; conteudo: string; metrica: string };
+  };
+  planoAcao: {
+    postsSemanais: number;
+    cronograma: { dia: string; tipo: string }[];
+    estrategiaTrafego: string;
+    campanhasSugeridas: string[];
+    landingPageSugerida: string;
+  };
+}
+
+export interface CampanhaMarketing {
   id: string;
   name: string;
   objective: string;
-  status: "Ativa" | "Pausada" | "Finalizada";
-  budget: number;
-  spent: number;
-  leads: number;
-  conversions: number;
+  channel: string;
+  audience: string;
   startDate: string;
   endDate: string;
+  budget: number;
+  spent: number;
+  status: "Ativa" | "Pausada" | "Finalizada" | "Rascunho";
+  leads: number;
+  conversions: number;
+  entregaveis: {
+    conteudos: number;
+    anuncios: number;
+    landingPages: number;
+    disparos: number;
+  };
 }
 
-export interface ClienteConteudo {
+export interface ConteudoMarketing {
   id: string;
   title: string;
-  network: "Instagram" | "Facebook" | "LinkedIn" | "TikTok";
+  network: string;
+  format: "Feed" | "Story" | "Reels" | "Carrossel" | "Blog" | "Email";
+  funnelStage: "Topo" | "Meio" | "Fundo";
   status: "Rascunho" | "Agendado" | "Publicado";
   date: string;
-  type: "Post" | "Story" | "Reels" | "Artigo";
+  description: string;
+  copy?: string;
+  cta?: string;
+  hashtags?: string[];
+  campaignId?: string;
 }
+
+// Legacy aliases
+export type ClienteCampanha = CampanhaMarketing;
+export type ClienteConteudo = ConteudoMarketing;
 
 export interface ClienteScript {
   id: string;
@@ -358,24 +413,79 @@ export function getCrmLeads(): CrmLead[] {
   ];
 }
 
-export function getClienteCampanhas(): ClienteCampanha[] {
+export function getClienteCampanhas(): CampanhaMarketing[] {
   return [
-    { id: "1", name: "Lançamento Produto X", objective: "Gerar leads", status: "Ativa", budget: 5000, spent: 3200, leads: 45, conversions: 8, startDate: "2026-02-01", endDate: "2026-02-28" },
-    { id: "2", name: "Remarketing Site", objective: "Conversão", status: "Ativa", budget: 2000, spent: 1100, leads: 22, conversions: 5, startDate: "2026-02-05", endDate: "2026-03-05" },
-    { id: "3", name: "Black Friday", objective: "Vendas diretas", status: "Finalizada", budget: 8000, spent: 7800, leads: 120, conversions: 32, startDate: "2025-11-20", endDate: "2025-11-30" },
-    { id: "4", name: "Institucional Q1", objective: "Brand awareness", status: "Pausada", budget: 3000, spent: 900, leads: 12, conversions: 1, startDate: "2026-01-15", endDate: "2026-03-15" },
+    { id: "1", name: "Lançamento Produto X", objective: "Gerar Leads", channel: "Multi-canal", audience: "Empresas de tecnologia 10-50 func.", startDate: "2026-02-01", endDate: "2026-02-28", budget: 5000, spent: 3200, status: "Ativa", leads: 45, conversions: 8, entregaveis: { conteudos: 6, anuncios: 3, landingPages: 1, disparos: 2 } },
+    { id: "2", name: "Remarketing Site", objective: "Vendas", channel: "Google", audience: "Visitantes do site últimos 30 dias", startDate: "2026-02-05", endDate: "2026-03-05", budget: 2000, spent: 1100, status: "Ativa", leads: 22, conversions: 5, entregaveis: { conteudos: 2, anuncios: 4, landingPages: 1, disparos: 0 } },
+    { id: "3", name: "Black Friday", objective: "Vendas", channel: "Multi-canal", audience: "Base de clientes + lookalike", startDate: "2025-11-20", endDate: "2025-11-30", budget: 8000, spent: 7800, status: "Finalizada", leads: 120, conversions: 32, entregaveis: { conteudos: 12, anuncios: 8, landingPages: 2, disparos: 5 } },
+    { id: "4", name: "Institucional Q1", objective: "Brand Awareness", channel: "Instagram", audience: "Público geral 25-45 anos", startDate: "2026-01-15", endDate: "2026-03-15", budget: 3000, spent: 900, status: "Pausada", leads: 12, conversions: 1, entregaveis: { conteudos: 4, anuncios: 1, landingPages: 0, disparos: 1 } },
   ];
 }
 
-export function getClienteConteudos(): ClienteConteudo[] {
+export function getClienteConteudos(): ConteudoMarketing[] {
   return [
-    { id: "1", title: "Dicas de produtividade", network: "Instagram", status: "Publicado", date: "2026-02-20", type: "Post" },
-    { id: "2", title: "Bastidores do time", network: "Instagram", status: "Agendado", date: "2026-02-22", type: "Story" },
-    { id: "3", title: "Case de sucesso cliente", network: "LinkedIn", status: "Rascunho", date: "2026-02-23", type: "Artigo" },
-    { id: "4", title: "Tutorial produto", network: "Instagram", status: "Agendado", date: "2026-02-24", type: "Reels" },
-    { id: "5", title: "Promoção relâmpago", network: "Facebook", status: "Publicado", date: "2026-02-19", type: "Post" },
-    { id: "6", title: "Tendências 2026", network: "LinkedIn", status: "Rascunho", date: "2026-02-25", type: "Artigo" },
+    { id: "1", title: "5 Dicas de produtividade para PMEs", network: "Instagram", format: "Carrossel", funnelStage: "Topo", status: "Publicado", date: "2026-02-17", description: "Carrossel com dicas práticas de produtividade", copy: "Sua equipe poderia render 2x mais com essas 5 mudanças simples 👇", cta: "Salve para aplicar hoje!", hashtags: ["#produtividade", "#gestão", "#pme"], campaignId: "1" },
+    { id: "2", title: "Bastidores: nosso processo de onboarding", network: "Instagram", format: "Story", funnelStage: "Meio", status: "Publicado", date: "2026-02-18", description: "Mostrar como funciona o onboarding", campaignId: "1" },
+    { id: "3", title: "Case: como a empresa X triplicou vendas", network: "LinkedIn", format: "Feed", funnelStage: "Fundo", status: "Publicado", date: "2026-02-19", description: "Case de sucesso com dados reais", copy: "A empresa X estava faturando R$ 30k/mês. Em 6 meses, chegou a R$ 95k. Como? 🧵", cta: "Agende uma consultoria gratuita", hashtags: ["#casesucesso", "#vendas", "#crescimento"] },
+    { id: "4", title: "Tutorial: configurando seu CRM", network: "Instagram", format: "Reels", funnelStage: "Meio", status: "Agendado", date: "2026-02-22", description: "Video tutorial passo a passo", campaignId: "1" },
+    { id: "5", title: "Promoção relâmpago de fevereiro", network: "Facebook", format: "Feed", funnelStage: "Fundo", status: "Publicado", date: "2026-02-19", description: "Post de oferta com urgência", copy: "🔥 Só até sexta! Plano anual com 30% OFF.", cta: "Garanta agora!", hashtags: ["#promoção", "#desconto"] },
+    { id: "6", title: "Tendências de marketing 2026", network: "LinkedIn", format: "Carrossel", funnelStage: "Topo", status: "Rascunho", date: "2026-02-25", description: "As 7 tendências que vão dominar o marketing digital" },
+    { id: "7", title: "Depoimento cliente Maria", network: "Instagram", format: "Reels", funnelStage: "Fundo", status: "Agendado", date: "2026-02-24", description: "Video depoimento de cliente satisfeita", campaignId: "1" },
+    { id: "8", title: "Checklist: sua empresa está pronta?", network: "Instagram", format: "Carrossel", funnelStage: "Topo", status: "Agendado", date: "2026-02-26", description: "Checklist interativo para diagnóstico" },
+    { id: "9", title: "Por que investir em CRM?", network: "Facebook", format: "Feed", funnelStage: "Meio", status: "Rascunho", date: "2026-02-27", description: "Post educativo sobre CRM" },
+    { id: "10", title: "Newsletter semanal", network: "LinkedIn", format: "Email", funnelStage: "Meio", status: "Agendado", date: "2026-02-21", description: "Email com novidades e conteúdos" },
   ];
+}
+
+export function getPlanoMarketing360(): PlanoMarketingData {
+  return {
+    posicionamento: {
+      publicoAlvo: "Empresas de pequeno e médio porte (10 a 100 funcionários) que buscam automatizar processos comerciais e de marketing.",
+      persona: "Carlos, 38 anos, dono de agência digital. Dor: perde leads por falta de processo. Desejo: ter um sistema que organize vendas e marketing em um só lugar.",
+      ticketMedio: 4500,
+      diferenciais: "Plataforma 360° que integra CRM, marketing, WhatsApp e IA em um único sistema. Suporte humanizado e onboarding guiado.",
+      concorrentes: ["RD Station", "Pipedrive", "HubSpot"],
+      mercado: "SaaS B2B — Gestão Comercial e Marketing Digital",
+    },
+    objetivo: {
+      tipo: "leads",
+      metaLeads: 150,
+      metaVendas: 25,
+      roiEsperado: 300,
+    },
+    canais: [
+      { name: "Instagram", active: true, icon: "instagram", frequenciaSugerida: "Diário" },
+      { name: "Facebook", active: true, icon: "facebook", frequenciaSugerida: "3x/semana" },
+      { name: "Google", active: true, icon: "search", frequenciaSugerida: "Contínuo" },
+      { name: "YouTube", active: false, icon: "youtube", frequenciaSugerida: "1x/semana" },
+      { name: "TikTok", active: false, icon: "music", frequenciaSugerida: "3x/semana" },
+      { name: "WhatsApp", active: true, icon: "message-circle", frequenciaSugerida: "Diário" },
+      { name: "Site", active: true, icon: "globe", frequenciaSugerida: "Contínuo" },
+    ],
+    orcamento: {
+      organico: 3000,
+      pago: 7000,
+      producao: 2000,
+    },
+    funil: {
+      topo: { descricao: "Atrair atenção e gerar interesse", conteudo: "Posts educativos, Reels virais, Blog SEO", metrica: "Alcance e Impressões" },
+      meio: { descricao: "Nutrir e qualificar leads", conteudo: "Cases, Webinars, Email marketing, Carrosséis", metrica: "Engajamento e Leads" },
+      fundo: { descricao: "Converter em vendas", conteudo: "Depoimentos, Ofertas, Landing Pages, Demos", metrica: "Conversão e Receita" },
+    },
+    planoAcao: {
+      postsSemanais: 5,
+      cronograma: [
+        { dia: "Segunda", tipo: "Autoridade" },
+        { dia: "Terça", tipo: "Educativo" },
+        { dia: "Quarta", tipo: "Prova Social" },
+        { dia: "Quinta", tipo: "Bastidores" },
+        { dia: "Sexta", tipo: "Oferta/CTA" },
+      ],
+      estrategiaTrafego: "Google Search para captação de leads qualificados + Meta Ads para remarketing e lookalike. Budget 60% Google / 40% Meta.",
+      campanhasSugeridas: ["Campanha de Leads — Google Search", "Remarketing — Meta Ads", "Lançamento Trimestral — Multi-canal", "Conteúdo Orgânico — Instagram/LinkedIn"],
+      landingPageSugerida: "Landing page com Hero + 3 benefícios + prova social + formulário + FAQ. Integrada ao CRM para captura automática de leads.",
+    },
+  };
 }
 
 export function getClienteScripts(): ClienteScript[] {
