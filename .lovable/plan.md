@@ -1,138 +1,178 @@
 
 
-# Reestruturacaoo Estrategica do Modulo Financeiro
+# Reestruturacao Final do Modulo Financeiro
 
 ## Resumo
 
-O modulo atual ja possui dados reais e 8 paginas funcionais. O que falta e adicionar a **Camada 3 (Previsibilidade)** e a **Camada 4 (Decisao de Investimento)** ao sistema, alem de enriquecer as paginas existentes com sub-secoes internas e melhorar o Dashboard com projecoes e semaforos de decisao.
+Reorganizar o modulo Financeiro para a estrutura definitiva: 6 itens de menu (Dashboard, Despesas, Receitas, Repasse, Fechamentos, Configuracoes). Remover Impostos como pagina separada (vira categoria dentro de Despesas). Remover Projecao e Mes a Mes como menus. Remover Clientes como menu. Simplificar a Projecao no Dashboard (painel unico sem abas Trimestral/Semestral). Criar novo modulo Fechamentos (DRE por franqueado). Reorganizar Despesas com tabs por categoria (incluindo Impostos). Reorganizar Receitas com subabas por produto (Visao Geral, Assessoria, SaaS, Sistema, Venda de Franquia) + subaba Clientes.
 
 ---
 
-## O que ja existe e funciona
+## Alteracoes no Menu (Sidebar)
 
-- Dashboard com KPIs, graficos e alertas
-- Despesas com filtro por categoria, KPIs e graficos
-- Receitas com status de NF, pagamento e repasse
-- Repasse agrupado por origem (Franqueado/Parceiro)
-- Impostos com regra 10% e breakdown NF
-- Mes a Mes com subtabs (Resumo/Receitas/Despesas/Impostos/Repasse)
-- Clientes com filtros por origem e tipo
-- Configuracoes com regras editaveis
+Menu atual: Dashboard, Despesas, Receitas, Repasse, Impostos, Projecao, Mes a Mes, Clientes, Configuracoes
+
+Menu final:
+- Dashboard (inclui Projecao dentro)
+- Despesas (inclui Impostos como categoria interna)
+- Receitas (inclui Clientes como subaba)
+- Repasse
+- Fechamentos (DRE) -- NOVO
+- Configuracoes
+
+Remover do menu: Impostos, Projecao, Mes a Mes, Clientes
 
 ---
 
-## O que sera adicionado/alterado
+## 1. Dashboard (`FinanceiroDashboard.tsx`) -- Reescrever
 
-### 1. Nova pagina: Projecao (Camada 3)
+### Bloco A -- Resumo (ja existe, manter e ajustar)
+- KPIs: Receita Bruta, Receita Liquida, Repasse Devido, Despesas Operacionais, Resultado, Caixa Atual, Runway, Clientes Ativos (por tipo)
+- Graficos: Receita Liquida x Despesas (linha), Despesas por categoria (pizza), Resultado mensal (barras)
+- Alertas: Receitas em atraso, Parcelas a vencer, Aumentos de folha, Meta clientes vs capacidade
 
-Criar `src/pages/FinanceiroProjecao.tsx` com:
+### Bloco B -- Projecao Inteligente (simplificar)
+- Remover abas Trimestral e Semestral
+- Manter apenas: painel Mes a Mes (realizado) + Simulacao (cenarios) como duas secoes
+- Projecao automatica 6 meses a frente (tabela + grafico de caixa projetado + lucro projetado)
+- Campos editaveis: Crescimento clientes/mes, Ticket medio, Franquias/mes, Ativar evento (on/off), Ativar contratacao (on/off)
+- Indicadores: "Pode investir?" + "Quando contratar?"
 
-- **Receita recorrente projetada** para 3 e 6 meses
-- **Folha projetada** considerando reajustes programados (marco/abril)
-- **Parcelas futuras** com visao de encerramento
-- **Investimentos futuros** (eventos a partir de abril)
-- **Break-even dinamico**: quantos clientes para empatar custos
-- **Capacidade operacional**: barra visual (atuais / 30)
-- **Lucro projetado 3 meses**: tabela mes a mes
-- **Alerta de simulacao**: "Se fizer evento esse mes, lucro cai para X"
+---
 
-### 2. Dashboard enriquecido (Camada 4 - Decisao de Investimento)
+## 2. Despesas (`FinanceiroDespesas.tsx`) -- Reorganizar
 
-Adicionar ao `FinanceiroDashboard.tsx`:
+Estrutura atual: filtros por categoria + status + tipo como botoes
+Nova estrutura:
+- Topo: Filtro por periodo (dropdown) + Botao "+ Nova Despesa"
+- KPIs internos (manter)
+- Tabs internas por categoria: Todas | Pessoas | Estrutura | Plataformas | Emprestimos | Investimentos | Impostos
+- A tab "Impostos" mostra despesas de imposto (base tributavel, NF emitidas, valor calculado, status pagamento)
+- Remover filtros complexos visiveis; usar botao "Filtrar" que abre modal simples (status, tipo fixa/variavel)
+- CRUD completo (ja existe, manter)
 
-- **Semaforo de investimento** (verde/amarelo/vermelho):
-  - Verde: lucro > 15% da receita E caixa > 3 meses de custo
-  - Amarelo: lucro entre 5-15% OU caixa entre 2-3 meses
-  - Vermelho: lucro < 5% OU caixa < 2 meses
-- **Card de Previsao** com receita recorrente e lucro projetado proximo mes
-- **KPI Break-even** (clientes necessarios para empatar)
+Para a categoria Impostos, ao gerar despesas do mes, adicionar automaticamente uma despesa com:
+- categoria: "Impostos"
+- subcategoria: "Imposto mensal (10%)"
+- valor: calculado pela regra (10% sobre NF + folha operacional, excluindo pro-labore)
+- status: Previsto
 
-### 3. Repasse enriquecido
+---
 
-Adicionar ao `FinanceiroRepasse.tsx`:
+## 3. Receitas (`FinanceiroReceitas.tsx`) -- Reorganizar
 
-- Subtabs: **Por Franqueado** | **Pendentes** | **Pagos** | **Historico**
-- Agrupar por franqueado (nao so por origem)
-- Status de pagamento do repasse (Pendente/Pago)
+Estrutura atual: 2 tabs (Receitas, Clientes)
+Nova estrutura com subabas:
+- Visao Geral: Dashboard de receita (total por tipo, recorrente, unitaria, por origem, por produto) com graficos
+- Assessoria: Lista CRUD de clientes/receitas de assessoria. Filtros: Status, Origem, Gera repasse, Ticket
+- SaaS: Lista CRUD apenas clientes SaaS
+- Sistema: Lista franqueados que pagam sistema (R$250)
+- Venda de Franquia: Lista de franquias vendidas (nome franqueado, valor, status pagamento, contrato, data, onboarding vinculado). Preparada para integracao futura
+- Clientes: Cadastro CRUD de clientes (ja existe, manter). Adicionar campos placeholder para Asaas (ID cobranca, Tipo cobranca, Status cobranca)
 
-### 4. Impostos enriquecido
+---
 
-Adicionar ao `FinanceiroImpostos.tsx`:
+## 4. Repasse (`FinanceiroRepasse.tsx`) -- Manter
 
-- Secao **Pagamentos** com status (Pago/Pendente)
-- Historico de impostos por mes
+Ja esta bem estruturado com subtabs (Por Franqueado, Pendentes, Pagos, Historico). Sem alteracoes significativas.
 
-### 5. Rota e sidebar
+---
 
-- Adicionar rota `/franqueadora/financeiro/projecao` no `App.tsx`
-- Adicionar item "Projecao" (icone TrendingUp) na sidebar do Financeiro
+## 5. Fechamentos (DRE) -- NOVO (`FinanceiroFechamentos.tsx`)
 
-### 6. Funcoes auxiliares no mockData
+Duas subabas:
+- **Por Franqueado**: Selecionar franqueado, ver DRE gerado automaticamente
+- **Todos os Fechamentos**: Lista de todas DREs geradas por mes
 
-Adicionar ao `src/data/mockData.ts`:
+### DRE Automatico (por franqueado, por mes)
+Estrutura:
+- Clientes ativos do franqueado
+- Receita bruta
+- (-) 1% royalties
+- (-) Imposto proporcional
+- (-) Sistema (R$250)
+- (-) Repasse matriz (se houver)
+- = Resultado liquido do franqueado
 
-- `getProjection(meses: number)` — calcula receita, custos e resultado projetado
-- `getBreakEven()` — calcula numero de clientes para break-even
-- `getInvestmentSignal(mes)` — retorna "green" | "yellow" | "red"
+Botoes: Exportar Excel (placeholder) | Exportar PDF (placeholder)
+Design: Logo Skillzy (placeholder), layout limpo, resumo executivo no topo
+
+Nota: Exportacao real sera implementada em fase futura. Por ora, botoes mostram toast "Em breve".
+
+---
+
+## 6. Configuracoes (`FinanceiroConfiguracoes.tsx`) -- Manter
+
+Ja esta completo. Sem alteracoes.
+
+---
+
+## 7. Rotas e Sidebar
+
+### App.tsx
+- Remover rota: `/franqueadora/financeiro/impostos`
+- Remover rota: `/franqueadora/financeiro/projecao` (se existir)
+- Remover rota: `/franqueadora/financeiro/mes-a-mes` (se existir)  
+- Remover rota: `/franqueadora/financeiro/clientes` (se existir)
+- Adicionar rota: `/franqueadora/financeiro/fechamentos`
+
+### FranqueadoraSidebar.tsx
+- Remover do submenu Financeiro: Impostos, Projecao, Mes a Mes, Clientes
+- Adicionar ao submenu: Fechamentos (icone FileSpreadsheet)
+- Ordem final: Dashboard, Despesas, Receitas, Repasse, Fechamentos, Configuracoes
+
+---
+
+## 8. Dados (`mockData.ts`)
+
+- Adicionar categoria "Impostos" ao tipo Despesa
+- Criar funcao `getImpostoDespesa(mes)` que retorna a despesa de imposto gerada automaticamente
+- Atualizar `getDespesasForMonth` para incluir imposto como despesa
+- Criar funcao `getDREFranqueado(franqueadoId, mes)` para gerar DRE automatico
+- Adicionar campo opcional `idCobrancaAsaas`, `tipoCobrancaAsaas`, `statusCobrancaAsaas` na interface Cliente
 
 ---
 
 ## Detalhes Tecnicos
 
-### Estrutura de arquivos modificados
-
+### Arquivos modificados
 ```text
-src/data/mockData.ts          -- novas funcoes de projecao
-src/pages/FinanceiroProjecao.tsx    -- NOVO
-src/pages/FinanceiroDashboard.tsx   -- semaforo + previsao
-src/pages/FinanceiroRepasse.tsx     -- subtabs por franqueado
-src/pages/FinanceiroImpostos.tsx    -- secao pagamentos
-src/components/FranqueadoraSidebar.tsx -- item Projecao
-src/App.tsx                    -- rota projecao
+src/components/FranqueadoraSidebar.tsx  -- remover/adicionar itens menu
+src/App.tsx                             -- remover/adicionar rotas
+src/data/mockData.ts                    -- nova categoria Impostos, funcao DRE, campos Asaas
+src/pages/FinanceiroDashboard.tsx       -- simplificar projecao (remover tabs trim/sem)
+src/pages/FinanceiroDespesas.tsx        -- tabs por categoria, incluir Impostos
+src/pages/FinanceiroReceitas.tsx        -- subabas por produto + Clientes com campos Asaas
 ```
 
-### Logica do Break-even
-
+### Arquivos criados
 ```text
-Custo mensal medio = (Despesas + Impostos) / 1
-Ticket medio = Receita Bruta / Num clientes ativos
-Break-even = Custo mensal medio / Ticket medio (arredondado para cima)
+src/pages/FinanceiroFechamentos.tsx     -- novo modulo DRE
 ```
 
-### Logica do Semaforo
-
+### Arquivos removidos
 ```text
-margemLucro = resultado / receitaLiquida
-SE margemLucro > 0.15 E runway > 3 → VERDE
-SE margemLucro > 0.05 E runway > 2 → AMARELO
-SENAO → VERMELHO
+src/pages/FinanceiroImpostos.tsx        -- impostos migram para dentro de Despesas
 ```
 
-### Projecao 3/6 meses
+### Funcao getDREFranqueado
+```text
+Para cada franqueado:
+  clientesDoFranqueado = clientes com franqueadoVinculado = franqueadoId
+  receitaBruta = soma dos valores
+  royalties = receitaBruta * 0.01
+  impostoProporcional = (receitaBruta / receitaTotalMes) * impostoTotalMes
+  sistema = 250
+  repasseMatriz = soma dos repasses
+  resultadoLiquido = receitaBruta - royalties - imposto - sistema - repasse
+```
 
-Para cada mes futuro, o sistema vai:
-1. Usar receita recorrente atual (clientes ativos recorrentes)
-2. Aplicar folha com reajustes programados
-3. Incluir parcelas ativas (removendo as que encerram)
-4. Incluir eventos/treinamento a partir de abril
-5. Calcular imposto com a mesma regra (10%)
-6. Calcular resultado projetado
-
-### Subtabs do Repasse
-
-- **Por Franqueado**: agrupa receitas pelo `franqueadoVinculado`
-- **Pendentes**: filtra receitas com repasse onde `pago = false`
-- **Pagos**: filtra receitas com repasse onde `pago = true`
-- **Historico**: mostra todos os meses com totais
-
----
-
-## Ordem de implementacao
-
-1. Funcoes auxiliares no mockData (projecao, break-even, semaforo)
-2. Pagina FinanceiroProjecao (nova)
-3. Dashboard enriquecido (semaforo + previsao)
-4. Repasse com subtabs
-5. Impostos com secao pagamentos
-6. Sidebar + rota
+### Ordem de implementacao
+1. mockData.ts (novos tipos, funcoes DRE, campo Asaas)
+2. FinanceiroFechamentos.tsx (novo)
+3. FinanceiroDashboard.tsx (simplificar projecao)
+4. FinanceiroDespesas.tsx (tabs por categoria + Impostos)
+5. FinanceiroReceitas.tsx (subabas por produto)
+6. Sidebar + App.tsx (menu e rotas)
+7. Remover FinanceiroImpostos.tsx
 
