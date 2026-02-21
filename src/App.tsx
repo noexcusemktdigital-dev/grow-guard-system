@@ -26,6 +26,7 @@ import Atendimento from "./pages/Atendimento";
 import Comunicados from "./pages/Comunicados";
 import Agenda from "./pages/Agenda";
 import Home from "./pages/Home";
+import Matriz from "./pages/Matriz";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="atendimento" element={<Atendimento />} />
               <Route path="comunicados" element={<Comunicados />} />
               <Route path="agenda" element={<Agenda />} />
+              <Route path="matriz" element={<Matriz />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
