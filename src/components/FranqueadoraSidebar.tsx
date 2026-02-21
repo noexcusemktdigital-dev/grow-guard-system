@@ -12,7 +12,6 @@ import {
   ChevronRight,
   ChevronDown,
   BarChart3,
-  Users,
   Settings,
   Calendar,
   Megaphone,
@@ -21,8 +20,8 @@ import {
   Trophy,
   Receipt,
   ArrowRightLeft,
-  Calculator,
   CreditCard,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -68,7 +67,7 @@ const adminSection: SidebarItem[] = [
       { label: "Despesas", icon: CreditCard, path: "/franqueadora/financeiro/despesas" },
       { label: "Receitas", icon: Receipt, path: "/franqueadora/financeiro/receitas" },
       { label: "Repasse", icon: ArrowRightLeft, path: "/franqueadora/financeiro/repasse" },
-      { label: "Impostos", icon: Calculator, path: "/franqueadora/financeiro/impostos" },
+      { label: "Fechamentos", icon: FileSpreadsheet, path: "/franqueadora/financeiro/fechamentos" },
       { label: "Configurações", icon: Settings, path: "/franqueadora/financeiro/configuracoes" },
     ],
   },
