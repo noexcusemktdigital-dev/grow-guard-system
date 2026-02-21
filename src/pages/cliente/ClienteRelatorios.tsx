@@ -65,7 +65,7 @@ export default function ClienteRelatorios() {
         {kpiCards.map((kpi, i) => (
           <Card
             key={kpi.label}
-            className="overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+            className="relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
             style={{ animationDelay: `${i * 80}ms` }}
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${kpi.gradient} opacity-60`} />
