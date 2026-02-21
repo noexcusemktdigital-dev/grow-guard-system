@@ -86,6 +86,34 @@ export function getFormatIcon(fmt: MarketingFormat) {
   return File;
 }
 
+export function getCategoryColor(cat: MarketingCategory): string {
+  const map: Record<MarketingCategory, string> = {
+    RedesSociais: "blue",
+    CampanhaProduto: "orange",
+    EmbaldeMensal: "purple",
+    ApresentacaoPortfolio: "emerald",
+    Marca: "rose",
+    KitDiaADia: "amber",
+  };
+  return map[cat];
+}
+
+export function getCategoryDescription(cat: MarketingCategory): string {
+  const map: Record<MarketingCategory, string> = {
+    RedesSociais: "Posts, stories, reels e carrosséis para suas redes",
+    CampanhaProduto: "Materiais de campanhas organizados por produto",
+    EmbaldeMensal: "Pacote completo pronto para uso mensal",
+    ApresentacaoPortfolio: "Apresentações institucionais e portfólio de cases",
+    Marca: "Logos, manual da marca e identidade visual",
+    KitDiaADia: "Fundos, assinaturas e templates do dia a dia",
+  };
+  return map[cat];
+}
+
+export function getCategoryAssetCount(cat: MarketingCategory): number {
+  return mockAssets.filter((a) => a.type === cat).length;
+}
+
 export function getAssetsByCategory(category: MarketingCategory): MarketingAsset[] {
   return mockAssets.filter((a) => a.type === category);
 }
