@@ -18,7 +18,7 @@ import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRad
 
 // ── Types ──
 interface InfoAtual { receitaAtual: number; ticketMedio: number; clientesAtivos: number; conversaoMedia: number; }
-interface MetaMensal { mes: string; faturamento: number; novosClientes: number; salvo: boolean; }
+interface MetaMensal { id: string; mes: string; ano: number; faturamento: number; novosClientes: number; }
 interface EstruturaComercial {
   qtdVendedores: number; qtdSDRs: number; qtdClosers: number; qtdCSs: number;
   canaisAquisicao: string[]; ferramentas: string[]; processoDocumentado: boolean;
@@ -66,8 +66,11 @@ export default function ClientePlanoVendas() {
   // ── METAS STATE ──
   const [infoAtual, setInfoAtual] = useState<InfoAtual>({ receitaAtual: 0, ticketMedio: 0, clientesAtivos: 0, conversaoMedia: 0 });
   const [infoAtualSalva, setInfoAtualSalva] = useState(false);
-  const [metasMensais, setMetasMensais] = useState<MetaMensal[]>(MESES.map(m => ({ mes: m, faturamento: 0, novosClientes: 0, salvo: false })));
+  const [metasMensais, setMetasMensais] = useState<MetaMensal[]>([]);
   const [metasSalvas, setMetasSalvas] = useState(false);
+  const [novaMeta, setNovaMeta] = useState<{ faturamento: number; novosClientes: number }>({ faturamento: 0, novosClientes: 0 });
+  const mesAtualIdx = new Date().getMonth(); // 0-based
+  const anoAtual = new Date().getFullYear();
 
   // ── ESTRUTURA STATE ──
   const [estrutura, setEstrutura] = useState<EstruturaComercial>({
@@ -383,53 +386,107 @@ export default function ClientePlanoVendas() {
             )}
           </Card>
 
-          {/* Metas Mensais */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /> Metas Mensais</CardTitle>
-              <p className="text-xs text-muted-foreground">Defina suas metas mês a mês. Cada mês fica salvo individualmente.</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-[60px_1fr_1fr_auto] gap-2 mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                <span>Mês</span><span>Faturamento (R$)</span><span>Novos Clientes</span><span></span>
+          {/* Metas Mensais - Cards */}
+          {infoAtualSalva && (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /> Metas Mensais</h3>
+                  <p className="text-xs text-muted-foreground">Adicione metas a partir do mês atual. Cada meta fica salva como um card.</p>
+                </div>
               </div>
-              <div className="space-y-2">
-                {metasMensais.map((m, i) => (
-                  <div key={m.mes} className={`grid grid-cols-[60px_1fr_1fr_auto] gap-2 items-center p-3 rounded-lg ${m.salvo ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-muted/30"}`}>
-                    <span className="text-sm font-bold text-muted-foreground">{m.mes}</span>
-                    <Input type="number" placeholder="0" value={m.faturamento || ""} disabled={m.salvo}
-                      onChange={e => { const arr = [...metasMensais]; arr[i] = { ...arr[i], faturamento: Number(e.target.value) }; setMetasMensais(arr); }} className="h-8 text-sm" />
-                    <Input type="number" placeholder="0" value={m.novosClientes || ""} disabled={m.salvo}
-                      onChange={e => { const arr = [...metasMensais]; arr[i] = { ...arr[i], novosClientes: Number(e.target.value) }; setMetasMensais(arr); }} className="h-8 text-sm" />
-                    {m.salvo ? (
-                      <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" />Salvo</Badge>
-                    ) : (
-                      <Button size="sm" variant="outline" className="h-8 text-xs" disabled={m.faturamento === 0}
-                        onClick={() => { const arr = [...metasMensais]; arr[i] = { ...arr[i], salvo: true }; setMetasMensais(arr); toast({ title: `Meta de ${m.mes} salva!` }); }}>
-                        <Save className="w-3 h-3 mr-1" /> Salvar
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Resumo */}
-          {metasMensais.some(m => m.salvo) && (
-            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-              <CardContent className="py-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div><p className="text-xl font-black text-primary">R$ {totalMetaAnual.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total acumulado</p></div>
-                <div><p className="text-xl font-black">R$ {metaFatMensal.toLocaleString()}</p><p className="text-xs text-muted-foreground">Média / mês</p></div>
-                <div><p className="text-xl font-black">{metasMensais.reduce((s, m) => s + m.novosClientes, 0)}</p><p className="text-xs text-muted-foreground">Total clientes</p></div>
-                <div><p className="text-xl font-black">{metasMensais.filter(m => m.salvo).length}/12</p><p className="text-xs text-muted-foreground">Meses definidos</p></div>
+              {/* Cards de metas salvas */}
+              {metasMensais.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {metasMensais.map(m => (
+                    <Card key={m.id} className="border-emerald-500/20 bg-emerald-500/5">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Badge className="text-xs bg-primary/10 text-primary border-primary/20" variant="outline">{m.mes}/{m.ano}</Badge>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Faturamento</p>
+                            <p className="text-lg font-bold">R$ {m.faturamento.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Novos Clientes</p>
+                            <p className="text-lg font-bold">{m.novosClientes}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Adicionar nova meta */}
+              {(() => {
+                // Determina próximo mês disponível
+                const mesesUsados = metasMensais.map(m => `${m.mes}-${m.ano}`);
+                let proximoMesIdx = mesAtualIdx;
+                let proximoAno = anoAtual;
+                // Avança até encontrar mês não usado
+                while (mesesUsados.includes(`${MESES[proximoMesIdx]}-${proximoAno}`)) {
+                  proximoMesIdx++;
+                  if (proximoMesIdx > 11) { proximoMesIdx = 0; proximoAno++; }
+                  if (proximoAno > anoAtual + 1) break; // Limite de 2 anos
+                }
+                const proximoMes = MESES[proximoMesIdx];
+
+                return (
+                  <Card className="border-dashed border-2">
+                    <CardContent className="p-4 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Plus className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold">Nova meta — {proximoMes}/{proximoAno}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Faturamento (R$)</Label>
+                          <Input type="number" value={novaMeta.faturamento || ""} onChange={e => setNovaMeta(p => ({ ...p, faturamento: Number(e.target.value) }))} placeholder="Ex: 65000" />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Novos Clientes</Label>
+                          <Input type="number" value={novaMeta.novosClientes || ""} onChange={e => setNovaMeta(p => ({ ...p, novosClientes: Number(e.target.value) }))} placeholder="Ex: 10" />
+                        </div>
+                      </div>
+                      <Button size="sm" disabled={novaMeta.faturamento === 0} onClick={() => {
+                        const nova: MetaMensal = { id: `meta-${Date.now()}`, mes: proximoMes, ano: proximoAno, faturamento: novaMeta.faturamento, novosClientes: novaMeta.novosClientes };
+                        setMetasMensais(prev => [...prev, nova]);
+                        setNovaMeta({ faturamento: 0, novosClientes: 0 });
+                        setMetasSalvas(true);
+                        toast({ title: `Meta de ${proximoMes}/${proximoAno} adicionada!` });
+                      }}>
+                        <Plus className="w-3 h-3 mr-1" /> Adicionar Meta
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
+              {/* Resumo */}
+              {metasMensais.length > 0 && (
+                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                  <CardContent className="py-4 grid grid-cols-3 gap-4 text-center">
+                    <div><p className="text-xl font-black text-primary">R$ {totalMetaAnual.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total acumulado</p></div>
+                    <div><p className="text-xl font-black">{metasMensais.reduce((s, m) => s + m.novosClientes, 0)}</p><p className="text-xs text-muted-foreground">Total clientes</p></div>
+                    <div><p className="text-xl font-black">{metasMensais.length}</p><p className="text-xs text-muted-foreground">Meses definidos</p></div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+
+          {!infoAtualSalva && (
+            <Card className="border-dashed">
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                Preencha as informações atuais acima para começar a definir suas metas.
               </CardContent>
             </Card>
           )}
-
-          <Button onClick={salvarMetas} className="w-full">
-            <Save className="w-4 h-4 mr-2" /> Salvar Todas as Metas
-          </Button>
         </TabsContent>
 
         {/* ===== ESTRUTURA COMERCIAL ===== */}
