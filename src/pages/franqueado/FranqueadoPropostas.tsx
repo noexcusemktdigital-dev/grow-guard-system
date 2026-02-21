@@ -6,34 +6,134 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
-  FileText, Download, ArrowLeft, FileCheck2, Plus, Target,
+  FileText, Download, ArrowLeft, FileCheck2, Target,
   Calculator, TrendingUp, BarChart3, CheckCircle2,
+  Palette, Share2, Zap, Globe, Database, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { getFranqueadoPropostas, getDiagnosticosNOE, getFranqueadoLeads, FranqueadoProposta } from "@/data/franqueadoData";
 import { toast } from "sonner";
 
+// ── TIPOS ──
+type ServicoNOE = {
+  id: string;
+  nome: string;
+  tipo: "unitario" | "mensal";
+  descricao: string;
+  valor: number;
+};
+
+type ModuloNOE = {
+  id: string;
+  nome: string;
+  descricao: string;
+  icone: "palette" | "share2" | "zap" | "globe" | "database";
+  servicos: ServicoNOE[];
+};
+
+const iconeMap = {
+  palette: Palette,
+  share2: Share2,
+  zap: Zap,
+  globe: Globe,
+  database: Database,
+};
+
+// ── DADOS DOS MÓDULOS NOE ──
+const modulosNOE: ModuloNOE[] = [
+  {
+    id: "branding",
+    nome: "Branding",
+    descricao: "Identidade visual e materiais de marca",
+    icone: "palette",
+    servicos: [
+      { id: "b1", nome: "Logo + Manual de Marca", tipo: "unitario", descricao: "Criação de logotipo profissional com manual de identidade visual completo, incluindo paleta de cores, tipografia e regras de uso.", valor: 3500 },
+      { id: "b2", nome: "Material de Marca", tipo: "unitario", descricao: "Desenvolvimento de materiais gráficos para a marca, como cartões de visita, papel timbrado, assinatura de e-mail e papelaria completa.", valor: 1500 },
+      { id: "b3", nome: "Mídia Off", tipo: "unitario", descricao: "Criação de peças para mídia offline, como banners, folders, flyers, outdoors e materiais impressos em geral.", valor: 1200 },
+      { id: "b4", nome: "Naming", tipo: "unitario", descricao: "Processo criativo de definição de nome para marca, produto ou serviço, com pesquisa de disponibilidade e análise estratégica.", valor: 2000 },
+      { id: "b5", nome: "Registro INPI", tipo: "unitario", descricao: "Acompanhamento e registro da marca junto ao INPI (Instituto Nacional da Propriedade Industrial).", valor: 1800 },
+      { id: "b6", nome: "Ebook", tipo: "unitario", descricao: "Criação de ebook profissional com design, diagramação e conteúdo estratégico para geração de leads.", valor: 2500 },
+      { id: "b7", nome: "Apresentação Comercial", tipo: "unitario", descricao: "Design de apresentação comercial profissional em PowerPoint ou Google Slides, com storytelling e identidade visual.", valor: 1800 },
+    ],
+  },
+  {
+    id: "social",
+    nome: "Social Media",
+    descricao: "Conteúdo orgânico e gestão de redes sociais",
+    icone: "share2",
+    servicos: [
+      { id: "s1", nome: "Artes / Criativos Orgânicos", tipo: "mensal", descricao: "Criação mensal de artes e criativos para publicações orgânicas nas redes sociais, incluindo feed, stories e carrossel.", valor: 1500 },
+      { id: "s2", nome: "Vídeos / Reels", tipo: "mensal", descricao: "Produção mensal de vídeos curtos e reels para Instagram, TikTok e outras plataformas, com edição profissional.", valor: 2000 },
+      { id: "s3", nome: "Programação Meta", tipo: "mensal", descricao: "Agendamento e publicação de conteúdo no Facebook e Instagram via Meta Business Suite, com planejamento de calendário editorial.", valor: 800 },
+      { id: "s4", nome: "Programação LinkedIn", tipo: "mensal", descricao: "Agendamento e publicação de conteúdo no LinkedIn, com foco em posicionamento profissional e B2B.", valor: 800 },
+      { id: "s5", nome: "Programação TikTok", tipo: "mensal", descricao: "Agendamento e publicação de conteúdo no TikTok, com estratégia de trends e virais.", valor: 800 },
+      { id: "s6", nome: "Programação YouTube", tipo: "mensal", descricao: "Agendamento e publicação de conteúdo no YouTube, incluindo shorts e vídeos longos.", valor: 800 },
+      { id: "s7", nome: "Capa de Destaques", tipo: "unitario", descricao: "Criação de capas profissionais para destaques do Instagram, alinhadas com a identidade visual.", valor: 500 },
+      { id: "s8", nome: "Criação de Avatar", tipo: "unitario", descricao: "Criação de avatar personalizado para uso em redes sociais e comunicações da marca.", valor: 400 },
+      { id: "s9", nome: "Template Canva", tipo: "unitario", descricao: "Criação de templates editáveis no Canva para que o cliente possa criar peças de forma autônoma.", valor: 600 },
+      { id: "s10", nome: "Edição de Vídeo YouTube", tipo: "unitario", descricao: "Edição profissional de vídeos para YouTube, com cortes, transições, legendas e thumbnail.", valor: 1200 },
+    ],
+  },
+  {
+    id: "performance",
+    nome: "Performance",
+    descricao: "Gestão de tráfego pago e campanhas",
+    icone: "zap",
+    servicos: [
+      { id: "p1", nome: "Gestão de Tráfego Meta", tipo: "mensal", descricao: "Gestão completa de campanhas de tráfego pago no Facebook e Instagram Ads, incluindo criação, otimização e relatórios.", valor: 2000 },
+      { id: "p2", nome: "Gestão de Tráfego Google", tipo: "mensal", descricao: "Gestão completa de campanhas no Google Ads (Search, Display, YouTube), com otimização contínua e relatórios.", valor: 2000 },
+      { id: "p3", nome: "Gestão de Tráfego LinkedIn", tipo: "mensal", descricao: "Gestão de campanhas no LinkedIn Ads, focadas em geração de leads B2B e posicionamento profissional.", valor: 2500 },
+      { id: "p4", nome: "Gestão de Tráfego TikTok", tipo: "mensal", descricao: "Gestão de campanhas no TikTok Ads, com foco em alcance, engajamento e conversão.", valor: 1800 },
+      { id: "p5", nome: "Configuração Google Meu Negócio", tipo: "unitario", descricao: "Setup completo do perfil no Google Meu Negócio, incluindo fotos, descrição, categorias e otimização para SEO local.", valor: 800 },
+      { id: "p6", nome: "Artes de Campanha", tipo: "mensal", descricao: "Criação mensal de artes e criativos específicos para campanhas de tráfego pago.", valor: 1000 },
+      { id: "p7", nome: "Vídeos de Campanha", tipo: "mensal", descricao: "Produção mensal de vídeos específicos para campanhas de tráfego pago, com foco em conversão.", valor: 1500 },
+    ],
+  },
+  {
+    id: "web",
+    nome: "Web",
+    descricao: "Sites, landing pages e e-commerce",
+    icone: "globe",
+    servicos: [
+      { id: "w1", nome: "Página de Site + SEO", tipo: "unitario", descricao: "Criação de página de site institucional com otimização SEO on-page, design responsivo e integração com analytics.", valor: 3000 },
+      { id: "w2", nome: "Landing Page Link na Bio", tipo: "unitario", descricao: "Criação de landing page otimizada para link na bio do Instagram, com links estratégicos e design atrativo.", valor: 800 },
+      { id: "w3", nome: "Landing Page VSL", tipo: "unitario", descricao: "Landing page com Video Sales Letter, projetada para converter visitantes em leads ou clientes através de vídeo.", valor: 1500 },
+      { id: "w4", nome: "Landing Page Vendas", tipo: "unitario", descricao: "Landing page completa de vendas com copywriting persuasivo, provas sociais e checkout integrado.", valor: 2000 },
+      { id: "w5", nome: "Landing Page Captura", tipo: "unitario", descricao: "Landing page focada em captura de leads, com formulário otimizado e integração com CRM/e-mail marketing.", valor: 1200 },
+      { id: "w6", nome: "Landing Page Ebook", tipo: "unitario", descricao: "Landing page para download de ebook, com preview do conteúdo e formulário de captura.", valor: 1000 },
+      { id: "w7", nome: "Alterar Contato", tipo: "unitario", descricao: "Alteração de informações de contato em site existente (telefone, e-mail, endereço, WhatsApp).", valor: 200 },
+      { id: "w8", nome: "Alterar Seção", tipo: "unitario", descricao: "Modificação de uma seção específica do site, incluindo texto, imagens e layout.", valor: 400 },
+      { id: "w9", nome: "E-commerce WooCommerce", tipo: "unitario", descricao: "Criação de loja virtual completa com WooCommerce, incluindo cadastro de produtos, meios de pagamento e frete.", valor: 5000 },
+    ],
+  },
+  {
+    id: "dados",
+    nome: "Dados / CRM",
+    descricao: "Configuração de CRM e automações",
+    icone: "database",
+    servicos: [
+      { id: "d1", nome: "Configuração CRM + Acompanhamento RD Station", tipo: "unitario", descricao: "Setup completo do RD Station CRM com funis de venda, automações de e-mail, lead scoring e integração com site.", valor: 3000 },
+      { id: "d2", nome: "Fluxo/Funil - Etapas de venda + roteiro comercial", tipo: "unitario", descricao: "Criação de fluxo de vendas estruturado com etapas definidas, roteiro comercial e scripts de abordagem.", valor: 2000 },
+    ],
+  },
+];
+
+const allServicos = modulosNOE.flatMap(m => m.servicos);
+
+// ── CONSTANTS ──
 const statusColors: Record<string, string> = {
   rascunho: "text-muted-foreground border-muted-foreground/30",
   enviada: "text-blue-600 dark:text-blue-400 border-blue-400/30",
   aceita: "text-green-600 dark:text-green-400 border-green-400/30",
   recusada: "text-red-600 dark:text-red-400 border-red-400/30",
 };
-
-const entregasDisponiveis = [
-  { id: "mkt", label: "Marketing Digital", valor: 1500 },
-  { id: "seo", label: "SEO", valor: 1200 },
-  { id: "trafego", label: "Tráfego Pago", valor: 2000 },
-  { id: "redes", label: "Gestão de Redes", valor: 1800 },
-  { id: "crm", label: "CRM", valor: 800 },
-  { id: "branding", label: "Branding", valor: 2500 },
-  { id: "consultoria", label: "Consultoria", valor: 3000 },
-];
 
 const projecaoMock = [
   { mes: "Mês 1", leads: 15, conversoes: 2, faturamento: "R$ 8.000" },
@@ -42,6 +142,35 @@ const projecaoMock = [
   { mes: "Mês 12", leads: 120, conversoes: 28, faturamento: "R$ 112.000" },
 ];
 
+// ── COMPONENTE DE SERVIÇO ──
+function ServicoItem({ servico, ativo, onToggle }: { servico: ServicoNOE; ativo: boolean; onToggle: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className={`flex items-start gap-3 p-4 rounded-lg border transition-all ${ativo ? "border-primary/40 bg-primary/5" : "border-border hover:bg-muted/30"}`}>
+      <Switch checked={ativo} onCheckedChange={onToggle} className="mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-sm">{servico.nome}</span>
+          <Badge variant={servico.tipo === "mensal" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+            {servico.tipo === "mensal" ? "Mensal" : "Unitário"}
+          </Badge>
+          <span className="text-xs font-semibold text-primary ml-auto">
+            R$ {servico.valor.toLocaleString()}
+          </span>
+        </div>
+        <p className={`text-xs text-muted-foreground mt-1 ${expanded ? "" : "line-clamp-1"}`}>
+          {servico.descricao}
+        </p>
+        <button onClick={() => setExpanded(!expanded)} className="text-[10px] text-primary hover:underline mt-0.5 flex items-center gap-0.5">
+          {expanded ? <><ChevronUp className="w-3 h-3" /> Menos</> : <><ChevronDown className="w-3 h-3" /> Mais detalhes</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── COMPONENTE PRINCIPAL ──
 export default function FranqueadoPropostas() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -59,7 +188,7 @@ export default function FranqueadoPropostas() {
   const [dialogProposta, setDialogProposta] = useState<FranqueadoProposta | null>(null);
 
   // Calculadora
-  const [entregasSelecionadas, setEntregasSelecionadas] = useState<string[]>(["mkt", "seo"]);
+  const [servicosSelecionados, setServicosSelecionados] = useState<string[]>([]);
   const [valorBase, setValorBase] = useState(0);
   const [valorBaseManual, setValorBaseManual] = useState(false);
   const [excedente, setExcedente] = useState(0);
@@ -68,8 +197,8 @@ export default function FranqueadoPropostas() {
   const [emissor, setEmissor] = useState<"franqueado" | "matriz">("franqueado");
 
   const valorCalculado = useMemo(() => {
-    return entregasSelecionadas.reduce((s, id) => s + (entregasDisponiveis.find(e => e.id === id)?.valor || 0), 0);
-  }, [entregasSelecionadas]);
+    return servicosSelecionados.reduce((s, id) => s + (allServicos.find(e => e.id === id)?.valor || 0), 0);
+  }, [servicosSelecionados]);
 
   const valorFinal = valorBaseManual ? valorBase : valorCalculado;
   const valorTotal = valorFinal + excedente;
@@ -77,9 +206,11 @@ export default function FranqueadoPropostas() {
   const projecaoUnidade = repasse20 + (emissor === "franqueado" ? excedente : excedente * 0.2);
   const impacto12 = projecaoUnidade * 12;
 
-  const toggleEntrega = (id: string) => {
-    setEntregasSelecionadas(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]);
+  const toggleServico = (id: string) => {
+    setServicosSelecionados(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]);
   };
+
+  const servicosSelecionadosData = allServicos.filter(s => servicosSelecionados.includes(s.id));
 
   const selected = propostas.find(p => p.id === selectedId);
 
@@ -108,7 +239,7 @@ export default function FranqueadoPropostas() {
       status: "rascunho",
       criadaEm: new Date().toISOString().split("T")[0],
       validaAte: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
-      servicos: entregasSelecionadas.map(id => entregasDisponiveis.find(e => e.id === id)?.label || id),
+      servicos: servicosSelecionadosData.map(s => s.nome),
       leadId: leadIdParam || undefined,
     };
     setPropostas(prev => [...prev, newProposta]);
@@ -277,27 +408,49 @@ export default function FranqueadoPropostas() {
           )}
         </TabsContent>
 
-        {/* ── ABA CALCULADORA ── */}
+        {/* ── ABA CALCULADORA NOE ── */}
         <TabsContent value="calculadora" className="space-y-6">
-          <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold uppercase tracking-wider">Entregas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {entregasDisponiveis.map(e => (
-                  <label key={e.id} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 cursor-pointer transition-colors">
-                    <Checkbox checked={entregasSelecionadas.includes(e.id)} onCheckedChange={() => toggleEntrega(e.id)} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{e.label}</p>
-                      <p className="text-xs text-muted-foreground">R$ {e.valor.toLocaleString()}/mês</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
 
+          {/* Módulos Accordion */}
+          <Accordion type="multiple" className="space-y-3">
+            {modulosNOE.map(modulo => {
+              const Icon = iconeMap[modulo.icone];
+              const qtdAtivos = modulo.servicos.filter(s => servicosSelecionados.includes(s.id)).length;
+              return (
+                <AccordionItem key={modulo.id} value={modulo.id} className="border-none">
+                  <AccordionTrigger className="hover:no-underline rounded-xl px-4 py-3 bg-destructive/90 text-destructive-foreground hover:bg-destructive transition-colors [&[data-state=open]]:rounded-b-none">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Icon className="w-5 h-5" />
+                      <div className="text-left">
+                        <span className="font-bold text-sm">{modulo.nome}</span>
+                        <p className="text-[11px] opacity-80 font-normal">{modulo.descricao}</p>
+                      </div>
+                      {qtdAtivos > 0 && (
+                        <Badge className="ml-auto mr-2 bg-white/20 text-white border-0 text-[10px]">
+                          {qtdAtivos} selecionado{qtdAtivos > 1 ? "s" : ""}
+                        </Badge>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="border border-t-0 border-border rounded-b-xl p-0">
+                    <div className="divide-y divide-border">
+                      {modulo.servicos.map(servico => (
+                        <div key={servico.id} className="px-4 py-0">
+                          <ServicoItem
+                            servico={servico}
+                            ativo={servicosSelecionados.includes(servico.id)}
+                            onToggle={() => toggleServico(servico.id)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+
+          {/* Valores */}
           <Card className="glass-card">
             <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Valores</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -311,7 +464,7 @@ export default function FranqueadoPropostas() {
                 <div>
                   <Label>Valor Base (R$)</Label>
                   <Input type="number" value={valorBaseManual ? valorBase : valorCalculado} onChange={e => setValorBase(Number(e.target.value))} disabled={!valorBaseManual} />
-                  {!valorBaseManual && <p className="text-[10px] text-muted-foreground mt-1">Calculado pelas entregas: R$ {valorCalculado.toLocaleString()}</p>}
+                  {!valorBaseManual && <p className="text-[10px] text-muted-foreground mt-1">Calculado pelos serviços: R$ {valorCalculado.toLocaleString()}</p>}
                 </div>
                 <div><Label>Excedente (R$)</Label><Input type="number" value={excedente} onChange={e => setExcedente(Number(e.target.value))} /></div>
                 <div>
@@ -374,6 +527,37 @@ export default function FranqueadoPropostas() {
                   <p className="text-lg font-bold text-green-600 dark:text-green-400">R$ {impacto12.toLocaleString()}</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Resumo de Serviços Selecionados */}
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold uppercase tracking-wider">
+                Serviços Selecionados ({servicosSelecionadosData.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {servicosSelecionadosData.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum serviço selecionado</p>
+              ) : (
+                <div className="space-y-2">
+                  {servicosSelecionadosData.map(s => (
+                    <div key={s.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                        <span>{s.nome}</span>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0">{s.tipo === "mensal" ? "Mensal" : "Unit."}</Badge>
+                      </div>
+                      <span className="font-semibold text-primary">R$ {s.valor.toLocaleString()}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between text-sm pt-2 font-bold border-t border-border">
+                    <span>Total dos serviços</span>
+                    <span className="text-primary">R$ {valorCalculado.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
