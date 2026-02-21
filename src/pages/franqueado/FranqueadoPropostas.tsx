@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,18 +16,25 @@ import {
   FileText, Download, ArrowLeft, FileCheck2,
   Calculator, CheckCircle2,
   Palette, Share2, Zap, Globe, Database, ChevronDown, ChevronUp,
-  ArrowRight, Minus, Plus,
+  ArrowRight, Minus, Plus, Clock,
 } from "lucide-react";
 import { getFranqueadoPropostas, getFranqueadoLeads, FranqueadoProposta } from "@/data/franqueadoData";
 import { toast } from "sonner";
 
 // ── TIPOS ──
+type TipoQuantidade = "single" | "quantity" | "package" | "youtube_time";
+
 type ServicoNOE = {
   id: string;
   nome: string;
   tipo: "unitario" | "mensal";
   descricao: string;
-  valor: number;
+  preco: number;
+  tipoQuantidade: TipoQuantidade;
+  pacotes?: number[];
+  minQuantidade?: number;
+  maxQuantidade?: number;
+  unidade?: string;
 };
 
 type ModuloNOE = {
@@ -47,66 +53,66 @@ const iconeMap = {
   database: Database,
 };
 
-// ── DADOS DOS MÓDULOS NOE ──
+// ── DADOS DOS MÓDULOS NOE (valores exatos da referência) ──
 const modulosNOE: ModuloNOE[] = [
   {
     id: "branding", nome: "Branding", descricao: "Identidade visual e materiais de marca", icone: "palette",
     servicos: [
-      { id: "b1", nome: "Logo + Manual de Marca", tipo: "unitario", descricao: "Criação de logotipo profissional com manual de identidade visual completo, incluindo paleta de cores, tipografia e regras de uso.", valor: 3500 },
-      { id: "b2", nome: "Material de Marca", tipo: "unitario", descricao: "Cartões de visita, papel timbrado, assinatura de e-mail e papelaria completa.", valor: 1500 },
-      { id: "b3", nome: "Mídia Off", tipo: "unitario", descricao: "Banners, folders, flyers, outdoors e materiais impressos.", valor: 1200 },
-      { id: "b4", nome: "Naming", tipo: "unitario", descricao: "Definição de nome para marca, produto ou serviço, com pesquisa de disponibilidade.", valor: 2000 },
-      { id: "b5", nome: "Registro INPI", tipo: "unitario", descricao: "Acompanhamento e registro da marca junto ao INPI.", valor: 1800 },
-      { id: "b6", nome: "Ebook", tipo: "unitario", descricao: "Ebook profissional com design, diagramação e conteúdo estratégico.", valor: 2500 },
-      { id: "b7", nome: "Apresentação Comercial", tipo: "unitario", descricao: "Design de apresentação profissional com storytelling e identidade visual.", valor: 1800 },
+      { id: "b1", nome: "Logo + Manual de Marca", tipo: "unitario", descricao: "Criação de logotipo profissional com manual de identidade visual completo.", preco: 2500, tipoQuantidade: "single" },
+      { id: "b2", nome: "Material de Marca", tipo: "unitario", descricao: "Cartões de visita, papel timbrado, assinatura de e-mail e papelaria.", preco: 200, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 50, unidade: "peça" },
+      { id: "b3", nome: "Mídia Off", tipo: "unitario", descricao: "Banners, folders, flyers, outdoors e materiais impressos.", preco: 200, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 50, unidade: "peça" },
+      { id: "b4", nome: "Naming", tipo: "unitario", descricao: "Definição de nome para marca, produto ou serviço.", preco: 1500, tipoQuantidade: "single" },
+      { id: "b5", nome: "Registro INPI", tipo: "unitario", descricao: "Acompanhamento e registro da marca junto ao INPI.", preco: 3500, tipoQuantidade: "single" },
+      { id: "b6", nome: "Ebook", tipo: "unitario", descricao: "Ebook profissional com design, diagramação e conteúdo estratégico.", preco: 0, tipoQuantidade: "single" },
+      { id: "b7", nome: "Apresentação Comercial", tipo: "unitario", descricao: "Design de apresentação profissional com storytelling.", preco: 0, tipoQuantidade: "single" },
     ],
   },
   {
     id: "social", nome: "Social Media", descricao: "Conteúdo orgânico e gestão de redes sociais", icone: "share2",
     servicos: [
-      { id: "s1", nome: "Artes / Criativos Orgânicos", tipo: "mensal", descricao: "Criação mensal de artes para feed, stories e carrossel.", valor: 1500 },
-      { id: "s2", nome: "Vídeos / Reels", tipo: "mensal", descricao: "Produção mensal de vídeos curtos e reels com edição profissional.", valor: 2000 },
-      { id: "s3", nome: "Programação Meta", tipo: "mensal", descricao: "Agendamento e publicação no Facebook e Instagram.", valor: 800 },
-      { id: "s4", nome: "Programação LinkedIn", tipo: "mensal", descricao: "Agendamento e publicação no LinkedIn.", valor: 800 },
-      { id: "s5", nome: "Programação TikTok", tipo: "mensal", descricao: "Agendamento e publicação no TikTok.", valor: 800 },
-      { id: "s6", nome: "Programação YouTube", tipo: "mensal", descricao: "Agendamento e publicação no YouTube.", valor: 800 },
-      { id: "s7", nome: "Capa de Destaques", tipo: "unitario", descricao: "Capas profissionais para destaques do Instagram.", valor: 500 },
-      { id: "s8", nome: "Criação de Avatar", tipo: "unitario", descricao: "Avatar personalizado para redes sociais.", valor: 400 },
-      { id: "s9", nome: "Template Canva", tipo: "unitario", descricao: "Templates editáveis no Canva para criação autônoma.", valor: 600 },
-      { id: "s10", nome: "Edição de Vídeo YouTube", tipo: "unitario", descricao: "Edição profissional com cortes, transições, legendas e thumbnail.", valor: 1200 },
+      { id: "s1", nome: "Artes (Criativos Orgânicos)", tipo: "mensal", descricao: "Criação mensal de artes para feed, stories e carrossel.", preco: 85, tipoQuantidade: "package", pacotes: [2, 4, 6, 8, 10, 12], unidade: "arte" },
+      { id: "s2", nome: "Vídeos (Reels)", tipo: "mensal", descricao: "Produção mensal de vídeos curtos e reels com edição profissional.", preco: 150, tipoQuantidade: "package", pacotes: [2, 4, 6, 8, 10, 12], unidade: "vídeo" },
+      { id: "s3", nome: "Programação Meta", tipo: "mensal", descricao: "Agendamento e publicação no Facebook e Instagram.", preco: 100, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 10, unidade: "conta" },
+      { id: "s4", nome: "Programação LinkedIn", tipo: "mensal", descricao: "Agendamento e publicação no LinkedIn.", preco: 100, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 10, unidade: "conta" },
+      { id: "s5", nome: "Programação TikTok", tipo: "mensal", descricao: "Agendamento e publicação no TikTok.", preco: 100, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 10, unidade: "conta" },
+      { id: "s6", nome: "Programação YouTube", tipo: "mensal", descricao: "Agendamento e publicação no YouTube.", preco: 100, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 10, unidade: "conta" },
+      { id: "s7", nome: "Capa de Destaques", tipo: "unitario", descricao: "Capas profissionais para destaques do Instagram.", preco: 100, tipoQuantidade: "single" },
+      { id: "s8", nome: "Criação de Avatar", tipo: "unitario", descricao: "Avatar personalizado para redes sociais.", preco: 20, tipoQuantidade: "single" },
+      { id: "s9", nome: "Template Canva", tipo: "unitario", descricao: "Templates editáveis no Canva para criação autônoma.", preco: 100, tipoQuantidade: "single" },
+      { id: "s10", nome: "Edição de Vídeo YouTube", tipo: "unitario", descricao: "Edição profissional com cortes, transições, legendas e thumbnail. Preço calculado por tempo.", preco: 250, tipoQuantidade: "youtube_time", unidade: "min" },
     ],
   },
   {
     id: "performance", nome: "Performance", descricao: "Gestão de tráfego pago e campanhas", icone: "zap",
     servicos: [
-      { id: "p1", nome: "Gestão de Tráfego Meta", tipo: "mensal", descricao: "Gestão completa de campanhas no Facebook e Instagram Ads.", valor: 2000 },
-      { id: "p2", nome: "Gestão de Tráfego Google", tipo: "mensal", descricao: "Gestão completa de campanhas no Google Ads.", valor: 2000 },
-      { id: "p3", nome: "Gestão de Tráfego LinkedIn", tipo: "mensal", descricao: "Gestão de campanhas no LinkedIn Ads para B2B.", valor: 2500 },
-      { id: "p4", nome: "Gestão de Tráfego TikTok", tipo: "mensal", descricao: "Gestão de campanhas no TikTok Ads.", valor: 1800 },
-      { id: "p5", nome: "Configuração Google Meu Negócio", tipo: "unitario", descricao: "Setup completo do perfil no Google Meu Negócio.", valor: 800 },
-      { id: "p6", nome: "Artes de Campanha", tipo: "mensal", descricao: "Criativos exclusivos para campanhas de tráfego pago.", valor: 1000 },
-      { id: "p7", nome: "Vídeos de Campanha", tipo: "mensal", descricao: "Vídeos para campanhas de tráfego pago com foco em conversão.", valor: 1500 },
+      { id: "p1", nome: "Gestão de Tráfego Meta", tipo: "mensal", descricao: "Gestão completa de campanhas no Facebook e Instagram Ads.", preco: 900, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 10, unidade: "conta" },
+      { id: "p2", nome: "Gestão de Tráfego Google (inclui YouTube)", tipo: "mensal", descricao: "Gestão completa de campanhas no Google Ads.", preco: 900, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 10, unidade: "conta" },
+      { id: "p3", nome: "Gestão de Tráfego LinkedIn", tipo: "mensal", descricao: "Gestão de campanhas no LinkedIn Ads para B2B.", preco: 900, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 10, unidade: "conta" },
+      { id: "p4", nome: "Gestão de Tráfego TikTok", tipo: "mensal", descricao: "Gestão de campanhas no TikTok Ads.", preco: 900, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 10, unidade: "conta" },
+      { id: "p5", nome: "Configuração Google Meu Negócio", tipo: "unitario", descricao: "Setup completo do perfil no Google Meu Negócio.", preco: 450, tipoQuantidade: "single" },
+      { id: "p6", nome: "Artes de Campanha", tipo: "mensal", descricao: "Criativos exclusivos para campanhas de tráfego pago.", preco: 85, tipoQuantidade: "package", pacotes: [2, 4, 6, 8, 10, 12], unidade: "arte" },
+      { id: "p7", nome: "Vídeos de Campanha", tipo: "mensal", descricao: "Vídeos para campanhas de tráfego pago com foco em conversão.", preco: 150, tipoQuantidade: "package", pacotes: [2, 4, 6, 8, 10, 12], unidade: "vídeo" },
     ],
   },
   {
     id: "web", nome: "Web", descricao: "Sites, landing pages e e-commerce", icone: "globe",
     servicos: [
-      { id: "w1", nome: "Página de Site + SEO", tipo: "unitario", descricao: "Site institucional com otimização SEO on-page e design responsivo.", valor: 3000 },
-      { id: "w2", nome: "Landing Page Link na Bio", tipo: "unitario", descricao: "Landing page otimizada para link na bio do Instagram.", valor: 800 },
-      { id: "w3", nome: "Landing Page VSL", tipo: "unitario", descricao: "Landing page com Video Sales Letter para conversão.", valor: 1500 },
-      { id: "w4", nome: "Landing Page Vendas", tipo: "unitario", descricao: "Landing page de vendas com copywriting persuasivo.", valor: 2000 },
-      { id: "w5", nome: "Landing Page Captura", tipo: "unitario", descricao: "Landing page focada em captura de leads.", valor: 1200 },
-      { id: "w6", nome: "Landing Page Ebook", tipo: "unitario", descricao: "Landing page para download de ebook.", valor: 1000 },
-      { id: "w7", nome: "Alterar Contato", tipo: "unitario", descricao: "Alteração de informações de contato em site existente.", valor: 200 },
-      { id: "w8", nome: "Alterar Seção", tipo: "unitario", descricao: "Modificação de uma seção específica do site.", valor: 400 },
-      { id: "w9", nome: "E-commerce WooCommerce", tipo: "unitario", descricao: "Loja virtual completa com WooCommerce.", valor: 5000 },
+      { id: "w1", nome: "Página de Site + SEO", tipo: "unitario", descricao: "Site institucional com otimização SEO on-page e design responsivo.", preco: 850, tipoQuantidade: "quantity", minQuantidade: 3, maxQuantidade: 20, unidade: "página" },
+      { id: "w2", nome: "Landing Page Link na Bio", tipo: "unitario", descricao: "Landing page otimizada para link na bio do Instagram.", preco: 800, tipoQuantidade: "single" },
+      { id: "w3", nome: "Landing Page VSL", tipo: "unitario", descricao: "Landing page com Video Sales Letter para conversão.", preco: 1800, tipoQuantidade: "single" },
+      { id: "w4", nome: "Landing Page Vendas", tipo: "unitario", descricao: "Landing page de vendas com copywriting persuasivo.", preco: 1600, tipoQuantidade: "single" },
+      { id: "w5", nome: "Landing Page Captura", tipo: "unitario", descricao: "Landing page focada em captura de leads.", preco: 1600, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 10, unidade: "LP" },
+      { id: "w6", nome: "Landing Page Ebook", tipo: "unitario", descricao: "Landing page para download de ebook.", preco: 1600, tipoQuantidade: "single" },
+      { id: "w7", nome: "Alterar Contato", tipo: "unitario", descricao: "Alteração de informações de contato em site existente.", preco: 50, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 20, unidade: "alteração" },
+      { id: "w8", nome: "Alterar Seção", tipo: "unitario", descricao: "Modificação de uma seção específica do site.", preco: 120, tipoQuantidade: "quantity", minQuantidade: 1, maxQuantidade: 20, unidade: "alteração" },
+      { id: "w9", nome: "E-commerce WooCommerce", tipo: "unitario", descricao: "Loja virtual completa com WooCommerce.", preco: 4500, tipoQuantidade: "single" },
     ],
   },
   {
     id: "dados", nome: "Dados / CRM", descricao: "Configuração de CRM e automações", icone: "database",
     servicos: [
-      { id: "d1", nome: "Configuração CRM + Acompanhamento RD Station", tipo: "unitario", descricao: "Setup completo do RD Station CRM com funis e automações.", valor: 3000 },
-      { id: "d2", nome: "Fluxo/Funil - Etapas de venda + roteiro comercial", tipo: "unitario", descricao: "Fluxo de vendas estruturado com roteiro e scripts.", valor: 2000 },
+      { id: "d1", nome: "Configuração CRM + Acompanhamento (RD Station)", tipo: "unitario", descricao: "Setup completo do RD Station CRM com funis e automações.", preco: 1000, tipoQuantidade: "single" },
+      { id: "d2", nome: "Fluxo/Funil (Etapas de venda + roteiro comercial)", tipo: "unitario", descricao: "Fluxo de vendas estruturado com roteiro e scripts.", preco: 600, tipoQuantidade: "single" },
     ],
   },
 ];
@@ -120,13 +126,32 @@ const statusColors: Record<string, string> = {
   recusada: "text-red-600 dark:text-red-400 border-red-400/30",
 };
 
+// ── Cálculo de valor do serviço ──
+function calcularValorServico(servico: ServicoNOE, quantidade: number, youtubeMinutos?: number): number {
+  if (servico.tipoQuantidade === "single") return servico.preco;
+  if (servico.tipoQuantidade === "youtube_time") {
+    const mins = youtubeMinutos || 2;
+    return servico.preco * Math.ceil(mins / 2);
+  }
+  return servico.preco * quantidade;
+}
+
+// ── Seleção state ──
+type SelecaoServico = {
+  quantidade: number;
+  youtubeMinutos?: number;
+};
 
 // ── COMPONENTE DE SERVIÇO COM QUANTIDADE ──
-function ServicoItem({ servico, ativo, quantidade, onToggle, onQuantidadeChange }: {
-  servico: ServicoNOE; ativo: boolean; quantidade: number;
-  onToggle: () => void; onQuantidadeChange: (q: number) => void;
+function ServicoItem({ servico, ativo, selecao, onToggle, onSelecaoChange }: {
+  servico: ServicoNOE;
+  ativo: boolean;
+  selecao: SelecaoServico;
+  onToggle: () => void;
+  onSelecaoChange: (s: SelecaoServico) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const valor = calcularValorServico(servico, selecao.quantidade, selecao.youtubeMinutos);
 
   return (
     <div className={`flex items-start gap-3 p-4 rounded-lg border transition-all ${ativo ? "border-primary/40 bg-primary/5" : "border-border hover:bg-muted/30"}`}>
@@ -137,6 +162,11 @@ function ServicoItem({ servico, ativo, quantidade, onToggle, onQuantidadeChange 
           <Badge variant={servico.tipo === "mensal" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
             {servico.tipo === "mensal" ? "Mensal" : "Unitário"}
           </Badge>
+          {servico.tipoQuantidade !== "single" && (
+            <span className="text-[10px] text-muted-foreground">
+              R$ {servico.preco.toLocaleString()}/{servico.unidade || "un"}
+            </span>
+          )}
         </div>
         <p className={`text-xs text-muted-foreground mt-1 ${expanded ? "" : "line-clamp-1"}`}>
           {servico.descricao}
@@ -144,35 +174,67 @@ function ServicoItem({ servico, ativo, quantidade, onToggle, onQuantidadeChange 
         <button onClick={() => setExpanded(!expanded)} className="text-[10px] text-primary hover:underline mt-0.5 flex items-center gap-0.5">
           {expanded ? <><ChevronUp className="w-3 h-3" /> Menos</> : <><ChevronDown className="w-3 h-3" /> Mais detalhes</>}
         </button>
-      </div>
-      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-        <span className="text-xs font-semibold text-primary">
-          R$ {(servico.valor * quantidade).toLocaleString()}
-        </span>
-        {ativo && (
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => onQuantidadeChange(Math.max(1, quantidade - 1))}>
+
+        {/* Controles de quantidade quando ativo */}
+        {ativo && servico.tipoQuantidade === "package" && servico.pacotes && (
+          <div className="mt-2">
+            <Select value={String(selecao.quantidade)} onValueChange={v => onSelecaoChange({ ...selecao, quantidade: Number(v) })}>
+              <SelectTrigger className="h-8 w-40 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {servico.pacotes.map(p => (
+                  <SelectItem key={p} value={String(p)}>{p} {servico.unidade || "un"}{p > 1 ? "s" : ""}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {ativo && servico.tipoQuantidade === "quantity" && (
+          <div className="mt-2 flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => onSelecaoChange({ ...selecao, quantidade: Math.max(servico.minQuantidade || 1, selecao.quantidade - 1) })}>
               <Minus className="w-3 h-3" />
             </Button>
-            <span className="text-xs font-medium w-6 text-center">{quantidade}</span>
-            <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => onQuantidadeChange(quantidade + 1)}>
+            <span className="text-xs font-medium w-8 text-center">{selecao.quantidade} {servico.unidade || "un"}</span>
+            <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => onSelecaoChange({ ...selecao, quantidade: Math.min(servico.maxQuantidade || 99, selecao.quantidade + 1) })}>
               <Plus className="w-3 h-3" />
             </Button>
           </div>
         )}
+
+        {ativo && servico.tipoQuantidade === "youtube_time" && (
+          <div className="mt-2 flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              type="number"
+              className="h-8 w-20 text-xs"
+              value={selecao.youtubeMinutos || 2}
+              min={1}
+              onChange={e => onSelecaoChange({ ...selecao, youtubeMinutos: Math.max(1, Number(e.target.value)) })}
+            />
+            <span className="text-xs text-muted-foreground">minutos (R$ {servico.preco}/2min)</span>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+        <span className="text-xs font-semibold text-primary">
+          R$ {valor.toLocaleString()}
+        </span>
       </div>
     </div>
   );
 }
 
 // ── WIZARD STEPS ──
-const STEPS = ["Serviços", "Valores & Excedente", "Resumo"];
+const STEPS = ["Serviços", "Investimento", "Proposta"];
 
 // ── COMPONENTE PRINCIPAL ──
 export default function FranqueadoPropostas() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const leadIdParam = searchParams.get("leadId");
+  const propostaRef = useRef<HTMLDivElement>(null);
 
   const [propostas, setPropostas] = useState(() => getFranqueadoPropostas());
   const leads = getFranqueadoLeads();
@@ -186,46 +248,54 @@ export default function FranqueadoPropostas() {
   const [wizardStep, setWizardStep] = useState(0);
 
   // Calculadora
-  const [servicosSelecionados, setServicosSelecionados] = useState<Record<string, number>>({});
-  const [valorBase, setValorBase] = useState(0);
-  const [valorBaseManual, setValorBaseManual] = useState(false);
-  const [excedente, setExcedente] = useState(0);
-  const [recorrencia, setRecorrencia] = useState("mensal");
-  const [prazo, setPrazo] = useState("12");
-  const [emissor, setEmissor] = useState<"franqueado" | "matriz">("franqueado");
+  const [selecoes, setSelecoes] = useState<Record<string, SelecaoServico>>({});
+  const [duracao, setDuracao] = useState<"6" | "12">("12");
+  const [formaPagamento, setFormaPagamento] = useState<"avista" | "3x" | "6x">("avista");
+  const [nomeCliente, setNomeCliente] = useState(lead?.nome || "");
 
-  const servicosAtivos = Object.entries(servicosSelecionados).filter(([, q]) => q > 0);
+  const servicosAtivos = Object.entries(selecoes).filter(([, s]) => s.quantidade > 0);
 
-  const valorCalculado = useMemo(() => {
-    return servicosAtivos.reduce((s, [id, qty]) => s + (allServicos.find(e => e.id === id)?.valor || 0) * qty, 0);
+  // Cálculo de totais
+  const { totalUnitario, totalMensal } = useMemo(() => {
+    let unit = 0, mensal = 0;
+    servicosAtivos.forEach(([id, sel]) => {
+      const servico = allServicos.find(s => s.id === id);
+      if (!servico) return;
+      const val = calcularValorServico(servico, sel.quantidade, sel.youtubeMinutos);
+      if (servico.tipo === "unitario") unit += val;
+      else mensal += val;
+    });
+    return { totalUnitario: unit, totalMensal: mensal };
   }, [servicosAtivos]);
 
-  const valorFinal = valorBaseManual ? valorBase : valorCalculado;
-  const valorTotal = valorFinal + excedente;
-  const repasse20 = valorFinal * 0.2;
-  const projecaoUnidade = repasse20 + (emissor === "franqueado" ? excedente : excedente * 0.2);
-  const impacto12 = projecaoUnidade * 12;
+  const totalGeral = totalUnitario + totalMensal;
+  const totalProjeto = totalUnitario + totalMensal * Number(duracao);
+
+  const parcelaInfo = useMemo(() => {
+    if (formaPagamento === "avista") return { parcelas: 1, valorParcela: totalProjeto, label: "À Vista" };
+    if (formaPagamento === "3x") return { parcelas: 3, valorParcela: Math.ceil(totalProjeto / 3), label: "3x" };
+    return { parcelas: 6, valorParcela: Math.ceil(totalProjeto / 6), label: "6x" };
+  }, [formaPagamento, totalProjeto]);
 
   const toggleServico = (id: string) => {
-    setServicosSelecionados(prev => {
+    setSelecoes(prev => {
       const next = { ...prev };
-      if (next[id] && next[id] > 0) { delete next[id]; } else { next[id] = 1; }
+      if (next[id] && next[id].quantidade > 0) {
+        delete next[id];
+      } else {
+        const servico = allServicos.find(s => s.id === id);
+        const defaultQty = servico?.tipoQuantidade === "package" && servico.pacotes ? servico.pacotes[0] :
+          servico?.minQuantidade || 1;
+        next[id] = { quantidade: defaultQty, youtubeMinutos: 2 };
+      }
       return next;
     });
   };
 
-  const setQuantidade = (id: string, qty: number) => {
-    if (qty <= 0) {
-      setServicosSelecionados(prev => { const next = { ...prev }; delete next[id]; return next; });
-    } else {
-      setServicosSelecionados(prev => ({ ...prev, [id]: qty }));
-    }
-  };
-
-  const servicosSelecionadosData = servicosAtivos.map(([id, qty]) => ({
-    ...allServicos.find(s => s.id === id)!,
-    quantidade: qty,
-  }));
+  const servicosSelecionadosData = servicosAtivos.map(([id, sel]) => {
+    const servico = allServicos.find(s => s.id === id)!;
+    return { ...servico, quantidade: sel.quantidade, youtubeMinutos: sel.youtubeMinutos, valorTotal: calcularValorServico(servico, sel.quantidade, sel.youtubeMinutos) };
+  });
 
   const selected = propostas.find(p => p.id === selectedId);
 
@@ -241,16 +311,36 @@ export default function FranqueadoPropostas() {
     navigate("/franqueado/contratos?novo=CT-novo");
   }
 
-  function handleGerarProposta() {
-    const nome = lead?.nome || "Novo Cliente";
+  async function handleBaixarPDF() {
+    if (!propostaRef.current) return;
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename: `Proposta_${nomeCliente || "Cliente"}_${new Date().toISOString().split("T")[0]}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        })
+        .from(propostaRef.current)
+        .save();
+      toast.success("PDF gerado com sucesso!");
+    } catch {
+      toast.error("Erro ao gerar PDF");
+    }
+  }
+
+  function handleSalvarProposta() {
+    const nome = nomeCliente || lead?.nome || "Novo Cliente";
     const newProposta: FranqueadoProposta = {
       id: `P-${Date.now()}`,
       clienteNome: nome,
-      valor: valorFinal,
-      valorExcedente: excedente,
-      emissorExcedente: emissor,
+      valor: totalGeral,
+      valorExcedente: 0,
+      emissorExcedente: "franqueado",
       tipo: "Recorrente",
-      prazo,
+      prazo: duracao,
       status: "rascunho",
       criadaEm: new Date().toISOString().split("T")[0],
       validaAte: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
@@ -258,9 +348,18 @@ export default function FranqueadoPropostas() {
       leadId: leadIdParam || undefined,
     };
     setPropostas(prev => [...prev, newProposta]);
-    setWizardStep(0);
-    toast.success("Proposta gerada com sucesso!");
+    toast.success("Proposta salva com sucesso!");
   }
+
+  // Agrupa serviços por módulo para a proposta
+  const servicosAgrupados = useMemo(() => {
+    return modulosNOE
+      .map(m => ({
+        ...m,
+        servicosAtivos: servicosSelecionadosData.filter(s => m.servicos.some(ms => ms.id === s.id)),
+      }))
+      .filter(m => m.servicosAtivos.length > 0);
+  }, [servicosSelecionadosData]);
 
   // ── DETALHE DA PROPOSTA ──
   if (selected) {
@@ -274,9 +373,7 @@ export default function FranqueadoPropostas() {
             <div className="grid grid-cols-2 gap-4">
               <div><p className="text-xs text-muted-foreground">Cliente</p><p className="font-semibold">{selected.clienteNome}</p></div>
               <div><p className="text-xs text-muted-foreground">Valor Base</p><p className="font-semibold text-primary">R$ {selected.valor.toLocaleString()}</p></div>
-              <div><p className="text-xs text-muted-foreground">Excedente</p><p className="font-semibold">{selected.valorExcedente ? `R$ ${selected.valorExcedente.toLocaleString()}` : "—"}</p></div>
               <div><p className="text-xs text-muted-foreground">Status</p><Badge variant="outline" className={statusColors[selected.status]}>{selected.status}</Badge></div>
-              <div><p className="text-xs text-muted-foreground">Tipo</p><p className="font-semibold">{selected.tipo || "—"}</p></div>
               <div><p className="text-xs text-muted-foreground">Válida até</p><p className="font-semibold">{selected.validaAte}</p></div>
             </div>
             <div>
@@ -404,7 +501,7 @@ export default function FranqueadoPropostas() {
               <Accordion type="multiple" className="space-y-3">
                 {modulosNOE.map(modulo => {
                   const Icon = iconeMap[modulo.icone];
-                  const qtdAtivos = modulo.servicos.filter(s => servicosSelecionados[s.id] > 0).length;
+                  const qtdAtivos = modulo.servicos.filter(s => selecoes[s.id]?.quantidade > 0).length;
                   return (
                     <AccordionItem key={modulo.id} value={modulo.id} className="border-none">
                       <AccordionTrigger className="hover:no-underline rounded-xl px-4 py-3 bg-destructive/90 text-destructive-foreground hover:bg-destructive transition-colors [&[data-state=open]]:rounded-b-none">
@@ -427,10 +524,10 @@ export default function FranqueadoPropostas() {
                             <div key={servico.id} className="px-4 py-0">
                               <ServicoItem
                                 servico={servico}
-                                ativo={(servicosSelecionados[servico.id] || 0) > 0}
-                                quantidade={servicosSelecionados[servico.id] || 1}
+                                ativo={(selecoes[servico.id]?.quantidade || 0) > 0}
+                                selecao={selecoes[servico.id] || { quantidade: servico.minQuantidade || 1, youtubeMinutos: 2 }}
                                 onToggle={() => toggleServico(servico.id)}
-                                onQuantidadeChange={(q) => setQuantidade(servico.id, q)}
+                                onSelecaoChange={(s) => setSelecoes(prev => ({ ...prev, [servico.id]: s }))}
                               />
                             </div>
                           ))}
@@ -446,7 +543,8 @@ export default function FranqueadoPropostas() {
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">{servicosAtivos.length} serviço{servicosAtivos.length !== 1 ? "s" : ""} selecionado{servicosAtivos.length !== 1 ? "s" : ""}</p>
-                    <p className="text-lg font-bold text-primary">R$ {valorCalculado.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-primary">R$ {totalGeral.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">Unit: R$ {totalUnitario.toLocaleString()} | Mensal: R$ {totalMensal.toLocaleString()}</p>
                   </div>
                   <Button onClick={() => setWizardStep(1)} disabled={servicosAtivos.length === 0}>
                     Próximo <ArrowRight className="w-4 h-4 ml-1" />
@@ -456,99 +554,75 @@ export default function FranqueadoPropostas() {
             </>
           )}
 
-          {/* ── STEP 2: VALORES & EXCEDENTE ── */}
+          {/* ── STEP 2: INVESTIMENTO ── */}
           {wizardStep === 1 && (
             <>
               <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Valores</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 text-sm">
-                      <Checkbox checked={valorBaseManual} onCheckedChange={(v) => { setValorBaseManual(!!v); if (!v) setValorBase(0); }} />
-                      Valor base manual
-                    </label>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Valor Base (R$)</Label>
-                      <Input type="number" value={valorBaseManual ? valorBase : valorCalculado} onChange={e => setValorBase(Number(e.target.value))} disabled={!valorBaseManual} />
-                      {!valorBaseManual && <p className="text-[10px] text-muted-foreground mt-1">Calculado pelos serviços: R$ {valorCalculado.toLocaleString()}</p>}
-                    </div>
-                    <div>
-                      <Label>Recorrência</Label>
-                      <Select value={recorrencia} onValueChange={setRecorrencia}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mensal">Mensal</SelectItem>
-                          <SelectItem value="trimestral">Trimestral</SelectItem>
-                          <SelectItem value="semestral">Semestral</SelectItem>
-                          <SelectItem value="anual">Anual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Prazo</Label>
-                      <Select value={prazo} onValueChange={setPrazo}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="6">6 meses</SelectItem>
-                          <SelectItem value="12">12 meses</SelectItem>
-                          <SelectItem value="18">18 meses</SelectItem>
-                          <SelectItem value="24">24 meses</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Emissor da cobrança</Label>
-                      <Select value={emissor} onValueChange={v => setEmissor(v as "franqueado" | "matriz")}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="franqueado">Franqueado (100% excedente seu)</SelectItem>
-                          <SelectItem value="matriz">Matriz (20% excedente para matriz)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Duração do Projeto</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(["6", "12"] as const).map(d => (
+                      <button
+                        key={d}
+                        onClick={() => setDuracao(d)}
+                        className={`p-4 rounded-xl border-2 text-center transition-all ${
+                          duracao === d ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        <p className="text-2xl font-bold">{d}</p>
+                        <p className="text-sm text-muted-foreground">meses</p>
+                      </button>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="glass-card border-orange-500/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                    💰 Excedente
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    Valor cobrado acima do contrato base. Se o <strong>franqueado emite</strong>, retém 100%. Se a <strong>matriz emite</strong>, retém 80% (20% para matriz).
-                  </p>
-                  <div>
-                    <Label>Excedente (R$)</Label>
-                    <Input type="number" value={excedente} onChange={e => setExcedente(Number(e.target.value))} />
+              <Card className="glass-card">
+                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Forma de Pagamento</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-3">
+                    {([
+                      { value: "avista" as const, label: "À Vista", desc: "Pagamento único" },
+                      { value: "3x" as const, label: "3x", desc: "Parcelado em 3" },
+                      { value: "6x" as const, label: "6x", desc: "Parcelado em 6" },
+                    ]).map(fp => (
+                      <button
+                        key={fp.value}
+                        onClick={() => setFormaPagamento(fp.value)}
+                        className={`p-4 rounded-xl border-2 text-center transition-all ${
+                          formaPagamento === fp.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        <p className="text-lg font-bold">{fp.label}</p>
+                        <p className="text-xs text-muted-foreground">{fp.desc}</p>
+                      </button>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Resumo financeiro */}
+              {/* Simulação */}
               <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-bold uppercase tracking-wider mb-4">Resumo Financeiro</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-wider mb-4">Simulação de Investimento</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Valor Total</p>
-                      <p className="text-lg font-bold">R$ {valorTotal.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Total Unitário</p>
+                      <p className="text-lg font-bold">R$ {totalUnitario.toLocaleString()}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Repasse 20%</p>
-                      <p className="text-lg font-bold text-orange-600 dark:text-orange-400">R$ {repasse20.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Mensal</p>
+                      <p className="text-lg font-bold">R$ {totalMensal.toLocaleString()}/mês</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Projeção Unidade</p>
-                      <p className="text-lg font-bold text-primary">R$ {projecaoUnidade.toLocaleString()}/mês</p>
+                      <p className="text-xs text-muted-foreground">Total {duracao} meses</p>
+                      <p className="text-lg font-bold text-primary">R$ {totalProjeto.toLocaleString()}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Impacto 12 meses</p>
-                      <p className="text-lg font-bold text-green-600 dark:text-green-400">R$ {impacto12.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">{parcelaInfo.label}</p>
+                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                        {parcelaInfo.parcelas}x R$ {parcelaInfo.valorParcela.toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -565,84 +639,119 @@ export default function FranqueadoPropostas() {
             </>
           )}
 
-          {/* ── STEP 3: RESUMO ── */}
+          {/* ── STEP 3: PROPOSTA ── */}
           {wizardStep === 2 && (
             <>
               <Card className="glass-card">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider">
-                    Serviços Selecionados ({servicosSelecionadosData.length})
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Dados do Cliente</CardTitle></CardHeader>
                 <CardContent>
-                  {servicosSelecionadosData.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum serviço selecionado</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {servicosSelecionadosData.map(s => (
-                        <div key={s.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                            <span>{s.nome}</span>
-                            {s.quantidade > 1 && <Badge variant="outline" className="text-[9px] px-1 py-0">x{s.quantidade}</Badge>}
-                            <Badge variant="outline" className="text-[9px] px-1 py-0">{s.tipo === "mensal" ? "Mensal" : "Unit."}</Badge>
-                          </div>
-                          <span className="font-semibold text-primary">R$ {(s.valor * s.quantidade).toLocaleString()}</span>
-                        </div>
-                      ))}
-                      <div className="flex items-center justify-between text-sm pt-2 font-bold border-t border-border">
-                        <span>Total dos serviços</span>
-                        <span className="text-primary">R$ {valorCalculado.toLocaleString()}</span>
+                  <Label>Nome do Cliente</Label>
+                  <Input value={nomeCliente} onChange={e => setNomeCliente(e.target.value)} placeholder="Nome da empresa ou cliente" />
+                </CardContent>
+              </Card>
+
+              {/* Preview da proposta */}
+              <Card className="glass-card overflow-hidden">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-bold uppercase tracking-wider">Preview da Proposta</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                  <div ref={propostaRef} className="bg-white text-gray-900 p-8 space-y-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                    {/* Cabeçalho */}
+                    <div className="flex items-center justify-between border-b-2 border-red-600 pb-4">
+                      <div>
+                        <h1 className="text-2xl font-black text-red-600 tracking-tight">NOEXCUSE</h1>
+                        <p className="text-xs text-gray-500">Marketing Digital</p>
+                      </div>
+                      <div className="text-right">
+                        <h2 className="text-lg font-bold text-gray-800">Proposta Comercial</h2>
+                        <p className="text-xs text-gray-500">{new Date().toLocaleDateString("pt-BR")}</p>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
 
-              <Card className="glass-card">
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold uppercase tracking-wider">Configuração</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                    <div><p className="text-xs text-muted-foreground">Valor Base</p><p className="font-semibold">R$ {valorFinal.toLocaleString()}</p></div>
-                    <div><p className="text-xs text-muted-foreground">Excedente</p><p className="font-semibold">R$ {excedente.toLocaleString()}</p></div>
-                    <div><p className="text-xs text-muted-foreground">Recorrência</p><p className="font-semibold capitalize">{recorrencia}</p></div>
-                    <div><p className="text-xs text-muted-foreground">Prazo</p><p className="font-semibold">{prazo} meses</p></div>
-                    <div><p className="text-xs text-muted-foreground">Emissor</p><p className="font-semibold capitalize">{emissor}</p></div>
-                    <div><p className="text-xs text-muted-foreground">Valor Total</p><p className="font-semibold text-primary">R$ {valorTotal.toLocaleString()}</p></div>
+                    {/* Cliente */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">Preparado para</p>
+                      <p className="text-lg font-bold text-gray-800">{nomeCliente || "Cliente"}</p>
+                    </div>
+
+                    {/* Duração */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-700">Duração do Projeto:</span>
+                      <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">{duracao} meses</span>
+                    </div>
+
+                    {/* Serviços agrupados */}
+                    {servicosAgrupados.map(grupo => (
+                      <div key={grupo.id}>
+                        <h3 className="text-sm font-bold text-red-600 uppercase tracking-wider mb-2 border-b border-gray-200 pb-1">{grupo.nome}</h3>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-xs text-gray-500 uppercase">
+                              <th className="py-1">Serviço</th>
+                              <th className="py-1">Tipo</th>
+                              <th className="py-1 text-center">Qtd</th>
+                              <th className="py-1 text-right">Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {grupo.servicosAtivos.map(s => (
+                              <tr key={s.id} className="border-b border-gray-100">
+                                <td className="py-1.5">{s.nome}</td>
+                                <td className="py-1.5 text-gray-500">{s.tipo === "mensal" ? "Mensal" : "Unitário"}</td>
+                                <td className="py-1.5 text-center">
+                                  {s.tipoQuantidade === "single" ? "—" :
+                                   s.tipoQuantidade === "youtube_time" ? `${s.youtubeMinutos || 2} min` :
+                                   `${s.quantidade} ${s.unidade || "un"}`}
+                                </td>
+                                <td className="py-1.5 text-right font-semibold">R$ {s.valorTotal.toLocaleString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+
+                    {/* Resumo Financeiro */}
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Resumo Financeiro</h3>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div><span className="text-gray-500">Total Unitário:</span></div>
+                        <div className="text-right font-semibold">R$ {totalUnitario.toLocaleString()}</div>
+                        <div><span className="text-gray-500">Total Mensal:</span></div>
+                        <div className="text-right font-semibold">R$ {totalMensal.toLocaleString()}/mês</div>
+                        <div className="border-t border-gray-300 pt-2"><span className="font-bold">Total do Projeto ({duracao} meses):</span></div>
+                        <div className="border-t border-gray-300 pt-2 text-right font-bold text-red-600 text-lg">R$ {totalProjeto.toLocaleString()}</div>
+                      </div>
+                    </div>
+
+                    {/* Investimento / Pagamento */}
+                    <div className="bg-red-50 rounded-lg p-4">
+                      <h3 className="text-sm font-bold text-red-600 uppercase tracking-wider mb-2">Investimento</h3>
+                      <p className="text-sm">
+                        <span className="font-semibold">Forma de pagamento:</span> {parcelaInfo.label}
+                      </p>
+                      <p className="text-lg font-bold text-gray-800 mt-1">
+                        {parcelaInfo.parcelas}x de R$ {parcelaInfo.valorParcela.toLocaleString()}
+                      </p>
+                    </div>
+
+                    {/* Rodapé */}
+                    <div className="border-t-2 border-red-600 pt-3 text-center">
+                      <p className="text-[10px] text-gray-400">Proposta gerada automaticamente pela Calculadora NOEXCUSE</p>
+                      <p className="text-[10px] text-gray-400">Válida por 30 dias</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="p-6">
-                  <h3 className="text-sm font-bold uppercase tracking-wider mb-4">Resumo Financeiro</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Valor Total</p>
-                      <p className="text-lg font-bold">R$ {valorTotal.toLocaleString()}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Repasse 20%</p>
-                      <p className="text-lg font-bold text-orange-600 dark:text-orange-400">R$ {repasse20.toLocaleString()}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Projeção Unidade</p>
-                      <p className="text-lg font-bold text-primary">R$ {projecaoUnidade.toLocaleString()}/mês</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Impacto 12 meses</p>
-                      <p className="text-lg font-bold text-green-600 dark:text-green-400">R$ {impacto12.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 <Button variant="outline" onClick={() => setWizardStep(1)}>
                   <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
                 </Button>
-                <Button className="flex-1" size="lg" onClick={handleGerarProposta}>
-                  <FileText className="w-4 h-4 mr-2" /> Gerar Proposta
+                <Button variant="outline" onClick={handleBaixarPDF}>
+                  <Download className="w-4 h-4 mr-1" /> Baixar PDF
+                </Button>
+                <Button className="flex-1" size="lg" onClick={handleSalvarProposta}>
+                  <FileText className="w-4 h-4 mr-2" /> Salvar Proposta
                 </Button>
               </div>
             </>
@@ -655,7 +764,7 @@ export default function FranqueadoPropostas() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Converter em Contrato</DialogTitle>
-            <DialogDescription>Confirme os dados para criar o contrato automaticamente.</DialogDescription>
+            <DialogDescription>Confirme os dados para criar o contrato.</DialogDescription>
           </DialogHeader>
           {dialogProposta && (
             <div className="grid grid-cols-2 gap-3 text-sm">
