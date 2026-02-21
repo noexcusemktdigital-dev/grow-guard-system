@@ -1,39 +1,49 @@
 
 
-# Reorganizar Propostas e Mover Estrategia para Diagnostico NOE
+# Atualizar Calculadora NOE com Valores Exatos e Proposta PDF
 
 ## Resumo
 
-Tres mudancas principais:
-1. Na pagina de Propostas, a aba "Estrategia" vira "Propostas" (lista de propostas existentes)
-2. A calculadora perde a lista de propostas que ficava embaixo e fica so com o wizard
-3. A secao de Estrategia (objetivos, plano de acao, projecao, justificativa) muda para o Diagnostico NOE, como uma aba/secao adicional no resultado
+Duas grandes mudancas:
+1. Substituir todos os valores, nomes, descricoes e tipos de quantidade dos servicos na calculadora para ficarem identicos ao projeto "calculadora NOE" de referencia
+2. Adicionar geracao de proposta em PDF no formato identico ao anexo (com logo NOEXCUSE, tabela Servico/Tipo/Qtd/Valor, Resumo Financeiro, forma de pagamento, duracao do projeto)
 
 ## O que muda
 
-### Pagina de Propostas (`FranqueadoPropostas.tsx`)
+### 1. Dados dos servicos (valores, tipos de quantidade, pacotes)
 
-**Tabs: "Propostas" + "Calculadora"** (antes era "Estrategia" + "Calculadora")
+O modelo atual usa tipo simples (unitario/mensal com quantidade generica). O projeto de referencia usa tipos mais ricos:
 
-- **Aba "Propostas"**: Contem a tabela de propostas existentes (que antes ficava abaixo de tudo). Cada proposta pode ser clicada para ver detalhes, exportar PDF, converter em contrato.
-- **Aba "Calculadora"**: Permanece com o wizard de 3 steps (Servicos, Valores/Excedente, Resumo). Remove a tabela de propostas que ficava embaixo.
+- `single` -- sem quantidade (ex: Logo + Manual = R$ 2.500)
+- `quantity` -- quantidade livre com min/max (ex: Material de Marca = R$ 200/peca)
+- `package` -- pacotes fixos como 2, 4, 6, 8, 10, 12 (ex: Artes = R$ 85/arte)
+- `youtube_time` -- tempo em minutos com preco calculado (ex: Edicao YouTube = R$ 250 por 2 min)
+- `toggle` -- liga/desliga simples
 
-**Descricoes dos servicos**: Atualizar para usar os textos EXATOS do site de referencia (mais longos e detalhados). Os nomes tambem ajustados para igualar: "Artes (Criativos Organicos)", "Videos (Reels)", "Gestao de Trafego Google (inclui YouTube)", "Configuracao CRM + Acompanhamento (RD Station)", "Fluxo/Funil (Etapas de venda + roteiro comercial)".
+**Exemplos de correcoes de preco:**
+- Artes (Criativos Organicos): R$ 1.500 atualmente, correto = R$ 85/arte (pacote 2-12)
+- Videos (Reels): R$ 2.000 atualmente, correto = R$ 150/video (pacote 2-12)
+- Gestao de Trafego Meta: R$ 2.000 atualmente, correto = R$ 900/conta
+- Logo + Manual de Marca: R$ 3.500 atualmente, correto = R$ 2.500
+- E todos os demais servicos ajustados conforme dados da calculadora
 
-**Quantidades e valores**: Mantidos como estao (quantidade x valor = subtotal). O site de referencia nao mostra valores -- isso e interno da franquia.
+### 2. Proposta PDF
 
-### Diagnostico NOE (`FranqueadoDiagnostico.tsx`)
+No Step 3 (Resumo), ao clicar "Gerar Proposta", alem de salvar na lista, gera um preview da proposta no estilo do PDF anexado, com botao "Baixar PDF" usando `html2pdf.js`:
 
-No resultado do diagnostico (tela pos-finalizacao), adicionar novas secoes de estrategia:
+- Cabecalho: logo NOEXCUSE + "Proposta Comercial" + data
+- "Preparado para:" + nome do cliente
+- "Duracao do Projeto" (6 ou 12 meses)
+- Servicos agrupados por modulo com tabela: Servico | Tipo | Qtd | Valor
+- Resumo Financeiro: Total Unitario + Total Mensal
+- Investimento: forma de pagamento (A Vista, 3x, 6x) com simulacao de parcelas
+- Rodape: "Proposta gerada automaticamente pela Calculadora NOEXCUSE / Valida por 30 dias"
 
-- **Objetivos Identificados** -- gerados com base nas respostas do diagnostico (recomendacoes ja existentes)
-- **Plano de Acao Recomendado** -- 5 passos estrategicos (mock)
-- **Projecao de Resultados** -- mini tabela mes 1/3/6/12 com leads, conversoes, faturamento
-- **Como Bater a Meta** -- texto com base nos gargalos identificados
-- **Entregas do Projeto** -- lista de entregas recomendadas com base no nivel de maturidade (o franqueado depois leva isso para a calculadora)
-- **Justificativa Tecnica** -- texto usando dados do diagnostico
+### 3. Wizard atualizado
 
-Botao "Gerar Proposta" continua no final, levando para a calculadora.
+- **Step 1**: Selecao de servicos com suporte a pacotes (2,4,6,8,10,12), quantidade com min/max, e YouTube time
+- **Step 2**: Duracao do projeto (6 ou 12 meses) + forma de pagamento (A Vista, 3x, 6x) -- substitui os campos de excedente/emissor/recorrencia que sao internos da franquia
+- **Step 3**: Resumo + preview da proposta + nome do cliente + Baixar PDF
 
 ---
 
@@ -42,30 +52,94 @@ Botao "Gerar Proposta" continua no final, levando para a calculadora.
 ### Arquivos modificados
 
 ```
-src/pages/franqueado/FranqueadoPropostas.tsx   -- tabs renomeadas, lista de propostas na aba Propostas, remove lista de baixo, descricoes atualizadas
-src/pages/franqueado/FranqueadoDiagnostico.tsx -- adiciona secoes de estrategia no resultado
+src/pages/franqueado/FranqueadoPropostas.tsx  -- reescrever modulosNOE, tipos, wizard steps, adicionar geracao PDF
 ```
 
-### Detalhes de implementacao
+### Estrutura de dados atualizada
 
-**FranqueadoPropostas.tsx:**
-- Renomear TabsTrigger "Estrategia" para "Propostas" com icone FileText
-- Conteudo da aba "Propostas" = tabela de propostas (mover de baixo para dentro da aba)
-- Remover Card "Propostas Existentes" que fica apos o Tabs
-- Remover todo o conteudo da antiga aba Estrategia (diagnostico cards, projecao, justificativa)
-- Atualizar descricoes dos servicos nos `modulosNOE` para textos identicos ao site de referencia
-- Ajustar nomes: "Artes (Criativos Organicos)", "Videos (Reels)", "Gestao de Trafego Google (inclui YouTube)", etc.
+```text
+ServicoNOE {
+  id, nome, descricao, preco: number,
+  tipo: 'unitario' | 'mensal',
+  tipoQuantidade: 'single' | 'quantity' | 'package' | 'youtube_time',
+  pacotes?: number[],        // ex: [2,4,6,8,10,12]
+  minQuantidade?: number,
+  maxQuantidade?: number,
+  unidade?: string,           // ex: 'arte', 'conta', 'pagina'
+}
+```
 
-**FranqueadoDiagnostico.tsx:**
-- No bloco `if (concluido)`, apos os cards de Gargalos e Recomendacoes, adicionar:
-  - Card "Plano de Acao Recomendado" com 5 items
-  - Card "Projecao de Resultados" com tabela mes 1/3/6/12
-  - Card "Como Bater a Meta" com texto baseado nos gargalos
-  - Card "Entregas Recomendadas" com lista de servicos sugeridos por nivel de maturidade
-  - Card "Justificativa Tecnica" com texto usando dados do diagnostico
+### Todos os servicos com valores corretos (copiados da referencia)
+
+**Branding:**
+- Logo + Manual de Marca: R$ 2.500 (single, unitario)
+- Material de Marca: R$ 200/peca (quantity 1-50, unitario)
+- Midia Off: R$ 200/peca (quantity 1-50, unitario)
+- Naming: R$ 1.500 (single, unitario)
+- Registro INPI: R$ 3.500 (single, unitario)
+- Ebook: R$ 0 (single, unitario)
+- Apresentacao Comercial: R$ 0 (single, unitario)
+
+**Social Media:**
+- Artes (Criativos Organicos): R$ 85/arte (package [2,4,6,8,10,12], mensal)
+- Videos (Reels): R$ 150/video (package [2,4,6,8,10,12], mensal)
+- Programacao Meta: R$ 100/conta (quantity 1-10, mensal)
+- Programacao LinkedIn: R$ 100/conta (quantity 1-10, mensal)
+- Programacao TikTok: R$ 100/conta (quantity 1-10, mensal)
+- Programacao YouTube: R$ 100/conta (quantity 1-10, mensal)
+- Capa de Destaques: R$ 100 (single, unitario)
+- Criacao de Avatar: R$ 20 (single, unitario)
+- Template Canva: R$ 100 (single, unitario)
+- Edicao de Video YouTube: preco calculado por tempo (youtube_time, unitario)
+
+**Performance:**
+- Gestao de Trafego Meta: R$ 900/conta (quantity 1-10, mensal)
+- Gestao de Trafego Google (inclui YouTube): R$ 900/conta (quantity 1-10, mensal)
+- Gestao de Trafego LinkedIn: R$ 900/conta (quantity 1-10, mensal)
+- Gestao de Trafego TikTok: R$ 900/conta (quantity 1-10, mensal)
+- Configuracao Google Meu Negocio: R$ 450 (single, unitario)
+- Artes de Campanha: R$ 85/arte (package [2,4,6,8,10,12], mensal)
+- Videos de Campanha: R$ 150/video (package [2,4,6,8,10,12], mensal)
+
+**Web:**
+- Pagina de Site + SEO: R$ 850/pagina (quantity 3-20, unitario)
+- Landing Page Link na Bio: R$ 800 (single, unitario)
+- Landing Page VSL: R$ 1.800 (single, unitario)
+- Landing Page Vendas: R$ 1.600 (single, unitario)
+- Landing Page Captura: R$ 1.600/LP (quantity 1-10, unitario)
+- Landing Page Ebook: R$ 1.600 (single, unitario)
+- Alterar Contato: R$ 50/alteracao (quantity 1-20, unitario)
+- Alterar Secao: R$ 120/alteracao (quantity 1-20, unitario)
+- E-commerce WooCommerce: R$ 4.500 (single, unitario)
+
+**Dados / CRM:**
+- Configuracao CRM + Acompanhamento (RD Station): R$ 1.000 (single, unitario)
+- Fluxo/Funil (Etapas de venda + roteiro comercial): R$ 600 (single, unitario)
+
+### Wizard redesenhado
+
+**Step 1 - Servicos**: Igual ao atual, mas com suporte a pacotes (Select com opcoes 2/4/6/8/10/12), quantidade com min/max, e YouTube time selector
+
+**Step 2 - Investimento**: 
+- Duracao: 6 ou 12 meses (botoes)
+- Forma de pagamento: A Vista / 3x / 6x (cards visuais)
+- Preview: simulacao de valores por mes
+
+**Step 3 - Proposta**:
+- Input nome do cliente
+- Preview visual da proposta (estilo PDF)
+- Botao "Baixar PDF" (usando html2pdf.js)
+- Botao "Salvar Proposta" (adiciona na lista)
+
+### Dependencia
+
+Instalar `html2pdf.js` para geracao de PDF no navegador.
 
 ### Ordem de implementacao
 
-1. `FranqueadoPropostas.tsx` -- reorganizar tabs, mover lista, atualizar descricoes
-2. `FranqueadoDiagnostico.tsx` -- adicionar secoes de estrategia no resultado
+1. Atualizar tipos e dados dos servicos com valores exatos
+2. Atualizar componente ServicoItem para suportar pacotes/quantity/youtube_time
+3. Redesenhar Step 2 (duracao + pagamento)
+4. Criar Step 3 com preview de proposta e geracao PDF
+5. Testar fluxo completo
 
