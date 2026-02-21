@@ -1,16 +1,14 @@
 import { useState, useMemo } from "react";
 import { Globe, Plus, ExternalLink, GripVertical, Type, Image, MessageSquare, HelpCircle, Award, ArrowDown, Sparkles, Eye, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/KpiCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getClienteSites } from "@/data/clienteData";
 import { toast } from "@/hooks/use-toast";
 
@@ -101,7 +99,6 @@ export default function ClienteSites() {
     AVAILABLE_BLOCKS[0], AVAILABLE_BLOCKS[1], AVAILABLE_BLOCKS[3], AVAILABLE_BLOCKS[4],
   ]);
   const [lpName, setLpName] = useState("");
-  const [previewMode, setPreviewMode] = useState(false);
 
   const addBlock = (block: LPBlock) => {
     setSelectedBlocks(prev => [...prev, { ...block, id: `${block.type}-${Date.now()}` }]);
@@ -162,13 +159,14 @@ export default function ClienteSites() {
         ))}
       </div>
 
-      {/* Builder Dialog */}
-      <Dialog open={builderOpen} onOpenChange={setBuilderOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Construtor de Landing Page</DialogTitle></DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+      {/* Builder Side-by-Side Sheet */}
+      <Sheet open={builderOpen} onOpenChange={setBuilderOpen}>
+        <SheetContent className="sm:max-w-4xl w-full overflow-y-auto p-0">
+          <div className="p-6 border-b">
+            <SheetHeader>
+              <SheetTitle>Construtor de Landing Page</SheetTitle>
+            </SheetHeader>
+            <div className="grid grid-cols-2 gap-4 mt-4">
               <div className="space-y-2">
                 <Label>Nome da Página</Label>
                 <Input value={lpName} onChange={e => setLpName(e.target.value)} placeholder="Ex: LP Promoção Março" />
@@ -185,14 +183,22 @@ export default function ClienteSites() {
                 </Select>
               </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-3 gap-4">
+          {/* Side-by-side layout */}
+          <div className="flex h-[calc(100vh-220px)]">
+            {/* Left: Block palette + selected blocks */}
+            <div className="w-72 border-r flex flex-col">
               {/* Block palette */}
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Blocos Disponíveis</p>
+              <div className="p-4 border-b">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Blocos Disponíveis</p>
                 <div className="space-y-1">
                   {AVAILABLE_BLOCKS.map(block => (
-                    <div key={block.id} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => addBlock(block)}>
+                    <div
+                      key={block.id}
+                      className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => addBlock(block)}
+                    >
                       {block.icon}
                       <span className="text-xs">{block.label}</span>
                       <Plus className="w-3 h-3 ml-auto text-muted-foreground" />
@@ -202,55 +208,61 @@ export default function ClienteSites() {
               </div>
 
               {/* Selected blocks */}
-              <div className="col-span-2 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">Estrutura da Página</p>
-                  <Button variant="outline" size="sm" className="text-[10px] h-6 gap-1" onClick={() => setPreviewMode(!previewMode)}>
-                    <Eye className="w-3 h-3" /> {previewMode ? "Editar" : "Preview"}
-                  </Button>
+              <div className="p-4 flex-1 overflow-y-auto">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Estrutura da Página</p>
+                <div className="space-y-2">
+                  {selectedBlocks.map((block, idx) => (
+                    <div key={block.id} className="flex items-center gap-2 p-2 border rounded-lg bg-background">
+                      <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab shrink-0" />
+                      {block.icon}
+                      <span className="text-xs flex-1 truncate">{block.label}</span>
+                      <div className="flex gap-0.5 shrink-0">
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => moveBlock(idx, -1)} disabled={idx === 0}>↑</Button>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => moveBlock(idx, 1)} disabled={idx === selectedBlocks.length - 1}>↓</Button>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => removeBlock(block.id)}><Trash2 className="w-3 h-3" /></Button>
+                      </div>
+                    </div>
+                  ))}
+                  {selectedBlocks.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-8">Adicione blocos da paleta acima</p>
+                  )}
                 </div>
-
-                {previewMode ? (
-                  <div className="border rounded-lg overflow-hidden">
-                    {selectedBlocks.map(block => (
-                      <div key={block.id}>
-                        {BLOCK_PREVIEWS[block.type]}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {selectedBlocks.map((block, idx) => (
-                      <div key={block.id} className="flex items-center gap-2 p-2 border rounded-lg bg-background">
-                        <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
-                        {block.icon}
-                        <span className="text-xs flex-1">{block.label}</span>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => moveBlock(idx, -1)} disabled={idx === 0}>↑</Button>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => moveBlock(idx, 1)} disabled={idx === selectedBlocks.length - 1}>↓</Button>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => removeBlock(block.id)}><Trash2 className="w-3 h-3" /></Button>
-                        </div>
-                      </div>
-                    ))}
-                    {selectedBlocks.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-8">Adicione blocos da paleta à esquerda</p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/10">
+            {/* Right: Live preview */}
+            <div className="flex-1 overflow-y-auto bg-muted/10 p-6">
+              <div className="max-w-md mx-auto">
+                <p className="text-xs font-medium text-muted-foreground mb-3 text-center">Preview ao Vivo</p>
+                <div className="border rounded-xl overflow-hidden bg-background shadow-lg">
+                  {selectedBlocks.length > 0 ? (
+                    selectedBlocks.map(block => (
+                      <div key={block.id}>
+                        {BLOCK_PREVIEWS[block.type]}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="h-64 flex items-center justify-center">
+                      <p className="text-xs text-muted-foreground">Adicione blocos para ver o preview</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t">
+            <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/10 mb-4">
               <Sparkles className="w-4 h-4 text-primary shrink-0" />
               <span className="text-xs">O formulário será integrado automaticamente ao CRM. Leads captados entrarão como "Novo Lead" com origem "Landing Page".</span>
             </div>
-
             <Button className="w-full" onClick={() => { toast({ title: "Landing page criada!", description: `"${lpName || 'Nova LP'}" publicada com sucesso.` }); setBuilderOpen(false); }}>
               Publicar Landing Page
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

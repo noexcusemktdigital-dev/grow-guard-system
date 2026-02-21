@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Rocket, Plus, FileText, Megaphone, Globe, Send, ChevronDown, ChevronUp, Sparkles, Target } from "lucide-react";
+import { Rocket, Plus, FileText, Megaphone, Globe, Send, Sparkles, Target, Calendar, Clock, ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,14 +12,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getClienteCampanhas, getPlanoMarketing360, type CampanhaMarketing } from "@/data/clienteData";
 import { toast } from "@/hooks/use-toast";
 
-const statusColors: Record<string, string> = {
-  Ativa: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  Pausada: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  Finalizada: "bg-muted text-muted-foreground",
-  Rascunho: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
+  Ativa: { bg: "bg-emerald-500/10", text: "text-emerald-500", dot: "bg-emerald-500" },
+  Pausada: { bg: "bg-yellow-500/10", text: "text-yellow-500", dot: "bg-yellow-500" },
+  Finalizada: { bg: "bg-muted", text: "text-muted-foreground", dot: "bg-muted-foreground" },
+  Rascunho: { bg: "bg-blue-500/10", text: "text-blue-500", dot: "bg-blue-500" },
 };
 
 export default function ClienteCampanhas() {
@@ -27,7 +28,7 @@ export default function ClienteCampanhas() {
   const plano = useMemo(() => getPlanoMarketing360(), []);
   const [filter, setFilter] = useState("Todas");
   const [createOpen, setCreateOpen] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<CampanhaMarketing | null>(null);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [aiGenerated, setAiGenerated] = useState(false);
   const filters = ["Todas", "Ativa", "Pausada", "Finalizada", "Rascunho"];
@@ -123,110 +124,159 @@ export default function ClienteCampanhas() {
         {filters.map(f => <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" className="text-xs" onClick={() => setFilter(f)}>{f}</Button>)}
       </div>
 
-      <div className="space-y-3">
-        {filtered.map(c => (
-          <Card key={c.id} className="hover:shadow-md transition-all">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">{c.name}</span>
-                  <Badge variant="outline" className={`text-[9px] ${statusColors[c.status]}`}>{c.status}</Badge>
-                  <Badge variant="outline" className="text-[9px]">{c.channel}</Badge>
-                </div>
-                <span className="text-xs text-muted-foreground">{c.startDate} → {c.endDate}</span>
-              </div>
+      {/* Timeline Visual */}
+      <div className="relative">
+        {/* Vertical timeline line */}
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border" />
 
-              {/* KPIs inline */}
-              <div className="grid grid-cols-4 gap-4 text-center mb-3">
-                <div><p className="text-lg font-bold">R$ {c.budget.toLocaleString()}</p><p className="text-[10px] text-muted-foreground">Orçamento</p></div>
-                <div><p className="text-lg font-bold">R$ {c.spent.toLocaleString()}</p><p className="text-[10px] text-muted-foreground">Gasto</p></div>
-                <div><p className="text-lg font-bold text-primary">{c.leads}</p><p className="text-[10px] text-muted-foreground">Leads</p></div>
-                <div><p className="text-lg font-bold">{c.conversions}</p><p className="text-[10px] text-muted-foreground">Conversões</p></div>
-              </div>
-
-              {/* Budget progress */}
-              <div className="mb-3">
-                <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                  <span>Orçamento utilizado</span>
-                  <span>{Math.round((c.spent / c.budget) * 100)}%</span>
+        <div className="space-y-4">
+          {filtered.map((c, idx) => {
+            const sc = statusColors[c.status];
+            const budgetPct = Math.round((c.spent / c.budget) * 100);
+            return (
+              <div key={c.id} className="relative pl-14">
+                {/* Timeline node */}
+                <div className="absolute left-[1.125rem] top-5 z-10 flex items-center justify-center">
+                  <div className={`w-4 h-4 rounded-full border-2 border-background ${sc.dot}`} />
                 </div>
-                <Progress value={(c.spent / c.budget) * 100} className="h-1.5" />
-              </div>
-
-              {/* Entregáveis */}
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2 flex-wrap">
-                  {c.entregaveis.conteudos > 0 && <Badge variant="secondary" className="text-[9px] gap-1"><FileText className="w-3 h-3" />{c.entregaveis.conteudos} conteúdos</Badge>}
-                  {c.entregaveis.anuncios > 0 && <Badge variant="secondary" className="text-[9px] gap-1"><Megaphone className="w-3 h-3" />{c.entregaveis.anuncios} anúncios</Badge>}
-                  {c.entregaveis.landingPages > 0 && <Badge variant="secondary" className="text-[9px] gap-1"><Globe className="w-3 h-3" />{c.entregaveis.landingPages} LPs</Badge>}
-                  {c.entregaveis.disparos > 0 && <Badge variant="secondary" className="text-[9px] gap-1"><Send className="w-3 h-3" />{c.entregaveis.disparos} disparos</Badge>}
+                {/* Date label */}
+                <div className="absolute left-0 top-5 -translate-x-0">
                 </div>
-                <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}>
-                  Ver detalhes {expandedId === c.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </Button>
-              </div>
 
-              {/* Expanded details */}
-              {expandedId === c.id && (
-                <div className="mt-4 pt-4 border-t">
-                  <Tabs defaultValue="resumo">
-                    <TabsList className="h-8">
-                      <TabsTrigger value="resumo" className="text-xs">Resumo</TabsTrigger>
-                      <TabsTrigger value="conteudos" className="text-xs">Conteúdos</TabsTrigger>
-                      <TabsTrigger value="anuncios" className="text-xs">Anúncios</TabsTrigger>
-                      <TabsTrigger value="lps" className="text-xs">Landing Pages</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="resumo" className="mt-3 space-y-2 text-sm">
-                      <div><span className="text-muted-foreground">Objetivo:</span> {c.objective}</div>
-                      <div><span className="text-muted-foreground">Público:</span> {c.audience}</div>
-                      <div><span className="text-muted-foreground">Canal:</span> {c.channel}</div>
-                    </TabsContent>
-                    <TabsContent value="conteudos" className="mt-3">
-                      {c.entregaveis.conteudos > 0 ? (
-                        <div className="space-y-2">
-                          {Array.from({ length: c.entregaveis.conteudos }, (_, i) => (
-                            <div key={i} className="flex items-center gap-2 text-sm p-2 rounded bg-muted/30">
-                              <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                              <span>Conteúdo #{i + 1} vinculado</span>
-                              <Badge variant="outline" className="text-[9px] ml-auto">Publicado</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <p className="text-sm text-muted-foreground">Nenhum conteúdo vinculado</p>}
-                    </TabsContent>
-                    <TabsContent value="anuncios" className="mt-3">
-                      {c.entregaveis.anuncios > 0 ? (
-                        <div className="space-y-2">
-                          {Array.from({ length: c.entregaveis.anuncios }, (_, i) => (
-                            <div key={i} className="flex items-center gap-2 text-sm p-2 rounded bg-muted/30">
-                              <Megaphone className="w-3.5 h-3.5 text-muted-foreground" />
-                              <span>Anúncio #{i + 1}</span>
-                              <Badge variant="outline" className="text-[9px] ml-auto">Ativo</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <p className="text-sm text-muted-foreground">Nenhum anúncio vinculado</p>}
-                    </TabsContent>
-                    <TabsContent value="lps" className="mt-3">
-                      {c.entregaveis.landingPages > 0 ? (
-                        <div className="space-y-2">
-                          {Array.from({ length: c.entregaveis.landingPages }, (_, i) => (
-                            <div key={i} className="flex items-center gap-2 text-sm p-2 rounded bg-muted/30">
-                              <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                              <span>Landing Page #{i + 1}</span>
-                              <Badge variant="outline" className="text-[9px] ml-auto">Ativa</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <p className="text-sm text-muted-foreground">Nenhuma landing page vinculada</p>}
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                <Card
+                  className="cursor-pointer hover:shadow-md transition-all hover:border-primary/20"
+                  onClick={() => setSelectedCampaign(c)}
+                >
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${sc.dot}`} />
+                        <span className="text-sm font-semibold">{c.name}</span>
+                        <Badge variant="outline" className={`text-[9px] ${sc.bg} ${sc.text}`}>{c.status}</Badge>
+                        <Badge variant="outline" className="text-[9px]">{c.channel}</Badge>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Calendar className="w-3 h-3" />
+                        <span>{c.startDate}</span>
+                        <ArrowRight className="w-3 h-3" />
+                        <span>{c.endDate}</span>
+                      </div>
+                    </div>
+
+                    {/* KPIs inline */}
+                    <div className="grid grid-cols-4 gap-4 text-center mb-3">
+                      <div><p className="text-lg font-bold">R$ {c.budget.toLocaleString()}</p><p className="text-[10px] text-muted-foreground">Orçamento</p></div>
+                      <div><p className="text-lg font-bold">R$ {c.spent.toLocaleString()}</p><p className="text-[10px] text-muted-foreground">Gasto</p></div>
+                      <div><p className="text-lg font-bold text-primary">{c.leads}</p><p className="text-[10px] text-muted-foreground">Leads</p></div>
+                      <div><p className="text-lg font-bold">{c.conversions}</p><p className="text-[10px] text-muted-foreground">Conversões</p></div>
+                    </div>
+
+                    {/* Budget progress */}
+                    <div className="mb-3">
+                      <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                        <span>Orçamento utilizado</span>
+                        <span>{budgetPct}%</span>
+                      </div>
+                      <Progress value={budgetPct} className="h-1.5" />
+                    </div>
+
+                    {/* Entregáveis */}
+                    <div className="flex gap-2 flex-wrap">
+                      {c.entregaveis.conteudos > 0 && <Badge variant="secondary" className="text-[9px] gap-1"><FileText className="w-3 h-3" />{c.entregaveis.conteudos} conteúdos</Badge>}
+                      {c.entregaveis.anuncios > 0 && <Badge variant="secondary" className="text-[9px] gap-1"><Megaphone className="w-3 h-3" />{c.entregaveis.anuncios} anúncios</Badge>}
+                      {c.entregaveis.landingPages > 0 && <Badge variant="secondary" className="text-[9px] gap-1"><Globe className="w-3 h-3" />{c.entregaveis.landingPages} LPs</Badge>}
+                      {c.entregaveis.disparos > 0 && <Badge variant="secondary" className="text-[9px] gap-1"><Send className="w-3 h-3" />{c.entregaveis.disparos} disparos</Badge>}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Campaign Detail Sheet */}
+      <Sheet open={!!selectedCampaign} onOpenChange={(open) => !open && setSelectedCampaign(null)}>
+        <SheetContent className="sm:max-w-xl overflow-y-auto">
+          {selectedCampaign && (
+            <>
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  {selectedCampaign.name}
+                  <Badge variant="outline" className={`text-[9px] ${statusColors[selectedCampaign.status].bg} ${statusColors[selectedCampaign.status].text}`}>
+                    {selectedCampaign.status}
+                  </Badge>
+                </SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 space-y-6">
+                <Tabs defaultValue="resumo">
+                  <TabsList className="h-8">
+                    <TabsTrigger value="resumo" className="text-xs">Resumo</TabsTrigger>
+                    <TabsTrigger value="conteudos" className="text-xs">Conteúdos</TabsTrigger>
+                    <TabsTrigger value="anuncios" className="text-xs">Anúncios</TabsTrigger>
+                    <TabsTrigger value="lps" className="text-xs">Landing Pages</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="resumo" className="mt-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Card><CardContent className="py-3 text-center"><p className="text-lg font-bold">R$ {selectedCampaign.budget.toLocaleString()}</p><p className="text-[10px] text-muted-foreground">Orçamento</p></CardContent></Card>
+                      <Card><CardContent className="py-3 text-center"><p className="text-lg font-bold">R$ {selectedCampaign.spent.toLocaleString()}</p><p className="text-[10px] text-muted-foreground">Gasto</p></CardContent></Card>
+                      <Card><CardContent className="py-3 text-center"><p className="text-lg font-bold text-primary">{selectedCampaign.leads}</p><p className="text-[10px] text-muted-foreground">Leads</p></CardContent></Card>
+                      <Card><CardContent className="py-3 text-center"><p className="text-lg font-bold">{selectedCampaign.conversions}</p><p className="text-[10px] text-muted-foreground">Conversões</p></CardContent></Card>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="text-muted-foreground">Objetivo:</span> {selectedCampaign.objective}</div>
+                      <div><span className="text-muted-foreground">Público:</span> {selectedCampaign.audience}</div>
+                      <div><span className="text-muted-foreground">Canal:</span> {selectedCampaign.channel}</div>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Clock className="w-3 h-3" /> {selectedCampaign.startDate} → {selectedCampaign.endDate}
+                      </div>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="conteudos" className="mt-4">
+                    {selectedCampaign.entregaveis.conteudos > 0 ? (
+                      <div className="space-y-2">
+                        {Array.from({ length: selectedCampaign.entregaveis.conteudos }, (_, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm p-3 rounded-lg bg-muted/30 border">
+                            <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span>Conteúdo #{i + 1} vinculado</span>
+                            <Badge variant="outline" className="text-[9px] ml-auto">Publicado</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-sm text-muted-foreground py-4 text-center">Nenhum conteúdo vinculado</p>}
+                  </TabsContent>
+                  <TabsContent value="anuncios" className="mt-4">
+                    {selectedCampaign.entregaveis.anuncios > 0 ? (
+                      <div className="space-y-2">
+                        {Array.from({ length: selectedCampaign.entregaveis.anuncios }, (_, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm p-3 rounded-lg bg-muted/30 border">
+                            <Megaphone className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span>Anúncio #{i + 1}</span>
+                            <Badge variant="outline" className="text-[9px] ml-auto">Ativo</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-sm text-muted-foreground py-4 text-center">Nenhum anúncio vinculado</p>}
+                  </TabsContent>
+                  <TabsContent value="lps" className="mt-4">
+                    {selectedCampaign.entregaveis.landingPages > 0 ? (
+                      <div className="space-y-2">
+                        {Array.from({ length: selectedCampaign.entregaveis.landingPages }, (_, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm p-3 rounded-lg bg-muted/30 border">
+                            <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span>Landing Page #{i + 1}</span>
+                            <Badge variant="outline" className="text-[9px] ml-auto">Ativa</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma landing page vinculada</p>}
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Generate Monthly Campaign */}
       <Card className="border-primary/20 bg-primary/5">
