@@ -1,11 +1,13 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import {
   Users, Plus, Phone, Mail, ThermometerSun, Search, LayoutGrid, List,
   MessageCircle, ClipboardList, StickyNote, CheckSquare, Tag, Globe,
   Instagram, Clock, Bot, User, ArrowRight, FileText, CheckCircle,
   XCircle, PhoneCall, Settings2, GripVertical, Pencil, Trash2,
-  Filter, TrendingUp, DollarSign, Target, AlertTriangle, ChevronDown,
-  Zap, BarChart3, Eye, MoreHorizontal, X, Save, Palette
+  Filter, DollarSign, Target, AlertTriangle, ChevronDown,
+  Zap, BarChart3, X, Save, Palette, CirclePlus, CircleDot,
+  Crosshair, Handshake, ShieldCheck, Ban, Sparkles, Star,
+  PhoneOutgoing, SearchCheck
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,45 +24,59 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getCrmLeads, getChatConversations, type CrmLead } from "@/data/clienteData";
-import { DndContext, DragOverlay, closestCorners, type DragEndEvent, type DragStartEvent, useDroppable } from "@dnd-kit/core";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { DndContext, DragOverlay, closestCorners, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 
 // ===== Stage System =====
 
 interface FunnelStage {
   key: string;
   label: string;
-  color: string; // tailwind color name like "blue", "amber", etc
-  emoji: string;
+  color: string;
+  icon: string; // lucide icon key
 }
 
+const STAGE_ICONS: Record<string, React.ReactNode> = {
+  "circle-plus": <CirclePlus className="w-4 h-4" />,
+  "phone-outgoing": <PhoneOutgoing className="w-4 h-4" />,
+  "search-check": <SearchCheck className="w-4 h-4" />,
+  "clipboard": <ClipboardList className="w-4 h-4" />,
+  "handshake": <Handshake className="w-4 h-4" />,
+  "shield-check": <ShieldCheck className="w-4 h-4" />,
+  "ban": <Ban className="w-4 h-4" />,
+  "star": <Star className="w-4 h-4" />,
+  "sparkles": <Sparkles className="w-4 h-4" />,
+  "target": <Target className="w-4 h-4" />,
+  "crosshair": <Crosshair className="w-4 h-4" />,
+  "circle-dot": <CircleDot className="w-4 h-4" />,
+};
+
+const STAGE_ICON_OPTIONS = Object.keys(STAGE_ICONS);
+
 const STAGE_COLORS = [
-  { name: "blue", label: "Azul", gradient: "from-blue-500/15 to-blue-600/5", border: "border-blue-500/30", text: "text-blue-500", dot: "bg-blue-500", bg: "bg-blue-500", ring: "ring-blue-500/20" },
-  { name: "amber", label: "Âmbar", gradient: "from-amber-500/15 to-amber-600/5", border: "border-amber-500/30", text: "text-amber-500", dot: "bg-amber-500", bg: "bg-amber-500", ring: "ring-amber-500/20" },
-  { name: "purple", label: "Roxo", gradient: "from-purple-500/15 to-purple-600/5", border: "border-purple-500/30", text: "text-purple-500", dot: "bg-purple-500", bg: "bg-purple-500", ring: "ring-purple-500/20" },
-  { name: "emerald", label: "Verde", gradient: "from-emerald-500/15 to-emerald-600/5", border: "border-emerald-500/30", text: "text-emerald-500", dot: "bg-emerald-500", bg: "bg-emerald-500", ring: "ring-emerald-500/20" },
-  { name: "red", label: "Vermelho", gradient: "from-red-500/15 to-red-600/5", border: "border-red-500/30", text: "text-red-500", dot: "bg-red-500", bg: "bg-red-500", ring: "ring-red-500/20" },
-  { name: "cyan", label: "Ciano", gradient: "from-cyan-500/15 to-cyan-600/5", border: "border-cyan-500/30", text: "text-cyan-500", dot: "bg-cyan-500", bg: "bg-cyan-500", ring: "ring-cyan-500/20" },
-  { name: "pink", label: "Rosa", gradient: "from-pink-500/15 to-pink-600/5", border: "border-pink-500/30", text: "text-pink-500", dot: "bg-pink-500", bg: "bg-pink-500", ring: "ring-pink-500/20" },
-  { name: "orange", label: "Laranja", gradient: "from-orange-500/15 to-orange-600/5", border: "border-orange-500/30", text: "text-orange-500", dot: "bg-orange-500", bg: "bg-orange-500", ring: "ring-orange-500/20" },
-  { name: "indigo", label: "Índigo", gradient: "from-indigo-500/15 to-indigo-600/5", border: "border-indigo-500/30", text: "text-indigo-500", dot: "bg-indigo-500", bg: "bg-indigo-500", ring: "ring-indigo-500/20" },
-  { name: "teal", label: "Teal", gradient: "from-teal-500/15 to-teal-600/5", border: "border-teal-500/30", text: "text-teal-500", dot: "bg-teal-500", bg: "bg-teal-500", ring: "ring-teal-500/20" },
+  { name: "blue", label: "Azul", gradient: "from-blue-500/10 to-transparent", border: "border-blue-500/25", text: "text-blue-500", dot: "bg-blue-500", bg: "bg-blue-500", ring: "ring-blue-500/20", light: "bg-blue-500/8" },
+  { name: "amber", label: "Âmbar", gradient: "from-amber-500/10 to-transparent", border: "border-amber-500/25", text: "text-amber-500", dot: "bg-amber-500", bg: "bg-amber-500", ring: "ring-amber-500/20", light: "bg-amber-500/8" },
+  { name: "purple", label: "Roxo", gradient: "from-purple-500/10 to-transparent", border: "border-purple-500/25", text: "text-purple-500", dot: "bg-purple-500", bg: "bg-purple-500", ring: "ring-purple-500/20", light: "bg-purple-500/8" },
+  { name: "emerald", label: "Verde", gradient: "from-emerald-500/10 to-transparent", border: "border-emerald-500/25", text: "text-emerald-500", dot: "bg-emerald-500", bg: "bg-emerald-500", ring: "ring-emerald-500/20", light: "bg-emerald-500/8" },
+  { name: "red", label: "Vermelho", gradient: "from-red-500/10 to-transparent", border: "border-red-500/25", text: "text-red-500", dot: "bg-red-500", bg: "bg-red-500", ring: "ring-red-500/20", light: "bg-red-500/8" },
+  { name: "cyan", label: "Ciano", gradient: "from-cyan-500/10 to-transparent", border: "border-cyan-500/25", text: "text-cyan-500", dot: "bg-cyan-500", bg: "bg-cyan-500", ring: "ring-cyan-500/20", light: "bg-cyan-500/8" },
+  { name: "pink", label: "Rosa", gradient: "from-pink-500/10 to-transparent", border: "border-pink-500/25", text: "text-pink-500", dot: "bg-pink-500", bg: "bg-pink-500", ring: "ring-pink-500/20", light: "bg-pink-500/8" },
+  { name: "orange", label: "Laranja", gradient: "from-orange-500/10 to-transparent", border: "border-orange-500/25", text: "text-orange-500", dot: "bg-orange-500", bg: "bg-orange-500", ring: "ring-orange-500/20", light: "bg-orange-500/8" },
+  { name: "indigo", label: "Índigo", gradient: "from-indigo-500/10 to-transparent", border: "border-indigo-500/25", text: "text-indigo-500", dot: "bg-indigo-500", bg: "bg-indigo-500", ring: "ring-indigo-500/20", light: "bg-indigo-500/8" },
+  { name: "teal", label: "Teal", gradient: "from-teal-500/10 to-transparent", border: "border-teal-500/25", text: "text-teal-500", dot: "bg-teal-500", bg: "bg-teal-500", ring: "ring-teal-500/20", light: "bg-teal-500/8" },
 ];
 
 const getColorStyle = (colorName: string) => STAGE_COLORS.find(c => c.name === colorName) || STAGE_COLORS[0];
 
 const DEFAULT_STAGES: FunnelStage[] = [
-  { key: "novo", label: "Novo Lead", color: "blue", emoji: "🆕" },
-  { key: "contato", label: "Contato", color: "amber", emoji: "📞" },
-  { key: "qualificacao", label: "Qualificação", color: "cyan", emoji: "🔍" },
-  { key: "proposta", label: "Proposta", color: "purple", emoji: "📋" },
-  { key: "negociacao", label: "Negociação", color: "orange", emoji: "🤝" },
-  { key: "fechado", label: "Fechado", color: "emerald", emoji: "✅" },
-  { key: "perdido", label: "Perdido", color: "red", emoji: "❌" },
+  { key: "novo", label: "Novo Lead", color: "blue", icon: "circle-plus" },
+  { key: "contato", label: "Contato", color: "amber", icon: "phone-outgoing" },
+  { key: "qualificacao", label: "Qualificação", color: "cyan", icon: "search-check" },
+  { key: "proposta", label: "Proposta", color: "purple", icon: "clipboard" },
+  { key: "negociacao", label: "Negociação", color: "orange", icon: "handshake" },
+  { key: "fechado", label: "Fechado", color: "emerald", icon: "shield-check" },
+  { key: "perdido", label: "Perdido", color: "red", icon: "ban" },
 ];
 
 const tempColors: Record<string, string> = {
@@ -103,92 +119,94 @@ const taskStatusColors: Record<string, string> = {
 function DroppableColumn({ stageKey, children }: { stageKey: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: stageKey });
   return (
-    <div ref={setNodeRef} className={`min-h-[80px] space-y-2 transition-all duration-200 rounded-lg p-1.5 ${isOver ? "bg-primary/5 ring-2 ring-primary/20" : ""}`}>
+    <div ref={setNodeRef} className={`min-h-[80px] space-y-2 transition-all duration-200 rounded-lg p-1.5 ${isOver ? "bg-primary/5 ring-2 ring-primary/20 ring-dashed" : ""}`}>
       {children}
     </div>
   );
 }
 
-// ===== Lead Card =====
+// ===== Draggable Lead Card =====
 
 function DraggableLeadCard({ lead, onClick, stageColor }: { lead: CrmLead; onClick: () => void; stageColor: string }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lead.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 };
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id });
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    opacity: isDragging ? 0.3 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
   const colorStyle = getColorStyle(stageColor);
-
-  const pendingTasks = lead.tasks.filter(t => t.status === "pendente" || t.status === "atrasada").length;
   const overdueTasks = lead.tasks.filter(t => t.status === "atrasada").length;
+  const pendingTasks = lead.tasks.filter(t => t.status === "pendente" || t.status === "atrasada").length;
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Card className={`cursor-grab active:cursor-grabbing hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group border-l-[3px] ${colorStyle.border}`} onClick={onClick}>
-        <CardContent className="p-3 space-y-2.5">
-          {/* Header */}
+      <Card
+        className={`cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${colorStyle.border}`}
+        onClick={(e) => { if (!isDragging) onClick(); }}
+      >
+        <CardContent className="p-3 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{lead.name}</p>
-              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <p className="text-[13px] font-semibold truncate leading-tight">{lead.name}</p>
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                 <Phone className="w-3 h-3 shrink-0" /> {lead.phone}
               </p>
             </div>
-            <Badge className={`text-[9px] shrink-0 ${tempColors[lead.temperature]}`}>
-              <ThermometerSun className="w-2.5 h-2.5 mr-0.5" />{lead.temperature}
+            <Badge variant="outline" className={`text-[9px] shrink-0 ${tempColors[lead.temperature]}`}>
+              {lead.temperature}
             </Badge>
           </div>
 
-          {/* Value + Responsible */}
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-primary">R$ {lead.value.toLocaleString()}</span>
-            <div className="flex items-center gap-1">
-              <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-[8px] font-bold text-primary">{lead.responsible.charAt(0)}</span>
+            <span className="text-[13px] font-bold text-primary">R$ {lead.value.toLocaleString()}</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
+                <span className="text-[9px] font-semibold text-muted-foreground">{lead.responsible.charAt(0)}</span>
               </div>
               <span className="text-[10px] text-muted-foreground">{lead.responsible}</span>
             </div>
           </div>
 
-          {/* Tags */}
           <div className="flex items-center gap-1 flex-wrap">
             {lead.origin && (
-              <Badge variant="secondary" className="text-[8px] px-1.5 py-0 gap-0.5">
+              <Badge variant="secondary" className="text-[8px] px-1.5 py-0 gap-0.5 font-normal">
                 {originIcons[lead.origin]}{lead.origin}
               </Badge>
             )}
             {lead.tags.slice(0, 2).map(tag => (
-              <Badge key={tag} variant="outline" className="text-[8px] px-1 py-0">{tag}</Badge>
+              <Badge key={tag} variant="outline" className="text-[8px] px-1 py-0 font-normal">{tag}</Badge>
             ))}
           </div>
 
-          {/* Footer indicators */}
-          <div className="flex items-center gap-2 pt-1.5 border-t border-border/50">
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-2 pt-1.5 border-t border-border/40">
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              <span>{lead.lastInteraction?.split(" ")[0] || lead.createdAt}</span>
-            </div>
-            <div className="flex items-center gap-1.5 ml-auto">
+              {lead.lastInteraction?.split(" ")[0] || lead.createdAt}
+            </span>
+            <div className="flex items-center gap-1 ml-auto">
               {lead.diagnosticoDone && (
-                <TooltipProvider><Tooltip><TooltipTrigger>
-                  <div className="w-4 h-4 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild>
+                  <div className="w-4 h-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
                     <CheckCircle className="w-2.5 h-2.5 text-emerald-500" />
                   </div>
-                </TooltipTrigger><TooltipContent side="top"><p className="text-xs">Diagnóstico feito</p></TooltipContent></Tooltip></TooltipProvider>
+                </TooltipTrigger><TooltipContent><p className="text-xs">Diagnóstico feito</p></TooltipContent></Tooltip></TooltipProvider>
               )}
               {lead.propostaEnviada && (
-                <TooltipProvider><Tooltip><TooltipTrigger>
-                  <div className="w-4 h-4 rounded-full bg-blue-500/15 flex items-center justify-center">
+                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild>
+                  <div className="w-4 h-4 rounded-full bg-blue-500/10 flex items-center justify-center">
                     <FileText className="w-2.5 h-2.5 text-blue-500" />
                   </div>
-                </TooltipTrigger><TooltipContent side="top"><p className="text-xs">Proposta enviada</p></TooltipContent></Tooltip></TooltipProvider>
+                </TooltipTrigger><TooltipContent><p className="text-xs">Proposta enviada</p></TooltipContent></Tooltip></TooltipProvider>
               )}
               {overdueTasks > 0 && (
-                <TooltipProvider><Tooltip><TooltipTrigger>
-                  <div className="w-4 h-4 rounded-full bg-destructive/15 flex items-center justify-center">
+                <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild>
+                  <div className="w-4 h-4 rounded-full bg-destructive/10 flex items-center justify-center">
                     <AlertTriangle className="w-2.5 h-2.5 text-destructive" />
                   </div>
-                </TooltipTrigger><TooltipContent side="top"><p className="text-xs">{overdueTasks} tarefa(s) atrasada(s)</p></TooltipContent></Tooltip></TooltipProvider>
+                </TooltipTrigger><TooltipContent><p className="text-xs">{overdueTasks} atrasada(s)</p></TooltipContent></Tooltip></TooltipProvider>
               )}
               {pendingTasks > 0 && overdueTasks === 0 && (
-                <Badge variant="outline" className="text-[8px] px-1 py-0">{pendingTasks} 📋</Badge>
+                <span className="text-[9px] text-muted-foreground">{pendingTasks} tarefa(s)</span>
               )}
             </div>
           </div>
@@ -206,21 +224,18 @@ function StageEditorDialog({ open, onClose, stages, onSave }: {
   const [editStages, setEditStages] = useState<FunnelStage[]>(stages);
   const [newLabel, setNewLabel] = useState("");
   const [newColor, setNewColor] = useState("blue");
-  const [newEmoji, setNewEmoji] = useState("📌");
+  const [newIcon, setNewIcon] = useState("circle-dot");
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editLabel, setEditLabel] = useState("");
 
   const addStage = () => {
     if (!newLabel.trim() || editStages.length >= 10) return;
     const key = newLabel.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
-    setEditStages([...editStages, { key: `custom_${key}_${Date.now()}`, label: newLabel.trim(), color: newColor, emoji: newEmoji }]);
+    setEditStages([...editStages, { key: `custom_${key}_${Date.now()}`, label: newLabel.trim(), color: newColor, icon: newIcon }]);
     setNewLabel("");
-    setNewEmoji("📌");
   };
 
-  const removeStage = (idx: number) => {
-    setEditStages(editStages.filter((_, i) => i !== idx));
-  };
+  const removeStage = (idx: number) => setEditStages(editStages.filter((_, i) => i !== idx));
 
   const startEdit = (idx: number) => {
     setEditingIdx(idx);
@@ -233,9 +248,8 @@ function StageEditorDialog({ open, onClose, stages, onSave }: {
     setEditingIdx(null);
   };
 
-  const updateColor = (idx: number, color: string) => {
-    setEditStages(editStages.map((s, i) => i === idx ? { ...s, color } : s));
-  };
+  const updateColor = (idx: number, color: string) => setEditStages(editStages.map((s, i) => i === idx ? { ...s, color } : s));
+  const updateIcon = (idx: number, icon: string) => setEditStages(editStages.map((s, i) => i === idx ? { ...s, icon } : s));
 
   const moveStage = (idx: number, dir: -1 | 1) => {
     const newIdx = idx + dir;
@@ -249,20 +263,23 @@ function StageEditorDialog({ open, onClose, stages, onSave }: {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 font-display">
             <Settings2 className="w-5 h-5 text-primary" />
-            Configurar Etapas do Funil
+            Etapas do Funil
           </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">Máximo 10 etapas. Reordene, renomeie ou altere cores.</p>
         </DialogHeader>
 
-        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
           {editStages.map((stage, idx) => {
             const colorStyle = getColorStyle(stage.color);
             return (
-              <div key={stage.key} className={`flex items-center gap-2 p-2.5 rounded-xl border ${colorStyle.border} bg-gradient-to-r ${colorStyle.gradient} transition-all`}>
-                <GripVertical className="w-4 h-4 text-muted-foreground shrink-0 cursor-move" />
-                <div className={`w-3 h-3 rounded-full ${colorStyle.dot} shrink-0`} />
-                <span className="text-base">{stage.emoji}</span>
+              <div key={stage.key} className={`flex items-center gap-2 p-2.5 rounded-lg border ${colorStyle.border} bg-gradient-to-r ${colorStyle.gradient} transition-all`}>
+                <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+
+                <div className={`w-7 h-7 rounded-lg ${colorStyle.light} flex items-center justify-center ${colorStyle.text} shrink-0`}>
+                  {STAGE_ICONS[stage.icon] || <CircleDot className="w-4 h-4" />}
+                </div>
 
                 {editingIdx === idx ? (
                   <div className="flex items-center gap-1 flex-1">
@@ -271,19 +288,28 @@ function StageEditorDialog({ open, onClose, stages, onSave }: {
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditingIdx(null)}><X className="w-3.5 h-3.5" /></Button>
                   </div>
                 ) : (
-                  <span className={`text-sm font-medium flex-1 ${colorStyle.text}`}>{stage.label}</span>
+                  <span className="text-sm font-medium flex-1">{stage.label}</span>
                 )}
 
                 <div className="flex items-center gap-0.5 shrink-0">
-                  {/* Color picker */}
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0"><Palette className="w-3.5 h-3.5" /></Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-2" align="end">
-                      <div className="grid grid-cols-5 gap-1">
+                      <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Cor</p>
+                      <div className="grid grid-cols-5 gap-1.5">
                         {STAGE_COLORS.map(c => (
-                          <button key={c.name} className={`w-6 h-6 rounded-full ${c.bg} ${stage.color === c.name ? "ring-2 ring-offset-2 ring-primary" : ""} transition-all hover:scale-110`} onClick={() => updateColor(idx, c.name)} />
+                          <button key={c.name} className={`w-6 h-6 rounded-full ${c.bg} ${stage.color === c.name ? "ring-2 ring-offset-2 ring-foreground" : ""} transition-all hover:scale-110`} onClick={() => updateColor(idx, c.name)} />
+                        ))}
+                      </div>
+                      <Separator className="my-2" />
+                      <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Ícone</p>
+                      <div className="grid grid-cols-6 gap-1">
+                        {STAGE_ICON_OPTIONS.map(iconKey => (
+                          <button key={iconKey} className={`w-7 h-7 rounded-md flex items-center justify-center transition-all hover:bg-muted ${stage.icon === iconKey ? "bg-primary/10 text-primary ring-1 ring-primary/30" : "text-muted-foreground"}`} onClick={() => updateIcon(idx, iconKey)}>
+                            {STAGE_ICONS[iconKey]}
+                          </button>
                         ))}
                       </div>
                     </PopoverContent>
@@ -311,13 +337,11 @@ function StageEditorDialog({ open, onClose, stages, onSave }: {
           <>
             <Separator />
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Adicionar etapa ({editStages.length}/10)</Label>
+              <Label className="text-xs text-muted-foreground">Nova etapa ({editStages.length}/10)</Label>
               <div className="flex gap-2">
                 <Input placeholder="Nome da etapa..." value={newLabel} onChange={e => setNewLabel(e.target.value)} className="h-9 text-sm flex-1" onKeyDown={e => e.key === "Enter" && addStage()} />
                 <Select value={newColor} onValueChange={setNewColor}>
-                  <SelectTrigger className="w-24 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-24 h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {STAGE_COLORS.map(c => (
                       <SelectItem key={c.name} value={c.name}>
@@ -336,7 +360,7 @@ function StageEditorDialog({ open, onClose, stages, onSave }: {
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => { onSave(editStages); onClose(); }}>Salvar Funil</Button>
+          <Button onClick={() => { onSave(editStages); onClose(); }}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -361,25 +385,16 @@ function NewLeadDialog({ open, onClose, stages, onSave }: {
     if (!name.trim()) return;
     const lead: CrmLead = {
       id: `lead_${Date.now()}`,
-      name: name.trim(),
-      phone,
-      email,
-      value: Number(value) || 0,
-      temperature: temp,
-      stage,
-      responsible: "Você",
-      notes,
+      name: name.trim(), phone, email,
+      value: Number(value) || 0, temperature: temp, stage,
+      responsible: "Você", notes,
       createdAt: new Date().toISOString().split("T")[0],
-      origin,
-      tags: [],
-      diagnosticoDone: false,
-      propostaEnviada: false,
-      propostaAceita: false,
+      origin, tags: [],
+      diagnosticoDone: false, propostaEnviada: false, propostaAceita: false,
       lastInteraction: new Date().toLocaleString("pt-BR"),
       linkedConversationId: null,
       timeline: [{ id: `t_${Date.now()}`, type: "stage_change", description: "Lead criado manualmente", date: new Date().toLocaleString("pt-BR"), icon: "arrow-right" }],
-      tasks: [],
-      leadNotes: [],
+      tasks: [], leadNotes: [],
     };
     onSave(lead);
     onClose();
@@ -390,7 +405,7 @@ function NewLeadDialog({ open, onClose, stages, onSave }: {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Plus className="w-5 h-5 text-primary" /> Novo Lead</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 font-display"><Plus className="w-5 h-5 text-primary" /> Novo Lead</DialogTitle>
         </DialogHeader>
         <div className="grid gap-3">
           <div className="grid grid-cols-2 gap-3">
@@ -407,7 +422,7 @@ function NewLeadDialog({ open, onClose, stages, onSave }: {
               <div className="flex gap-1 mt-1">
                 {(["Quente", "Morno", "Frio"] as const).map(t => (
                   <button key={t} className={`flex-1 text-[10px] font-medium py-1.5 rounded-lg border transition-all ${temp === t ? tempColors[t] + " border-current" : "border-border hover:bg-muted/50"}`} onClick={() => setTemp(t)}>
-                    {t === "Quente" ? "🔥" : t === "Morno" ? "☀️" : "❄️"} {t}
+                    {t}
                   </button>
                 ))}
               </div>
@@ -428,7 +443,7 @@ function NewLeadDialog({ open, onClose, stages, onSave }: {
               <Select value={stage} onValueChange={setStage}>
                 <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {stages.map(s => <SelectItem key={s.key} value={s.key}>{s.emoji} {s.label}</SelectItem>)}
+                  {stages.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -463,7 +478,6 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
-        {/* Header */}
         <SheetHeader className="px-5 pt-5 pb-4 border-b border-border">
           <div className="space-y-3">
             <div className="flex items-start gap-3">
@@ -471,14 +485,19 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
                 {lead.name.charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
-                <SheetTitle className="text-lg truncate">{lead.name}</SheetTitle>
+                <SheetTitle className="text-lg font-display truncate">{lead.name}</SheetTitle>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {stageInfo && <Badge className={`${colorStyle.bg} text-white text-[10px]`}>{stageInfo.emoji} {stageInfo.label}</Badge>}
-                  <Badge className={`text-[10px] ${tempColors[lead.temperature]}`}><ThermometerSun className="w-3 h-3 mr-0.5" />{lead.temperature}</Badge>
+                  {stageInfo && (
+                    <Badge className={`${colorStyle.bg} text-white text-[10px]`}>
+                      {stageInfo.label}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className={`text-[10px] ${tempColors[lead.temperature]}`}>
+                    {lead.temperature}
+                  </Badge>
                 </div>
               </div>
             </div>
-            {/* Quick stats */}
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-muted/40 rounded-lg p-2 text-center">
                 <p className="text-[10px] text-muted-foreground">Valor</p>
@@ -486,7 +505,7 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
               </div>
               <div className="bg-muted/40 rounded-lg p-2 text-center">
                 <p className="text-[10px] text-muted-foreground">Tarefas</p>
-                <p className="text-sm font-bold">{lead.tasks.filter(t => t.status !== "feita").length} pendentes</p>
+                <p className="text-sm font-bold">{lead.tasks.filter(t => t.status !== "feita").length}</p>
               </div>
               <div className="bg-muted/40 rounded-lg p-2 text-center">
                 <p className="text-[10px] text-muted-foreground">Atividades</p>
@@ -509,42 +528,31 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
 
               <TabsContent value="resumo" className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">Telefone</p>
-                    <p className="text-sm font-medium flex items-center gap-1"><Phone className="w-3 h-3 text-primary" /> {lead.phone}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">E-mail</p>
-                    <p className="text-sm font-medium flex items-center gap-1"><Mail className="w-3 h-3 text-primary" /> {lead.email}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">Responsável</p>
-                    <p className="text-sm font-medium">{lead.responsible}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">Origem</p>
-                    <p className="text-sm flex items-center gap-1">{originIcons[lead.origin]} {lead.origin}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">Última interação</p>
-                    <p className="text-sm">{lead.lastInteraction}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">Criado em</p>
-                    <p className="text-sm">{lead.createdAt}</p>
-                  </div>
+                  {[
+                    { label: "Telefone", value: lead.phone, icon: <Phone className="w-3 h-3 text-primary" /> },
+                    { label: "E-mail", value: lead.email, icon: <Mail className="w-3 h-3 text-primary" /> },
+                    { label: "Responsável", value: lead.responsible },
+                    { label: "Origem", value: lead.origin, icon: originIcons[lead.origin] },
+                    { label: "Última interação", value: lead.lastInteraction },
+                    { label: "Criado em", value: lead.createdAt },
+                  ].map(item => (
+                    <div key={item.label} className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">{item.label}</p>
+                      <p className="text-sm font-medium flex items-center gap-1">{item.icon} {item.value}</p>
+                    </div>
+                  ))}
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Status do Lead</p>
+                  <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Status</p>
                   <div className="flex gap-1.5 flex-wrap">
-                    {lead.diagnosticoDone && <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30 bg-emerald-500/5">✅ Diagnóstico</Badge>}
-                    {lead.propostaEnviada && <Badge variant="outline" className="text-[9px] text-blue-600 border-blue-500/30 bg-blue-500/5">📄 Proposta Enviada</Badge>}
-                    {lead.propostaAceita && <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30 bg-emerald-500/5">🎉 Proposta Aceita</Badge>}
-                    {!lead.diagnosticoDone && !lead.propostaEnviada && <Badge variant="outline" className="text-[9px] text-muted-foreground">Nenhum progresso registrado</Badge>}
+                    {lead.diagnosticoDone && <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30 bg-emerald-500/5"><CheckCircle className="w-3 h-3 mr-0.5" /> Diagnóstico</Badge>}
+                    {lead.propostaEnviada && <Badge variant="outline" className="text-[9px] text-blue-600 border-blue-500/30 bg-blue-500/5"><FileText className="w-3 h-3 mr-0.5" /> Proposta Enviada</Badge>}
+                    {lead.propostaAceita && <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30 bg-emerald-500/5"><CheckCircle className="w-3 h-3 mr-0.5" /> Aceita</Badge>}
+                    {!lead.diagnosticoDone && !lead.propostaEnviada && <span className="text-xs text-muted-foreground">Nenhum progresso</span>}
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Tags</p>
+                  <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Tags</p>
                   <div className="flex gap-1.5 flex-wrap">
                     {lead.tags.map(tag => <Badge key={tag} variant="secondary" className="text-[10px] gap-1"><Tag className="w-2.5 h-2.5" /> {tag}</Badge>)}
                     {lead.tags.length === 0 && <span className="text-xs text-muted-foreground">Nenhuma tag</span>}
@@ -552,7 +560,7 @@ function LeadDetailSheet({ lead, open, onClose, stages }: { lead: CrmLead | null
                 </div>
                 {lead.notes && (
                   <div>
-                    <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Observações</p>
+                    <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Observações</p>
                     <p className="text-sm bg-muted/30 p-3 rounded-lg border border-border/50">{lead.notes}</p>
                   </div>
                 )}
@@ -659,21 +667,21 @@ function CrmKpiBar({ leads, stages }: { leads: CrmLead[]; stages: FunnelStage[] 
   const kpis = [
     { label: "Total no Funil", value: leads.length.toString(), icon: Users, color: "text-primary", sub: `${stages.length} etapas` },
     { label: "Valor Total", value: `R$ ${totalValue.toLocaleString()}`, icon: DollarSign, color: "text-emerald-500", sub: "pipeline" },
-    { label: "Leads Quentes", value: hotLeads.toString(), icon: Zap, color: "text-destructive", sub: "atenção imediata" },
+    { label: "Leads Quentes", value: hotLeads.toString(), icon: Zap, color: "text-destructive", sub: "prioridade" },
     { label: "Conversão", value: `${conversionRate}%`, icon: Target, color: "text-blue-500", sub: `${closedLeads} fechados` },
-    { label: "Tarefas Pendentes", value: pendingTasks.toString(), icon: AlertTriangle, color: pendingTasks > 3 ? "text-destructive" : "text-amber-500", sub: pendingTasks > 3 ? "ação necessária" : "em dia" },
+    { label: "Tarefas", value: pendingTasks.toString(), icon: AlertTriangle, color: pendingTasks > 3 ? "text-destructive" : "text-amber-500", sub: pendingTasks > 3 ? "ação necessária" : "em dia" },
   ];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {kpis.map(kpi => (
-        <Card key={kpi.label} className="border-border/50 hover:shadow-md transition-shadow">
+        <Card key={kpi.label} className="border-border/50 hover:shadow-sm transition-shadow">
           <CardContent className="p-3 flex items-center gap-3">
             <div className={`w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center ${kpi.color}`}>
-              <kpi.icon className="w-4.5 h-4.5" />
+              <kpi.icon className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-lg font-bold leading-none">{kpi.value}</p>
+              <p className="text-lg font-bold leading-none font-display">{kpi.value}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">{kpi.label}</p>
             </div>
           </CardContent>
@@ -690,7 +698,7 @@ function FunnelVisualization({ leads, stages }: { leads: CrmLead[]; stages: Funn
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-2 pt-3 px-4">
-        <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" /> Visão do Funil</CardTitle>
+        <CardTitle className="text-sm flex items-center gap-2 font-display"><BarChart3 className="w-4 h-4 text-primary" /> Visão do Funil</CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-3">
         <div className="space-y-1.5">
@@ -701,9 +709,14 @@ function FunnelVisualization({ leads, stages }: { leads: CrmLead[]; stages: Funn
             const value = leads.filter(l => l.stage === stage.key).reduce((s, l) => s + l.value, 0);
             return (
               <div key={stage.key} className="flex items-center gap-2">
-                <span className="text-[10px] w-24 truncate text-muted-foreground">{stage.emoji} {stage.label}</span>
+                <div className="flex items-center gap-1.5 w-28 shrink-0">
+                  <div className={`w-5 h-5 rounded ${colorStyle.light} flex items-center justify-center ${colorStyle.text}`}>
+                    {STAGE_ICONS[stage.icon] ? <span className="scale-75">{STAGE_ICONS[stage.icon]}</span> : <CircleDot className="w-3 h-3" />}
+                  </div>
+                  <span className="text-[10px] truncate text-muted-foreground">{stage.label}</span>
+                </div>
                 <div className="flex-1 h-6 bg-muted/30 rounded-md overflow-hidden relative">
-                  <div className={`h-full ${colorStyle.bg} rounded-md transition-all duration-500`} style={{ width: `${Math.max(pct, 4)}%` }} />
+                  <div className={`h-full ${colorStyle.bg} rounded-md transition-all duration-500 opacity-80`} style={{ width: `${Math.max(pct, 4)}%` }} />
                   <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium mix-blend-difference text-white">
                     {count} leads · R$ {value.toLocaleString()}
                   </span>
@@ -730,7 +743,6 @@ export default function ClienteCRM() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [showFunnel, setShowFunnel] = useState(false);
 
-  // Filters
   const [filterTemp, setFilterTemp] = useState<string>("all");
   const [filterOrigin, setFilterOrigin] = useState<string>("all");
   const [filterResponsible, setFilterResponsible] = useState<string>("all");
@@ -752,13 +764,19 @@ export default function ClienteCRM() {
   const activeFilters = [filterTemp, filterOrigin, filterResponsible].filter(f => f !== "all").length;
 
   const activeLead = activeId ? leads.find(l => l.id === activeId) : null;
+
   const handleDragStart = (event: DragStartEvent) => setActiveId(event.active.id as string);
+
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;
     if (!over) return;
-    const targetStage = stages.find(s => s.key === over.id)?.key;
-    if (targetStage) setLeads(prev => prev.map(l => l.id === active.id ? { ...l, stage: targetStage } : l));
+    // over.id is the droppable column's stage key
+    const targetStageKey = String(over.id);
+    const targetStage = stages.find(s => s.key === targetStageKey);
+    if (targetStage) {
+      setLeads(prev => prev.map(l => l.id === active.id ? { ...l, stage: targetStageKey } : l));
+    }
   };
 
   const handleAddLead = (lead: CrmLead) => setLeads(prev => [lead, ...prev]);
@@ -767,11 +785,11 @@ export default function ClienteCRM() {
     <div className="max-w-[1600px] mx-auto space-y-4">
       <PageHeader
         title="CRM de Vendas"
-        subtitle="Gerencie seus leads e funil de vendas"
+        subtitle="Gerencie leads e funil de vendas"
         icon={<Users className="w-5 h-5 text-primary" />}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowFunnel(!showFunnel)}>
+            <Button variant="outline" size="sm" onClick={() => setShowFunnel(!showFunnel)} className={showFunnel ? "bg-muted" : ""}>
               <BarChart3 className="w-4 h-4 mr-1" /> Funil
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowStageEditor(true)}>
@@ -784,10 +802,8 @@ export default function ClienteCRM() {
         }
       />
 
-      {/* KPIs */}
       <CrmKpiBar leads={filteredLeads} stages={stages} />
 
-      {/* Funnel Viz */}
       {showFunnel && <FunnelVisualization leads={filteredLeads} stages={stages} />}
 
       {/* Toolbar */}
@@ -797,7 +813,6 @@ export default function ClienteCRM() {
           <Input placeholder="Buscar lead..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
         </div>
 
-        {/* Filters */}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 gap-1">
@@ -812,9 +827,9 @@ export default function ClienteCRM() {
                 <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="Quente">🔥 Quente</SelectItem>
-                  <SelectItem value="Morno">☀️ Morno</SelectItem>
-                  <SelectItem value="Frio">❄️ Frio</SelectItem>
+                  <SelectItem value="Quente">Quente</SelectItem>
+                  <SelectItem value="Morno">Morno</SelectItem>
+                  <SelectItem value="Frio">Frio</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -855,10 +870,10 @@ export default function ClienteCRM() {
           </Button>
         </div>
 
-        <Badge variant="outline" className="text-[10px] h-7">{filteredLeads.length} lead{filteredLeads.length !== 1 ? "s" : ""}</Badge>
+        <span className="text-[11px] text-muted-foreground">{filteredLeads.length} lead{filteredLeads.length !== 1 ? "s" : ""}</span>
       </div>
 
-      {/* Kanban View */}
+      {/* Kanban */}
       {viewMode === "kanban" ? (
         <DndContext collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="flex gap-3 overflow-x-auto pb-2" style={{ minHeight: "calc(100vh - 420px)" }}>
@@ -868,21 +883,21 @@ export default function ClienteCRM() {
               const total = stageLeads.reduce((s, l) => s + l.value, 0);
               return (
                 <div key={stage.key} className={`flex-shrink-0 w-[280px] rounded-xl border ${colorStyle.border} bg-gradient-to-b ${colorStyle.gradient} overflow-hidden flex flex-col`}>
-                  {/* Column header */}
-                  <div className="px-3 py-2.5 border-b border-border/50">
+                  <div className="px-3 py-2.5 border-b border-border/40">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm">{stage.emoji}</span>
-                      <span className={`text-[11px] font-bold uppercase tracking-wider ${colorStyle.text}`}>{stage.label}</span>
+                      <div className={`w-6 h-6 rounded-lg ${colorStyle.light} flex items-center justify-center ${colorStyle.text}`}>
+                        {STAGE_ICONS[stage.icon] ? <span className="scale-[0.8]">{STAGE_ICONS[stage.icon]}</span> : <CircleDot className="w-3.5 h-3.5" />}
+                      </div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground">{stage.label}</span>
                       <Badge variant="outline" className={`text-[9px] ml-auto ${colorStyle.border} ${colorStyle.text}`}>{stageLeads.length}</Badge>
                     </div>
-                    <p className="text-[10px] text-muted-foreground font-medium mt-0.5">R$ {total.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground font-medium mt-0.5 pl-8">R$ {total.toLocaleString()}</p>
                   </div>
-                  {/* Column body */}
                   <ScrollArea className="flex-1">
                     <div className="p-2">
                       <DroppableColumn stageKey={stage.key}>
                         {stageLeads.length === 0 ? (
-                          <div className={`border-2 border-dashed ${colorStyle.border} rounded-lg p-6 text-center`}>
+                          <div className={`border border-dashed ${colorStyle.border} rounded-lg p-6 text-center`}>
                             <p className="text-[10px] text-muted-foreground">Arraste leads aqui</p>
                           </div>
                         ) : stageLeads.map(lead => (
@@ -897,13 +912,13 @@ export default function ClienteCRM() {
           </div>
           <DragOverlay>
             {activeLead && (
-              <Card className="rotate-3 scale-105 shadow-2xl w-[270px]">
+              <Card className="rotate-2 scale-105 shadow-2xl w-[270px] border-primary/30">
                 <CardContent className="p-3">
                   <p className="text-sm font-semibold">{activeLead.name}</p>
                   <p className="text-xs text-muted-foreground">{activeLead.phone}</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-sm font-bold text-primary">R$ {activeLead.value.toLocaleString()}</span>
-                    <Badge className={`text-[9px] ${tempColors[activeLead.temperature]}`}>{activeLead.temperature}</Badge>
+                    <Badge variant="outline" className={`text-[9px] ${tempColors[activeLead.temperature]}`}>{activeLead.temperature}</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -911,20 +926,15 @@ export default function ClienteCRM() {
           </DragOverlay>
         </DndContext>
       ) : (
-        /* List View */
         <Card className="border-border/50">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b bg-muted/30">
-                    <th className="text-left text-[11px] font-semibold p-3 text-muted-foreground uppercase tracking-wider">Lead</th>
-                    <th className="text-left text-[11px] font-semibold p-3 text-muted-foreground uppercase tracking-wider">Contato</th>
-                    <th className="text-left text-[11px] font-semibold p-3 text-muted-foreground uppercase tracking-wider">Etapa</th>
-                    <th className="text-left text-[11px] font-semibold p-3 text-muted-foreground uppercase tracking-wider">Origem</th>
-                    <th className="text-left text-[11px] font-semibold p-3 text-muted-foreground uppercase tracking-wider">Valor</th>
-                    <th className="text-left text-[11px] font-semibold p-3 text-muted-foreground uppercase tracking-wider">Temp.</th>
-                    <th className="text-left text-[11px] font-semibold p-3 text-muted-foreground uppercase tracking-wider">Responsável</th>
+                  <tr className="border-b bg-muted/20">
+                    {["Lead", "Contato", "Etapa", "Origem", "Valor", "Temp.", "Responsável"].map(h => (
+                      <th key={h} className="text-left text-[11px] font-medium p-3 text-muted-foreground uppercase tracking-wider">{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -932,10 +942,10 @@ export default function ClienteCRM() {
                     const stageInfo = stages.find(s => s.key === lead.stage);
                     const colorStyle = stageInfo ? getColorStyle(stageInfo.color) : getColorStyle("blue");
                     return (
-                      <tr key={lead.id} className="border-b hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => setSelected(lead)}>
+                      <tr key={lead.id} className="border-b border-border/30 hover:bg-muted/20 cursor-pointer transition-colors" onClick={() => setSelected(lead)}>
                         <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-8 h-8 rounded-lg ${colorStyle.bg} flex items-center justify-center text-white font-bold text-xs`}>
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-8 h-8 rounded-lg ${colorStyle.bg} flex items-center justify-center text-white font-semibold text-xs`}>
                               {lead.name.charAt(0)}
                             </div>
                             <div>
@@ -947,12 +957,12 @@ export default function ClienteCRM() {
                         <td className="p-3 text-sm text-muted-foreground">{lead.phone}</td>
                         <td className="p-3">
                           <Badge variant="outline" className={`text-[10px] ${colorStyle.border} ${colorStyle.text}`}>
-                            {stageInfo?.emoji} {stageInfo?.label || lead.stage}
+                            {stageInfo?.label || lead.stage}
                           </Badge>
                         </td>
-                        <td className="p-3"><Badge variant="secondary" className="text-[9px] gap-0.5">{originIcons[lead.origin]}{lead.origin}</Badge></td>
+                        <td className="p-3"><Badge variant="secondary" className="text-[9px] gap-0.5 font-normal">{originIcons[lead.origin]}{lead.origin}</Badge></td>
                         <td className="p-3 text-sm font-bold text-primary">R$ {lead.value.toLocaleString()}</td>
-                        <td className="p-3"><Badge className={`text-[9px] ${tempColors[lead.temperature]}`}>{lead.temperature}</Badge></td>
+                        <td className="p-3"><Badge variant="outline" className={`text-[9px] ${tempColors[lead.temperature]}`}>{lead.temperature}</Badge></td>
                         <td className="p-3 text-sm text-muted-foreground">{lead.responsible}</td>
                       </tr>
                     );
@@ -964,7 +974,6 @@ export default function ClienteCRM() {
         </Card>
       )}
 
-      {/* Dialogs */}
       <LeadDetailSheet lead={selected} open={!!selected} onClose={() => setSelected(null)} stages={stages} />
       <StageEditorDialog open={showStageEditor} onClose={() => setShowStageEditor(false)} stages={stages} onSave={setStages} />
       <NewLeadDialog open={showNewLead} onClose={() => setShowNewLead(false)} stages={stages} onSave={handleAddLead} />

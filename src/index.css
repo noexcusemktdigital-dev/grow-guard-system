@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Sora:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -136,8 +136,9 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.01em;
   }
 
   /* Premium scrollbar */
@@ -194,7 +195,8 @@
 
   .page-header-title {
     @apply text-2xl font-bold text-foreground tracking-tight;
-    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-family: 'Sora', 'DM Sans', sans-serif;
+    letter-spacing: -0.02em;
   }
 
   /* Smooth page transitions */
