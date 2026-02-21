@@ -1767,7 +1767,6 @@ export default function ClientePlanoVendas() {
                             onClick={() => { setAvaliacaoEscopo(opt.value); setAvaliacaoVendedor(""); }}>
                             {selected && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="w-3 h-3 text-primary-foreground" /></div>}
                             <span className="text-sm font-semibold block">{opt.label}</span>
-                            <span className="text-sm font-semibold block">{opt.label}</span>
                             <span className="text-[11px] text-muted-foreground">{opt.desc}</span>
                           </button>
                         );
