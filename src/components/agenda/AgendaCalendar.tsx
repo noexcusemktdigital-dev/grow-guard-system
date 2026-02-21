@@ -17,18 +17,19 @@ interface Props {
   activeCalendars: string[];
   onSelectEvent: (id: string) => void;
   onSelectDate: (date: Date) => void;
+  onCreateEvent: (date: Date) => void;
 }
 
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7h-21h
 
-export function AgendaCalendar({ view, currentDate, activeCalendars, onSelectEvent, onSelectDate }: Props) {
-  if (view === "month") return <MonthView currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={onSelectEvent} onSelectDate={onSelectDate} />;
-  if (view === "week") return <WeekView currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={onSelectEvent} />;
-  return <DayView currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={onSelectEvent} />;
+export function AgendaCalendar({ view, currentDate, activeCalendars, onSelectEvent, onSelectDate, onCreateEvent }: Props) {
+  if (view === "month") return <MonthView currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={onSelectEvent} onSelectDate={onSelectDate} onCreateEvent={onCreateEvent} />;
+  if (view === "week") return <WeekView currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={onSelectEvent} onCreateEvent={onCreateEvent} />;
+  return <DayView currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={onSelectEvent} onCreateEvent={onCreateEvent} />;
 }
 
 // ===== MONTH =====
-function MonthView({ currentDate, activeCalendars, onSelectEvent, onSelectDate }: Omit<Props, "view">) {
+function MonthView({ currentDate, activeCalendars, onSelectEvent, onSelectDate, onCreateEvent }: Omit<Props, "view">) {
   const days = useMemo(() => getMonthDays(currentDate), [currentDate]);
   const events = useMemo(() => getEventsForMonth(currentDate, activeCalendars), [currentDate, activeCalendars]);
   const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -51,7 +52,7 @@ function MonthView({ currentDate, activeCalendars, onSelectEvent, onSelectDate }
               className={`border-b border-r border-border p-1 min-h-[90px] cursor-pointer hover:bg-secondary/30 transition-colors ${
                 !isCurrentMonth ? "bg-muted/20" : ""
               }`}
-              onClick={() => onSelectDate(day)}
+              onClick={() => onCreateEvent(day)}
             >
               <div className={`text-xs mb-1 w-6 h-6 flex items-center justify-center rounded-full ${
                 isToday ? "bg-primary text-primary-foreground font-bold" : isCurrentMonth ? "text-foreground" : "text-muted-foreground/50"
@@ -90,7 +91,7 @@ function MonthView({ currentDate, activeCalendars, onSelectEvent, onSelectDate }
 }
 
 // ===== WEEK =====
-function WeekView({ currentDate, activeCalendars, onSelectEvent }: Omit<Props, "view" | "onSelectDate">) {
+function WeekView({ currentDate, activeCalendars, onSelectEvent, onCreateEvent }: Omit<Props, "view" | "onSelectDate">) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
@@ -178,7 +179,7 @@ function WeekView({ currentDate, activeCalendars, onSelectEvent }: Omit<Props, "
 }
 
 // ===== DAY =====
-function DayView({ currentDate, activeCalendars, onSelectEvent }: Omit<Props, "view" | "onSelectDate">) {
+function DayView({ currentDate, activeCalendars, onSelectEvent, onCreateEvent }: Omit<Props, "view" | "onSelectDate">) {
   const dayEvents = useMemo(() => getEventsForDate(currentDate, activeCalendars), [currentDate, activeCalendars]);
   const allDayEvents = dayEvents.filter(e => e.allDay);
   const timedEvents = dayEvents.filter(e => !e.allDay);
