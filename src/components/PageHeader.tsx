@@ -15,7 +15,7 @@ export function PageHeader({ title, subtitle, badge, icon, actions, backButton }
       <div className="flex items-center gap-3.5">
         {backButton}
         {icon && (
-          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/5">
+          <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/5">
             {icon}
           </div>
         )}
@@ -23,12 +23,12 @@ export function PageHeader({ title, subtitle, badge, icon, actions, backButton }
           <div className="flex items-center gap-2.5">
             <h1 className="page-header-title">{title}</h1>
             {badge && (
-              <Badge variant="secondary" className="text-[10px] font-semibold rounded-full px-2.5">
+              <Badge variant="secondary" className="text-[10px] font-extrabold rounded-full px-2.5 uppercase tracking-wider">
                 {badge}
               </Badge>
             )}
           </div>
-          {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+          {subtitle && <p className="text-sm text-muted-foreground mt-0.5 font-medium">{subtitle}</p>}
         </div>
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}

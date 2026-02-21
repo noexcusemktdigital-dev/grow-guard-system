@@ -20,7 +20,7 @@ export function HomeAtalhos() {
 
   return (
     <div className="glass-card p-6">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+      <h3 className="section-label mb-4">
         Atalhos Rápidos
       </h3>
       <div className="grid grid-cols-4 sm:grid-cols-4 gap-3">
@@ -30,10 +30,12 @@ export function HomeAtalhos() {
             <button
               key={a.path}
               onClick={() => navigate(a.path)}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-card hover:bg-muted/50 hover:scale-105 transition-all cursor-pointer"
+              className="flex flex-col items-center gap-2.5 p-4 rounded-2xl border border-border bg-card hover:bg-muted/50 hover:scale-105 hover:shadow-lg transition-all cursor-pointer group"
             >
-              <Icon className="w-5 h-5 text-primary" />
-              <span className="text-xs font-medium text-foreground">{a.label}</span>
+              <div className="p-2.5 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
+                <Icon className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-[11px] font-semibold text-foreground">{a.label}</span>
             </button>
           );
         })}

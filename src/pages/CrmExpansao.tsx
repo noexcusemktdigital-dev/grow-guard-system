@@ -102,16 +102,16 @@ export default function CrmExpansao() {
     setLeads((prev) => prev.map((l) => l.id === convertLeadId ? { ...l, leadStatus: "Vendido", stage: "Venda", atualizadoEm: new Date().toISOString() } : l));
 
     if (lead.funnel === "franchise") {
-      if (convertChecks.unit) toast({ title: "📍 Unidade", description: "Criar unidade no módulo Unidades (placeholder)" });
-      if (convertChecks.contract) toast({ title: "📄 Contrato", description: "Criar contrato de franquia (placeholder)" });
-      if (convertChecks.task) toast({ title: "🚀 Onboarding", description: "Tarefa de onboarding criada (placeholder)" });
+      if (convertChecks.unit) toast({ title: "Unidade", description: "Criar unidade no módulo Unidades (placeholder)" });
+      if (convertChecks.contract) toast({ title: "Contrato", description: "Criar contrato de franquia (placeholder)" });
+      if (convertChecks.task) toast({ title: "Onboarding", description: "Tarefa de onboarding criada (placeholder)" });
     } else {
-      if (convertChecks.unit) toast({ title: "👤 Cliente", description: "Criar cliente em Receitas (placeholder)" });
-      if (convertChecks.contract) toast({ title: "📄 Contrato", description: "Criar contrato de cliente (placeholder)" });
-      if (convertChecks.task) toast({ title: "💳 Cobrança", description: "Tarefa: Criar cobrança no Asaas (placeholder)" });
+      if (convertChecks.unit) toast({ title: "Cliente", description: "Criar cliente em Receitas (placeholder)" });
+      if (convertChecks.contract) toast({ title: "Contrato", description: "Criar contrato de cliente (placeholder)" });
+      if (convertChecks.task) toast({ title: "Cobrança", description: "Tarefa: Criar cobrança no Asaas (placeholder)" });
     }
 
-    toast({ title: "✅ Lead convertido!", description: `${lead.nome} marcado como Vendido.` });
+    toast({ title: "Lead convertido!", description: `${lead.nome} marcado como Vendido.` });
     setConvertDialog(false);
     setConvertLeadId(null);
   };

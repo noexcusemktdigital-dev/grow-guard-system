@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap');
 
 @layer base {
   :root {
@@ -163,8 +163,13 @@
 }
 
 @layer utilities {
+  /* ── Glass Card ── */
   .glass-card {
-    @apply bg-card border border-border rounded-xl shadow-sm;
+    @apply bg-card border border-border rounded-2xl shadow-sm transition-all duration-300;
+  }
+
+  .glass-card:hover {
+    box-shadow: 0 8px 30px -8px hsl(0 0% 0% / 0.08);
   }
 
   .dark .glass-card {
@@ -173,50 +178,54 @@
     backdrop-filter: blur(12px);
   }
 
+  .dark .glass-card:hover {
+    box-shadow: 0 8px 30px -8px hsl(0 0% 0% / 0.5);
+  }
+
+  /* ── Hover Lift ── */
   .hover-lift {
     @apply transition-all duration-300 ease-out;
   }
 
   .hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px -8px hsl(0 0% 0% / 0.12);
+    box-shadow: 0 12px 40px -12px hsl(0 0% 0% / 0.12);
   }
 
   .dark .hover-lift:hover {
-    box-shadow: 0 8px 30px -8px hsl(0 0% 0% / 0.5);
+    box-shadow: 0 12px 40px -12px hsl(0 0% 0% / 0.5);
   }
 
+  /* ── KPI Card ── */
   .kpi-card {
-    @apply glass-card p-5 flex flex-col gap-1 hover-lift cursor-default;
+    @apply glass-card p-6 flex flex-col gap-1.5 hover-lift cursor-default relative overflow-hidden;
+    border-radius: 1.5rem;
   }
 
+  /* ── Section Label ── */
   .section-label {
-    @apply text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground;
+    @apply text-[10px] font-extrabold uppercase tracking-[0.2em] text-muted-foreground;
   }
 
+  /* ── Page Header Title — bold impactante ── */
   .page-header-title {
-    @apply text-2xl font-bold text-foreground tracking-tight;
-    font-family: 'Manrope', 'Inter', sans-serif;
-    letter-spacing: -0.025em;
+    @apply text-2xl font-black text-foreground tracking-tight uppercase;
+    font-family: 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.03em;
+    font-style: italic;
   }
 
-  /* Smooth page transitions */
+  /* ── Smooth page transitions ── */
   .page-enter {
     animation: pageEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
   @keyframes pageEnter {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Stagger children animation */
+  /* ── Stagger children animation ── */
   .stagger-children > * {
     opacity: 0;
     animation: staggerIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -230,17 +239,11 @@
   .stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
 
   @keyframes staggerIn {
-    from {
-      opacity: 0;
-      transform: translateY(6px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Pulse glow for active states */
+  /* ── Pulse glow ── */
   .pulse-glow {
     animation: pulseGlow 2s ease-in-out infinite;
   }
@@ -250,7 +253,7 @@
     50% { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
   }
 
-  /* Gradient text */
+  /* ── Gradient text ── */
   .text-gradient {
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--chart-orange)));
     -webkit-background-clip: text;
@@ -258,7 +261,7 @@
     background-clip: text;
   }
 
-  /* Card shine effect on hover */
+  /* ── Card shine effect ── */
   .card-shine {
     position: relative;
     overflow: hidden;
@@ -271,7 +274,7 @@
     left: -100%;
     width: 50%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.03), transparent);
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.04), transparent);
     transition: left 0.6s ease;
   }
 

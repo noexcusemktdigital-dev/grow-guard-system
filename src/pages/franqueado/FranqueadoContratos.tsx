@@ -141,9 +141,9 @@ export default function FranqueadoContratos() {
             <div className="border-t border-border pt-4">
               <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider font-bold">Histórico</p>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <p>📄 Contrato criado em {selected.inicioEm}</p>
-                {selected.assinado && <p>✅ Contrato assinado pelo cliente</p>}
-                {selected.propostaId && <p>🔗 Vinculado à proposta {selected.propostaId}</p>}
+                <p>Contrato criado em {selected.inicioEm}</p>
+                {selected.assinado && <p>Contrato assinado pelo cliente</p>}
+                {selected.propostaId && <p>Vinculado à proposta {selected.propostaId}</p>}
               </div>
             </div>
 

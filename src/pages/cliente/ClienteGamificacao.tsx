@@ -1,9 +1,18 @@
-import { Trophy, Medal, Star } from "lucide-react";
+import { Trophy, Medal, Star, Target, Coins, Timer, Smartphone, BarChart3, Award } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { getGamificacaoData } from "@/data/clienteData";
+
+const medalIcons: Record<string, React.ElementType> = {
+  lead: Target,
+  sales: Coins,
+  streak: Timer,
+  social: Smartphone,
+  crm: BarChart3,
+  closer: Trophy,
+};
 
 export default function ClienteGamificacao() {
   const data = getGamificacaoData();
@@ -47,14 +56,19 @@ export default function ClienteGamificacao() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {data.medals.map(m => (
-              <div key={m.id} className={`p-4 rounded-xl border text-center transition-all duration-200 ${m.unlocked ? "bg-muted/30 hover:bg-muted/50" : "opacity-30 grayscale"}`}>
-                <span className="text-3xl">{m.emoji}</span>
-                <p className="text-xs font-semibold mt-2">{m.name}</p>
-                <p className="text-[10px] text-muted-foreground">{m.description}</p>
-                {m.unlocked && <Badge variant="secondary" className="text-[9px] mt-2">Conquistada</Badge>}
-              </div>
-            ))}
+              {data.medals.map(m => {
+                const MedalIcon = medalIcons[m.emoji] || Award;
+                return (
+                <div key={m.id} className={`p-4 rounded-xl border text-center transition-all duration-200 ${m.unlocked ? "bg-muted/30 hover:bg-muted/50" : "opacity-30 grayscale"}`}>
+                  <div className="w-10 h-10 mx-auto rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+                    <MedalIcon className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-xs font-semibold mt-1">{m.name}</p>
+                  <p className="text-[10px] text-muted-foreground">{m.description}</p>
+                  {m.unlocked && <Badge variant="secondary" className="text-[9px] mt-2">Conquistada</Badge>}
+                </div>
+                );
+              })}
           </div>
         </CardContent>
       </Card>

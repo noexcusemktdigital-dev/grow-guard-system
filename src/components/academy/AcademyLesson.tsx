@@ -39,7 +39,7 @@ export function AcademyLesson({ lessonId, onBack, onNavigate, onGoToQuiz }: Prop
 
   const handleComplete = () => {
     markLessonComplete(lessonId);
-    toast({ title: "Aula concluída! ✅", description: `${lesson.title} marcada como concluída.` });
+    toast({ title: "Aula concluída!", description: `${lesson.title} marcada como concluída.` });
     forceUpdate((n) => n + 1);
   };
 

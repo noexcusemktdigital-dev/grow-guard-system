@@ -4,7 +4,7 @@ import {
   Sparkles, Clock, CheckCircle2, Zap, ChevronDown, User,
   Phone, Tag, Volume2, X, ArrowRight, BookOpen, Brain,
   Database, Code2, Stethoscope, FileText, Plus, Trash2,
-  AlertTriangle, Activity
+  AlertTriangle, Activity, Target, DollarSign, Wrench, RefreshCw
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
@@ -41,11 +41,11 @@ const agentAccent: Record<IAAgent["type"], string> = {
   "Pós-venda": "border-orange-500/30 text-orange-400",
 };
 
-const agentIcons: Record<IAAgent["type"], string> = {
-  SDR: "🎯",
-  Closer: "💰",
-  Suporte: "🛠️",
-  "Pós-venda": "🔄",
+const agentIcons: Record<IAAgent["type"], React.ElementType> = {
+  SDR: Target,
+  Closer: DollarSign,
+  Suporte: Wrench,
+  "Pós-venda": RefreshCw,
 };
 
 interface ChatMessage {
@@ -145,8 +145,8 @@ export default function ClienteAgentesIA() {
                   {/* Header */}
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg border-2 ${agentAccent[agent.type]} bg-background/50 backdrop-blur-sm`}>
-                        {agentIcons[agent.type]}
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center border-2 ${agentAccent[agent.type]} bg-background/50 backdrop-blur-sm`}>
+                        {(() => { const AgIcon = agentIcons[agent.type]; return <AgIcon className="w-5 h-5" />; })()}
                       </div>
                       <div>
                         <h3 className="font-semibold text-sm">{agent.name}</h3>
@@ -220,8 +220,8 @@ export default function ClienteAgentesIA() {
               {/* Playground header */}
               <div className={`flex items-center justify-between px-5 py-3 border-b bg-gradient-to-r ${agentGradients[currentAgent.type]}`}>
                 <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-base border ${agentAccent[currentAgent.type]} bg-background/60`}>
-                    {agentIcons[currentAgent.type]}
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${agentAccent[currentAgent.type]} bg-background/60`}>
+                    {(() => { const AgIcon = agentIcons[currentAgent.type]; return <AgIcon className="w-4 h-4" />; })()}
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm">{currentAgent.name}</h3>
@@ -237,8 +237,8 @@ export default function ClienteAgentesIA() {
               <ScrollArea className="flex-1 p-4">
                 {chatMessages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-16">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-3xl mb-4">
-                      {agentIcons[currentAgent.type]}
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                      {(() => { const AgIcon = agentIcons[currentAgent.type]; return <AgIcon className="w-8 h-8 text-primary" />; })()}
                     </div>
                     <p className="text-sm font-medium">Teste o agente {currentAgent.name}</p>
                     <p className="text-xs mt-1 max-w-xs">Envie uma mensagem para simular como o agente responderia aos seus clientes.</p>
@@ -563,8 +563,8 @@ export default function ClienteAgentesIA() {
               {/* === SIMULADOR === */}
               <TabsContent value="simulador" className="p-5 space-y-4 mt-0">
                 <div className="p-4 rounded-xl border bg-muted/10 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl mx-auto">
-                    {agentIcons[currentConfig.type]}
+                   <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                     {(() => { const AgIcon = agentIcons[currentConfig.type]; return <AgIcon className="w-6 h-6 text-primary" />; })()}
                   </div>
                   <div>
                     <p className="text-sm font-medium">Simulador do {currentConfig.name}</p>
