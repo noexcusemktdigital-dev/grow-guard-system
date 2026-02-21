@@ -1104,17 +1104,6 @@ export default function ClienteCRM() {
         }
       />
 
-      <CrmKpiBar leads={filteredLeads} stages={stages} />
-
-      {/* Active funnel indicator */}
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className="text-xs gap-1.5 py-1 px-2.5">
-          <BarChart3 className="w-3 h-3 text-primary" />
-          {activeFunnel.name}
-          <span className="text-muted-foreground">· {stages.length} etapas</span>
-        </Badge>
-      </div>
-
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
