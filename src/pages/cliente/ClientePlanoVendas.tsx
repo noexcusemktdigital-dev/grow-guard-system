@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, Lightbulb, Zap, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar, Plus, Lock, CheckCircle2, FileText, Phone, Mail, MessageSquare, Building2, UserCheck, Layers, BarChart3, History, DollarSign, UserPlus, Handshake, ShieldCheck, Receipt, BarChartHorizontal, Megaphone, Trash2, FolderOpen, ChevronDown, ChevronRight, Filter } from "lucide-react";
+import { Target, Save, AlertTriangle, Brain, TrendingUp, Users, ClipboardCheck, Rocket, Lightbulb, Zap, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar, Plus, Lock, CheckCircle2, FileText, Phone, Mail, MessageSquare, Building2, UserCheck, Layers, BarChart3, History, DollarSign, UserPlus, Handshake, ShieldCheck, Receipt, BarChartHorizontal, Megaphone, Trash2, FolderOpen, ChevronDown, ChevronRight, Filter, Pencil, X, Check } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/KpiCard";
@@ -215,6 +215,22 @@ export default function ClientePlanoVendas() {
   };
 
   const VENDEDORES_MOCK = ["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Lima"];
+
+  // ── INLINE EDIT STATE ──
+  const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{ nome: string; mesRef: string; valorAlvo: number }>({ nome: "", mesRef: "", valorAlvo: 0 });
+
+  const startEditing = (m: MetaMensal) => {
+    setEditingMetaId(m.id);
+    setEditDraft({ nome: m.nome, mesRef: m.mesRef, valorAlvo: m.valorAlvo });
+  };
+  const saveEditing = () => {
+    if (!editingMetaId) return;
+    setMetasMensais(prev => prev.map(m => m.id === editingMetaId ? { ...m, nome: editDraft.nome || m.nome, mesRef: editDraft.mesRef || m.mesRef, valorAlvo: editDraft.valorAlvo || m.valorAlvo } : m));
+    setEditingMetaId(null);
+    toast({ title: "Meta atualizada!" });
+  };
+  const cancelEditing = () => setEditingMetaId(null);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -714,19 +730,62 @@ export default function ClientePlanoVendas() {
                                 <div className={`p-1.5 rounded-lg ${tipoConfig.bg}`}>
                                   <Icon className={`w-3.5 h-3.5 ${tipoConfig.color}`} />
                                 </div>
-                                <div>
-                                  <p className="text-xs font-semibold">{m.nome}</p>
-                                  <p className="text-[10px] text-muted-foreground">{m.mesRef} · {tipoConfig.label} · {m.periodo}</p>
+                                <div className="flex-1 min-w-0">
+                                  {editingMetaId === m.id ? (
+                                    <Input value={editDraft.nome} onChange={e => setEditDraft(p => ({ ...p, nome: e.target.value }))}
+                                      className="h-6 text-xs font-semibold px-1.5" autoFocus />
+                                  ) : (
+                                    <p className="text-xs font-semibold truncate">{m.nome}</p>
+                                  )}
+                                  {editingMetaId === m.id ? (
+                                    <Select value={editDraft.mesRef} onValueChange={v => setEditDraft(p => ({ ...p, mesRef: v }))}>
+                                      <SelectTrigger className="h-5 text-[10px] px-1.5 w-auto mt-0.5"><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        {MESES_COMPLETOS.map((mes, i) => {
+                                          const valor = `${mes}/${i >= new Date().getMonth() ? anoAtual : anoAtual + 1}`;
+                                          return <SelectItem key={mes} value={valor} className="text-xs">{valor}</SelectItem>;
+                                        })}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <p className="text-[10px] text-muted-foreground">{m.mesRef} · {tipoConfig.label} · {m.periodo}</p>
+                                  )}
                                 </div>
                               </div>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                onClick={() => { setMetasMensais(prev => prev.filter(x => x.id !== m.id)); toast({ title: "Meta removida." }); }}>
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                {editingMetaId === m.id ? (
+                                  <>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-emerald-500 hover:text-emerald-600" onClick={saveEditing}>
+                                      <Check className="w-3 h-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={cancelEditing}>
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" onClick={() => startEditing(m)}>
+                                      <Pencil className="w-3 h-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                      onClick={() => { setMetasMensais(prev => prev.filter(x => x.id !== m.id)); toast({ title: "Meta removida." }); }}>
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <p className="text-xl font-black">
-                              {isMoney ? fmtBRL(m.valorAlvo) : isPercent ? fmtPct(m.valorAlvo) : fmtNum(m.valorAlvo)}
-                            </p>
+                            {editingMetaId === m.id ? (
+                              <div className="flex items-center gap-2">
+                                <Input type="number" value={editDraft.valorAlvo || ""} onChange={e => setEditDraft(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
+                                  className="h-8 text-lg font-black w-40" />
+                                <span className="text-xs text-muted-foreground">{isMoney ? "(R$)" : isPercent ? "(%)" : "(un)"}</span>
+                              </div>
+                            ) : (
+                              <p className="text-xl font-black">
+                                {isMoney ? fmtBRL(m.valorAlvo) : isPercent ? fmtPct(m.valorAlvo) : fmtNum(m.valorAlvo)}
+                              </p>
+                            )}
                             <div className="flex flex-wrap gap-1.5">
                               <Badge variant="outline" className="text-[10px]">
                                 {m.escopo === "empresa" ? "🏢 Empresa" : m.escopo === "equipe" ? `👥 ${m.equipe}` : `👤 ${m.responsavel}`}
