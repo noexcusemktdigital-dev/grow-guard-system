@@ -12,6 +12,10 @@ import FinanceiroDespesas from "./pages/FinanceiroDespesas";
 import FinanceiroReceitas from "./pages/FinanceiroReceitas";
 import FinanceiroRepasse from "./pages/FinanceiroRepasse";
 import FinanceiroFechamentos from "./pages/FinanceiroFechamentos";
+import ContratosGerenciamento from "./pages/ContratosGerenciamento";
+import ContratosGerador from "./pages/ContratosGerador";
+import ContratosTemplates from "./pages/ContratosTemplates";
+import ContratosConfiguracoes from "./pages/ContratosConfiguracoes";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +36,10 @@ const App = () => (
               <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
               <Route path="financeiro/fechamentos" element={<FinanceiroFechamentos />} />
               <Route path="financeiro/configuracoes" element={<FinanceiroConfiguracoes />} />
+              <Route path="contratos" element={<ContratosGerenciamento />} />
+              <Route path="contratos/gerador" element={<ContratosGerador />} />
+              <Route path="contratos/templates" element={<ContratosTemplates />} />
+              <Route path="contratos/configuracoes" element={<ContratosConfiguracoes />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
