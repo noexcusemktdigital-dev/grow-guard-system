@@ -1,295 +1,122 @@
 
 
-# Redesign UX/UI -- NOEXCUSE Gestao Comercial
+# Redesign Visual Completo - Estilo Premium Impactante
 
-## Resumo
-
-Reestruturar o frontend completo do sistema NOEXCUSE (19 paginas do cliente final) para uma experiencia mais profissional, intuitiva e orientada a acao. O redesign foca em 4 pilares: hierarquia visual clara, reducao de fricao, consistencia entre modulos e fluxos orientados a resultado.
-
----
-
-## Problemas Identificados
-
-| Problema | Onde ocorre | Impacto |
-|----------|-------------|---------|
-| Paginas muito longas com scroll excessivo | Plano de Vendas (6 tabs), Plano de Marketing (6 accordions) | Usuario se perde, nao completa |
-| Inconsistencia entre modulos | Cada pagina tem layout diferente | Curva de aprendizado alta |
-| Dialogs muito simples para criacao | Campanhas, Conteudos, Disparos | Parecem formularios genericos |
-| Falta de feedback visual de progresso | CRM, Campanhas | Usuario nao sabe onde esta |
-| Sidebar ocupa muito espaco com 19 itens | ClienteSidebar | Sobrecarga visual |
-| Chat ocupa tela cheia sem necessidade | ClienteChat (3 colunas) | Desperdicio em desktop |
-| Paginas placeholder sem conteudo | Integracoes | Sensacao de produto incompleto |
-| KPIs repetitivos no topo de cada pagina | Quase todas as paginas | Fadiga visual |
+## Objetivo
+Aplicar o estilo visual da plataforma de referencia em todas as 3 visoes (Franqueadora, Franqueado, Cliente Final), removendo todos os emojis restantes e modernizando tipografia, shapes e animacoes.
 
 ---
 
-## Principios do Redesign
+## 1. Sistema Tipografico e CSS Global
 
-1. **Wizard sobre formulario**: Fluxos de criacao complexos usam steps visuais, nao dialogs simples
-2. **Dashboard-first**: Cada modulo abre com um resumo visual antes de mergulhar nos detalhes
-3. **Consistencia de layout**: Todas as paginas seguem o padrao PageHeader + KPIs compactos + conteudo principal
-4. **Acoes contextuais**: Botoes e acoes aparecem onde fazem sentido, nao acumulados no header
-5. **Empty states ricos**: Paginas sem dados mostram ilustracoes e CTAs claros
+**Arquivo: `src/index.css`**
+- Importar a fonte **Inter** com variacao completa (300-900) - ja em uso, mas ajustar os pesos
+- Titulos principais: `font-black uppercase italic tracking-tighter` (estilo do design de referencia)
+- Labels de KPI: `text-[10px] font-black uppercase tracking-[0.2em]` com cor `text-gray-400`
+- Valores grandes: `text-3xl font-black tracking-tighter`
 
----
+**Arquivo: `tailwind.config.ts`**
+- Ajustar font-family para priorizar Inter em ambas sans e display
+- Atualizar border-radius padrao para valores mais arredondados
 
-## Mudancas por Area
-
-### 1. Sidebar (ClienteSidebar.tsx)
-
-**Problema**: 19 itens + 4 secoes colapsaveis = muito scroll na sidebar
-
-**Solucao**:
-- Agrupar itens de forma mais logica
-- Renomear "Global" para apenas mostrar os icones sem label de secao (economia de espaco)
-- Mover Gamificacao para dentro do perfil do usuario (nao merece item de menu proprio)
-- Mover Notificacoes para o header (ja existe o sino la)
-- Resultado: remover 2 itens do menu principal
-
-### 2. Dashboard / Inicio (ClienteInicio.tsx)
-
-**Problema**: KPIs + graficos + campanhas + tarefas + alertas = muita informacao sem hierarquia
-
-**Solucao**:
-- Reorganizar em 2 colunas: esquerda (metricas + grafico) e direita (tarefas + alertas)
-- Mover "Acoes Rapidas" para badges flutuantes no topo, nao no fundo da pagina
-- Compactar KPIs em 2 linhas em vez de 4 cards grandes
-- Adicionar saudacao personalizada com nome do usuario e resumo em 1 frase
-- Alertas viram um banner compacto no topo (nao card no fundo)
-
-### 3. Checklist do Dia (ClienteChecklist.tsx)
-
-**Problema**: Funcional, mas pode ser mais engajante
-
-**Solucao**:
-- Adicionar micro-animacoes ao completar tarefa (checkmark animado)
-- Agrupar tarefas por prioridade (Urgente, Hoje, Opcional) em vez de lista plana
-- Barra de progresso circular em vez de linear (mais visual)
-- Streak counter: "5 dias consecutivos completando 100%"
-
-### 4. CRM (ClienteCRM.tsx)
-
-**Problema**: Kanban funcional mas cards muito compactos, detalhes em pagina separada
-
-**Solucao**:
-- Expandir cards do kanban com mais informacoes visiveis (ultimo contato, proximo passo)
-- Adicionar mini-avatar e indicador de temperatura mais visual (icone de chama colorida)
-- Ao clicar no lead, abrir painel lateral (Sheet) em vez de navegar para outra pagina
-- Adicionar filtros rapidos no topo: Temperatura, Responsavel, Origem
-- Contador de valor total por coluna no header de cada stage
-
-### 5. Chat (ClienteChat.tsx)
-
-**Problema**: 3 colunas ocupa muito espaco, coluna de contas raramente necessaria
-
-**Solucao**:
-- Remover coluna de contas do layout principal — mover para um dropdown/select no topo da lista de conversas
-- Layout 2 colunas: lista de conversas (1/3) + chat ativo (2/3)
-- Painel de contato abre como Sheet lateral (nao coluna fixa)
-- Adicionar indicador de "digitando..." e timestamps agrupados por dia
-- Quick replies: botoes de resposta rapida acima do input
-
-### 6. Agentes de IA (ClienteAgentesIA.tsx)
-
-**Problema**: Cards grandes, area de teste escondida em collapsible
-
-**Solucao**:
-- Layout em lista compacta (nao grid 2x2) com expand inline
-- Area de teste sempre visivel na lateral direita (2 colunas: lista agentes + playground)
-- Adicionar metricas inline mais compactas
-- Configuracao abre em Sheet lateral (nao Dialog)
-
-### 7. Scripts e Playbooks (ClienteScripts.tsx)
-
-**Problema**: Muito basico, apenas lista expandivel
-
-**Solucao**:
-- Adicionar preview inline do script (primeiras 3 linhas visiveis sem expandir)
-- Botao "Usar no Chat" que copia e redireciona
-- Adicionar indicador de "mais usado" e "favorito"
-- Search bar para buscar por conteudo do script
-
-### 8. Disparos (ClienteDisparos.tsx)
-
-**Problema**: Tabela funcional mas dialog de criacao muito basico
-
-**Solucao**:
-- Dialog de criacao vira stepper: Destinatarios > Mensagem > Agendamento > Revisao
-- Adicionar preview da mensagem no formato WhatsApp (balao verde)
-- Historico de disparos com grafico de entrega em mini sparkline
-- Follow-ups sempre visiveis (nao colapsados)
-
-### 9. Relatorios (ClienteRelatorios.tsx)
-
-**Problema**: Apenas 3 graficos estaticos sem interatividade
-
-**Solucao**:
-- Adicionar KPIs resumo no topo (Receita Total, Leads, Conversao, ROI)
-- Graficos interativos com hover detalhado
-- Adicionar aba "Comparativo" para comparar periodos
-- Tabela de ranking de vendedores
-- Botao "Exportar PDF"
-
-### 10. Plano de Marketing (ClientePlanoMarketing.tsx)
-
-**Problema**: 6 accordions longos, dificil de navegar
-
-**Solucao**:
-- Converter de Accordion para stepper visual lateral (sidebar de progresso + area de conteudo)
-- Cada secao ocupa a tela inteira com navegacao "Proximo" / "Anterior"
-- Progress bar no topo mostrando secoes completas
-- Secao de Plano de Acao mostra resultado gerado de forma mais visual (timeline semanal)
-
-### 11. Campanhas (ClienteCampanhas.tsx)
-
-**Problema**: Cards empilhados com entregaveis escondidos
-
-**Solucao**:
-- Adicionar view de timeline: campanhas ao longo do mes em formato Gantt simplificado
-- Cards mostram progress bar de orcamento e badges de entregaveis sem precisar expandir
-- Gerador de campanha mensal vira wizard de 3 passos (nao dialog simples)
-
-### 12. Conteudos (ClienteConteudos.tsx)
-
-**Problema**: Calendario funcional, mas criacao por dialog e limitada
-
-**Solucao**:
-- Calendario com cards mais visuais (miniatura de preview)
-- Ao clicar em dia, painel lateral abre (Sheet) mostrando conteudos do dia + botao criar
-- Gerador IA mais proeminente: secao dedicada com preview em tempo real
-- Aba de roteiros com cards mais visuais (icones de funil coloridos)
-
-### 13. Redes Sociais (ClienteRedesSociais.tsx)
-
-**Problema**: Galeria de design funcional, gerador IA basico
-
-**Solucao**:
-- Galeria com grid mais visual (thumbnails placeholder com cores do estilo)
-- Filtros laterais em vez de no topo (economia de espaco vertical)
-- Preview de peca gerada em mockup de dispositivo (frame de celular/desktop)
-- Status workflow: Rascunho > Em Revisao > Aprovado (kanban horizontal mini)
-
-### 14. Sites / Landing Pages (ClienteSites.tsx)
-
-**Problema**: Construtor de blocos funcional mas preview basico
-
-**Solucao**:
-- Builder em 2 paineis: blocos a esquerda + preview a direita (side by side, nao empilhado)
-- Drag and drop de blocos (ja tem dnd-kit instalado)
-- Preview responsivo: botoes para alternar Mobile / Desktop
-- Templates prontos: ao criar LP, oferecer 3 templates (Captura, Vendas, Obrigado)
-
-### 15. Trafego Pago (ClienteTrafegoPago.tsx)
-
-**Problema**: Dashboard + lista funcional, criador IA basico
-
-**Solucao**:
-- Dashboard com metricas mais visuais (sparklines inline nos KPIs)
-- Tabela de campanhas com colunas mais compactas e status coloridos
-- Criador de campanha IA vira wizard: Plataforma > Objetivo > Segmentacao > Criativo > Revisao
-- Adicionar comparativo Meta vs Google (side by side)
-
-### 16. Integracoes (ClienteIntegracoes.tsx)
-
-**Problema**: Pagina vazia com texto "em breve"
-
-**Solucao**:
-- Grid de cards de integracoes disponiveis com status (Conectado, Disponivel, Em Breve)
-- Cards para: WhatsApp (Z-API), Google Ads, Meta Ads, Google Analytics, RD Station, Hotmart
-- Cada card com icone, descricao e botao de acao (Conectar / Configurar / Em Breve)
-- Integracoes conectadas mostram status e ultima sincronizacao
-
-### 17. Plano e Creditos (ClientePlanoCreditos.tsx)
-
-**Problema**: Funcional, mas muita informacao empilhada
-
-**Solucao**:
-- Reorganizar: card de plano com CTA de upgrade mais proeminente
-- Wallet com gauge circular (nao barra linear)
-- Historico em tabela mais compacta com paginacao
-- Cards de planos com highlight visual mais forte no "recomendado"
-
-### 18. Configuracoes (ClienteConfiguracoes.tsx)
-
-**Problema**: Funcional, tabs bem organizadas
-
-**Solucao**: Manter estrutura atual, apenas refinar:
-- Avatar editavel com upload placeholder
-- Aba Equipe: permissoes em formato de matrix (check grid) mais claro
-- Aba Notificacoes: agrupar switches por categoria
-
-### 19. Gamificacao (ClienteGamificacao.tsx)
-
-**Problema**: Pagina standalone para pouca informacao
-
-**Solucao**:
-- Mover para um widget no dashboard (pontos + nivel + medalha mais recente)
-- Pagina completa acessivel via "Ver tudo" no widget ou pelo perfil do usuario
-- Adicionar animacao de progresso ao nivel
+**Novas classes utilitarias no CSS:**
+- `.page-title` - Titulos bold, italic, uppercase, tracking-tighter (estilo dashboard de referencia)
+- `.kpi-label` - Labels de metricas em 10px uppercase tracking-widest
+- `.card-premium` - Cards com `rounded-[32px]` ou `rounded-[40px]`, padding generoso, hover com shadow-xl e translate-y
+- `.card-dark` - Card escuro estilo agenda (bg-gray-800, texto branco, shapes decorativos)
 
 ---
 
-## Divisao em Etapas de Implementacao
+## 2. Remocao Total de Emojis (17 arquivos)
 
-Devido ao volume (19 paginas), a implementacao sera dividida em 4 etapas:
+Substituir todos os emojis restantes por icones Lucide ou texto limpo:
 
-**Etapa 1 -- Core (esta implementacao):**
-- Sidebar otimizada
-- Dashboard (Inicio) redesenhado
-- Checklist aprimorado
-- CRM com painel lateral
-- Chat em 2 colunas
-
-**Etapa 2 -- Vendas:**
-- Agentes de IA com playground lateral
-- Scripts com search e preview
-- Disparos com stepper
-- Relatorios interativos
-- Plano de Vendas (manter, apenas refinar)
-
-**Etapa 3 -- Marketing:**
-- Plano de Marketing com stepper lateral
-- Campanhas com timeline
-- Conteudos com Sheet lateral
-- Redes Sociais com galeria aprimorada
-- Sites com builder side-by-side
-- Trafego Pago com wizard
-
-**Etapa 4 -- Sistema:**
-- Integracoes com grid de conectores
-- Plano e Creditos com gauge circular
-- Configuracoes refinadas
-- Gamificacao como widget
+| Arquivo | Emojis | Substituicao |
+|---------|--------|-------------|
+| `ClienteGamificacao.tsx` | Medalhas com emoji | Icones Lucide (Target, Coins, Timer, Smartphone, BarChart3, Trophy) |
+| `ClienteAgentesIA.tsx` | Tipos de agente com emoji | Icones Lucide (Target, DollarSign, Wrench, RefreshCw) |
+| `ClientePlanoVendas.tsx` | Sim/Nao com emoji | Texto limpo "Sim" / "Nao" com estilo de badge |
+| `ClienteConteudos.tsx` | Rocket em copy mock | Texto limpo |
+| `AcademyQuiz.tsx` | Party emoji em toast | Texto "Aprovado!" limpo |
+| `AcademyLesson.tsx` | Check emoji em toast | Texto limpo |
+| `AcademyModuleDetail.tsx` | Party emoji | Texto limpo |
+| `CrmExpansao.tsx` | Emojis em toasts | Texto limpo |
+| `FranqueadoContratos.tsx` | Doc/check/link emojis | Icones Lucide (FileText, CheckCircle, Link) |
+| `clienteData.ts` | Medalhas com emoji | Campo `icon` com nome de icone Lucide |
+| `clienteData.ts` | Timeline e conteudos | Texto limpo |
 
 ---
 
-## Secao Tecnica
+## 3. Redesign dos Componentes Core
 
-### Arquivos modificados na Etapa 1
+### PageHeader (`src/components/PageHeader.tsx`)
+- Titulo: `text-4xl font-black text-black tracking-tighter uppercase italic`
+- Subtitulo: `text-gray-400 font-medium`
+- Seguindo exatamente o estilo "DASHBOARD" da referencia
 
-```
-src/components/ClienteSidebar.tsx    -- Remover itens, compactar
-src/pages/cliente/ClienteInicio.tsx  -- Redesign completo do dashboard
-src/pages/cliente/ClienteChecklist.tsx -- Grupos de prioridade + progresso circular
-src/pages/cliente/ClienteCRM.tsx     -- Painel lateral com Sheet
-src/pages/cliente/ClienteChat.tsx    -- Layout 2 colunas, dropdown de contas
-```
+### KpiCard (`src/components/KpiCard.tsx`)
+- Cards com `rounded-[40px]` e padding `p-8`
+- Shape decorativo no canto superior direito (circulo bg-gray-50)
+- Icone em container `p-4 bg-gray-50 rounded-2xl` com hover scale
+- Badge de trend em pill `bg-green-50 text-green-600 rounded-full`
+- Valor com hover que muda para cor primary (`group-hover:text-primary`)
 
-### Componentes reutilizados
-- Sheet (painel lateral para CRM e Conteudos)
-- Tabs, Card, Badge, Button, Progress (ja existentes)
-- ScrollArea (lista de conversas)
-- Dialog (criacao simplificada)
+### Cards gerais (glass-card utility)
+- Atualizar para `rounded-[32px]` com border sutil
+- Hover: `shadow-xl` + `translate-y-[-2px]`
+- Gradiente top-line no hover (`h-1 bg-gradient-to-r from-primary to-black`)
 
-### Padroes de layout
-- Todas as paginas: `max-w-7xl mx-auto space-y-6`
-- KPIs: `grid grid-cols-2 lg:grid-cols-4 gap-4` com cards compactos
-- PageHeader sempre presente com titulo, subtitulo e acoes
+---
 
-### Ordem de implementacao Etapa 1
-1. ClienteSidebar -- compactar menu
-2. ClienteInicio -- redesign dashboard
-3. ClienteChecklist -- grupos + progresso circular
-4. ClienteCRM -- Sheet lateral
-5. ClienteChat -- 2 colunas
+## 4. Componentes Especificos
+
+### Sidebar (todas as visoes)
+- Manter sidebar escura
+- Section labels: `text-[10px] font-black uppercase tracking-[0.2em]` com cor muted
+- Label "FRANCHISE SYSTEM" como subtitulo decorativo
+
+### Home/Dashboard
+- Aplicar grid de KPI cards com o novo estilo premium
+- Card de agenda com fundo escuro `bg-gray-800 rounded-[48px]`
+- Botoes com `rounded-2xl text-xs font-black uppercase tracking-widest`
+
+### CRM, Chat e demais modulos
+- Aplicar o novo border-radius e spacing
+- Substituir qualquer emoji remanescente
+
+---
+
+## 5. Dark Mode
+
+- Manter as variaveis CSS do dark mode existentes
+- Cards premium: no dark mode usar `bg-card` com border sutil `border-white/5`
+- Garantir que o hover com primary funcione em ambos os temas
+
+---
+
+## Detalhes Tecnicos
+
+### Arquivos que serao modificados:
+1. `src/index.css` - Novas classes utilitarias, ajuste tipografico
+2. `tailwind.config.ts` - Border-radius, font weights
+3. `src/components/PageHeader.tsx` - Estilo titulo impactante
+4. `src/components/KpiCard.tsx` - Redesign completo do card
+5. `src/pages/cliente/ClienteGamificacao.tsx` - Remover emojis
+6. `src/pages/cliente/ClienteAgentesIA.tsx` - Remover emojis
+7. `src/pages/cliente/ClientePlanoVendas.tsx` - Remover emojis
+8. `src/pages/cliente/ClienteConteudos.tsx` - Remover emojis
+9. `src/components/academy/AcademyQuiz.tsx` - Remover emojis
+10. `src/components/academy/AcademyLesson.tsx` - Remover emojis
+11. `src/components/academy/AcademyModuleDetail.tsx` - Remover emojis
+12. `src/pages/CrmExpansao.tsx` - Remover emojis
+13. `src/pages/franqueado/FranqueadoContratos.tsx` - Remover emojis
+14. `src/data/clienteData.ts` - Remover emojis dos dados mock
+15. `src/components/home/HomeAtalhos.tsx` - Aplicar novo estilo de cards
+
+### Principio de design:
+- Tipografia bold/italic/uppercase para titulos = impacto visual
+- Rounded extremo (32-48px) nos cards = modernidade
+- Shapes decorativos sutis = sofisticacao
+- Tracking widest em labels = identidade premium
+- Hover com scale e color transition = interatividade refinada
 
