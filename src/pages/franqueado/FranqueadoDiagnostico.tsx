@@ -8,20 +8,22 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ClipboardCheck, FileText, ChevronRight, BarChart3, AlertTriangle, Lightbulb } from "lucide-react";
+import { ClipboardCheck, FileText, ChevronRight, AlertTriangle } from "lucide-react";
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from "recharts";
 import { getDiagnosticoPerguntas, getDiagnosticosNOE, getFranqueadoLeads, DiagnosticoNOEPergunta } from "@/data/franqueadoData";
 import { toast } from "sonner";
+import { DiagnosticoTermometro } from "@/components/diagnostico/DiagnosticoTermometro";
+import { DiagnosticoSinais } from "@/components/diagnostico/DiagnosticoSinais";
 
+// ── Helpers ──
 function calcularPontuacao(respostas: Record<number, string>, perguntas: DiagnosticoNOEPergunta[]): number {
-  let totalPeso = 0;
-  let totalPontos = 0;
+  let totalPeso = 0, totalPontos = 0;
   perguntas.forEach(p => {
     totalPeso += p.peso;
     const r = respostas[p.id];
     if (!r) return;
-    if (p.tipo === "sim_nao") {
-      totalPontos += r === "Sim" ? p.peso : 0;
-    } else if (p.opcoes) {
+    if (p.tipo === "sim_nao") totalPontos += r === "Sim" ? p.peso : 0;
+    else if (p.opcoes) {
       const idx = p.opcoes.indexOf(r);
       const max = p.opcoes.length - 1;
       if (idx >= 0 && max > 0) totalPontos += (idx / max) * p.peso;
@@ -30,10 +32,11 @@ function calcularPontuacao(respostas: Record<number, string>, perguntas: Diagnos
   return totalPeso > 0 ? Math.round((totalPontos / totalPeso) * 100) : 0;
 }
 
-function getNivel(pontuacao: number): { label: string; color: string } {
-  if (pontuacao <= 40) return { label: "Inicial", color: "bg-red-500" };
-  if (pontuacao <= 70) return { label: "Intermediário", color: "bg-yellow-500" };
-  return { label: "Avançado", color: "bg-green-500" };
+export function getNivelTermometro(pontuacao: number) {
+  if (pontuacao <= 25) return { id: 1, label: "Caótico", cor: "#dc2626", desc: "Tudo é feito no improviso" };
+  if (pontuacao <= 50) return { id: 2, label: "Reativo", cor: "#ea580c", desc: "Ações pontuais sem continuidade" };
+  if (pontuacao <= 75) return { id: 3, label: "Estruturado", cor: "#eab308", desc: "Tem base, falta otimização" };
+  return { id: 4, label: "Analítico", cor: "#16a34a", desc: "Sabe o que dá resultado, falta escala" };
 }
 
 function gerarGargalos(respostas: Record<number, string>, perguntas: DiagnosticoNOEPergunta[]): string[] {
@@ -49,14 +52,6 @@ function gerarGargalos(respostas: Record<number, string>, perguntas: Diagnostico
   });
   return gargalos.slice(0, 5);
 }
-
-const recomendacoesMock = [
-  "Implementar automação de marketing para reduzir CAC",
-  "Estruturar funil de vendas com CRM integrado",
-  "Investir em tráfego pago segmentado por persona",
-  "Criar processo de nutrição de leads por e-mail",
-  "Definir metas SMART com acompanhamento semanal",
-];
 
 export default function FranqueadoDiagnostico() {
   const navigate = useNavigate();
@@ -79,7 +74,7 @@ export default function FranqueadoDiagnostico() {
   const progresso = (Object.keys(respostas).length / perguntas.length) * 100;
 
   const pontuacao = useMemo(() => calcularPontuacao(respostas, perguntas), [respostas, perguntas]);
-  const nivel = getNivel(pontuacao);
+  const nivel = getNivelTermometro(pontuacao);
   const gargalos = useMemo(() => gerarGargalos(respostas, perguntas), [respostas, perguntas]);
 
   const setResposta = (id: number, val: string) => setRespostas(prev => ({ ...prev, [id]: val }));
@@ -90,12 +85,21 @@ export default function FranqueadoDiagnostico() {
     toast.success("Diagnóstico NOE concluído!");
   };
 
+  // Radar data por bloco
+  const radarData = useMemo(() =>
+    blocos.map(bloco => ({
+      area: bloco,
+      pontuacao: calcularPontuacao(respostas, perguntas.filter(p => p.bloco === bloco)),
+      fullMark: 100,
+    })),
+    [respostas, perguntas, blocos]
+  );
+
   // ── RESULTADO ──
   if (concluido) {
     const pontuacaoFinal = diagnosticoExistente?.pontuacao ?? pontuacao;
-    const nivelFinal = diagnosticoExistente ? getNivel(diagnosticoExistente.pontuacao) : nivel;
+    const nivelFinal = getNivelTermometro(diagnosticoExistente?.pontuacao ?? pontuacao);
     const gargalosFinal = diagnosticoExistente?.gargalos ?? gargalos;
-    const recomendacoesFinal = diagnosticoExistente?.recomendacoes ?? recomendacoesMock;
 
     return (
       <div className="max-w-3xl mx-auto space-y-6">
@@ -107,33 +111,35 @@ export default function FranqueadoDiagnostico() {
           }
         />
 
-        {/* Pontuação */}
-        <Card className="glass-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <BarChart3 className="w-8 h-8 text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-3xl font-bold">{pontuacaoFinal}%</span>
-                  <Badge className={`${nivelFinal.color} text-white`}>{nivelFinal.label}</Badge>
-                </div>
-                <Progress value={pontuacaoFinal} className="h-3" />
-              </div>
-            </div>
+        {/* Termômetro Visual */}
+        <DiagnosticoTermometro pontuacao={pontuacaoFinal} nivel={nivelFinal} />
 
-            {/* Detalhes por bloco */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              {blocos.map(bloco => {
-                const pergBloco = perguntas.filter(p => p.bloco === bloco);
-                const pontBloco = calcularPontuacao(respostas, pergBloco);
-                const nvl = getNivel(pontBloco);
+        {/* Sinais do Nível */}
+        <DiagnosticoSinais nivel={nivelFinal} />
+
+        {/* Radar Chart por bloco */}
+        <Card className="glass-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider">📊 Maturidade por Área</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="w-full h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="area" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <Radar name="Pontuação" dataKey="pontuacao" stroke={nivelFinal.cor} fill={nivelFinal.cor} fillOpacity={0.2} strokeWidth={2} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+              {radarData.map(d => {
+                const nvl = getNivelTermometro(d.pontuacao);
                 return (
-                  <div key={bloco} className="text-center p-3 rounded-xl bg-muted/30">
-                    <p className="text-xs text-muted-foreground mb-1">{bloco}</p>
-                    <p className="text-lg font-bold">{pontBloco}%</p>
-                    <div className={`w-2 h-2 rounded-full ${nvl.color} mx-auto mt-1`} />
+                  <div key={d.area} className="text-center p-3 rounded-xl bg-muted/30">
+                    <p className="text-xs text-muted-foreground mb-1">{d.area}</p>
+                    <p className="text-lg font-bold" style={{ color: nvl.cor }}>{d.pontuacao}%</p>
+                    <p className="text-[10px] text-muted-foreground">{nvl.label}</p>
                   </div>
                 );
               })}
@@ -160,26 +166,7 @@ export default function FranqueadoDiagnostico() {
           </CardContent>
         </Card>
 
-        {/* Recomendações */}
-        <Card className="glass-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-              <Lightbulb className="w-4 h-4 text-primary" /> Recomendações Estratégicas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {recomendacoesFinal.map((r, i) => (
-                <li key={i} className="text-sm flex gap-2 items-start">
-                  <span className="text-primary font-bold">{i + 1}.</span>
-                  {r}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Respostas */}
+        {/* Respostas registradas */}
         <Card className="glass-card">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-bold uppercase tracking-wider">Respostas Registradas</CardTitle>
@@ -199,7 +186,7 @@ export default function FranqueadoDiagnostico() {
           </CardContent>
         </Card>
 
-        {/* Seções de Estratégia */}
+        {/* Seções de Estratégia (3 fases) */}
         <DiagnosticoEstrategia
           pontuacao={pontuacaoFinal}
           nivel={nivelFinal.label}
@@ -209,7 +196,7 @@ export default function FranqueadoDiagnostico() {
 
         <div className="flex gap-2">
           <Button size="sm"><FileText className="w-4 h-4 mr-1" /> Exportar PDF</Button>
-          <Button size="sm" variant="outline" onClick={() => navigate(`/franqueado/propostas?leadId=${leadIdParam || ""}`)}>
+          <Button size="sm" variant="outline" onClick={() => navigate(`/franqueado/propostas?leadId=${leadIdParam || ""}&nivel=${nivelFinal.label}`)}>
             <ChevronRight className="w-4 h-4 mr-1" /> Gerar Proposta
           </Button>
         </div>
@@ -270,12 +257,14 @@ export default function FranqueadoDiagnostico() {
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold">{pontuacao}%</p>
-              <Badge className={`${nivel.color} text-white text-[10px]`}>{nivel.label}</Badge>
+              <p className="text-2xl font-bold" style={{ color: nivel.cor }}>{pontuacao}%</p>
+              <Badge style={{ backgroundColor: nivel.cor }} className="text-white text-[10px]">{nivel.label}</Badge>
             </div>
             <div className="flex-1">
-              <Progress value={pontuacao} className="h-2" />
-              <p className="text-xs text-muted-foreground mt-1">Maturidade em tempo real</p>
+              <div className="h-3 rounded-full overflow-hidden" style={{ background: "linear-gradient(90deg, #dc2626, #ea580c, #eab308, #16a34a)" }}>
+                <div className="h-full bg-background/60" style={{ marginLeft: `${pontuacao}%`, width: `${100 - pontuacao}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Termômetro de maturidade em tempo real</p>
             </div>
           </CardContent>
         </Card>
