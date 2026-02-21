@@ -493,13 +493,17 @@ export default function ClientePlanoVendas() {
         {/* ===== ESTRUTURA COMERCIAL ===== */}
         <TabsContent value="estrutura" className="space-y-5">
           {/* Equipe */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Equipe Comercial</CardTitle>
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3 bg-gradient-to-r from-blue-500/10 to-transparent border-b border-blue-500/10">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-blue-500/15"><Users className="w-4 h-4 text-blue-500" /></div>
+                Equipe Comercial
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Quem faz parte da sua operação de vendas</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-4 space-y-5">
               <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Quantas pessoas trabalham no comercial?</Label>
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-blue-500" /> Quantas pessoas trabalham no comercial?</Label>
                 <div className="flex flex-wrap gap-2">
                   {["Só eu", "2-3 pessoas", "4-7 pessoas", "8-15 pessoas", "16+ pessoas"].map(opt => (
                     <Button key={opt} size="sm" variant={estrutura.tamanhoEquipe === opt ? "default" : "outline"}
@@ -507,44 +511,50 @@ export default function ClientePlanoVendas() {
                   ))}
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Tem SDR / Pré-vendas?</Label>
-                <div className="flex gap-2">
-                  {["Sim", "Não", "Pretendo contratar"].map(opt => (
-                    <Button key={opt} size="sm" variant={estrutura.temSDR === opt ? "default" : "outline"}
-                      onClick={() => setEstrutura(p => ({ ...p, temSDR: opt }))}>{opt}</Button>
-                  ))}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-3 rounded-xl bg-muted/30 space-y-2">
+                  <Label className="text-xs font-semibold block">SDR / Pré-vendas</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["Sim", "Não", "Pretendo"].map(opt => (
+                      <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temSDR === opt ? "default" : "outline"}
+                        onClick={() => setEstrutura(p => ({ ...p, temSDR: opt }))}>{opt}</Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Tem Closer / Vendedor dedicado?</Label>
-                <div className="flex gap-2">
-                  {["Sim", "Não", "Eu mesmo fecho"].map(opt => (
-                    <Button key={opt} size="sm" variant={estrutura.temCloser === opt ? "default" : "outline"}
-                      onClick={() => setEstrutura(p => ({ ...p, temCloser: opt }))}>{opt}</Button>
-                  ))}
+                <div className="p-3 rounded-xl bg-muted/30 space-y-2">
+                  <Label className="text-xs font-semibold block">Closer / Vendedor</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["Sim", "Não", "Eu mesmo"].map(opt => (
+                      <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temCloser === opt ? "default" : "outline"}
+                        onClick={() => setEstrutura(p => ({ ...p, temCloser: opt }))}>{opt}</Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Tem CS / Pós-venda?</Label>
-                <div className="flex gap-2">
-                  {["Sim", "Não", "Pretendo implantar"].map(opt => (
-                    <Button key={opt} size="sm" variant={estrutura.temCS === opt ? "default" : "outline"}
-                      onClick={() => setEstrutura(p => ({ ...p, temCS: opt }))}>{opt}</Button>
-                  ))}
+                <div className="p-3 rounded-xl bg-muted/30 space-y-2">
+                  <Label className="text-xs font-semibold block">CS / Pós-venda</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["Sim", "Não", "Pretendo"].map(opt => (
+                      <Button key={opt} size="sm" className="text-xs h-7 px-2.5" variant={estrutura.temCS === opt ? "default" : "outline"}
+                        onClick={() => setEstrutura(p => ({ ...p, temCS: opt }))}>{opt}</Button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Processo */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2"><Layers className="w-4 h-4 text-primary" /> Processo Comercial</CardTitle>
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/10">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/15"><Layers className="w-4 h-4 text-amber-500" /></div>
+                Processo Comercial
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Como funciona sua operação de vendas hoje</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-4 space-y-5">
               <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Seu processo comercial é documentado?</Label>
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-amber-500" /> Processo documentado?</Label>
                 <div className="flex gap-2">
                   {["Sim, completo", "Parcialmente", "Não"].map(opt => (
                     <Button key={opt} size="sm" variant={(estrutura.processoDocumentado && opt === "Sim, completo") || (!estrutura.processoDocumentado && opt === "Não") ? "default" : "outline"}
@@ -553,65 +563,80 @@ export default function ClientePlanoVendas() {
                 </div>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Quais etapas existem no seu funil?</Label>
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-amber-500" /> Quais etapas existem no seu funil?</Label>
                 <div className="flex flex-wrap gap-2">
                   {["Prospecção", "Qualificação", "Apresentação", "Proposta", "Negociação", "Fechamento", "Pós-venda"].map(etapa => (
                     <Button key={etapa} size="sm" variant={estrutura.etapasProcesso.includes(etapa) ? "default" : "outline"}
+                      className={estrutura.etapasProcesso.includes(etapa) ? "" : "border-dashed"}
                       onClick={() => setEstrutura(p => ({
                         ...p,
                         etapasProcesso: p.etapasProcesso.includes(etapa) ? p.etapasProcesso.filter(e => e !== etapa) : [...p.etapasProcesso, etapa]
                       }))}>{etapa}</Button>
                   ))}
                 </div>
+                {estrutura.etapasProcesso.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-1.5">{estrutura.etapasProcesso.length} etapas selecionadas: {estrutura.etapasProcesso.join(" → ")}</p>
+                )}
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Tempo médio de fechamento</Label>
-                <div className="flex flex-wrap gap-2">
-                  {["Até 7 dias", "7-15 dias", "15-30 dias", "30-60 dias", "60+ dias"].map(opt => (
-                    <Button key={opt} size="sm" variant={estrutura.tempoMedioFechamento === opt ? "default" : "outline"}
-                      onClick={() => setEstrutura(p => ({ ...p, tempoMedioFechamento: opt }))}>{opt}</Button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Faz reunião comercial recorrente?</Label>
-                <div className="flex gap-2">
-                  {["Sim", "Não"].map(opt => (
-                    <Button key={opt} size="sm" variant={(estrutura.reuniaoRecorrente && opt === "Sim") || (!estrutura.reuniaoRecorrente && opt === "Não") ? "default" : "outline"}
-                      onClick={() => setEstrutura(p => ({ ...p, reuniaoRecorrente: opt === "Sim" }))}>{opt}</Button>
-                  ))}
-                </div>
-              </div>
-              {estrutura.reuniaoRecorrente && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">Com qual frequência?</Label>
+                  <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-amber-500" /> Tempo médio de fechamento</Label>
                   <div className="flex flex-wrap gap-2">
-                    {["Diária", "Semanal", "Quinzenal", "Mensal"].map(opt => (
-                      <Button key={opt} size="sm" variant={estrutura.frequenciaReuniao === opt ? "default" : "outline"}
-                        onClick={() => setEstrutura(p => ({ ...p, frequenciaReuniao: opt }))}>{opt}</Button>
+                    {["Até 7 dias", "7-15 dias", "15-30 dias", "30-60 dias", "60+ dias"].map(opt => (
+                      <Button key={opt} size="sm" variant={estrutura.tempoMedioFechamento === opt ? "default" : "outline"}
+                        onClick={() => setEstrutura(p => ({ ...p, tempoMedioFechamento: opt }))}>{opt}</Button>
                     ))}
                   </div>
                 </div>
-              )}
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-amber-500" /> Reunião comercial recorrente?</Label>
+                  <div className="flex gap-2">
+                    {["Sim", "Não"].map(opt => (
+                      <Button key={opt} size="sm" variant={(estrutura.reuniaoRecorrente && opt === "Sim") || (!estrutura.reuniaoRecorrente && opt === "Não") ? "default" : "outline"}
+                        onClick={() => setEstrutura(p => ({ ...p, reuniaoRecorrente: opt === "Sim" }))}>{opt}</Button>
+                    ))}
+                  </div>
+                  {estrutura.reuniaoRecorrente && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {["Diária", "Semanal", "Quinzenal", "Mensal"].map(opt => (
+                        <Button key={opt} size="sm" className="text-xs h-7" variant={estrutura.frequenciaReuniao === opt ? "default" : "outline"}
+                          onClick={() => setEstrutura(p => ({ ...p, frequenciaReuniao: opt }))}>{opt}</Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           {/* Canais e Ferramentas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm">Canais de Aquisição</CardTitle></CardHeader>
-              <CardContent className="flex flex-wrap gap-2">
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-3 bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-emerald-500/10">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/15"><TrendingUp className="w-4 h-4 text-emerald-500" /></div>
+                  Canais de Aquisição
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-3 flex flex-wrap gap-2">
                 {CANAIS_OPTIONS.map(c => (
                   <Button key={c} size="sm" variant={estrutura.canaisAquisicao.includes(c) ? "default" : "outline"}
+                    className={estrutura.canaisAquisicao.includes(c) ? "" : "border-dashed"}
                     onClick={() => toggleCanal(c)}>{c}</Button>
                 ))}
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm">Ferramentas Utilizadas</CardTitle></CardHeader>
-              <CardContent className="flex flex-wrap gap-2">
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-3 bg-gradient-to-r from-purple-500/10 to-transparent border-b border-purple-500/10">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-purple-500/15"><Zap className="w-4 h-4 text-purple-500" /></div>
+                  Ferramentas Utilizadas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-3 flex flex-wrap gap-2">
                 {FERRAMENTAS_OPTIONS.map(f => (
                   <Button key={f} size="sm" variant={estrutura.ferramentas.includes(f) ? "default" : "outline"}
+                    className={estrutura.ferramentas.includes(f) ? "" : "border-dashed"}
                     onClick={() => toggleFerramenta(f)}>{f}</Button>
                 ))}
               </CardContent>
