@@ -1,94 +1,147 @@
 
+# Modulo Gestao -- Financeiro Unidade + Meus Contratos (Rewrite Completo)
 
-# Refactor -- Area do Franqueado 100% Independente
+## Visao Geral
 
-## Problema
-
-3 paginas do Franqueado importam dados da area da Franqueadora (`homeData.ts`), quebrando a regra de separacao total:
-
-- `FranqueadoDashboard.tsx` -- importa `getMensagemHoje`, `getProximosEventos`, `getComunicadosAtivos`
-- `FranqueadoAgenda.tsx` -- importa `getProximosEventos`
-- `FranqueadoComunicados.tsx` -- importa `getComunicadosAtivos`
-
-As outras 9 paginas (Suporte, CRM, Propostas, Diagnostico, Prospeccao IA, Materiais, Academy, Financeiro, Contratos) ja estao 100% independentes usando apenas `franqueadoData.ts`.
-
-## Solucao
-
-Adicionar dados proprios em `franqueadoData.ts` e reescrever as 3 paginas para eliminar toda dependencia de `homeData.ts`.
+Reescrever completamente as 2 paginas do modulo Gestao do Franqueado e expandir os dados em `franqueadoData.ts` para suportar:
+- Logica de excedente (quem emitiu a cobranca define a % retida)
+- Dashboard financeiro com 8 KPIs + graficos
+- Entradas detalhadas por cliente
+- Saidas locais do franqueado
+- Fechamentos/DRE com download
+- Alertas automaticos
+- Contratos com filtros, geracao, detalhe rico e alertas de vencimento
 
 ---
 
 ## Arquivo 1: `src/data/franqueadoData.ts`
 
-Adicionar ao final do arquivo existente (sem alterar nada que ja existe):
+### Substituir interfaces e dados existentes
+
+**Substituir `FranqueadoContrato`** para incluir:
+- `valorBase`, `valorExcedente`, `emissorExcedente` ("franqueado" | "matriz" | null)
+- `status` agora inclui "vencendo"
+- `tipo` agora e "Recorrente" | "Unitario"
+- `assinado: boolean`, `propostaId?: string`
+
+**Substituir `FranqueadoFinanceiroResumo`** para incluir:
+- `receitaBruta`, `repasse`, `excedenteGerado`, `excedenteEmitido`
+- `valorLiquidoEstimado`, `royalties`, `sistemaMensalidade`, `resultadoEstimado`
 
 ### Novos tipos
 
-- `FranqueadoMensagemDia` -- { categoria: string, texto: string, autor: string }
-- `FranqueadoEvento` -- { id, titulo, data, hora, tipo, visibilidade: "pessoal"|"unidade"|"rede", editavel: boolean }
-- `FranqueadoComunicado` -- { id, titulo, conteudo, prioridade: "Critica"|"Alta"|"Normal", autorNome, criadoEm, destinatario: "rede"|"unidade", lido: boolean }
+- **`FranqueadoEntrada`**: clienteNome, tipo (Recorrente/Unitario/SaaS/Excedente), valorContrato, repasseValor (20%), excedente, emissorExcedente, valorFinalFranqueado (calculado), statusCobranca, recebido, data
+- **`FranqueadoSaida`**: descricao, tipo, valor, categoria (Pessoas/Estrutura/Marketing/Ferramentas/Outros), mes, status
+- **`FranqueadoFechamento`**: mes, receita, repasse, excedenteFranqueado, royalties, sistema, valorLiquido, status (Disponivel/Pago/Pendente)
+- **`FranqueadoAlertaFinanceiro`**: tipo (warning/info/clock), mensagem
 
 ### Novas funcoes
 
-- `getFranqueadoMensagemDia()` -- retorna mensagem motivacional propria da unidade (nao da franqueadora)
-- `getFranqueadoEventos()` -- retorna 8-10 eventos com mix de visibilidades (pessoal/unidade/rede), onde eventos da rede tem `editavel: false`
-- `getFranqueadoComunicadosUnidade()` -- retorna 6-8 comunicados com conteudo real diferente do titulo, prioridades variadas, campo `lido` inicialmente false
+- `getFranqueadoEntradas()` -- 5 entradas com mix de emissores e status
+- `getFranqueadoSaidas()` -- 5 despesas locais (aluguel, salario, ads, licenca, material)
+- `getFranqueadoFechamentos()` -- 5 meses com status variados
+- `getFranqueadoAlertasFinanceiros()` -- 4 alertas (contrato vencendo, cobranca pendente, fechamento disponivel, DRE aguardando)
+- `getFranqueadoReceitaMensal()` -- 6 meses de receita + repasse para grafico
+
+### Logica do Excedente (regra de negocio)
+
+```text
+Se emissorExcedente === "franqueado":
+  valorFinalFranqueado = (20% do valorBase) + 100% do excedente
+
+Se emissorExcedente === "matriz":
+  valorFinalFranqueado = (20% do valorBase) + 20% do excedente
+
+Se excedente === 0:
+  valorFinalFranqueado = 20% do valorBase
+```
 
 ---
 
-## Arquivo 2: `src/pages/franqueado/FranqueadoDashboard.tsx`
+## Arquivo 2: `src/pages/franqueado/FranqueadoFinanceiro.tsx` (rewrite completo)
 
-Reescrever para eliminar `import ... from "@/data/homeData"`.
+### Estrutura: 4 abas via Tabs component
 
-Mudancas:
-- Mensagem do dia: usar `getFranqueadoMensagemDia()` em vez de `getMensagemHoje()`
-- Eventos: usar `getFranqueadoEventos()` em vez de `getProximosEventos()`
-- Comunicados: usar `getFranqueadoComunicadosUnidade()` em vez de `getComunicadosAtivos()`
-- Adicionar secao "Hoje eu preciso de..." com 4 botoes de atalho rapido (Criar Lead, Abrir Chamado, Ver Propostas, Acessar CRM) que navegam para as rotas do franqueado
-- Manter tudo que ja funciona: KPIs, Metas, Ranking, Chamados (ja usam franqueadoData)
+#### Aba 1 -- Dashboard Financeiro
+- **8 KPI cards** em grid 2x4:
+  - Receita Bruta do Mes
+  - Repasse (20%)
+  - Excedente Gerado
+  - Excedente Emitido por Voce
+  - Valor Liquido Estimado
+  - Royalties (1%)
+  - Sistema Mensalidade
+  - Resultado Estimado
+- **Grafico Recharts** (BarChart): Receita vs Repasse nos ultimos 6 meses
+- **Card de Alertas** com lista dos alertas financeiros (usando AlertCard ou similar)
 
----
+#### Aba 2 -- Entradas
+- Tabela com colunas: Cliente, Tipo, Valor Contrato, 20% Repasse, Excedente, Status Cobranca (quem emitiu), Recebido (sim/nao badge), Data
+- Tooltip ou badge explicando a logica do excedente por linha
+- Totalizador no rodape
 
-## Arquivo 3: `src/pages/franqueado/FranqueadoAgenda.tsx`
+#### Aba 3 -- Saidas
+- Tabela com colunas: Descricao, Tipo, Valor, Categoria, Mes, Status
+- Filtro por categoria (tabs secundarias ou badges)
+- Totalizador
+- Texto explicativo: "Gestao interna da unidade -- nao interfere no financeiro da matriz"
 
-Reescrever para eliminar `import ... from "@/data/homeData"`.
-
-Mudancas:
-- Usar `getFranqueadoEventos()` em vez de `getProximosEventos()`
-- Filtrar por visibilidade real dos eventos (Pessoal/Unidade/Rede) usando o campo `visibilidade`
-- Mostrar badge "Somente leitura" nos eventos da rede
-- Botao "Novo Evento" so habilitado para pessoal/unidade
-- Formulario simples inline para criar evento (titulo, data, tipo, visibilidade pessoal ou unidade)
-
----
-
-## Arquivo 4: `src/pages/franqueado/FranqueadoComunicados.tsx`
-
-Reescrever para eliminar `import ... from "@/data/homeData"`.
-
-Mudancas:
-- Usar `getFranqueadoComunicadosUnidade()` em vez de `getComunicadosAtivos()`
-- Exibir conteudo real de cada comunicado (campo `conteudo`, nao repetir o titulo)
-- Adicionar filtros por prioridade (Todas/Critica/Alta/Normal) e status (Todos/Nao lidos/Lidos)
-- Contador de nao lidos no topo
-- Detalhe do comunicado ao clicar (view com conteudo completo em tela separada)
-- Manter botao "Confirmar leitura" funcional
-- Somente leitura -- sem edicao, sem exclusao
+#### Aba 4 -- Fechamentos (DRE)
+- Tabela com colunas: Mes, Receita, Repasse, Excedente Franqueado, Royalties, Sistema, Valor Liquido, Status
+- Badge de status colorido (Disponivel = azul, Pago = verde, Pendente = amarelo)
+- Botoes de download PDF e Excel por linha
+- Somente leitura -- sem edicao
 
 ---
 
-## Resultado Final
+## Arquivo 3: `src/pages/franqueado/FranqueadoContratos.tsx` (rewrite completo)
 
-Zero imports de `homeData.ts` nas paginas do Franqueado. Todas as 12 paginas usam exclusivamente `franqueadoData.ts`. A area do Franqueado funciona como aplicacao completamente independente.
+### Estrutura: 3 abas + detalhe
+
+#### Aba 1 -- Lista de Contratos
+- **4 KPI cards**: Contratos Ativos, Receita Recorrente, Vencendo em 15 dias, Pendentes (sem assinatura)
+- **Filtros**: Status (todos/ativo/vencendo/pendente/encerrado), Tipo (todos/recorrente/unitario)
+- **Tabela** com colunas: Cliente, Tipo, Valor Base, Excedente, Data Inicio, Data Vencimento, Status, Assinado
+- Clicar na linha abre o detalhe (aba 3)
+- Status badges coloridos (ativo=verde, vencendo=laranja, pendente=amarelo, encerrado=cinza)
+
+#### Aba 2 -- Gerar Novo Contrato
+- Formulario com campos:
+  - Select de cliente (do CRM -- getFranqueadoLeads)
+  - Select de proposta vinculada (getFranqueadoPropostas, filtrado por status aceita)
+  - Valor base (auto-preenchido da proposta)
+  - Valor excedente (input numerico)
+  - Forma de cobranca (select: Franqueado / Matriz)
+  - Prazo (select: 6 meses / 12 meses / 24 meses)
+  - Tipo (Recorrente / Unitario)
+- Botao "Gerar Contrato" (mock -- adiciona toast de sucesso)
+- Botao "Baixar PDF" (mock)
+
+#### Aba 3 -- Detalhe do Contrato (exibido ao clicar em um contrato)
+- Card com todos os dados: cliente, valor base, excedente, % repasse calculado, emissor, data inicio, vencimento, status assinatura
+- Historico placeholder (lista de eventos)
+- Botoes: Download PDF, Anexar Assinado (mock upload)
+- Botao Voltar retorna para aba 1
+
+#### Alertas (exibidos na aba 1)
+- Card de alertas: contratos vencendo em 15 dias, contratos sem assinatura, cliente sem cobranca emitida
+
+---
 
 ## Arquivos modificados
 
 ```text
-src/data/franqueadoData.ts                        -- adicionar 3 tipos + 3 funcoes
-src/pages/franqueado/FranqueadoDashboard.tsx       -- reescrever sem homeData
-src/pages/franqueado/FranqueadoAgenda.tsx          -- reescrever sem homeData
-src/pages/franqueado/FranqueadoComunicados.tsx     -- reescrever sem homeData
+src/data/franqueadoData.ts                        -- substituir interfaces + adicionar 6 novas funcoes
+src/pages/franqueado/FranqueadoFinanceiro.tsx      -- rewrite completo com 4 abas
+src/pages/franqueado/FranqueadoContratos.tsx       -- rewrite completo com 3 abas + detalhe
 ```
 
 Nenhum arquivo da franqueadora e tocado.
 
+---
+
+## Ordem de implementacao
+
+1. `franqueadoData.ts` -- novos tipos, dados e funcoes
+2. `FranqueadoFinanceiro.tsx` -- 4 abas completas com graficos e alertas
+3. `FranqueadoContratos.tsx` -- lista com filtros, gerador, detalhe e alertas
