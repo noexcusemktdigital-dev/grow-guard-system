@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { DollarSign, Plus, Sparkles, Target, BarChart3 } from "lucide-react";
+import { DollarSign, Plus, Sparkles, Target, BarChart3, CheckCircle2, Circle, ArrowRight, ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { getTrafegoPagoData } from "@/data/clienteData";
@@ -58,20 +58,191 @@ const statusColors: Record<string, string> = {
   Finalizada: "bg-muted text-muted-foreground",
 };
 
+const WIZARD_STEPS = [
+  { title: "Plataforma & Objetivo", description: "Escolha onde anunciar e o que deseja alcançar" },
+  { title: "Público & Segmentação", description: "Defina quem verá seus anúncios" },
+  { title: "Orçamento & Duração", description: "Configure investimento e período" },
+  { title: "Criativo & Copy", description: "Adicione texto e criativos do anúncio" },
+  { title: "Revisão & Publicação", description: "Confira tudo antes de publicar" },
+];
+
 export default function ClienteTrafegoPago() {
   const data = useMemo(() => getTrafegoPagoData(), []);
   const [period, setPeriod] = useState("30d");
   const [createOpen, setCreateOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
   const [aiSuggestion, setAiSuggestion] = useState(false);
+
+  // Wizard form state
+  const [wizardData, setWizardData] = useState({
+    platform: "Meta",
+    objective: "leads",
+    name: "",
+    audience: "",
+    dailyBudget: "",
+    duration: "",
+    copy: "",
+  });
 
   const totalSpent = mockCampaigns.reduce((s, c) => s + c.spent, 0);
   const totalLeads = mockCampaigns.reduce((s, c) => s + c.leads, 0);
   const avgCPC = (mockCampaigns.reduce((s, c) => s + c.cpc, 0) / mockCampaigns.length).toFixed(2);
   const avgROI = Math.round(mockCampaigns.filter(c => c.status === "Ativa").reduce((s, c) => s + c.roi, 0) / mockCampaigns.filter(c => c.status === "Ativa").length);
 
+  const openWizard = () => {
+    setWizardStep(0);
+    setAiSuggestion(false);
+    setWizardData({ platform: "Meta", objective: "leads", name: "", audience: "", dailyBudget: "", duration: "", copy: "" });
+    setCreateOpen(true);
+  };
+
   const generateStructure = () => {
     setAiSuggestion(true);
     toast({ title: "Estrutura gerada!", description: "IA sugeriu estrutura de campanha com segmentação e copy." });
+  };
+
+  const renderWizardContent = () => {
+    switch (wizardStep) {
+      case 0:
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Plataforma</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {["Meta", "Google"].map(p => (
+                  <div
+                    key={p}
+                    className={`p-4 border rounded-xl cursor-pointer transition-all text-center ${
+                      wizardData.platform === p ? "border-primary bg-primary/5 shadow-sm" : "hover:bg-muted/30"
+                    }`}
+                    onClick={() => setWizardData(d => ({ ...d, platform: p }))}
+                  >
+                    <Badge className={`text-xs ${platformColors[p]}`}>{p} Ads</Badge>
+                    <p className="text-[10px] text-muted-foreground mt-2">{p === "Meta" ? "Facebook & Instagram" : "Search & Display"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Objetivo</Label>
+              <Select value={wizardData.objective} onValueChange={v => setWizardData(d => ({ ...d, objective: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="leads">Geração de Leads</SelectItem>
+                  <SelectItem value="conversao">Conversão</SelectItem>
+                  <SelectItem value="trafego">Tráfego</SelectItem>
+                  <SelectItem value="reconhecimento">Reconhecimento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Nome da Campanha</Label>
+              <Input value={wizardData.name} onChange={e => setWizardData(d => ({ ...d, name: e.target.value }))} placeholder="Ex: Search Produto X" />
+            </div>
+          </div>
+        );
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Público-alvo</Label>
+              <Textarea value={wizardData.audience} onChange={e => setWizardData(d => ({ ...d, audience: e.target.value }))} placeholder="Descreva o público-alvo..." rows={3} />
+            </div>
+            <Button variant="outline" className="w-full gap-2" onClick={generateStructure}>
+              <Sparkles className="w-4 h-4" /> Sugerir Segmentação com IA
+            </Button>
+            {aiSuggestion && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="py-3 space-y-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    <span className="font-semibold">Segmentação Sugerida</span>
+                  </div>
+                  <div><span className="font-medium">Grupo 1:</span> Lookalike 1% — Clientes ativos</div>
+                  <div><span className="font-medium">Grupo 2:</span> Interesse — Marketing Digital + CRM</div>
+                  <div><span className="font-medium">Grupo 3:</span> Remarketing — Visitantes site 30 dias</div>
+                  <div><span className="font-medium">Faixa etária:</span> 25-55 anos, Empresários</div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        );
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Orçamento Diário (R$)</Label>
+                <Input type="number" value={wizardData.dailyBudget} onChange={e => setWizardData(d => ({ ...d, dailyBudget: e.target.value }))} placeholder="50" />
+              </div>
+              <div className="space-y-2">
+                <Label>Duração (dias)</Label>
+                <Input type="number" value={wizardData.duration} onChange={e => setWizardData(d => ({ ...d, duration: e.target.value }))} placeholder="30" />
+              </div>
+            </div>
+            {wizardData.dailyBudget && wizardData.duration && (
+              <Card>
+                <CardContent className="py-3">
+                  <p className="text-xs text-muted-foreground">Investimento Total Estimado</p>
+                  <p className="text-2xl font-bold text-primary">R$ {(Number(wizardData.dailyBudget) * Number(wizardData.duration)).toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">R$ {wizardData.dailyBudget}/dia × {wizardData.duration} dias</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        );
+      case 3:
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Copy do Anúncio</Label>
+              <Textarea value={wizardData.copy} onChange={e => setWizardData(d => ({ ...d, copy: e.target.value }))} placeholder="Headline e descrição do anúncio..." rows={4} />
+            </div>
+            <Button variant="outline" className="w-full gap-2" onClick={() => {
+              setWizardData(d => ({ ...d, copy: "🚀 Automatize suas vendas e triplique seus resultados. CRM + Marketing + IA em uma só plataforma. Agende uma demo gratuita!" }));
+              toast({ title: "Copy gerado com IA!" });
+            }}>
+              <Sparkles className="w-4 h-4" /> Gerar Copy com IA
+            </Button>
+          </div>
+        );
+      case 4:
+        return (
+          <div className="space-y-4">
+            <p className="text-xs font-medium text-muted-foreground">Revisão da Campanha</p>
+            <div className="space-y-2">
+              <div className="flex justify-between p-3 rounded-lg bg-muted/30 border text-sm">
+                <span className="text-muted-foreground">Plataforma</span>
+                <Badge className={`text-[10px] ${platformColors[wizardData.platform]}`}>{wizardData.platform} Ads</Badge>
+              </div>
+              <div className="flex justify-between p-3 rounded-lg bg-muted/30 border text-sm">
+                <span className="text-muted-foreground">Objetivo</span>
+                <span className="font-medium capitalize">{wizardData.objective}</span>
+              </div>
+              <div className="flex justify-between p-3 rounded-lg bg-muted/30 border text-sm">
+                <span className="text-muted-foreground">Nome</span>
+                <span className="font-medium">{wizardData.name || "—"}</span>
+              </div>
+              <div className="flex justify-between p-3 rounded-lg bg-muted/30 border text-sm">
+                <span className="text-muted-foreground">Orçamento Total</span>
+                <span className="font-medium text-primary">R$ {wizardData.dailyBudget && wizardData.duration ? (Number(wizardData.dailyBudget) * Number(wizardData.duration)).toLocaleString() : "—"}</span>
+              </div>
+              <div className="flex justify-between p-3 rounded-lg bg-muted/30 border text-sm">
+                <span className="text-muted-foreground">Duração</span>
+                <span className="font-medium">{wizardData.duration ? `${wizardData.duration} dias` : "—"}</span>
+              </div>
+            </div>
+            {wizardData.copy && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Copy</p>
+                <p className="text-sm bg-muted/30 p-3 rounded-lg border">{wizardData.copy}</p>
+              </div>
+            )}
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -87,7 +258,7 @@ export default function ClienteTrafegoPago() {
                 <Button key={p} variant={period === p ? "default" : "outline"} size="sm" className="text-xs" onClick={() => setPeriod(p)}>{p}</Button>
               ))}
             </div>
-            <Button size="sm" onClick={() => { setCreateOpen(true); setAiSuggestion(false); }}>
+            <Button size="sm" onClick={openWizard}>
               <Plus className="w-4 h-4 mr-1" /> Nova Campanha
             </Button>
           </div>
@@ -148,7 +319,6 @@ export default function ClienteTrafegoPago() {
             </Card>
           </div>
 
-          {/* Platform breakdown */}
           <div className="grid grid-cols-2 gap-4">
             {(["Meta", "Google"] as const).map(platform => {
               const camps = mockCampaigns.filter(c => c.platform === platform);
@@ -206,74 +376,69 @@ export default function ClienteTrafegoPago() {
         </TabsContent>
       </Tabs>
 
-      {/* Create Campaign Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Nova Campanha de Tráfego</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Plataforma</Label>
-                <Select defaultValue="Meta"><SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Meta">Meta Ads</SelectItem>
-                    <SelectItem value="Google">Google Ads</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Objetivo</Label>
-                <Select defaultValue="leads"><SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="leads">Geração de Leads</SelectItem>
-                    <SelectItem value="conversao">Conversão</SelectItem>
-                    <SelectItem value="trafego">Tráfego</SelectItem>
-                    <SelectItem value="reconhecimento">Reconhecimento</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2"><Label>Nome da Campanha</Label><Input placeholder="Ex: Search Produto X" /></div>
-            <div className="space-y-2"><Label>Público-alvo</Label><Textarea placeholder="Descreva o público..." rows={2} /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Orçamento Diário (R$)</Label><Input type="number" placeholder="50" /></div>
-              <div className="space-y-2"><Label>Duração (dias)</Label><Input type="number" placeholder="30" /></div>
-            </div>
-            <div className="space-y-2"><Label>Criativo / Copy do Anúncio</Label><Textarea placeholder="Headline e descrição do anúncio..." rows={2} /></div>
+      {/* Wizard Sheet */}
+      <Sheet open={createOpen} onOpenChange={setCreateOpen}>
+        <SheetContent className="sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Nova Campanha de Tráfego</SheetTitle>
+          </SheetHeader>
 
-            <Button variant="outline" className="w-full gap-2" onClick={generateStructure}>
-              <Sparkles className="w-4 h-4" /> Gerar Estrutura com IA
-            </Button>
-
-            {aiSuggestion && (
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="py-3 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-semibold">Estrutura Sugerida</span>
+          <div className="mt-6">
+            {/* Wizard step indicators */}
+            <div className="flex items-center justify-between mb-6">
+              {WIZARD_STEPS.map((step, idx) => (
+                <div key={idx} className="flex items-center">
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-xs font-bold transition-all cursor-pointer ${
+                      idx < wizardStep ? "bg-primary border-primary text-primary-foreground" :
+                      idx === wizardStep ? "border-primary text-primary" :
+                      "border-muted-foreground/30 text-muted-foreground/50"
+                    }`}
+                    onClick={() => idx <= wizardStep && setWizardStep(idx)}
+                  >
+                    {idx < wizardStep ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
                   </div>
-                  <div className="space-y-2 text-xs">
-                    <div><span className="font-medium">Campanha:</span> Conversão — Geração de Leads Qualificados</div>
-                    <div><span className="font-medium">Grupo 1:</span> Lookalike 1% — Clientes ativos</div>
-                    <div><span className="font-medium">Grupo 2:</span> Interesse — Marketing Digital + CRM</div>
-                    <div><span className="font-medium">Grupo 3:</span> Remarketing — Visitantes site 30 dias</div>
-                    <div className="pt-2 border-t">
-                      <span className="font-medium">Copy sugerida:</span>
-                      <p className="mt-1 text-muted-foreground">"🚀 Automatize suas vendas e triplique seus resultados. CRM + Marketing + IA em uma só plataforma. Agende uma demo gratuita!"</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Segmentação:</span>
-                      <p className="text-muted-foreground">25-55 anos, Empresários, Marketing Digital, Gestão Empresarial</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  {idx < WIZARD_STEPS.length - 1 && (
+                    <div className={`w-6 h-0.5 mx-0.5 ${idx < wizardStep ? "bg-primary" : "bg-muted-foreground/20"}`} />
+                  )}
+                </div>
+              ))}
+            </div>
 
-            <Button className="w-full" onClick={() => { toast({ title: "Campanha criada!" }); setCreateOpen(false); }}>Criar Campanha</Button>
+            {/* Step title */}
+            <div className="mb-5">
+              <h3 className="text-sm font-semibold">{WIZARD_STEPS[wizardStep].title}</h3>
+              <p className="text-xs text-muted-foreground">{WIZARD_STEPS[wizardStep].description}</p>
+            </div>
+
+            {/* Step content */}
+            {renderWizardContent()}
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setWizardStep(Math.max(0, wizardStep - 1))}
+                disabled={wizardStep === 0}
+                className="gap-1"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Anterior
+              </Button>
+              <span className="text-xs text-muted-foreground">{wizardStep + 1} / {WIZARD_STEPS.length}</span>
+              {wizardStep < WIZARD_STEPS.length - 1 ? (
+                <Button size="sm" onClick={() => setWizardStep(wizardStep + 1)} className="gap-1">
+                  Próximo <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => { toast({ title: "Campanha criada!" }); setCreateOpen(false); }}>
+                  Publicar
+                </Button>
+              )}
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
