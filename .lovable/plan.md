@@ -1,176 +1,150 @@
 
-# Reestruturacao do Modulo Comercial (Franqueado)
 
-## Resumo
+# Rewrite Calculadora e Proposta -- Estilo Calculadora NOE
 
-Reorganizar a secao "Comercial AI" na sidebar para a ordem correta e renomear itens, depois reescrever completamente os 4 modulos: CRM de Vendas (nucleo com indicadores de vinculacao), Prospeccao IA (planejamento + scripts), Diagnostico NOE (questionario estruturado com calculo de maturidade), e Gerador de Proposta (estrategia + calculadora).
+## Objetivo
+
+Reescrever a aba "Calculadora" do Gerador de Proposta para seguir exatamente o layout e estrutura de servicos do site de referencia (calcculadoranoe.lovable.app), mantendo a parte de excedente que ja existe no sistema atual.
 
 ---
 
-## Mudancas
+## O que muda
 
-### 1. Sidebar (`src/components/FranqueadoSidebar.tsx`)
+### Layout da Calculadora (aba "Calculadora")
 
-Reordenar e renomear a secao "Comercial AI" para "Comercial":
+**ANTES**: Grid simples com 7 checkboxes genericos (Marketing Digital, SEO, Trafego, etc.) e valor fixo por item.
 
-```text
-ANTES:                              DEPOIS:
-- Prospeccao IA                     - CRM de Vendas
-- Diagnostico Maiar                 - Prospeccao IA
-- Gerador de Propostas              - Diagnostico NOE
-- CRM de Vendas                     - Gerador de Proposta
-```
+**DEPOIS**: Servicos organizados por modulos em **Accordion** (colapsaveis), cada modulo com header colorido (vermelho), icone e descricao. Dentro de cada modulo, cada servico tem:
+- Nome do servico
+- Badge "Unitario" ou "Mensal"
+- Descricao detalhada (texto truncado com expand)
+- Switch (toggle) para ativar/desativar
 
-Rotas permanecem as mesmas.
+### Modulos e Servicos (conforme referencia)
 
-### 2. CRM de Vendas (`src/pages/franqueado/FranqueadoCRM.tsx`) -- Rewrite
+**Branding** (Identidade visual e materiais de marca)
+- Logo + Manual de Marca (Unitario)
+- Material de Marca (Unitario)
+- Midia Off (Unitario)
+- Naming (Unitario)
+- Registro INPI (Unitario)
+- Ebook (Unitario)
+- Apresentacao Comercial (Unitario)
 
-O CRM ja existe e funciona. As mudancas sao:
+**Social Media** (Conteudo organico e gestao de redes sociais)
+- Artes / Criativos Organicos (Mensal)
+- Videos / Reels (Mensal)
+- Programacao Meta (Mensal)
+- Programacao LinkedIn (Mensal)
+- Programacao TikTok (Mensal)
+- Programacao YouTube (Mensal)
+- Capa de Destaques (Unitario)
+- Criacao de Avatar (Unitario)
+- Template Canva (Unitario)
+- Edicao de Video YouTube (Unitario)
 
-**No Kanban (cards de lead):**
-- Adicionar indicadores visuais de vinculacao em cada card:
-  - Icone check verde: "Diagnostico feito"
-  - Icone check azul: "Proposta gerada"
-  - Icone check laranja: "Proposta aceita"
-  - Icone check roxo: "Contrato ativo"
-- Manter botoes existentes de "Gerar Proposta" (Sheet) e "Converter em Contrato" (Dialog)
+**Performance** (Gestao de trafego pago e campanhas)
+- Gestao de Trafego Meta (Mensal)
+- Gestao de Trafego Google (Mensal)
+- Gestao de Trafego LinkedIn (Mensal)
+- Gestao de Trafego TikTok (Mensal)
+- Configuracao Google Meu Negocio (Unitario)
+- Artes de Campanha (Mensal)
+- Videos de Campanha (Mensal)
 
-**No detalhe do lead:**
-- Adicionar secao "Historico do Lead" com timeline visual mostrando:
-  - Data de criacao
-  - Diagnostico NOE (se vinculado) com link para ver
-  - Proposta (se vinculada) com link para ver
-  - Contrato (se convertido)
-- Adicionar campo `notas` editavel (textarea)
-- Adicionar secao "Tarefas" (lista simples com checkbox, titulo, data)
-- Adicionar botao "Iniciar Diagnostico NOE" que navega para `/franqueado/diagnostico?leadId=X`
+**Web** (Sites, landing pages e e-commerce)
+- Pagina de Site + SEO (Unitario)
+- Landing Page Link na Bio (Unitario)
+- Landing Page VSL (Unitario)
+- Landing Page Vendas (Unitario)
+- Landing Page Captura (Unitario)
+- Landing Page Ebook (Unitario)
+- Alterar Contato (Unitario)
+- Alterar Secao (Unitario)
+- E-commerce WooCommerce (Unitario)
 
-**Dados (`franqueadoData.ts`):**
-- Adicionar campo `diagnosticoId?: string` na interface `FranqueadoLead`
-- Adicionar campo `contratoId?: string` na interface `FranqueadoLead`
-- Vincular leads mock: L-7 (Marcos Silva) com diagnosticoId e contratoId
+**Dados / CRM** (Configuracao de CRM e automacoes)
+- Configuracao CRM + Acompanhamento RD Station (Unitario)
+- Fluxo/Funil - Etapas de venda + roteiro comercial (Unitario)
 
-### 3. Prospeccao IA (`src/pages/franqueado/FranqueadoProspeccaoIA.tsx`) -- Rewrite
+Cada servico tera um valor pre-definido (mock) que sera somado ao valor base quando selecionado.
 
-Substituir o gerador de mensagens simples por duas abas:
+### Secao de Valores (mantida + melhorada)
 
-**Aba A: Planejamento de Prospeccao**
-- Formulario com campos: Regiao, Nicho, Meta mensal, Produto foco, Ticket medio desejado, Tipo de abordagem
-- Botao "Gerar Plano" que retorna (mock): ideias de prospeccao, plano de acao, canais recomendados, abordagens sugeridas
-- Botao "Criar Lead no CRM" que navega para `/franqueado/crm` (ou abre sheet inline)
-
-**Aba B: Script Comercial**
-- Formulario com campos: Perfil do cliente, Objecoes comuns, Canal de contato
-- Botao "Gerar Script" que retorna (mock): script inicial, perguntas estrategicas, quebra de objecoes, CTA final
-- Botao "Copiar" e "Salvar vinculado ao lead" (select de leads existentes)
-
-### 4. Diagnostico NOE (`src/pages/franqueado/FranqueadoDiagnostico.tsx`) -- Rewrite
-
-Renomear de "Diagnostico Maiar" para "Diagnostico NOE". Reestruturar completamente:
-
-**Questionario expandido em 4 blocos:**
-
-Bloco Marketing:
-- Investimento atual em marketing (faixa de valor)
-- Canais ativos (multiselect)
-- Volume de leads mensal (faixa)
-- CAC estimado (faixa de valor)
-
-Bloco Comercial:
-- Processo de vendas estruturado? (sim/nao)
-- Taxa de conversao estimada (%)
-- Tamanho da equipe comercial (numero)
-- Estrutura de atendimento (opcoes)
-
-Bloco Receita:
-- Receita mensal atual (faixa)
-- Ticket medio (faixa)
-- Quantidade de clientes ativos (faixa)
-- Time interno (numero)
-
-Bloco Objetivos:
-- Meta de crescimento (%)
-- Prazo para atingir meta (meses)
-- Meta de faturamento (valor)
-
-**Calculo de maturidade:**
-- Sistema pontua cada resposta (peso por bloco)
-- Gera nivel: Inicial (0-40%), Intermediario (41-70%), Avancado (71-100%)
-- Exibe barra de progresso colorida e label do nivel
-
-**Resultado do Diagnostico:**
-- Card com pontuacao, nivel de maturidade, badge colorido
-- Lista de principais gargalos identificados (gerados automaticamente com base nas respostas fracas)
-- Recomendacoes estrategicas (3-5 bullet points mock)
-- Botao "Exportar PDF"
-- Botao "Gerar Proposta" que navega para `/franqueado/propostas?leadId=X&diagnosticoId=Y`
-- Diagnostico fica salvo e vinculado ao lead
-
-**Aceita query param `?leadId=X`:**
-- Pre-preenche nome e empresa do lead
-- Vincula automaticamente ao retornar
-
-### 5. Gerador de Proposta (`src/pages/franqueado/FranqueadoPropostas.tsx`) -- Rewrite
-
-Reestruturar em duas abas dentro da mesma pagina:
-
-**Aba A: Estrategia**
-- Se diagnosticoId presente via query param, carrega dados do diagnostico
-- Exibe apresentacao executiva com:
-  - Objetivos identificados (do diagnostico)
-  - Plano de acao recomendado (mock, 3-5 itens)
-  - Projecao de resultados (mini tabela: mes 1/3/6/12)
-  - Justificativa tecnica (texto mock)
-- Visual tipo apresentacao com cards separados por secao
-
-**Aba B: Calculadora (ja existe parcialmente no drawer do CRM)**
-- Campos: Entregas selecionadas (checkboxes: Marketing Digital, SEO, Trafego Pago, Gestao de Redes, CRM, Branding, Consultoria)
-- Valor base (calculado ou editavel)
-- Excedente
+Abaixo dos modulos accordion, a secao "Valores" permanece com:
+- Toggle "Valor base manual" (se nao, calcula pela soma dos servicos selecionados)
+- Valor Base (R$)
+- **Excedente (R$)** -- campo que NAO existe na referencia, mas deve continuar aqui
 - Recorrencia (mensal/trimestral/semestral/anual)
-- Prazo
-- Emissor da cobranca
-- Calculo automatico:
-  - Valor total
-  - Repasse 20%
-  - Projecao da unidade
-  - Impacto financeiro estimado (12 meses)
+- Prazo (6/12/18/24 meses)
+- Emissor da cobranca (Franqueado / Matriz)
 
-**Botao "Gerar Proposta":**
-- Cria proposta na lista
-- Toast de sucesso
-- Opcao de "Converter em Contrato" na mesma tela (para propostas aceitas)
+### Resumo Financeiro (mantido)
 
-**Lista de propostas existentes permanece abaixo** (tabela atual)
+Card de resumo com:
+- Valor Total
+- Repasse 20%
+- Projecao Unidade
+- Impacto 12 meses
 
-### 6. Dados (`src/data/franqueadoData.ts`)
+### Resumo de Servicos Selecionados
 
-Mudancas na camada de dados:
+Antes do botao "Gerar Proposta", exibir lista dos servicos selecionados com seus valores, similar ao rodape da referencia ("Nenhum servico selecionado" quando vazio).
 
-- Adicionar `diagnosticoId?: string` e `contratoId?: string` em `FranqueadoLead`
-- Adicionar interface `FranqueadoDiagnosticoNOE` com campos: id, leadId, leadNome, empresa, blocos (marketing, comercial, receita, objetivos), pontuacao, nivel, gargalos, recomendacoes, criadoEm
-- Adicionar funcao `getDiagnosticosNOE()` com 2 diagnosticos mock vinculados a leads existentes
-- Atualizar `getDiagnosticoPerguntas()` para retornar os 4 blocos novos (Marketing, Comercial, Receita, Objetivos) com as perguntas especificadas
-- Vincular lead L-7 com diagnosticoId e contratoId nos dados mock
+### Aba Estrategia e Lista de Propostas
+
+Permanecem inalteradas.
 
 ---
 
-## Arquivos Modificados
+## Secao Tecnica
 
-```text
-src/components/FranqueadoSidebar.tsx               -- reordenar secao Comercial
-src/data/franqueadoData.ts                         -- novos campos, interface DiagnosticoNOE, perguntas expandidas
-src/pages/franqueado/FranqueadoCRM.tsx              -- indicadores visuais, historico, tarefas no detalhe
-src/pages/franqueado/FranqueadoProspeccaoIA.tsx     -- rewrite: 2 abas (Planejamento + Script)
-src/pages/franqueado/FranqueadoDiagnostico.tsx      -- rewrite: NOE com 4 blocos, maturidade, gargalos
-src/pages/franqueado/FranqueadoPropostas.tsx        -- rewrite: 2 abas (Estrategia + Calculadora) + lista
+### Componentes utilizados
+- `Accordion` (radix) para os modulos colapsaveis
+- `Switch` (radix) para toggle de cada servico em vez de Checkbox
+- `Badge` para "Unitario" / "Mensal"
+- Os demais componentes (Card, Input, Select, etc.) permanecem
+
+### Dados dos servicos
+
+Criar um array `servicosNOE` diretamente no arquivo `FranqueadoPropostas.tsx` com a estrutura:
+
+```ts
+type ServicoNOE = {
+  id: string;
+  nome: string;
+  tipo: "unitario" | "mensal";
+  descricao: string;
+  valor: number;
+};
+
+type ModuloNOE = {
+  id: string;
+  nome: string;
+  descricao: string;
+  icone: string; // lucide icon name
+  servicos: ServicoNOE[];
+};
 ```
 
-## Ordem de Implementacao
+### Arquivo modificado
 
-1. `FranqueadoSidebar.tsx` -- reordenar e renomear
-2. `franqueadoData.ts` -- novos campos e dados
-3. `FranqueadoCRM.tsx` -- indicadores e historico
-4. `FranqueadoProspeccaoIA.tsx` -- planejamento + script
-5. `FranqueadoDiagnostico.tsx` -- NOE completo
-6. `FranqueadoPropostas.tsx` -- estrategia + calculadora
+```
+src/pages/franqueado/FranqueadoPropostas.tsx    -- rewrite da aba Calculadora
+```
+
+Nenhum outro arquivo e alterado.
+
+### Logica de calculo
+
+- `valorCalculado` = soma dos valores dos servicos selecionados (servicos mensais somam direto, unitarios somam direto tambem)
+- `valorFinal` = valorBaseManual ? valorBase : valorCalculado (igual ao atual)
+- `excedente`, `repasse20`, `projecaoUnidade`, `impacto12` = logica atual mantida integralmente
+
+### Ordem de implementacao
+
+1. Substituir o array `entregasDisponiveis` pelo novo `modulosNOE` com todos os servicos detalhados
+2. Reescrever a secao de entregas na aba Calculadora usando Accordion + Switch
+3. Adicionar secao "Servicos Selecionados" (resumo) antes do botao Gerar Proposta
+4. Manter inalterados: aba Estrategia, detalhe da proposta, lista de propostas, dialogs
+
