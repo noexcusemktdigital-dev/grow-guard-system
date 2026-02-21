@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
 import { TopSwitch } from "@/components/TopSwitch";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { GlobalSearch } from "@/components/GlobalSearch";
+import { NotificationBell } from "@/components/NotificationBell";
+import { UserMenu } from "@/components/UserMenu";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 const Index = () => {
   const [level, setLevel] = useState("FRANQUEADORA");
   const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
 
   // Sync level with current path
   useEffect(() => {
@@ -37,9 +36,16 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-center py-3 px-4 relative">
-          <TopSwitch active={level} onChange={handleLevelChange} />
-          <div className="absolute right-4">
+        <div className="flex items-center justify-between py-3 px-4">
+          <div className="flex-1 flex items-center">
+            <GlobalSearch />
+          </div>
+          <div className="flex items-center justify-center">
+            <TopSwitch active={level} onChange={handleLevelChange} />
+          </div>
+          <div className="flex-1 flex items-center justify-end gap-1">
+            <NotificationBell />
+            <UserMenu level={level} />
             <ThemeToggle />
           </div>
         </div>
