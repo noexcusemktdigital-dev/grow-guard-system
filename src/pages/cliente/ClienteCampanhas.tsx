@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Rocket, Plus, FileText, Megaphone, Globe, Send, ChevronDown, ChevronUp } from "lucide-react";
+import { Rocket, Plus, FileText, Megaphone, Globe, Send, ChevronDown, ChevronUp, Sparkles, Target } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getClienteCampanhas, type CampanhaMarketing } from "@/data/clienteData";
+import { getClienteCampanhas, getPlanoMarketing360, type CampanhaMarketing } from "@/data/clienteData";
 import { toast } from "@/hooks/use-toast";
 
 const statusColors: Record<string, string> = {
@@ -24,9 +24,12 @@ const statusColors: Record<string, string> = {
 
 export default function ClienteCampanhas() {
   const campanhas = useMemo(() => getClienteCampanhas(), []);
+  const plano = useMemo(() => getPlanoMarketing360(), []);
   const [filter, setFilter] = useState("Todas");
   const [createOpen, setCreateOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
   const filters = ["Todas", "Ativa", "Pausada", "Finalizada", "Rascunho"];
   const filtered = filter === "Todas" ? campanhas : campanhas.filter(c => c.status === filter);
 
@@ -38,6 +41,11 @@ export default function ClienteCampanhas() {
   const handleCreate = () => {
     toast({ title: "Campanha criada!", description: "Nova campanha adicionada com sucesso." });
     setCreateOpen(false);
+  };
+
+  const generateMonthlyCampaign = () => {
+    setAiGenerated(true);
+    toast({ title: "Campanha mensal gerada!", description: "Estrutura baseada nas metas do seu plano de marketing." });
   };
 
   return (
@@ -219,6 +227,45 @@ export default function ClienteCampanhas() {
           </Card>
         ))}
       </div>
+
+      {/* Generate Monthly Campaign */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold">Gerar Campanha Mensal</span>
+            </div>
+            <Button size="sm" variant="outline" className="text-xs gap-1" onClick={generateMonthlyCampaign}>
+              <Sparkles className="w-3.5 h-3.5" /> Gerar com base nas metas
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Meta do plano: {plano.objetivo.metaLeads} leads/mês · {plano.objetivo.metaVendas} vendas/mês · ROI {plano.objetivo.roiEsperado}%
+          </p>
+          {aiGenerated && (
+            <div className="space-y-3 pt-3 border-t">
+              <p className="text-xs font-medium">Campanha sugerida para Março/2026:</p>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-2 bg-background rounded-lg border"><span className="text-muted-foreground">Nome:</span> Captação Março Q1</div>
+                <div className="p-2 bg-background rounded-lg border"><span className="text-muted-foreground">Objetivo:</span> Gerar {plano.objetivo.metaLeads} leads</div>
+                <div className="p-2 bg-background rounded-lg border"><span className="text-muted-foreground">Orçamento:</span> R$ {plano.orcamento.pago.toLocaleString()}</div>
+                <div className="p-2 bg-background rounded-lg border"><span className="text-muted-foreground">Canal:</span> Multi-canal</div>
+              </div>
+              <div className="text-xs space-y-1">
+                <p className="font-medium">Entregáveis sugeridos:</p>
+                <p className="text-muted-foreground">• 8 conteúdos orgânicos (Topo + Meio de funil)</p>
+                <p className="text-muted-foreground">• 4 anúncios pagos (Google Search + Meta Remarketing)</p>
+                <p className="text-muted-foreground">• 1 landing page de captura</p>
+                <p className="text-muted-foreground">• 2 disparos WhatsApp segmentados</p>
+              </div>
+              <Button size="sm" className="w-full" onClick={() => toast({ title: "Campanha criada!", description: "Campanha mensal gerada e adicionada." })}>
+                Criar Campanha
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
