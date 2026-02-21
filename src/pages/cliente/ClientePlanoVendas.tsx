@@ -17,15 +17,22 @@ import { toast } from "@/hooks/use-toast";
 import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LineChart, Line } from "recharts";
 
 // ── Types ──
-interface InfoAtual { receitaAtual: number; ticketMedio: number; clientesAtivos: number; conversaoMedia: number; }
+interface InfoAtual {
+  receitaMensal: string; ticketMedio: string; clientesAtivos: string; conversaoMedia: string;
+  leadsMensais: string; reunioesMensais: string; contratosMensais: string; taxaRetencao: string;
+}
 type TipoMeta = "faturamento" | "novos_clientes" | "contratos" | "retencao" | "ticket_medio" | "conversao" | "leads" | "reunioes";
 type EscopoMeta = "empresa" | "equipe" | "individual";
 type PeriodoMeta = "mensal" | "trimestral" | "semestral" | "anual";
 interface MetaMensal {
-  id: string; mes: string; ano: number; tipo: TipoMeta; escopo: EscopoMeta;
+  id: string; nome: string; mesRef: string; tipo: TipoMeta; escopo: EscopoMeta;
   periodo: PeriodoMeta; valorAlvo: number; equipe?: string; responsavel?: string;
   prioridade: "alta" | "media" | "baixa";
 }
+
+function fmtBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+function fmtNum(v: number) { return v.toLocaleString("pt-BR"); }
+function fmtPct(v: number) { return `${v.toLocaleString("pt-BR")}%`; }
 interface EstruturaComercial {
   tamanhoEquipe: string; temSDR: string; temCloser: string; temCS: string;
   canaisAquisicao: string[]; ferramentas: string[]; processoDocumentado: boolean;
@@ -88,12 +95,12 @@ export default function ClientePlanoVendas() {
   const [activeTab, setActiveTab] = useState("visao");
 
   // ── METAS STATE ──
-  const [infoAtual, setInfoAtual] = useState<InfoAtual>({ receitaAtual: 0, ticketMedio: 0, clientesAtivos: 0, conversaoMedia: 0 });
+  const [infoAtual, setInfoAtual] = useState<InfoAtual>({ receitaMensal: "", ticketMedio: "", clientesAtivos: "", conversaoMedia: "", leadsMensais: "", reunioesMensais: "", contratosMensais: "", taxaRetencao: "" });
   const [infoAtualSalva, setInfoAtualSalva] = useState(false);
   const [metasMensais, setMetasMensais] = useState<MetaMensal[]>([]);
   const [metasSalvas, setMetasSalvas] = useState(false);
-  const [novaMeta, setNovaMeta] = useState<{ tipo: TipoMeta; escopo: EscopoMeta; periodo: PeriodoMeta; valorAlvo: number; equipe: string; responsavel: string; prioridade: "alta" | "media" | "baixa" }>({ tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
-  const mesAtualIdx = new Date().getMonth(); // 0-based
+  const [novaMeta, setNovaMeta] = useState<{ nome: string; mesRef: string; tipo: TipoMeta; escopo: EscopoMeta; periodo: PeriodoMeta; valorAlvo: number; equipe: string; responsavel: string; prioridade: "alta" | "media" | "baixa" }>({ nome: "", mesRef: "", tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
+  const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const anoAtual = new Date().getFullYear();
 
   // ── ESTRUTURA STATE ──
@@ -158,7 +165,8 @@ export default function ClientePlanoVendas() {
     if (!estrutura.processoDocumentado) ins.push({ text: "Processo comercial não documentado. Isso reduz previsibilidade.", severity: "error" });
     if (estrutura.canaisAquisicao.length < 2) ins.push({ text: "Poucos canais de aquisição. Diversifique para reduzir risco.", severity: "warn" });
     if (estrutura.canaisAquisicao.length >= 4) ins.push({ text: "Boa diversificação de canais. Continue testando e otimizando.", severity: "info" });
-    if (infoAtual.conversaoMedia > 0 && infoAtual.conversaoMedia < 15) ins.push({ text: `Sua conversão atual (${infoAtual.conversaoMedia}%) está abaixo da média. Revise seu funil.`, severity: "warn" });
+    const conv = Number(infoAtual.conversaoMedia) || 0;
+    if (conv > 0 && conv < 15) ins.push({ text: `Sua conversão atual (${fmtPct(conv)}) está abaixo da média. Revise seu funil.`, severity: "warn" });
     if (estrutura.reuniaoRecorrente) ins.push({ text: "Reuniões recorrentes ajudam na previsibilidade. Mantenha a cadência.", severity: "success" });
     return ins;
   }, [visaoDesbloqueada, scoreAvaliacao, totalEquipe, estrutura, infoAtual]);
@@ -180,7 +188,7 @@ export default function ClientePlanoVendas() {
     if (estrutura.canaisAquisicao.length < 3) acoes.push({ titulo: "Diversificar canais de aquisição", descricao: "Teste pelo menos 3 canais diferentes para reduzir dependência.", prioridade: "media" });
     if (scoreAvaliacao <= 50) acoes.push({ titulo: "Implantar rotina de CRM", descricao: "Garanta que 100% dos leads são registrados e acompanhados no CRM diariamente.", prioridade: "alta" });
     if (!estrutura.reuniaoRecorrente) acoes.push({ titulo: "Criar reunião comercial semanal", descricao: "Reunião de 30 min para revisar pipeline, metas e gargalos.", prioridade: "media" });
-    if (metaFatMensal > 0) acoes.push({ titulo: "Definir metas semanais", descricao: `Meta mensal de R$ ${metaFatMensal.toLocaleString()} = ~R$ ${Math.round(metaFatMensal / 4).toLocaleString()}/semana.`, prioridade: "baixa" });
+    if (metaFatMensal > 0) acoes.push({ titulo: "Definir metas semanais", descricao: `Meta mensal de ${fmtBRL(metaFatMensal)} = ~${fmtBRL(Math.round(metaFatMensal / 4))}/semana.`, prioridade: "baixa" });
     return acoes;
   }, [visaoDesbloqueada, estrutura, totalEquipe, scoreAvaliacao, metaFatMensal]);
 
@@ -267,11 +275,11 @@ export default function ClientePlanoVendas() {
             <>
               {/* KPIs */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard label="Receita Atual" value={`R$ ${infoAtual.receitaAtual.toLocaleString()}`} />
-                <KpiCard label="Meta Acumulada" value={`R$ ${totalMetaAnual.toLocaleString()}`} variant="accent" />
-                <KpiCard label="Meta Mensal" value={`R$ ${metaFatMensal.toLocaleString()}`} />
+                <KpiCard label="Receita Atual" value={fmtBRL(Number(infoAtual.receitaMensal) || 0)} />
+                <KpiCard label="Meta Acumulada" value={fmtBRL(totalMetaAnual)} variant="accent" />
+                <KpiCard label="Meta Mensal" value={fmtBRL(metaFatMensal)} />
                 <KpiCard label="Equipe" value={estrutura.tamanhoEquipe || "—"} sublabel={`SDR: ${estrutura.temSDR} | Closer: ${estrutura.temCloser}`} />
-                <KpiCard label="Maturidade" value={`${scoreAvaliacao}%`} sublabel={nivelAvaliacao.label} />
+                <KpiCard label="Maturidade" value={fmtPct(scoreAvaliacao)} sublabel={nivelAvaliacao.label} />
               </div>
 
               {/* Alertas & Insights */}
@@ -308,7 +316,7 @@ export default function ClientePlanoVendas() {
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                           <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                           <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                          <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString()}`} />
+                          <Tooltip formatter={(v: number) => fmtBRL(v)} />
                           <Area type="monotone" dataKey="meta" stroke="hsl(var(--primary))" fill="hsl(var(--primary)/0.15)" strokeWidth={2} name="Meta" />
                           <Area type="monotone" dataKey="realizado" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2)/0.15)" strokeWidth={2} name="Projeção" strokeDasharray="5 5" />
                         </AreaChart>
@@ -359,11 +367,11 @@ export default function ClientePlanoVendas() {
               <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
                 <CardHeader className="pb-2"><CardTitle className="text-sm">Resumo Consolidado</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1 text-muted-foreground">
-                  <p><strong>Receita Atual:</strong> R$ {infoAtual.receitaAtual.toLocaleString()} | <strong>Ticket Médio:</strong> R$ {infoAtual.ticketMedio.toLocaleString()} | <strong>Meta Total:</strong> R$ {totalMetaAnual.toLocaleString()}</p>
+                  <p><strong>Receita Atual:</strong> {fmtBRL(Number(infoAtual.receitaMensal) || 0)} | <strong>Ticket Médio:</strong> {fmtBRL(Number(infoAtual.ticketMedio) || 0)} | <strong>Meta Total:</strong> {fmtBRL(totalMetaAnual)}</p>
                   <p><strong>Equipe:</strong> {estrutura.tamanhoEquipe} | <strong>SDR:</strong> {estrutura.temSDR} | <strong>Closer:</strong> {estrutura.temCloser} | <strong>CS:</strong> {estrutura.temCS}</p>
                   <p><strong>Canais:</strong> {estrutura.canaisAquisicao.join(", ") || "Nenhum"}</p>
-                  <p><strong>Processo documentado:</strong> {estrutura.processoDocumentado ? "Sim" : "Não"} | <strong>Tempo fechamento:</strong> {estrutura.tempoMedioFechamento} dias</p>
-                  <p><strong>Maturidade:</strong> {scoreAvaliacao}% — {nivelAvaliacao.label}</p>
+                  <p><strong>Processo documentado:</strong> {estrutura.processoDocumentado ? "Sim" : "Não"} | <strong>Tempo fechamento:</strong> {estrutura.tempoMedioFechamento}</p>
+                  <p><strong>Maturidade:</strong> {fmtPct(scoreAvaliacao)} — {nivelAvaliacao.label}</p>
                 </CardContent>
               </Card>
             </>
@@ -378,39 +386,83 @@ export default function ClientePlanoVendas() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-cyan-500/15"><BarChart3 className="w-4 h-4 text-cyan-500" /></div>
-                  Informações Atuais
+                  Situação Atual do Comercial
                 </CardTitle>
                 {infoAtualSalva && <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" />Salvo</Badge>}
               </div>
-              <p className="text-xs text-muted-foreground">Antes de definir suas metas, precisamos entender onde você está hoje.</p>
+              <p className="text-xs text-muted-foreground">Preencha os indicadores atuais para que as metas sejam calculadas corretamente.</p>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <CardContent className="pt-4 space-y-4">
+              {/* Financeiro */}
               <div>
-                <Label className="text-xs text-muted-foreground">Receita Atual Mensal (R$)</Label>
-                <Input type="number" value={infoAtual.receitaAtual || ""} disabled={infoAtualSalva}
-                  onChange={e => setInfoAtual(p => ({ ...p, receitaAtual: Number(e.target.value) }))} placeholder="Ex: 47500" />
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Indicadores Financeiros
+                </Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Receita Mensal (R$)</Label>
+                    <Input value={infoAtual.receitaMensal} disabled={infoAtualSalva}
+                      onChange={e => setInfoAtual(p => ({ ...p, receitaMensal: e.target.value }))} placeholder="Ex: 47.500" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Ticket Médio (R$)</Label>
+                    <Input value={infoAtual.ticketMedio} disabled={infoAtualSalva}
+                      onChange={e => setInfoAtual(p => ({ ...p, ticketMedio: e.target.value }))} placeholder="Ex: 4.500" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Contratos Ativos/Mês</Label>
+                    <Input value={infoAtual.contratosMensais} disabled={infoAtualSalva}
+                      onChange={e => setInfoAtual(p => ({ ...p, contratosMensais: e.target.value }))} placeholder="Ex: 8" />
+                  </div>
+                </div>
               </div>
+              {/* Comercial */}
               <div>
-                <Label className="text-xs text-muted-foreground">Ticket Médio (R$)</Label>
-                <Input type="number" value={infoAtual.ticketMedio || ""} disabled={infoAtualSalva}
-                  onChange={e => setInfoAtual(p => ({ ...p, ticketMedio: Number(e.target.value) }))} placeholder="Ex: 4500" />
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-blue-500" /> Indicadores Comerciais
+                </Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Clientes Ativos</Label>
+                    <Input value={infoAtual.clientesAtivos} disabled={infoAtualSalva}
+                      onChange={e => setInfoAtual(p => ({ ...p, clientesAtivos: e.target.value }))} placeholder="Ex: 35" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Leads/Mês</Label>
+                    <Input value={infoAtual.leadsMensais} disabled={infoAtualSalva}
+                      onChange={e => setInfoAtual(p => ({ ...p, leadsMensais: e.target.value }))} placeholder="Ex: 120" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Reuniões/Mês</Label>
+                    <Input value={infoAtual.reunioesMensais} disabled={infoAtualSalva}
+                      onChange={e => setInfoAtual(p => ({ ...p, reunioesMensais: e.target.value }))} placeholder="Ex: 20" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Conversão Média (%)</Label>
+                    <Input value={infoAtual.conversaoMedia} disabled={infoAtualSalva}
+                      onChange={e => setInfoAtual(p => ({ ...p, conversaoMedia: e.target.value }))} placeholder="Ex: 20" />
+                  </div>
+                </div>
               </div>
+              {/* Retenção */}
               <div>
-                <Label className="text-xs text-muted-foreground">Clientes Ativos</Label>
-                <Input type="number" value={infoAtual.clientesAtivos || ""} disabled={infoAtualSalva}
-                  onChange={e => setInfoAtual(p => ({ ...p, clientesAtivos: Number(e.target.value) }))} placeholder="Ex: 35" />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Conversão Média (%)</Label>
-                <Input type="number" value={infoAtual.conversaoMedia || ""} disabled={infoAtualSalva}
-                  onChange={e => setInfoAtual(p => ({ ...p, conversaoMedia: Number(e.target.value) }))} placeholder="Ex: 20" step={0.1} />
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-teal-500" /> Retenção
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Taxa de Retenção (%)</Label>
+                    <Input value={infoAtual.taxaRetencao} disabled={infoAtualSalva}
+                      onChange={e => setInfoAtual(p => ({ ...p, taxaRetencao: e.target.value }))} placeholder="Ex: 85" />
+                  </div>
+                </div>
               </div>
             </CardContent>
             {!infoAtualSalva && (
               <div className="px-6 pb-4">
-                <Button size="sm" onClick={() => { setInfoAtualSalva(true); toast({ title: "Informações atuais salvas!" }); }}
-                  disabled={infoAtual.receitaAtual === 0}>
-                  <Save className="w-3 h-3 mr-1" /> Salvar Informações
+                <Button size="sm" onClick={() => { setInfoAtualSalva(true); toast({ title: "Situação atual salva com sucesso!" }); }}
+                  disabled={!infoAtual.receitaMensal}>
+                  <Save className="w-3 h-3 mr-1" /> Salvar Situação Atual
                 </Button>
               </div>
             )}
@@ -456,6 +508,38 @@ export default function ClientePlanoVendas() {
                         );
                       })}
                     </div>
+                  </div>
+
+                  {/* Nome da Meta */}
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-slate-500" /> Dê um nome para essa meta
+                    </Label>
+                    <Input value={novaMeta.nome} className="max-w-md"
+                      onChange={e => setNovaMeta(p => ({ ...p, nome: e.target.value }))}
+                      placeholder="Ex: Meta de Faturamento Q1, Expansão Novos Clientes..." />
+                  </div>
+
+                  {/* Mês de Referência */}
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-violet-500" /> Mês de referência
+                    </Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {MESES_COMPLETOS.map((mes, i) => {
+                        const valor = `${mes}/${anoAtual}`;
+                        const valorProx = `${mes}/${anoAtual + 1}`;
+                        const selected = novaMeta.mesRef === valor || novaMeta.mesRef === valorProx;
+                        return (
+                          <Button key={mes} size="sm" variant={selected ? "default" : "outline"}
+                            className={`text-xs h-8 px-2.5 ${!selected ? "border-dashed" : ""}`}
+                            onClick={() => setNovaMeta(p => ({ ...p, mesRef: i >= new Date().getMonth() ? valor : valorProx }))}>
+                            {MESES[i]}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    {novaMeta.mesRef && <p className="text-[10px] text-muted-foreground mt-1">📅 {novaMeta.mesRef}</p>}
                   </div>
 
                   {/* Escopo */}
@@ -588,25 +672,17 @@ export default function ClientePlanoVendas() {
                   </div>
 
                   {/* Botão Criar */}
-                  <Button className="w-full gap-2" disabled={novaMeta.valorAlvo === 0 || (novaMeta.escopo === "equipe" && !novaMeta.equipe) || (novaMeta.escopo === "individual" && !novaMeta.responsavel)} onClick={() => {
-                    const mesesUsados = metasMensais.map(m => `${m.mes}-${m.ano}`);
-                    let proximoMesIdx = mesAtualIdx;
-                    let proximoAno = anoAtual;
-                    while (mesesUsados.includes(`${MESES[proximoMesIdx]}-${proximoAno}`)) {
-                      proximoMesIdx++;
-                      if (proximoMesIdx > 11) { proximoMesIdx = 0; proximoAno++; }
-                      if (proximoAno > anoAtual + 1) break;
-                    }
+                  <Button className="w-full gap-2" disabled={novaMeta.valorAlvo === 0 || !novaMeta.mesRef || (novaMeta.escopo === "equipe" && !novaMeta.equipe) || (novaMeta.escopo === "individual" && !novaMeta.responsavel)} onClick={() => {
                     const nova: MetaMensal = {
-                      id: `meta-${Date.now()}`, mes: MESES[proximoMesIdx], ano: proximoAno,
+                      id: `meta-${Date.now()}`, nome: novaMeta.nome || TIPO_META_LABELS[novaMeta.tipo], mesRef: novaMeta.mesRef,
                       tipo: novaMeta.tipo, escopo: novaMeta.escopo, periodo: novaMeta.periodo,
                       valorAlvo: novaMeta.valorAlvo, equipe: novaMeta.equipe, responsavel: novaMeta.responsavel,
                       prioridade: novaMeta.prioridade,
                     };
                     setMetasMensais(prev => [...prev, nova]);
-                    setNovaMeta({ tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
+                    setNovaMeta({ nome: "", mesRef: "", tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
                     setMetasSalvas(true);
-                    toast({ title: `Meta de ${TIPO_META_LABELS[novaMeta.tipo]} adicionada!` });
+                    toast({ title: `Meta "${nova.nome}" adicionada!` });
                   }}>
                     <Plus className="w-4 h-4" /> Criar Meta
                   </Button>
@@ -639,8 +715,8 @@ export default function ClientePlanoVendas() {
                                   <Icon className={`w-3.5 h-3.5 ${tipoConfig.color}`} />
                                 </div>
                                 <div>
-                                  <p className="text-xs font-semibold">{tipoConfig.label}</p>
-                                  <p className="text-[10px] text-muted-foreground">{m.mes}/{m.ano} · {m.periodo}</p>
+                                  <p className="text-xs font-semibold">{m.nome}</p>
+                                  <p className="text-[10px] text-muted-foreground">{m.mesRef} · {tipoConfig.label} · {m.periodo}</p>
                                 </div>
                               </div>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
@@ -649,7 +725,7 @@ export default function ClientePlanoVendas() {
                               </Button>
                             </div>
                             <p className="text-xl font-black">
-                              {isMoney ? `R$ ${m.valorAlvo.toLocaleString()}` : isPercent ? `${m.valorAlvo}%` : m.valorAlvo}
+                              {isMoney ? fmtBRL(m.valorAlvo) : isPercent ? fmtPct(m.valorAlvo) : fmtNum(m.valorAlvo)}
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               <Badge variant="outline" className="text-[10px]">
