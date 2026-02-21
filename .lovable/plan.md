@@ -1,333 +1,214 @@
 
 
-# Area do Cliente Final (SaaS NOEXCUSE) -- Terceiro Nivel
+# Plano de Vendas -- Cerebro Estrategico do SaaS
 
 ## Resumo
 
-Criar toda a area do Cliente Final como terceiro nivel do ecossistema, seguindo os mesmos padroes visuais (dark premium, sidebar colapsavel, PageHeader, KpiCards, transicoes suaves) mas com identidade propria de SaaS operacional. O cliente nao ve nada de franquia ou rede -- apenas suas ferramentas de trabalho.
+Transformar o Plano de Vendas de um formulario simples em um diagnostico estrategico completo com 6 abas, calculos automaticos em cascata, funil grafico dinamico, radar de maturidade comercial e plano de acao integrado ao CRM/Scripts/IA.
 
 ---
 
-## Estrutura de Navegacao (Sidebar)
+## Estrutura: 6 Abas com Barra de Progresso
 
-Conforme o print de referencia, 3 secoes:
+No topo da pagina: barra de progresso indicando quantas abas foram preenchidas (0-6). Cada aba salva seu estado via useState.
 
-**PRINCIPAL**
-- Inicio (Dashboard)
-- Checklist do Dia
-- Notificacoes
-- Gamificacao
-
-**VENDAS**
-- Plano de Vendas
-- Chat
-- CRM
-- Agentes de IA
-- Scripts e Playbooks
-- Disparos
-- Relatorios
-
-**MARKETING**
-- Plano de Marketing
-- Campanhas
-- Conteudos
-- Redes Sociais
-- Sites
-- Trafego Pago
+| Aba | Nome | Conteudo principal |
+|-----|------|--------------------|
+| 1 | Visao Geral | Periodo, receita atual/desejada, tipo de venda, grafico de crescimento |
+| 2 | Meta Financeira | Meta, ticket, conversao, funil grafico cascata |
+| 3 | Estrutura Comercial | Vendedores, canais, ferramentas, insights automaticos |
+| 4 | Mercado | Concorrentes, diferenciais, posicionamento |
+| 5 | Diagnostico | Score de maturidade comercial com radar |
+| 6 | Plano de Acao | Metas diarias/semanais, sugestoes, botoes de integracao |
 
 ---
 
-## Arquivos a Criar
+## Detalhamento por Aba
 
-### Infraestrutura (3 arquivos)
+### Aba 1 -- Visao Geral
 
+Campos editaveis:
+- Periodo do plano: Select (Mensal / Trimestral / Semestral / Anual)
+- Receita atual media (R$): Input numerico
+- Receita desejada (R$): Input numerico
+- Crescimento desejado (%): Calculado automaticamente (desejada - atual) / atual * 100
+- Mercado de atuacao: Input texto
+- Tipo de venda: Select (B2B / B2C / Hibrido)
+
+Visual:
+- Grafico AreaChart do Recharts mostrando projecao de crescimento meses a frente
+- Card comparativo "Atual vs Meta" com barra de progresso
+
+### Aba 2 -- Meta Financeira (Motor de Calculos)
+
+Campos editaveis:
+- Meta de faturamento (R$)
+- Ticket medio (R$)
+- Taxa de conversao lead-venda (%)
+- Taxa de conversao lead-proposta (%)
+
+Calculos automaticos em cascata:
 ```
-src/components/ClienteLayout.tsx        -- Layout wrapper (igual FranqueadoLayout)
-src/components/ClienteSidebar.tsx        -- Sidebar com secoes Principal/Vendas/Marketing
-src/data/clienteData.ts                  -- Dados mock e helpers do cliente
-```
-
-### Paginas Principal (4 arquivos)
-
-```
-src/pages/cliente/ClienteInicio.tsx       -- Dashboard com metricas resumidas
-src/pages/cliente/ClienteChecklist.tsx    -- Checklist do dia com marcacao animada
-src/pages/cliente/ClienteNotificacoes.tsx -- Central de alertas filtravei
-src/pages/cliente/ClienteGamificacao.tsx  -- Pontos, niveis, medalhas, ranking
-```
-
-### Paginas Vendas (7 arquivos)
-
-```
-src/pages/cliente/ClientePlanoVendas.tsx   -- Documento estrategico editavel
-src/pages/cliente/ClienteChat.tsx          -- Chat interno da equipe
-src/pages/cliente/ClienteCRM.tsx           -- Funil simples (5 colunas)
-src/pages/cliente/ClienteAgentesIA.tsx     -- IA por categoria (Vendas/Marketing/Gestao)
-src/pages/cliente/ClienteScripts.tsx       -- Biblioteca de scripts e playbooks
-src/pages/cliente/ClienteDisparos.tsx      -- Ferramenta de envio (email/mensagem)
-src/pages/cliente/ClienteRelatorios.tsx    -- Relatorios com graficos dinamicos
-```
-
-### Paginas Marketing (6 arquivos)
-
-```
-src/pages/cliente/ClientePlanoMarketing.tsx -- Estrategia mensal
-src/pages/cliente/ClienteCampanhas.tsx      -- Gerenciamento de campanhas
-src/pages/cliente/ClienteConteudos.tsx      -- Planejamento editorial/calendario
-src/pages/cliente/ClienteRedesSociais.tsx   -- Dashboard redes (futuro)
-src/pages/cliente/ClienteSites.tsx          -- Gestao de landing pages
-src/pages/cliente/ClienteTrafegoPago.tsx    -- Painel de trafego simplificado
+Vendas necessarias = Meta / Ticket
+Propostas necessarias = Vendas / (conversaoVenda / 100)
+Leads necessarios = Propostas / (conversaoProposta / 100)
+Contatos necessarios = Leads * 1.5 (fator estimado)
 ```
 
-**Total: 20 novos arquivos**
+Visual:
+- **Funil grafico dinamico**: 4 barras horizontais decrescentes (Contatos > Leads > Propostas > Vendas) com valores calculados em tempo real
+- Grid 4 KpiCards com os resultados
+- Card "Meta Mensal Detalhada": Meta/dia util, Meta/semana
 
----
+### Aba 3 -- Estrutura Comercial
 
-## Detalhamento por Pagina
+Campos:
+- Quantidade de vendedores: Input numerico
+- Canais de aquisicao: Checkboxes (Google Ads, Instagram, Indicacao, Site, LinkedIn, Outro)
+- Ferramentas usadas: Checkboxes (CRM, WhatsApp, Email, Telefone)
+- Tempo medio de fechamento (dias): Input numerico
+- Processo estruturado: Switch (Sim/Nao)
 
-### 1. Inicio (Dashboard)
+Insights automaticos gerados com base nos dados:
+- Se conversao < 15%: "Seu funil indica baixa conversao. Recomendamos revisar a etapa de proposta."
+- Se leads necessarios > leads ativos * 1.3: "Sua meta exige X% mais leads do que voce tem hoje."
+- Se vendedores < vendas necessarias / 10: "Sua equipe pode estar subdimensionada para a meta."
+- Se sem processo estruturado: "A falta de processo impacta diretamente a previsibilidade comercial."
 
-Cards grandes com:
-- Receita estimada do mes
-- Leads do mes
-- Taxa de conversao
-- Meta vs Realizado
+Cards de insights com icone AlertTriangle e cor amarela/vermelha conforme severidade.
+
+### Aba 4 -- Mercado e Concorrencia
+
+Campos:
+- Principais concorrentes: 3 inputs de texto
+- Diferenciais competitivos: Textarea
+- Posicionamento de preco: Select (Abaixo do mercado / Na media / Acima do mercado / Premium)
+- Saturacao do mercado: Slider (1-10, com labels Baixa/Media/Alta)
+
+Card "Sugestoes de IA" (placeholder visual):
+- "Baseado no seu nicho, considere diferenciacao por atendimento personalizado"
+- "Posicionamento premium requer prova social forte -- invista em cases"
+- Badge "Powered by IA" no canto
+
+### Aba 5 -- Diagnostico de Maturidade Comercial
+
+5 perguntas com escala 1-5:
+1. Seu processo de vendas esta documentado?
+2. Voce acompanha taxa de conversao por etapa?
+3. Existe gestao ativa de leads e follow-up?
+4. Suas metas sao baseadas em dados historicos?
+5. Voce usa CRM integrado ao dia a dia?
+
+Calculo: media das respostas normalizada para 0-100%
+
+Classificacao (4 niveis, mesmo padrao do DiagnosticoTermometro):
+- 0-25%: Inicial (vermelho)
+- 26-50%: Estruturando (laranja)
+- 51-75%: Escalavel (amarelo)
+- 76-100%: Alta Performance (verde)
+
+Visual:
+- Termometro visual (reutilizar conceito do DiagnosticoTermometro)
+- RadarChart do Recharts com 5 eixos (Processo, Conversao, Gestao Leads, Metas, CRM)
+- Badge do nivel com cor correspondente
+
+### Aba 6 -- Plano de Acao
+
+Gerado automaticamente com base nos dados das abas anteriores.
 
 Secoes:
-- Campanhas ativas (cards resumidos)
-- Tarefas pendentes (lista com badges)
-- Alertas coloridos (contratos, metas, leads)
-- Graficos simples (AreaChart de receita, BarChart de leads)
+- **Metas calculadas**: Leads/dia, Leads/semana, Vendas/semana, Valor/semana
+- **Estrategia de abordagem**: Texto gerado baseado no tipo de venda e canais selecionados
+- **Sugestoes**: Lista de acoes recomendadas baseadas nos insights da aba 3
 
-### 2. Checklist do Dia
+3 botoes de integracao:
+- "Criar Scripts Automaticamente" -> navega para `/cliente/scripts` com toast
+- "Gerar Playbook" -> navega para `/cliente/scripts` com toast
+- "Atualizar Metas no CRM" -> navega para `/cliente/crm` com toast
 
-Lista de tarefas operacionais com:
-- Checkbox animado (scale + checkmark)
-- Origem (automatico do plano ou manual)
-- Badge de tipo (Comercial/Marketing/Gestao)
-- Barra de progresso geral no topo
-- Botao "Adicionar tarefa"
-- Tarefas sugeridas: Ligar para leads, Postar conteudo, Ajustar campanha, Responder mensagens
-
-### 3. Notificacoes
-
-Central de alertas com:
-- Filtro por tipo (Leads/Chat/Campanhas/Metas)
-- Lista cronologica com icones coloridos
-- Marcacao de lido/nao lido
-- Badge de contagem no topo
-
-### 4. Gamificacao
-
-Sistema de pontos:
-- Pontuacao total com animacao
-- Nivel atual com barra de progresso
-- Medalhas conquistadas (grid de badges)
-- Ranking interno da empresa (tabela)
-- Criterios: Tarefas concluidas, Leads atendidos, Postagens, Metas atingidas
-
-### 5. Plano de Vendas
-
-Documento editavel com:
-- Meta mensal (editavel)
-- Ticket medio
-- Projecao automatica (leads necessarios = meta / ticket / conversao)
-- Taxa de conversao
-- KPIs calculados em tempo real
-- Botao "Salvar alteracoes"
-
-### 6. Chat
-
-Chat interno simples:
-- Lista de conversas (sidebar esquerda)
-- Area de mensagens (direita)
-- Input com envio
-- Mensagens com avatar, nome, timestamp
-- Badge "Em breve: Chat com leads"
-
-### 7. CRM
-
-Funil Kanban com 5 colunas:
-- Novo Lead | Contato | Proposta | Fechado | Perdido
-- Cards arrastaveies com nome, telefone, valor, temperatura
-- Detalhe do lead com historico, tarefas, observacoes, responsavel
-- Botao "Novo Lead"
-
-### 8. Agentes de IA
-
-3 categorias em tabs:
-- Vendas (gerar mensagens, responder objecoes)
-- Marketing (criar copy, legendas, headlines)
-- Gestao (criar estrategias, planos)
-
-Cada agente: input de prompt + area de resultado + botao copiar
-Placeholder para integracao futura com Lovable AI
-
-### 9. Scripts e Playbooks
-
-Biblioteca organizada em tabs:
-- Scripts de Vendas
-- Roteiros de Ligacao
-- Modelos de Proposta
-- Estrategias
-
-Cada item: titulo, descricao, conteudo expandivel, botao editar/copiar
-Cliente pode criar novos scripts
-
-### 10. Disparos
-
-Interface de envio:
-- Tipo: Email / Mensagem / Campanha interna
-- Destinatarios (selecao de contatos do CRM)
-- Assunto / Conteudo
-- Agendar ou enviar agora
-- Badge "Em breve: WhatsApp API"
-- Historico de disparos
-
-### 11. Relatorios
-
-Dashboard analitico com:
-- Filtro de periodo (7d/30d/90d)
-- Graficos: Vendas por periodo, Conversao, Receita acumulada, Performance equipe
-- Tabela resumo exportavel
-- Recharts (AreaChart, BarChart, PieChart)
-
-### 12. Plano de Marketing
-
-Documento estrategico:
-- Canais ativos (checkboxes)
-- Frequencia de postagem por canal
-- Objetivo do mes
-- Orcamento alocado
-- Editavel e salvavel
-
-### 13. Campanhas
-
-Gerenciamento em tabela/cards:
-- Nome, Objetivo, Status (Ativa/Pausada/Finalizada), Orcamento, Resultado
-- Filtros por status
-- Criar nova campanha (dialog)
-- Detalhe com metricas
-
-### 14. Conteudos
-
-Planejamento editorial:
-- Calendario visual (grade semanal)
-- Cards de postagem: titulo, rede, status (Rascunho/Agendado/Publicado), arquivo
-- Criar novo conteudo
-- Filtro por rede social
-
-### 15. Redes Sociais
-
-Dashboard placeholder para integracao futura:
-- Cards para Instagram, Facebook, LinkedIn
-- Metricas mock (seguidores, engajamento, alcance)
-- Badge "Integracao em breve"
-
-### 16. Sites
-
-Gestao de landing pages:
-- Lista de sites/paginas
-- Status (Ativo/Inativo)
-- Leads gerados
-- Taxa de conversao
-- Criar nova pagina (placeholder)
-
-### 17. Trafego Pago
-
-Painel simplificado:
-- KPIs: Investimento, CPC, CPL, Leads, Conversao
-- Grafico de investimento vs leads (LineChart)
-- Tabela de campanhas ativas
-- Filtro por periodo e plataforma
+Card resumo com todos os dados consolidados do plano.
 
 ---
 
 ## Secao Tecnica
 
-### Routing (App.tsx)
-
-Adicionar terceiro bloco de rotas dentro do Index Route:
+### Arquivos modificados
 
 ```
-<Route path="cliente" element={<ClienteLayout />}>
-  <Route index element={<Navigate to="/cliente/inicio" replace />} />
-  <Route path="inicio" element={<ClienteInicio />} />
-  <Route path="checklist" element={<ClienteChecklist />} />
-  <Route path="notificacoes" element={<ClienteNotificacoes />} />
-  <Route path="gamificacao" element={<ClienteGamificacao />} />
-  <Route path="plano-vendas" element={<ClientePlanoVendas />} />
-  <Route path="chat" element={<ClienteChat />} />
-  <Route path="crm" element={<ClienteCRM />} />
-  <Route path="agentes-ia" element={<ClienteAgentesIA />} />
-  <Route path="scripts" element={<ClienteScripts />} />
-  <Route path="disparos" element={<ClienteDisparos />} />
-  <Route path="relatorios" element={<ClienteRelatorios />} />
-  <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
-  <Route path="campanhas" element={<ClienteCampanhas />} />
-  <Route path="conteudos" element={<ClienteConteudos />} />
-  <Route path="redes-sociais" element={<ClienteRedesSociais />} />
-  <Route path="sites" element={<ClienteSites />} />
-  <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
-</Route>
+src/pages/cliente/ClientePlanoVendas.tsx  -- reescrever completamente com 6 abas
+src/data/clienteData.ts                   -- expandir getPlanoVendasData() com dados completos
 ```
 
-### Index.tsx -- TopSwitch
+### Estado do componente
 
-Atualizar o handleLevelChange para navegar para `/cliente/inicio` quando "CLIENTE FINAL" for selecionado. Atualizar o useEffect para sincronizar o nivel quando a URL comecar com `/cliente`.
+Todos os campos gerenciados por um unico useState com objeto:
 
-### ClienteSidebar.tsx
+```
+interface PlanoVendasState {
+  // Aba 1
+  periodo: "mensal" | "trimestral" | "semestral" | "anual";
+  receitaAtual: number;
+  receitaDesejada: number;
+  mercado: string;
+  tipoVenda: "B2B" | "B2C" | "Hibrido";
+  // Aba 2
+  metaFaturamento: number;
+  ticketMedio: number;
+  conversaoVenda: number;
+  conversaoProposta: number;
+  // Aba 3
+  vendedores: number;
+  canais: string[];
+  ferramentas: string[];
+  tempoFechamento: number;
+  processoEstruturado: boolean;
+  // Aba 4
+  concorrentes: string[];
+  diferenciais: string;
+  posicionamento: string;
+  saturacao: number;
+  // Aba 5
+  respostasDiagnostico: number[];
+}
+```
 
-Mesmo padrao do FranqueadoSidebar:
-- Colapsavel
-- 3 secoes: PRINCIPAL, VENDAS, MARKETING
-- Icones em vermelho/primary
-- Pill indicator ativo
-- Label "SaaS NoExcuse" no header
-- Usuario logado no footer
+### Calculos derivados (useMemo)
 
-### ClienteLayout.tsx
+```
+vendasNecessarias = metaFaturamento / ticketMedio
+propostasNecessarias = vendasNecessarias / (conversaoVenda / 100)
+leadsNecessarios = propostasNecessarias / (conversaoProposta / 100)
+contatosNecessarios = leadsNecessarios * 1.5
+metaDiaria = metaFaturamento / 22
+metaSemanal = metaFaturamento / 4
+leadsDiarios = leadsNecessarios / 22
+scoreMaturidade = media(respostasDiagnostico) / 5 * 100
+```
 
-Identico ao FranqueadoLayout: sidebar + main com Outlet e animacao slide-up.
+### Componentes utilizados
 
-### clienteData.ts
+- Tabs/TabsList/TabsTrigger/TabsContent (Radix)
+- Input, Select, Switch, Slider, Textarea, Checkbox (UI)
+- KpiCard, PageHeader, SectionHeader (projeto)
+- AreaChart, BarChart, RadarChart (Recharts)
+- Progress (barra de progresso do plano)
+- Badge, Card, Button (UI)
 
-Dados mock para:
-- Dashboard KPIs (receita, leads, conversao, metas)
-- Checklist items (com tipo e origem)
-- Notificacoes (com tipo e timestamp)
-- Gamificacao (pontos, niveis, medalhas, ranking)
-- CRM leads (funil simplificado de 5 estagios)
-- Campanhas, conteudos, disparos
-- Plano de vendas e marketing
+### Funil visual (Aba 2)
 
-### Ordem de Implementacao
+4 barras horizontais com largura proporcional:
+- Contatos (100% largura, cor cinza)
+- Leads (proporcional, cor amarela)
+- Propostas (proporcional, cor laranja)
+- Vendas (proporcional, cor verde)
 
-Devido ao volume (20 arquivos), sera implementado em 3 blocos:
+Cada barra com label e valor numerico.
 
-**Bloco 1 -- Infraestrutura + Principal**
-1. `clienteData.ts` (dados mock)
-2. `ClienteSidebar.tsx` + `ClienteLayout.tsx`
-3. `App.tsx` + `Index.tsx` (routing e TopSwitch)
-4. `ClienteInicio.tsx` (dashboard)
-5. `ClienteChecklist.tsx`
-6. `ClienteNotificacoes.tsx`
-7. `ClienteGamificacao.tsx`
+### Dados expandidos em clienteData.ts
 
-**Bloco 2 -- Vendas**
-8. `ClientePlanoVendas.tsx`
-9. `ClienteChat.tsx`
-10. `ClienteCRM.tsx`
-11. `ClienteAgentesIA.tsx`
-12. `ClienteScripts.tsx`
-13. `ClienteDisparos.tsx`
-14. `ClienteRelatorios.tsx`
+Expandir `getPlanoVendasData()` para retornar defaults completos para todas as abas, incluindo valores iniciais para diagnostico, mercado, estrutura comercial.
 
-**Bloco 3 -- Marketing**
-15. `ClientePlanoMarketing.tsx`
-16. `ClienteCampanhas.tsx`
-17. `ClienteConteudos.tsx`
-18. `ClienteRedesSociais.tsx`
-19. `ClienteSites.tsx`
-20. `ClienteTrafegoPago.tsx`
+### Ordem de implementacao
 
+1. Expandir `getPlanoVendasData()` em `clienteData.ts`
+2. Reescrever `ClientePlanoVendas.tsx` com as 6 abas completas
