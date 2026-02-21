@@ -20,6 +20,7 @@ import Marketing from "./pages/Marketing";
 import Academy from "./pages/Academy";
 import MetasRanking from "./pages/MetasRanking";
 import Unidades from "./pages/Unidades";
+import CrmExpansao from "./pages/CrmExpansao";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="treinamentos" element={<Academy />} />
               <Route path="metas" element={<MetasRanking />} />
               <Route path="unidades" element={<Unidades />} />
+              <Route path="crm" element={<CrmExpansao />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
