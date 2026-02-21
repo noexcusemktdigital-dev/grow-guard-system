@@ -25,6 +25,7 @@ import Onboarding from "./pages/Onboarding";
 import Atendimento from "./pages/Atendimento";
 import Comunicados from "./pages/Comunicados";
 import Agenda from "./pages/Agenda";
+import Home from "./pages/Home";
 
 const queryClient = new QueryClient();
 
@@ -36,9 +37,10 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />}>
-            <Route index element={<Navigate to="/franqueadora/financeiro" replace />} />
+            <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
             <Route path="franqueadora" element={<FranqueadoraLayout />}>
-              <Route index element={<Navigate to="/franqueadora/financeiro" replace />} />
+              <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
+              <Route path="dashboard" element={<Home />} />
               <Route path="financeiro" element={<FinanceiroDashboard />} />
               <Route path="financeiro/despesas" element={<FinanceiroDespesas />} />
               <Route path="financeiro/receitas" element={<FinanceiroReceitas />} />

@@ -16,7 +16,7 @@ const Index = () => {
     setLevel(newLevel);
     if (newLevel === "FRANQUEADORA") {
       if (!location.pathname.startsWith("/franqueadora")) {
-        navigate("/franqueadora/financeiro");
+        navigate("/franqueadora/dashboard");
       }
     }
   };
