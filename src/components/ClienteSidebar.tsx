@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, Bell, Trophy, ChevronLeft, ChevronRight,
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign, User,
-  ChevronDown, Link, CreditCard, Settings,
+  ChevronDown, Link, CreditCard, Settings, Zap,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { mockSubscription, mockWallet, getTrialDaysRemaining } from "@/data/clienteData";
 
 interface SidebarItem {
   label: string;
@@ -111,6 +113,10 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
 
 export function ClienteSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
+  const trialDays = getTrialDaysRemaining();
+  const isTrialing = mockSubscription.status === "trial";
+  const trialUrgent = trialDays <= 3;
 
   return (
     <aside
@@ -148,14 +154,50 @@ export function ClienteSidebar() {
         <CollapsibleSection title="Sistema" items={sistemaSection} collapsed={collapsed} />
       </div>
 
-      {/* Footer - Credits */}
+      {/* Trial Banner */}
+      {isTrialing && !collapsed && (
+        <div
+          className={`mx-3 mb-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+            trialUrgent
+              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
+              : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
+          }`}
+          onClick={() => navigate("/cliente/plano-creditos")}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className={`text-xs font-semibold ${trialUrgent ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}>
+              🧪 Trial: {trialDays} dias
+            </span>
+          </div>
+          <Progress value={((14 - trialDays) / 14) * 100} className={`h-1 ${trialUrgent ? "[&>div]:bg-red-500" : "[&>div]:bg-amber-500"}`} />
+          <p className={`text-[10px] mt-1 ${trialUrgent ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
+            Ver planos →
+          </p>
+        </div>
+      )}
+      {isTrialing && collapsed && (
+        <div className="flex justify-center py-2" title={`Trial: ${trialDays} dias restantes`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${trialUrgent ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"}`}>
+            {trialDays}
+          </div>
+        </div>
+      )}
+
+      {/* Footer - Credits + Plan */}
       {!collapsed ? (
         <div className="px-4 py-3 border-t border-sidebar-border space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Créditos</span>
-            <span className="font-medium text-foreground">500 / 2.000</span>
+            <span className="font-medium text-foreground">{mockWallet.currentBalance.toLocaleString("pt-BR")} / {mockWallet.totalIncluded.toLocaleString("pt-BR")}</span>
           </div>
-          <Progress value={25} className="h-1.5" />
+          <Progress value={(mockWallet.currentBalance / mockWallet.totalIncluded) * 100} className="h-1.5" />
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 gap-1">
+              <Zap className="w-2.5 h-2.5" />
+              {mockSubscription.planName}
+              {isTrialing && " · Trial"}
+            </Badge>
+          </div>
         </div>
       ) : (
         <div className="flex justify-center py-3 border-t border-sidebar-border">
