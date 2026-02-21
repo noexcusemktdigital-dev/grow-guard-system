@@ -12,11 +12,24 @@ const Index = () => {
     document.documentElement.classList.add("dark");
   }, []);
 
+  // Sync level with current path
+  useEffect(() => {
+    if (location.pathname.startsWith("/franqueado")) {
+      setLevel("FRANQUEADO");
+    } else if (location.pathname.startsWith("/franqueadora")) {
+      setLevel("FRANQUEADORA");
+    }
+  }, [location.pathname]);
+
   const handleLevelChange = (newLevel: string) => {
     setLevel(newLevel);
     if (newLevel === "FRANQUEADORA") {
       if (!location.pathname.startsWith("/franqueadora")) {
         navigate("/franqueadora/dashboard");
+      }
+    } else if (newLevel === "FRANQUEADO") {
+      if (!location.pathname.startsWith("/franqueado")) {
+        navigate("/franqueado/dashboard");
       }
     }
   };
@@ -32,7 +45,7 @@ const Index = () => {
         </div>
       </header>
 
-      {level === "FRANQUEADORA" ? (
+      {level === "FRANQUEADORA" || level === "FRANQUEADO" ? (
         <Outlet />
       ) : (
         <div className="flex items-center justify-center h-[calc(100vh-60px)]">

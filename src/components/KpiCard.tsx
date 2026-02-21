@@ -1,17 +1,27 @@
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, LucideIcon } from "lucide-react";
 
-interface KpiCardProps {
+export interface KpiCardProps {
   label: string;
   value: string;
   sublabel?: string;
   trend?: "up" | "down" | "neutral";
   accent?: boolean;
+  icon?: LucideIcon;
+  delay?: number;
+  variant?: "default" | "accent";
 }
 
-export function KpiCard({ label, value, sublabel, trend, accent }: KpiCardProps) {
+export function KpiCard({ label, value, sublabel, trend, accent, icon: Icon, delay = 0, variant }: KpiCardProps) {
+  const isAccent = accent || variant === "accent";
   return (
-    <div className={`kpi-card animate-fade-in ${accent ? "border-primary/20 bg-gradient-to-br from-primary/5 to-transparent" : ""}`}>
-      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
+    <div
+      className={`kpi-card animate-fade-in ${isAccent ? "border-primary/20 bg-gradient-to-br from-primary/5 to-transparent" : ""}`}
+      style={delay ? { animationDelay: `${delay * 100}ms` } : undefined}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
+        {Icon && <Icon className="w-4 h-4 text-primary/60" />}
+      </div>
       <div className="flex items-end gap-2 mt-1">
         <span className={`text-2xl font-bold ${
           trend === "up" ? "text-kpi-positive" : 

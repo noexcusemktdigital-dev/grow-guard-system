@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { FranqueadoraLayout } from "./components/FranqueadoraLayout";
+import { FranqueadoLayout } from "./components/FranqueadoLayout";
 import FinanceiroDashboard from "./pages/FinanceiroDashboard";
 import FinanceiroConfiguracoes from "./pages/FinanceiroConfiguracoes";
 import FinanceiroDespesas from "./pages/FinanceiroDespesas";
@@ -27,6 +28,19 @@ import Comunicados from "./pages/Comunicados";
 import Agenda from "./pages/Agenda";
 import Home from "./pages/Home";
 import Matriz from "./pages/Matriz";
+// Franqueado pages
+import FranqueadoDashboard from "./pages/franqueado/FranqueadoDashboard";
+import FranqueadoAgenda from "./pages/franqueado/FranqueadoAgenda";
+import FranqueadoComunicados from "./pages/franqueado/FranqueadoComunicados";
+import FranqueadoSuporte from "./pages/franqueado/FranqueadoSuporte";
+import FranqueadoProspeccaoIA from "./pages/franqueado/FranqueadoProspeccaoIA";
+import FranqueadoDiagnostico from "./pages/franqueado/FranqueadoDiagnostico";
+import FranqueadoPropostas from "./pages/franqueado/FranqueadoPropostas";
+import FranqueadoCRM from "./pages/franqueado/FranqueadoCRM";
+import FranqueadoMateriais from "./pages/franqueado/FranqueadoMateriais";
+import FranqueadoAcademy from "./pages/franqueado/FranqueadoAcademy";
+import FranqueadoFinanceiro from "./pages/franqueado/FranqueadoFinanceiro";
+import FranqueadoContratos from "./pages/franqueado/FranqueadoContratos";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +76,21 @@ const App = () => (
               <Route path="comunicados" element={<Comunicados />} />
               <Route path="agenda" element={<Agenda />} />
               <Route path="matriz" element={<Matriz />} />
+            </Route>
+            <Route path="franqueado" element={<FranqueadoLayout />}>
+              <Route index element={<Navigate to="/franqueado/dashboard" replace />} />
+              <Route path="dashboard" element={<FranqueadoDashboard />} />
+              <Route path="agenda" element={<FranqueadoAgenda />} />
+              <Route path="comunicados" element={<FranqueadoComunicados />} />
+              <Route path="suporte" element={<FranqueadoSuporte />} />
+              <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
+              <Route path="diagnostico" element={<FranqueadoDiagnostico />} />
+              <Route path="propostas" element={<FranqueadoPropostas />} />
+              <Route path="crm" element={<FranqueadoCRM />} />
+              <Route path="materiais" element={<FranqueadoMateriais />} />
+              <Route path="academy" element={<FranqueadoAcademy />} />
+              <Route path="financeiro" element={<FranqueadoFinanceiro />} />
+              <Route path="contratos" element={<FranqueadoContratos />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
