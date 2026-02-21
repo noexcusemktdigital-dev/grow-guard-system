@@ -511,10 +511,11 @@ export interface DREFranqueado {
   mes: string;
   clientesAtivos: { nome: string; valor: number }[];
   receitaBruta: number;
+  retencaoFranqueadora: number;
+  repasseFranqueado: number;
   royalties: number;
   impostoProporcional: number;
   sistema: number;
-  repasseMatriz: number;
   resultadoLiquido: number;
 }
 
@@ -527,6 +528,8 @@ export function getDREFranqueado(franqueadoId: string, mes: string): DREFranquea
   );
 
   const receitaBruta = clientesDoFranqueado.reduce((s, c) => s + c.valor, 0);
+  const retencaoFranqueadora = receitaBruta * 0.80;
+  const repasseFranqueado = receitaBruta * 0.20;
   const royalties = receitaBruta * 0.01;
 
   // Imposto proporcional
@@ -538,11 +541,7 @@ export function getDREFranqueado(franqueadoId: string, mes: string): DREFranquea
 
   const sistema = franqueado.mensalidadeSistema;
 
-  const repasseMatriz = clientesDoFranqueado
-    .filter(c => c.geraRepasse)
-    .reduce((s, c) => s + c.valor * (c.percentualRepasse / 100), 0);
-
-  const resultadoLiquido = receitaBruta - royalties - impostoProporcional - sistema - repasseMatriz;
+  const resultadoLiquido = repasseFranqueado - royalties - impostoProporcional - sistema;
 
   return {
     franqueadoId,
@@ -550,10 +549,11 @@ export function getDREFranqueado(franqueadoId: string, mes: string): DREFranquea
     mes,
     clientesAtivos: clientesDoFranqueado.map(c => ({ nome: c.nome, valor: c.valor })),
     receitaBruta,
+    retencaoFranqueadora,
+    repasseFranqueado,
     royalties,
     impostoProporcional,
     sistema,
-    repasseMatriz,
     resultadoLiquido,
   };
 }
