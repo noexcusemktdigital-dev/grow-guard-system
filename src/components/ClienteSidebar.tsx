@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, CheckSquare, Bell, Trophy, ChevronLeft, ChevronRight,
+  LayoutDashboard, CheckSquare, ChevronLeft, ChevronRight,
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
-  Megaphone, Rocket, FileText, Share2, Globe, DollarSign, User,
+  Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
   ChevronDown, Link, CreditCard, Settings, Zap,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -17,19 +17,17 @@ interface SidebarItem {
   path: string;
 }
 
-const principalSection: SidebarItem[] = [
+const globalSection: SidebarItem[] = [
   { label: "Início", icon: LayoutDashboard, path: "/cliente/inicio" },
-  { label: "Checklist do Dia", icon: CheckSquare, path: "/cliente/checklist" },
-  { label: "Notificações", icon: Bell, path: "/cliente/notificacoes" },
-  { label: "Gamificação", icon: Trophy, path: "/cliente/gamificacao" },
+  { label: "Checklist", icon: CheckSquare, path: "/cliente/checklist" },
 ];
 
 const vendasSection: SidebarItem[] = [
   { label: "Plano de Vendas", icon: Target, path: "/cliente/plano-vendas" },
-  { label: "Chat", icon: MessageCircle, path: "/cliente/chat" },
   { label: "CRM", icon: Users, path: "/cliente/crm" },
-  { label: "Agentes de IA", icon: Bot, path: "/cliente/agentes-ia" },
-  { label: "Scripts & Playbooks", icon: BookOpen, path: "/cliente/scripts" },
+  { label: "Chat", icon: MessageCircle, path: "/cliente/chat" },
+  { label: "Agentes IA", icon: Bot, path: "/cliente/agentes-ia" },
+  { label: "Scripts", icon: BookOpen, path: "/cliente/scripts" },
   { label: "Disparos", icon: Send, path: "/cliente/disparos" },
   { label: "Relatórios", icon: BarChart3, path: "/cliente/relatorios" },
 ];
@@ -52,7 +50,7 @@ const sistemaSection: SidebarItem[] = [
 function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed: boolean }) {
   const location = useLocation();
   return (
-    <nav className="flex flex-col gap-0.5">
+    <nav className="flex flex-col gap-px">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname.startsWith(item.path);
@@ -60,13 +58,16 @@ function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed
           <RouterNavLink
             key={item.path}
             to={item.path}
-            className={`flex items-center gap-3 px-3 py-2.5 text-sm transition-all duration-200 rounded-lg mx-1
-              ${collapsed ? "justify-center" : ""}
-              ${isActive ? "bg-primary/10 text-foreground font-medium border-l-[3px] border-primary" : "text-sidebar-foreground hover:text-foreground hover:bg-primary/5"}
+            className={`flex items-center gap-2.5 px-3 py-2 text-[13px] transition-all duration-150 rounded-lg mx-1.5
+              ${collapsed ? "justify-center px-2" : ""}
+              ${isActive
+                ? "bg-primary/10 text-foreground font-semibold border-l-[3px] border-primary ml-0 pl-2.5"
+                : "text-sidebar-foreground hover:text-foreground hover:bg-muted/50"
+              }
             `}
             title={collapsed ? item.label : undefined}
           >
-            <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? "text-primary" : "text-primary/60"}`} />
+            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
             {!collapsed && <span className="truncate">{item.label}</span>}
           </RouterNavLink>
         );
@@ -81,32 +82,22 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
   const [isOpen, setIsOpen] = useState(defaultOpen || isActive);
 
   if (collapsed) {
-    return (
-      <div className="mb-2">
-        <SidebarNavItems items={items} collapsed={collapsed} />
-      </div>
-    );
+    return <SidebarNavItems items={items} collapsed={collapsed} />;
   }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="mb-2">
-        <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between cursor-pointer hover:bg-primary/5 rounded-lg px-4 py-2 transition-colors mx-1">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              {title}
-            </span>
-            {isOpen ? (
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-          </div>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarNavItems items={items} collapsed={collapsed} />
-        </CollapsibleContent>
-      </div>
+      <CollapsibleTrigger className="w-full">
+        <div className="flex items-center justify-between cursor-pointer hover:bg-muted/30 rounded-md px-3 py-1.5 transition-colors mx-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+            {title}
+          </span>
+          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`} />
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-0.5">
+        <SidebarNavItems items={items} collapsed={collapsed} />
+      </CollapsibleContent>
     </Collapsible>
   );
 }
@@ -120,34 +111,29 @@ export function ClienteSidebar() {
 
   return (
     <aside
-      className={`h-[calc(100vh-49px)] bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 sticky top-[49px] ${collapsed ? "w-16" : "w-64"}`}
+      className={`h-[calc(100vh-49px)] bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 sticky top-[49px] ${collapsed ? "w-[60px]" : "w-60"}`}
     >
-      {/* Logo Header */}
-      <div className={`flex items-center h-16 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary flex-shrink-0">
-            <span className="text-lg font-bold text-primary-foreground">N</span>
+      {/* Logo */}
+      <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary flex-shrink-0">
+            <span className="text-sm font-bold text-primary-foreground">N</span>
           </div>
           {!collapsed && (
-            <div className="flex flex-col">
-              <span className="text-base font-bold text-foreground tracking-tight">NOEXCUSE</span>
-              <span className="text-[10px] text-muted-foreground">Gestão Comercial</span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-bold text-foreground tracking-tight">NOEXCUSE</span>
+              <span className="text-[9px] text-muted-foreground -mt-0.5">Gestão Comercial</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Menu */}
-      <div className="flex-1 overflow-y-auto py-4 space-y-1">
-        {/* Global - always open */}
-        <div className="mb-2">
-          {!collapsed && (
-            <div className="px-4 mb-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Global</span>
-            </div>
-          )}
-          <SidebarNavItems items={principalSection} collapsed={collapsed} />
-        </div>
+      <div className="flex-1 overflow-y-auto py-3 space-y-3">
+        {/* Global items — no section header */}
+        <SidebarNavItems items={globalSection} collapsed={collapsed} />
+
+        <div className="mx-3 border-t border-sidebar-border" />
 
         <CollapsibleSection title="Vendas" items={vendasSection} collapsed={collapsed} defaultOpen />
         <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
@@ -157,59 +143,56 @@ export function ClienteSidebar() {
       {/* Trial Banner */}
       {isTrialing && !collapsed && (
         <div
-          className={`mx-3 mb-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+          className={`mx-2 mb-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
             trialUrgent
-              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
-              : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
+              ? "bg-destructive/5 border-destructive/20"
+              : "bg-amber-500/5 border-amber-500/20"
           }`}
           onClick={() => navigate("/cliente/plano-creditos")}
         >
-          <div className="flex items-center justify-between mb-1.5">
-            <span className={`text-xs font-semibold ${trialUrgent ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}>
-              🧪 Trial: {trialDays} dias
+          <div className="flex items-center justify-between mb-1">
+            <span className={`text-[11px] font-semibold ${trialUrgent ? "text-destructive" : "text-amber-600 dark:text-amber-400"}`}>
+              Trial · {trialDays} dias
             </span>
           </div>
-          <Progress value={((14 - trialDays) / 14) * 100} className={`h-1 ${trialUrgent ? "[&>div]:bg-red-500" : "[&>div]:bg-amber-500"}`} />
-          <p className={`text-[10px] mt-1 ${trialUrgent ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
+          <Progress value={((14 - trialDays) / 14) * 100} className={`h-1 ${trialUrgent ? "[&>div]:bg-destructive" : "[&>div]:bg-amber-500"}`} />
+          <p className={`text-[9px] mt-1 ${trialUrgent ? "text-destructive/70" : "text-amber-600/70 dark:text-amber-400/70"}`}>
             Ver planos →
           </p>
         </div>
       )}
       {isTrialing && collapsed && (
-        <div className="flex justify-center py-2" title={`Trial: ${trialDays} dias restantes`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${trialUrgent ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"}`}>
+        <div className="flex justify-center py-2" title={`Trial: ${trialDays} dias`}>
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${trialUrgent ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"}`}>
             {trialDays}
           </div>
         </div>
       )}
 
-      {/* Footer - Credits + Plan */}
+      {/* Footer */}
       {!collapsed ? (
-        <div className="px-4 py-3 border-t border-sidebar-border space-y-2">
-          <div className="flex items-center justify-between text-xs">
+        <div className="px-3 py-2.5 border-t border-sidebar-border">
+          <div className="flex items-center justify-between text-[11px] mb-1">
             <span className="text-muted-foreground">Créditos</span>
-            <span className="font-medium text-foreground">{mockWallet.currentBalance.toLocaleString("pt-BR")} / {mockWallet.totalIncluded.toLocaleString("pt-BR")}</span>
+            <span className="font-medium text-foreground">{mockWallet.currentBalance.toLocaleString("pt-BR")}/{mockWallet.totalIncluded.toLocaleString("pt-BR")}</span>
           </div>
-          <Progress value={(mockWallet.currentBalance / mockWallet.totalIncluded) * 100} className="h-1.5" />
-          <div className="flex items-center gap-1.5">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 gap-1">
-              <Zap className="w-2.5 h-2.5" />
-              {mockSubscription.planName}
-              {isTrialing && " · Trial"}
-            </Badge>
-          </div>
+          <Progress value={(mockWallet.currentBalance / mockWallet.totalIncluded) * 100} className="h-1" />
+          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 gap-1 mt-1.5">
+            <Zap className="w-2.5 h-2.5" />
+            {mockSubscription.planName}{isTrialing && " · Trial"}
+          </Badge>
         </div>
       ) : (
-        <div className="flex justify-center py-3 border-t border-sidebar-border">
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
+        <div className="flex justify-center py-2.5 border-t border-sidebar-border" title="Créditos">
+          <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
         </div>
       )}
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-12 border-t border-sidebar-border text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center justify-center h-10 border-t border-sidebar-border text-muted-foreground hover:text-foreground transition-colors"
       >
-        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>
     </aside>
   );
