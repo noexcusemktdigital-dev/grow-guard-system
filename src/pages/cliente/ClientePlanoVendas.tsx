@@ -40,7 +40,7 @@ interface EstruturaComercial {
   frequenciaReuniao: string;
 }
 type EscopoAvaliacao = "empresa" | "individual";
-interface Avaliacao { id: string; data: string; respostas: number[]; score: number; escopo: EscopoAvaliacao; vendedor?: string; }
+interface Avaliacao { id: string; data: string; mesRef: string; respostas: number[]; score: number; escopo: EscopoAvaliacao; vendedor?: string; }
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const CANAIS_OPTIONS = ["Google Ads", "Instagram", "Facebook", "LinkedIn", "Indicação", "Site/SEO", "WhatsApp", "TikTok", "Cold Call", "Outro"];
@@ -121,6 +121,7 @@ export default function ClientePlanoVendas() {
   const [avaliacaoVendedor, setAvaliacaoVendedor] = useState("");
   const [historicoFiltro, setHistoricoFiltro] = useState<"todos" | "empresa" | "individual">("todos");
   const [pastasAbertas, setPastasAbertas] = useState<Record<string, boolean>>({});
+  const [avaliacaoMesRef, setAvaliacaoMesRef] = useState("");
 
   const toggleCanal = (c: string) => setEstrutura(prev => ({ ...prev, canaisAquisicao: prev.canaisAquisicao.includes(c) ? prev.canaisAquisicao.filter(x => x !== c) : [...prev.canaisAquisicao, c] }));
   const toggleFerramenta = (f: string) => setEstrutura(prev => ({ ...prev, ferramentas: prev.ferramentas.includes(f) ? prev.ferramentas.filter(x => x !== f) : [...prev.ferramentas, f] }));
@@ -156,7 +157,7 @@ export default function ClientePlanoVendas() {
 
   // Insights based on all data
   const insights = useMemo(() => {
-    if (!visaoDesbloqueada) return [];
+    if (!temEstrutura && !temAvaliacao) return [];
     const ins: { text: string; severity: "warn" | "error" | "success" | "info" }[] = [];
     if (scoreAvaliacao <= 25) ins.push({ text: "Seu comercial está no nível Inicial. Priorize documentar o processo e implantar um CRM.", severity: "error" });
     if (scoreAvaliacao > 25 && scoreAvaliacao <= 50) ins.push({ text: "Seu comercial está se estruturando. Foque em padronizar follow-ups e metas semanais.", severity: "warn" });
@@ -182,7 +183,7 @@ export default function ClientePlanoVendas() {
 
   // Plano de ação items
   const planoDeAcao = useMemo(() => {
-    if (!visaoDesbloqueada) return [];
+    if (!temEstrutura && !temAvaliacao) return [];
     const acoes: { titulo: string; descricao: string; prioridade: "alta" | "media" | "baixa" }[] = [];
     if (estrutura.processoDocumentado === "Não" || !estrutura.processoDocumentado) acoes.push({ titulo: "Documentar processo comercial", descricao: "Crie um playbook com cada etapa do funil, scripts e critérios de qualificação.", prioridade: "alta" });
     if (totalEquipe < 3) acoes.push({ titulo: "Expandir equipe comercial", descricao: `Você tem ${totalEquipe} pessoa(s). Considere contratar SDRs para acelerar prospecção.`, prioridade: "media" });
@@ -207,11 +208,12 @@ export default function ClientePlanoVendas() {
     const total = respostasAvaliacao.reduce((a, b) => a + b, 0);
     const max = AVALIACAO_PERGUNTAS.length * 5;
     const score = Math.round((total / max) * 100);
-    const nova: Avaliacao = { id: `av-${Date.now()}`, data: new Date().toLocaleDateString("pt-BR"), respostas: [...respostasAvaliacao], score, escopo: avaliacaoEscopo, vendedor: avaliacaoEscopo === "individual" ? avaliacaoVendedor : undefined };
+    const nova: Avaliacao = { id: `av-${Date.now()}`, data: new Date().toLocaleDateString("pt-BR"), mesRef: avaliacaoMesRef, respostas: [...respostasAvaliacao], score, escopo: avaliacaoEscopo, vendedor: avaliacaoEscopo === "individual" ? avaliacaoVendedor : undefined };
     setAvaliacoesSalvas(prev => [...prev, nova]);
     setAvaliacaoAtiva(false);
     setRespostasAvaliacao(new Array(AVALIACAO_PERGUNTAS.length).fill(0));
     setAvaliacaoVendedor("");
+    setAvaliacaoMesRef("");
     toast({ title: `Avaliação concluída! Score: ${score}%` });
   };
 
@@ -251,7 +253,7 @@ export default function ClientePlanoVendas() {
           ].map(t => (
             <TabsTrigger key={t.value} value={t.value} className="flex-1 min-w-[140px] gap-1.5 text-xs">
               <t.icon className="w-3.5 h-3.5" /> {t.label}
-              {t.value === "visao" && !visaoDesbloqueada && <Lock className="w-3 h-3 text-muted-foreground" />}
+              {t.value === "visao" && (!temMetas && !temEstrutura && !temAvaliacao) && <Badge variant="outline" className="text-[10px]">Novo</Badge>}
               {t.value === "metas" && temMetas && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
               {t.value === "estrutura" && temEstrutura && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
               {t.value === "diagnostico" && temAvaliacao && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
@@ -261,710 +263,606 @@ export default function ClientePlanoVendas() {
 
         {/* ===== VISÃO GERAL ===== */}
         <TabsContent value="visao" className="space-y-5">
-          {!visaoDesbloqueada ? (
-            <Card className="border-dashed border-2">
-              <CardContent className="py-16 text-center space-y-4">
-                <Lock className="w-12 h-12 mx-auto text-muted-foreground/50" />
-                <h3 className="text-lg font-semibold">Visão Geral Bloqueada</h3>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Para desbloquear a visão geral do seu comercial, preencha as 3 seções abaixo:
-                </p>
-                <div className="flex flex-col items-center gap-2 mt-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    {temMetas ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />}
-                    <span className={temMetas ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}>Minhas Metas</span>
-                    {!temMetas && <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setActiveTab("metas")}>Preencher →</Button>}
+          {/* KPIs */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard label="Meta Acumulada" value={fmtBRL(totalMetaAnual)} variant="accent" />
+            <KpiCard label="Meta Mensal" value={fmtBRL(metaFatMensal)} />
+            <KpiCard label="Equipe" value={estrutura.tamanhoEquipe || "—"} sublabel={estrutura.temSDR ? `SDR: ${estrutura.temSDR} | Closer: ${estrutura.temCloser}` : "Preencha a estrutura"} />
+            <KpiCard label="Maturidade" value={temAvaliacao ? fmtPct(scoreAvaliacao) : "—"} sublabel={temAvaliacao ? nivelAvaliacao.label : "Faça uma avaliação"} />
+          </div>
+
+          {/* Status das seções */}
+          {(!temMetas || !temEstrutura || !temAvaliacao) && (
+            <Card className="border-dashed">
+              <CardContent className="py-4">
+                <p className="text-xs text-muted-foreground mb-3">Para uma visão mais completa, preencha as seções abaixo:</p>
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center gap-1.5 text-xs">
+                    {temMetas ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <div className="w-3.5 h-3.5 rounded-full border-2 border-muted-foreground/30" />}
+                    <span className={temMetas ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}>Metas</span>
+                    {!temMetas && <Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => setActiveTab("metas")}>→</Button>}
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    {temEstrutura ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />}
-                    <span className={temEstrutura ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}>Estrutura Comercial</span>
-                    {!temEstrutura && <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setActiveTab("estrutura")}>Preencher →</Button>}
+                  <div className="flex items-center gap-1.5 text-xs">
+                    {temEstrutura ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <div className="w-3.5 h-3.5 rounded-full border-2 border-muted-foreground/30" />}
+                    <span className={temEstrutura ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}>Estrutura</span>
+                    {!temEstrutura && <Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => setActiveTab("estrutura")}>→</Button>}
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    {temAvaliacao ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />}
-                    <span className={temAvaliacao ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}>Avaliar Meu Comercial</span>
-                    {!temAvaliacao && <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setActiveTab("diagnostico")}>Preencher →</Button>}
+                  <div className="flex items-center gap-1.5 text-xs">
+                    {temAvaliacao ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <div className="w-3.5 h-3.5 rounded-full border-2 border-muted-foreground/30" />}
+                    <span className={temAvaliacao ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}>Avaliação</span>
+                    {!temAvaliacao && <Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => setActiveTab("diagnostico")}>→</Button>}
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ) : (
-            <>
-              {/* KPIs */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard label="Receita Atual" value={fmtBRL(Number(infoAtual.receitaMensal) || 0)} />
-                <KpiCard label="Meta Acumulada" value={fmtBRL(totalMetaAnual)} variant="accent" />
-                <KpiCard label="Meta Mensal" value={fmtBRL(metaFatMensal)} />
-                <KpiCard label="Equipe" value={estrutura.tamanhoEquipe || "—"} sublabel={`SDR: ${estrutura.temSDR} | Closer: ${estrutura.temCloser}`} />
-                <KpiCard label="Maturidade" value={fmtPct(scoreAvaliacao)} sublabel={nivelAvaliacao.label} />
+          )}
+
+          {/* Alertas & Insights */}
+          {insights.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-primary" /> Alertas & Insights
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {insights.map((ins, i) => {
+                  const style = insightColors[ins.severity];
+                  const Icon = insightIcons[ins.severity];
+                  return (
+                    <Card key={i} className={`${style.border} ${style.bg}`}>
+                      <CardContent className="py-3 flex items-start gap-3">
+                        <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${style.icon}`} />
+                        <p className="text-sm">{ins.text}</p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
+            </div>
+          )}
 
-              {/* Alertas & Insights */}
-              {insights.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5 text-primary" /> Alertas & Insights
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {insights.map((ins, i) => {
-                      const style = insightColors[ins.severity];
-                      const Icon = insightIcons[ins.severity];
-                      return (
-                        <Card key={i} className={`${style.border} ${style.bg}`}>
-                          <CardContent className="py-3 flex items-start gap-3">
-                            <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${style.icon}`} />
-                            <p className="text-sm">{ins.text}</p>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {projecaoData.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção Anual</CardTitle></CardHeader>
-                    <CardContent>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={projecaoData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                          <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                          <Tooltip formatter={(v: number) => fmtBRL(v)} />
-                          <Area type="monotone" dataKey="meta" stroke="hsl(var(--primary))" fill="hsl(var(--primary)/0.15)" strokeWidth={2} name="Meta" />
-                          <Area type="monotone" dataKey="realizado" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2)/0.15)" strokeWidth={2} name="Projeção" strokeDasharray="5 5" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                )}
-                {radarData.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Radar de Maturidade</CardTitle></CardHeader>
-                    <CardContent>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <RadarChart data={radarData}>
-                          <PolarGrid stroke="hsl(var(--border))" />
-                          <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                          <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                          <Radar dataKey="value" stroke={nivelAvaliacao.cor} fill={nivelAvaliacao.cor} fillOpacity={0.3} />
-                        </RadarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              {/* Plano de Ação */}
-              {planoDeAcao.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Rocket className="w-3.5 h-3.5 text-primary" /> Plano de Ação
-                  </h3>
-                  <div className="space-y-2">
-                    {planoDeAcao.map((acao, i) => (
-                      <Card key={i} className={`border ${prioridadeCores[acao.prioridade]}`}>
-                        <CardContent className="py-3 flex items-start gap-3">
-                          <Badge variant="outline" className="text-[10px] shrink-0 mt-0.5">{acao.prioridade}</Badge>
-                          <div>
-                            <p className="text-sm font-medium">{acao.titulo}</p>
-                            <p className="text-xs text-muted-foreground">{acao.descricao}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Resumo consolidado */}
-              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Resumo Consolidado</CardTitle></CardHeader>
-                <CardContent className="text-sm space-y-1 text-muted-foreground">
-                  <p><strong>Receita Atual:</strong> {fmtBRL(Number(infoAtual.receitaMensal) || 0)} | <strong>Ticket Médio:</strong> {fmtBRL(Number(infoAtual.ticketMedio) || 0)} | <strong>Meta Total:</strong> {fmtBRL(totalMetaAnual)}</p>
-                  <p><strong>Equipe:</strong> {estrutura.tamanhoEquipe} | <strong>SDR:</strong> {estrutura.temSDR} | <strong>Closer:</strong> {estrutura.temCloser} | <strong>CS:</strong> {estrutura.temCS}</p>
-                  <p><strong>Canais:</strong> {estrutura.canaisAquisicao.join(", ") || "Nenhum"}</p>
-                  <p><strong>Processo documentado:</strong> {estrutura.processoDocumentado || "Não informado"} | <strong>Tempo fechamento:</strong> {estrutura.tempoMedioFechamento}</p>
-                  <p><strong>Maturidade:</strong> {fmtPct(scoreAvaliacao)} — {nivelAvaliacao.label}</p>
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {projecaoData.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção Anual</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart data={projecaoData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                      <Area type="monotone" dataKey="meta" stroke="hsl(var(--primary))" fill="hsl(var(--primary)/0.15)" strokeWidth={2} name="Meta" />
+                      <Area type="monotone" dataKey="realizado" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2)/0.15)" strokeWidth={2} name="Projeção" strokeDasharray="5 5" />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
-            </>
+            )}
+            {radarData.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Radar de Maturidade</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <RadarChart data={radarData}>
+                      <PolarGrid stroke="hsl(var(--border))" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                      <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                      <Radar dataKey="value" stroke={nivelAvaliacao.cor} fill={nivelAvaliacao.cor} fillOpacity={0.3} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Plano de Ação */}
+          {planoDeAcao.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Rocket className="w-3.5 h-3.5 text-primary" /> Plano de Ação
+              </h3>
+              <div className="space-y-2">
+                {planoDeAcao.map((acao, i) => (
+                  <Card key={i} className={`border ${prioridadeCores[acao.prioridade]}`}>
+                    <CardContent className="py-3 flex items-start gap-3">
+                      <Badge variant="outline" className="text-[10px] shrink-0 mt-0.5">{acao.prioridade}</Badge>
+                      <div>
+                        <p className="text-sm font-medium">{acao.titulo}</p>
+                        <p className="text-xs text-muted-foreground">{acao.descricao}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Resumo consolidado */}
+          {(temMetas || temEstrutura || temAvaliacao) && (
+            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Resumo Consolidado</CardTitle></CardHeader>
+              <CardContent className="text-sm space-y-1 text-muted-foreground">
+                {temMetas && <p><strong>Meta Total:</strong> {fmtBRL(totalMetaAnual)} | <strong>Meta Mensal:</strong> {fmtBRL(metaFatMensal)}</p>}
+                {temEstrutura && (
+                  <>
+                    <p><strong>Equipe:</strong> {estrutura.tamanhoEquipe} | <strong>SDR:</strong> {estrutura.temSDR} | <strong>Closer:</strong> {estrutura.temCloser} | <strong>CS:</strong> {estrutura.temCS}</p>
+                    <p><strong>Canais:</strong> {estrutura.canaisAquisicao.join(", ") || "Nenhum"}</p>
+                    <p><strong>Processo documentado:</strong> {estrutura.processoDocumentado || "Não informado"} | <strong>Tempo fechamento:</strong> {estrutura.tempoMedioFechamento}</p>
+                  </>
+                )}
+                {temAvaliacao && <p><strong>Maturidade:</strong> {fmtPct(scoreAvaliacao)} — {nivelAvaliacao.label}</p>}
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
         {/* ===== MINHAS METAS ===== */}
         <TabsContent value="metas" className="space-y-5">
-          {/* Informações Atuais */}
-          <Card className={`overflow-hidden ${infoAtualSalva ? "border-emerald-500/20" : ""}`}>
-            <CardHeader className="pb-3 bg-gradient-to-r from-cyan-500/10 to-transparent border-b border-cyan-500/10">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-cyan-500/15"><BarChart3 className="w-4 h-4 text-cyan-500" /></div>
-                  Situação Atual do Comercial
-                </CardTitle>
-                {infoAtualSalva && <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" />Salvo</Badge>}
-              </div>
-              <p className="text-xs text-muted-foreground">Preencha os indicadores atuais para que as metas sejam calculadas corretamente.</p>
+          {/* Criar Nova Meta */}
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/10">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/15"><Plus className="w-4 h-4 text-amber-500" /></div>
+                Criar Nova Meta
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Selecione tipo, escopo e período para definir sua meta.</p>
             </CardHeader>
-            <CardContent className="pt-4 space-y-4">
-              {/* Financeiro */}
+            <CardContent className="pt-4 space-y-5">
+              {/* Tipo de Meta */}
               <div>
                 <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Indicadores Financeiros
+                  <Target className="w-3.5 h-3.5 text-amber-500" /> Qual o tipo da meta?
                 </Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground">Receita Mensal (R$)</Label>
-                    <Input value={infoAtual.receitaMensal} disabled={infoAtualSalva}
-                      onChange={e => setInfoAtual(p => ({ ...p, receitaMensal: e.target.value }))} placeholder="Ex: 47.500" />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground">Ticket Médio (R$)</Label>
-                    <Input value={infoAtual.ticketMedio} disabled={infoAtualSalva}
-                      onChange={e => setInfoAtual(p => ({ ...p, ticketMedio: e.target.value }))} placeholder="Ex: 4.500" />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground">Contratos Ativos/Mês</Label>
-                    <Input value={infoAtual.contratosMensais} disabled={infoAtualSalva}
-                      onChange={e => setInfoAtual(p => ({ ...p, contratosMensais: e.target.value }))} placeholder="Ex: 8" />
-                  </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {([
+                    { value: "faturamento" as TipoMeta, label: "Faturamento", icon: DollarSign, color: "text-emerald-500" },
+                    { value: "novos_clientes" as TipoMeta, label: "Novos Clientes", icon: UserPlus, color: "text-blue-500" },
+                    { value: "contratos" as TipoMeta, label: "Contratos", icon: FileText, color: "text-purple-500" },
+                    { value: "retencao" as TipoMeta, label: "Retenção", icon: ShieldCheck, color: "text-teal-500" },
+                    { value: "ticket_medio" as TipoMeta, label: "Ticket Médio", icon: Receipt, color: "text-orange-500" },
+                    { value: "conversao" as TipoMeta, label: "Conversão (%)", icon: BarChartHorizontal, color: "text-indigo-500" },
+                    { value: "leads" as TipoMeta, label: "Leads Gerados", icon: Megaphone, color: "text-pink-500" },
+                    { value: "reunioes" as TipoMeta, label: "Reuniões", icon: Handshake, color: "text-cyan-500" },
+                  ]).map(opt => {
+                    const Icon = opt.icon;
+                    const selected = novaMeta.tipo === opt.value;
+                    return (
+                      <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
+                        className={`justify-start gap-2 h-auto py-2.5 px-3 ${!selected ? "border-dashed" : ""}`}
+                        onClick={() => setNovaMeta(p => ({ ...p, tipo: opt.value }))}>
+                        <Icon className={`w-4 h-4 ${selected ? "" : opt.color}`} />
+                        <span className="text-xs">{opt.label}</span>
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
-              {/* Comercial */}
+
+              {/* Nome da Meta */}
               <div>
                 <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-blue-500" /> Indicadores Comerciais
+                  <FileText className="w-3.5 h-3.5 text-slate-500" /> Dê um nome para essa meta
                 </Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground">Clientes Ativos</Label>
-                    <Input value={infoAtual.clientesAtivos} disabled={infoAtualSalva}
-                      onChange={e => setInfoAtual(p => ({ ...p, clientesAtivos: e.target.value }))} placeholder="Ex: 35" />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground">Leads/Mês</Label>
-                    <Input value={infoAtual.leadsMensais} disabled={infoAtualSalva}
-                      onChange={e => setInfoAtual(p => ({ ...p, leadsMensais: e.target.value }))} placeholder="Ex: 120" />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground">Reuniões/Mês</Label>
-                    <Input value={infoAtual.reunioesMensais} disabled={infoAtualSalva}
-                      onChange={e => setInfoAtual(p => ({ ...p, reunioesMensais: e.target.value }))} placeholder="Ex: 20" />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground">Conversão Média (%)</Label>
-                    <Input value={infoAtual.conversaoMedia} disabled={infoAtualSalva}
-                      onChange={e => setInfoAtual(p => ({ ...p, conversaoMedia: e.target.value }))} placeholder="Ex: 20" />
-                  </div>
-                </div>
+                <Input value={novaMeta.nome} className="max-w-md"
+                  onChange={e => setNovaMeta(p => ({ ...p, nome: e.target.value }))}
+                  placeholder="Ex: Meta de Faturamento Q1, Expansão Novos Clientes..." />
               </div>
-              {/* Retenção */}
+
+              {/* Mês de Referência */}
               <div>
                 <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal-500" /> Retenção
+                  <Calendar className="w-3.5 h-3.5 text-violet-500" /> Mês de referência
                 </Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground">Taxa de Retenção (%)</Label>
-                    <Input value={infoAtual.taxaRetencao} disabled={infoAtualSalva}
-                      onChange={e => setInfoAtual(p => ({ ...p, taxaRetencao: e.target.value }))} placeholder="Ex: 85" />
-                  </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {MESES_COMPLETOS.map((mes, i) => {
+                    const valor = `${mes}/${anoAtual}`;
+                    const valorProx = `${mes}/${anoAtual + 1}`;
+                    const selected = novaMeta.mesRef === valor || novaMeta.mesRef === valorProx;
+                    return (
+                      <Button key={mes} size="sm" variant={selected ? "default" : "outline"}
+                        className={`text-xs h-8 px-2.5 ${!selected ? "border-dashed" : ""}`}
+                        onClick={() => setNovaMeta(p => ({ ...p, mesRef: i >= new Date().getMonth() ? valor : valorProx }))}>
+                        {MESES[i]}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {novaMeta.mesRef && <p className="text-[10px] text-muted-foreground mt-1">📅 {novaMeta.mesRef}</p>}
+              </div>
+
+              {/* Escopo */}
+              <div>
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-blue-500" /> Essa meta é para quem?
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { value: "empresa" as EscopoMeta, label: "Empresa inteira", icon: Building2, desc: "Meta macro para toda a empresa" },
+                    { value: "equipe" as EscopoMeta, label: "Por equipe", icon: Users, desc: "Meta específica por time" },
+                    { value: "individual" as EscopoMeta, label: "Individual", icon: UserCheck, desc: "Meta para pessoa específica" },
+                  ]).map(opt => {
+                    const Icon = opt.icon;
+                    const selected = novaMeta.escopo === opt.value;
+                    return (
+                      <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
+                        className={`gap-2 h-auto py-2.5 px-4 ${!selected ? "border-dashed" : ""}`}
+                        onClick={() => setNovaMeta(p => ({ ...p, escopo: opt.value, equipe: "", responsavel: "" }))}>
+                        <Icon className="w-4 h-4" />
+                        <div className="text-left">
+                          <span className="text-xs font-medium block">{opt.label}</span>
+                          <span className="text-[10px] opacity-70">{opt.desc}</span>
+                        </div>
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Equipe / Responsável (condicional) */}
+              {novaMeta.escopo === "equipe" && (
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-purple-500" /> Qual equipe?
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["Vendas", "Pré-vendas (SDR)", "Pós-venda (CS)", "Marketing", "Prospecção"].map(opt => (
+                      <Button key={opt} size="sm" variant={novaMeta.equipe === opt ? "default" : "outline"}
+                        className={`text-xs ${novaMeta.equipe !== opt ? "border-dashed" : ""}`}
+                        onClick={() => setNovaMeta(p => ({ ...p, equipe: opt }))}>{opt}</Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {novaMeta.escopo === "individual" && (
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-purple-500" /> Quem é o responsável?
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Lima"].map(opt => (
+                      <Button key={opt} size="sm" variant={novaMeta.responsavel === opt ? "default" : "outline"}
+                        className={`text-xs ${novaMeta.responsavel !== opt ? "border-dashed" : ""}`}
+                        onClick={() => setNovaMeta(p => ({ ...p, responsavel: opt }))}>{opt}</Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Período */}
+              <div>
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-green-500" /> Qual o período da meta?
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { value: "mensal" as PeriodoMeta, label: "Mensal" },
+                    { value: "trimestral" as PeriodoMeta, label: "Trimestral" },
+                    { value: "semestral" as PeriodoMeta, label: "Semestral" },
+                    { value: "anual" as PeriodoMeta, label: "Anual" },
+                  ]).map(opt => (
+                    <Button key={opt.value} size="sm" variant={novaMeta.periodo === opt.value ? "default" : "outline"}
+                      className={`text-xs ${novaMeta.periodo !== opt.value ? "border-dashed" : ""}`}
+                      onClick={() => setNovaMeta(p => ({ ...p, periodo: opt.value }))}>{opt.label}</Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Valor Alvo */}
+              <div>
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-red-500" /> Qual o valor alvo?
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {(novaMeta.tipo === "faturamento" || novaMeta.tipo === "ticket_medio"
+                    ? ["R$ 10.000", "R$ 25.000", "R$ 50.000", "R$ 100.000", "R$ 200.000", "R$ 500.000"]
+                    : novaMeta.tipo === "conversao" || novaMeta.tipo === "retencao"
+                    ? ["10%", "20%", "30%", "50%", "70%", "90%"]
+                    : ["5", "10", "20", "50", "100", "200"]
+                  ).map(opt => {
+                    const numVal = Number(opt.replace(/[^0-9]/g, ""));
+                    const selected = novaMeta.valorAlvo === numVal;
+                    return (
+                      <Button key={opt} size="sm" variant={selected ? "default" : "outline"}
+                        className={`text-xs ${!selected ? "border-dashed" : ""}`}
+                        onClick={() => setNovaMeta(p => ({ ...p, valorAlvo: numVal }))}>{opt}</Button>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Ou digite:</span>
+                  <Input type="number" className="w-32 h-8 text-xs" value={novaMeta.valorAlvo || ""}
+                    onChange={e => setNovaMeta(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
+                    placeholder="Valor personalizado" />
+                </div>
+              </div>
+
+              {/* Prioridade */}
+              <div>
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-yellow-500" /> Prioridade dessa meta
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { value: "alta" as const, label: "🔴 Alta", desc: "Crítica para o resultado" },
+                    { value: "media" as const, label: "🟡 Média", desc: "Importante mas não urgente" },
+                    { value: "baixa" as const, label: "🟢 Baixa", desc: "Desejável, secundária" },
+                  ]).map(opt => (
+                    <Button key={opt.value} size="sm" variant={novaMeta.prioridade === opt.value ? "default" : "outline"}
+                      className={`gap-2 h-auto py-2 px-3 ${novaMeta.prioridade !== opt.value ? "border-dashed" : ""}`}
+                      onClick={() => setNovaMeta(p => ({ ...p, prioridade: opt.value }))}>
+                      <div className="text-left">
+                        <span className="text-xs font-medium block">{opt.label}</span>
+                        <span className="text-[10px] opacity-70">{opt.desc}</span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Botão Criar */}
+              <Button className="w-full gap-2" disabled={novaMeta.valorAlvo === 0 || !novaMeta.mesRef || (novaMeta.escopo === "equipe" && !novaMeta.equipe) || (novaMeta.escopo === "individual" && !novaMeta.responsavel)} onClick={() => {
+                const nova: MetaMensal = {
+                  id: `meta-${Date.now()}`, nome: novaMeta.nome || TIPO_META_LABELS[novaMeta.tipo], mesRef: novaMeta.mesRef,
+                  tipo: novaMeta.tipo, escopo: novaMeta.escopo, periodo: novaMeta.periodo,
+                  valorAlvo: novaMeta.valorAlvo, equipe: novaMeta.equipe, responsavel: novaMeta.responsavel,
+                  prioridade: novaMeta.prioridade,
+                };
+                setMetasMensais(prev => [...prev, nova]);
+                setNovaMeta({ nome: "", mesRef: "", tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
+                setMetasSalvas(true);
+                toast({ title: `Meta "${nova.nome}" adicionada!` });
+              }}>
+                <Plus className="w-4 h-4" /> Criar Meta
+              </Button>
             </CardContent>
-            {!infoAtualSalva && (
-              <div className="px-6 pb-4">
-                <Button size="sm" onClick={() => { setInfoAtualSalva(true); toast({ title: "Situação atual salva com sucesso!" }); }}
-                  disabled={!infoAtual.receitaMensal}>
-                  <Save className="w-3 h-3 mr-1" /> Salvar Situação Atual
-                </Button>
-              </div>
-            )}
           </Card>
 
-          {/* Criar Nova Meta */}
-          {infoAtualSalva && (
-            <>
-              <Card className="overflow-hidden">
-                <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/10">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-amber-500/15"><Plus className="w-4 h-4 text-amber-500" /></div>
-                    Criar Nova Meta
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground">Selecione tipo, escopo e período para definir sua meta.</p>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-5">
-                  {/* Tipo de Meta */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                      <Target className="w-3.5 h-3.5 text-amber-500" /> Qual o tipo da meta?
-                    </Label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {([
-                        { value: "faturamento" as TipoMeta, label: "Faturamento", icon: DollarSign, color: "text-emerald-500" },
-                        { value: "novos_clientes" as TipoMeta, label: "Novos Clientes", icon: UserPlus, color: "text-blue-500" },
-                        { value: "contratos" as TipoMeta, label: "Contratos", icon: FileText, color: "text-purple-500" },
-                        { value: "retencao" as TipoMeta, label: "Retenção", icon: ShieldCheck, color: "text-teal-500" },
-                        { value: "ticket_medio" as TipoMeta, label: "Ticket Médio", icon: Receipt, color: "text-orange-500" },
-                        { value: "conversao" as TipoMeta, label: "Conversão (%)", icon: BarChartHorizontal, color: "text-indigo-500" },
-                        { value: "leads" as TipoMeta, label: "Leads Gerados", icon: Megaphone, color: "text-pink-500" },
-                        { value: "reunioes" as TipoMeta, label: "Reuniões", icon: Handshake, color: "text-cyan-500" },
-                      ]).map(opt => {
-                        const Icon = opt.icon;
-                        const selected = novaMeta.tipo === opt.value;
-                        return (
-                          <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
-                            className={`justify-start gap-2 h-auto py-2.5 px-3 ${!selected ? "border-dashed" : ""}`}
-                            onClick={() => setNovaMeta(p => ({ ...p, tipo: opt.value }))}>
-                            <Icon className={`w-4 h-4 ${selected ? "" : opt.color}`} />
-                            <span className="text-xs">{opt.label}</span>
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
+           {/* Metas Salvas com Acompanhamento */}
+          {metasMensais.length > 0 && (() => {
+            // Simulate progress for each meta
+            const metasComProgresso = metasMensais.map((m, i) => {
+              const seed = m.id.charCodeAt(m.id.length - 1) + i;
+              const progressPercent = Math.min(((seed * 17 + 23) % 85) + 15, 100);
+              const isMoney = m.tipo === "faturamento" || m.tipo === "ticket_medio";
+              const isPercent = m.tipo === "conversao" || m.tipo === "retencao";
+              const realizado = Math.round(m.valorAlvo * progressPercent / 100);
+              return { ...m, progressPercent, realizado, isMoney, isPercent };
+            });
+            const totalMetas = metasComProgresso.length;
+            const metasBatidas = metasComProgresso.filter(m => m.progressPercent >= 100).length;
+            const metasEmRisco = metasComProgresso.filter(m => m.progressPercent < 40).length;
+            const mediaProgresso = Math.round(metasComProgresso.reduce((s, m) => s + m.progressPercent, 0) / totalMetas);
+            const metasFat = metasComProgresso.filter(m => m.tipo === "faturamento");
+            const totalAlvoFat = metasFat.reduce((s, m) => s + m.valorAlvo, 0);
+            const totalRealizadoFat = metasFat.reduce((s, m) => s + m.realizado, 0);
 
-                  {/* Nome da Meta */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-slate-500" /> Dê um nome para essa meta
-                    </Label>
-                    <Input value={novaMeta.nome} className="max-w-md"
-                      onChange={e => setNovaMeta(p => ({ ...p, nome: e.target.value }))}
-                      placeholder="Ex: Meta de Faturamento Q1, Expansão Novos Clientes..." />
-                  </div>
+            const chartData = metasComProgresso.map(m => ({
+              nome: m.nome.length > 15 ? m.nome.slice(0, 15) + "…" : m.nome,
+              meta: m.valorAlvo,
+              realizado: m.realizado,
+            }));
 
-                  {/* Mês de Referência */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-violet-500" /> Mês de referência
-                    </Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {MESES_COMPLETOS.map((mes, i) => {
-                        const valor = `${mes}/${anoAtual}`;
-                        const valorProx = `${mes}/${anoAtual + 1}`;
-                        const selected = novaMeta.mesRef === valor || novaMeta.mesRef === valorProx;
-                        return (
-                          <Button key={mes} size="sm" variant={selected ? "default" : "outline"}
-                            className={`text-xs h-8 px-2.5 ${!selected ? "border-dashed" : ""}`}
-                            onClick={() => setNovaMeta(p => ({ ...p, mesRef: i >= new Date().getMonth() ? valor : valorProx }))}>
-                            {MESES[i]}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                    {novaMeta.mesRef && <p className="text-[10px] text-muted-foreground mt-1">📅 {novaMeta.mesRef}</p>}
-                  </div>
+            const tipoAgrupado = Object.entries(
+              metasComProgresso.reduce((acc, m) => {
+                if (!acc[m.tipo]) acc[m.tipo] = { total: 0, realizado: 0, count: 0 };
+                acc[m.tipo].total += m.valorAlvo;
+                acc[m.tipo].realizado += m.realizado;
+                acc[m.tipo].count += 1;
+                return acc;
+              }, {} as Record<string, { total: number; realizado: number; count: number }>)
+            ).map(([tipo, d]) => ({
+              tipo: TIPO_META_LABELS[tipo as TipoMeta],
+              progresso: Math.round((d.realizado / d.total) * 100),
+              count: d.count,
+            }));
 
-                  {/* Escopo */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-blue-500" /> Essa meta é para quem?
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
-                      {([
-                        { value: "empresa" as EscopoMeta, label: "Empresa inteira", icon: Building2, desc: "Meta macro para toda a empresa" },
-                        { value: "equipe" as EscopoMeta, label: "Por equipe", icon: Users, desc: "Meta específica por time" },
-                        { value: "individual" as EscopoMeta, label: "Individual", icon: UserCheck, desc: "Meta para pessoa específica" },
-                      ]).map(opt => {
-                        const Icon = opt.icon;
-                        const selected = novaMeta.escopo === opt.value;
+            return (
+              <>
+                {/* KPI Summary */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <Card className="overflow-hidden">
+                    <div className="h-1 bg-gradient-to-r from-primary to-primary/60" />
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-black text-primary">{fmtPct(mediaProgresso)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">Progresso Médio</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="overflow-hidden">
+                    <div className="h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-black text-emerald-500">{metasBatidas}/{totalMetas}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">Metas Batidas</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="overflow-hidden">
+                    <div className="h-1 bg-gradient-to-r from-red-400 to-red-600" />
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-black text-red-500">{metasEmRisco}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">Em Risco (&lt;40%)</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="overflow-hidden">
+                    <div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600" />
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-black">{totalAlvoFat > 0 ? fmtPct(Math.round((totalRealizadoFat / totalAlvoFat) * 100)) : "—"}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">Faturamento vs Meta</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-primary" /> Meta vs Realizado
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={chartData} barGap={4}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="nome" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} angle={-20} textAnchor="end" height={50} />
+                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                          <Tooltip formatter={(v: number) => fmtNum(v)} />
+                          <Bar dataKey="meta" fill="hsl(var(--muted-foreground)/0.3)" radius={[4, 4, 0, 0]} name="Meta" />
+                          <Bar dataKey="realizado" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Realizado" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Target className="w-4 h-4 text-primary" /> Progresso por Tipo
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {tipoAgrupado.map(t => {
+                        const color = t.progresso >= 100 ? "bg-emerald-500" : t.progresso >= 60 ? "bg-primary" : t.progresso >= 40 ? "bg-amber-500" : "bg-red-500";
                         return (
-                          <Button key={opt.value} variant={selected ? "default" : "outline"} size="sm"
-                            className={`gap-2 h-auto py-2.5 px-4 ${!selected ? "border-dashed" : ""}`}
-                            onClick={() => setNovaMeta(p => ({ ...p, escopo: opt.value, equipe: "", responsavel: "" }))}>
-                            <Icon className="w-4 h-4" />
-                            <div className="text-left">
-                              <span className="text-xs font-medium block">{opt.label}</span>
-                              <span className="text-[10px] opacity-70">{opt.desc}</span>
+                          <div key={t.tipo} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="font-medium">{t.tipo} <span className="text-muted-foreground">({t.count})</span></span>
+                              <span className="font-bold">{fmtPct(t.progresso)}</span>
                             </div>
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Equipe / Responsável (condicional) */}
-                  {novaMeta.escopo === "equipe" && (
-                    <div>
-                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5 text-purple-500" /> Qual equipe?
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {["Vendas", "Pré-vendas (SDR)", "Pós-venda (CS)", "Marketing", "Prospecção"].map(opt => (
-                          <Button key={opt} size="sm" variant={novaMeta.equipe === opt ? "default" : "outline"}
-                            className={`text-xs ${novaMeta.equipe !== opt ? "border-dashed" : ""}`}
-                            onClick={() => setNovaMeta(p => ({ ...p, equipe: opt }))}>{opt}</Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {novaMeta.escopo === "individual" && (
-                    <div>
-                      <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                        <UserCheck className="w-3.5 h-3.5 text-purple-500" /> Quem é o responsável?
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Lima"].map(opt => (
-                          <Button key={opt} size="sm" variant={novaMeta.responsavel === opt ? "default" : "outline"}
-                            className={`text-xs ${novaMeta.responsavel !== opt ? "border-dashed" : ""}`}
-                            onClick={() => setNovaMeta(p => ({ ...p, responsavel: opt }))}>{opt}</Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Período */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-green-500" /> Qual o período da meta?
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
-                      {([
-                        { value: "mensal" as PeriodoMeta, label: "Mensal" },
-                        { value: "trimestral" as PeriodoMeta, label: "Trimestral" },
-                        { value: "semestral" as PeriodoMeta, label: "Semestral" },
-                        { value: "anual" as PeriodoMeta, label: "Anual" },
-                      ]).map(opt => (
-                        <Button key={opt.value} size="sm" variant={novaMeta.periodo === opt.value ? "default" : "outline"}
-                          className={`text-xs ${novaMeta.periodo !== opt.value ? "border-dashed" : ""}`}
-                          onClick={() => setNovaMeta(p => ({ ...p, periodo: opt.value }))}>{opt.label}</Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Valor Alvo */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                      <Target className="w-3.5 h-3.5 text-red-500" /> Qual o valor alvo?
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
-                      {(novaMeta.tipo === "faturamento" || novaMeta.tipo === "ticket_medio"
-                        ? ["R$ 10.000", "R$ 25.000", "R$ 50.000", "R$ 100.000", "R$ 200.000", "R$ 500.000"]
-                        : novaMeta.tipo === "conversao" || novaMeta.tipo === "retencao"
-                        ? ["10%", "20%", "30%", "50%", "70%", "90%"]
-                        : ["5", "10", "20", "50", "100", "200"]
-                      ).map(opt => {
-                        const numVal = Number(opt.replace(/[^0-9]/g, ""));
-                        const selected = novaMeta.valorAlvo === numVal;
-                        return (
-                          <Button key={opt} size="sm" variant={selected ? "default" : "outline"}
-                            className={`text-xs ${!selected ? "border-dashed" : ""}`}
-                            onClick={() => setNovaMeta(p => ({ ...p, valorAlvo: numVal }))}>{opt}</Button>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Ou digite:</span>
-                      <Input type="number" className="w-32 h-8 text-xs" value={novaMeta.valorAlvo || ""}
-                        onChange={e => setNovaMeta(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
-                        placeholder="Valor personalizado" />
-                    </div>
-                  </div>
-
-                  {/* Prioridade */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-yellow-500" /> Prioridade dessa meta
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
-                      {([
-                        { value: "alta" as const, label: "🔴 Alta", desc: "Crítica para o resultado" },
-                        { value: "media" as const, label: "🟡 Média", desc: "Importante mas não urgente" },
-                        { value: "baixa" as const, label: "🟢 Baixa", desc: "Desejável, secundária" },
-                      ]).map(opt => (
-                        <Button key={opt.value} size="sm" variant={novaMeta.prioridade === opt.value ? "default" : "outline"}
-                          className={`gap-2 h-auto py-2 px-3 ${novaMeta.prioridade !== opt.value ? "border-dashed" : ""}`}
-                          onClick={() => setNovaMeta(p => ({ ...p, prioridade: opt.value }))}>
-                          <div className="text-left">
-                            <span className="text-xs font-medium block">{opt.label}</span>
-                            <span className="text-[10px] opacity-70">{opt.desc}</span>
+                            <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                              <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${Math.min(t.progresso, 100)}%` }} />
+                            </div>
                           </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Botão Criar */}
-                  <Button className="w-full gap-2" disabled={novaMeta.valorAlvo === 0 || !novaMeta.mesRef || (novaMeta.escopo === "equipe" && !novaMeta.equipe) || (novaMeta.escopo === "individual" && !novaMeta.responsavel)} onClick={() => {
-                    const nova: MetaMensal = {
-                      id: `meta-${Date.now()}`, nome: novaMeta.nome || TIPO_META_LABELS[novaMeta.tipo], mesRef: novaMeta.mesRef,
-                      tipo: novaMeta.tipo, escopo: novaMeta.escopo, periodo: novaMeta.periodo,
-                      valorAlvo: novaMeta.valorAlvo, equipe: novaMeta.equipe, responsavel: novaMeta.responsavel,
-                      prioridade: novaMeta.prioridade,
-                    };
-                    setMetasMensais(prev => [...prev, nova]);
-                    setNovaMeta({ nome: "", mesRef: "", tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
-                    setMetasSalvas(true);
-                    toast({ title: `Meta "${nova.nome}" adicionada!` });
-                  }}>
-                    <Plus className="w-4 h-4" /> Criar Meta
-                  </Button>
-                </CardContent>
-              </Card>
-
-               {/* Metas Salvas com Acompanhamento */}
-              {metasMensais.length > 0 && (() => {
-                // Simulate progress for each meta
-                const metasComProgresso = metasMensais.map((m, i) => {
-                  const seed = m.id.charCodeAt(m.id.length - 1) + i;
-                  const progressPercent = Math.min(((seed * 17 + 23) % 85) + 15, 100);
-                  const isMoney = m.tipo === "faturamento" || m.tipo === "ticket_medio";
-                  const isPercent = m.tipo === "conversao" || m.tipo === "retencao";
-                  const realizado = Math.round(m.valorAlvo * progressPercent / 100);
-                  return { ...m, progressPercent, realizado, isMoney, isPercent };
-                });
-                const totalMetas = metasComProgresso.length;
-                const metasBatidas = metasComProgresso.filter(m => m.progressPercent >= 100).length;
-                const metasEmRisco = metasComProgresso.filter(m => m.progressPercent < 40).length;
-                const mediaProgresso = Math.round(metasComProgresso.reduce((s, m) => s + m.progressPercent, 0) / totalMetas);
-                const metasFat = metasComProgresso.filter(m => m.tipo === "faturamento");
-                const totalAlvoFat = metasFat.reduce((s, m) => s + m.valorAlvo, 0);
-                const totalRealizadoFat = metasFat.reduce((s, m) => s + m.realizado, 0);
-
-                // Chart data for bar chart comparison
-                const chartData = metasComProgresso.map(m => ({
-                  nome: m.nome.length > 15 ? m.nome.slice(0, 15) + "…" : m.nome,
-                  meta: m.valorAlvo,
-                  realizado: m.realizado,
-                }));
-
-                // Chart data for progress by type
-                const tipoAgrupado = Object.entries(
-                  metasComProgresso.reduce((acc, m) => {
-                    if (!acc[m.tipo]) acc[m.tipo] = { total: 0, realizado: 0, count: 0 };
-                    acc[m.tipo].total += m.valorAlvo;
-                    acc[m.tipo].realizado += m.realizado;
-                    acc[m.tipo].count += 1;
-                    return acc;
-                  }, {} as Record<string, { total: number; realizado: number; count: number }>)
-                ).map(([tipo, d]) => ({
-                  tipo: TIPO_META_LABELS[tipo as TipoMeta],
-                  progresso: Math.round((d.realizado / d.total) * 100),
-                  count: d.count,
-                }));
-
-                return (
-                  <>
-                    {/* KPI Summary */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <Card className="overflow-hidden">
-                        <div className="h-1 bg-gradient-to-r from-primary to-primary/60" />
-                        <CardContent className="p-4 text-center">
-                          <p className="text-2xl font-black text-primary">{fmtPct(mediaProgresso)}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">Progresso Médio</p>
-                        </CardContent>
-                      </Card>
-                      <Card className="overflow-hidden">
-                        <div className="h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
-                        <CardContent className="p-4 text-center">
-                          <p className="text-2xl font-black text-emerald-500">{metasBatidas}/{totalMetas}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">Metas Batidas</p>
-                        </CardContent>
-                      </Card>
-                      <Card className="overflow-hidden">
-                        <div className="h-1 bg-gradient-to-r from-red-400 to-red-600" />
-                        <CardContent className="p-4 text-center">
-                          <p className="text-2xl font-black text-red-500">{metasEmRisco}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">Em Risco (&lt;40%)</p>
-                        </CardContent>
-                      </Card>
-                      <Card className="overflow-hidden">
-                        <div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600" />
-                        <CardContent className="p-4 text-center">
-                          <p className="text-2xl font-black">{totalAlvoFat > 0 ? fmtPct(Math.round((totalRealizadoFat / totalAlvoFat) * 100)) : "—"}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">Faturamento vs Meta</p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* Charts */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {/* Bar Chart: Meta vs Realizado */}
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm flex items-center gap-2">
-                            <BarChart3 className="w-4 h-4 text-primary" /> Meta vs Realizado
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={chartData} barGap={4}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                              <XAxis dataKey="nome" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} angle={-20} textAnchor="end" height={50} />
-                              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
-                              <Tooltip formatter={(v: number) => fmtNum(v)} />
-                              <Bar dataKey="meta" fill="hsl(var(--muted-foreground)/0.3)" radius={[4, 4, 0, 0]} name="Meta" />
-                              <Bar dataKey="realizado" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Realizado" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </CardContent>
-                      </Card>
-
-                      {/* Progress by Type */}
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm flex items-center gap-2">
-                            <Target className="w-4 h-4 text-primary" /> Progresso por Tipo
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {tipoAgrupado.map(t => {
-                            const color = t.progresso >= 100 ? "bg-emerald-500" : t.progresso >= 60 ? "bg-primary" : t.progresso >= 40 ? "bg-amber-500" : "bg-red-500";
-                            return (
-                              <div key={t.tipo} className="space-y-1">
-                                <div className="flex justify-between text-xs">
-                                  <span className="font-medium">{t.tipo} <span className="text-muted-foreground">({t.count})</span></span>
-                                  <span className="font-bold">{fmtPct(t.progresso)}</span>
-                                </div>
-                                <div className="h-2.5 rounded-full bg-muted overflow-hidden">
-                                  <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${Math.min(t.progresso, 100)}%` }} />
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {tipoAgrupado.length === 0 && <p className="text-xs text-muted-foreground text-center py-6">Nenhuma meta criada ainda.</p>}
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* Metas Cards with Progress */}
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-emerald-500/15"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></div>
-                        Metas Definidas ({metasMensais.length})
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {metasComProgresso.map(m => {
-                        const tipoConfig = TIPO_META_CONFIG[m.tipo];
-                        const Icon = tipoConfig.icon;
-                        const prioridadeColors = { alta: "border-red-500/30 bg-red-500/5", media: "border-yellow-500/30 bg-yellow-500/5", baixa: "border-emerald-500/30 bg-emerald-500/5" };
-                        const progressColor = m.progressPercent >= 100 ? "bg-emerald-500" : m.progressPercent >= 60 ? "bg-primary" : m.progressPercent >= 40 ? "bg-amber-500" : "bg-red-500";
-                        const statusLabel = m.progressPercent >= 100 ? "✓ Batida" : m.progressPercent >= 60 ? "Em progresso" : m.progressPercent >= 40 ? "Atenção" : "Em risco";
-                        const statusColor = m.progressPercent >= 100 ? "text-emerald-600 border-emerald-500/30" : m.progressPercent >= 60 ? "text-primary border-primary/30" : m.progressPercent >= 40 ? "text-amber-600 border-amber-500/30" : "text-red-600 border-red-500/30";
-                        return (
-                          <Card key={m.id} className={`overflow-hidden ${prioridadeColors[m.prioridade]}`}>
-                            <div className={`h-1 ${tipoConfig.gradient}`} />
-                            <CardContent className="p-4 space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className={`p-1.5 rounded-lg ${tipoConfig.bg}`}>
-                                    <Icon className={`w-3.5 h-3.5 ${tipoConfig.color}`} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    {editingMetaId === m.id ? (
-                                      <Input value={editDraft.nome} onChange={e => setEditDraft(p => ({ ...p, nome: e.target.value }))}
-                                        className="h-6 text-xs font-semibold px-1.5" autoFocus />
-                                    ) : (
-                                      <p className="text-xs font-semibold truncate">{m.nome}</p>
-                                    )}
-                                    {editingMetaId === m.id ? (
-                                      <Select value={editDraft.mesRef} onValueChange={v => setEditDraft(p => ({ ...p, mesRef: v }))}>
-                                        <SelectTrigger className="h-5 text-[10px] px-1.5 w-auto mt-0.5"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                          {MESES_COMPLETOS.map((mes, i) => {
-                                            const valor = `${mes}/${i >= new Date().getMonth() ? anoAtual : anoAtual + 1}`;
-                                            return <SelectItem key={mes} value={valor} className="text-xs">{valor}</SelectItem>;
-                                          })}
-                                        </SelectContent>
-                                      </Select>
-                                    ) : (
-                                      <p className="text-[10px] text-muted-foreground">{m.mesRef} · {tipoConfig.label} · {m.periodo}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  {editingMetaId === m.id ? (
-                                    <>
-                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-emerald-500 hover:text-emerald-600" onClick={saveEditing}>
-                                        <Check className="w-3 h-3" />
-                                      </Button>
-                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={cancelEditing}>
-                                        <X className="w-3 h-3" />
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" onClick={() => startEditing(m)}>
-                                        <Pencil className="w-3 h-3" />
-                                      </Button>
-                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                        onClick={() => { setMetasMensais(prev => prev.filter(x => x.id !== m.id)); toast({ title: "Meta removida." }); }}>
-                                        <Trash2 className="w-3 h-3" />
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Progress Section */}
-                              {editingMetaId === m.id ? (
-                                <div className="flex items-center gap-2">
-                                  <Input type="number" value={editDraft.valorAlvo || ""} onChange={e => setEditDraft(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
-                                    className="h-8 text-lg font-black w-40" />
-                                  <span className="text-xs text-muted-foreground">{m.isMoney ? "(R$)" : m.isPercent ? "(%)" : "(un)"}</span>
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-xl font-black">
-                                      {m.isMoney ? fmtBRL(m.realizado) : m.isPercent ? fmtPct(m.realizado) : fmtNum(m.realizado)}
-                                    </p>
-                                    <Badge variant="outline" className={`text-[10px] ${statusColor}`}>{statusLabel}</Badge>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <div className="h-2.5 rounded-full bg-muted overflow-hidden">
-                                      <div className={`h-full rounded-full ${progressColor} transition-all duration-700`} style={{ width: `${Math.min(m.progressPercent, 100)}%` }} />
-                                    </div>
-                                    <div className="flex justify-between text-[10px] text-muted-foreground">
-                                      <span>Realizado: {m.isMoney ? fmtBRL(m.realizado) : m.isPercent ? fmtPct(m.realizado) : fmtNum(m.realizado)}</span>
-                                      <span>Meta: {m.isMoney ? fmtBRL(m.valorAlvo) : m.isPercent ? fmtPct(m.valorAlvo) : fmtNum(m.valorAlvo)}</span>
-                                    </div>
-                                    <p className="text-right text-xs font-bold">{fmtPct(m.progressPercent)}</p>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="flex flex-wrap gap-1.5">
-                                <Badge variant="outline" className="text-[10px]">
-                                  {m.escopo === "empresa" ? "🏢 Empresa" : m.escopo === "equipe" ? `👥 ${m.equipe}` : `👤 ${m.responsavel}`}
-                                </Badge>
-                                <Badge variant="outline" className={`text-[10px] ${m.prioridade === "alta" ? "text-red-500 border-red-500/30" : m.prioridade === "media" ? "text-yellow-600 border-yellow-500/30" : "text-emerald-500 border-emerald-500/30"}`}>
-                                  {m.prioridade === "alta" ? "🔴 Alta" : m.prioridade === "media" ? "🟡 Média" : "🟢 Baixa"}
-                                </Badge>
-                              </div>
-                            </CardContent>
-                          </Card>
                         );
                       })}
-                    </div>
+                      {tipoAgrupado.length === 0 && <p className="text-xs text-muted-foreground text-center py-6">Nenhuma meta criada ainda.</p>}
+                    </CardContent>
+                  </Card>
+                </div>
 
-                    {/* Resumo */}
-                    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                      <CardContent className="py-4 grid grid-cols-4 gap-4 text-center">
-                        <div><p className="text-xl font-black text-primary">{metasMensais.length}</p><p className="text-xs text-muted-foreground">Total metas</p></div>
-                        <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "empresa").length}</p><p className="text-xs text-muted-foreground">Empresa</p></div>
-                        <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "equipe").length}</p><p className="text-xs text-muted-foreground">Por equipe</p></div>
-                        <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "individual").length}</p><p className="text-xs text-muted-foreground">Individuais</p></div>
-                      </CardContent>
-                    </Card>
-                  </>
-                );
-              })()}
-            </>
-          )}
+                {/* Metas Cards with Progress */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/15"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></div>
+                    Metas Definidas ({metasMensais.length})
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {metasComProgresso.map(m => {
+                    const tipoConfig = TIPO_META_CONFIG[m.tipo];
+                    const Icon = tipoConfig.icon;
+                    const prioridadeColors = { alta: "border-red-500/30 bg-red-500/5", media: "border-yellow-500/30 bg-yellow-500/5", baixa: "border-emerald-500/30 bg-emerald-500/5" };
+                    const progressColor = m.progressPercent >= 100 ? "bg-emerald-500" : m.progressPercent >= 60 ? "bg-primary" : m.progressPercent >= 40 ? "bg-amber-500" : "bg-red-500";
+                    const statusLabel = m.progressPercent >= 100 ? "✓ Batida" : m.progressPercent >= 60 ? "Em progresso" : m.progressPercent >= 40 ? "Atenção" : "Em risco";
+                    const statusColor = m.progressPercent >= 100 ? "text-emerald-600 border-emerald-500/30" : m.progressPercent >= 60 ? "text-primary border-primary/30" : m.progressPercent >= 40 ? "text-amber-600 border-amber-500/30" : "text-red-600 border-red-500/30";
+                    return (
+                      <Card key={m.id} className={`overflow-hidden ${prioridadeColors[m.prioridade]}`}>
+                        <div className={`h-1 ${tipoConfig.gradient}`} />
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`p-1.5 rounded-lg ${tipoConfig.bg}`}>
+                                <Icon className={`w-3.5 h-3.5 ${tipoConfig.color}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                {editingMetaId === m.id ? (
+                                  <Input value={editDraft.nome} onChange={e => setEditDraft(p => ({ ...p, nome: e.target.value }))}
+                                    className="h-6 text-xs font-semibold px-1.5" autoFocus />
+                                ) : (
+                                  <p className="text-xs font-semibold truncate">{m.nome}</p>
+                                )}
+                                {editingMetaId === m.id ? (
+                                  <Select value={editDraft.mesRef} onValueChange={v => setEditDraft(p => ({ ...p, mesRef: v }))}>
+                                    <SelectTrigger className="h-5 text-[10px] px-1.5 w-auto mt-0.5"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {MESES_COMPLETOS.map((mes, i) => {
+                                        const valor = `${mes}/${i >= new Date().getMonth() ? anoAtual : anoAtual + 1}`;
+                                        return <SelectItem key={mes} value={valor} className="text-xs">{valor}</SelectItem>;
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <p className="text-[10px] text-muted-foreground">{m.mesRef} · {tipoConfig.label} · {m.periodo}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {editingMetaId === m.id ? (
+                                <>
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-emerald-500 hover:text-emerald-600" onClick={saveEditing}>
+                                    <Check className="w-3 h-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={cancelEditing}>
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" onClick={() => startEditing(m)}>
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                    onClick={() => { setMetasMensais(prev => prev.filter(x => x.id !== m.id)); toast({ title: "Meta removida." }); }}>
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
 
-          {!infoAtualSalva && (
-            <Card className="border-dashed">
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Preencha as informações atuais acima para começar a definir suas metas.
-              </CardContent>
-            </Card>
-          )}
+                          {/* Progress Section */}
+                          {editingMetaId === m.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input type="number" value={editDraft.valorAlvo || ""} onChange={e => setEditDraft(p => ({ ...p, valorAlvo: Number(e.target.value) }))}
+                                className="h-8 text-lg font-black w-40" />
+                              <span className="text-xs text-muted-foreground">{m.isMoney ? "(R$)" : m.isPercent ? "(%)" : "(un)"}</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-xl font-black">
+                                  {m.isMoney ? fmtBRL(m.realizado) : m.isPercent ? fmtPct(m.realizado) : fmtNum(m.realizado)}
+                                </p>
+                                <Badge variant="outline" className={`text-[10px] ${statusColor}`}>{statusLabel}</Badge>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                                  <div className={`h-full rounded-full ${progressColor} transition-all duration-700`} style={{ width: `${Math.min(m.progressPercent, 100)}%` }} />
+                                </div>
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Realizado: {m.isMoney ? fmtBRL(m.realizado) : m.isPercent ? fmtPct(m.realizado) : fmtNum(m.realizado)}</span>
+                                  <span>Meta: {m.isMoney ? fmtBRL(m.valorAlvo) : m.isPercent ? fmtPct(m.valorAlvo) : fmtNum(m.valorAlvo)}</span>
+                                </div>
+                                <p className="text-right text-xs font-bold">{fmtPct(m.progressPercent)}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap gap-1.5">
+                            <Badge variant="outline" className="text-[10px]">
+                              {m.escopo === "empresa" ? "🏢 Empresa" : m.escopo === "equipe" ? `👥 ${m.equipe}` : `👤 ${m.responsavel}`}
+                            </Badge>
+                            <Badge variant="outline" className={`text-[10px] ${m.prioridade === "alta" ? "text-red-500 border-red-500/30" : m.prioridade === "media" ? "text-yellow-600 border-yellow-500/30" : "text-emerald-500 border-emerald-500/30"}`}>
+                              {m.prioridade === "alta" ? "🔴 Alta" : m.prioridade === "media" ? "🟡 Média" : "🟢 Baixa"}
+                            </Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Resumo */}
+                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                  <CardContent className="py-4 grid grid-cols-4 gap-4 text-center">
+                    <div><p className="text-xl font-black text-primary">{metasMensais.length}</p><p className="text-xs text-muted-foreground">Total metas</p></div>
+                    <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "empresa").length}</p><p className="text-xs text-muted-foreground">Empresa</p></div>
+                    <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "equipe").length}</p><p className="text-xs text-muted-foreground">Por equipe</p></div>
+                    <div><p className="text-xl font-black">{metasMensais.filter(m => m.escopo === "individual").length}</p><p className="text-xs text-muted-foreground">Individuais</p></div>
+                  </CardContent>
+                </Card>
+              </>
+            );
+          })()}
         </TabsContent>
 
         {/* ===== ESTRUTURA COMERCIAL ===== */}
@@ -1197,11 +1095,34 @@ export default function ClientePlanoVendas() {
                     </div>
                   )}
 
+                  {/* Mês de Referência */}
+                  <div>
+                    <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-violet-500" /> Mês de referência da avaliação
+                    </Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {MESES_COMPLETOS.map((mes, i) => {
+                        const valor = `${mes}/${anoAtual}`;
+                        const valorProx = `${mes}/${anoAtual + 1}`;
+                        const selected = avaliacaoMesRef === valor || avaliacaoMesRef === valorProx;
+                        return (
+                          <Button key={mes} size="sm" variant={selected ? "default" : "outline"}
+                            className={`text-xs h-8 px-2.5 ${!selected ? "border-dashed" : ""}`}
+                            onClick={() => setAvaliacaoMesRef(i >= new Date().getMonth() ? valor : valorProx)}>
+                            {MESES[i]}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    {avaliacaoMesRef && <p className="text-[10px] text-muted-foreground mt-1">📅 {avaliacaoMesRef}</p>}
+                  </div>
+
                   <Button className="w-full gap-2"
-                    disabled={avaliacaoEscopo === "individual" && !avaliacaoVendedor}
+                    disabled={(avaliacaoEscopo === "individual" && !avaliacaoVendedor) || !avaliacaoMesRef}
                     onClick={() => { setAvaliacaoAtiva(true); setRespostasAvaliacao(new Array(AVALIACAO_PERGUNTAS.length).fill(0)); }}>
                     <ClipboardCheck className="w-4 h-4" /> Iniciar Avaliação
-                    {avaliacaoEscopo === "individual" && avaliacaoVendedor && <span className="text-xs opacity-80">— {avaliacaoVendedor}</span>}
+                    {avaliacaoMesRef && <span className="text-xs opacity-80">— {avaliacaoMesRef}</span>}
+                    {avaliacaoEscopo === "individual" && avaliacaoVendedor && <span className="text-xs opacity-80">· {avaliacaoVendedor}</span>}
                   </Button>
                 </CardContent>
               </Card>
@@ -1218,10 +1139,10 @@ export default function ClientePlanoVendas() {
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={220}>
-                      <LineChart data={avaliacoesSalvas.map((av, i) => ({
-                        nome: av.escopo === "empresa" ? `Empresa #${i + 1}` : `${av.vendedor} #${i + 1}`,
+                      <LineChart data={avaliacoesSalvas.map((av) => ({
+                        nome: av.escopo === "empresa" ? "Empresa" : av.vendedor,
                         score: av.score,
-                        data: av.data,
+                        data: av.mesRef || av.data,
                       }))}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="data" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
@@ -1310,7 +1231,8 @@ export default function ClientePlanoVendas() {
                                       <div className="flex items-center gap-3">
                                         <Badge variant="outline" className="text-[10px] w-8 justify-center">#{i + 1}</Badge>
                                         <div>
-                                          <span className="text-sm">{av.data}</span>
+                                          <span className="text-sm">{av.mesRef}</span>
+                                          <span className="text-[10px] text-muted-foreground ml-2">({av.data})</span>
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-2">
