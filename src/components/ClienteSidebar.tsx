@@ -67,17 +67,17 @@ function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed
               ${collapsed ? "justify-center px-2" : ""}
               ${isGated ? "opacity-50" : ""}
               ${isActive
-                ? "bg-primary/10 text-foreground font-semibold border-l-[3px] border-primary ml-0 pl-2.5"
-                : "text-sidebar-foreground hover:text-foreground hover:bg-muted/50"
+                ? "bg-sidebar-primary/15 text-sidebar-primary-foreground font-semibold border-l-[3px] border-sidebar-primary ml-0 pl-2.5"
+                : "text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-white/5"
               }
             `}
             title={collapsed ? item.label : undefined}
           >
-            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-sidebar-primary" : "text-sidebar-muted"}`} />
             {!collapsed && (
               <>
                 <span className="truncate flex-1">{item.label}</span>
-                {isGated && <Lock className="w-3 h-3 text-muted-foreground" />}
+                {isGated && <Lock className="w-3 h-3 text-sidebar-muted" />}
               </>
             )}
           </RouterNavLink>
@@ -99,11 +99,11 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="w-full">
-        <div className="flex items-center justify-between cursor-pointer hover:bg-muted/30 rounded-md px-3 py-1.5 transition-colors mx-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+        <div className="flex items-center justify-between cursor-pointer hover:bg-white/5 rounded-md px-3 py-1.5 transition-colors mx-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-muted">
             {title}
           </span>
-          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`} />
+          <ChevronDown className={`h-3 w-3 text-sidebar-muted transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`} />
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-0.5">
@@ -133,8 +133,8 @@ export function ClienteSidebar() {
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-bold text-foreground tracking-tight">NOEXCUSE</span>
-              <span className="text-[9px] text-muted-foreground -mt-0.5">Gestão Comercial</span>
+              <span className="text-sm font-bold text-sidebar-primary-foreground tracking-tight">NOEXCUSE</span>
+              <span className="text-[9px] text-sidebar-muted -mt-0.5">Gestão Comercial</span>
             </div>
           )}
         </div>
@@ -180,14 +180,14 @@ export function ClienteSidebar() {
 
       {/* Demo Toggles */}
       {!collapsed && (
-        <div className="mx-2 mb-2 p-2.5 rounded-lg border border-dashed border-border bg-muted/30 space-y-2">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Demo</span>
+        <div className="mx-2 mb-2 p-2.5 rounded-lg border border-dashed border-sidebar-border bg-white/5 space-y-2">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-sidebar-muted">Demo</span>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">Trial expirado</span>
+            <span className="text-[11px] text-sidebar-foreground">Trial expirado</span>
             <Switch checked={simulateTrialExpired} onCheckedChange={setSimulateTrialExpired} className="scale-75" />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">Sem créditos</span>
+            <span className="text-[11px] text-sidebar-foreground">Sem créditos</span>
             <Switch checked={simulateNoCredits} onCheckedChange={setSimulateNoCredits} className="scale-75" />
           </div>
         </div>
@@ -197,24 +197,24 @@ export function ClienteSidebar() {
       {!collapsed ? (
         <div className="px-3 py-2.5 border-t border-sidebar-border">
           <div className="flex items-center justify-between text-[11px] mb-1">
-            <span className="text-muted-foreground">Créditos</span>
-            <span className="font-medium text-foreground">{mockWallet.currentBalance.toLocaleString("pt-BR")}/{mockWallet.totalIncluded.toLocaleString("pt-BR")}</span>
+            <span className="text-sidebar-muted">Créditos</span>
+            <span className="font-medium text-sidebar-primary-foreground">{mockWallet.currentBalance.toLocaleString("pt-BR")}/{mockWallet.totalIncluded.toLocaleString("pt-BR")}</span>
           </div>
-          <Progress value={(mockWallet.currentBalance / mockWallet.totalIncluded) * 100} className="h-1" />
-          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 gap-1 mt-1.5">
+          <Progress value={(mockWallet.currentBalance / mockWallet.totalIncluded) * 100} className="h-1 [&>div]:bg-sidebar-primary" />
+          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 gap-1 mt-1.5 border-sidebar-border text-sidebar-foreground">
             <Zap className="w-2.5 h-2.5" />
             {mockSubscription.planName}{isTrialing && " · Trial"}
           </Badge>
         </div>
       ) : (
         <div className="flex justify-center py-2.5 border-t border-sidebar-border" title="Créditos">
-          <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
+          <CreditCard className="h-3.5 w-3.5 text-sidebar-muted" />
         </div>
       )}
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-10 border-t border-sidebar-border text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center justify-center h-10 border-t border-sidebar-border text-sidebar-muted hover:text-sidebar-primary-foreground transition-colors"
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>
