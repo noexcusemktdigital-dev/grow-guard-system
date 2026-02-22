@@ -2,8 +2,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+type AppRole = "super_admin" | "admin" | "franqueado" | "cliente_admin" | "cliente_user";
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  allowedRoles?: AppRole[];
+}
+
+function getRoleRedirect(role: AppRole | null): string {
+  if (!role) return "/auth";
+  if (role === "super_admin" || role === "admin") return "/franqueadora/dashboard";
+  if (role === "franqueado") return "/franqueado/dashboard";
+  return "/cliente/inicio";
+}
+
+export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+  const { user, role, loading } = useAuth();
 
   if (loading) {
     return (
@@ -15,6 +29,13 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // If roles are specified, check access
+  if (allowedRoles && allowedRoles.length > 0 && role) {
+    if (!allowedRoles.includes(role)) {
+      return <Navigate to={getRoleRedirect(role)} replace />;
+    }
   }
 
   return <>{children}</>;

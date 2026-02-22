@@ -39,12 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfileAndRole = async (userId: string) => {
+  const fetchProfileAndRole = async (currentUser: User) => {
     // Fetch profile
     const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", userId)
+      .eq("id", currentUser.id)
       .single();
 
     if (profileData) {
@@ -55,27 +55,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId);
+      .eq("user_id", currentUser.id);
 
     if (roleData && roleData.length > 0) {
-      // Priority order
       const priorityOrder: AppRole[] = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
       const roles = roleData.map((r) => r.role as AppRole);
       const topRole = priorityOrder.find((p) => roles.includes(p)) || roles[0];
       setRole(topRole);
+    } else {
+      // New user from SaaS signup — check if they came from Google OAuth or SaaS signup
+      const signupSource = currentUser.user_metadata?.signup_source;
+      if (signupSource === "saas" || currentUser.app_metadata?.provider === "google") {
+        // Provision via edge function
+        try {
+          const companyName = currentUser.user_metadata?.company_name || 
+                             (currentUser.user_metadata?.full_name ? currentUser.user_metadata.full_name + "'s Company" : "Minha Empresa");
+          await supabase.functions.invoke("signup-saas", {
+            body: { user_id: currentUser.id, company_name: companyName },
+          });
+          setRole("cliente_admin");
+        } catch (err) {
+          console.error("Auto-provisioning error:", err);
+        }
+      }
     }
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          // Use setTimeout to avoid Supabase client deadlock
-          setTimeout(() => fetchProfileAndRole(newSession.user.id), 0);
+          setTimeout(() => fetchProfileAndRole(newSession.user), 0);
         } else {
           setProfile(null);
           setRole(null);
@@ -84,12 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // THEN check existing session
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
       if (existingSession?.user) {
-        fetchProfileAndRole(existingSession.user.id);
+        fetchProfileAndRole(existingSession.user);
       }
       setLoading(false);
     });

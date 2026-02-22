@@ -1,1 +1,4 @@
 project_id = "gxrhdpbbxfipeopdyygn"
+
+[functions.signup-saas]
+verify_jwt = false

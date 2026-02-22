@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import SaasAuth from "./pages/SaasAuth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { FranqueadoraLayout } from "./components/FranqueadoraLayout";
@@ -77,11 +78,17 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* Auth routes */}
             <Route path="/auth" element={<Auth />} />
+            <Route path="/app/auth" element={<SaasAuth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Protected app shell */}
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>}>
               <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
-              <Route path="franqueadora" element={<FranqueadoraLayout />}>
+
+              {/* Franqueadora — super_admin + admin */}
+              <Route path="franqueadora" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><FranqueadoraLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
                 <Route path="dashboard" element={<Home />} />
                 <Route path="financeiro" element={<FinanceiroDashboard />} />
@@ -105,7 +112,9 @@ const App = () => (
                 <Route path="agenda" element={<Agenda />} />
                 <Route path="matriz" element={<Matriz />} />
               </Route>
-              <Route path="franqueado" element={<FranqueadoLayout />}>
+
+              {/* Franqueado */}
+              <Route path="franqueado" element={<ProtectedRoute allowedRoles={["franqueado"]}><FranqueadoLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/franqueado/dashboard" replace />} />
                 <Route path="dashboard" element={<FranqueadoDashboard />} />
                 <Route path="agenda" element={<FranqueadoAgenda />} />
@@ -120,7 +129,9 @@ const App = () => (
                 <Route path="financeiro" element={<FranqueadoFinanceiro />} />
                 <Route path="contratos" element={<FranqueadoContratos />} />
               </Route>
-              <Route path="cliente" element={<ClienteLayout />}>
+
+              {/* Cliente Final */}
+              <Route path="cliente" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/cliente/inicio" replace />} />
                 <Route path="inicio" element={<ClienteInicio />} />
                 <Route path="checklist" element={<ClienteChecklist />} />
