@@ -14,6 +14,9 @@ export interface CrmContact {
   tags: string[];
   source: string | null;
   custom_fields: Record<string, any>;
+  document: string | null;
+  address: string | null;
+  birth_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -79,5 +82,21 @@ export function useCrmContactMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contacts"] }),
   });
 
-  return { createContact, updateContact, deleteContact };
+  const bulkUpdateContacts = useMutation({
+    mutationFn: async ({ ids, fields }: { ids: string[]; fields: Record<string, any> }) => {
+      const { error } = await supabase.from("crm_contacts").update(fields).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contacts"] }),
+  });
+
+  const bulkDeleteContacts = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("crm_contacts").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contacts"] }),
+  });
+
+  return { createContact, updateContact, deleteContact, bulkUpdateContacts, bulkDeleteContacts };
 }

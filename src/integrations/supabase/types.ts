@@ -1226,9 +1226,12 @@ export type Database = {
       }
       crm_contacts: {
         Row: {
+          address: string | null
+          birth_date: string | null
           company: string | null
           created_at: string
           custom_fields: Json | null
+          document: string | null
           email: string | null
           id: string
           name: string
@@ -1241,9 +1244,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          birth_date?: string | null
           company?: string | null
           created_at?: string
           custom_fields?: Json | null
+          document?: string | null
           email?: string | null
           id?: string
           name: string
@@ -1256,9 +1262,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          birth_date?: string | null
           company?: string | null
           created_at?: string
           custom_fields?: Json | null
+          document?: string | null
           email?: string | null
           id?: string
           name?: string

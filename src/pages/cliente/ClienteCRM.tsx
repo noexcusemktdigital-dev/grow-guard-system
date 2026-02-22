@@ -4,7 +4,8 @@ import {
   Users, Plus, Phone, Search, LayoutGrid, List, Clock,
   GripVertical, Settings2, Filter, X, Copy, MoreHorizontal,
   MessageCircle, CircleDot, XCircle, ChevronDown,
-  Calendar, DollarSign, UserCircle, FileSpreadsheet, BookUser
+  Calendar, DollarSign, UserCircle, FileSpreadsheet, BookUser,
+  Tag, Trash2, ArrowRightLeft
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,11 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useClienteCrm";
 import { useCrmFunnels } from "@/hooks/useClienteCrm";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
@@ -156,7 +160,7 @@ export default function ClienteCRM() {
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();
   const { data: crmSettings } = useCrmSettings();
   const { data: team } = useCrmTeam();
-  const { updateLead, deleteLead, markAsLost } = useCrmLeadMutations();
+  const { updateLead, deleteLead, markAsLost, bulkUpdateLeads, bulkDeleteLeads } = useCrmLeadMutations();
 
   const [activeTab, setActiveTab] = useState<"pipeline" | "contatos">("pipeline");
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -167,6 +171,11 @@ export default function ClienteCRM() {
   const [funnelManagerOpen, setFunnelManagerOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteLeadsOpen, setBulkDeleteLeadsOpen] = useState(false);
+  const [bulkMoveStage, setBulkMoveStage] = useState("");
+  const [bulkTagInput, setBulkTagInput] = useState("");
+  const [bulkAssigned, setBulkAssigned] = useState("");
 
   // All filters
   const [filterSource, setFilterSource] = useState("");
@@ -258,6 +267,57 @@ export default function ClienteCRM() {
   };
 
   const hasFilters = activeFilterCount > 0;
+  const someLeadsSelected = selectedLeadIds.size > 0;
+
+  const toggleLeadSelection = (id: string) => {
+    const next = new Set(selectedLeadIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedLeadIds(next);
+  };
+
+  const toggleAllLeads = () => {
+    if (filteredLeads.every(l => selectedLeadIds.has(l.id))) setSelectedLeadIds(new Set());
+    else setSelectedLeadIds(new Set(filteredLeads.map(l => l.id)));
+  };
+
+  const handleBulkMoveStage = (stage: string) => {
+    bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { stage } });
+    setSelectedLeadIds(new Set());
+    toast({ title: `Leads movidos para "${stages.find(s => s.key === stage)?.label || stage}"` });
+  };
+
+  const handleBulkAssign = (userId: string) => {
+    bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { assigned_to: userId } });
+    setSelectedLeadIds(new Set());
+    toast({ title: "Responsável atribuído em massa" });
+  };
+
+  const handleBulkAddTag = () => {
+    if (!bulkTagInput.trim()) return;
+    const leadsToUpdate = allLeads.filter(l => selectedLeadIds.has(l.id));
+    leadsToUpdate.forEach(l => {
+      const existing = l.tags || [];
+      if (!existing.includes(bulkTagInput.trim())) {
+        updateLead.mutate({ id: l.id, tags: [...existing, bulkTagInput.trim()] });
+      }
+    });
+    setBulkTagInput("");
+    setSelectedLeadIds(new Set());
+    toast({ title: "Tag adicionada em massa" });
+  };
+
+  const handleBulkMarkLost = () => {
+    bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { lost_at: new Date().toISOString(), stage: "perdido" } });
+    setSelectedLeadIds(new Set());
+    toast({ title: "Leads marcados como perdidos" });
+  };
+
+  const handleBulkDeleteLeads = () => {
+    bulkDeleteLeads.mutate(Array.from(selectedLeadIds));
+    setSelectedLeadIds(new Set());
+    setBulkDeleteLeadsOpen(false);
+    toast({ title: "Leads excluídos" });
+  };
 
   if (isLoading) {
     return (
@@ -460,6 +520,51 @@ export default function ClienteCRM() {
             )}
           </div>
 
+          {/* Bulk Actions Bar */}
+          {someLeadsSelected && (
+            <div className="sticky top-0 z-30 bg-primary text-primary-foreground rounded-lg px-4 py-2.5 flex flex-wrap items-center gap-2 shadow-lg animate-fade-in">
+              <span className="text-xs font-semibold">{selectedLeadIds.size} lead(s) selecionado(s)</span>
+              <Separator orientation="vertical" className="h-5 bg-primary-foreground/20" />
+
+              <Select value="" onValueChange={handleBulkMoveStage}>
+                <SelectTrigger className="h-7 w-32 text-xs bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+                  <ArrowRightLeft className="w-3 h-3 mr-1" /><SelectValue placeholder="Mover etapa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stages.map(s => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+
+              {team && team.length > 0 && (
+                <Select value="" onValueChange={handleBulkAssign}>
+                  <SelectTrigger className="h-7 w-32 text-xs bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+                    <UserCircle className="w-3 h-3 mr-1" /><SelectValue placeholder="Atribuir" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {team.map(m => <SelectItem key={m.user_id} value={m.user_id} className="text-xs">{m.full_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+
+              <div className="flex items-center gap-1">
+                <Input placeholder="Tag..." value={bulkTagInput} onChange={e => setBulkTagInput(e.target.value)} className="h-7 w-24 text-xs bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50" />
+                <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkAddTag} disabled={!bulkTagInput.trim()}><Tag className="w-3 h-3 mr-1" /> Tag</Button>
+              </div>
+
+              <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkMarkLost}>
+                <XCircle className="w-3 h-3 mr-1" /> Perdido
+              </Button>
+
+              <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => setBulkDeleteLeadsOpen(true)}>
+                <Trash2 className="w-3 h-3 mr-1" /> Excluir
+              </Button>
+
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-primary-foreground hover:text-primary-foreground/80 ml-auto" onClick={() => setSelectedLeadIds(new Set())}>
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          )}
+
           {allLeads.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -488,28 +593,32 @@ export default function ClienteCRM() {
                       </div>
                       <DroppableColumn stageKey={stage.key}>
                         {stageLeads.map(lead => (
-                          <DraggableLeadCard
-                            key={lead.id}
-                            lead={lead}
-                            onClick={() => setSelectedLead(lead)}
-                            stageColor={stage.color}
-                            onCopyPhone={() => {
-                              if (lead.phone) {
-                                navigator.clipboard.writeText(lead.phone);
-                                toast({ title: "Telefone copiado" });
-                              } else {
-                                toast({ title: "Lead sem telefone", variant: "destructive" });
-                              }
-                            }}
-                            onMarkLost={() => {
-                              markAsLost.mutate({ id: lead.id });
-                              toast({ title: "Lead marcado como perdido" });
-                            }}
-                            onDelete={() => {
-                              deleteLead.mutate(lead.id);
-                              toast({ title: "Lead excluído" });
-                            }}
-                          />
+                          <div key={lead.id} className="relative group/check">
+                            <div className={`absolute top-2 left-2 z-10 ${someLeadsSelected ? 'opacity-100' : 'opacity-0 group-hover/check:opacity-100'} transition-opacity`} onClick={e => e.stopPropagation()}>
+                              <Checkbox checked={selectedLeadIds.has(lead.id)} onCheckedChange={() => toggleLeadSelection(lead.id)} />
+                            </div>
+                            <DraggableLeadCard
+                              lead={lead}
+                              onClick={() => setSelectedLead(lead)}
+                              stageColor={stage.color}
+                              onCopyPhone={() => {
+                                if (lead.phone) {
+                                  navigator.clipboard.writeText(lead.phone);
+                                  toast({ title: "Telefone copiado" });
+                                } else {
+                                  toast({ title: "Lead sem telefone", variant: "destructive" });
+                                }
+                              }}
+                              onMarkLost={() => {
+                                markAsLost.mutate({ id: lead.id });
+                                toast({ title: "Lead marcado como perdido" });
+                              }}
+                              onDelete={() => {
+                                deleteLead.mutate(lead.id);
+                                toast({ title: "Lead excluído" });
+                              }}
+                            />
+                          </div>
                         ))}
                         {stageLeads.length === 0 && (
                           <div className="text-center py-8 text-[11px] text-muted-foreground/50">
@@ -535,6 +644,11 @@ export default function ClienteCRM() {
           ) : (
             <Card>
               <CardContent className="p-0">
+                {/* Header with select all */}
+                <div className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30">
+                  <Checkbox checked={filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.has(l.id))} onCheckedChange={toggleAllLeads} />
+                  <span className="text-[10px] text-muted-foreground font-medium">Selecionar todos</span>
+                </div>
                 <div className="divide-y">
                   {filteredLeads.map(lead => {
                     const stage = stages.find(s => s.key === lead.stage);
@@ -545,6 +659,7 @@ export default function ClienteCRM() {
                         className="flex items-center gap-4 px-4 py-3 hover:bg-muted/30 cursor-pointer transition-colors"
                         onClick={() => setSelectedLead(lead)}
                       >
+                        <Checkbox checked={selectedLeadIds.has(lead.id)} onCheckedChange={() => toggleLeadSelection(lead.id)} onClick={e => e.stopPropagation()} />
                         <div className={`w-2.5 h-2.5 rounded-full ${colorStyle.dot}`} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{lead.name}</p>
@@ -580,6 +695,20 @@ export default function ClienteCRM() {
 
       {/* CSV Import Dialog (for leads) */}
       <CrmCsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
+
+      {/* Bulk Delete Leads Confirmation */}
+      <AlertDialog open={bulkDeleteLeadsOpen} onOpenChange={setBulkDeleteLeadsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {selectedLeadIds.size} lead(s)?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. Todos os dados associados serão perdidos.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDeleteLeads} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
