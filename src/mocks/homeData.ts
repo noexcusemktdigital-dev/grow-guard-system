@@ -1,12 +1,25 @@
 import { mockTickets, type Ticket } from "./atendimentoData";
-import { mockContratos, type Contrato } from "./contratosData";
 import { mockComunicados, type Comunicado } from "./comunicadosData";
 import { mockOnboardings, mockMeetings, mockTasks as onboardingTasks } from "./onboardingData";
 import { mockEvents, mockCalendars, type AgendaEvent } from "./agendaData";
 import { mockLeads } from "./crmData";
-import { getMonthSummary } from "./mockData";
 import { getRankingForMonth } from "./metasRankingData";
+import type { Contrato } from "@/types/contratos";
 import { parseISO, isAfter, isBefore, addDays, format } from "date-fns";
+
+// Inline mock contracts (previously from contratosData)
+const mockContratos: Contrato[] = [
+  { id: "ctr-1", numero: "CTR-001", tipo: "Assessoria", dono: "Franqueado", clienteNome: "Clínica Saúde Mais", clienteDocumento: "12.345.678/0001-90", clienteEmail: "contato@saudemais.com", franqueadoId: "f1", franqueadoNome: "João Silva (Unidade Centro)", produto: "Assessoria", recorrencia: "Mensal", valorMensal: 2500, valorTotal: 30000, dataInicio: "2025-01-01", dataFim: "2025-12-31", status: "Assinado", templateId: "tpl-1", observacoes: "Cliente prioritário", criadoEm: "2024-12-20", atualizadoEm: "2025-01-02" },
+  { id: "ctr-2", numero: "CTR-002", tipo: "SaaS", dono: "Interno", clienteNome: "Tech Solutions LTDA", clienteDocumento: "98.765.432/0001-10", clienteEmail: "financeiro@techsolutions.com", produto: "SaaS", recorrencia: "Anual", valorMensal: 1200, valorTotal: 14400, dataInicio: "2025-02-01", dataFim: "2026-01-31", status: "Aguardando Assinatura", templateId: "tpl-2", observacoes: "", criadoEm: "2025-01-25", atualizadoEm: "2025-01-25" },
+  { id: "ctr-5", numero: "CTR-005", tipo: "Sistema", dono: "Parceiro", clienteNome: "Escola Futuro Brilhante", clienteDocumento: "55.666.777/0001-88", clienteEmail: "escola@futurobrilhante.com", produto: "Sistema", recorrencia: "Mensal", valorMensal: 250, valorTotal: 3000, dataInicio: "2024-06-01", dataFim: "2025-05-31", status: "Vencido", observacoes: "Renovação pendente", criadoEm: "2024-05-20", atualizadoEm: "2025-06-01" },
+];
+
+function getMonthSummary(_month: string) {
+  return {
+    receitaBruta: 73000,
+    receitaPorProduto: { Assessoria: 42000, SaaS: 18000, Sistema: 8000, Franquia: 5000 },
+  };
+}
 
 // ========== TYPES ==========
 
