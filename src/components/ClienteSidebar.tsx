@@ -11,8 +11,11 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { mockSubscription, mockWallet, getTrialDaysRemaining } from "@/data/clienteData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
+import { differenceInDays } from "date-fns";
 
 interface SidebarItem {
   label: string;
@@ -37,7 +40,6 @@ const vendasSection: SidebarItem[] = [
 
 const marketingSection: SidebarItem[] = [
   { label: "Plano de Marketing", icon: Megaphone, path: "/cliente/plano-marketing" },
-  
   { label: "Conteúdos", icon: FileText, path: "/cliente/conteudos" },
   { label: "Redes Sociais", icon: Share2, path: "/cliente/redes-sociais" },
   { label: "Sites", icon: Globe, path: "/cliente/sites" },
@@ -148,12 +150,22 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
 export function ClienteSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
-  const trialDays = getTrialDaysRemaining();
-  const isTrialing = mockSubscription.status === "trial";
-  const trialUrgent = trialDays <= 3;
   const { simulateTrialExpired, setSimulateTrialExpired, simulateNoCredits, setSimulateNoCredits } = useFeatureGate();
 
-  const creditPercent = (mockWallet.currentBalance / mockWallet.totalIncluded) * 100;
+  const { data: subscription, isLoading: subLoading } = useClienteSubscription();
+  const { data: wallet, isLoading: walletLoading } = useClienteWallet();
+
+  const isTrialing = subscription?.status === "trial";
+  const trialDays = subscription?.expires_at
+    ? Math.max(0, differenceInDays(new Date(subscription.expires_at), new Date()))
+    : 0;
+  const trialUrgent = trialDays <= 3;
+
+  const currentBalance = wallet?.balance ?? 0;
+  // Use a reasonable default for total included based on plan
+  const totalIncluded = 2000; // Could be derived from subscription plan config
+  const creditPercent = totalIncluded > 0 ? (currentBalance / totalIncluded) * 100 : 0;
+  const planName = subscription?.plan ?? "—";
 
   return (
     <aside
@@ -242,24 +254,34 @@ export function ClienteSidebar() {
       {/* Footer — Credits */}
       {!collapsed ? (
         <div className="px-3 py-3 border-t border-sidebar-border">
-          <div className="flex items-center justify-between text-[11px] mb-1.5">
-            <span className="text-sidebar-muted">Créditos</span>
-            <span className="font-medium text-white/90 tabular-nums">
-              {mockWallet.currentBalance.toLocaleString("pt-BR")}/{mockWallet.totalIncluded.toLocaleString("pt-BR")}
-            </span>
-          </div>
-          <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-sidebar-primary transition-all duration-500"
-              style={{ width: `${creditPercent}%` }}
-            />
-          </div>
-          <div className="flex items-center gap-1.5 mt-2">
-            <Badge variant="outline" className="text-[9px] px-2 py-0 h-[18px] gap-1 border-sidebar-border text-sidebar-foreground rounded-full">
-              <Zap className="w-2.5 h-2.5 text-sidebar-primary" />
-              {mockSubscription.planName}{isTrialing && " · Trial"}
-            </Badge>
-          </div>
+          {walletLoading || subLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-full bg-white/10" />
+              <Skeleton className="h-1 w-full bg-white/10" />
+              <Skeleton className="h-[18px] w-24 bg-white/10" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between text-[11px] mb-1.5">
+                <span className="text-sidebar-muted">Créditos</span>
+                <span className="font-medium text-white/90 tabular-nums">
+                  {currentBalance.toLocaleString("pt-BR")}/{totalIncluded.toLocaleString("pt-BR")}
+                </span>
+              </div>
+              <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-sidebar-primary transition-all duration-500"
+                  style={{ width: `${creditPercent}%` }}
+                />
+              </div>
+              <div className="flex items-center gap-1.5 mt-2">
+                <Badge variant="outline" className="text-[9px] px-2 py-0 h-[18px] gap-1 border-sidebar-border text-sidebar-foreground rounded-full">
+                  <Zap className="w-2.5 h-2.5 text-sidebar-primary" />
+                  {planName}{isTrialing && " · Trial"}
+                </Badge>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <Tooltip delayDuration={0}>
@@ -274,7 +296,7 @@ export function ClienteSidebar() {
             </div>
           </TooltipTrigger>
           <TooltipContent side="right">
-            Créditos: {mockWallet.currentBalance}/{mockWallet.totalIncluded}
+            Créditos: {currentBalance}/{totalIncluded}
           </TooltipContent>
         </Tooltip>
       )}
