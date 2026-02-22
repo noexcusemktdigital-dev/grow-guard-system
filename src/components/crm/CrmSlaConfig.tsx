@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bell, Save } from "lucide-react";
 import { useCrmSettings, useCrmSettingsMutations } from "@/hooks/useCrmSettings";
@@ -14,24 +15,61 @@ export function CrmSlaConfig() {
   const { data: settings, isLoading } = useCrmSettings();
   const { upsertSettings } = useCrmSettingsMutations();
 
-  const [slaContact, setSlaContact] = useState(24);
-  const [slaTask, setSlaTask] = useState(3);
+  // SLA 1st contact
+  const [contactValue, setContactValue] = useState(24);
+  const [contactUnit, setContactUnit] = useState<"minutes" | "hours">("hours");
+
+  // SLA no response
+  const [noResponseValue, setNoResponseValue] = useState(72);
+  const [noResponseUnit, setNoResponseUnit] = useState<"minutes" | "hours">("hours");
+  const [noResponseEnabled, setNoResponseEnabled] = useState(true);
+
+  // SLA stage stuck
+  const [stageStuckDays, setStageStuckDays] = useState(7);
+  const [stageStuckEnabled, setStageStuckEnabled] = useState(true);
+
+  // General
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [autoTasks, setAutoTasks] = useState(true);
 
   useEffect(() => {
     if (settings) {
-      setSlaContact(settings.sla_first_contact_hours);
-      setSlaTask(settings.sla_task_open_days);
+      // First contact
+      const fcMin = (settings as any).sla_first_contact_minutes || settings.sla_first_contact_hours * 60;
+      if (fcMin >= 60 && fcMin % 60 === 0) {
+        setContactValue(fcMin / 60);
+        setContactUnit("hours");
+      } else {
+        setContactValue(fcMin);
+        setContactUnit("minutes");
+      }
+
+      // No response
+      const nrMin = (settings as any).sla_no_response_minutes || 4320;
+      if (nrMin >= 60 && nrMin % 60 === 0) {
+        setNoResponseValue(nrMin / 60);
+        setNoResponseUnit("hours");
+      } else {
+        setNoResponseValue(nrMin);
+        setNoResponseUnit("minutes");
+      }
+
+      setStageStuckDays((settings as any).sla_stage_stuck_days || 7);
       setAlertsEnabled(settings.alerts_enabled);
       setAutoTasks(settings.auto_tasks_on_stage_move);
     }
   }, [settings]);
 
   const handleSave = () => {
+    const firstContactMinutes = contactUnit === "hours" ? contactValue * 60 : contactValue;
+    const noResponseMinutes = noResponseUnit === "hours" ? noResponseValue * 60 : noResponseValue;
+
     upsertSettings.mutate({
-      sla_first_contact_hours: slaContact,
-      sla_task_open_days: slaTask,
+      sla_first_contact_hours: Math.round(firstContactMinutes / 60), // keep legacy
+      sla_first_contact_minutes: firstContactMinutes,
+      sla_no_response_minutes: noResponseMinutes,
+      sla_stage_stuck_days: stageStuckDays,
+      sla_task_open_days: settings?.sla_task_open_days || 3,
       alerts_enabled: alertsEnabled,
       auto_tasks_on_stage_move: autoTasks,
     });
@@ -45,26 +83,64 @@ export function CrmSlaConfig() {
       <CardHeader>
         <CardTitle className="text-sm flex items-center gap-2"><Bell className="w-4 h-4" /> SLA e Alertas</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-xs">Tempo máximo para 1º contato (horas)</Label>
-            <Input type="number" value={slaContact} onChange={e => setSlaContact(Number(e.target.value))} className="h-8 mt-1" />
+      <CardContent className="space-y-5">
+        {/* SLA 1st Contact */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold">Tempo máximo para 1º contato</Label>
           </div>
-          <div>
-            <Label className="text-xs">Tempo máximo de tarefa aberta (dias)</Label>
-            <Input type="number" value={slaTask} onChange={e => setSlaTask(Number(e.target.value))} className="h-8 mt-1" />
+          <div className="flex gap-2">
+            <Input type="number" value={contactValue} onChange={e => setContactValue(Number(e.target.value))} className="h-8 w-24" min={1} />
+            <Select value={contactUnit} onValueChange={(v: any) => setContactUnit(v)}>
+              <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minutes" className="text-xs">Minutos</SelectItem>
+                <SelectItem value="hours" className="text-xs">Horas</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <Label className="text-sm">Alertas habilitados</Label>
-          <Switch checked={alertsEnabled} onCheckedChange={setAlertsEnabled} />
+        {/* SLA No Response */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold">Tempo máximo sem resposta do lead</Label>
+            <Switch checked={noResponseEnabled} onCheckedChange={setNoResponseEnabled} />
+          </div>
+          {noResponseEnabled && (
+            <div className="flex gap-2">
+              <Input type="number" value={noResponseValue} onChange={e => setNoResponseValue(Number(e.target.value))} className="h-8 w-24" min={1} />
+              <Select value={noResponseUnit} onValueChange={(v: any) => setNoResponseUnit(v)}>
+                <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="minutes" className="text-xs">Minutos</SelectItem>
+                  <SelectItem value="hours" className="text-xs">Horas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center justify-between">
-          <Label className="text-sm">Criar tarefas automáticas ao mover etapa</Label>
-          <Switch checked={autoTasks} onCheckedChange={setAutoTasks} />
+        {/* SLA Stage Stuck */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold">Lead parado na mesma etapa (dias)</Label>
+            <Switch checked={stageStuckEnabled} onCheckedChange={setStageStuckEnabled} />
+          </div>
+          {stageStuckEnabled && (
+            <Input type="number" value={stageStuckDays} onChange={e => setStageStuckDays(Number(e.target.value))} className="h-8 w-24" min={1} />
+          )}
+        </div>
+
+        <div className="border-t pt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Alertas habilitados</Label>
+            <Switch checked={alertsEnabled} onCheckedChange={setAlertsEnabled} />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Criar tarefas automáticas ao mover etapa</Label>
+            <Switch checked={autoTasks} onCheckedChange={setAutoTasks} />
+          </div>
         </div>
 
         <Button size="sm" className="gap-1" onClick={handleSave}>
