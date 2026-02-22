@@ -31,18 +31,18 @@ export const TestimonialsColumn = (props: {
             {props.testimonials.map(({ text, image, name, role }, i) => (
               <div
                 key={`${index}-${i}`}
-                className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 p-5 shadow-lg"
+                className="rounded-2xl bg-black/5 backdrop-blur-sm border border-black/10 p-5 shadow-sm"
               >
-                <p className="text-white/90 text-sm leading-relaxed">{text}</p>
+                <p className="text-black/70 text-sm leading-relaxed">{text}</p>
                 <div className="flex items-center gap-3 mt-4">
                   <img
                     src={image}
                     alt={name}
-                    className="h-10 w-10 rounded-full object-cover border border-white/20"
+                    className="h-10 w-10 rounded-full object-cover border border-black/10"
                   />
                   <div>
-                    <p className="text-white font-semibold text-sm">{name}</p>
-                    <p className="text-white/50 text-xs">{role}</p>
+                    <p className="text-black/80 font-semibold text-sm">{name}</p>
+                    <p className="text-black/40 text-xs">{role}</p>
                   </div>
                 </div>
               </div>
