@@ -74,12 +74,12 @@ export default function ClienteInicio() {
   const taskProgress = checklist.length > 0 ? (completedTasks.length / checklist.length) * 100 : 0;
 
   // KPI values (mix of real data + placeholders)
-  const kpiValues = [
+  const kpiValues: { value: string; sublabel: string; trend: "up" | "down" | "neutral" }[] = [
     { value: "R$ 47.500", sublabel: "+12% vs mês anterior", trend: "up" },
     { value: String(leadsCount), sublabel: "leads no CRM", trend: "up" },
     { value: "18,5%", sublabel: "+2.3pp", trend: "up" },
     { value: "72%", sublabel: "R$ 34.200 / R$ 47.500", trend: "neutral" },
-  ] as const;
+  ];
 
   const alerts = [
     { label: "3 leads sem contato há +48h", type: "urgent" as const },
