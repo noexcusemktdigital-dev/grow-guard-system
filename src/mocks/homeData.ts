@@ -275,7 +275,6 @@ export function getAlertasFranqueadora(): AlertaHome[] {
     moduloOrigem: "Onboarding",
     criadoEm: new Date().toISOString(),
   });
-    });
 
   // Comunicados críticos
   mockComunicados
