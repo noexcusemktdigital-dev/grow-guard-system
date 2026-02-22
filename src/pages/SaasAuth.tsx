@@ -127,11 +127,13 @@ const SaasAuth = () => {
               <img src={logoDark} alt="NoExcuse" className="h-8 mx-auto object-contain" />
             </div>
 
-            <p
-              className="text-xl lg:text-2xl font-bold text-white leading-snug"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              Plataforma completa de marketing e vendas para acelerar seus resultados
+            <p className="text-xl lg:text-2xl font-black uppercase italic tracking-tighter text-white leading-snug">
+              Plataforma{" "}
+              <span className="relative inline">
+                <span className="relative z-10">completa de marketing e vendas</span>
+                <span className="absolute inset-0 -skew-x-2 bg-[hsl(45,93%,52%)]/30 rounded-sm -mx-1 px-1" />
+              </span>{" "}
+              para acelerar seus resultados
             </p>
 
             <div className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[hsl(355,78%,50%)] border border-[hsl(355,78%,60%)] shadow-lg shadow-[hsl(355,78%,50%)]/20">

@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import logoDark from "@/assets/NOE3.png";
+import { TestimonialsColumn } from "@/components/ui/testimonials-columns";
 
 const BENEFITS = [
   "CRM completo para nunca perder uma venda",
@@ -14,28 +15,25 @@ const BENEFITS = [
   "Integração com redes sociais e tráfego pago",
 ];
 
-const TESTIMONIALS = [
-  { name: "Ricardo M.", company: "RM Consultoria", text: "Triplicamos nossas vendas em 4 meses usando a plataforma." },
-  { name: "Ana Paula S.", company: "Studio AP", text: "Nunca tive tanto controle sobre meu comercial. Mudou meu negócio." },
-  { name: "Carlos D.", company: "CD Franquias", text: "A automação de marketing economizou 20h por semana da minha equipe." },
-  { name: "Fernanda L.", company: "FL Digital", text: "O CRM é intuitivo e minha equipe adotou em 1 semana." },
-  { name: "João Pedro R.", company: "JPR Serviços", text: "Saí de 50 para 300 leads por mês com as campanhas automatizadas." },
-  { name: "Marina C.", company: "MC Imóveis", text: "Os relatórios me deram clareza total sobre onde investir." },
-  { name: "Eduardo B.", company: "EB Tech", text: "Melhor investimento que fiz pro meu negócio esse ano." },
-  { name: "Patrícia V.", company: "PV Estética", text: "Agora consigo acompanhar cada vendedor em tempo real." },
-  { name: "Thiago N.", company: "TN Educação", text: "A plataforma é completa e o suporte é excepcional." },
-  { name: "Luciana F.", company: "LF Moda", text: "Dobrei meu faturamento em 6 meses. Recomendo demais." },
+const testimonials = [
+  { text: "Triplicamos nossas vendas em 4 meses usando a plataforma.", image: "https://randomuser.me/api/portraits/men/1.jpg", name: "Ricardo M.", role: "CEO — RM Consultoria" },
+  { text: "Nunca tive tanto controle sobre meu comercial. Mudou meu negócio.", image: "https://randomuser.me/api/portraits/women/2.jpg", name: "Ana Paula S.", role: "Diretora — Studio AP" },
+  { text: "A automação de marketing economizou 20h por semana da minha equipe.", image: "https://randomuser.me/api/portraits/men/3.jpg", name: "Carlos D.", role: "Franqueado — CD Franquias" },
+  { text: "O CRM é intuitivo e minha equipe adotou em 1 semana.", image: "https://randomuser.me/api/portraits/women/4.jpg", name: "Fernanda L.", role: "Gestora — FL Digital" },
+  { text: "Saí de 50 para 300 leads por mês com as campanhas automatizadas.", image: "https://randomuser.me/api/portraits/men/5.jpg", name: "João Pedro R.", role: "Diretor — JPR Serviços" },
+  { text: "Os relatórios me deram clareza total sobre onde investir.", image: "https://randomuser.me/api/portraits/women/6.jpg", name: "Marina C.", role: "Corretora — MC Imóveis" },
+  { text: "Melhor investimento que fiz pro meu negócio esse ano.", image: "https://randomuser.me/api/portraits/men/7.jpg", name: "Eduardo B.", role: "CTO — EB Tech" },
+  { text: "Agora consigo acompanhar cada vendedor em tempo real.", image: "https://randomuser.me/api/portraits/women/8.jpg", name: "Patrícia V.", role: "Proprietária — PV Estética" },
+  { text: "Dobrei meu faturamento em 6 meses. Recomendo demais.", image: "https://randomuser.me/api/portraits/women/9.jpg", name: "Luciana F.", role: "CEO — LF Moda" },
 ];
+
+const col1 = testimonials.slice(0, 3);
+const col2 = testimonials.slice(3, 6);
+const col3 = testimonials.slice(6, 9);
 
 const SaasBrandingPanel = () => {
   const [benefitIndex, setBenefitIndex] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
-
-  // Shuffle testimonials once
-  const shuffled = useMemo(
-    () => [...TESTIMONIALS].sort(() => Math.random() - 0.5),
-    []
-  );
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -56,57 +54,33 @@ const SaasBrandingPanel = () => {
 
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full px-10 py-10">
-        {/* Benefits phrase — centered, big */}
-        <div className="flex-1 flex items-center justify-center">
+        {/* Benefits phrase — title font */}
+        <div className="pt-4 pb-8 flex items-center justify-center min-h-[120px]">
           <p
-            className={`text-3xl md:text-4xl font-bold text-white text-center leading-tight max-w-md transition-all duration-400 ${
+            className={`text-2xl xl:text-3xl font-black uppercase italic tracking-tighter text-white text-center leading-tight max-w-md transition-all duration-400 ${
               fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {BENEFITS[benefitIndex]}
           </p>
         </div>
 
-        {/* Testimonials — dynamic, mixed sizes */}
-        <div className="mb-8 overflow-hidden h-44 relative">
-          <style>{`
-            @keyframes scrollTestimonials {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-          `}</style>
-          <div
-            className="flex gap-4 absolute whitespace-nowrap"
-            style={{ animation: "scrollTestimonials 35s linear infinite" }}
-          >
-            {[...shuffled, ...shuffled].map((t, i) => {
-              const isLarge = i % 3 === 0;
-              return (
-                <div
-                  key={i}
-                  className={`inline-block whitespace-normal rounded-xl bg-white/15 backdrop-blur-sm border border-white/10 shrink-0 ${
-                    isLarge ? "w-72 p-5" : "w-56 p-4"
-                  }`}
-                >
-                  <p className={`text-white/90 italic leading-snug ${isLarge ? "text-sm" : "text-xs"}`}>
-                    "{t.text}"
-                  </p>
-                  <p className={`mt-2 font-semibold text-white ${isLarge ? "text-sm" : "text-xs"}`}>
-                    {t.name}
-                  </p>
-                  <p className={`text-white/50 ${isLarge ? "text-xs" : "text-[10px]"}`}>
-                    {t.company}
-                  </p>
-                </div>
-              );
-            })}
+        {/* Testimonials columns */}
+        <div className="flex-1 overflow-hidden relative">
+          {/* Fade masks */}
+          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-[hsl(355,78%,40%)]/80 to-transparent z-10 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[hsl(355,78%,30%)]/80 to-transparent z-10 pointer-events-none" />
+
+          <div className="flex gap-4 h-full [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]">
+            <TestimonialsColumn testimonials={col1} duration={15} className="flex-1" />
+            <TestimonialsColumn testimonials={col2} duration={19} className="flex-1 hidden xl:block" />
+            <TestimonialsColumn testimonials={col3} duration={17} className="flex-1 hidden 2xl:block" />
           </div>
         </div>
 
         {/* Logo bottom */}
-        <div className="flex justify-center">
-          <img src={logoDark} alt="NoExcuse" className="h-8 object-contain opacity-80" />
+        <div className="flex justify-center pt-6">
+          <img src={logoDark} alt="NoExcuse" className="h-7 object-contain opacity-70" />
         </div>
       </div>
     </div>
