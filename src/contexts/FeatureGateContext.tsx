@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { mockSubscription, mockWallet } from "@/data/clienteData";
+import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { useClienteWallet } from "@/hooks/useClienteWallet";
 
 type GateReason = "trial_expired" | "no_credits" | null;
 
@@ -38,10 +39,17 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const [simulateTrialExpired, setSimulateTrialExpired] = useState(false);
   const [simulateNoCredits, setSimulateNoCredits] = useState(false);
 
+  const { data: subscription } = useClienteSubscription();
+  const { data: wallet } = useClienteWallet();
+
   const isTrialExpired =
-    simulateTrialExpired || mockSubscription.status === "expired";
+    simulateTrialExpired ||
+    (subscription?.status === "trial" &&
+      !!subscription?.expires_at &&
+      new Date(subscription.expires_at) < new Date());
+
   const hasNoCredits =
-    simulateNoCredits || mockWallet.currentBalance <= 0;
+    simulateNoCredits || (wallet ? wallet.balance <= 0 : false);
 
   const getGateReason = (feature: string): GateReason => {
     if (ALWAYS_ACCESSIBLE.some((r) => feature.startsWith(r))) return null;
