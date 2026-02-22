@@ -33,28 +33,28 @@ const SaasBrandingPanel = () => {
         pointerColor="255, 80, 80"
         size="80%"
         blendingValue="hard-light"
-        interactive={true}
+        interactive={false}
         containerClassName="absolute inset-0"
         className="h-full w-full flex flex-col"
       >
         <div className="flex flex-col h-full px-8 py-8">
-          {/* Tagline with highlight */}
-          <div className="pt-4 pb-6">
-            <h2 className="text-2xl xl:text-3xl font-black uppercase italic tracking-tighter text-white leading-tight">
+          {/* Tagline with highlight — centered, smaller */}
+          <div className="pt-4 pb-6 text-center">
+            <p className="text-base xl:text-lg font-semibold text-white/90 leading-relaxed max-w-sm mx-auto">
               Plataforma{" "}
               <Highlight className="text-white">
                 completa de marketing e vendas
               </Highlight>{" "}
               para acelerar seus resultados
-            </h2>
+            </p>
           </div>
 
-          {/* Testimonials columns — fills remaining space */}
+          {/* Testimonials columns — smooth fade edges */}
           <div className="flex-1 overflow-hidden relative min-h-0">
-            <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-black/20 to-transparent z-10 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/20 to-transparent z-10 pointer-events-none" />
-
-            <div className="flex gap-3 h-full [mask-image:linear-gradient(to_bottom,transparent,black_5%,black_95%,transparent)]">
+            <div className="flex gap-3 h-full" style={{
+              maskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)",
+            }}>
               <TestimonialsColumn testimonials={col1} duration={15} className="flex-1" />
               <TestimonialsColumn testimonials={col2} duration={19} className="flex-1 hidden xl:block" />
               <TestimonialsColumn testimonials={col3} duration={17} className="flex-1 hidden 2xl:block" />

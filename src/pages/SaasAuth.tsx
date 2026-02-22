@@ -153,10 +153,10 @@ const SaasAuth = () => {
               <img src={logoDark} alt="NoExcuse" className="h-8 mx-auto object-contain" />
             </div>
 
-            {/* Rotating benefit phrase */}
-            <div className="min-h-[56px] flex items-center">
+            {/* Rotating benefit phrase — larger */}
+            <div className="min-h-[80px] flex items-center">
               <p
-                className={`text-lg lg:text-xl font-black uppercase italic tracking-tighter text-white leading-snug transition-all duration-400 ${
+                className={`text-2xl lg:text-3xl font-black uppercase italic tracking-tighter text-white leading-tight transition-all duration-400 ${
                   fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
                 }`}
               >
