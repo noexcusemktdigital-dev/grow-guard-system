@@ -2,3 +2,6 @@ project_id = "gxrhdpbbxfipeopdyygn"
 
 [functions.signup-saas]
 verify_jwt = false
+
+[functions.seed-users]
+verify_jwt = false
