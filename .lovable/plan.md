@@ -1,137 +1,95 @@
 
-# Dois Sistemas de Login Separados
+
+# Login da Franquia com Tema Espacial + Logos NoExcuse
 
 ## Resumo
 
-A plataforma precisa de **dois fluxos de autenticacao completamente separados**:
-
-1. **Login Franquia** (`/auth`) -- Sistema interno da rede No Excuse
-   - Sem auto-cadastro (contas criadas por admins)
-   - Apenas email + senha
-   - Roles: super_admin, admin (franqueadora) e franqueado, franqueado_user (franqueado)
-
-2. **Login SaaS** (`/app/auth`) -- No Excuse Gestao Comercial (produto SaaS)
-   - Auto-cadastro permitido (email/senha + Google)
-   - Trial de 7 dias com acesso total
-   - Roles: cliente_admin (dono da conta) e cliente_user (funcionario, criado pelo admin)
+Redesign do painel esquerdo da pagina de login da franquia (`/auth`) com tema espacial animado, logos oficiais da NoExcuse e frases motivacionais rotativas. Tambem atualizar o login SaaS (`/app/auth`) com a logo correta.
 
 ---
 
-## Fase 1 -- Pagina de Login do SaaS (`/app/auth`)
+## Logos a serem adicionados ao projeto
 
-### Criar nova pagina com:
-- **Branding diferente**: "NOEXCUSE Gestao Comercial" (identidade dark premium do SaaS)
-- **Tabs**: "Entrar" e "Criar conta"
-- **Criar conta**: formulario com nome, email, senha + botao "Entrar com Google"
-- **Entrar**: email/senha + botao "Entrar com Google" + "Esqueci minha senha"
-- **Trial**: ao criar conta, automaticamente cria organizacao + subscription com trial de 7 dias + wallet de creditos
-
-### Login com Google:
-- Usar Lovable Cloud OAuth gerenciado (`lovable.auth.signInWithOAuth("google")`)
-- Configurar o modulo via ferramenta de social auth
+| Arquivo | Uso | Destino |
+|---|---|---|
+| `noe2.png` | Logo fundo claro (vermelho/preto) | `src/assets/noe2.png` -- formulario mobile, areas claras |
+| `NOE3.png` | Logo fundo escuro (vermelho/branco) | `src/assets/NOE3.png` -- painel espacial, login SaaS |
 
 ---
 
-## Fase 2 -- Atualizar Login da Franquia (`/auth`)
+## Fase 1 -- Componente SpaceScene
 
-### Manter como esta, com ajustes:
-- Remover qualquer possibilidade de auto-cadastro
-- Manter branding "NO EXCUSE - Plataforma de gestao para franquias"
-- Apenas email + senha (sem Google)
+### Criar `src/components/ui/space-login-scene.tsx`
 
----
+Componente do painel esquerdo com:
 
-## Fase 3 -- Atualizar Roteamento
+- **Fundo espacial**: Background escuro (#0a0a1a) com estrelas animadas (twinkle), nebulosas (gradientes radiais roxo/azul sutis)
+- **Foguete SVG**: Segue o mouse com movimento suave (lerp), chamas animadas na base, inclinacao limitada
+- **Astronauta SVG**: Flutuacao suave (bob animation), olha na direcao do mouse
+- **Logo NoExcuse** (NOE3.png -- versao fundo escuro): Posicionada no topo do painel, importada como asset
+- **Frases rotativas** acima dos personagens, trocando a cada 5 segundos com fade:
+  - "Sem desculpas. So resultados."
+  - "Sua franquia no proximo nivel."
+  - "Gestao inteligente, crescimento real."
+  - "Cada dia e uma nova chance de liderar."
+  - "Disciplina hoje, liberdade amanha."
+  - "Foco no processo, o resultado vem."
 
-### Separar os fluxos no App.tsx:
-
-```text
-/auth           -> Login Franquia (sem cadastro)
-/app/auth       -> Login SaaS (com cadastro + Google)
-/reset-password -> Compartilhado
-
-/franqueadora/* -> Protegido (roles: super_admin, admin)
-/franqueado/*   -> Protegido (roles: franqueado)
-/cliente/*      -> Protegido (roles: cliente_admin, cliente_user)
-```
-
-### Redirecionamento apos login:
-- Se role e super_admin/admin -> `/franqueadora/dashboard`
-- Se role e franqueado -> `/franqueado/dashboard`
-- Se role e cliente_admin/cliente_user -> `/cliente/inicio`
-- Se usuario logou via `/app/auth` e nao tem role ainda (novo cadastro) -> criar org + role automaticamente -> `/cliente/inicio`
+### Interatividade:
+- Mouse tracking com `mousemove` para foguete e astronauta
+- Foguete inclina suavemente na direcao do mouse (max 15 graus)
+- Astronauta vira levemente e flutua independentemente
+- Estrelas com diferentes velocidades de twinkle
 
 ---
 
-## Fase 4 -- Edge Function para Auto-Cadastro SaaS
+## Fase 2 -- Atualizar Auth.tsx (Login Franquia)
 
-### Criar `signup-saas` edge function:
-Apos o signup do usuario (via trigger ou chamada direta):
-1. Criar organizacao (type: 'cliente', name: nome da empresa)
-2. Criar organization_membership (user + org)
-3. Criar user_role (cliente_admin)
-4. Criar subscription (plan: 'trial', expires_at: now + 7 dias)
-5. Criar credit_wallet (balance: creditos iniciais do trial)
+### Painel esquerdo:
+- Substituir o gradiente atual pelo componente `SpaceScene`
 
----
-
-## Fase 5 -- Protecao de Rotas por Role
-
-### Atualizar ProtectedRoute para aceitar roles permitidas:
-- `/franqueadora/*` aceita apenas super_admin e admin
-- `/franqueado/*` aceita apenas franqueado
-- `/cliente/*` aceita apenas cliente_admin e cliente_user
-- Se usuario tenta acessar area errada, redireciona para sua area correta
+### Painel direito (formulario):
+- Manter logica de login intacta
+- Trocar o texto "NO EXCUSE" por `<img>` usando `noe2.png` (logo fundo claro) no mobile
+- Manter "Acesso somente por convite do administrador"
 
 ---
 
-## Fase 6 -- Atualizar AuthContext
+## Fase 3 -- Atualizar SaasAuth.tsx (Login SaaS)
 
-### Adicionar logica para detectar tipo de login:
-- Se usuario veio do `/app/auth` e nao tem role -> provisionar automaticamente como cliente_admin
-- Se usuario veio do `/auth` e nao tem role -> mostrar erro (conta precisa ser criada pelo admin)
+- Substituir o texto "NOEXCUSE" no painel esquerdo pela imagem `NOE3.png` (logo fundo escuro)
+- Substituir o texto "NOEXCUSE" no mobile pela imagem `NOE3.png`
+- Manter toda a logica de autenticacao intacta
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos novos:
-```text
-src/pages/SaasAuth.tsx              -- Login/cadastro do SaaS
-supabase/functions/signup-saas/     -- Edge function para provisionar novo cliente
-```
+### Arquivos:
 
-### Arquivos modificados:
-```text
-src/App.tsx                         -- Novas rotas /app/auth, protecao por role
-src/components/ProtectedRoute.tsx   -- Aceitar prop de roles permitidas
-src/contexts/AuthContext.tsx        -- Detectar tipo de usuario
-```
+| Acao | Arquivo |
+|---|---|
+| Copiar | `user-uploads://noe2.png` -> `src/assets/noe2.png` |
+| Copiar | `user-uploads://NOE3.png` -> `src/assets/NOE3.png` |
+| Criar | `src/components/ui/space-login-scene.tsx` |
+| Modificar | `src/pages/Auth.tsx` |
+| Modificar | `src/pages/SaasAuth.tsx` |
 
-### Migracao SQL:
-- Habilitar signup no auth (atualmente desabilitado) -- necessario para o SaaS
-- O controle de "quem pode se cadastrar" sera feito pela UI (so a pagina do SaaS tem formulario de cadastro)
-
-### Google OAuth:
-- Configurar via ferramenta `configure-social-auth` do Lovable Cloud
-- Usar `lovable.auth.signInWithOAuth("google")` no SaasAuth.tsx
-
----
-
-## Resumo Visual
+### Importacao dos assets nos componentes:
 
 ```text
-+---------------------------+       +---------------------------+
-|     /auth (Franquia)      |       |   /app/auth (SaaS)        |
-|---------------------------|       |---------------------------|
-| - Apenas email+senha      |       | - Email+senha OU Google   |
-| - Sem auto-cadastro       |       | - Auto-cadastro permitido |
-| - "Acesso por convite"    |       | - "Teste gratis 7 dias"   |
-| - Branding: NO EXCUSE     |       | - Branding: Gestao Com.   |
-|   Franquias               |       |   NOEXCUSE                |
-+---------------------------+       +---------------------------+
-         |                                    |
-         v                                    v
-  super_admin/admin -> /franqueadora    cliente_admin -> /cliente
-  franqueado        -> /franqueado      cliente_user  -> /cliente
+import logoLight from "@/assets/noe2.png";  // Auth.tsx (mobile)
+import logoDark from "@/assets/NOE3.png";   // SpaceScene + SaasAuth
 ```
+
+### Animacoes CSS (keyframes no componente):
+- `twinkle`: opacidade das estrelas (0.3 -> 1 -> 0.3)
+- `float`: astronauta flutuando (translateY -5px -> 5px)
+- `flame`: chamas do foguete (scaleY 0.8 -> 1.2, opacidade)
+- `fade-phrase`: transicao das frases (opacity 0 -> 1 -> 0)
+
+### Mouse tracking:
+- `useEffect` com `mousemove` listener
+- `useRef` + `requestAnimationFrame` para lerp suave
+- Posicoes limitadas com `Math.max/Math.min`
+
