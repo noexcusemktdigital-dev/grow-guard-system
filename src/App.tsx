@@ -55,6 +55,7 @@ import ClienteGamificacao from "./pages/cliente/ClienteGamificacao";
 import ClientePlanoVendas from "./pages/cliente/ClientePlanoVendas";
 import ClienteChat from "./pages/cliente/ClienteChat";
 import ClienteCRM from "./pages/cliente/ClienteCRM";
+import CrmConfigPage from "./components/crm/CrmConfigPage";
 import ClienteAgentesIA from "./pages/cliente/ClienteAgentesIA";
 import ClienteScripts from "./pages/cliente/ClienteScripts";
 import ClienteDisparos from "./pages/cliente/ClienteDisparos";
@@ -140,6 +141,7 @@ const App = () => (
                 <Route path="plano-vendas" element={<ClientePlanoVendas />} />
                 <Route path="chat" element={<ClienteChat />} />
                 <Route path="crm" element={<ClienteCRM />} />
+                <Route path="crm/config" element={<CrmConfigPage />} />
                 <Route path="agentes-ia" element={<ClienteAgentesIA />} />
                 <Route path="scripts" element={<ClienteScripts />} />
                 <Route path="disparos" element={<ClienteDisparos />} />

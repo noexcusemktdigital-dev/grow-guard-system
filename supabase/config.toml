@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.ai-agent-reply]
 verify_jwt = false
+
+[functions.crm-lead-webhook]
+verify_jwt = false
