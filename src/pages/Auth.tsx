@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
+import SpaceLoginScene from "@/components/ui/space-login-scene";
+import logoLight from "@/assets/noe2.png";
 
 const Auth = () => {
   const [mode, setMode] = useState<"login" | "forgot">("login");
@@ -43,24 +45,9 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-gradient-to-br from-primary/90 to-primary">
-        <div className="relative z-10 text-center px-12">
-          <h1 className="text-5xl font-black tracking-tight text-primary-foreground mb-4" style={{ fontStyle: "italic" }}>
-            NO EXCUSE
-          </h1>
-          <p className="text-primary-foreground/80 text-lg font-medium">
-            Plataforma de gestão para franquias
-          </p>
-          <div className="mt-8 flex gap-3 justify-center">
-            <div className="h-1.5 w-12 rounded-full bg-primary-foreground/40" />
-            <div className="h-1.5 w-8 rounded-full bg-primary-foreground/20" />
-            <div className="h-1.5 w-4 rounded-full bg-primary-foreground/10" />
-          </div>
-        </div>
-        {/* Decorative shapes */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary-foreground/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary-foreground/5 rounded-full translate-y-1/3 -translate-x-1/3" />
+      {/* Left panel — space scene */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <SpaceLoginScene />
       </div>
 
       {/* Right panel — form */}
@@ -68,9 +55,7 @@ const Auth = () => {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <h1 className="text-3xl font-black tracking-tight text-primary" style={{ fontStyle: "italic" }}>
-              NO EXCUSE
-            </h1>
+            <img src={logoLight} alt="NoExcuse" className="h-10 mx-auto object-contain" />
           </div>
 
           {mode === "login" ? (

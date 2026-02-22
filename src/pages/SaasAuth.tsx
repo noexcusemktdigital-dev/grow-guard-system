@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import logoDark from "@/assets/NOE3.png";
 
 const SaasAuth = () => {
   const [tab, setTab] = useState<"login" | "signup">("login");
@@ -107,8 +108,8 @@ const SaasAuth = () => {
             <Sparkles className="h-4 w-4 text-[hsl(45,93%,52%)]" />
             <span className="text-sm font-medium text-white/90">7 dias grátis</span>
           </div>
-          <h1 className="text-5xl font-black tracking-tight text-white mb-3" style={{ fontStyle: "italic" }}>
-            NOEXCUSE
+          <h1 className="mb-3">
+            <img src={logoDark} alt="NoExcuse" className="h-14 mx-auto object-contain drop-shadow-lg" />
           </h1>
           <p className="text-xl font-semibold text-white/90 mb-1">
             Gestão Comercial
@@ -131,10 +132,8 @@ const SaasAuth = () => {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <h1 className="text-3xl font-black tracking-tight text-white" style={{ fontStyle: "italic" }}>
-              NOEXCUSE
-            </h1>
-            <p className="text-sm text-white/60">Gestão Comercial</p>
+            <img src={logoDark} alt="NoExcuse" className="h-8 mx-auto object-contain" />
+            <p className="text-sm text-white/60 mt-1">Gestão Comercial</p>
           </div>
 
           {mode === "forgot" ? (
