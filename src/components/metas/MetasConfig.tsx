@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, FileText, Building2, Target, Settings, Eye } from "lucide-react";
-import { pointsConfig, levelThresholds, type PointsConfig } from "@/data/metasRankingData";
+import { pointsConfig, levelThresholds, type PointsConfig } from "@/types/metas";
 
 export default function MetasConfig() {
   const [config, setConfig] = useState<PointsConfig>({ ...pointsConfig });

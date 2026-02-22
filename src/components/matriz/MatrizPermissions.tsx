@@ -8,7 +8,7 @@ import { useState } from "react";
 import {
   ModuloPermissao, NivelAcesso, getModulosBySection, getNivelAcessoLabel,
   perfisPreConfigurados,
-} from "@/data/matrizData";
+} from "@/types/matriz";
 
 interface Props {
   permissoes: ModuloPermissao[];

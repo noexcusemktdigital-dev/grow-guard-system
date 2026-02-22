@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Video, Target, BarChart3, TrendingUp, CalendarCheck } from "lucide-react";
-import type { OnboardingMeeting, MeetingType, MeetingStatus } from "@/data/onboardingData";
-import { MEETING_STATUS_COLORS } from "@/data/onboardingData";
+import type { OnboardingMeeting, MeetingType, MeetingStatus } from "@/types/onboarding";
+import { MEETING_STATUS_COLORS } from "@/types/onboarding";
 
 const MEETING_ICONS: Record<MeetingType, React.ElementType> = {
   Kickoff: Video,

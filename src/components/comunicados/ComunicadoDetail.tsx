@@ -20,8 +20,8 @@ import {
   getStatusColor,
   getPrioridadeColor,
   getTipoColor,
-  getVisualizacoes,
-} from "@/data/comunicadosData";
+} from "@/types/comunicados";
+import { getVisualizacoes } from "@/data/comunicadosData";
 import {
   Edit,
   Copy,

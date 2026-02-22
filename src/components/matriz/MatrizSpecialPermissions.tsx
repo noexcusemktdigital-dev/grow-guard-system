@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { AlertTriangle } from "lucide-react";
-import { PermissoesEspeciais, permissoesEspeciaisConfig } from "@/data/matrizData";
+import { PermissoesEspeciais, permissoesEspeciaisConfig } from "@/types/matriz";
 
 interface Props {
   permissoes: PermissoesEspeciais;

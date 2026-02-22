@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Archive } from "lucide-react";
-import { mockMensagens, MENSAGEM_CATEGORIAS, type MensagemDoDia, type MensagemCategoria, type MensagemStatus } from "@/data/homeData";
+import { type MensagemDoDia, type MensagemCategoria, type MensagemStatus, MENSAGEM_CATEGORIAS } from "@/types/home";
+import { mockMensagens } from "@/data/homeData";
 
 interface Props {
   open: boolean;

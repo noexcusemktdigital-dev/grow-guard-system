@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { categoryGradients } from "@/types/academy";
 import {
   mockModules,
   getLessonsByModule,
@@ -11,7 +12,6 @@ import {
   getLessonProgress,
   getQuizAttempts,
   getUserCertificates,
-  categoryGradients,
 } from "@/data/academyData";
 
 const categoryIcons: Record<string, React.ElementType> = {

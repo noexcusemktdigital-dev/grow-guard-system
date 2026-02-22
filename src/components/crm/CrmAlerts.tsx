@@ -1,5 +1,5 @@
 import { AlertTriangle, Clock, Flame, TrendingUp } from "lucide-react";
-import type { CrmAlert } from "@/data/crmData";
+import type { CrmAlert } from "@/types/crm";
 
 const iconMap = {
   "no-contact": AlertTriangle,

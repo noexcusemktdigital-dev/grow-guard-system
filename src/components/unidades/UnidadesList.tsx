@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Unidade, UnidadeStatus, mockUnidadeUsers } from "@/data/unidadesData";
+import { Unidade, UnidadeStatus } from "@/types/unidades";
+import { mockUnidadeUsers } from "@/data/unidadesData";
 
 interface UnidadesListProps {
   unidades: Unidade[];

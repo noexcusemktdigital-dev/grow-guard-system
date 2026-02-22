@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CATEGORIES, SUBCATEGORIES_MAP, SLA_DEADLINES, RESPONSAVEIS, TicketCategory, TicketPriority } from "@/data/atendimentoData";
+import { CATEGORIES, SUBCATEGORIES_MAP, SLA_DEADLINES, RESPONSAVEIS, TicketCategory, TicketPriority } from "@/types/atendimento";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

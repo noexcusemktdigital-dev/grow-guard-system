@@ -1,6 +1,6 @@
 import { DollarSign, Trophy, TrendingUp, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatBRL } from "@/data/metasRankingData";
+import { formatBRL } from "@/types/metas";
 
 interface ComercialData {
   faturamentoRede: number;

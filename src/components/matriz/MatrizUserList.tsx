@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users, Shield, UserX, Building2, Search, Eye, Pencil } from "lucide-react";
-import { MatrizUser, MatrizArea, getAreaColor, getUserModulosHabilitados, areas, perfisPreConfigurados } from "@/data/matrizData";
+import { MatrizUser, MatrizArea, getAreaColor, areas, perfisPreConfigurados } from "@/types/matriz";
+import { getUserModulosHabilitados } from "@/data/matrizData";
 
 interface Props {
   users: MatrizUser[];

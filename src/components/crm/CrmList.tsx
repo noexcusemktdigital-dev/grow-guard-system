@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, ArrowRight } from "lucide-react";
-import type { Lead, FunnelType, Task } from "@/data/crmData";
-import { getStagesForFunnel } from "@/data/crmData";
+import type { Lead, FunnelType, Task } from "@/types/crm";
+import { getStagesForFunnel } from "@/types/crm";
 import { useState } from "react";
 
 const tempBadge: Record<string, string> = {

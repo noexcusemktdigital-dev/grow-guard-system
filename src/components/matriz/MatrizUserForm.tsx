@@ -9,7 +9,7 @@ import { Info } from "lucide-react";
 import {
   MatrizUser, MatrizArea, MatrizUserStatus, areas, perfisPreConfigurados,
   todosModulos, getPerfilById, type PermissoesEspeciais, type ModuloPermissao,
-} from "@/data/matrizData";
+} from "@/types/matriz";
 
 interface Props {
   user?: MatrizUser;

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { UnidadeDoc, DocType, DocVisibility } from "@/data/unidadesData";
+import { UnidadeDoc, DocType, DocVisibility } from "@/types/unidades";
 
 const docTypes: DocType[] = ["Contrato de franquia", "Documentos administrativos", "Arquivos internos", "Outros"];
 const visibilities: DocVisibility[] = ["Somente Franqueadora", "Ambos"];

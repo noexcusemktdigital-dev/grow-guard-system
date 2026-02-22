@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { AgendaEvent } from "@/types/agenda";
 import {
   getEventsForDate, getEventsForMonth, getMonthDays, getEventColor, getStatusColor,
-  mockTimeBlocks, type AgendaEvent
+  mockTimeBlocks
 } from "@/data/agendaData";
 import {
   format, isSameDay, isSameMonth, parseISO, startOfWeek, endOfWeek,

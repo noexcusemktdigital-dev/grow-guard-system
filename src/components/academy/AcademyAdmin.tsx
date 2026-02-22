@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import type { AcademyModule, AcademyLesson, AcademyModuleCategory } from "@/types/academy";
 import {
   mockModules,
   mockLessons,
@@ -18,9 +19,6 @@ import {
   mockQuizQuestions,
   getLessonsByModule,
   getQuestionsByQuiz,
-  type AcademyModule,
-  type AcademyLesson,
-  type AcademyModuleCategory,
 } from "@/data/academyData";
 
 export function AcademyAdmin() {

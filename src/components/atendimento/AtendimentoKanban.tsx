@@ -1,4 +1,4 @@
-import { Ticket, TicketStatus, TICKET_STATUSES, isSlaBreached, getSlaRemaining } from "@/data/atendimentoData";
+import { Ticket, TicketStatus, TICKET_STATUSES, isSlaBreached, getSlaRemaining } from "@/types/atendimento";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Clock, AlertTriangle, User, GripVertical } from "lucide-react";

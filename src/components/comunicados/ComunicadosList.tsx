@@ -11,12 +11,11 @@ import {
   ComunicadoTipo,
   ComunicadoPrioridade,
   PublicoAlvo,
-  mockComunicados,
-  mockVisualizacoes,
   getStatusColor,
   getPrioridadeColor,
   getTipoColor,
-} from "@/data/comunicadosData";
+} from "@/types/comunicados";
+import { mockComunicados, mockVisualizacoes } from "@/data/comunicadosData";
 import {
   Eye,
   Edit,

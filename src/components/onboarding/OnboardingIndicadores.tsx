@@ -1,6 +1,6 @@
 import { Progress } from "@/components/ui/progress";
 import { Users, DollarSign, FileText, Target, Zap } from "lucide-react";
-import type { OnboardingIndicators } from "@/data/onboardingData";
+import type { OnboardingIndicators } from "@/types/onboarding";
 
 interface OnboardingIndicadoresProps {
   indicators: OnboardingIndicators | undefined;
