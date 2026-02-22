@@ -22,17 +22,11 @@ const SaasBrandingPanel = () => {
   return (
     <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white">
       <div className="flex flex-col h-screen px-8 py-8 w-full">
-          {/* Header — badge + title + subtitle */}
-          <div className="pt-4 pb-6 text-center flex flex-col items-center gap-3 shrink-0">
-            <span className="inline-block text-sm font-medium border rounded-full px-4 py-1.5 text-black/60 border-black/10">
-              Depoimentos
-            </span>
-            <h2 className="text-2xl xl:text-3xl font-black tracking-tight text-black leading-tight max-w-sm">
+          {/* Title */}
+          <div className="pt-4 pb-6 text-center flex flex-col items-center shrink-0">
+            <h2 className="text-3xl xl:text-4xl font-black tracking-tight text-black leading-tight max-w-lg">
               Plataforma completa de marketing e vendas para acelerar seus resultados
             </h2>
-            <p className="text-black/50 text-sm max-w-xs">
-              Veja o que nossos clientes dizem sobre nós.
-            </p>
           </div>
 
           {/* Testimonials columns — fills remaining space */}
@@ -49,7 +43,7 @@ const SaasBrandingPanel = () => {
 
           {/* Logo bottom — larger */}
           <div className="flex justify-center pt-4 shrink-0">
-            <img src={logoLight} alt="NoExcuse" className="h-10 object-contain opacity-70" />
+            <img src={logoLight} alt="NoExcuse" className="h-16 object-contain opacity-70" />
           </div>
       </div>
     </div>
