@@ -193,3 +193,53 @@ export const monthLabels = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
+
+// Mock data and data-dependent helpers (placeholder until fully backed by database)
+export const mockFolders: MarketingFolder[] = [
+  { id: "rs-1", name: "2026", parentId: null, category: "RedesSociais", path: "2026", childCount: 1 },
+  { id: "rs-2", name: "02 Fevereiro", parentId: "rs-1", category: "RedesSociais", path: "2026/02 Fevereiro", childCount: 5 },
+  { id: "rs-3", name: "Feed", parentId: "rs-2", category: "RedesSociais", path: "2026/02 Fevereiro/Feed", childCount: 2 },
+  { id: "rs-4", name: "Story", parentId: "rs-2", category: "RedesSociais", path: "2026/02 Fevereiro/Story", childCount: 1 },
+  { id: "cp-1", name: "Noexcuse", parentId: null, category: "CampanhaProduto", path: "Noexcuse", childCount: 1 },
+  { id: "mk-1", name: "Logos", parentId: null, category: "Marca", path: "Logos", childCount: 1 },
+  { id: "kd-1", name: "Fundos Tela", parentId: null, category: "KitDiaADia", path: "Fundos Tela", childCount: 1 },
+  { id: "ap-1", name: "Institucional", parentId: null, category: "ApresentacaoPortfolio", path: "Institucional", childCount: 1 },
+];
+
+export const mockAssets: MarketingAsset[] = [
+  { id: "a1", title: "Post Lançamento Noexcuse", fileName: "post-lancamento-noexcuse.png", fileSize: "2.4 MB", type: "RedesSociais", year: 2026, month: 2, product: "Noexcuse", format: "feed", tags: ["lançamento"], version: "v1", isPublished: true, uploadedBy: "Ana Paula", createdAt: "2026-02-01", folder: "2026/02 Fevereiro/Feed" },
+  { id: "a2", title: "Carrossel Benefícios", fileName: "carrossel-beneficios.png", fileSize: "4.1 MB", type: "RedesSociais", year: 2026, month: 2, product: "Franquia", format: "carrossel", tags: ["franquia"], version: "v2", isPublished: true, uploadedBy: "Ana Paula", createdAt: "2026-02-03", folder: "2026/02 Fevereiro/Feed" },
+  { id: "a7", title: "Banner Campanha Venda Franquia", fileName: "banner-venda-franquia.png", fileSize: "1.8 MB", type: "CampanhaProduto", year: 2026, month: 2, product: "Noexcuse", format: "png", tags: ["banner"], version: "v1", isPublished: true, uploadedBy: "Carlos", createdAt: "2026-01-28", folder: "Noexcuse" },
+  { id: "a16", title: "Logo Principal PNG", fileName: "logo-principal.png", fileSize: "540 KB", type: "Marca", year: 2026, month: 1, product: "Geral", format: "png", tags: ["logo"], version: "v1", isPublished: true, uploadedBy: "Ana Paula", createdAt: "2025-12-01", folder: "Logos" },
+  { id: "a13", title: "Apresentação Institucional 2026", fileName: "institucional-2026.ppt", fileSize: "15.4 MB", type: "ApresentacaoPortfolio", year: 2026, month: 1, product: "Geral", format: "ppt", tags: ["institucional"], version: "v3", isPublished: true, uploadedBy: "Carlos", createdAt: "2026-01-15", folder: "Institucional" },
+  { id: "a18", title: "Fundo Zoom Institucional", fileName: "fundo-zoom.png", fileSize: "1.2 MB", type: "KitDiaADia", year: 2026, month: 1, product: "Geral", format: "png", tags: ["zoom"], version: "v1", isPublished: true, uploadedBy: "Carlos", createdAt: "2026-01-10", folder: "Fundos Tela" },
+];
+
+export function getCategoryAssetCount(cat: MarketingCategory): number {
+  return mockAssets.filter((a) => a.type === cat).length;
+}
+
+export function getAssetsByCategory(category: MarketingCategory): MarketingAsset[] {
+  return mockAssets.filter((a) => a.type === category);
+}
+
+export function getFoldersByCategory(category: MarketingCategory): MarketingFolder[] {
+  return mockFolders.filter((f) => f.category === category);
+}
+
+export function getChildFolders(category: MarketingCategory, parentPath: string): MarketingFolder[] {
+  return mockFolders.filter((f) => {
+    if (f.category !== category) return false;
+    if (parentPath === "") return f.parentId === null;
+    const parts = f.path.split("/");
+    const parentParts = parentPath.split("/");
+    return parts.length === parentParts.length + 1 && f.path.startsWith(parentPath + "/");
+  });
+}
+
+export function getAssetsInFolder(category: MarketingCategory, folderPath: string): MarketingAsset[] {
+  return mockAssets.filter((a) => {
+    if (a.type !== category) return false;
+    return (a.folder || "") === folderPath;
+  });
+}

@@ -14,8 +14,9 @@ import {
   getStatusColor,
   getPrioridadeColor,
   getTipoColor,
+  mockComunicados,
+  mockVisualizacoes,
 } from "@/types/comunicados";
-import { mockComunicados, mockVisualizacoes } from "@/mocks/comunicadosData";
 import {
   Eye,
   Edit,

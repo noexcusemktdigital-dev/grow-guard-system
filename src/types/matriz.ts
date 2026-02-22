@@ -155,6 +155,21 @@ export function getPerfilById(id: string): PerfilPreConfigurado | undefined {
   return perfisPreConfigurados.find(p => p.id === id);
 }
 
+export function getUserModulosHabilitados(user: MatrizUser): string[] {
+  return user.permissoes.filter(p => p.nivel !== "sem_acesso").map(p => p.modulo);
+}
+
+export function applyPerfil(user: MatrizUser, perfilId: string): MatrizUser {
+  const perfil = getPerfilById(perfilId);
+  if (!perfil) return user;
+  return {
+    ...user,
+    permissoes: [...perfil.permissoes],
+    permissoesEspeciais: { ...perfil.permissoesEspeciais },
+    perfilBase: perfilId,
+  };
+}
+
 export function getNivelAcessoLabel(nivel: NivelAcesso): string {
   const map: Record<NivelAcesso, string> = {
     sem_acesso: "Sem acesso", visualizacao: "Visualização", edicao: "Edição", admin: "Admin",
