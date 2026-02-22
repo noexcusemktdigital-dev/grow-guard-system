@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import {
   Users, Plus, Phone, Search, LayoutGrid, List, Clock,
   GripVertical, Settings2, Filter, X, Copy, MoreHorizontal,
-  MessageCircle, CircleDot, XCircle, Tag, Shuffle, ChevronDown,
-  Calendar, DollarSign, UserCircle
+  MessageCircle, CircleDot, XCircle, ChevronDown,
+  Calendar, DollarSign, UserCircle, FileSpreadsheet, BookUser
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useClienteCrm";
 import { useCrmFunnels } from "@/hooks/useClienteCrm";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
@@ -26,7 +26,10 @@ import { DndContext, DragOverlay, closestCorners, useDraggable, useDroppable, ty
 import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
 import { CrmFunnelManager } from "@/components/crm/CrmFunnelManager";
+import { CrmContactsView } from "@/components/crm/CrmContactsView";
+import { CrmCsvImportDialog } from "@/components/crm/CrmCsvImportDialog";
 import { DEFAULT_STAGES, STAGE_ICONS, getColorStyle, type FunnelStage } from "@/components/crm/CrmStageSystem";
+import { Shuffle } from "lucide-react";
 
 const SOURCES = ["WhatsApp", "Formulário", "Indicação", "Ads", "LinkedIn", "Evento", "Orgânico"];
 
@@ -58,7 +61,7 @@ interface LeadRow {
   whatsapp_contact_id?: string | null;
 }
 
-// ===== Draggable Lead Card with Quick Actions =====
+// ===== Draggable Lead Card =====
 function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost, onDelete }: {
   lead: LeadRow;
   onClick: () => void;
@@ -94,7 +97,6 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
                 </p>
               )}
             </div>
-            {/* Quick actions on hover */}
             <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
               <Popover>
                 <PopoverTrigger asChild>
@@ -109,7 +111,7 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
                       <MessageCircle className="w-3 h-3" /> WhatsApp
                     </a>
                   )}
-                  <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2 text-red-600" onClick={onMarkLost}>
+                  <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2 text-destructive" onClick={onMarkLost}>
                     <XCircle className="w-3 h-3" /> Marcar perdido
                   </button>
                 </PopoverContent>
@@ -156,6 +158,7 @@ export default function ClienteCRM() {
   const { data: team } = useCrmTeam();
   const { updateLead, deleteLead, markAsLost } = useCrmLeadMutations();
 
+  const [activeTab, setActiveTab] = useState<"pipeline" | "contatos">("pipeline");
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [search, setSearch] = useState("");
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
@@ -163,9 +166,10 @@ export default function ClienteCRM() {
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [funnelManagerOpen, setFunnelManagerOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
 
-  // All filters in one place
-  const [filterSource, setFilterSource] = useState<string>("");
+  // All filters
+  const [filterSource, setFilterSource] = useState("");
   const [filterTag, setFilterTag] = useState("");
   const [filterAssigned, setFilterAssigned] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -268,28 +272,69 @@ export default function ClienteCRM() {
 
   const draggingLead = draggingId ? allLeads.find(l => l.id === draggingId) : null;
 
+  const handleCreateLeadFromContact = (contact: any) => {
+    setActiveTab("pipeline");
+    setNewLeadOpen(true);
+    // The CrmNewLeadDialog handles contact selection internally
+  };
+
   return (
     <div className="max-w-full mx-auto space-y-5">
       <PageHeader
         title="CRM de Vendas"
-        subtitle={`${allLeads.length} leads · Gerencie seus leads e oportunidades`}
+        subtitle={activeTab === "pipeline"
+          ? `${allLeads.length} leads · Gerencie seus leads e oportunidades`
+          : "Base de dados de contatos"
+        }
         icon={<Users className="w-5 h-5 text-primary" />}
         actions={
           <div className="flex items-center gap-2">
-            {crmSettings?.lead_roulette_enabled && (
+            {crmSettings?.lead_roulette_enabled && activeTab === "pipeline" && (
               <Badge variant="outline" className="text-[10px] gap-1"><Shuffle className="w-3 h-3" /> Roleta ativa</Badge>
             )}
-            <Button size="sm" onClick={() => setNewLeadOpen(true)} className="gap-1">
-              <Plus className="w-3.5 h-3.5" /> Novo Lead
+
+            {/* Contacts toggle button */}
+            <Button
+              variant={activeTab === "contatos" ? "default" : "outline"}
+              size="sm"
+              className="gap-1.5 h-8"
+              onClick={() => setActiveTab(activeTab === "contatos" ? "pipeline" : "contatos")}
+            >
+              <BookUser className="w-3.5 h-3.5" />
+              Contatos
             </Button>
-            <div className="flex gap-0.5 p-0.5 rounded-lg bg-muted/50 border">
-              <Button variant={view === "kanban" ? "default" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setView("kanban")}>
-                <LayoutGrid className="w-3.5 h-3.5" />
-              </Button>
-              <Button variant={view === "list" ? "default" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setView("list")}>
-                <List className="w-3.5 h-3.5" />
-              </Button>
-            </div>
+
+            {activeTab === "pipeline" && (
+              <>
+                {/* New Lead dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" className="gap-1">
+                      <Plus className="w-3.5 h-3.5" /> Novo Lead
+                      <ChevronDown className="w-3 h-3 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setNewLeadOpen(true)} className="gap-2 text-xs">
+                      <Plus className="w-3.5 h-3.5" /> Criar Lead
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCsvImportOpen(true)} className="gap-2 text-xs">
+                      <FileSpreadsheet className="w-3.5 h-3.5" /> Importar Planilha
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="flex gap-0.5 p-0.5 rounded-lg bg-muted/50 border">
+                  <Button variant={view === "kanban" ? "default" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setView("kanban")}>
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant={view === "list" ? "default" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setView("list")}>
+                    <List className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </>
+            )}
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -304,221 +349,224 @@ export default function ClienteCRM() {
         }
       />
 
-      {/* Search + Unified Filter */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar lead..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-8" />
-        </div>
+      {/* ===== CONTACTS TAB ===== */}
+      {activeTab === "contatos" && (
+        <CrmContactsView onCreateLeadFromContact={handleCreateLeadFromContact} />
+      )}
 
-        <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-              <Filter className="w-3.5 h-3.5" /> Filtros
-              {activeFilterCount > 0 && <Badge variant="secondary" className="text-[9px] h-4 px-1.5 ml-0.5">{activeFilterCount}</Badge>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-4" align="start">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold">Filtros</p>
-                {hasFilters && <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={clearAllFilters}><X className="w-3 h-3" /> Limpar tudo</Button>}
-              </div>
-
-              {/* Assigned */}
-              {team && team.length > 0 && (
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Responsável</Label>
-                  <Select value={filterAssigned} onValueChange={v => setFilterAssigned(v === "all" ? "" : v)}>
-                    <SelectTrigger className="h-8 text-xs"><UserCircle className="w-3 h-3 mr-1" /><SelectValue placeholder="Todos" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="text-xs">Todos</SelectItem>
-                      {team.map(m => <SelectItem key={m.user_id} value={m.user_id} className="text-xs">{m.full_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Date Range */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Data de</Label>
-                  <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
-                </div>
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Data até</Label>
-                  <Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
-                </div>
-              </div>
-
-              {/* Source */}
-              <div>
-                <Label className="text-[10px] text-muted-foreground">Origem</Label>
-                <Select value={filterSource} onValueChange={v => setFilterSource(v === "all" ? "" : v)}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todas" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all" className="text-xs">Todas origens</SelectItem>
-                    {SOURCES.map(s => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Tags */}
-              {allTags.length > 0 && (
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Tag</Label>
-                  <Select value={filterTag} onValueChange={v => setFilterTag(v === "all" ? "" : v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todas" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="text-xs">Todas tags</SelectItem>
-                      {allTags.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Status */}
-              <div>
-                <Label className="text-[10px] text-muted-foreground">Status</Label>
-                <Select value={filterStatus} onValueChange={v => setFilterStatus(v === "all" ? "" : v)}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all" className="text-xs">Todos</SelectItem>
-                    <SelectItem value="active" className="text-xs">Ativo</SelectItem>
-                    <SelectItem value="won" className="text-xs">Vendido</SelectItem>
-                    <SelectItem value="lost" className="text-xs">Perdido</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Value Range */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Valor mín</Label>
-                  <Input type="number" value={filterValueMin} onChange={e => setFilterValueMin(e.target.value)} className="h-8 text-xs" placeholder="0" />
-                </div>
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Valor máx</Label>
-                  <Input type="number" value={filterValueMax} onChange={e => setFilterValueMax(e.target.value)} className="h-8 text-xs" placeholder="∞" />
-                </div>
-              </div>
+      {/* ===== PIPELINE TAB ===== */}
+      {activeTab === "pipeline" && (
+        <>
+          {/* Search + Unified Filter */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Buscar lead..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-8" />
             </div>
-          </PopoverContent>
-        </Popover>
 
-        {hasFilters && (
-          <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={clearAllFilters}>
-            <X className="w-3 h-3" /> Limpar filtros
-          </Button>
-        )}
-      </div>
-
-      {allLeads.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Users className="w-12 h-12 text-muted-foreground/30 mb-4" />
-            <p className="text-sm font-medium">Nenhum lead cadastrado</p>
-            <p className="text-xs text-muted-foreground mt-1">Adicione leads para começar a gerenciar suas vendas.</p>
-            <Button size="sm" className="mt-4 gap-1" onClick={() => setNewLeadOpen(true)}>
-              <Plus className="w-3.5 h-3.5" /> Novo Lead
-            </Button>
-          </CardContent>
-        </Card>
-      ) : view === "kanban" ? (
-        <DndContext collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="flex gap-3 overflow-x-auto pb-4">
-            {stages.map(stage => {
-              const stageLeads = leadsByStage[stage.key] || [];
-              const colorStyle = getColorStyle(stage.color);
-              return (
-                <div key={stage.key} className="min-w-[260px] max-w-[280px] flex-shrink-0">
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-t-xl border-b-2 ${colorStyle.border} bg-gradient-to-r ${colorStyle.gradient}`}>
-                    <div className={`w-6 h-6 rounded-md ${colorStyle.light} flex items-center justify-center ${colorStyle.text}`}>
-                      {STAGE_ICONS[stage.icon] || <CircleDot className="w-3.5 h-3.5" />}
-                    </div>
-                    <span className="text-xs font-semibold flex-1">{stage.label}</span>
-                    <Badge variant="outline" className="text-[9px] h-5">{stageLeads.length}</Badge>
+            <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                  <Filter className="w-3.5 h-3.5" /> Filtros
+                  {activeFilterCount > 0 && <Badge variant="secondary" className="text-[9px] h-4 px-1.5 ml-0.5">{activeFilterCount}</Badge>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="start">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold">Filtros</p>
+                    {hasFilters && <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={clearAllFilters}><X className="w-3 h-3" /> Limpar tudo</Button>}
                   </div>
-                  <DroppableColumn stageKey={stage.key}>
-                    {stageLeads.map(lead => (
-                      <DraggableLeadCard
-                        key={lead.id}
-                        lead={lead}
-                        onClick={() => setSelectedLead(lead)}
-                        stageColor={stage.color}
-                        onCopyPhone={() => {
-                          if (lead.phone) {
-                            navigator.clipboard.writeText(lead.phone);
-                            toast({ title: "Telefone copiado" });
-                          } else {
-                            toast({ title: "Lead sem telefone", variant: "destructive" });
-                          }
-                        }}
-                        onMarkLost={() => {
-                          markAsLost.mutate({ id: lead.id });
-                          toast({ title: "Lead marcado como perdido" });
-                        }}
-                        onDelete={() => {
-                          deleteLead.mutate(lead.id);
-                          toast({ title: "Lead excluído" });
-                        }}
-                      />
-                    ))}
-                    {stageLeads.length === 0 && (
-                      <div className="text-center py-8 text-[11px] text-muted-foreground/50">
-                        Arraste leads aqui
-                      </div>
-                    )}
-                  </DroppableColumn>
+
+                  {team && team.length > 0 && (
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Responsável</Label>
+                      <Select value={filterAssigned} onValueChange={v => setFilterAssigned(v === "all" ? "" : v)}>
+                        <SelectTrigger className="h-8 text-xs"><UserCircle className="w-3 h-3 mr-1" /><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                          {team.map(m => <SelectItem key={m.user_id} value={m.user_id} className="text-xs">{m.full_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Data de</Label>
+                      <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Data até</Label>
+                      <Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Origem</Label>
+                    <Select value={filterSource} onValueChange={v => setFilterSource(v === "all" ? "" : v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todas" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="text-xs">Todas origens</SelectItem>
+                        {SOURCES.map(s => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {allTags.length > 0 && (
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Tag</Label>
+                      <Select value={filterTag} onValueChange={v => setFilterTag(v === "all" ? "" : v)}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todas" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all" className="text-xs">Todas tags</SelectItem>
+                          {allTags.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Status</Label>
+                    <Select value={filterStatus} onValueChange={v => setFilterStatus(v === "all" ? "" : v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                        <SelectItem value="active" className="text-xs">Ativo</SelectItem>
+                        <SelectItem value="won" className="text-xs">Vendido</SelectItem>
+                        <SelectItem value="lost" className="text-xs">Perdido</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Valor mín</Label>
+                      <Input type="number" value={filterValueMin} onChange={e => setFilterValueMin(e.target.value)} className="h-8 text-xs" placeholder="0" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Valor máx</Label>
+                      <Input type="number" value={filterValueMax} onChange={e => setFilterValueMax(e.target.value)} className="h-8 text-xs" placeholder="∞" />
+                    </div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-          <DragOverlay>
-            {draggingLead && (
-              <Card className="shadow-xl border-primary/30 w-[260px]">
-                <CardContent className="p-3">
-                  <p className="text-sm font-semibold">{draggingLead.name}</p>
-                  <p className="text-xs text-muted-foreground">{draggingLead.phone}</p>
-                </CardContent>
-              </Card>
+              </PopoverContent>
+            </Popover>
+
+            {hasFilters && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={clearAllFilters}>
+                <X className="w-3 h-3" /> Limpar filtros
+              </Button>
             )}
-          </DragOverlay>
-        </DndContext>
-      ) : (
-        /* List view */
-        <Card>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {filteredLeads.map(lead => {
-                const stage = stages.find(s => s.key === lead.stage);
-                const colorStyle = stage ? getColorStyle(stage.color) : getColorStyle("blue");
-                return (
-                  <div
-                    key={lead.id}
-                    className="flex items-center gap-4 px-4 py-3 hover:bg-muted/30 cursor-pointer transition-colors"
-                    onClick={() => setSelectedLead(lead)}
-                  >
-                    <div className={`w-2.5 h-2.5 rounded-full ${colorStyle.dot}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{lead.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{lead.email || lead.phone || "—"}</p>
+          </div>
+
+          {allLeads.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <Users className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                <p className="text-sm font-medium">Nenhum lead cadastrado</p>
+                <p className="text-xs text-muted-foreground mt-1">Adicione leads para começar a gerenciar suas vendas.</p>
+                <Button size="sm" className="mt-4 gap-1" onClick={() => setNewLeadOpen(true)}>
+                  <Plus className="w-3.5 h-3.5" /> Novo Lead
+                </Button>
+              </CardContent>
+            </Card>
+          ) : view === "kanban" ? (
+            <DndContext collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div className="flex gap-3 overflow-x-auto pb-4">
+                {stages.map(stage => {
+                  const stageLeads = leadsByStage[stage.key] || [];
+                  const colorStyle = getColorStyle(stage.color);
+                  return (
+                    <div key={stage.key} className="min-w-[260px] max-w-[280px] flex-shrink-0">
+                      <div className={`flex items-center gap-2 px-3 py-2 rounded-t-xl border-b-2 ${colorStyle.border} bg-gradient-to-r ${colorStyle.gradient}`}>
+                        <div className={`w-6 h-6 rounded-md ${colorStyle.light} flex items-center justify-center ${colorStyle.text}`}>
+                          {STAGE_ICONS[stage.icon] || <CircleDot className="w-3.5 h-3.5" />}
+                        </div>
+                        <span className="text-xs font-semibold flex-1">{stage.label}</span>
+                        <Badge variant="outline" className="text-[9px] h-5">{stageLeads.length}</Badge>
+                      </div>
+                      <DroppableColumn stageKey={stage.key}>
+                        {stageLeads.map(lead => (
+                          <DraggableLeadCard
+                            key={lead.id}
+                            lead={lead}
+                            onClick={() => setSelectedLead(lead)}
+                            stageColor={stage.color}
+                            onCopyPhone={() => {
+                              if (lead.phone) {
+                                navigator.clipboard.writeText(lead.phone);
+                                toast({ title: "Telefone copiado" });
+                              } else {
+                                toast({ title: "Lead sem telefone", variant: "destructive" });
+                              }
+                            }}
+                            onMarkLost={() => {
+                              markAsLost.mutate({ id: lead.id });
+                              toast({ title: "Lead marcado como perdido" });
+                            }}
+                            onDelete={() => {
+                              deleteLead.mutate(lead.id);
+                              toast({ title: "Lead excluído" });
+                            }}
+                          />
+                        ))}
+                        {stageLeads.length === 0 && (
+                          <div className="text-center py-8 text-[11px] text-muted-foreground/50">
+                            Arraste leads aqui
+                          </div>
+                        )}
+                      </DroppableColumn>
                     </div>
-                    <Badge variant="outline" className={`text-[9px] ${colorStyle.text} ${colorStyle.border}`}>
-                      {stage?.label || lead.stage}
-                    </Badge>
-                    <span className="text-sm font-semibold text-primary whitespace-nowrap">
-                      {lead.value ? `R$ ${Number(lead.value).toLocaleString()}` : "—"}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      {new Date(lead.created_at).toLocaleDateString("pt-BR")}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  );
+                })}
+              </div>
+              <DragOverlay>
+                {draggingLead && (
+                  <Card className="shadow-xl border-primary/30 w-[260px]">
+                    <CardContent className="p-3">
+                      <p className="text-sm font-semibold">{draggingLead.name}</p>
+                      <p className="text-xs text-muted-foreground">{draggingLead.phone}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </DragOverlay>
+            </DndContext>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {filteredLeads.map(lead => {
+                    const stage = stages.find(s => s.key === lead.stage);
+                    const colorStyle = stage ? getColorStyle(stage.color) : getColorStyle("blue");
+                    return (
+                      <div
+                        key={lead.id}
+                        className="flex items-center gap-4 px-4 py-3 hover:bg-muted/30 cursor-pointer transition-colors"
+                        onClick={() => setSelectedLead(lead)}
+                      >
+                        <div className={`w-2.5 h-2.5 rounded-full ${colorStyle.dot}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{lead.name}</p>
+                          <p className="text-[11px] text-muted-foreground">{lead.email || lead.phone || "—"}</p>
+                        </div>
+                        <Badge variant="outline" className={`text-[9px] ${colorStyle.text} ${colorStyle.border}`}>
+                          {stage?.label || lead.stage}
+                        </Badge>
+                        <span className="text-sm font-semibold text-primary whitespace-nowrap">
+                          {lead.value ? `R$ ${Number(lead.value).toLocaleString()}` : "—"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {new Date(lead.created_at).toLocaleDateString("pt-BR")}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Lead Detail Sheet */}
@@ -529,6 +577,9 @@ export default function ClienteCRM() {
 
       {/* Funnel Manager */}
       <CrmFunnelManager open={funnelManagerOpen} onOpenChange={setFunnelManagerOpen} />
+
+      {/* CSV Import Dialog (for leads) */}
+      <CrmCsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
     </div>
   );
 }
