@@ -1,4 +1,17 @@
-import { mockTickets, type Ticket } from "./atendimentoData";
+import type { Ticket } from "@/types/atendimento";
+import { isSlaBreached } from "@/types/atendimento";
+
+const now = new Date();
+const h = (hoursAgo: number) => new Date(now.getTime() - hoursAgo * 3600000).toISOString();
+const future = (hoursAhead: number) => new Date(now.getTime() + hoursAhead * 3600000).toISOString();
+
+const mockTickets: Ticket[] = [
+  { id: "t1", numero: "#001", unidadeId: "u1", unidadeNome: "Unidade Centro", categoria: "Financeiro", subcategoria: "Dúvida de repasse", prioridade: "Urgente", status: "Aberto", responsavelId: "r1", responsavelNome: "Davi", descricao: "Franqueado reporta divergência no valor de repasse do mês de janeiro.", anexos: ["relatorio_jan.pdf"], slaDeadline: h(1), criadoEm: h(6), atualizadoEm: h(2) },
+  { id: "t2", numero: "#002", unidadeId: "u2", unidadeNome: "Unidade Norte", categoria: "Sistema", subcategoria: "Bug", prioridade: "Alta", status: "Em analise", responsavelId: "r2", responsavelNome: "Lucas", descricao: "Sistema não gera relatório DRE corretamente.", anexos: [], slaDeadline: h(-2), criadoEm: h(12), atualizadoEm: h(4) },
+  { id: "t3", numero: "#003", unidadeId: "u3", unidadeNome: "Unidade Sul", categoria: "Marketing", subcategoria: "Material de campanha", prioridade: "Normal", status: "Em atendimento", responsavelId: "r3", responsavelNome: "Amanda", descricao: "Artes para campanha de Dia das Mães.", anexos: ["briefing.docx"], slaDeadline: future(12), criadoEm: h(20), atualizadoEm: h(3) },
+  { id: "t4", numero: "#004", unidadeId: "u4", unidadeNome: "Unidade Leste", categoria: "Clientes", subcategoria: "Cancelamento", prioridade: "Alta", status: "Aguardando franqueado", responsavelId: "r1", responsavelNome: "Davi", descricao: "Cliente importante solicitou cancelamento.", anexos: [], slaDeadline: future(2), criadoEm: h(30), atualizadoEm: h(50) },
+  { id: "t5", numero: "#005", unidadeId: "u1", unidadeNome: "Unidade Centro", categoria: "Juridico", subcategoria: "Contrato", prioridade: "Normal", status: "Aberto", responsavelId: "r2", responsavelNome: "Lucas", descricao: "Dúvida sobre cláusula de exclusividade territorial.", anexos: ["contrato_v2.pdf"], slaDeadline: future(18), criadoEm: h(8), atualizadoEm: h(8) },
+];
 import { mockComunicados, type Comunicado } from "./comunicadosData";
 import { mockOnboardings, mockMeetings, mockTasks as onboardingTasks } from "./onboardingData";
 import type { AgendaEvent } from "@/types/agenda";
