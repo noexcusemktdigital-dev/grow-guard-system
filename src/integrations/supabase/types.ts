@@ -1166,11 +1166,16 @@ export type Database = {
         Row: {
           action_config: Json
           action_type: string
+          assigned_user_ids: Json
           created_at: string
+          description: string | null
+          funnel_ids: Json
           id: string
           is_active: boolean
           name: string
           organization_id: string
+          priority: number
+          team_ids: Json
           trigger_config: Json
           trigger_type: string
           updated_at: string
@@ -1178,11 +1183,16 @@ export type Database = {
         Insert: {
           action_config?: Json
           action_type?: string
+          assigned_user_ids?: Json
           created_at?: string
+          description?: string | null
+          funnel_ids?: Json
           id?: string
           is_active?: boolean
           name: string
           organization_id: string
+          priority?: number
+          team_ids?: Json
           trigger_config?: Json
           trigger_type?: string
           updated_at?: string
@@ -1190,11 +1200,16 @@ export type Database = {
         Update: {
           action_config?: Json
           action_type?: string
+          assigned_user_ids?: Json
           created_at?: string
+          description?: string | null
+          funnel_ids?: Json
           id?: string
           is_active?: boolean
           name?: string
           organization_id?: string
+          priority?: number
+          team_ids?: Json
           trigger_config?: Json
           trigger_type?: string
           updated_at?: string
@@ -1202,6 +1217,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "crm_automations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_contacts: {
+        Row: {
+          company: string | null
+          created_at: string
+          custom_fields: Json | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          position: string | null
+          source: string | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          position?: string | null
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          position?: string | null
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contacts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1350,6 +1421,7 @@ export type Database = {
         Row: {
           assigned_to: string | null
           company: string | null
+          contact_id: string | null
           created_at: string
           custom_fields: Json | null
           email: string | null
@@ -1371,6 +1443,7 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           company?: string | null
+          contact_id?: string | null
           created_at?: string
           custom_fields?: Json | null
           email?: string | null
@@ -1392,6 +1465,7 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           company?: string | null
+          contact_id?: string | null
           created_at?: string
           custom_fields?: Json | null
           email?: string | null
@@ -1411,6 +1485,13 @@ export type Database = {
           won_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_leads_funnel_id_fkey"
             columns: ["funnel_id"]
@@ -1498,8 +1579,12 @@ export type Database = {
           id: string
           lead_roulette_enabled: boolean
           organization_id: string
+          outbound_webhooks: Json
           roulette_members: Json
           sla_first_contact_hours: number
+          sla_first_contact_minutes: number
+          sla_no_response_minutes: number
+          sla_stage_stuck_days: number
           sla_task_open_days: number
           updated_at: string
         }
@@ -1510,8 +1595,12 @@ export type Database = {
           id?: string
           lead_roulette_enabled?: boolean
           organization_id: string
+          outbound_webhooks?: Json
           roulette_members?: Json
           sla_first_contact_hours?: number
+          sla_first_contact_minutes?: number
+          sla_no_response_minutes?: number
+          sla_stage_stuck_days?: number
           sla_task_open_days?: number
           updated_at?: string
         }
@@ -1522,8 +1611,12 @@ export type Database = {
           id?: string
           lead_roulette_enabled?: boolean
           organization_id?: string
+          outbound_webhooks?: Json
           roulette_members?: Json
           sla_first_contact_hours?: number
+          sla_first_contact_minutes?: number
+          sla_no_response_minutes?: number
+          sla_stage_stuck_days?: number
           sla_task_open_days?: number
           updated_at?: string
         }
@@ -1587,6 +1680,47 @@ export type Database = {
           },
           {
             foreignKeyName: "crm_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_teams: {
+        Row: {
+          created_at: string
+          description: string | null
+          funnel_ids: Json | null
+          id: string
+          members: Json | null
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          funnel_ids?: Json | null
+          id?: string
+          members?: Json | null
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          funnel_ids?: Json | null
+          id?: string
+          members?: Json | null
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_teams_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

@@ -68,6 +68,7 @@ import ClienteTrafegoPago from "./pages/cliente/ClienteTrafegoPago";
 import ClienteIntegracoes from "./pages/cliente/ClienteIntegracoes";
 import ClientePlanoCreditos from "./pages/cliente/ClientePlanoCreditos";
 import ClienteConfiguracoes from "./pages/cliente/ClienteConfiguracoes";
+import ClienteContatos from "./pages/cliente/ClienteContatos";
 
 const queryClient = new QueryClient();
 
@@ -142,6 +143,7 @@ const App = () => (
                 <Route path="chat" element={<ClienteChat />} />
                 <Route path="crm" element={<ClienteCRM />} />
                 <Route path="crm/config" element={<CrmConfigPage />} />
+                <Route path="contatos" element={<ClienteContatos />} />
                 <Route path="agentes-ia" element={<ClienteAgentesIA />} />
                 <Route path="scripts" element={<ClienteScripts />} />
                 <Route path="disparos" element={<ClienteDisparos />} />
