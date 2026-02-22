@@ -1,89 +1,30 @@
 import { useState, useMemo } from "react";
 import {
-  Users, Plus, Phone, Mail, Search, LayoutGrid, List,
-  MessageCircle, ClipboardList, StickyNote, CheckSquare, Tag, Globe,
-  Instagram, Clock, Bot, User, ArrowRight, FileText, CheckCircle,
-  XCircle, PhoneCall, Settings2, GripVertical, Pencil, Trash2,
-  Filter, DollarSign, Target, AlertTriangle, ChevronDown,
-  Zap, BarChart3, X, Save, Palette, CirclePlus, CircleDot,
-  Crosshair, Handshake, ShieldCheck, Ban, Sparkles, Star,
-  PhoneOutgoing, SearchCheck, Copy, MoreHorizontal, ExternalLink
+  Users, Plus, Phone, Search, LayoutGrid, List, Clock,
+  GripVertical, Settings2, Filter, X, Copy, MoreHorizontal,
+  MessageCircle, CircleDot, XCircle, Tag
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useClienteCrm";
-import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useClienteCrm";
+import { useCrmFunnels } from "@/hooks/useClienteCrm";
+import { useToast } from "@/hooks/use-toast";
 import { DndContext, DragOverlay, closestCorners, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
+import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
+import { CrmFunnelManager } from "@/components/crm/CrmFunnelManager";
+import { DEFAULT_STAGES, STAGE_ICONS, getColorStyle, type FunnelStage } from "@/components/crm/CrmStageSystem";
 
-// ===== Stage System =====
-
-interface FunnelStage {
-  key: string;
-  label: string;
-  color: string;
-  icon: string;
-}
-
-const STAGE_ICONS: Record<string, React.ReactNode> = {
-  "circle-plus": <CirclePlus className="w-4 h-4" />,
-  "phone-outgoing": <PhoneOutgoing className="w-4 h-4" />,
-  "search-check": <SearchCheck className="w-4 h-4" />,
-  "clipboard": <ClipboardList className="w-4 h-4" />,
-  "handshake": <Handshake className="w-4 h-4" />,
-  "shield-check": <ShieldCheck className="w-4 h-4" />,
-  "ban": <Ban className="w-4 h-4" />,
-  "star": <Star className="w-4 h-4" />,
-  "sparkles": <Sparkles className="w-4 h-4" />,
-  "target": <Target className="w-4 h-4" />,
-  "crosshair": <Crosshair className="w-4 h-4" />,
-  "circle-dot": <CircleDot className="w-4 h-4" />,
-};
-
-const STAGE_ICON_OPTIONS = Object.keys(STAGE_ICONS);
-
-const STAGE_COLORS = [
-  { name: "blue", label: "Azul", gradient: "from-blue-500/10 to-transparent", border: "border-blue-500/25", text: "text-blue-500", dot: "bg-blue-500", bg: "bg-blue-500", ring: "ring-blue-500/20", light: "bg-blue-500/8" },
-  { name: "amber", label: "Âmbar", gradient: "from-amber-500/10 to-transparent", border: "border-amber-500/25", text: "text-amber-500", dot: "bg-amber-500", bg: "bg-amber-500", ring: "ring-amber-500/20", light: "bg-amber-500/8" },
-  { name: "purple", label: "Roxo", gradient: "from-purple-500/10 to-transparent", border: "border-purple-500/25", text: "text-purple-500", dot: "bg-purple-500", bg: "bg-purple-500", ring: "ring-purple-500/20", light: "bg-purple-500/8" },
-  { name: "emerald", label: "Verde", gradient: "from-emerald-500/10 to-transparent", border: "border-emerald-500/25", text: "text-emerald-500", dot: "bg-emerald-500", bg: "bg-emerald-500", ring: "ring-emerald-500/20", light: "bg-emerald-500/8" },
-  { name: "red", label: "Vermelho", gradient: "from-red-500/10 to-transparent", border: "border-red-500/25", text: "text-red-500", dot: "bg-red-500", bg: "bg-red-500", ring: "ring-red-500/20", light: "bg-red-500/8" },
-  { name: "cyan", label: "Ciano", gradient: "from-cyan-500/10 to-transparent", border: "border-cyan-500/25", text: "text-cyan-500", dot: "bg-cyan-500", bg: "bg-cyan-500", ring: "ring-cyan-500/20", light: "bg-cyan-500/8" },
-  { name: "pink", label: "Rosa", gradient: "from-pink-500/10 to-transparent", border: "border-pink-500/25", text: "text-pink-500", dot: "bg-pink-500", bg: "bg-pink-500", ring: "ring-pink-500/20", light: "bg-pink-500/8" },
-  { name: "orange", label: "Laranja", gradient: "from-orange-500/10 to-transparent", border: "border-orange-500/25", text: "text-orange-500", dot: "bg-orange-500", bg: "bg-orange-500", ring: "ring-orange-500/20", light: "bg-orange-500/8" },
-  { name: "indigo", label: "Índigo", gradient: "from-indigo-500/10 to-transparent", border: "border-indigo-500/25", text: "text-indigo-500", dot: "bg-indigo-500", bg: "bg-indigo-500", ring: "ring-indigo-500/20", light: "bg-indigo-500/8" },
-  { name: "teal", label: "Teal", gradient: "from-teal-500/10 to-transparent", border: "border-teal-500/25", text: "text-teal-500", dot: "bg-teal-500", bg: "bg-teal-500", ring: "ring-teal-500/20", light: "bg-teal-500/8" },
-];
-
-const getColorStyle = (colorName: string) => STAGE_COLORS.find(c => c.name === colorName) || STAGE_COLORS[0];
-
-const DEFAULT_STAGES: FunnelStage[] = [
-  { key: "novo", label: "Novo Lead", color: "blue", icon: "circle-plus" },
-  { key: "contato", label: "Contato", color: "amber", icon: "phone-outgoing" },
-  { key: "qualificacao", label: "Qualificação", color: "cyan", icon: "search-check" },
-  { key: "proposta", label: "Proposta", color: "purple", icon: "clipboard" },
-  { key: "negociacao", label: "Negociação", color: "orange", icon: "handshake" },
-  { key: "fechado", label: "Fechado", color: "emerald", icon: "shield-check" },
-  { key: "perdido", label: "Perdido", color: "red", icon: "ban" },
-];
+const SOURCES = ["WhatsApp", "Formulário", "Indicação", "Ads", "LinkedIn", "Evento", "Orgânico"];
 
 // ===== Droppable Column =====
-
 function DroppableColumn({ stageKey, children }: { stageKey: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: stageKey });
   return (
@@ -93,8 +34,7 @@ function DroppableColumn({ stageKey, children }: { stageKey: string; children: R
   );
 }
 
-// ===== Draggable Lead Card =====
-
+// ===== Lead Card Row Type =====
 interface LeadRow {
   id: string;
   name: string;
@@ -106,9 +46,21 @@ interface LeadRow {
   source: string | null;
   tags: string[] | null;
   created_at: string;
+  won_at?: string | null;
+  lost_at?: string | null;
+  lost_reason?: string | null;
+  whatsapp_contact_id?: string | null;
 }
 
-function DraggableLeadCard({ lead, onClick, stageColor }: { lead: LeadRow; onClick: () => void; stageColor: string }) {
+// ===== Draggable Lead Card with Quick Actions =====
+function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost, onDelete }: {
+  lead: LeadRow;
+  onClick: () => void;
+  stageColor: string;
+  onCopyPhone: () => void;
+  onMarkLost: () => void;
+  onDelete: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id });
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -118,7 +70,7 @@ function DraggableLeadCard({ lead, onClick, stageColor }: { lead: LeadRow; onCli
   const colorStyle = getColorStyle(stageColor);
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="group">
       <Card
         className={`cursor-pointer hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${colorStyle.border}`}
         onClick={() => { if (!isDragging) onClick(); }}
@@ -136,6 +88,27 @@ function DraggableLeadCard({ lead, onClick, stageColor }: { lead: LeadRow; onCli
                 </p>
               )}
             </div>
+            {/* Quick actions on hover */}
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreHorizontal className="w-3.5 h-3.5" /></Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-36 p-1" align="end">
+                  <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2" onClick={onCopyPhone}>
+                    <Copy className="w-3 h-3" /> Copiar telefone
+                  </button>
+                  {lead.phone && (
+                    <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2">
+                      <MessageCircle className="w-3 h-3" /> WhatsApp
+                    </a>
+                  )}
+                  <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2 text-red-600" onClick={onMarkLost}>
+                    <XCircle className="w-3 h-3" /> Marcar perdido
+                  </button>
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <div className="flex items-center justify-between">
@@ -143,9 +116,7 @@ function DraggableLeadCard({ lead, onClick, stageColor }: { lead: LeadRow; onCli
               {lead.value ? `R$ ${Number(lead.value).toLocaleString()}` : "—"}
             </span>
             {lead.source && (
-              <Badge variant="secondary" className="text-[8px] px-1.5 py-0 font-normal">
-                {lead.source}
-              </Badge>
+              <Badge variant="secondary" className="text-[8px] px-1.5 py-0 font-normal">{lead.source}</Badge>
             )}
           </div>
 
@@ -170,20 +141,25 @@ function DraggableLeadCard({ lead, onClick, stageColor }: { lead: LeadRow; onCli
 }
 
 // ===== Main Component =====
-
 export default function ClienteCRM() {
+  const { toast } = useToast();
   const { data: leads, isLoading: leadsLoading } = useCrmLeads();
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();
-  const { updateLead } = useCrmLeadMutations();
+  const { updateLead, deleteLead, markAsLost } = useCrmLeadMutations();
 
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [search, setSearch] = useState("");
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [newLeadOpen, setNewLeadOpen] = useState(false);
+  const [funnelManagerOpen, setFunnelManagerOpen] = useState(false);
+
+  // Filters
+  const [filterSource, setFilterSource] = useState<string>("");
+  const [filterTag, setFilterTag] = useState("");
 
   const isLoading = leadsLoading || funnelsLoading;
 
-  // Use DB funnels or defaults
   const stages: FunnelStage[] = useMemo(() => {
     if (funnelsData && funnelsData.length > 0) {
       const defaultFunnel = funnelsData.find(f => f.is_default) || funnelsData[0];
@@ -202,16 +178,32 @@ export default function ClienteCRM() {
 
   const allLeads = leads ?? [];
 
+  // Collect unique tags for filter
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    allLeads.forEach(l => l.tags?.forEach(t => tags.add(t)));
+    return Array.from(tags).sort();
+  }, [allLeads]);
+
   const filteredLeads = useMemo(() => {
-    if (!search) return allLeads;
-    const q = search.toLowerCase();
-    return allLeads.filter(l =>
-      l.name.toLowerCase().includes(q) ||
-      l.email?.toLowerCase().includes(q) ||
-      l.phone?.includes(q) ||
-      l.company?.toLowerCase().includes(q)
-    );
-  }, [allLeads, search]);
+    let result = allLeads;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(l =>
+        l.name.toLowerCase().includes(q) ||
+        l.email?.toLowerCase().includes(q) ||
+        l.phone?.includes(q) ||
+        l.company?.toLowerCase().includes(q)
+      );
+    }
+    if (filterSource) {
+      result = result.filter(l => l.source === filterSource);
+    }
+    if (filterTag) {
+      result = result.filter(l => l.tags?.includes(filterTag));
+    }
+    return result;
+  }, [allLeads, search, filterSource, filterTag]);
 
   const leadsByStage = useMemo(() => {
     const map: Record<string, LeadRow[]> = {};
@@ -236,6 +228,8 @@ export default function ClienteCRM() {
     }
   };
 
+  const hasFilters = !!filterSource || !!filterTag;
+
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto space-y-6">
@@ -257,6 +251,9 @@ export default function ClienteCRM() {
         icon={<Users className="w-5 h-5 text-primary" />}
         actions={
           <div className="flex gap-2">
+            <Button size="sm" onClick={() => setNewLeadOpen(true)} className="gap-1">
+              <Plus className="w-3.5 h-3.5" /> Novo Lead
+            </Button>
             <div className="flex gap-0.5 p-0.5 rounded-lg bg-muted/50 border">
               <Button variant={view === "kanban" ? "default" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setView("kanban")}>
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -265,14 +262,53 @@ export default function ClienteCRM() {
                 <List className="w-3.5 h-3.5" />
               </Button>
             </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setFunnelManagerOpen(true)}>
+                    <Settings2 className="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Configurar funil</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         }
       />
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Buscar lead..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+      {/* Search + Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar lead..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-8" />
+        </div>
+        <Select value={filterSource} onValueChange={v => setFilterSource(v === "all" ? "" : v)}>
+          <SelectTrigger className="h-8 w-36 text-xs">
+            <Filter className="w-3 h-3 mr-1" />
+            <SelectValue placeholder="Origem" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="text-xs">Todas origens</SelectItem>
+            {SOURCES.map(s => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {allTags.length > 0 && (
+          <Select value={filterTag} onValueChange={v => setFilterTag(v === "all" ? "" : v)}>
+            <SelectTrigger className="h-8 w-32 text-xs">
+              <Tag className="w-3 h-3 mr-1" />
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">Todas tags</SelectItem>
+              {allTags.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        {hasFilters && (
+          <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setFilterSource(""); setFilterTag(""); }}>
+            <X className="w-3 h-3" /> Limpar filtros
+          </Button>
+        )}
       </div>
 
       {allLeads.length === 0 ? (
@@ -281,6 +317,9 @@ export default function ClienteCRM() {
             <Users className="w-12 h-12 text-muted-foreground/30 mb-4" />
             <p className="text-sm font-medium">Nenhum lead cadastrado</p>
             <p className="text-xs text-muted-foreground mt-1">Adicione leads para começar a gerenciar suas vendas.</p>
+            <Button size="sm" className="mt-4 gap-1" onClick={() => setNewLeadOpen(true)}>
+              <Plus className="w-3.5 h-3.5" /> Novo Lead
+            </Button>
           </CardContent>
         </Card>
       ) : view === "kanban" ? (
@@ -305,6 +344,22 @@ export default function ClienteCRM() {
                         lead={lead}
                         onClick={() => setSelectedLead(lead)}
                         stageColor={stage.color}
+                        onCopyPhone={() => {
+                          if (lead.phone) {
+                            navigator.clipboard.writeText(lead.phone);
+                            toast({ title: "Telefone copiado" });
+                          } else {
+                            toast({ title: "Lead sem telefone", variant: "destructive" });
+                          }
+                        }}
+                        onMarkLost={() => {
+                          markAsLost.mutate({ id: lead.id });
+                          toast({ title: "Lead marcado como perdido" });
+                        }}
+                        onDelete={() => {
+                          deleteLead.mutate(lead.id);
+                          toast({ title: "Lead excluído" });
+                        }}
                       />
                     ))}
                     {stageLeads.length === 0 && (
@@ -365,117 +420,13 @@ export default function ClienteCRM() {
       )}
 
       {/* Lead Detail Sheet */}
-      <Sheet open={!!selectedLead} onOpenChange={open => !open && setSelectedLead(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{selectedLead?.name}</SheetTitle>
-          </SheetHeader>
-          {selectedLead && <LeadDetailContent lead={selectedLead} stages={stages} />}
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
+      <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} />
 
-// ===== Lead Detail with WhatsApp Tab =====
+      {/* New Lead Dialog */}
+      <CrmNewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} defaultStage={stages[0]?.key || "novo"} />
 
-function LeadDetailContent({ lead, stages }: { lead: LeadRow; stages: FunnelStage[] }) {
-  const navigate = useNavigate();
-  const whatsappContactId = (lead as any).whatsapp_contact_id;
-  const stage = stages.find(s => s.key === lead.stage);
-
-  return (
-    <div className="space-y-4 mt-4">
-      <Tabs defaultValue="info" className="w-full">
-        <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="info" className="text-xs">Informações</TabsTrigger>
-          <TabsTrigger value="whatsapp" className="text-xs gap-1">
-            <MessageCircle className="w-3 h-3" /> WhatsApp
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="info" className="space-y-3 mt-3">
-          {stage && (
-            <Badge variant="outline" className={`text-xs ${getColorStyle(stage.color).text} ${getColorStyle(stage.color).border}`}>
-              {STAGE_ICONS[stage.icon] || <CircleDot className="w-3 h-3" />}
-              <span className="ml-1">{stage.label}</span>
-            </Badge>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            {lead.phone && (
-              <div className="p-3 rounded-lg border">
-                <p className="text-[10px] text-muted-foreground uppercase">Telefone</p>
-                <p className="text-sm font-medium">{lead.phone}</p>
-              </div>
-            )}
-            {lead.email && (
-              <div className="p-3 rounded-lg border">
-                <p className="text-[10px] text-muted-foreground uppercase">E-mail</p>
-                <p className="text-sm font-medium truncate">{lead.email}</p>
-              </div>
-            )}
-            {lead.company && (
-              <div className="p-3 rounded-lg border">
-                <p className="text-[10px] text-muted-foreground uppercase">Empresa</p>
-                <p className="text-sm font-medium">{lead.company}</p>
-              </div>
-            )}
-            <div className="p-3 rounded-lg border">
-              <p className="text-[10px] text-muted-foreground uppercase">Valor</p>
-              <p className="text-sm font-bold text-primary">
-                {lead.value ? `R$ ${Number(lead.value).toLocaleString()}` : "—"}
-              </p>
-            </div>
-          </div>
-          {lead.tags && lead.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {lead.tags.map(tag => (
-                <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
-              ))}
-            </div>
-          )}
-          <div className="p-3 rounded-lg border">
-            <p className="text-[10px] text-muted-foreground uppercase">Criado em</p>
-            <p className="text-sm">{new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="whatsapp" className="mt-3">
-          {whatsappContactId ? (
-            <div className="space-y-3">
-              <Card>
-                <CardContent className="p-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-emerald-500" />
-                    <div>
-                      <p className="text-sm font-medium">Conversa vinculada</p>
-                      <p className="text-xs text-muted-foreground">{lead.phone}</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs gap-1"
-                    onClick={() => navigate("/cliente/chat")}
-                  >
-                    <ExternalLink className="w-3 h-3" /> Abrir chat
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <MessageCircle className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhuma conversa vinculada</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {lead.phone
-                  ? "Quando este número enviar uma mensagem, será vinculado automaticamente."
-                  : "Adicione um telefone ao lead para vincular ao WhatsApp."}
-              </p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Funnel Manager */}
+      <CrmFunnelManager open={funnelManagerOpen} onOpenChange={setFunnelManagerOpen} />
     </div>
   );
 }
