@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { Trophy, BarChart3, Target, Zap, Settings } from "lucide-react";
+import { Trophy, BarChart3, Target, Zap, Settings, Inbox } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getNetworkTotals, formatBRL } from "@/data/metasRankingData";
-import MetasDashboard from "@/components/metas/MetasDashboard";
-import MetasGoals from "@/components/metas/MetasGoals";
-import MetasRankingView from "@/components/metas/MetasRankingView";
-import MetasCampaigns from "@/components/metas/MetasCampaigns";
-import MetasConfig from "@/components/metas/MetasConfig";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGoals, useRankings } from "@/hooks/useGoals";
+
+const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const tabs = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3, color: "text-blue-500", bg: "bg-blue-500/10", desc: "Visão geral estratégica" },
@@ -18,7 +16,11 @@ const tabs = [
 
 export default function MetasRanking() {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const totals = getNetworkTotals("2026-02");
+  const { data: goals, isLoading: loadingGoals } = useGoals();
+  const now = new Date();
+  const { data: rankings, isLoading: loadingRankings } = useRankings(now.getMonth() + 1, now.getFullYear());
+
+  const isLoading = loadingGoals || loadingRankings;
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -34,22 +36,6 @@ export default function MetasRanking() {
               <Badge variant="secondary" className="text-[10px]">Franqueadora</Badge>
             </div>
             <p className="text-sm text-muted-foreground">Performance, gamificação e metas da rede</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Faturamento</p>
-            <p className="font-bold text-sm">{formatBRL(totals.totalRevenue)}</p>
-          </div>
-          <div className="w-px h-8 bg-border" />
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Meta</p>
-            <p className="font-bold text-sm">{totals.goalPercent.toFixed(0)}%</p>
-          </div>
-          <div className="w-px h-8 bg-border" />
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Contratos</p>
-            <p className="font-bold text-sm">{totals.totalContracts}</p>
           </div>
         </div>
       </div>
@@ -76,12 +62,27 @@ export default function MetasRanking() {
         })}
       </div>
 
-      {/* Tab Content */}
-      {activeTab === "dashboard" && <MetasDashboard />}
-      {activeTab === "metas" && <MetasGoals />}
-      {activeTab === "ranking" && <MetasRankingView />}
-      {activeTab === "campanhas" && <MetasCampaigns />}
-      {activeTab === "config" && <MetasConfig />}
+      {/* Content */}
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-1">
+            {activeTab === "dashboard" && "Nenhuma meta configurada"}
+            {activeTab === "metas" && "Nenhuma meta encontrada"}
+            {activeTab === "ranking" && "Nenhum ranking disponível"}
+            {activeTab === "campanhas" && "Nenhuma campanha ativa"}
+            {activeTab === "config" && "Configure pesos e regras das metas"}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {(goals ?? []).length === 0 ? "Crie suas primeiras metas para começar." : `${goals!.length} meta(s) encontrada(s).`}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

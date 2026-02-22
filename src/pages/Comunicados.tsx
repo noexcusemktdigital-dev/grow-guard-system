@@ -1,19 +1,45 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Megaphone, ArrowLeft, Plus } from "lucide-react";
-import { mockComunicados, Comunicado } from "@/data/comunicadosData";
+import { Megaphone, ArrowLeft, Plus, Inbox } from "lucide-react";
 import ComunicadosList from "@/components/comunicados/ComunicadosList";
 import ComunicadoForm from "@/components/comunicados/ComunicadoForm";
 import ComunicadoDetail from "@/components/comunicados/ComunicadoDetail";
 import { toast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAnnouncements, useAnnouncementMutations } from "@/hooks/useAnnouncements";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Comunicado, PublicoAlvo } from "@/data/comunicadosData";
 
 type View = "list" | "create" | "edit" | "detail";
 
 export default function Comunicados() {
   const [view, setView] = useState<View>("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [comunicados, setComunicados] = useState<Comunicado[]>(mockComunicados);
+  const { data: announcements, isLoading } = useAnnouncements();
+  const { createAnnouncement, updateAnnouncement, deleteAnnouncement } = useAnnouncementMutations();
+  const { user } = useAuth();
+
+  // Map DB types to component types
+  const comunicados: Comunicado[] = (announcements ?? []).map(a => ({
+    id: a.id,
+    titulo: a.title,
+    conteudo: a.content || "",
+    tipo: (a.type || "Informativo") as any,
+    prioridade: (a.priority || "Normal") as any,
+    publico: (a.target_roles || []) as PublicoAlvo[],
+    unidadesEspecificas: [] as string[],
+    mostrarDashboard: true,
+    mostrarPopup: false,
+    exigirConfirmacao: false,
+    dataProgramada: undefined,
+    dataExpiracao: a.expires_at || undefined,
+    status: a.published_at ? "Ativo" : "Rascunho",
+    autorId: a.created_by || "",
+    autorNome: "Admin",
+    criadoEm: a.created_at,
+    atualizadoEm: a.updated_at,
+  }));
 
   const selected = selectedId ? comunicados.find((c) => c.id === selectedId) : null;
 
@@ -21,63 +47,52 @@ export default function Comunicados() {
   const handleEdit = (id: string) => { setSelectedId(id); setView("edit"); };
 
   const handleDuplicate = (id: string) => {
-    const orig = comunicados.find((c) => c.id === id);
+    const orig = comunicados.find(c => c.id === id);
     if (!orig) return;
-    const dup: Comunicado = {
-      ...orig,
-      id: `com-${Date.now()}`,
-      titulo: `${orig.titulo} (Cópia)`,
-      status: "Rascunho",
-      criadoEm: new Date().toISOString(),
-      atualizadoEm: new Date().toISOString(),
-    };
-    setComunicados((prev) => [dup, ...prev]);
+    createAnnouncement.mutate({
+      title: `${orig.titulo} (Cópia)`,
+      content: orig.conteudo,
+      type: orig.tipo,
+      priority: orig.prioridade,
+      target_roles: orig.publico,
+    });
     toast({ title: "Comunicado duplicado", description: "Salvo como rascunho." });
   };
 
   const handleArchive = (id: string) => {
-    setComunicados((prev) => prev.map((c) => c.id === id ? { ...c, status: "Arquivado" as const, atualizadoEm: new Date().toISOString() } : c));
+    updateAnnouncement.mutate({ id, type: "archived" });
     toast({ title: "Comunicado arquivado" });
     if (view === "detail") setView("list");
   };
 
   const handleDelete = () => {
     if (!selectedId) return;
-    setComunicados((prev) => prev.filter((c) => c.id !== selectedId));
+    deleteAnnouncement.mutate(selectedId);
     toast({ title: "Comunicado excluído" });
     setSelectedId(null);
     setView("list");
   };
 
   const handlePublish = (data: Partial<Comunicado>) => {
-    const now = new Date().toISOString();
     if (view === "edit" && selectedId) {
-      setComunicados((prev) => prev.map((c) => c.id === selectedId ? { ...c, ...data, status: "Ativo" as const, atualizadoEm: now } : c));
+      updateAnnouncement.mutate({
+        id: selectedId,
+        title: data.titulo,
+        content: data.conteudo,
+        type: data.tipo,
+        priority: data.prioridade,
+        target_roles: data.publico,
+        published_at: new Date().toISOString(),
+      });
       toast({ title: "Comunicado atualizado e publicado" });
     } else {
-      const novo: Comunicado = {
-        id: `com-${Date.now()}`,
-        titulo: data.titulo || "",
-        conteudo: data.conteudo || "",
-        imagemUrl: data.imagemUrl,
-        linkExterno: data.linkExterno,
-        anexo: data.anexo,
-        publico: data.publico || [],
-        unidadesEspecificas: data.unidadesEspecificas || [],
-        tipo: data.tipo || "Informativo",
-        prioridade: data.prioridade || "Normal",
-        mostrarDashboard: data.mostrarDashboard ?? true,
-        mostrarPopup: data.mostrarPopup ?? false,
-        exigirConfirmacao: data.exigirConfirmacao ?? false,
-        dataProgramada: data.dataProgramada,
-        dataExpiracao: data.dataExpiracao,
-        status: data.dataProgramada ? "Programado" : "Ativo",
-        autorId: "u1",
-        autorNome: "Davi",
-        criadoEm: now,
-        atualizadoEm: now,
-      };
-      setComunicados((prev) => [novo, ...prev]);
+      createAnnouncement.mutate({
+        title: data.titulo || "",
+        content: data.conteudo || "",
+        type: data.tipo || "Informativo",
+        priority: data.prioridade || "Normal",
+        target_roles: data.publico,
+      });
       toast({ title: "Comunicado publicado com sucesso" });
     }
     setView("list");
@@ -85,35 +100,35 @@ export default function Comunicados() {
   };
 
   const handleSaveDraft = (data: Partial<Comunicado>) => {
-    const now = new Date().toISOString();
     if (view === "edit" && selectedId) {
-      setComunicados((prev) => prev.map((c) => c.id === selectedId ? { ...c, ...data, status: "Rascunho" as const, atualizadoEm: now } : c));
+      updateAnnouncement.mutate({
+        id: selectedId,
+        title: data.titulo,
+        content: data.conteudo,
+        type: data.tipo,
+        priority: data.prioridade,
+      });
     } else {
-      const novo: Comunicado = {
-        id: `com-${Date.now()}`,
-        titulo: data.titulo || "Sem título",
-        conteudo: data.conteudo || "",
-        publico: data.publico || [],
-        unidadesEspecificas: data.unidadesEspecificas || [],
-        tipo: data.tipo || "Informativo",
-        prioridade: data.prioridade || "Normal",
-        mostrarDashboard: data.mostrarDashboard ?? false,
-        mostrarPopup: data.mostrarPopup ?? false,
-        exigirConfirmacao: data.exigirConfirmacao ?? false,
-        dataProgramada: data.dataProgramada,
-        dataExpiracao: data.dataExpiracao,
-        status: "Rascunho",
-        autorId: "u1",
-        autorNome: "Davi",
-        criadoEm: now,
-        atualizadoEm: now,
-      };
-      setComunicados((prev) => [novo, ...prev]);
+      createAnnouncement.mutate({
+        title: data.titulo || "Sem título",
+        content: data.conteudo || "",
+        type: data.tipo || "Informativo",
+        priority: data.prioridade || "Normal",
+      });
     }
     toast({ title: "Rascunho salvo" });
     setView("list");
     setSelectedId(null);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -143,7 +158,16 @@ export default function Comunicados() {
       </div>
 
       {/* Content */}
-      {view === "list" && (
+      {view === "list" && comunicados.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-1">Nenhum comunicado</h3>
+          <p className="text-sm text-muted-foreground mb-4">Crie o primeiro comunicado para a rede.</p>
+          <Button onClick={() => setView("create")}><Plus className="w-4 h-4 mr-1" /> Novo Comunicado</Button>
+        </div>
+      )}
+
+      {view === "list" && comunicados.length > 0 && (
         <ComunicadosList
           comunicados={comunicados}
           onView={handleView}

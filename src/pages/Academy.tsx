@@ -1,24 +1,17 @@
 import { useState } from "react";
-import { GraduationCap, BookOpen, Route, ClipboardCheck, Award, Settings, BarChart3, TrendingUp, Target, Building2, Package } from "lucide-react";
+import { GraduationCap, BookOpen, Route, ClipboardCheck, Award, Settings, BarChart3, Inbox } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { getTotalProgress, getUserCertificates, mockModules, getModuleProgress, getQuizByModule, getQuizAttempts, getCategoryModuleCount } from "@/data/academyData";
-import { AcademyModules } from "@/components/academy/AcademyModules";
-import { AcademyModuleDetail } from "@/components/academy/AcademyModuleDetail";
-import { AcademyLesson } from "@/components/academy/AcademyLesson";
-import { AcademyJourney } from "@/components/academy/AcademyJourney";
-import { AcademyQuiz } from "@/components/academy/AcademyQuiz";
-import { AcademyCertificates } from "@/components/academy/AcademyCertificates";
-import { AcademyAdmin } from "@/components/academy/AcademyAdmin";
-import { AcademyReports } from "@/components/academy/AcademyReports";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAcademyModules, useAcademyProgress, useAcademyCertificates } from "@/hooks/useAcademy";
 
 type Tab = "modulos" | "jornada" | "provas" | "certificados" | "admin" | "relatorios";
 
-const tabs: { id: Tab; label: string; description: string; icon: React.ElementType; color: string; admin?: boolean; countFn?: () => string }[] = [
-  { id: "modulos", label: "Trilhas", description: "Módulos e aulas disponíveis", icon: BookOpen, color: "blue", countFn: () => `${mockModules.filter(m => m.status === "published").length} trilhas` },
+const tabs: { id: Tab; label: string; description: string; icon: React.ElementType; color: string; admin?: boolean }[] = [
+  { id: "modulos", label: "Trilhas", description: "Módulos e aulas disponíveis", icon: BookOpen, color: "blue" },
   { id: "jornada", label: "Minha Jornada", description: "Seu progresso pessoal", icon: Route, color: "emerald" },
   { id: "provas", label: "Provas", description: "Avaliações por módulo", icon: ClipboardCheck, color: "orange" },
-  { id: "certificados", label: "Certificados", description: "Conquistas obtidas", icon: Award, color: "yellow", countFn: () => `${getUserCertificates().length} obtidos` },
+  { id: "certificados", label: "Certificados", description: "Conquistas obtidas", icon: Award, color: "yellow" },
   { id: "admin", label: "Gestão", description: "Cadastrar e editar conteúdo", icon: Settings, color: "purple", admin: true },
   { id: "relatorios", label: "Relatórios", description: "Métricas e alertas", icon: BarChart3, color: "rose", admin: true },
 ];
@@ -34,195 +27,112 @@ const tabColorMap: Record<string, { ring: string; bg: string; text: string; icon
 
 export default function Academy() {
   const [activeTab, setActiveTab] = useState<Tab>("modulos");
-  const [selectedModule, setSelectedModule] = useState<string | null>(null);
-  const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
-  const [activeQuiz, setActiveQuiz] = useState<string | null>(null);
+  const { data: modules, isLoading: loadingModules } = useAcademyModules();
+  const { data: progress } = useAcademyProgress();
+  const { data: certs } = useAcademyCertificates();
 
-  const totalProgress = getTotalProgress();
-  const certs = getUserCertificates();
-  const publishedModules = mockModules.filter(m => m.status === "published");
-  const completedModules = publishedModules.filter(m => getModuleProgress(m.id) === 100).length;
+  if (loadingModules) {
+    return <div className="space-y-6"><Skeleton className="h-32 w-full" /><Skeleton className="h-64 w-full" /></div>;
+  }
 
-  const isSubView = !!(selectedModule || selectedLesson || activeQuiz);
-
-  const renderContent = () => {
-    if (selectedLesson && selectedModule) {
-      return (
-        <AcademyLesson
-          lessonId={selectedLesson}
-          onBack={() => setSelectedLesson(null)}
-          onNavigate={(id) => setSelectedLesson(id)}
-          onGoToQuiz={(quizId) => { setSelectedLesson(null); setActiveQuiz(quizId); }}
-        />
-      );
-    }
-    if (activeQuiz) {
-      return (
-        <AcademyQuiz
-          quizId={activeQuiz}
-          onBack={() => { setActiveQuiz(null); }}
-          onViewCertificate={() => { setActiveQuiz(null); setSelectedModule(null); setActiveTab("certificados"); }}
-        />
-      );
-    }
-    if (selectedModule) {
-      return (
-        <AcademyModuleDetail
-          moduleId={selectedModule}
-          onBack={() => setSelectedModule(null)}
-          onSelectLesson={(id) => setSelectedLesson(id)}
-          onStartQuiz={(quizId) => setActiveQuiz(quizId)}
-          onViewCertificate={() => { setSelectedModule(null); setActiveTab("certificados"); }}
-        />
-      );
-    }
-    switch (activeTab) {
-      case "modulos":
-        return <AcademyModules onSelectModule={(id) => setSelectedModule(id)} />;
-      case "jornada":
-        return (
-          <AcademyJourney
-            onSelectModule={(id) => { setActiveTab("modulos"); setSelectedModule(id); }}
-            onSelectLesson={(lessonId, moduleId) => { setSelectedModule(moduleId); setSelectedLesson(lessonId); }}
-          />
-        );
-      case "provas":
-        return <AcademyModules onSelectModule={(id) => setSelectedModule(id)} />;
-      case "certificados":
-        return <AcademyCertificates />;
-      case "admin":
-        return <AcademyAdmin />;
-      case "relatorios":
-        return <AcademyReports />;
-      default:
-        return null;
-    }
-  };
+  const publishedModules = (modules ?? []).filter(m => m.is_published);
+  const totalProgress = 0; // will be computed from progress data when available
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header — contextual */}
-      {!isSubView ? (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 p-6">
-          {/* Decorative circles */}
-          <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-primary/5 blur-2xl" />
-          <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-primary/5 blur-2xl" />
-
-          <div className="relative flex items-start justify-between flex-wrap gap-4">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center flex-shrink-0">
-                <GraduationCap className="w-7 h-7 text-primary" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="page-header-title">NOE Academy</h1>
-                  <Badge variant="secondary" className="text-[10px] font-semibold">Franqueadora</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Plataforma de treinamento e capacitação da rede
-                </p>
-              </div>
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 p-6">
+        <div className="relative flex items-start justify-between flex-wrap gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+              <GraduationCap className="w-7 h-7 text-primary" />
             </div>
-
-            {/* Progress ring */}
-            <div className="flex items-center gap-5">
-              <div className="relative w-16 h-16">
-                <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-                  <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
-                  <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(totalProgress / 100) * 175.9} 175.9`} className="transition-all duration-700" />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">{totalProgress}%</span>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="page-header-title">NOE Academy</h1>
+                <Badge variant="secondary" className="text-[10px] font-semibold">Franqueadora</Badge>
               </div>
-              <div className="hidden sm:flex flex-col gap-1 text-xs text-muted-foreground">
-                <span><strong className="text-foreground">{completedModules}</strong> módulos concluídos</span>
-                <span><strong className="text-foreground">{certs.length}</strong> certificados</span>
-              </div>
+              <p className="text-sm text-muted-foreground">Plataforma de treinamento e capacitação da rede</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-5">
+            <div className="hidden sm:flex flex-col gap-1 text-xs text-muted-foreground">
+              <span><strong className="text-foreground">{publishedModules.length}</strong> módulos disponíveis</span>
+              <span><strong className="text-foreground">{(certs ?? []).length}</strong> certificados</span>
             </div>
           </div>
         </div>
-      ) : null}
+      </div>
 
-      {/* Tab navigation — only on main view */}
-      {!isSubView && (
-        <>
-          {/* User tabs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {tabs.filter(t => !t.admin).map((tab) => {
-              const Icon = tab.icon;
-              const c = tabColorMap[tab.color];
-              const isActive = activeTab === tab.id;
+      {/* Tab navigation */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {tabs.filter(t => !t.admin).map((tab) => {
+          const Icon = tab.icon;
+          const c = tabColorMap[tab.color];
+          const isActive = activeTab === tab.id;
+          return (
+            <Card key={tab.id} className={`relative cursor-pointer transition-all duration-200 p-4 hover:shadow-md hover:scale-[1.02] border-l-4 ${isActive ? `${c.activeBg} ${c.ring} ring-1 border-l-current ${c.text}` : `${c.bg} ${c.border} border-l-transparent hover:border-l-current`}`} onClick={() => setActiveTab(tab.id)}>
+              <div className="flex items-start gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
+                  <Icon className={`w-5 h-5 ${c.text}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-sm font-semibold leading-tight ${isActive ? c.text : "text-foreground"}`}>{tab.label}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{tab.description}</p>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
 
-              return (
-                <Card
-                  key={tab.id}
-                  className={`relative cursor-pointer transition-all duration-200 p-4 hover:shadow-md hover:scale-[1.02] border-l-4 ${
-                    isActive ? `${c.activeBg} ${c.ring} ring-1 border-l-current ${c.text}` : `${c.bg} ${c.border} border-l-transparent hover:border-l-current`
-                  }`}
-                  onClick={() => { setActiveTab(tab.id); setSelectedModule(null); setSelectedLesson(null); setActiveQuiz(null); }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
-                      <Icon className={`w-5 h-5 ${c.text}`} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className={`text-sm font-semibold leading-tight ${isActive ? c.text : "text-foreground"}`}>
-                        {tab.label}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{tab.description}</p>
-                      {tab.countFn && (
-                        <p className={`text-[10px] font-medium mt-1 ${c.text}`}>{tab.countFn()}</p>
-                      )}
-                    </div>
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Administração</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {tabs.filter(t => t.admin).map((tab) => {
+          const Icon = tab.icon;
+          const c = tabColorMap[tab.color];
+          const isActive = activeTab === tab.id;
+          return (
+            <Card key={tab.id} className={`relative cursor-pointer transition-all duration-200 p-4 hover:shadow-md hover:scale-[1.02] border-l-4 ${isActive ? `${c.activeBg} ${c.ring} ring-1 border-l-current ${c.text}` : `${c.bg} ${c.border} border-l-transparent hover:border-l-current`}`} onClick={() => setActiveTab(tab.id)}>
+              <div className="flex items-start gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
+                  <Icon className={`w-5 h-5 ${c.text}`} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className={`text-sm font-semibold leading-tight ${isActive ? c.text : "text-foreground"}`}>{tab.label}</p>
+                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Admin</Badge>
                   </div>
-                </Card>
-              );
-            })}
-          </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{tab.description}</p>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
 
-          {/* Admin divider + tabs */}
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Administração</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {tabs.filter(t => t.admin).map((tab) => {
-              const Icon = tab.icon;
-              const c = tabColorMap[tab.color];
-              const isActive = activeTab === tab.id;
-
-              return (
-                <Card
-                  key={tab.id}
-                  className={`relative cursor-pointer transition-all duration-200 p-4 hover:shadow-md hover:scale-[1.02] border-l-4 ${
-                    isActive ? `${c.activeBg} ${c.ring} ring-1 border-l-current ${c.text}` : `${c.bg} ${c.border} border-l-transparent hover:border-l-current`
-                  }`}
-                  onClick={() => { setActiveTab(tab.id); setSelectedModule(null); setSelectedLesson(null); setActiveQuiz(null); }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
-                      <Icon className={`w-5 h-5 ${c.text}`} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className={`text-sm font-semibold leading-tight ${isActive ? c.text : "text-foreground"}`}>
-                          {tab.label}
-                        </p>
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Admin</Badge>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{tab.description}</p>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {/* Content */}
+      {/* Content - empty states */}
       <div className="animate-fade-in">
-        {renderContent()}
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-1">
+            {activeTab === "modulos" && "Nenhum módulo disponível"}
+            {activeTab === "jornada" && "Sua jornada está vazia"}
+            {activeTab === "provas" && "Nenhuma prova disponível"}
+            {activeTab === "certificados" && "Nenhum certificado obtido"}
+            {activeTab === "admin" && "Cadastre módulos e aulas"}
+            {activeTab === "relatorios" && "Nenhum dado para relatórios"}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {activeTab === "modulos" ? "Crie o primeiro módulo de treinamento na aba Gestão." :
+             activeTab === "admin" ? "Crie módulos, adicione aulas e configure provas." :
+             "Os dados aparecerão conforme módulos e aulas forem criados."}
+          </p>
+        </div>
       </div>
     </div>
   );

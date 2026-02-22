@@ -1,36 +1,29 @@
 import { useState } from "react";
-import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList } from "lucide-react";
+import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { mockUnidades, mockUnidadeUsers, mockUnidadeDocs, Unidade, UnidadeUser, UnidadeDoc } from "@/data/unidadesData";
-import { UnidadesList } from "@/components/unidades/UnidadesList";
-import { UnidadeDados } from "@/components/unidades/UnidadeDados";
-import { UnidadeUsuarios } from "@/components/unidades/UnidadeUsuarios";
-import { UnidadeDocumentos } from "@/components/unidades/UnidadeDocumentos";
-import { UnidadeFinanceiro } from "@/components/unidades/UnidadeFinanceiro";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useUnits, useUnitMutations } from "@/hooks/useUnits";
 
 export default function Unidades() {
-  const [unidades, setUnidades] = useState<Unidade[]>(mockUnidades);
-  const [users, setUsers] = useState<UnidadeUser[]>(mockUnidadeUsers);
-  const [docs, setDocs] = useState<UnidadeDoc[]>(mockUnidadeDocs);
+  const { data: units, isLoading } = useUnits();
+  const { createUnit } = useUnitMutations();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const selected = unidades.find(u => u.id === selectedId);
+  const selected = (units ?? []).find(u => u.id === selectedId);
 
-  const handleAddUnidade = (u: Unidade) => setUnidades(prev => [...prev, u]);
-  const handleUpdateUnidade = (u: Unidade) => setUnidades(prev => prev.map(x => x.id === u.id ? u : x));
-  const handleUpdateUsers = (updated: UnidadeUser[]) => {
-    setUsers(prev => {
-      const others = prev.filter(u => u.unidadeId !== selectedId);
-      return [...others, ...updated];
-    });
-  };
-  const handleUpdateDocs = (updated: UnidadeDoc[]) => {
-    setDocs(prev => {
-      const others = prev.filter(d => d.unidadeId !== selectedId);
-      return [...others, ...updated];
-    });
-  };
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-12 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -43,7 +36,7 @@ export default function Unidades() {
         <div>
           <div className="flex items-center gap-2">
             <Building2 className="w-6 h-6 text-primary" />
-            <h1 className="page-header-title">{selected ? selected.nome : "Unidades da Rede"}</h1>
+            <h1 className="page-header-title">{selected ? selected.name : "Unidades da Rede"}</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             {selected ? "Gerenciamento da unidade" : "Cadastro e gerenciamento das franquias da rede"}
@@ -52,7 +45,31 @@ export default function Unidades() {
       </div>
 
       {!selected ? (
-        <UnidadesList unidades={unidades} onSelect={setSelectedId} onAdd={handleAddUnidade} />
+        <>
+          {(units ?? []).length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-1">Nenhuma unidade cadastrada</h3>
+              <p className="text-sm text-muted-foreground mb-4">Cadastre a primeira unidade da rede.</p>
+              <Button onClick={() => createUnit.mutate({ name: "Nova Unidade" })}>
+                <Plus className="w-4 h-4 mr-1" /> Nova Unidade
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {units!.map(u => (
+                <Card key={u.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedId(u.id)}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">{u.name}</h3>
+                    <Badge variant={u.status === "active" ? "default" : "secondary"} className="text-[10px]">{u.status === "active" ? "Ativa" : u.status}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{u.city}{u.state ? `, ${u.state}` : ""}</p>
+                  {u.manager_name && <p className="text-xs text-muted-foreground mt-1">Responsável: {u.manager_name}</p>}
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       ) : (
         <div className="animate-fade-in">
           <Tabs defaultValue="dados">
@@ -62,10 +79,22 @@ export default function Unidades() {
               <TabsTrigger value="documentos" className="gap-2"><FileText className="w-4 h-4" /> Documentos</TabsTrigger>
               <TabsTrigger value="financeiro" className="gap-2"><Settings className="w-4 h-4" /> Financeiro</TabsTrigger>
             </TabsList>
-            <TabsContent value="dados"><UnidadeDados unidade={selected} onUpdate={handleUpdateUnidade} /></TabsContent>
-            <TabsContent value="usuarios"><UnidadeUsuarios users={users.filter(u => u.unidadeId === selectedId)} unidadeId={selectedId} onUpdate={handleUpdateUsers} /></TabsContent>
-            <TabsContent value="documentos"><UnidadeDocumentos docs={docs.filter(d => d.unidadeId === selectedId)} unidadeId={selectedId} onUpdate={handleUpdateDocs} /></TabsContent>
-            <TabsContent value="financeiro"><UnidadeFinanceiro unidade={selected} onUpdate={handleUpdateUnidade} /></TabsContent>
+            <TabsContent value="dados">
+              <Card className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{selected.name}</span></div>
+                  <div><span className="text-muted-foreground">Status:</span> <span className="font-medium">{selected.status}</span></div>
+                  <div><span className="text-muted-foreground">Cidade:</span> <span className="font-medium">{selected.city || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Estado:</span> <span className="font-medium">{selected.state || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Telefone:</span> <span className="font-medium">{selected.phone || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{selected.email || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Responsável:</span> <span className="font-medium">{selected.manager_name || "—"}</span></div>
+                </div>
+              </Card>
+            </TabsContent>
+            <TabsContent value="usuarios"><Card className="p-6 text-center text-muted-foreground">Nenhum usuário vinculado a esta unidade.</Card></TabsContent>
+            <TabsContent value="documentos"><Card className="p-6 text-center text-muted-foreground">Nenhum documento cadastrado.</Card></TabsContent>
+            <TabsContent value="financeiro"><Card className="p-6 text-center text-muted-foreground">Configuração financeira não definida.</Card></TabsContent>
           </Tabs>
         </div>
       )}
