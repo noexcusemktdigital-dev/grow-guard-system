@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { Ticket, TicketMessage, TicketStatus, TICKET_STATUSES, RESPONSAVEIS, isSlaBreached, getSlaRemaining } from "@/types/atendimento";
-import { getMessagesForTicket } from "@/mocks/atendimentoData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 interface Props {
   ticket: Ticket;
   onUpdateTicket: (updated: Ticket) => void;
+  initialMessages?: TicketMessage[];
 }
 
 const statusBadge: Record<string, string> = {
@@ -35,9 +35,9 @@ const priorityBadge: Record<string, string> = {
   "Urgente": "bg-red-100 text-red-700",
 };
 
-export function AtendimentoDetail({ ticket, onUpdateTicket }: Props) {
+export function AtendimentoDetail({ ticket, onUpdateTicket, initialMessages = [] }: Props) {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<TicketMessage[]>(getMessagesForTicket(ticket.id));
+  const [messages, setMessages] = useState<TicketMessage[]>(initialMessages);
   const [newMessage, setNewMessage] = useState("");
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [rating, setRating] = useState(0);
