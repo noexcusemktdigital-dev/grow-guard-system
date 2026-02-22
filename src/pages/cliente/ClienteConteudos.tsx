@@ -3,7 +3,8 @@ import {
   FileText, Edit3, Check, Plus, Sparkles, Copy,
   BookOpen, Users, Eye, Shield, Target, Download,
   FolderOpen, Folder, Clock, ArrowLeft, File,
-  ChevronDown, ChevronUp, Lightbulb,
+  ChevronDown, ChevronUp, Lightbulb, CheckCircle2, Circle,
+  Star,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -76,6 +77,7 @@ interface ContentFile {
   network: string;
   funnel: string;
   createdAt: string;
+  approved: boolean;
 }
 
 interface MonthFolder {
@@ -86,25 +88,27 @@ interface MonthFolder {
   files: ContentFile[];
 }
 
+const CURRENT_MONTH = "2026-02";
+
 const mockFolders: MonthFolder[] = [
   {
     id: "feb-2026", month: "2026-02", label: "Fevereiro 2026", createdAt: "05/02/2026",
     files: [
-      { id: "1", name: "5 Erros que Todo Franqueado Comete no Marketing.txt", script: "ABERTURA: Você sabia que 78% dos franqueados cometem pelo menos um desses erros no marketing?\n\nERRO 1 — Não ter persona definida\nA maioria investe em anúncios sem saber exatamente quem quer atingir. Resultado: dinheiro jogado fora.\n\nERRO 2 — Ignorar o marketing local\nFranquias precisam de estratégia nacional E local. Adaptar campanhas para a região é essencial.\n\nERRO 3 — Não medir resultados\nSe você não sabe seu CAC, CPL e taxa de conversão, está voando às cegas.\n\nERRO 4 — Conteúdo genérico demais\nPostar frases motivacionais não gera leads. Conteúdo educativo e específico sim.\n\nERRO 5 — Não usar automação\nResponder leads manualmente em 2026? Automação é obrigação, não diferencial.\n\nCTA: Quer corrigir esses erros? Acesse o link na bio e agende uma consultoria gratuita.", format: "Carrossel", network: "Instagram", funnel: "Topo", createdAt: "03/02/2026" },
-      { id: "2", name: "Como Definir Metas de Vendas para Sua Franquia.txt", script: "ROTEIRO DE POST:\n\nTítulo: Como Definir Metas de Vendas que Realmente Funcionam\n\nParágrafo 1: Metas vagas geram resultados vagos. Se sua meta é 'vender mais', você já começou errado.\n\nParágrafo 2: Use o método SMART:\n- Específica: 'Aumentar vendas da unidade Centro em 20%'\n- Mensurável: Acompanhe semanalmente no CRM\n- Atingível: Baseie-se no histórico dos últimos 3 meses\n- Relevante: Alinhada com o objetivo da rede\n- Temporal: Prazo de 90 dias\n\nParágrafo 3: Distribua a meta por vendedor e por canal (online vs presencial).\n\nCTA: Baixe nosso template gratuito de metas no link da bio.", format: "Feed", network: "LinkedIn", funnel: "Meio", createdAt: "03/02/2026" },
-      { id: "3", name: "Case - Franquia que Triplicou Leads com IA.txt", script: "ROTEIRO REELS (60s):\n\n[0-5s] HOOK: 'Essa franquia triplicou seus leads em 90 dias. Quer saber como?'\n\n[5-15s] CONTEXTO: A Rede FastFood tinha 3 unidades e gerava em média 50 leads/mês por unidade.\n\n[15-30s] PROBLEMA: O time respondia leads manualmente, perdia oportunidades e não tinha visibilidade do funil.\n\n[30-45s] SOLUÇÃO: Implementaram nossa plataforma com IA para qualificação automática, CRM integrado e campanhas segmentadas.\n\n[45-55s] RESULTADO: Em 90 dias — 150 leads/mês por unidade, 40% de taxa de conversão, ROI de 8x.\n\n[55-60s] CTA: 'Quer o mesmo resultado? Link na bio.'", format: "Reels", network: "Instagram", funnel: "Fundo", createdAt: "03/02/2026" },
-      { id: "4", name: "O Poder do CRM para Redes de Franquias.txt", script: "POST EDUCATIVO:\n\nSe você gerencia uma rede de franquias sem CRM, está perdendo dinheiro todos os dias.\n\nVeja o que um CRM inteligente faz por você:\n\n1. Centraliza todos os leads de todas as unidades\n2. Automatiza follow-ups (ninguém esquece de responder)\n3. Mostra em tempo real qual unidade está performando\n4. Identifica gargalos no funil de vendas\n5. Gera relatórios automáticos para a franqueadora\n\nO resultado? Mais vendas, menos trabalho manual e visibilidade total da operação.\n\nNão é sobre tecnologia. É sobre não deixar dinheiro na mesa.\n\n#crm #franquias #vendas #gestao #marketing", format: "Feed", network: "Instagram", funnel: "Meio", createdAt: "03/02/2026" },
-      { id: "5", name: "Checklist - Marketing Digital para Franquias.txt", script: "CARROSSEL (7 slides):\n\nSlide 1 — Capa: 'Checklist Completo: Marketing Digital para Franquias'\n\nSlide 2 — Fundamentos:\n[ ] Persona definida por unidade\n[ ] Identidade visual padronizada\n[ ] Presença em Google Meu Negócio\n\nSlide 3 — Conteúdo:\n[ ] Calendário editorial mensal\n[ ] 3 posts/semana mínimo\n[ ] Mix de formatos (feed, reels, stories)\n\nSlide 4 — Tráfego Pago:\n[ ] Pixel instalado\n[ ] Campanhas de captação ativas\n[ ] Remarketing configurado\n\nSlide 5 — CRM & Vendas:\n[ ] Leads centralizados\n[ ] Follow-up automatizado\n[ ] Pipeline visual configurado\n\nSlide 6 — Métricas:\n[ ] CAC calculado\n[ ] Taxa de conversão acompanhada\n[ ] ROI mensal medido\n\nSlide 7 — CTA: 'Salve este checklist e comece a implementar hoje!'", format: "Carrossel", network: "Instagram", funnel: "Topo", createdAt: "03/02/2026" },
-      { id: "6", name: "Depoimento - Como a Plataforma Mudou Minha Gestão.txt", script: "REELS (45s):\n\n[0-3s] Texto na tela: 'Antes vs Depois da NoExcuse'\n\n[3-15s] Depoimento: 'Eu gerenciava tudo em planilha. Leads perdidos, equipe desalinhada, zero visibilidade.'\n\n[15-30s] Transição: 'Depois de implementar a plataforma...'\n'Agora eu vejo todos os leads em tempo real, meu time recebe alertas automáticos, e eu sei exatamente quanto cada campanha retorna.'\n\n[30-40s] Resultado: 'Em 6 meses: 3x mais leads, 45% de conversão, e finalmente tenho tempo para estratégia.'\n\n[40-45s] CTA: 'Quer a mesma transformação? Link na bio.'", format: "Reels", network: "Instagram", funnel: "Fundo", createdAt: "03/02/2026" },
-      { id: "7", name: "3 Tendências de Marketing para Franquias 2026.txt", script: "POST LINKEDIN:\n\n3 tendências que vão dominar o marketing de franquias em 2026:\n\n1. IA Generativa para Conteúdo\nNão é mais sobre criar conteúdo manualmente. É sobre ter IA que entende sua marca e gera roteiros, artes e campanhas alinhados com sua identidade.\n\n2. Hiperlocalização\nCada unidade precisa de marketing adaptado à sua região. O mesmo anúncio não funciona em São Paulo e em Manaus.\n\n3. Automação do Funil Completo\nDo lead ao fechamento, sem intervenção manual. Qualificação por IA, nurturing automatizado e alertas inteligentes.\n\nQuem adotar essas tendências primeiro vai dominar o mercado.", format: "Feed", network: "LinkedIn", funnel: "Topo", createdAt: "03/02/2026" },
-      { id: "8", name: "Agende Sua Demo Gratuita.txt", script: "STORY SEQUENCE (3 stories):\n\nStory 1:\nTexto: 'Cansado de perder leads por falta de organização?'\n\nStory 2:\nTexto: 'Nossa plataforma integra CRM + Marketing + IA em um só lugar'\n\nStory 3:\nTexto: 'Agende sua demo gratuita — link aqui'\nSticker: Countdown para fim da oferta", format: "Story", network: "Instagram", funnel: "Fundo", createdAt: "03/02/2026" },
+      { id: "1", name: "5 Erros que Todo Franqueado Comete no Marketing.txt", script: "ABERTURA: Você sabia que 78% dos franqueados cometem pelo menos um desses erros no marketing?\n\nERRO 1 — Não ter persona definida\nA maioria investe em anúncios sem saber exatamente quem quer atingir. Resultado: dinheiro jogado fora.\n\nERRO 2 — Ignorar o marketing local\nFranquias precisam de estratégia nacional E local. Adaptar campanhas para a região é essencial.\n\nERRO 3 — Não medir resultados\nSe você não sabe seu CAC, CPL e taxa de conversão, está voando às cegas.\n\nERRO 4 — Conteúdo genérico demais\nPostar frases motivacionais não gera leads. Conteúdo educativo e específico sim.\n\nERRO 5 — Não usar automação\nResponder leads manualmente em 2026? Automação é obrigação, não diferencial.\n\nCTA: Quer corrigir esses erros? Acesse o link na bio e agende uma consultoria gratuita.", format: "Carrossel", network: "Instagram", funnel: "Topo", createdAt: "03/02/2026", approved: true },
+      { id: "2", name: "Como Definir Metas de Vendas para Sua Franquia.txt", script: "ROTEIRO DE POST:\n\nTítulo: Como Definir Metas de Vendas que Realmente Funcionam\n\nParágrafo 1: Metas vagas geram resultados vagos. Se sua meta é 'vender mais', você já começou errado.\n\nParágrafo 2: Use o método SMART:\n- Específica: 'Aumentar vendas da unidade Centro em 20%'\n- Mensurável: Acompanhe semanalmente no CRM\n- Atingível: Baseie-se no histórico dos últimos 3 meses\n- Relevante: Alinhada com o objetivo da rede\n- Temporal: Prazo de 90 dias\n\nParágrafo 3: Distribua a meta por vendedor e por canal (online vs presencial).\n\nCTA: Baixe nosso template gratuito de metas no link da bio.", format: "Feed", network: "LinkedIn", funnel: "Meio", createdAt: "03/02/2026", approved: true },
+      { id: "3", name: "Case - Franquia que Triplicou Leads com IA.txt", script: "ROTEIRO REELS (60s):\n\n[0-5s] HOOK: 'Essa franquia triplicou seus leads em 90 dias. Quer saber como?'\n\n[5-15s] CONTEXTO: A Rede FastFood tinha 3 unidades e gerava em média 50 leads/mês por unidade.\n\n[15-30s] PROBLEMA: O time respondia leads manualmente, perdia oportunidades e não tinha visibilidade do funil.\n\n[30-45s] SOLUÇÃO: Implementaram nossa plataforma com IA para qualificação automática, CRM integrado e campanhas segmentadas.\n\n[45-55s] RESULTADO: Em 90 dias — 150 leads/mês por unidade, 40% de taxa de conversão, ROI de 8x.\n\n[55-60s] CTA: 'Quer o mesmo resultado? Link na bio.'", format: "Reels", network: "Instagram", funnel: "Fundo", createdAt: "03/02/2026", approved: false },
+      { id: "4", name: "O Poder do CRM para Redes de Franquias.txt", script: "POST EDUCATIVO:\n\nSe você gerencia uma rede de franquias sem CRM, está perdendo dinheiro todos os dias.\n\nVeja o que um CRM inteligente faz por você:\n\n1. Centraliza todos os leads de todas as unidades\n2. Automatiza follow-ups (ninguém esquece de responder)\n3. Mostra em tempo real qual unidade está performando\n4. Identifica gargalos no funil de vendas\n5. Gera relatórios automáticos para a franqueadora\n\nO resultado? Mais vendas, menos trabalho manual e visibilidade total da operação.\n\nNão é sobre tecnologia. É sobre não deixar dinheiro na mesa.\n\n#crm #franquias #vendas #gestao #marketing", format: "Feed", network: "Instagram", funnel: "Meio", createdAt: "03/02/2026", approved: false },
+      { id: "5", name: "Checklist - Marketing Digital para Franquias.txt", script: "CARROSSEL (7 slides):\n\nSlide 1 — Capa: 'Checklist Completo: Marketing Digital para Franquias'\n\nSlide 2 — Fundamentos:\n[ ] Persona definida por unidade\n[ ] Identidade visual padronizada\n[ ] Presença em Google Meu Negócio\n\nSlide 3 — Conteúdo:\n[ ] Calendário editorial mensal\n[ ] 3 posts/semana mínimo\n[ ] Mix de formatos (feed, reels, stories)\n\nSlide 4 — Tráfego Pago:\n[ ] Pixel instalado\n[ ] Campanhas de captação ativas\n[ ] Remarketing configurado\n\nSlide 5 — CRM & Vendas:\n[ ] Leads centralizados\n[ ] Follow-up automatizado\n[ ] Pipeline visual configurado\n\nSlide 6 — Métricas:\n[ ] CAC calculado\n[ ] Taxa de conversão acompanhada\n[ ] ROI mensal medido\n\nSlide 7 — CTA: 'Salve este checklist e comece a implementar hoje!'", format: "Carrossel", network: "Instagram", funnel: "Topo", createdAt: "03/02/2026", approved: false },
+      { id: "6", name: "Depoimento - Como a Plataforma Mudou Minha Gestão.txt", script: "REELS (45s):\n\n[0-3s] Texto na tela: 'Antes vs Depois da NoExcuse'\n\n[3-15s] Depoimento: 'Eu gerenciava tudo em planilha. Leads perdidos, equipe desalinhada, zero visibilidade.'\n\n[15-30s] Transição: 'Depois de implementar a plataforma...'\n'Agora eu vejo todos os leads em tempo real, meu time recebe alertas automáticos, e eu sei exatamente quanto cada campanha retorna.'\n\n[30-40s] Resultado: 'Em 6 meses: 3x mais leads, 45% de conversão, e finalmente tenho tempo para estratégia.'\n\n[40-45s] CTA: 'Quer a mesma transformação? Link na bio.'", format: "Reels", network: "Instagram", funnel: "Fundo", createdAt: "03/02/2026", approved: false },
+      { id: "7", name: "3 Tendências de Marketing para Franquias 2026.txt", script: "POST LINKEDIN:\n\n3 tendências que vão dominar o marketing de franquias em 2026:\n\n1. IA Generativa para Conteúdo\nNão é mais sobre criar conteúdo manualmente. É sobre ter IA que entende sua marca e gera roteiros, artes e campanhas alinhados com sua identidade.\n\n2. Hiperlocalização\nCada unidade precisa de marketing adaptado à sua região. O mesmo anúncio não funciona em São Paulo e em Manaus.\n\n3. Automação do Funil Completo\nDo lead ao fechamento, sem intervenção manual. Qualificação por IA, nurturing automatizado e alertas inteligentes.\n\nQuem adotar essas tendências primeiro vai dominar o mercado.", format: "Feed", network: "LinkedIn", funnel: "Topo", createdAt: "03/02/2026", approved: false },
+      { id: "8", name: "Agende Sua Demo Gratuita.txt", script: "STORY SEQUENCE (3 stories):\n\nStory 1:\nTexto: 'Cansado de perder leads por falta de organização?'\n\nStory 2:\nTexto: 'Nossa plataforma integra CRM + Marketing + IA em um só lugar'\n\nStory 3:\nTexto: 'Agende sua demo gratuita — link aqui'\nSticker: Countdown para fim da oferta", format: "Story", network: "Instagram", funnel: "Fundo", createdAt: "03/02/2026", approved: false },
     ],
   },
   {
     id: "jan-2026", month: "2026-01", label: "Janeiro 2026", createdAt: "03/01/2026",
     files: [
-      { id: "j1", name: "Ano Novo, Franquia Nova - Planejamento 2026.txt", script: "POST COMPLETO:\n\nComeço de ano é o momento ideal para reestruturar o marketing da sua franquia.\n\nO que você precisa definir agora:\n\n1. Meta de leads por trimestre\n2. Orçamento de mídia paga mensal\n3. Calendário editorial Q1\n4. KPIs prioritários\n5. Ferramentas que vai adotar\n\nQuem planeja em janeiro, colhe o ano inteiro.", format: "Feed", network: "Instagram", funnel: "Topo", createdAt: "03/01/2026" },
-      { id: "j2", name: "Por que Franquias Precisam de Marketing Digital.txt", script: "CARROSSEL (5 slides):\n\nSlide 1 — 'Por que sua franquia PRECISA de marketing digital'\nSlide 2 — '92% dos consumidores pesquisam online antes de comprar'\nSlide 3 — 'Franquias com presença digital forte geram 3x mais leads'\nSlide 4 — 'Marketing local + digital = combinação imbatível'\nSlide 5 — 'Comece hoje. Fale conosco.'", format: "Carrossel", network: "Instagram", funnel: "Topo", createdAt: "03/01/2026" },
+      { id: "j1", name: "Ano Novo, Franquia Nova - Planejamento 2026.txt", script: "POST COMPLETO:\n\nComeço de ano é o momento ideal para reestruturar o marketing da sua franquia.\n\nO que você precisa definir agora:\n\n1. Meta de leads por trimestre\n2. Orçamento de mídia paga mensal\n3. Calendário editorial Q1\n4. KPIs prioritários\n5. Ferramentas que vai adotar\n\nQuem planeja em janeiro, colhe o ano inteiro.", format: "Feed", network: "Instagram", funnel: "Topo", createdAt: "03/01/2026", approved: true },
+      { id: "j2", name: "Por que Franquias Precisam de Marketing Digital.txt", script: "CARROSSEL (5 slides):\n\nSlide 1 — 'Por que sua franquia PRECISA de marketing digital'\nSlide 2 — '92% dos consumidores pesquisam online antes de comprar'\nSlide 3 — 'Franquias com presença digital forte geram 3x mais leads'\nSlide 4 — 'Marketing local + digital = combinação imbatível'\nSlide 5 — 'Comece hoje. Fale conosco.'", format: "Carrossel", network: "Instagram", funnel: "Topo", createdAt: "03/01/2026", approved: true },
     ],
   },
 ];
@@ -125,7 +129,7 @@ const funnelColors: Record<string, string> = {
 export default function ClienteConteudos() {
   const [sections, setSections] = useState(initialSections);
   const [editing, setEditing] = useState<string | null>(null);
-  const [folders] = useState(mockFolders);
+  const [folders, setFolders] = useState(mockFolders);
   const [openFolder, setOpenFolder] = useState<string | null>(null);
   const [openFile, setOpenFile] = useState<ContentFile | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
@@ -156,7 +160,28 @@ export default function ClienteConteudos() {
     toast({ title: "Conteúdos gerados!", description: `${bQtd} roteiros criados para ${bMes}.` });
   };
 
+  const toggleApproval = (fileId: string) => {
+    setFolders(prev => prev.map(folder => ({
+      ...folder,
+      files: folder.files.map(f => f.id === fileId ? { ...f, approved: !f.approved } : f),
+    })));
+    // Also update the open file if it's the same
+    if (openFile?.id === fileId) {
+      setOpenFile(prev => prev ? { ...prev, approved: !prev.approved } : null);
+    }
+  };
+
+  const approveAll = (folderId: string) => {
+    setFolders(prev => prev.map(folder =>
+      folder.id === folderId
+        ? { ...folder, files: folder.files.map(f => ({ ...f, approved: true })) }
+        : folder
+    ));
+    toast({ title: "Todos os roteiros aprovados!" });
+  };
+
   const currentFolder = folders.find(f => f.id === openFolder);
+  const isCurrentMonth = (month: string) => month === CURRENT_MONTH;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -351,6 +376,14 @@ export default function ClienteConteudos() {
                     </div>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
+                    <Button
+                      variant={openFile.approved ? "outline" : "default"}
+                      size="sm"
+                      className={`h-8 text-xs gap-1 ${openFile.approved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
+                      onClick={() => { toggleApproval(openFile.id); toast({ title: openFile.approved ? "Aprovação removida" : "Roteiro aprovado!" }); }}
+                    >
+                      {openFile.approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Aprovado</> : <><Check className="w-3.5 h-3.5" /> Aprovar</>}
+                    </Button>
                     <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(openFile.script); toast({ title: "Roteiro copiado!" }); }}>
                       <Copy className="w-3.5 h-3.5" /> Copiar
                     </Button>
@@ -366,56 +399,119 @@ export default function ClienteConteudos() {
             </Card>
           ) : openFolder && currentFolder ? (
             /* Files inside folder */
-            <div className="space-y-1">
-              {currentFolder.files.map(file => (
-                <Card
-                  key={file.id}
-                  className="glass-card cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => setOpenFile(file)}
-                >
-                  <CardContent className="py-3 flex items-center gap-3">
-                    <File className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{file.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant="outline" className="text-[8px] h-4">{file.format}</Badge>
-                        <Badge className={`text-[8px] h-4 ${networkColors[file.network] || ""}`}>{file.network}</Badge>
-                        <span className="text-[10px] text-muted-foreground">{file.createdAt}</span>
+            <div className="space-y-3">
+              {/* Approval summary */}
+              {(() => {
+                const approved = currentFolder.files.filter(f => f.approved).length;
+                const total = currentFolder.files.length;
+                const allApproved = approved === total;
+                return (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={allApproved ? "default" : "secondary"} className={`text-[10px] gap-1 ${allApproved ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" : ""}`}>
+                        <CheckCircle2 className="w-3 h-3" /> {approved}/{total} aprovados
+                      </Badge>
+                    </div>
+                    {!allApproved && (
+                      <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => approveAll(currentFolder.id)}>
+                        <Check className="w-3 h-3" /> Aprovar Todos
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="space-y-1">
+                {currentFolder.files.map(file => (
+                  <Card
+                    key={file.id}
+                    className={`cursor-pointer hover:bg-muted/30 transition-all ${file.approved ? "border-emerald-500/20 bg-emerald-500/[0.02]" : "glass-card"}`}
+                    onClick={() => setOpenFile(file)}
+                  >
+                    <CardContent className="py-3 flex items-center gap-3">
+                      <div className="relative shrink-0">
+                        <File className="w-4 h-4 text-muted-foreground" />
+                        {file.approved && (
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500 absolute -bottom-1 -right-1" />
+                        )}
                       </div>
-                    </div>
-                    <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { navigator.clipboard.writeText(file.script); toast({ title: "Copiado!" }); }}>
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Download iniciado!" })}>
-                        <Download className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{file.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge variant="outline" className="text-[8px] h-4">{file.format}</Badge>
+                          <Badge className={`text-[8px] h-4 ${networkColors[file.network] || ""}`}>{file.network}</Badge>
+                          <span className="text-[10px] text-muted-foreground">{file.createdAt}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0 items-center" onClick={e => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 px-2 text-[10px] gap-1 ${file.approved ? "text-emerald-600" : "text-muted-foreground"}`}
+                          onClick={() => { toggleApproval(file.id); toast({ title: file.approved ? "Aprovação removida" : "Aprovado!" }); }}
+                        >
+                          {file.approved ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { navigator.clipboard.writeText(file.script); toast({ title: "Copiado!" }); }}>
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Download iniciado!" })}>
+                          <Download className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           ) : (
             /* Folder list */
-            <div className="space-y-2">
-              {folders.map(folder => (
-                <Card
-                  key={folder.id}
-                  className="glass-card cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => setOpenFolder(folder.id)}
-                >
-                  <CardContent className="py-4 flex items-center gap-4">
-                    <div className="p-2.5 rounded-xl bg-primary/10">
-                      <Folder className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">{folder.label}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{folder.files.length} arquivos — Criado em {folder.createdAt}</p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] shrink-0">{folder.files.length} roteiros</Badge>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="space-y-3">
+              {folders.map(folder => {
+                const isCurrent = isCurrentMonth(folder.month);
+                const approvedCount = folder.files.filter(f => f.approved).length;
+                const totalCount = folder.files.length;
+                const allApproved = approvedCount === totalCount;
+
+                return (
+                  <Card
+                    key={folder.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      isCurrent
+                        ? "ring-2 ring-primary/40 bg-primary/[0.03] shadow-md shadow-primary/10"
+                        : "glass-card hover:bg-muted/30"
+                    }`}
+                    onClick={() => setOpenFolder(folder.id)}
+                  >
+                    <CardContent className="py-4 flex items-center gap-4">
+                      <div className={`p-2.5 rounded-xl ${isCurrent ? "bg-primary/15" : "bg-primary/10"}`}>
+                        <Folder className={`w-5 h-5 ${isCurrent ? "text-primary" : "text-primary"}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold">{folder.label}</p>
+                          {isCurrent && (
+                            <Badge className="text-[9px] bg-primary/15 text-primary border-primary/30 gap-1">
+                              <Star className="w-2.5 h-2.5" /> Mês Atual
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {totalCount} roteiros — Criado em {folder.createdAt}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] gap-1 ${allApproved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
+                        >
+                          <CheckCircle2 className="w-3 h-3" /> {approvedCount}/{totalCount}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
 
               {folders.length === 0 && (
                 <div className="text-center py-16">
