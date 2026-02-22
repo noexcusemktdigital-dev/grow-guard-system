@@ -22,14 +22,16 @@ const SaasBrandingPanel = () => {
   return (
     <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white">
       <div className="flex flex-col h-full px-8 py-8 w-full">
-          {/* Tagline with highlight — centered, smaller */}
-          <div className="pt-4 pb-6 text-center">
-            <p className="text-base xl:text-lg font-semibold text-black/80 leading-relaxed max-w-sm mx-auto">
-              Plataforma{" "}
-              <Highlight className="text-white">
-                completa de marketing e vendas
-              </Highlight>{" "}
-              para acelerar seus resultados
+          {/* Header — badge + title + subtitle */}
+          <div className="pt-6 pb-8 text-center flex flex-col items-center gap-3">
+            <span className="inline-block text-sm font-medium border rounded-full px-4 py-1.5 text-black/60 border-black/10">
+              Depoimentos
+            </span>
+            <h2 className="text-3xl xl:text-4xl font-black tracking-tight text-black leading-tight">
+              O que nossos clientes dizem
+            </h2>
+            <p className="text-black/50 text-sm max-w-xs">
+              Plataforma completa de marketing e vendas para acelerar seus resultados.
             </p>
           </div>
 
