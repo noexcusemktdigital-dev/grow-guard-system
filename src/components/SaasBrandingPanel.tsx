@@ -1,4 +1,4 @@
-import logoDark from "@/assets/NOE3.png";
+import logoLight from "@/assets/noe2.png";
 import { BackgroundGradientAnimation } from "@/components/ui/background-gradient-animation";
 import { TestimonialsColumn } from "@/components/ui/testimonials-columns";
 import { Highlight } from "@/components/ui/hero-highlight";
@@ -23,14 +23,14 @@ const SaasBrandingPanel = () => {
   return (
     <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
       <BackgroundGradientAnimation
-        gradientBackgroundStart="rgb(139, 0, 0)"
-        gradientBackgroundEnd="rgb(80, 0, 0)"
-        firstColor="200, 30, 30"
-        secondColor="255, 60, 60"
-        thirdColor="180, 0, 0"
-        fourthColor="255, 100, 50"
-        fifthColor="220, 20, 60"
-        pointerColor="255, 80, 80"
+        gradientBackgroundStart="rgb(255, 255, 255)"
+        gradientBackgroundEnd="rgb(240, 240, 245)"
+        firstColor="230, 230, 240"
+        secondColor="220, 220, 235"
+        thirdColor="240, 240, 250"
+        fourthColor="210, 215, 230"
+        fifthColor="235, 235, 245"
+        pointerColor="225, 225, 240"
         size="80%"
         blendingValue="hard-light"
         interactive={false}
@@ -40,7 +40,7 @@ const SaasBrandingPanel = () => {
         <div className="flex flex-col h-full px-8 py-8">
           {/* Tagline with highlight — centered, smaller */}
           <div className="pt-4 pb-6 text-center">
-            <p className="text-base xl:text-lg font-semibold text-white/90 leading-relaxed max-w-sm mx-auto">
+            <p className="text-base xl:text-lg font-semibold text-black/80 leading-relaxed max-w-sm mx-auto">
               Plataforma{" "}
               <Highlight className="text-white">
                 completa de marketing e vendas
@@ -63,7 +63,7 @@ const SaasBrandingPanel = () => {
 
           {/* Logo bottom */}
           <div className="flex justify-center pt-4">
-            <img src={logoDark} alt="NoExcuse" className="h-7 object-contain opacity-70" />
+            <img src={logoLight} alt="NoExcuse" className="h-7 object-contain opacity-60" />
           </div>
         </div>
       </BackgroundGradientAnimation>
