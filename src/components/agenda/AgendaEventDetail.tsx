@@ -11,7 +11,7 @@ import type { AgendaEvent } from "@/types/agenda";
 import {
   mockEvents, getEventColor, getStatusColor, getInviteStatusColor, getLevelLabel,
   getRecurrenceLabel, mockCalendars
-} from "@/data/agendaData";
+} from "@/mocks/agendaData";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeft, Calendar, Clock, Edit, MapPin, Repeat, Trash2, Users, Video, XCircle, Check, X, Cloud } from "lucide-react";

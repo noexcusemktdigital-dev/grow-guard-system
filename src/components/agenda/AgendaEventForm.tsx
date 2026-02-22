@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, X, Cloud } from "lucide-react";
 import type { AgendaEvent, EventParticipant } from "@/types/agenda";
-import { mockCalendars, mockAgendaUsers } from "@/data/agendaData";
+import { mockCalendars, mockAgendaUsers } from "@/mocks/agendaData";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {

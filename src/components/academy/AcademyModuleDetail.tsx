@@ -12,7 +12,7 @@ import {
   getLessonProgress,
   getQuizAttempts,
   getUserCertificates,
-} from "@/data/academyData";
+} from "@/mocks/academyData";
 
 const categoryIcons: Record<string, React.ElementType> = {
   Comercial: TrendingUp,

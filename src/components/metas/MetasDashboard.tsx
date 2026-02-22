@@ -1,7 +1,7 @@
 import { DollarSign, Target, FileText, Users, TrendingUp, TrendingDown, Trophy, Medal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBRL, levelThresholds } from "@/types/metas";
-import { getNetworkTotals, getEvolutionData, getRevenueByProduct, getRankingForMonth } from "@/data/metasRankingData";
+import { getNetworkTotals, getEvolutionData, getRevenueByProduct, getRankingForMonth } from "@/mocks/metasRankingData";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 

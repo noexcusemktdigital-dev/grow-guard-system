@@ -22,7 +22,7 @@ import {
   getCategoryColor,
   getFormatIcon,
   monthLabels,
-} from "@/data/marketingData";
+} from "@/mocks/marketingData";
 
 interface MarketingDriveProps {
   category: MarketingCategory;

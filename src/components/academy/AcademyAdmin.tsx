@@ -19,7 +19,7 @@ import {
   mockQuizQuestions,
   getLessonsByModule,
   getQuestionsByQuiz,
-} from "@/data/academyData";
+} from "@/mocks/academyData";
 
 export function AcademyAdmin() {
   const [adminTab, setAdminTab] = useState("modulos");

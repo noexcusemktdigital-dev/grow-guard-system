@@ -9,7 +9,7 @@ import {
   mockModules,
   getModuleProgress,
   getCategoryModuleCount,
-} from "@/data/academyData";
+} from "@/mocks/academyData";
 
 const categoryFilters: (AcademyModuleCategory | "Todos")[] = ["Todos", "Comercial", "Estrategia", "Institucional", "Produtos"];
 

@@ -13,8 +13,8 @@ import {
   getOnboardingProgress, getCurrentPhase,
   STATUS_COLORS, CS_RESPONSAVEIS, DEFAULT_CHECKLIST,
 } from "@/types/onboarding";
-import { getOnboardingAlerts } from "@/data/onboardingData";
-import { mockUnidades } from "@/data/unidadesData";
+import { getOnboardingAlerts } from "@/mocks/onboardingData";
+import { mockUnidades } from "@/mocks/unidadesData";
 
 interface OnboardingListProps {
   onboardings: OnboardingUnit[];

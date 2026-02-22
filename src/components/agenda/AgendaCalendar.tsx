@@ -5,7 +5,7 @@ import type { AgendaEvent } from "@/types/agenda";
 import {
   getEventsForDate, getEventsForMonth, getMonthDays, getEventColor, getStatusColor,
   mockTimeBlocks
-} from "@/data/agendaData";
+} from "@/mocks/agendaData";
 import {
   format, isSameDay, isSameMonth, parseISO, startOfWeek, endOfWeek,
   eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, addHours

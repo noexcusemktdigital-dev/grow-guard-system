@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import type { AcademyCertificate } from "@/types/academy";
-import { getUserCertificates, mockModules } from "@/data/academyData";
+import { getUserCertificates, mockModules } from "@/mocks/academyData";
 
 export function AcademyCertificates() {
   const certs = getUserCertificates();

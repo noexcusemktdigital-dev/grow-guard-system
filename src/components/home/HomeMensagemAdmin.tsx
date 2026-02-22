@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Archive } from "lucide-react";
 import { type MensagemDoDia, type MensagemCategoria, type MensagemStatus, MENSAGEM_CATEGORIAS } from "@/types/home";
-import { mockMensagens } from "@/data/homeData";
+import { mockMensagens } from "@/mocks/homeData";
 
 interface Props {
   open: boolean;

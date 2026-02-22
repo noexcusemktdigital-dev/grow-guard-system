@@ -17,9 +17,9 @@ import { useDailyMessages } from "@/hooks/useDailyMessages";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { useCalendarEvents } from "@/hooks/useCalendar";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
-import type { Comunicado, PublicoAlvo } from "@/data/comunicadosData";
-import type { AgendaEvent } from "@/data/agendaData";
-import type { MensagemDoDia } from "@/data/homeData";
+import type { Comunicado, PublicoAlvo } from "@/mocks/comunicadosData";
+import type { AgendaEvent } from "@/mocks/agendaData";
+import type { MensagemDoDia } from "@/mocks/homeData";
 
 const quickActionIcons: Record<string, React.ElementType> = {
   MessageSquare, Calendar, Megaphone, TrendingUp,

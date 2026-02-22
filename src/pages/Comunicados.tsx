@@ -9,7 +9,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAnnouncements, useAnnouncementMutations } from "@/hooks/useAnnouncements";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Comunicado, PublicoAlvo } from "@/data/comunicadosData";
+import type { Comunicado, PublicoAlvo } from "@/mocks/comunicadosData";
 
 type View = "list" | "create" | "edit" | "detail";
 

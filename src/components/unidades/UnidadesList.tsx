@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Unidade, UnidadeStatus } from "@/types/unidades";
-import { mockUnidadeUsers } from "@/data/unidadesData";
+import { mockUnidadeUsers } from "@/mocks/unidadesData";
 
 interface UnidadesListProps {
   unidades: Unidade[];

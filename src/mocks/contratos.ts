@@ -33,7 +33,7 @@ export const FRANQUEADOS_LIST = [
 
 // ── Mock Templates (re-exported from data for now — content is large) ──
 // Templates have large string content, importing from original source
-export { mockTemplates } from "@/data/contratosData";
+export { mockTemplates } from "./contratosData";
 
 // ── Mock Contracts ──
 

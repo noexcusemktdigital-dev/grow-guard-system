@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead, Activity, Task, LeadFile, LeadProposal, ActivityType, TaskStatus, FunnelType } from "@/types/crm";
 import { getStagesForFunnel, LEAD_ORIGINS, RESPONSAVEIS, TEMPERATURES, CONTACT_STATUSES } from "@/types/crm";
-import { getActivitiesForLead, getTasksForLead, getFilesForLead, getProposalsForLead } from "@/data/crmData";
+import { getActivitiesForLead, getTasksForLead, getFilesForLead, getProposalsForLead } from "@/mocks/crmData";
 
 const activityIcons: Record<ActivityType, React.ElementType> = {
   ligacao: Phone, whatsapp: MessageSquare, reuniao: Video, email: Mail,
