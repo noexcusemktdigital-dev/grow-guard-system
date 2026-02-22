@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { TopSwitch } from "@/components/TopSwitch";
+import { useEffect } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -11,19 +10,6 @@ const Index = () => {
   const { role } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Determine level from path
-  const getLevel = () => {
-    if (location.pathname.startsWith("/cliente")) return "CLIENTE FINAL";
-    if (location.pathname.startsWith("/franqueado")) return "FRANQUEADO";
-    return "FRANQUEADORA";
-  };
-
-  const [level, setLevel] = useState(getLevel());
-
-  useEffect(() => {
-    setLevel(getLevel());
-  }, [location.pathname]);
 
   // Redirect based on role on initial load
   useEffect(() => {
@@ -38,20 +24,6 @@ const Index = () => {
     }
   }, [role, location.pathname, navigate]);
 
-  const handleLevelChange = (newLevel: string) => {
-    setLevel(newLevel);
-    if (newLevel === "FRANQUEADORA") {
-      if (!location.pathname.startsWith("/franqueadora")) navigate("/franqueadora/dashboard");
-    } else if (newLevel === "FRANQUEADO") {
-      if (!location.pathname.startsWith("/franqueado")) navigate("/franqueado/dashboard");
-    } else if (newLevel === "CLIENTE FINAL") {
-      if (!location.pathname.startsWith("/cliente")) navigate("/cliente/inicio");
-    }
-  };
-
-  // Only super_admins can switch levels
-  const showSwitch = role === "super_admin";
-
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border/60 bg-card/80 backdrop-blur-xl">
@@ -59,11 +31,6 @@ const Index = () => {
           <div className="flex-1 flex items-center">
             <GlobalSearch />
           </div>
-          {showSwitch && (
-            <div className="flex items-center justify-center">
-              <TopSwitch active={level} onChange={handleLevelChange} />
-            </div>
-          )}
           <div className="flex-1 flex items-center justify-end gap-1.5">
             <NotificationBell />
             <UserMenu />
