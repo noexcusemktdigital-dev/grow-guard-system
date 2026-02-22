@@ -1,163 +1,137 @@
 
-
-# Implementacao de Login, Usuarios e Banco de Dados
+# Dois Sistemas de Login Separados
 
 ## Resumo
 
-Vamos transformar a plataforma de mockup para producao, criando toda a infraestrutura de autenticacao, perfis de usuario, organizacoes e controle de acesso baseado em papeis (roles). O sistema suportara os 3 niveis da plataforma: Franqueadora, Franqueado e Cliente Final.
+A plataforma precisa de **dois fluxos de autenticacao completamente separados**:
+
+1. **Login Franquia** (`/auth`) -- Sistema interno da rede No Excuse
+   - Sem auto-cadastro (contas criadas por admins)
+   - Apenas email + senha
+   - Roles: super_admin, admin (franqueadora) e franqueado, franqueado_user (franqueado)
+
+2. **Login SaaS** (`/app/auth`) -- No Excuse Gestao Comercial (produto SaaS)
+   - Auto-cadastro permitido (email/senha + Google)
+   - Trial de 7 dias com acesso total
+   - Roles: cliente_admin (dono da conta) e cliente_user (funcionario, criado pelo admin)
 
 ---
 
-## Fase 1 -- Banco de Dados (Migracao SQL)
+## Fase 1 -- Pagina de Login do SaaS (`/app/auth`)
 
-Criar as tabelas base, funcoes auxiliares e politicas de seguranca (RLS):
+### Criar nova pagina com:
+- **Branding diferente**: "NOEXCUSE Gestao Comercial" (identidade dark premium do SaaS)
+- **Tabs**: "Entrar" e "Criar conta"
+- **Criar conta**: formulario com nome, email, senha + botao "Entrar com Google"
+- **Entrar**: email/senha + botao "Entrar com Google" + "Esqueci minha senha"
+- **Trial**: ao criar conta, automaticamente cria organizacao + subscription com trial de 7 dias + wallet de creditos
 
-### Tabelas
+### Login com Google:
+- Usar Lovable Cloud OAuth gerenciado (`lovable.auth.signInWithOAuth("google")`)
+- Configurar o modulo via ferramenta de social auth
 
-| Tabela | Descricao |
-|---|---|
-| `profiles` | Nome, cargo, avatar, telefone -- vinculado ao auth.users |
-| `organizations` | Empresas (franqueadora, franqueados, clientes) |
-| `organization_memberships` | Vincula usuario a organizacao com papel |
-| `user_roles` | Papeis do sistema (enum: super_admin, admin, franqueado, cliente_admin, cliente_user) |
-| `subscriptions` | Assinaturas das organizacoes |
-| `credit_wallets` | Carteira de creditos por organizacao |
+---
 
-### Enum de papeis
+## Fase 2 -- Atualizar Login da Franquia (`/auth`)
+
+### Manter como esta, com ajustes:
+- Remover qualquer possibilidade de auto-cadastro
+- Manter branding "NO EXCUSE - Plataforma de gestao para franquias"
+- Apenas email + senha (sem Google)
+
+---
+
+## Fase 3 -- Atualizar Roteamento
+
+### Separar os fluxos no App.tsx:
 
 ```text
-super_admin    -> Equipe da franqueadora
-admin          -> Admin interno da franqueadora
-franqueado     -> Dono/gestor de unidade
-cliente_admin  -> Admin da empresa cliente (SaaS)
-cliente_user   -> Operador da empresa cliente
+/auth           -> Login Franquia (sem cadastro)
+/app/auth       -> Login SaaS (com cadastro + Google)
+/reset-password -> Compartilhado
+
+/franqueadora/* -> Protegido (roles: super_admin, admin)
+/franqueado/*   -> Protegido (roles: franqueado)
+/cliente/*      -> Protegido (roles: cliente_admin, cliente_user)
 ```
 
-### Funcoes auxiliares (SECURITY DEFINER)
-
-- `has_role(user_id, role)` -- verifica se usuario tem papel
-- `get_user_org_id(user_id)` -- retorna org do usuario
-- `is_member_of_org(user_id, org_id)` -- verifica pertencimento
-
-### Trigger automatico
-
-- Ao criar usuario no auth.users, cria automaticamente o registro em `profiles`
+### Redirecionamento apos login:
+- Se role e super_admin/admin -> `/franqueadora/dashboard`
+- Se role e franqueado -> `/franqueado/dashboard`
+- Se role e cliente_admin/cliente_user -> `/cliente/inicio`
+- Se usuario logou via `/app/auth` e nao tem role ainda (novo cadastro) -> criar org + role automaticamente -> `/cliente/inicio`
 
 ---
 
-## Fase 2 -- Pagina de Login
+## Fase 4 -- Edge Function para Auto-Cadastro SaaS
 
-### Criar `/auth` com:
-
-- Formulario de email + senha
-- Opcao de "Esqueci minha senha"
-- Layout profissional com branding NoExcuse
-- Sem auto-cadastro (usuarios serao convidados pelo admin)
-
-### Criar `/reset-password`:
-
-- Formulario para definir nova senha apos link de recuperacao
+### Criar `signup-saas` edge function:
+Apos o signup do usuario (via trigger ou chamada direta):
+1. Criar organizacao (type: 'cliente', name: nome da empresa)
+2. Criar organization_membership (user + org)
+3. Criar user_role (cliente_admin)
+4. Criar subscription (plan: 'trial', expires_at: now + 7 dias)
+5. Criar credit_wallet (balance: creditos iniciais do trial)
 
 ---
 
-## Fase 3 -- Contexto de Autenticacao
+## Fase 5 -- Protecao de Rotas por Role
 
-### Criar `AuthContext` + `AuthProvider`:
-
-- Gerencia sessao do usuario (login, logout, sessao ativa)
-- Busca perfil e roles do usuario logado
-- Expoe dados do usuario para toda a aplicacao
-
-### Protecao de rotas:
-
-- Criar componente `ProtectedRoute` que redireciona para `/auth` se nao autenticado
-- Envolver todas as rotas existentes com protecao
+### Atualizar ProtectedRoute para aceitar roles permitidas:
+- `/franqueadora/*` aceita apenas super_admin e admin
+- `/franqueado/*` aceita apenas franqueado
+- `/cliente/*` aceita apenas cliente_admin e cliente_user
+- Se usuario tenta acessar area errada, redireciona para sua area correta
 
 ---
 
-## Fase 4 -- Roteamento baseado em Role
+## Fase 6 -- Atualizar AuthContext
 
-### Logica de redirecionamento apos login:
-
-```text
-super_admin / admin   -> /franqueadora/dashboard
-franqueado            -> /franqueado/dashboard
-cliente_admin / user  -> /cliente/inicio
-```
-
-### Remover TopSwitch manual:
-
-- O nivel (Franqueadora/Franqueado/Cliente) sera determinado automaticamente pelo papel do usuario logado
-- Manter o switch apenas para super_admins que precisam navegar entre niveis
-
----
-
-## Fase 5 -- Atualizar Header e UserMenu
-
-- Mostrar nome real do usuario (do perfil)
-- Mostrar email e cargo reais
-- Implementar logout funcional
-- Atualizar avatar com iniciais do nome real
-
----
-
-## Fase 6 -- Seed de Dados Iniciais
-
-Criar um usuario admin inicial para primeiro acesso:
-
-- Email: definido pelo usuario
-- Senha: definida pelo usuario
-- Role: super_admin
-- Organizacao: Franqueadora principal
+### Adicionar logica para detectar tipo de login:
+- Se usuario veio do `/app/auth` e nao tem role -> provisionar automaticamente como cliente_admin
+- Se usuario veio do `/auth` e nao tem role -> mostrar erro (conta precisa ser criada pelo admin)
 
 ---
 
 ## Detalhes Tecnicos
 
-### Estrutura de arquivos novos:
-
+### Arquivos novos:
 ```text
-src/
-  contexts/
-    AuthContext.tsx          -- Provider de autenticacao
-  components/
-    ProtectedRoute.tsx       -- Guard de rotas
-  pages/
-    Auth.tsx                 -- Login + esqueci senha
-    ResetPassword.tsx        -- Redefinir senha
+src/pages/SaasAuth.tsx              -- Login/cadastro do SaaS
+supabase/functions/signup-saas/     -- Edge function para provisionar novo cliente
 ```
 
 ### Arquivos modificados:
-
 ```text
-src/App.tsx                  -- Adicionar rotas /auth e /reset-password, proteger rotas
-src/pages/Index.tsx          -- Usar dados reais do usuario no header
-src/components/UserMenu.tsx  -- Logout funcional, dados reais
+src/App.tsx                         -- Novas rotas /app/auth, protecao por role
+src/components/ProtectedRoute.tsx   -- Aceitar prop de roles permitidas
+src/contexts/AuthContext.tsx        -- Detectar tipo de usuario
 ```
 
-### Migracao SQL (resumo):
+### Migracao SQL:
+- Habilitar signup no auth (atualmente desabilitado) -- necessario para o SaaS
+- O controle de "quem pode se cadastrar" sera feito pela UI (so a pagina do SaaS tem formulario de cadastro)
 
-1. Criar enum `app_role`
-2. Criar tabelas: profiles, organizations, organization_memberships, user_roles, subscriptions, credit_wallets
-3. Habilitar RLS em todas as tabelas
-4. Criar funcoes helper (has_role, get_user_org_id, is_member_of_org)
-5. Criar trigger para auto-criar profile no signup
-6. Criar politicas RLS para cada tabela
-
-### Confirmacao de email:
-
-- Sera **desabilitada** inicialmente (acesso imediato apos convite)
-- Como usuarios sao convidados pelo admin, a confirmacao pode ser habilitada depois
+### Google OAuth:
+- Configurar via ferramenta `configure-social-auth` do Lovable Cloud
+- Usar `lovable.auth.signInWithOAuth("google")` no SaasAuth.tsx
 
 ---
 
-## Ordem de Implementacao
+## Resumo Visual
 
-1. Migracao SQL (todas as tabelas + RLS + funcoes)
-2. Pagina de Login (`/auth`)
-3. Pagina Reset Password (`/reset-password`)
-4. AuthContext + ProtectedRoute
-5. Atualizar App.tsx (rotas protegidas)
-6. Atualizar Index.tsx + UserMenu (dados reais)
-7. Seed do primeiro usuario admin
-
+```text
++---------------------------+       +---------------------------+
+|     /auth (Franquia)      |       |   /app/auth (SaaS)        |
+|---------------------------|       |---------------------------|
+| - Apenas email+senha      |       | - Email+senha OU Google   |
+| - Sem auto-cadastro       |       | - Auto-cadastro permitido |
+| - "Acesso por convite"    |       | - "Teste gratis 7 dias"   |
+| - Branding: NO EXCUSE     |       | - Branding: Gestao Com.   |
+|   Franquias               |       |   NOEXCUSE                |
++---------------------------+       +---------------------------+
+         |                                    |
+         v                                    v
+  super_admin/admin -> /franqueadora    cliente_admin -> /cliente
+  franqueado        -> /franqueado      cliente_user  -> /cliente
+```
