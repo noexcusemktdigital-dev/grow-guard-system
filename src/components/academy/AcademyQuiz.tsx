@@ -12,7 +12,7 @@ import {
   getQuizAttempts,
   submitQuizAttempt,
   getModuleProgress,
-} from "@/data/academyData";
+} from "@/mocks/academyData";
 
 type Phase = "pre" | "active" | "result";
 

@@ -14,7 +14,7 @@ import {
   getQuizAttempts,
   getLessonsByModule,
   getLessonProgress,
-} from "@/data/academyData";
+} from "@/mocks/academyData";
 
 interface Props {
   onSelectModule: (moduleId: string) => void;

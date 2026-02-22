@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Check, X, Settings, Bell } from "lucide-react";
 import type { AgendaEvent } from "@/types/agenda";
-import { mockCalendars, getPendingInvites } from "@/data/agendaData";
+import { mockCalendars, getPendingInvites } from "@/mocks/agendaData";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";

@@ -12,7 +12,7 @@ import {
   markLessonComplete,
   getModuleProgress,
   getQuizByModule,
-} from "@/data/academyData";
+} from "@/mocks/academyData";
 import { useState } from "react";
 
 interface Props {

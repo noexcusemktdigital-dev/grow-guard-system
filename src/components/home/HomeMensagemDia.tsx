@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { MensagemDoDia } from "@/types/home";
-import { mockMensagens } from "@/data/homeData";
+import { mockMensagens } from "@/mocks/homeData";
 import { HomeMensagemAdmin } from "./HomeMensagemAdmin";
 
 const categoriaColors: Record<string, string> = {

@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Target, Users, Building2 } from "lucide-react";
 import { goalTypeConfig, formatBRL, type Goal, type GoalType } from "@/types/metas";
-import { mockGoals, getRankingForMonth, getAllFranchises } from "@/data/metasRankingData";
+import { mockGoals, getRankingForMonth, getAllFranchises } from "@/mocks/metasRankingData";
 
 const MONTH = "2026-02";
 

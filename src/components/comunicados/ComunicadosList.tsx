@@ -15,7 +15,7 @@ import {
   getPrioridadeColor,
   getTipoColor,
 } from "@/types/comunicados";
-import { mockComunicados, mockVisualizacoes } from "@/data/comunicadosData";
+import { mockComunicados, mockVisualizacoes } from "@/mocks/comunicadosData";
 import {
   Eye,
   Edit,

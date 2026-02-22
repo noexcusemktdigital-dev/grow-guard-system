@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Calendar, Cloud, Lock, Plus, Trash2, Unlock, Users } from "lucide-react";
 import type { CalendarConfig } from "@/types/agenda";
-import { mockCalendars, mockTimeBlocks, mockAgendaUsers } from "@/data/agendaData";
+import { mockCalendars, mockTimeBlocks, mockAgendaUsers } from "@/mocks/agendaData";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 

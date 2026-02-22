@@ -8,8 +8,8 @@ import type {
 } from "@/types/marketing";
 
 // ── Mock Data (re-export from data to avoid duplicating large arrays) ──
-export { mockFolders, mockAssets } from "@/data/marketingData";
-import { mockFolders, mockAssets } from "@/data/marketingData";
+export { mockFolders, mockAssets } from "./marketingData";
+import { mockFolders, mockAssets } from "./marketingData";
 
 // ── Helpers ──
 

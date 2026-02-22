@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Crown, DollarSign, TrendingUp, Headphones, Megaphone, Check } from "lucide-react";
 import { perfisPreConfigurados, permissoesEspeciaisConfig, type PerfilPreConfigurado } from "@/types/matriz";
-import { getUserModulosHabilitados } from "@/data/matrizData";
+import { getUserModulosHabilitados } from "@/mocks/matrizData";
 
 const iconMap: Record<string, React.ElementType> = {
   Crown, DollarSign, TrendingUp, Headphones, Megaphone,

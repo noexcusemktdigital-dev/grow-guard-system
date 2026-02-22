@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { mockFranchiseReports } from "@/data/academyData";
+import { mockFranchiseReports } from "@/mocks/academyData";
 
 export function AcademyReports() {
   const totalUsers = mockFranchiseReports.reduce((sum, f) => sum + f.usersCount, 0);
