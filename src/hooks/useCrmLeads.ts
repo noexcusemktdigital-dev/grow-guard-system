@@ -130,5 +130,24 @@ export function useCrmLeadMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
   });
 
-  return { createLead, updateLead, deleteLead, markAsWon, markAsLost };
+  const bulkUpdateLeads = useMutation({
+    mutationFn: async ({ ids, fields }: { ids: string[]; fields: Record<string, any> }) => {
+      const { error } = await supabase.from("crm_leads").update(fields).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-lead"] });
+    },
+  });
+
+  const bulkDeleteLeads = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("crm_leads").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+  });
+
+  return { createLead, updateLead, deleteLead, markAsWon, markAsLost, bulkUpdateLeads, bulkDeleteLeads };
 }
