@@ -2,16 +2,17 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { AgendaEvent } from "@/types/agenda";
-import { getEventColor } from "@/mocks/agendaData";
+import type { AgendaEvent, CalendarConfig } from "@/types/agenda";
+import { getEventColor } from "@/types/agenda";
 import { format, parseISO, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Props {
   eventos: AgendaEvent[];
+  calendars?: CalendarConfig[];
 }
 
-export function HomeAgenda({ eventos }: Props) {
+export function HomeAgenda({ eventos, calendars = [] }: Props) {
   const navigate = useNavigate();
 
   return (
@@ -39,7 +40,7 @@ export function HomeAgenda({ eventos }: Props) {
               >
                 <div
                   className="w-1 h-8 rounded-full shrink-0"
-                  style={{ backgroundColor: getEventColor(e.calendarId) }}
+                  style={{ backgroundColor: getEventColor(e.calendarId, calendars) }}
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium line-clamp-1">{e.titulo}</p>

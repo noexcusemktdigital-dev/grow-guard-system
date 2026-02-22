@@ -18,7 +18,7 @@ import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { useCalendarEvents } from "@/hooks/useCalendar";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
 import type { Comunicado, PublicoAlvo } from "@/mocks/comunicadosData";
-import type { AgendaEvent } from "@/mocks/agendaData";
+import type { AgendaEvent } from "@/types/agenda";
 import type { MensagemDoDia } from "@/mocks/homeData";
 
 const quickActionIcons: Record<string, React.ElementType> = {

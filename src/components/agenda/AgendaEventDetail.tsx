@@ -7,29 +7,27 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { AgendaEvent } from "@/types/agenda";
-import {
-  mockEvents, getEventColor, getStatusColor, getInviteStatusColor, getLevelLabel,
-  getRecurrenceLabel, mockCalendars
-} from "@/mocks/agendaData";
+import type { AgendaEvent, CalendarConfig } from "@/types/agenda";
+import { getEventColor, getStatusColor, getInviteStatusColor, getLevelLabel, getRecurrenceLabel } from "@/types/agenda";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Calendar, Clock, Edit, MapPin, Repeat, Trash2, Users, Video, XCircle, Check, X, Cloud } from "lucide-react";
+import { ArrowLeft, Clock, Edit, MapPin, Repeat, Trash2, Users, Video, XCircle, Check, X, Cloud } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {
-  eventId: string;
+  event: AgendaEvent | undefined;
+  calendars: CalendarConfig[];
+  currentUserId?: string;
   onBack: () => void;
   onEdit: (event: AgendaEvent) => void;
 }
 
-export function AgendaEventDetail({ eventId, onBack, onEdit }: Props) {
+export function AgendaEventDetail({ event, calendars, currentUserId, onBack, onEdit }: Props) {
   const { toast } = useToast();
-  const event = mockEvents.find(e => e.id === eventId);
   if (!event) return <div className="p-6 text-muted-foreground">Evento não encontrado.</div>;
 
-  const calendar = mockCalendars.find(c => c.id === event.calendarId);
-  const pendingForMe = event.participantes.find(p => p.userId === "u-davi" && p.status === "Pendente");
+  const calendar = calendars.find(c => c.id === event.calendarId);
+  const pendingForMe = currentUserId ? event.participantes.find(p => p.userId === currentUserId && p.status === "Pendente") : null;
 
   const handleInvite = (action: "Aceito" | "Recusado") => {
     toast({ title: action === "Aceito" ? "Convite aceito!" : "Convite recusado", description: `Você ${action === "Aceito" ? "aceitou" : "recusou"} o evento "${event.titulo}".` });
@@ -41,7 +39,6 @@ export function AgendaEventDetail({ eventId, onBack, onEdit }: Props) {
         <ArrowLeft className="w-4 h-4" /> Voltar
       </Button>
 
-      {/* Convite pendente */}
       {pendingForMe && (
         <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/20">
           <CardContent className="p-4 flex items-center justify-between">
@@ -57,14 +54,13 @@ export function AgendaEventDetail({ eventId, onBack, onEdit }: Props) {
         </Card>
       )}
 
-      {/* Conteúdo */}
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-xl">{event.titulo}</CardTitle>
               <div className="flex flex-wrap gap-1.5 mt-2">
-                <Badge className="text-[10px]" style={{ backgroundColor: getEventColor(event.calendarId), color: "white" }}>
+                <Badge className="text-[10px]" style={{ backgroundColor: getEventColor(event.calendarId, calendars), color: "white" }}>
                   {calendar?.nome}
                 </Badge>
                 <Badge variant="secondary" className="text-[10px]">{event.tipo}</Badge>
@@ -134,7 +130,6 @@ export function AgendaEventDetail({ eventId, onBack, onEdit }: Props) {
         </CardContent>
       </Card>
 
-      {/* Participantes */}
       {event.participantes.length > 0 && (
         <Card>
           <CardHeader>
@@ -165,7 +160,6 @@ export function AgendaEventDetail({ eventId, onBack, onEdit }: Props) {
         </Card>
       )}
 
-      {/* Google Calendar placeholder */}
       <Card className="bg-muted/30">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-2">

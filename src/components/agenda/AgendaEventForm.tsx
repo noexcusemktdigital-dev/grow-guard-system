@@ -6,13 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertTriangle, X, Cloud } from "lucide-react";
-import type { AgendaEvent, EventParticipant } from "@/types/agenda";
-import { mockCalendars, mockAgendaUsers } from "@/mocks/agendaData";
+import { X, Cloud } from "lucide-react";
+import type { AgendaEvent, EventParticipant, CalendarConfig } from "@/types/agenda";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {
@@ -20,6 +18,7 @@ interface Props {
   onClose: () => void;
   editingEvent?: AgendaEvent | null;
   defaultDate?: Date;
+  calendars: CalendarConfig[];
 }
 
 const EVENT_TYPES = ["Reunião", "CS", "Comercial", "Treinamento", "Evento", "Prazo", "Bloqueio"] as const;
@@ -33,12 +32,7 @@ const RECURRENCES = [
   { value: "monthly", label: "Mensal" },
 ];
 
-const UNIDADES = [
-  { id: "u1", nome: "Curitiba" }, { id: "u2", nome: "São Paulo" },
-  { id: "u3", nome: "Bahia" }, { id: "u4", nome: "Belo Horizonte" },
-];
-
-export function AgendaEventForm({ open, onClose, editingEvent, defaultDate }: Props) {
+export function AgendaEventForm({ open, onClose, editingEvent, defaultDate, calendars }: Props) {
   const { toast } = useToast();
   const isEditing = !!editingEvent;
 
@@ -50,7 +44,7 @@ export function AgendaEventForm({ open, onClose, editingEvent, defaultDate }: Pr
   const [inicio, setInicio] = useState(editingEvent?.inicio?.slice(0, 16) ?? defaultDateStr);
   const [fim, setFim] = useState(editingEvent?.fim?.slice(0, 16) ?? defaultDateStr);
   const [recorrencia, setRecorrencia] = useState(editingEvent?.recorrencia ?? "none");
-  const [calendarId, setCalendarId] = useState(editingEvent?.calendarId ?? "cal-1");
+  const [calendarId, setCalendarId] = useState(editingEvent?.calendarId ?? calendars[0]?.id ?? "");
   const [tipo, setTipo] = useState(editingEvent?.tipo ?? "Reunião");
   const [status, setStatus] = useState(editingEvent?.status ?? "Confirmado");
   const [visibilidade, setVisibilidade] = useState(editingEvent?.visibilidade ?? "Privado");
@@ -58,18 +52,6 @@ export function AgendaEventForm({ open, onClose, editingEvent, defaultDate }: Pr
   const [local, setLocal] = useState(editingEvent?.local ?? "");
   const [linkMeet, setLinkMeet] = useState(editingEvent?.linkMeet ?? "");
   const [emailExterno, setEmailExterno] = useState("");
-
-  const addParticipant = (userId: string) => {
-    if (participantes.some(p => p.userId === userId)) return;
-    const user = mockAgendaUsers.find(u => u.id === userId);
-    if (!user) return;
-    setParticipantes([...participantes, { userId, nome: user.nome, unidadeNome: user.unidadeNome, status: "Pendente" }]);
-  };
-
-  const addUnidade = (unidadeNome: string) => {
-    const users = mockAgendaUsers.filter(u => u.unidadeNome === unidadeNome && !participantes.some(p => p.userId === u.id));
-    setParticipantes([...participantes, ...users.map(u => ({ userId: u.id, nome: u.nome, unidadeNome: u.unidadeNome, status: "Pendente" as const }))]);
-  };
 
   const removeParticipant = (userId: string) => {
     setParticipantes(participantes.filter(p => p.userId !== userId));
@@ -93,7 +75,6 @@ export function AgendaEventForm({ open, onClose, editingEvent, defaultDate }: Pr
 
         <ScrollArea className="max-h-[60vh] pr-4">
           <div className="space-y-6">
-            {/* Seção 1 - Básico */}
             <div className="space-y-3">
               <div className="text-sm font-semibold text-muted-foreground">Informações Básicas</div>
               <div>
@@ -128,7 +109,6 @@ export function AgendaEventForm({ open, onClose, editingEvent, defaultDate }: Pr
 
             <Separator />
 
-            {/* Seção 2 - Classificação */}
             <div className="space-y-3">
               <div className="text-sm font-semibold text-muted-foreground">Classificação</div>
               <div className="grid grid-cols-2 gap-3">
@@ -136,7 +116,7 @@ export function AgendaEventForm({ open, onClose, editingEvent, defaultDate }: Pr
                   <Label>Calendário</Label>
                   <Select value={calendarId} onValueChange={setCalendarId}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{mockCalendars.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                    <SelectContent>{calendars.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div>
@@ -165,27 +145,8 @@ export function AgendaEventForm({ open, onClose, editingEvent, defaultDate }: Pr
 
             <Separator />
 
-            {/* Seção 3 - Participantes */}
             <div className="space-y-3">
               <div className="text-sm font-semibold text-muted-foreground">Participantes</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Adicionar usuário</Label>
-                  <Select onValueChange={addParticipant}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                    <SelectContent>{mockAgendaUsers.filter(u => !participantes.some(p => p.userId === u.id)).map(u =>
-                      <SelectItem key={u.id} value={u.id}>{u.nome} ({u.unidadeNome})</SelectItem>
-                    )}</SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Adicionar unidade inteira</Label>
-                  <Select onValueChange={addUnidade}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                    <SelectContent>{UNIDADES.map(u => <SelectItem key={u.id} value={u.nome}>{u.nome}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
               <div>
                 <Label>E-mail externo (Google Calendar)</Label>
                 <div className="flex gap-2">
@@ -208,7 +169,6 @@ export function AgendaEventForm({ open, onClose, editingEvent, defaultDate }: Pr
 
             <Separator />
 
-            {/* Seção 4 - Local */}
             <div className="space-y-3">
               <div className="text-sm font-semibold text-muted-foreground">Local e Links</div>
               <div className="grid grid-cols-2 gap-3">
@@ -219,16 +179,11 @@ export function AgendaEventForm({ open, onClose, editingEvent, defaultDate }: Pr
 
             <Separator />
 
-            {/* Seção 5 - Google Calendar placeholder */}
             <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                 <Cloud className="w-4 h-4" /> Google Calendar
               </div>
               <p className="text-xs text-muted-foreground">Conecte o Google Calendar nas configurações para sincronizar este evento.</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div><span className="text-muted-foreground">google_event_id:</span> <span className="text-muted-foreground/50">—</span></div>
-                <div><span className="text-muted-foreground">sync_status:</span> <span className="text-muted-foreground/50">Não sincronizado</span></div>
-              </div>
             </div>
           </div>
         </ScrollArea>
