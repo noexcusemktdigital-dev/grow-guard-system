@@ -163,3 +163,70 @@ export function useMarkContactRead() {
     },
   });
 }
+
+export function useUpdateAttendingMode() {
+  const queryClient = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async ({ contactId, mode }: { contactId: string; mode: "ai" | "human" }) => {
+      if (!orgId) return;
+      const { error } = await supabase
+        .from("whatsapp_contacts" as any)
+        .update({ attending_mode: mode } as any)
+        .eq("id", contactId)
+        .eq("organization_id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    },
+  });
+}
+
+export function useLinkContactToCrmLead() {
+  const queryClient = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async ({ contactId, leadId }: { contactId: string; leadId: string }) => {
+      if (!orgId) return;
+      // Update both sides of the link
+      await Promise.all([
+        supabase
+          .from("whatsapp_contacts" as any)
+          .update({ crm_lead_id: leadId } as any)
+          .eq("id", contactId)
+          .eq("organization_id", orgId),
+        supabase
+          .from("crm_leads")
+          .update({ whatsapp_contact_id: contactId } as any)
+          .eq("id", leadId),
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+    },
+  });
+}
+
+export function useFindLeadByPhone(phone: string | null) {
+  const { data: orgId } = useUserOrgId();
+
+  return useQuery({
+    queryKey: ["crm-lead-by-phone", orgId, phone],
+    queryFn: async () => {
+      if (!orgId || !phone) return null;
+      const { data, error } = await supabase
+        .from("crm_leads")
+        .select("id, name, phone, stage, value")
+        .eq("organization_id", orgId!)
+        .eq("phone", phone)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orgId && !!phone,
+  });
+}

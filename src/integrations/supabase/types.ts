@@ -300,6 +300,57 @@ export type Database = {
           },
         ]
       }
+      ai_conversation_logs: {
+        Row: {
+          agent_id: string
+          contact_id: string
+          created_at: string
+          id: string
+          input_message: string | null
+          model: string | null
+          organization_id: string
+          output_message: string | null
+          tokens_used: number | null
+        }
+        Insert: {
+          agent_id: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          input_message?: string | null
+          model?: string | null
+          organization_id: string
+          output_message?: string | null
+          tokens_used?: number | null
+        }
+        Update: {
+          agent_id?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          input_message?: string | null
+          model?: string | null
+          organization_id?: string
+          output_message?: string | null
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversation_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "client_ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_conversation_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcement_views: {
         Row: {
           announcement_id: string
@@ -1267,6 +1318,7 @@ export type Database = {
           tags: string[] | null
           updated_at: string
           value: number | null
+          whatsapp_contact_id: string | null
           won_at: string | null
         }
         Insert: {
@@ -1287,6 +1339,7 @@ export type Database = {
           tags?: string[] | null
           updated_at?: string
           value?: number | null
+          whatsapp_contact_id?: string | null
           won_at?: string | null
         }
         Update: {
@@ -1307,6 +1360,7 @@ export type Database = {
           tags?: string[] | null
           updated_at?: string
           value?: number | null
+          whatsapp_contact_id?: string | null
           won_at?: string | null
         }
         Relationships: [
@@ -2744,7 +2798,10 @@ export type Database = {
       }
       whatsapp_contacts: {
         Row: {
+          agent_id: string | null
+          attending_mode: string
           created_at: string
+          crm_lead_id: string | null
           id: string
           last_message_at: string | null
           name: string | null
@@ -2755,7 +2812,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agent_id?: string | null
+          attending_mode?: string
           created_at?: string
+          crm_lead_id?: string | null
           id?: string
           last_message_at?: string | null
           name?: string | null
@@ -2766,7 +2826,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agent_id?: string | null
+          attending_mode?: string
           created_at?: string
+          crm_lead_id?: string | null
           id?: string
           last_message_at?: string | null
           name?: string | null
@@ -2777,6 +2840,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_contacts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "client_ai_agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_contacts_organization_id_fkey"
             columns: ["organization_id"]
