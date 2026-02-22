@@ -12,8 +12,8 @@ const mockTickets: Ticket[] = [
   { id: "t4", numero: "#004", unidadeId: "u4", unidadeNome: "Unidade Leste", categoria: "Clientes", subcategoria: "Cancelamento", prioridade: "Alta", status: "Aguardando franqueado", responsavelId: "r1", responsavelNome: "Davi", descricao: "Cliente importante solicitou cancelamento.", anexos: [], slaDeadline: future(2), criadoEm: h(30), atualizadoEm: h(50) },
   { id: "t5", numero: "#005", unidadeId: "u1", unidadeNome: "Unidade Centro", categoria: "Juridico", subcategoria: "Contrato", prioridade: "Normal", status: "Aberto", responsavelId: "r2", responsavelNome: "Lucas", descricao: "Dúvida sobre cláusula de exclusividade territorial.", anexos: ["contrato_v2.pdf"], slaDeadline: future(18), criadoEm: h(8), atualizadoEm: h(8) },
 ];
-import { mockComunicados, type Comunicado } from "./comunicadosData";
-import { mockOnboardings, mockMeetings, mockTasks as onboardingTasks } from "./onboardingData";
+import { mockComunicados, type Comunicado } from "@/types/comunicados";
+import type { OnboardingUnit, OnboardingMeeting, OnboardingTask } from "@/types/onboarding";
 import type { AgendaEvent } from "@/types/agenda";
 import { mockLeads } from "./crm";
 import { getRankingForMonth } from "./metasRankingData";
@@ -264,40 +264,17 @@ export function getAlertasFranqueadora(): AlertaHome[] {
       });
     });
 
-  // Onboarding — tarefas atrasadas
-  onboardingTasks
-    .filter(t => t.status === "Atrasada")
-    .forEach(t => {
-      const ob = mockOnboardings.find(o => o.id === t.onboardingId);
-      alertas.push({
-        id: `alert-onb-${t.id}`,
-        tipo: "onboarding",
-        titulo: `Tarefa atrasada — ${ob?.unidadeNome || ""}`,
-        descricao: t.tarefa,
-        prioridade: "alta",
-        link: "/franqueadora/onboarding",
-        moduloOrigem: "Onboarding",
-        criadoEm: t.prazo,
-      });
-    });
-
-  // Reuniões onboarding pendentes
-  mockMeetings
-    .filter(m => m.status === "Cancelada" || m.status === "Agendada")
-    .forEach(m => {
-      if (m.status === "Cancelada") {
-        const ob = mockOnboardings.find(o => o.id === m.onboardingId);
-        alertas.push({
-          id: `alert-meeting-${m.id}`,
-          tipo: "onboarding",
-          titulo: `Reunião cancelada — ${ob?.unidadeNome || ""}`,
-          descricao: `${m.tipo}: ${m.resumo.substring(0, 60)}`,
-          prioridade: "alta",
-          link: "/franqueadora/onboarding",
-          moduloOrigem: "Onboarding",
-          criadoEm: m.data,
-        });
-      }
+   // Onboarding placeholder alerts
+  alertas.push({
+    id: "alert-onb-placeholder",
+    tipo: "onboarding",
+    titulo: "Tarefas de onboarding pendentes",
+    descricao: "Verifique o módulo de onboarding para tarefas atrasadas",
+    prioridade: "alta",
+    link: "/franqueadora/onboarding",
+    moduloOrigem: "Onboarding",
+    criadoEm: new Date().toISOString(),
+  });
     });
 
   // Comunicados críticos

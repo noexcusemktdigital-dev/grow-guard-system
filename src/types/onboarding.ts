@@ -120,3 +120,22 @@ export function getCurrentPhase(checklist: ChecklistItem[]): OnboardingPhase {
   }
   return "Consolidação";
 }
+
+export function getOnboardingAlerts(onboardings: OnboardingUnit[], meetings: OnboardingMeeting[], tasks: OnboardingTask[]): OnboardingAlert[] {
+  const alerts: OnboardingAlert[] = [];
+  for (const ob of onboardings) {
+    if (ob.status === "Implantado com sucesso" || ob.status === "Encerrado") continue;
+    const kickoff = meetings.find((m) => m.onboardingId === ob.id && m.tipo === "Kickoff" && m.status === "Realizada");
+    if (!kickoff) {
+      alerts.push({ tipo: "kickoff", mensagem: "Kickoff não realizado", onboardingId: ob.id, unidadeNome: ob.unidadeNome });
+    }
+    if (ob.status === "Em risco") {
+      alerts.push({ tipo: "progresso_baixo", mensagem: "Unidade em risco", onboardingId: ob.id, unidadeNome: ob.unidadeNome });
+    }
+    const atrasadas = tasks.filter((t) => t.onboardingId === ob.id && t.status === "Atrasada");
+    if (atrasadas.length > 0) {
+      alerts.push({ tipo: "inatividade", mensagem: `${atrasadas.length} tarefa(s) atrasada(s)`, onboardingId: ob.id, unidadeNome: ob.unidadeNome });
+    }
+  }
+  return alerts;
+}

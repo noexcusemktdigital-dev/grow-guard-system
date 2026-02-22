@@ -10,11 +10,10 @@ import { Label } from "@/components/ui/label";
 import { AlertTriangle, UserX, Rocket, TrendingUp, Plus, Eye } from "lucide-react";
 import {
   OnboardingUnit, OnboardingMeeting, OnboardingTask, OnboardingAlert,
-  getOnboardingProgress, getCurrentPhase,
+  getOnboardingProgress, getCurrentPhase, getOnboardingAlerts,
   STATUS_COLORS, CS_RESPONSAVEIS, DEFAULT_CHECKLIST,
 } from "@/types/onboarding";
-import { getOnboardingAlerts } from "@/mocks/onboardingData";
-import { mockUnidades } from "@/mocks/unidadesData";
+import { mockUnidades } from "@/types/unidades";
 
 interface OnboardingListProps {
   onboardings: OnboardingUnit[];

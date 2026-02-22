@@ -3,8 +3,7 @@ import { Quote, History, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { MensagemDoDia } from "@/types/home";
-import { mockMensagens } from "@/mocks/homeData";
+import { type MensagemDoDia, mockMensagens } from "@/types/home";
 import { HomeMensagemAdmin } from "./HomeMensagemAdmin";
 
 const categoriaColors: Record<string, string> = {
