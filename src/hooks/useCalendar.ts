@@ -1,0 +1,67 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserOrgId } from "./useUserOrgId";
+import { useAuth } from "@/contexts/AuthContext";
+
+export function useCalendars() {
+  const { data: orgId } = useUserOrgId();
+  return useQuery({
+    queryKey: ["calendars", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("calendars").select("*").eq("organization_id", orgId!).order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orgId,
+  });
+}
+
+export function useCalendarEvents(startDate?: string, endDate?: string) {
+  const { data: orgId } = useUserOrgId();
+  return useQuery({
+    queryKey: ["calendar-events", orgId, startDate, endDate],
+    queryFn: async () => {
+      let q = supabase.from("calendar_events").select("*").eq("organization_id", orgId!).order("start_at");
+      if (startDate) q = q.gte("start_at", startDate);
+      if (endDate) q = q.lte("end_at", endDate);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orgId,
+  });
+}
+
+export function useCalendarEventMutations() {
+  const qc = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+  const { user } = useAuth();
+
+  const createEvent = useMutation({
+    mutationFn: async (event: { title: string; start_at: string; end_at: string; description?: string; location?: string; calendar_id?: string; all_day?: boolean; color?: string }) => {
+      const { data, error } = await supabase.from("calendar_events").insert({ ...event, organization_id: orgId!, created_by: user?.id }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["calendar-events"] }),
+  });
+
+  const updateEvent = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { data, error } = await supabase.from("calendar_events").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["calendar-events"] }),
+  });
+
+  const deleteEvent = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("calendar_events").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["calendar-events"] }),
+  });
+
+  return { createEvent, updateEvent, deleteEvent };
+}
