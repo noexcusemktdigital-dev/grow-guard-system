@@ -1,11 +1,25 @@
-import {
-  franqueados,
-  getReceitasForMonth,
-  getMonthSummary,
-  clientes,
-  type Franqueado,
-} from "./mockData";
-import { mockContratos, type Contrato } from "./contratosData";
+// ── Inline types & data previously from mockData / contratosData ──
+
+interface Franqueado {
+  id: string;
+  nomeUnidade: string;
+  status: string;
+  percentualRepasse: number;
+  mensalidadeSistema: number;
+  observacoes: string;
+}
+
+const franqueados: Franqueado[] = [
+  { id: "f1", nomeUnidade: "Franquia São Paulo Centro", status: "Ativo", percentualRepasse: 20, mensalidadeSistema: 250, observacoes: "Primeira franquia" },
+  { id: "f2", nomeUnidade: "Franquia Rio de Janeiro", status: "Ativo", percentualRepasse: 20, mensalidadeSistema: 250, observacoes: "Segunda franquia" },
+];
+
+function getMonthSummary(_month: string) {
+  return {
+    receitaBruta: 73000,
+    receitaPorProduto: { Assessoria: 42000, SaaS: 18000, Sistema: 8000, Franquia: 5000 } as Record<string, number>,
+  };
+}
 import {
   Shield,
   TrendingUp,
