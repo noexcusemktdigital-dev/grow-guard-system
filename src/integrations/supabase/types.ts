@@ -1517,20 +1517,120 @@ export type Database = {
           },
         ]
       }
+      crm_partner_companies: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          document: string | null
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          document?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          document?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_partner_companies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_products: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          price: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          price?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          price?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_proposals: {
         Row: {
           accepted_at: string | null
           content: Json | null
           created_at: string
           created_by: string | null
+          discount_total: number
           id: string
+          items: Json
           lead_id: string | null
+          notes: string | null
           organization_id: string
+          partner_company_id: string | null
+          payment_terms: string | null
           rejected_at: string | null
           sent_at: string | null
           status: string
           title: string
           updated_at: string
+          valid_until: string | null
           value: number | null
         }
         Insert: {
@@ -1538,14 +1638,20 @@ export type Database = {
           content?: Json | null
           created_at?: string
           created_by?: string | null
+          discount_total?: number
           id?: string
+          items?: Json
           lead_id?: string | null
+          notes?: string | null
           organization_id: string
+          partner_company_id?: string | null
+          payment_terms?: string | null
           rejected_at?: string | null
           sent_at?: string | null
           status?: string
           title: string
           updated_at?: string
+          valid_until?: string | null
           value?: number | null
         }
         Update: {
@@ -1553,14 +1659,20 @@ export type Database = {
           content?: Json | null
           created_at?: string
           created_by?: string | null
+          discount_total?: number
           id?: string
+          items?: Json
           lead_id?: string | null
+          notes?: string | null
           organization_id?: string
+          partner_company_id?: string | null
+          payment_terms?: string | null
           rejected_at?: string | null
           sent_at?: string | null
           status?: string
           title?: string
           updated_at?: string
+          valid_until?: string | null
           value?: number | null
         }
         Relationships: [
@@ -1576,6 +1688,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_proposals_partner_company_id_fkey"
+            columns: ["partner_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_partner_companies"
             referencedColumns: ["id"]
           },
         ]

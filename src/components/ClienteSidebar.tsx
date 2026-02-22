@@ -35,7 +35,7 @@ const vendasSection: SidebarItem[] = [
   { label: "Agentes IA", icon: Bot, path: "/cliente/agentes-ia" },
   { label: "Scripts", icon: BookOpen, path: "/cliente/scripts" },
   { label: "Disparos", icon: Send, path: "/cliente/disparos" },
-  { label: "Relatórios", icon: BarChart3, path: "/cliente/relatorios" },
+  { label: "Dashboard", icon: BarChart3, path: "/cliente/dashboard" },
 ];
 
 const marketingSection: SidebarItem[] = [

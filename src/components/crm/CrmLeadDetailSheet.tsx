@@ -2,7 +2,8 @@ import { useState } from "react";
 import {
   Phone, Mail, Building2, DollarSign, Tag, Clock, CheckCircle, XCircle,
   MessageCircle, ExternalLink, CircleDot, Plus, Trash2, CalendarDays,
-  PhoneCall, Video, Send, StickyNote, AlertTriangle
+  PhoneCall, Video, Send, StickyNote, AlertTriangle, FileText, Copy,
+  MoreHorizontal, ArrowRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -17,9 +18,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmActivities, useCrmActivityMutations } from "@/hooks/useCrmActivities";
 import { useCrmTasks, useCrmTaskMutations } from "@/hooks/useCrmTasks";
+import { useCrmProposals, useCrmProposalMutations, type CrmProposal, type ProposalItem } from "@/hooks/useCrmProposals";
+import { useCrmProducts, type CrmProduct } from "@/hooks/useCrmProducts";
+import { useCrmPartners } from "@/hooks/useCrmPartners";
 import { useToast } from "@/hooks/use-toast";
 import type { FunnelStage } from "./CrmStageSystem";
 import { STAGE_ICONS, getColorStyle } from "./CrmStageSystem";
@@ -55,6 +61,13 @@ const ACTIVITY_TYPES = [
   { value: "note", label: "Nota", icon: <StickyNote className="w-3.5 h-3.5" /> },
 ];
 
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  draft: { label: "Rascunho", color: "bg-muted text-muted-foreground" },
+  sent: { label: "Enviada", color: "bg-blue-500/15 text-blue-600 border-blue-500/30" },
+  accepted: { label: "Aceita", color: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" },
+  rejected: { label: "Rejeitada", color: "bg-red-500/15 text-red-600 border-red-500/30" },
+};
+
 export function CrmLeadDetailSheet({ lead, onClose, stages }: CrmLeadDetailSheetProps) {
   return (
     <Sheet open={!!lead} onOpenChange={open => !open && onClose()}>
@@ -89,12 +102,10 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
   const [lostDialog, setLostDialog] = useState(false);
   const [lostReason, setLostReason] = useState("");
 
-  // Activity form
   const [actType, setActType] = useState("note");
   const [actTitle, setActTitle] = useState("");
   const [actDesc, setActDesc] = useState("");
 
-  // Task form
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
   const [taskPriority, setTaskPriority] = useState("medium");
@@ -104,14 +115,9 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
 
   const handleSave = () => {
     updateLead.mutate({
-      id: lead.id,
-      name: editName,
-      phone: editPhone || null,
-      email: editEmail || null,
-      company: editCompany || null,
-      value: editValue ? parseFloat(editValue) : null,
-      stage: editStage,
-      tags: editTags,
+      id: lead.id, name: editName, phone: editPhone || null,
+      email: editEmail || null, company: editCompany || null,
+      value: editValue ? parseFloat(editValue) : null, stage: editStage, tags: editTags,
     });
     toast({ title: "Lead atualizado" });
   };
@@ -146,12 +152,15 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
   return (
     <div className="space-y-4 mt-4">
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="w-full grid grid-cols-4">
+        <TabsList className="w-full grid grid-cols-5">
           <TabsTrigger value="info" className="text-xs">Dados</TabsTrigger>
           <TabsTrigger value="activities" className="text-xs">Atividades</TabsTrigger>
           <TabsTrigger value="tasks" className="text-xs">Tarefas</TabsTrigger>
+          <TabsTrigger value="proposals" className="text-xs gap-1">
+            <FileText className="w-3 h-3" /> Propostas
+          </TabsTrigger>
           <TabsTrigger value="whatsapp" className="text-xs gap-1">
-            <MessageCircle className="w-3 h-3" /> WhatsApp
+            <MessageCircle className="w-3 h-3" /> WA
           </TabsTrigger>
         </TabsList>
 
@@ -189,24 +198,19 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
               <Select value={editStage} onValueChange={setEditStage}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {stages.map(s => (
-                    <SelectItem key={s.key} value={s.key} className="text-sm">{s.label}</SelectItem>
-                  ))}
+                  {stages.map(s => <SelectItem key={s.key} value={s.key} className="text-sm">{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Tags */}
           <div>
             <Label className="text-xs">Tags</Label>
             <div className="flex flex-wrap gap-1 mt-1">
               {editTags.map(tag => (
                 <Badge key={tag} variant="secondary" className="text-xs gap-1">
                   {tag}
-                  <button onClick={() => setEditTags(editTags.filter(t => t !== tag))} className="hover:text-destructive">
-                    <XCircle className="w-3 h-3" />
-                  </button>
+                  <button onClick={() => setEditTags(editTags.filter(t => t !== tag))} className="hover:text-destructive"><XCircle className="w-3 h-3" /></button>
                 </Badge>
               ))}
             </div>
@@ -217,7 +221,6 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
           </div>
 
           <Button size="sm" className="w-full" onClick={handleSave}>Salvar alterações</Button>
-
           <Separator />
 
           {!lead.won_at && !lead.lost_at && (
@@ -244,9 +247,7 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
             <Select value={actType} onValueChange={setActType}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ACTIVITY_TYPES.map(t => (
-                  <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
-                ))}
+                {ACTIVITY_TYPES.map(t => <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <Input value={actTitle} onChange={e => setActTitle(e.target.value)} placeholder="Título..." className="h-8 text-xs" />
@@ -255,9 +256,7 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
               <Plus className="w-3 h-3 mr-1" /> Registrar
             </Button>
           </div>
-
           <Separator />
-
           {(!activities || activities.length === 0) ? (
             <div className="text-center py-6">
               <Clock className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
@@ -269,9 +268,7 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
                 const typeInfo = ACTIVITY_TYPES.find(t => t.value === act.type) || ACTIVITY_TYPES[4];
                 return (
                   <div key={act.id} className="p-3 rounded-lg border flex gap-3">
-                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                      {typeInfo.icon}
-                    </div>
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-primary shrink-0">{typeInfo.icon}</div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium">{act.title}</p>
                       {act.description && <p className="text-[11px] text-muted-foreground mt-0.5">{act.description}</p>}
@@ -306,9 +303,7 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
               <Plus className="w-3 h-3 mr-1" /> Criar tarefa
             </Button>
           </div>
-
           <Separator />
-
           {(!tasks || tasks.length === 0) ? (
             <div className="text-center py-6">
               <CalendarDays className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
@@ -321,13 +316,7 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
                 const priorityColor = task.priority === "high" ? "text-red-500" : task.priority === "medium" ? "text-amber-500" : "text-blue-500";
                 return (
                   <div key={task.id} className={`p-3 rounded-lg border flex items-start gap-3 ${isOverdue ? "border-red-300 bg-red-500/5" : ""}`}>
-                    <Checkbox
-                      checked={!!task.completed_at}
-                      onCheckedChange={checked => {
-                        updateTask.mutate({ id: task.id, completed_at: checked ? new Date().toISOString() : null });
-                      }}
-                      className="mt-0.5"
-                    />
+                    <Checkbox checked={!!task.completed_at} onCheckedChange={checked => updateTask.mutate({ id: task.id, completed_at: checked ? new Date().toISOString() : null })} className="mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className={`text-xs font-medium ${task.completed_at ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
                       <div className="flex items-center gap-2 mt-1">
@@ -351,6 +340,11 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
               })}
             </div>
           )}
+        </TabsContent>
+
+        {/* === PROPOSALS TAB === */}
+        <TabsContent value="proposals" className="mt-3">
+          <ProposalsTab leadId={lead.id} />
         </TabsContent>
 
         {/* === WHATSAPP TAB === */}
@@ -393,6 +387,283 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setLostDialog(false)}>Cancelar</Button>
             <Button size="sm" variant="destructive" onClick={handleMarkLost}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+/* ========== PROPOSALS TAB COMPONENT ========== */
+
+function ProposalsTab({ leadId }: { leadId: string }) {
+  const { toast } = useToast();
+  const { data: proposals, isLoading } = useCrmProposals(leadId);
+  const { createProposal, updateProposal, deleteProposal, duplicateProposal } = useCrmProposalMutations();
+  const { data: products } = useCrmProducts();
+  const { data: partners } = useCrmPartners();
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingProposal, setEditingProposal] = useState<CrmProposal | null>(null);
+
+  // Form state
+  const [title, setTitle] = useState("");
+  const [partnerId, setPartnerId] = useState<string>("");
+  const [items, setItems] = useState<ProposalItem[]>([]);
+  const [paymentTerms, setPaymentTerms] = useState("");
+  const [validUntil, setValidUntil] = useState("");
+  const [notes, setNotes] = useState("");
+  const [discountTotal, setDiscountTotal] = useState(0);
+
+  const subtotal = items.reduce((s, i) => s + i.total, 0);
+  const total = subtotal - discountTotal;
+
+  const resetForm = () => {
+    setTitle(""); setPartnerId(""); setItems([]); setPaymentTerms("");
+    setValidUntil(""); setNotes(""); setDiscountTotal(0); setEditingProposal(null);
+  };
+
+  const openNew = () => { resetForm(); setShowForm(true); };
+
+  const openEdit = (p: CrmProposal) => {
+    setEditingProposal(p);
+    setTitle(p.title);
+    setPartnerId(p.partner_company_id || "");
+    setItems(p.items || []);
+    setPaymentTerms(p.payment_terms || "");
+    setValidUntil(p.valid_until || "");
+    setNotes(p.notes || "");
+    setDiscountTotal(p.discount_total);
+    setShowForm(true);
+  };
+
+  const addItem = () => {
+    setItems([...items, { product_id: null, name: "", quantity: 1, unit_price: 0, discount: 0, total: 0 }]);
+  };
+
+  const updateItem = (idx: number, field: string, value: any) => {
+    const updated = [...items];
+    (updated[idx] as any)[field] = value;
+    if (field === "product_id" && products) {
+      const prod = products.find(p => p.id === value);
+      if (prod) {
+        updated[idx].name = prod.name;
+        updated[idx].unit_price = prod.price;
+      }
+    }
+    updated[idx].total = (updated[idx].quantity * updated[idx].unit_price) - updated[idx].discount;
+    setItems(updated);
+  };
+
+  const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
+
+  const handleSave = () => {
+    if (!title.trim()) return;
+    const payload = {
+      title, lead_id: leadId, items, value: total,
+      partner_company_id: partnerId || null, payment_terms: paymentTerms || null,
+      valid_until: validUntil || null, notes: notes || null, discount_total: discountTotal,
+    };
+    if (editingProposal) {
+      updateProposal.mutate({ id: editingProposal.id, ...payload });
+      toast({ title: "Proposta atualizada" });
+    } else {
+      createProposal.mutate({ ...payload, status: "draft" });
+      toast({ title: "Proposta criada" });
+    }
+    setShowForm(false);
+    resetForm();
+  };
+
+  const handleStatusChange = (id: string, status: string) => {
+    const now = new Date().toISOString();
+    const extra: Record<string, any> = { status };
+    if (status === "sent") extra.sent_at = now;
+    if (status === "accepted") extra.accepted_at = now;
+    if (status === "rejected") extra.rejected_at = now;
+    updateProposal.mutate({ id, ...extra });
+    toast({ title: `Status alterado para ${STATUS_MAP[status]?.label || status}` });
+  };
+
+  if (isLoading) return <div className="text-center py-6 text-xs text-muted-foreground">Carregando...</div>;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold">Propostas ({proposals?.length || 0})</p>
+        <Button size="sm" className="h-7 text-xs gap-1" onClick={openNew}><Plus className="w-3 h-3" /> Nova Proposta</Button>
+      </div>
+
+      {(!proposals || proposals.length === 0) && !showForm && (
+        <div className="text-center py-8">
+          <FileText className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Nenhuma proposta</p>
+          <p className="text-xs text-muted-foreground mt-1">Crie propostas para negociar com este lead.</p>
+        </div>
+      )}
+
+      {proposals?.map(p => {
+        const st = STATUS_MAP[p.status] || STATUS_MAP.draft;
+        return (
+          <Card key={p.id} className="overflow-hidden">
+            <CardContent className="p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{p.title}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className={`text-[10px] ${st.color}`}>{st.label}</Badge>
+                    <span className="text-xs font-semibold text-primary">
+                      R$ {(p.value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {new Date(p.created_at).toLocaleDateString("pt-BR")}
+                    {p.valid_until && ` · Validade: ${new Date(p.valid_until).toLocaleDateString("pt-BR")}`}
+                  </p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="w-4 h-4" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="text-xs">
+                    <DropdownMenuItem onClick={() => openEdit(p)}>Editar</DropdownMenuItem>
+                    {p.status === "draft" && <DropdownMenuItem onClick={() => handleStatusChange(p.id, "sent")}>Marcar como Enviada</DropdownMenuItem>}
+                    {(p.status === "sent" || p.status === "draft") && <DropdownMenuItem onClick={() => handleStatusChange(p.id, "accepted")}>Marcar como Aceita</DropdownMenuItem>}
+                    {(p.status === "sent" || p.status === "draft") && <DropdownMenuItem onClick={() => handleStatusChange(p.id, "rejected")}>Marcar como Rejeitada</DropdownMenuItem>}
+                    <DropdownMenuItem onClick={() => { duplicateProposal.mutate(p); toast({ title: "Proposta duplicada" }); }}>Duplicar</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={() => { deleteProposal.mutate(p.id); toast({ title: "Proposta excluída" }); }}>Excluir</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {/* Proposal Form Dialog */}
+      <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); resetForm(); } }}>
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingProposal ? "Editar Proposta" : "Nova Proposta"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs">Título</Label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Proposta comercial..." className="h-8 text-sm" />
+            </div>
+
+            <div>
+              <Label className="text-xs">Empresa Parceira</Label>
+              <Select value={partnerId} onValueChange={setPartnerId}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione (opcional)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-sm">Nenhuma</SelectItem>
+                  {partners?.map(p => <SelectItem key={p.id} value={p.id} className="text-sm">{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Items table */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-xs">Itens</Label>
+                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={addItem}>
+                  <Plus className="w-3 h-3" /> Adicionar item
+                </Button>
+              </div>
+              {items.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs h-8">Produto</TableHead>
+                        <TableHead className="text-xs h-8 w-16">Qtd</TableHead>
+                        <TableHead className="text-xs h-8 w-24">Preço Un.</TableHead>
+                        <TableHead className="text-xs h-8 w-20">Desc.</TableHead>
+                        <TableHead className="text-xs h-8 w-24 text-right">Total</TableHead>
+                        <TableHead className="h-8 w-8" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="p-1">
+                            <Select value={item.product_id || "custom"} onValueChange={v => updateItem(idx, "product_id", v === "custom" ? null : v)}>
+                              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Produto" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="custom" className="text-xs">Personalizado</SelectItem>
+                                {products?.map(p => <SelectItem key={p.id} value={p.id} className="text-xs">{p.name} — R$ {p.price}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            {!item.product_id && (
+                              <Input value={item.name} onChange={e => updateItem(idx, "name", e.target.value)} placeholder="Nome..." className="h-7 text-xs mt-1" />
+                            )}
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Input type="number" min={1} value={item.quantity} onChange={e => updateItem(idx, "quantity", Number(e.target.value))} className="h-7 text-xs w-14" />
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Input type="number" step="0.01" value={item.unit_price} onChange={e => updateItem(idx, "unit_price", Number(e.target.value))} className="h-7 text-xs w-22" />
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Input type="number" step="0.01" value={item.discount} onChange={e => updateItem(idx, "discount", Number(e.target.value))} className="h-7 text-xs w-18" />
+                          </TableCell>
+                          <TableCell className="p-1 text-right text-xs font-medium">
+                            R$ {item.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeItem(idx)}>
+                              <Trash2 className="w-3 h-3 text-muted-foreground" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
+            {/* Summary */}
+            <div className="bg-muted/30 border rounded-lg p-3 space-y-1">
+              <div className="flex justify-between text-xs">
+                <span>Subtotal</span>
+                <span>R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-xs items-center gap-2">
+                <span>Desconto total</span>
+                <Input type="number" step="0.01" value={discountTotal} onChange={e => setDiscountTotal(Number(e.target.value))} className="h-7 text-xs w-28 text-right" />
+              </div>
+              <Separator />
+              <div className="flex justify-between text-sm font-bold">
+                <span>Valor final</span>
+                <span className="text-primary">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Condições de pagamento</Label>
+                <Input value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} placeholder="Ex: 30/60/90 dias" className="h-8 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Validade da proposta</Label>
+                <Input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="h-8 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Observações internas</Label>
+              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas internas..." className="text-xs min-h-[60px]" />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => { setShowForm(false); resetForm(); }}>Cancelar</Button>
+            <Button size="sm" onClick={handleSave} disabled={!title.trim()}>
+              {editingProposal ? "Salvar" : "Criar proposta"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
