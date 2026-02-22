@@ -3,16 +3,22 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { mockFranchiseReports } from "@/mocks/academyData";
+
+// TODO: Replace with real data from a dedicated reports query when available
+const franchiseReports = [
+  { franchiseId: "fr-1", franchiseName: "Franquia São Paulo - Centro", usersCount: 5, avgCompletion: 72, quizzesPassed: 12, certificates: 8 },
+  { franchiseId: "fr-2", franchiseName: "Franquia Rio de Janeiro", usersCount: 3, avgCompletion: 45, quizzesPassed: 5, certificates: 3 },
+  { franchiseId: "fr-3", franchiseName: "Franquia Belo Horizonte", usersCount: 4, avgCompletion: 88, quizzesPassed: 14, certificates: 12 },
+];
 
 export function AcademyReports() {
-  const totalUsers = mockFranchiseReports.reduce((sum, f) => sum + f.usersCount, 0);
-  const avgCompletion = Math.round(mockFranchiseReports.reduce((sum, f) => sum + f.avgCompletion, 0) / mockFranchiseReports.length);
-  const totalCerts = mockFranchiseReports.reduce((sum, f) => sum + f.certificates, 0);
+  const totalUsers = franchiseReports.reduce((sum, f) => sum + f.usersCount, 0);
+  const avgCompletion = Math.round(franchiseReports.reduce((sum, f) => sum + f.avgCompletion, 0) / franchiseReports.length);
+  const totalCerts = franchiseReports.reduce((sum, f) => sum + f.certificates, 0);
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* KPI cards — vibrant */}
+      {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Usuários Ativos", value: totalUsers, icon: Users, gradient: "from-blue-500/15 to-blue-500/5", iconColor: "text-blue-600 dark:text-blue-400", iconBg: "bg-blue-500/20" },
@@ -30,7 +36,7 @@ export function AcademyReports() {
         ))}
       </div>
 
-      {/* Franchise table with visual bars */}
+      {/* Franchise table */}
       <div className="space-y-3">
         <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Progresso por Franquia</h3>
         <Card className="overflow-hidden">
@@ -46,12 +52,10 @@ export function AcademyReports() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockFranchiseReports.map((f) => (
+                {franchiseReports.map((f) => (
                   <TableRow key={f.franchiseId} className="hover:bg-accent/30">
                     <TableCell className="font-medium">{f.franchiseName}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="text-xs">{f.usersCount}</Badge>
-                    </TableCell>
+                    <TableCell><Badge variant="secondary" className="text-xs">{f.usersCount}</Badge></TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2.5 min-w-[120px]">
                         <Progress value={f.avgCompletion} className="h-2 flex-1" />

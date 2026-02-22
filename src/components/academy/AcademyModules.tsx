@@ -5,11 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AcademyModuleCategory } from "@/types/academy";
 import { categoryGradients, categoryColors } from "@/types/academy";
-import {
-  mockModules,
-  getModuleProgress,
-  getCategoryModuleCount,
-} from "@/mocks/academyData";
+import { useAcademyModules, useAcademyLessons, useAcademyProgress, computeModuleProgress } from "@/hooks/useAcademy";
 
 const categoryFilters: (AcademyModuleCategory | "Todos")[] = ["Todos", "Comercial", "Estrategia", "Institucional", "Produtos"];
 
@@ -41,15 +37,21 @@ interface Props {
 
 export function AcademyModules({ onSelectModule }: Props) {
   const [filter, setFilter] = useState<AcademyModuleCategory | "Todos">("Todos");
+  const { data: modules = [] } = useAcademyModules();
+  const { data: allLessons = [] } = useAcademyLessons();
+  const { data: progress = [] } = useAcademyProgress();
 
-  const filtered = filter === "Todos" ? mockModules.filter(m => m.status === "published") : mockModules.filter((m) => m.category === filter && m.status === "published");
+  const publishedModules = modules.filter(m => m.is_published);
+  const filtered = filter === "Todos" ? publishedModules : publishedModules.filter(m => m.category === filter);
+
+  const getCategoryCount = (cat: string) => publishedModules.filter(m => m.category === cat).length;
 
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Filter pills with icon + count */}
       <div className="flex gap-2 flex-wrap">
         {categoryFilters.map((cat) => {
-          const count = cat === "Todos" ? mockModules.filter(m => m.status === "published").length : getCategoryModuleCount(cat);
+          const count = cat === "Todos" ? publishedModules.length : getCategoryCount(cat);
           const CatIcon = cat !== "Todos" ? categoryIcons[cat] : null;
           return (
             <button
@@ -70,11 +72,13 @@ export function AcademyModules({ onSelectModule }: Props) {
       {/* Modules — horizontal cards */}
       <div className="space-y-3">
         {filtered.map((mod) => {
-          const progress = getModuleProgress(mod.id);
-          const color = categoryColors[mod.category];
-          const gradient = categoryGradients[mod.category];
-          const CatIcon = categoryIcons[mod.category] || BookOpen;
-          const isComplete = progress === 100;
+          const modProgress = computeModuleProgress(mod.id, allLessons, progress);
+          const color = categoryColors[(mod.category as AcademyModuleCategory) ?? "Comercial"];
+          const gradient = categoryGradients[(mod.category as AcademyModuleCategory) ?? "Comercial"];
+          const CatIcon = categoryIcons[mod.category ?? ""] || BookOpen;
+          const isComplete = modProgress === 100;
+          const lessonsCount = allLessons.filter(l => l.module_id === mod.id).length;
+          const estimatedHours = Math.round(allLessons.filter(l => l.module_id === mod.id).reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0) / 60 * 10) / 10;
 
           return (
             <Card
@@ -103,9 +107,8 @@ export function AcademyModules({ onSelectModule }: Props) {
                 </div>
 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> {mod.lessonsCount} aulas</span>
-                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> ~{mod.estimatedHours}h</span>
-                  <span>{mod.version}</span>
+                  <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> {lessonsCount} aulas</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> ~{estimatedHours}h</span>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -113,9 +116,9 @@ export function AcademyModules({ onSelectModule }: Props) {
                   <div className="relative w-10 h-10 flex-shrink-0">
                     <svg className="w-10 h-10 -rotate-90" viewBox="0 0 40 40">
                       <circle cx="20" cy="20" r="16" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
-                      <circle cx="20" cy="20" r="16" fill="none" stroke={isComplete ? "hsl(142, 71%, 45%)" : "hsl(var(--primary))"} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(progress / 100) * 100.5} 100.5`} className="transition-all duration-500" />
+                      <circle cx="20" cy="20" r="16" fill="none" stroke={isComplete ? "hsl(142, 71%, 45%)" : "hsl(var(--primary))"} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(modProgress / 100) * 100.5} 100.5`} className="transition-all duration-500" />
                     </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">{progress}%</span>
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">{modProgress}%</span>
                   </div>
 
                   <div className="flex-1" />
@@ -123,9 +126,9 @@ export function AcademyModules({ onSelectModule }: Props) {
                   <Button
                     size="sm"
                     className="gap-2 group-hover:gap-3 transition-all"
-                    variant={progress > 0 ? "default" : "outline"}
+                    variant={modProgress > 0 ? "default" : "outline"}
                   >
-                    {progress > 0 ? (
+                    {modProgress > 0 ? (
                       <><Play className="w-3.5 h-3.5" /> Continuar</>
                     ) : (
                       <><ArrowRight className="w-3.5 h-3.5" /> Iniciar</>

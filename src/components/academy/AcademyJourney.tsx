@@ -4,17 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { categoryColors, categoryGradients } from "@/types/academy";
+import type { AcademyModuleCategory } from "@/types/academy";
 import {
-  mockModules,
-  getTotalProgress,
-  getModuleProgress,
-  getUserCertificates,
-  getNextRecommendedLesson,
-  getQuizByModule,
-  getQuizAttempts,
-  getLessonsByModule,
-  getLessonProgress,
-} from "@/mocks/academyData";
+  useAcademyModules, useAcademyLessons, useAcademyProgress,
+  useAcademyCertificates, useAcademyQuizzes, useAcademyQuizAttempts,
+  computeModuleProgress, computeTotalProgress,
+} from "@/hooks/useAcademy";
 
 interface Props {
   onSelectModule: (moduleId: string) => void;
@@ -22,19 +17,37 @@ interface Props {
 }
 
 export function AcademyJourney({ onSelectModule, onSelectLesson }: Props) {
-  const totalProgress = getTotalProgress();
-  const certs = getUserCertificates();
-  const next = getNextRecommendedLesson();
-  const publishedModules = mockModules.filter(m => m.status === "published");
-  const completedModules = publishedModules.filter(m => getModuleProgress(m.id) === 100).length;
+  const { data: modules = [] } = useAcademyModules();
+  const { data: allLessons = [] } = useAcademyLessons();
+  const { data: progress = [] } = useAcademyProgress();
+  const { data: certs = [] } = useAcademyCertificates();
+  const { data: quizzes = [] } = useAcademyQuizzes();
+  const { data: allAttempts = [] } = useAcademyQuizAttempts();
+
+  const publishedModules = modules.filter(m => m.is_published);
+  const totalProgress = computeTotalProgress(allLessons.filter(l => publishedModules.some(m => m.id === l.module_id)), progress);
+  const completedModules = publishedModules.filter(m => computeModuleProgress(m.id, allLessons, progress) === 100).length;
   const passedQuizzes = publishedModules.filter(m => {
-    const q = getQuizByModule(m.id);
-    return q && getQuizAttempts(q.id).some(a => a.status === "passed");
+    const q = quizzes.find(qz => qz.module_id === m.id);
+    return q && allAttempts.some(a => a.quiz_id === q.id && a.passed);
   }).length;
+
+  // Find next recommended lesson
+  const getNextRecommended = () => {
+    for (const mod of publishedModules) {
+      const lessons = allLessons.filter(l => l.module_id === mod.id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      for (const lesson of lessons) {
+        const isCompleted = progress.some(p => p.lesson_id === lesson.id && p.completed_at);
+        if (!isCompleted) return { module: mod, lesson };
+      }
+    }
+    return null;
+  };
+  const next = getNextRecommended();
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* KPI cards — large icons, vibrant */}
+      {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Progresso Geral", value: `${totalProgress}%`, icon: TrendingUp, gradient: "from-blue-500/15 to-blue-500/5", iconColor: "text-blue-600 dark:text-blue-400", iconBg: "bg-blue-500/20" },
@@ -52,7 +65,7 @@ export function AcademyJourney({ onSelectModule, onSelectLesson }: Props) {
         ))}
       </div>
 
-      {/* Next recommended — CTA card */}
+      {/* Next recommended */}
       {next && (
         <Card className="relative overflow-hidden p-5 border-2 border-primary/20 bg-gradient-to-br from-primary/8 to-transparent">
           <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-primary/5 blur-xl" />
@@ -72,27 +85,24 @@ export function AcademyJourney({ onSelectModule, onSelectLesson }: Props) {
         </Card>
       )}
 
-      {/* Per-module progress — visual cards */}
+      {/* Per-module progress */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Por Módulo</h3>
         {publishedModules.map((mod) => {
-          const progress = getModuleProgress(mod.id);
-          const lessons = getLessonsByModule(mod.id);
-          const completedLessons = lessons.filter(l => getLessonProgress(l.id)?.status === "completed").length;
-          const quiz = getQuizByModule(mod.id);
-          const quizAttempts = quiz ? getQuizAttempts(quiz.id) : [];
-          const passed = quizAttempts.some(a => a.status === "passed");
+          const modProgress = computeModuleProgress(mod.id, allLessons, progress);
+          const lessons = allLessons.filter(l => l.module_id === mod.id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+          const completedLessons = lessons.filter(l => progress.some(p => p.lesson_id === l.id && p.completed_at)).length;
+          const quiz = quizzes.find(q => q.module_id === mod.id);
+          const quizAttempts = quiz ? allAttempts.filter(a => a.quiz_id === quiz.id) : [];
+          const passed = quizAttempts.some(a => a.passed);
           const bestScore = quizAttempts.length > 0 ? Math.max(...quizAttempts.map(a => a.score)) : null;
-          const color = categoryColors[mod.category];
-          const gradient = categoryGradients[mod.category];
-          const isComplete = progress === 100 && passed;
-
-          // Find next incomplete lesson
-          const nextLesson = lessons.find(l => getLessonProgress(l.id)?.status !== "completed");
+          const color = categoryColors[(mod.category as AcademyModuleCategory) ?? "Comercial"];
+          const gradient = categoryGradients[(mod.category as AcademyModuleCategory) ?? "Comercial"];
+          const isComplete = modProgress === 100 && passed;
+          const nextLesson = lessons.find(l => !progress.some(p => p.lesson_id === l.id && p.completed_at));
 
           return (
             <Card key={mod.id} className="overflow-hidden cursor-pointer hover:shadow-md transition-all" onClick={() => onSelectModule(mod.id)}>
-              {/* Mini gradient strip */}
               <div className={`h-1.5 bg-gradient-to-r ${gradient}`} />
               <div className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -103,7 +113,7 @@ export function AcademyJourney({ onSelectModule, onSelectLesson }: Props) {
                       <span className="text-xs font-medium">Completo</span>
                     </div>
                   )}
-                  {!isComplete && progress > 0 && (
+                  {!isComplete && modProgress > 0 && (
                     <div className="flex items-center gap-1 text-blue-600">
                       <Clock className="w-3.5 h-3.5 animate-pulse" />
                       <span className="text-xs font-medium">Em andamento</span>
@@ -111,7 +121,7 @@ export function AcademyJourney({ onSelectModule, onSelectLesson }: Props) {
                   )}
                 </div>
 
-                <Progress value={progress} className="h-2" />
+                <Progress value={modProgress} className="h-2" />
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{completedLessons}/{lessons.length} aulas</span>
