@@ -1,7 +1,7 @@
 import { mockTickets, type Ticket } from "./atendimentoData";
 import { mockComunicados, type Comunicado } from "./comunicadosData";
 import { mockOnboardings, mockMeetings, mockTasks as onboardingTasks } from "./onboardingData";
-import { mockEvents, mockCalendars, type AgendaEvent } from "./agendaData";
+import type { AgendaEvent } from "@/types/agenda";
 import { mockLeads } from "./crm";
 import { getRankingForMonth } from "./metasRankingData";
 import type { Contrato } from "@/types/contratos";
@@ -356,14 +356,10 @@ export function getDadosComerciais() {
   };
 }
 
-// Próximos eventos
-export function getProximosEventos(limit = 5): AgendaEvent[] {
-  const now = new Date();
-  const calendarIds = mockCalendars.map(c => c.id);
-  return mockEvents
-    .filter(e => calendarIds.includes(e.calendarId) && isAfter(parseISO(e.inicio), now) && e.status !== "Cancelado")
-    .sort((a, b) => parseISO(a.inicio).getTime() - parseISO(b.inicio).getTime())
-    .slice(0, limit);
+// Próximos eventos - now returns empty since mock data was removed
+// The parent (Home.tsx) fetches real events from useCalendarEvents
+export function getProximosEventos(_limit = 5): AgendaEvent[] {
+  return [];
 }
 
 // Comunicados ativos para dashboard

@@ -1,6 +1,6 @@
 // Agenda types and constants (extracted from agendaData.ts)
 import {
-  isSameDay, isSameMonth, startOfWeek, endOfWeek,
+  isSameDay, isSameMonth, startOfWeek, endOfWeek, eachDayOfInterval,
   startOfMonth, endOfMonth, parseISO, format, isWithinInterval
 } from "date-fns";
 
@@ -82,7 +82,8 @@ export interface TimeBlock {
   criadoEm: string;
 }
 
-// Helper functions (pure, no mock data)
+// ========== Pure helper functions (no mock data) ==========
+
 export function getTypeIcon(tipo: EventType): string {
   const map: Record<EventType, string> = {
     "Reunião": "Users", CS: "HeadphonesIcon", Comercial: "TrendingUp",
@@ -124,4 +125,29 @@ export function getLevelColor(nivel: CalendarLevel): string {
     colaborativa: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
   };
   return map[nivel];
+}
+
+export function getEventColor(calendarId: string, calendars: CalendarConfig[]): string {
+  return calendars.find(c => c.id === calendarId)?.cor ?? "#6B7280";
+}
+
+export function getRecurrenceLabel(r: RecurrenceType): string {
+  const map: Record<RecurrenceType, string> = {
+    none: "Nenhuma", daily: "Diária", weekly: "Semanal", biweekly: "Quinzenal", monthly: "Mensal",
+  };
+  return map[r];
+}
+
+export function getMonthDays(date: Date): Date[] {
+  const monthStart = startOfMonth(date);
+  const monthEnd = endOfMonth(date);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+  return eachDayOfInterval({ start: calStart, end: calEnd });
+}
+
+export function getPendingInvites(events: AgendaEvent[], userId: string): AgendaEvent[] {
+  return events.filter(e =>
+    e.participantes.some(p => p.userId === userId && p.status === "Pendente")
+  );
 }

@@ -4,8 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Check, X, Settings, Bell } from "lucide-react";
-import type { AgendaEvent } from "@/types/agenda";
-import { mockCalendars, getPendingInvites } from "@/mocks/agendaData";
+import type { AgendaEvent, CalendarConfig } from "@/types/agenda";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -16,15 +15,16 @@ interface AgendaSidebarProps {
   activeCalendars: string[];
   onToggleCalendar: (id: string) => void;
   onOpenConfig: () => void;
+  calendars: CalendarConfig[];
+  pendingInvites: AgendaEvent[];
 }
 
-export function AgendaSidebar({ currentDate, onDateSelect, activeCalendars, onToggleCalendar, onOpenConfig }: AgendaSidebarProps) {
+export function AgendaSidebar({ currentDate, onDateSelect, activeCalendars, onToggleCalendar, onOpenConfig, calendars, pendingInvites }: AgendaSidebarProps) {
   const { toast } = useToast();
-  const pendingInvites = getPendingInvites("u-davi");
 
-  const userCalendars = mockCalendars.filter(c => c.nivel === "usuario" || c.nivel === "unidade");
-  const redeCalendars = mockCalendars.filter(c => c.nivel === "rede");
-  const colabCalendars = mockCalendars.filter(c => c.nivel === "colaborativa");
+  const userCalendars = calendars.filter(c => c.nivel === "usuario" || c.nivel === "unidade");
+  const redeCalendars = calendars.filter(c => c.nivel === "rede");
+  const colabCalendars = calendars.filter(c => c.nivel === "colaborativa");
 
   const handleInviteAction = (event: AgendaEvent, action: "Aceito" | "Recusado") => {
     toast({
@@ -37,7 +37,6 @@ export function AgendaSidebar({ currentDate, onDateSelect, activeCalendars, onTo
     <aside className="w-[240px] border-r border-border bg-card flex flex-col shrink-0">
       <ScrollArea className="flex-1">
         <div className="p-3">
-          {/* Mini Calendar */}
           <Calendar
             mode="single"
             selected={currentDate}
@@ -46,52 +45,45 @@ export function AgendaSidebar({ currentDate, onDateSelect, activeCalendars, onTo
             locale={ptBR}
           />
 
-          {/* Meus Calendários */}
-          <div className="mt-4">
-            <div className="section-label mb-2 px-1">Meus Calendários</div>
-            {userCalendars.map(cal => (
-              <label key={cal.id} className="flex items-center gap-2 px-1 py-1.5 cursor-pointer hover:bg-secondary/50 rounded text-sm">
-                <Checkbox
-                  checked={activeCalendars.includes(cal.id)}
-                  onCheckedChange={() => onToggleCalendar(cal.id)}
-                />
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cal.cor }} />
-                <span className="truncate">{cal.nome}</span>
-              </label>
-            ))}
-          </div>
+          {userCalendars.length > 0 && (
+            <div className="mt-4">
+              <div className="section-label mb-2 px-1">Meus Calendários</div>
+              {userCalendars.map(cal => (
+                <label key={cal.id} className="flex items-center gap-2 px-1 py-1.5 cursor-pointer hover:bg-secondary/50 rounded text-sm">
+                  <Checkbox checked={activeCalendars.includes(cal.id)} onCheckedChange={() => onToggleCalendar(cal.id)} />
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cal.cor }} />
+                  <span className="truncate">{cal.nome}</span>
+                </label>
+              ))}
+            </div>
+          )}
 
-          {/* Rede */}
-          <div className="mt-4">
-            <div className="section-label mb-2 px-1">Rede</div>
-            {redeCalendars.map(cal => (
-              <label key={cal.id} className="flex items-center gap-2 px-1 py-1.5 cursor-pointer hover:bg-secondary/50 rounded text-sm">
-                <Checkbox
-                  checked={activeCalendars.includes(cal.id)}
-                  onCheckedChange={() => onToggleCalendar(cal.id)}
-                />
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cal.cor }} />
-                <span className="truncate">{cal.nome}</span>
-              </label>
-            ))}
-          </div>
+          {redeCalendars.length > 0 && (
+            <div className="mt-4">
+              <div className="section-label mb-2 px-1">Rede</div>
+              {redeCalendars.map(cal => (
+                <label key={cal.id} className="flex items-center gap-2 px-1 py-1.5 cursor-pointer hover:bg-secondary/50 rounded text-sm">
+                  <Checkbox checked={activeCalendars.includes(cal.id)} onCheckedChange={() => onToggleCalendar(cal.id)} />
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cal.cor }} />
+                  <span className="truncate">{cal.nome}</span>
+                </label>
+              ))}
+            </div>
+          )}
 
-          {/* Colaborativas */}
-          <div className="mt-4">
-            <div className="section-label mb-2 px-1">Colaborativas</div>
-            {colabCalendars.map(cal => (
-              <label key={cal.id} className="flex items-center gap-2 px-1 py-1.5 cursor-pointer hover:bg-secondary/50 rounded text-sm">
-                <Checkbox
-                  checked={activeCalendars.includes(cal.id)}
-                  onCheckedChange={() => onToggleCalendar(cal.id)}
-                />
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cal.cor }} />
-                <span className="truncate">{cal.nome}</span>
-              </label>
-            ))}
-          </div>
+          {colabCalendars.length > 0 && (
+            <div className="mt-4">
+              <div className="section-label mb-2 px-1">Colaborativas</div>
+              {colabCalendars.map(cal => (
+                <label key={cal.id} className="flex items-center gap-2 px-1 py-1.5 cursor-pointer hover:bg-secondary/50 rounded text-sm">
+                  <Checkbox checked={activeCalendars.includes(cal.id)} onCheckedChange={() => onToggleCalendar(cal.id)} />
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cal.cor }} />
+                  <span className="truncate">{cal.nome}</span>
+                </label>
+              ))}
+            </div>
+          )}
 
-          {/* Convites Pendentes */}
           {pendingInvites.length > 0 && (
             <div className="mt-4">
               <div className="section-label mb-2 px-1 flex items-center gap-1.5">

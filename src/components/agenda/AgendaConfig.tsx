@@ -7,20 +7,20 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Calendar, Cloud, Lock, Plus, Trash2, Unlock, Users } from "lucide-react";
-import type { CalendarConfig } from "@/types/agenda";
-import { mockCalendars, mockTimeBlocks, mockAgendaUsers } from "@/mocks/agendaData";
+import type { CalendarConfig, TimeBlock } from "@/types/agenda";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   onBack: () => void;
+  calendars: CalendarConfig[];
+  timeBlocks: TimeBlock[];
 }
 
 const COLORS = ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#14B8A6", "#EF4444", "#EC4899", "#6366F1"];
 
-export function AgendaConfig({ onBack }: Props) {
+export function AgendaConfig({ onBack, calendars, timeBlocks }: Props) {
   const { toast } = useToast();
   const [showNewColab, setShowNewColab] = useState(false);
   const [showNewBlock, setShowNewBlock] = useState(false);
@@ -31,11 +31,10 @@ export function AgendaConfig({ onBack }: Props) {
         <ArrowLeft className="w-4 h-4" /> Voltar
       </Button>
 
-      {/* Meus Calendários */}
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Calendar className="w-4 h-4" /> Meus Calendários</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          {mockCalendars.filter(c => c.nivel === "usuario" || c.nivel === "unidade").map(cal => (
+          {calendars.filter(c => c.nivel === "usuario" || c.nivel === "unidade").map(cal => (
             <div key={cal.id} className="flex items-center gap-4 p-3 bg-secondary/20 rounded-lg">
               <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: cal.cor }} />
               <div className="flex-1 min-w-0">
@@ -52,7 +51,6 @@ export function AgendaConfig({ onBack }: Props) {
         </CardContent>
       </Card>
 
-      {/* Agendas Colaborativas */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -76,7 +74,7 @@ export function AgendaConfig({ onBack }: Props) {
               </div>
             </div>
           )}
-          {mockCalendars.filter(c => c.nivel === "colaborativa").map(cal => (
+          {calendars.filter(c => c.nivel === "colaborativa").map(cal => (
             <div key={cal.id} className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg">
               <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: cal.cor }} />
               <div className="flex-1">
@@ -93,7 +91,6 @@ export function AgendaConfig({ onBack }: Props) {
         </CardContent>
       </Card>
 
-      {/* Bloqueios de Horário */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -126,7 +123,7 @@ export function AgendaConfig({ onBack }: Props) {
               </div>
             </div>
           )}
-          {mockTimeBlocks.map(block => (
+          {timeBlocks.map(block => (
             <div key={block.id} className={`flex items-center gap-3 p-3 rounded-lg border border-dashed ${
               block.tipo === "disponivel" ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300" : "bg-red-50/50 dark:bg-red-950/20 border-red-300"
             }`}>
@@ -141,7 +138,6 @@ export function AgendaConfig({ onBack }: Props) {
         </CardContent>
       </Card>
 
-      {/* Google Calendar */}
       <Card className="bg-muted/30">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2"><Cloud className="w-4 h-4" /> Google Calendar</CardTitle>

@@ -1,23 +1,25 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import type { AgendaEvent } from "@/types/agenda";
-import { mockEvents, getEventColor, getStatusColor, getLevelLabel } from "@/mocks/agendaData";
-import { format, parseISO, addDays, isSameDay, isAfter, isBefore, startOfDay } from "date-fns";
+import type { AgendaEvent, CalendarConfig } from "@/types/agenda";
+import { getEventColor, getStatusColor, getLevelLabel } from "@/types/agenda";
+import { format, parseISO, addDays, isSameDay, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Users, MapPin, Video, Clock } from "lucide-react";
 
 interface Props {
   currentDate: Date;
   activeCalendars: string[];
+  events: AgendaEvent[];
+  calendars: CalendarConfig[];
   onSelectEvent: (id: string) => void;
 }
 
-export function AgendaListView({ currentDate, activeCalendars, onSelectEvent }: Props) {
+export function AgendaListView({ currentDate, activeCalendars, events, calendars, onSelectEvent }: Props) {
   const grouped = useMemo(() => {
     const start = startOfDay(currentDate);
     const end = addDays(start, 14);
-    const filtered = mockEvents
+    const filtered = events
       .filter(e => activeCalendars.includes(e.calendarId))
       .filter(e => {
         const d = parseISO(e.inicio);
@@ -33,7 +35,7 @@ export function AgendaListView({ currentDate, activeCalendars, onSelectEvent }: 
       else groups.push({ date: d, events: [ev] });
     });
     return groups;
-  }, [currentDate, activeCalendars]);
+  }, [currentDate, activeCalendars, events]);
 
   if (grouped.length === 0) {
     return (
@@ -45,7 +47,7 @@ export function AgendaListView({ currentDate, activeCalendars, onSelectEvent }: 
 
   return (
     <div className="p-4 space-y-6 overflow-auto h-full">
-      {grouped.map(({ date, events }) => (
+      {grouped.map(({ date, events: dayEvents }) => (
         <div key={date.toISOString()}>
           <div className="flex items-center gap-2 mb-3">
             <div className={`text-sm font-semibold ${isSameDay(date, new Date()) ? "text-primary" : ""}`}>
@@ -54,11 +56,11 @@ export function AgendaListView({ currentDate, activeCalendars, onSelectEvent }: 
             {isSameDay(date, new Date()) && <Badge variant="outline" className="text-[10px]">Hoje</Badge>}
           </div>
           <div className="space-y-2">
-            {events.map(ev => (
+            {dayEvents.map(ev => (
               <Card
                 key={ev.id}
                 className="p-3 cursor-pointer hover:shadow-md transition-shadow border-l-4"
-                style={{ borderLeftColor: getEventColor(ev.calendarId) }}
+                style={{ borderLeftColor: getEventColor(ev.calendarId, calendars) }}
                 onClick={() => onSelectEvent(ev.id)}
               >
                 <div className="flex items-start justify-between gap-3">
