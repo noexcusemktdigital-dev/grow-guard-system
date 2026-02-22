@@ -1,73 +1,106 @@
 
-# Contatos dentro do CRM + Importacao CSV com Padrao de Planilha
+
+# Acoes em Massa no CRM e Contatos + Filtros Avancados
 
 ## Resumo
 
-Integrar os Contatos como uma aba dentro do CRM (em vez de pagina separada), transformar o botao "Novo Lead" em um menu com opcoes (criar lead ou importar planilha), e criar um sistema completo de importacao CSV com modelo padrao para download, preview com mapeamento de colunas e confirmacao antes de importar.
+Adicionar selecao multipla com checkbox e acoes em massa tanto na aba Pipeline (leads) quanto na aba Contatos do CRM. Tambem expandir os filtros e opcoes de edicao nos contatos.
 
 ---
 
-## 1. Contatos como aba dentro do CRM
+## 1. Acoes em Massa nos Leads (Pipeline)
 
-Adicionar um estado `activeTab` (`"pipeline"` | `"contatos"`) no `ClienteCRM.tsx`. Um botao "Contatos" em destaque no header alterna para a visualizacao de contatos.
+### Selecao
 
-**Aba Contatos inclui:**
-- Busca por nome, email, telefone, empresa
-- Filtros em Popover (tags, origem, empresa)
-- Lista de contatos com avatar, dados, badge de leads vinculados
-- Criar/editar/excluir contatos (Dialog e Sheet)
-- Botao "Criar Lead" a partir de um contato selecionado
-- Importacao CSV de contatos
+- Adicionar um estado `selectedLeadIds: Set<string>` no `ClienteCRM.tsx`
+- Na view **lista**: adicionar coluna de Checkbox em cada linha + checkbox "selecionar todos" no header
+- Na view **kanban**: adicionar checkbox discreto no canto superior esquerdo de cada card de lead (visivel on hover ou sempre quando ha selecao ativa)
 
-A logica atual do `ClienteContatos.tsx` sera absorvida pelo `ClienteCRM.tsx`.
+### Barra de Acoes em Massa
 
----
+Quando ha leads selecionados, exibir uma barra fixa no topo (sticky) com:
+- Contador: "X leads selecionados"
+- **Mover etapa** -- Select para mover todos os selecionados para uma etapa
+- **Atribuir responsavel** -- Select com membros da equipe
+- **Adicionar tag** -- Input para adicionar tag em massa
+- **Marcar como perdido** -- Botao com confirmacao
+- **Excluir** -- Botao com confirmacao (AlertDialog)
+- **Limpar selecao** -- Botao X
 
-## 2. Botao "Novo Lead" com Menu
+### Hook `useCrmLeadMutations`
 
-Substituir o botao simples por um `DropdownMenu` com duas opcoes:
-- **Criar Lead** -- abre o dialog `CrmNewLeadDialog`
-- **Importar Planilha** -- abre dialog de importacao CSV de leads
+Adicionar uma mutation `bulkUpdateLeads` que recebe um array de IDs e os campos a atualizar. Usa `supabase.from("crm_leads").update(fields).in("id", ids)`.
 
----
-
-## 3. Importacao CSV com Padrao de Planilha
-
-### Modelo padrao de planilha
-
-Gerar um CSV padrao com as colunas esperadas e uma linha de exemplo. O usuario pode baixar esse modelo clicando em "Baixar modelo".
-
-**Colunas do modelo:**
-```
-nome,email,telefone,empresa,cargo,origem,tags,notas
-João Silva,joao@email.com,11999999999,Empresa XYZ,Diretor,Indicação,"tag1, tag2",Observações aqui
-```
-
-O download e feito via `Blob` + `URL.createObjectURL` no frontend, sem necessidade de backend.
-
-### Fluxo de importacao
-
-1. **Botao "Baixar modelo"** -- gera e baixa o CSV padrao
-2. **Upload do arquivo** -- usuario seleciona o CSV
-3. **Preview com mapeamento** -- mostra uma tabela com as primeiras 5 linhas do CSV, mapeando automaticamente colunas reconhecidas (nome, name, email, telefone, phone, empresa, company, etc.)
-4. **Confirmacao** -- mostra resumo: "X contatos serao importados" com os dados formatados
-5. **Importar** -- executa a importacao em batch
-6. **Resultado** -- mostra quantos foram importados com sucesso e quantos tiveram erro
-
-### Dialog de importacao
-
-Um Dialog dedicado `CrmCsvImportDialog` que encapsula todo o fluxo:
-- Passo 1: Instrucoes + botao "Baixar modelo" + area de upload
-- Passo 2: Preview dos dados com tabela (primeiras 5 linhas)
-- Passo 3: Botao "Importar X contatos" com loading
+Adicionar uma mutation `bulkDeleteLeads` que recebe um array de IDs. Usa `supabase.from("crm_leads").delete().in("id", ids)`.
 
 ---
 
-## 4. Limpeza
+## 2. Acoes em Massa nos Contatos
 
-- Remover item "Contatos" do `ClienteSidebar.tsx`
-- Remover rota `/cliente/contatos` do `App.tsx`
-- Deletar `src/pages/cliente/ClienteContatos.tsx` (funcionalidade movida para CRM)
+### Selecao
+
+- Adicionar estado `selectedContactIds: Set<string>` no `CrmContactsView.tsx`
+- Adicionar checkbox em cada linha da lista de contatos + checkbox "selecionar todos" no header
+
+### Barra de Acoes em Massa
+
+Quando ha contatos selecionados, exibir barra com:
+- Contador: "X contatos selecionados"
+- **Adicionar tag** -- Input para adicionar tag em massa
+- **Alterar origem** -- Input para definir origem em massa
+- **Alterar empresa** -- Input para definir empresa em massa
+- **Criar leads** -- Criar um lead para cada contato selecionado (com Dialog de confirmacao mostrando em qual funil/etapa)
+- **Excluir** -- Botao com confirmacao
+- **Limpar selecao** -- Botao X
+
+### Hook `useCrmContactMutations`
+
+Adicionar mutations:
+- `bulkUpdateContacts(ids: string[], fields)` -- update em massa
+- `bulkDeleteContacts(ids: string[])` -- delete em massa
+
+---
+
+## 3. Filtros Avancados nos Contatos
+
+Expandir o Popover de filtros em `CrmContactsView.tsx` para incluir:
+
+- **Tag** (ja existe)
+- **Origem** (ja existe)
+- **Empresa** (ja existe)
+- **Cargo** -- Select com cargos unicos extraidos dos contatos
+- **Periodo de criacao** -- Inputs date "De" e "Ate"
+- **Com leads vinculados** -- Toggle sim/nao/todos (filtra contatos que tem ou nao leads)
+- Badge com contagem de filtros ativos
+- Botao "Limpar tudo"
+
+---
+
+## 4. Mais Opcoes de Edicao nos Contatos
+
+### Sheet de Edicao Expandido
+
+Adicionar ao `ContactForm` e ao Sheet de edicao:
+- Campo **CPF/CNPJ** (novo campo `document` na tabela -- requer migration)
+- Campo **Endereco** (novo campo `address` na tabela -- requer migration)
+- Campo **Data de nascimento** (novo campo `birth_date` na tabela -- requer migration)
+- Separar o formulario em secoes visuais: "Dados Pessoais", "Dados Profissionais", "Informacoes Adicionais"
+
+### Migration
+
+Adicionar colunas na tabela `crm_contacts`:
+- `document` text nullable (CPF/CNPJ)
+- `address` text nullable
+- `birth_date` date nullable
+
+### Acoes individuais no contato (menu de contexto)
+
+Adicionar um menu de 3 pontos em cada contato na lista com:
+- Editar
+- Criar Lead
+- Copiar telefone
+- Copiar email
+- Excluir
 
 ---
 
@@ -75,16 +108,19 @@ Um Dialog dedicado `CrmCsvImportDialog` que encapsula todo o fluxo:
 
 | Acao | Arquivo |
 |------|---------|
-| Reescrever | `src/pages/cliente/ClienteCRM.tsx` -- adicionar aba contatos, menu no botao novo lead, dialog de importacao CSV |
-| Editar | `src/components/ClienteSidebar.tsx` -- remover item "Contatos" |
-| Editar | `src/App.tsx` -- remover rota `/cliente/contatos` |
-| Deletar | `src/pages/cliente/ClienteContatos.tsx` |
+| Migration | Adicionar `document`, `address`, `birth_date` em `crm_contacts` |
+| Editar | `src/hooks/useCrmContacts.ts` -- adicionar `bulkUpdateContacts`, `bulkDeleteContacts`, atualizar interface |
+| Editar | `src/hooks/useCrmLeads.ts` -- adicionar `bulkUpdateLeads`, `bulkDeleteLeads` |
+| Reescrever | `src/components/crm/CrmContactsView.tsx` -- checkbox, barra de acoes em massa, filtros avancados, formulario expandido, menu de contexto |
+| Editar | `src/pages/cliente/ClienteCRM.tsx` -- checkbox nos leads (kanban + lista), barra de acoes em massa para leads |
 
 ## Detalhes Tecnicos
 
-- O modelo CSV e gerado com `new Blob([csvContent], { type: "text/csv" })` e baixado via `<a>` temporario
-- O mapeamento de colunas aceita nomes em portugues e ingles: nome/name, telefone/phone, empresa/company, cargo/position, origem/source
-- O preview mostra uma mini-tabela HTML com as 5 primeiras linhas e destaca colunas reconhecidas em verde
-- A importacao reutiliza `useCrmContactMutations().createContact` para cada linha
-- O estado `activeTab` controla se o CRM mostra pipeline ou contatos; o header muda conforme a aba ativa
-- Os filtros de contatos ficam em um Popover independente dos filtros de leads
+- Bulk update usa `supabase.from("table").update(fields).in("id", ids)` -- uma unica query
+- Bulk delete usa `supabase.from("table").delete().in("id", ids)`
+- A barra de acoes em massa usa `position: sticky` com `z-index` alto para ficar visivel ao rolar
+- O checkbox "selecionar todos" seleciona apenas os itens filtrados/visiveis, nao todos os dados
+- As acoes em massa usam `AlertDialog` para confirmacao antes de excluir ou alterar em massa
+- Os novos campos `document`, `address`, `birth_date` sao nullable para compatibilidade
+- O filtro "com leads vinculados" faz join local usando o `leadsCountByContact` ja computado
+
