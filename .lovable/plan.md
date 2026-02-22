@@ -1,126 +1,173 @@
 
 
-# Acoes em Massa no CRM e Contatos + Filtros Avancados
+# Propostas/Produtos no CRM + Dashboard Unificado
 
 ## Resumo
 
-Adicionar selecao multipla com checkbox e acoes em massa tanto na aba Pipeline (leads) quanto na aba Contatos do CRM. Tambem expandir os filtros e opcoes de edicao nos contatos.
+Duas grandes mudancas: (1) criar um sistema completo de propostas e negociacao dentro do CRM com cadastro de produtos e empresas parceiras, e (2) transformar a pagina "Relatorios" em um "Dashboard" com abas para CRM, Chat e Agentes IA.
 
 ---
 
-## 1. Acoes em Massa nos Leads (Pipeline)
+## Parte 1: Propostas e Negociacao no CRM
 
-### Selecao
+### 1.1 Nova tabela `crm_products`
 
-- Adicionar um estado `selectedLeadIds: Set<string>` no `ClienteCRM.tsx`
-- Na view **lista**: adicionar coluna de Checkbox em cada linha + checkbox "selecionar todos" no header
-- Na view **kanban**: adicionar checkbox discreto no canto superior esquerdo de cada card de lead (visivel on hover ou sempre quando ha selecao ativa)
+Cadastro de produtos/servicos que podem ser adicionados a propostas.
 
-### Barra de Acoes em Massa
+Colunas:
+- `id` uuid PK
+- `organization_id` uuid NOT NULL (FK organizations)
+- `name` text NOT NULL
+- `description` text nullable
+- `price` numeric default 0
+- `unit` text default 'un' (un, hora, mes, projeto)
+- `category` text nullable
+- `is_active` boolean default true
+- `created_at`, `updated_at` timestamps
 
-Quando ha leads selecionados, exibir uma barra fixa no topo (sticky) com:
-- Contador: "X leads selecionados"
-- **Mover etapa** -- Select para mover todos os selecionados para uma etapa
-- **Atribuir responsavel** -- Select com membros da equipe
-- **Adicionar tag** -- Input para adicionar tag em massa
-- **Marcar como perdido** -- Botao com confirmacao
-- **Excluir** -- Botao com confirmacao (AlertDialog)
-- **Limpar selecao** -- Botao X
+RLS: membros podem SELECT, admins (super_admin, admin, cliente_admin) podem ALL.
 
-### Hook `useCrmLeadMutations`
+### 1.2 Nova tabela `crm_partner_companies`
 
-Adicionar uma mutation `bulkUpdateLeads` que recebe um array de IDs e os campos a atualizar. Usa `supabase.from("crm_leads").update(fields).in("id", ids)`.
+Empresas parceiras que podem ser vinculadas a propostas.
 
-Adicionar uma mutation `bulkDeleteLeads` que recebe um array de IDs. Usa `supabase.from("crm_leads").delete().in("id", ids)`.
+Colunas:
+- `id` uuid PK
+- `organization_id` uuid NOT NULL
+- `name` text NOT NULL
+- `document` text nullable (CNPJ)
+- `contact_name` text nullable
+- `contact_email` text nullable
+- `contact_phone` text nullable
+- `notes` text nullable
+- `created_at`, `updated_at` timestamps
+
+RLS: membros podem SELECT/INSERT/UPDATE, admins podem DELETE.
+
+### 1.3 Alterar tabela `crm_proposals`
+
+Adicionar colunas:
+- `items` jsonb default '[]' -- lista de produtos: `[{product_id, name, quantity, unit_price, discount, total}]`
+- `partner_company_id` uuid nullable (FK crm_partner_companies)
+- `notes` text nullable -- observacoes internas
+- `valid_until` date nullable -- validade da proposta
+- `payment_terms` text nullable -- condicoes de pagamento
+- `discount_total` numeric default 0
+
+### 1.4 Nova aba "Propostas" no Lead Detail Sheet
+
+No `CrmLeadDetailSheet.tsx`, adicionar uma 5a aba "Propostas" (ao lado de Dados, Atividades, Tarefas, WhatsApp) com:
+
+- Lista de propostas vinculadas ao lead
+- Badge de status colorido (Rascunho, Enviada, Aceita, Rejeitada)
+- Botao "+ Nova Proposta" que abre um Dialog/Sheet com:
+  - Titulo da proposta
+  - Empresa parceira (select com busca)
+  - Tabela de itens: selecionar produto do catalogo, quantidade, preco unitario, desconto -- calculo automatico do total por linha
+  - Botao "Adicionar item" para mais linhas
+  - Resumo: subtotal, desconto total, valor final
+  - Condicoes de pagamento (texto livre)
+  - Validade da proposta (date)
+  - Observacoes internas
+- Acoes por proposta: Editar, Enviar (muda status), Marcar como Aceita, Marcar como Rejeitada, Duplicar, Excluir
+
+### 1.5 Gestao de Produtos (dentro do CRM Config)
+
+No `CrmConfigPage.tsx`, adicionar uma nova aba "Produtos" com:
+- Lista de produtos cadastrados com nome, preco, unidade, categoria
+- Busca e filtro por categoria
+- Dialog para criar/editar produto
+- Toggle ativo/inativo
+- Importacao simples (manual)
+
+### 1.6 Gestao de Empresas Parceiras (dentro do CRM Config)
+
+No `CrmConfigPage.tsx`, adicionar uma nova aba "Parceiros" com:
+- Lista de empresas parceiras
+- Dialog para criar/editar
+- Campos: nome, CNPJ, contato, email, telefone, notas
+
+### 1.7 Hook `useCrmProposals`
+
+Novo hook com:
+- `useCrmProposals(leadId?)` -- lista propostas (filtro opcional por lead)
+- `useCrmProposalMutations()` -- create, update, delete, duplicate
+
+### 1.8 Hook `useCrmProducts`
+
+Novo hook com:
+- `useCrmProducts()` -- lista todos os produtos ativos
+- `useCrmProductMutations()` -- CRUD
+
+### 1.9 Hook `useCrmPartners`
+
+Novo hook com:
+- `useCrmPartners()` -- lista parceiros
+- `useCrmPartnerMutations()` -- CRUD
 
 ---
 
-## 2. Acoes em Massa nos Contatos
+## Parte 2: Dashboard Unificado (substituir Relatorios)
 
-### Selecao
+### 2.1 Renomear pagina
 
-- Adicionar estado `selectedContactIds: Set<string>` no `CrmContactsView.tsx`
-- Adicionar checkbox em cada linha da lista de contatos + checkbox "selecionar todos" no header
+- Mudar `ClienteRelatorios.tsx` para `ClienteDashboard.tsx`
+- Atualizar sidebar: "Relatorios" -> "Dashboard" com mesmo icone `BarChart3`
+- Atualizar rota de `/cliente/relatorios` para `/cliente/dashboard`
 
-### Barra de Acoes em Massa
+### 2.2 Abas do Dashboard
 
-Quando ha contatos selecionados, exibir barra com:
-- Contador: "X contatos selecionados"
-- **Adicionar tag** -- Input para adicionar tag em massa
-- **Alterar origem** -- Input para definir origem em massa
-- **Alterar empresa** -- Input para definir empresa em massa
-- **Criar leads** -- Criar um lead para cada contato selecionado (com Dialog de confirmacao mostrando em qual funil/etapa)
-- **Excluir** -- Botao com confirmacao
-- **Limpar selecao** -- Botao X
+Tres abas principais usando `Tabs`:
 
-### Hook `useCrmContactMutations`
+**Aba "CRM" (padrao):**
+- KPIs: Receita total, Leads captados, Taxa de conversao, Ticket medio (ja existem)
+- Grafico radial de conversao (ja existe)
+- Grafico de barras: leads por etapa do funil
+- Grafico de barras: leads por origem
+- Grafico de linha: evolucao de leads no tempo (7d/30d/90d)
+- Tabela: top leads por valor
+- Card: propostas em aberto (quantidade e valor total)
 
-Adicionar mutations:
-- `bulkUpdateContacts(ids: string[], fields)` -- update em massa
-- `bulkDeleteContacts(ids: string[])` -- delete em massa
+**Aba "Chat":**
+- KPIs: Total de conversas, Mensagens hoje, Tempo medio de resposta, Conversas ativas
+- Dados vindos de `whatsapp_contacts` e `whatsapp_messages`
+- Grafico: volume de mensagens por dia
+- Lista: ultimas conversas
 
----
+**Aba "Agentes IA":**
+- KPIs: Total de agentes, Agentes ativos, Mensagens processadas pela IA, Tokens utilizados
+- Dados vindos de `client_ai_agents` e `ai_conversation_logs`
+- Grafico: uso por agente
+- Lista: ultimos logs de conversa IA
 
-## 3. Filtros Avancados nos Contatos
+### 2.3 Exportacao de Relatorios
 
-Expandir o Popover de filtros em `CrmContactsView.tsx` para incluir:
-
-- **Tag** (ja existe)
-- **Origem** (ja existe)
-- **Empresa** (ja existe)
-- **Cargo** -- Select com cargos unicos extraidos dos contatos
-- **Periodo de criacao** -- Inputs date "De" e "Ate"
-- **Com leads vinculados** -- Toggle sim/nao/todos (filtra contatos que tem ou nao leads)
-- Badge com contagem de filtros ativos
-- Botao "Limpar tudo"
+Em cada aba, botao "Exportar" que gera um CSV com os dados filtrados pelo periodo selecionado.
 
 ---
 
-## 4. Mais Opcoes de Edicao nos Contatos
-
-### Sheet de Edicao Expandido
-
-Adicionar ao `ContactForm` e ao Sheet de edicao:
-- Campo **CPF/CNPJ** (novo campo `document` na tabela -- requer migration)
-- Campo **Endereco** (novo campo `address` na tabela -- requer migration)
-- Campo **Data de nascimento** (novo campo `birth_date` na tabela -- requer migration)
-- Separar o formulario em secoes visuais: "Dados Pessoais", "Dados Profissionais", "Informacoes Adicionais"
-
-### Migration
-
-Adicionar colunas na tabela `crm_contacts`:
-- `document` text nullable (CPF/CNPJ)
-- `address` text nullable
-- `birth_date` date nullable
-
-### Acoes individuais no contato (menu de contexto)
-
-Adicionar um menu de 3 pontos em cada contato na lista com:
-- Editar
-- Criar Lead
-- Copiar telefone
-- Copiar email
-- Excluir
-
----
-
-## Arquivos a editar
+## Arquivos a criar/editar
 
 | Acao | Arquivo |
 |------|---------|
-| Migration | Adicionar `document`, `address`, `birth_date` em `crm_contacts` |
-| Editar | `src/hooks/useCrmContacts.ts` -- adicionar `bulkUpdateContacts`, `bulkDeleteContacts`, atualizar interface |
-| Editar | `src/hooks/useCrmLeads.ts` -- adicionar `bulkUpdateLeads`, `bulkDeleteLeads` |
-| Reescrever | `src/components/crm/CrmContactsView.tsx` -- checkbox, barra de acoes em massa, filtros avancados, formulario expandido, menu de contexto |
-| Editar | `src/pages/cliente/ClienteCRM.tsx` -- checkbox nos leads (kanban + lista), barra de acoes em massa para leads |
+| Migration | Criar `crm_products`, `crm_partner_companies`; alterar `crm_proposals` |
+| Criar | `src/hooks/useCrmProposals.ts` |
+| Criar | `src/hooks/useCrmProducts.ts` |
+| Criar | `src/hooks/useCrmPartners.ts` |
+| Reescrever | `src/pages/cliente/ClienteRelatorios.tsx` -> `src/pages/cliente/ClienteDashboard.tsx` |
+| Editar | `src/components/crm/CrmLeadDetailSheet.tsx` -- adicionar aba Propostas |
+| Editar | `src/components/crm/CrmConfigPage.tsx` -- adicionar abas Produtos e Parceiros |
+| Editar | `src/components/ClienteSidebar.tsx` -- renomear Relatorios para Dashboard |
+| Editar | `src/App.tsx` -- atualizar rota |
+| Editar | `src/hooks/useClienteCrm.ts` -- exportar novos hooks |
 
 ## Detalhes Tecnicos
 
-- Bulk update usa `supabase.from("table").update(fields).in("id", ids)` -- uma unica query
-- Bulk delete usa `supabase.from("table").delete().in("id", ids)`
-- A barra de acoes em massa usa `position: sticky` com `z-index` alto para ficar visivel ao rolar
-- O checkbox "selecionar todos" seleciona apenas os itens filtrados/visiveis, nao todos os dados
-- As acoes em massa usam `AlertDialog` para confirmacao antes de excluir ou alterar em massa
-- Os novos campos `document`, `address`, `birth_date` sao nullable para compatibilidade
-- O filtro "com leads vinculados" faz join local usando o `leadsCountByContact` ja computado
+- A tabela `crm_proposals` ja existe com campos basicos (`title`, `value`, `status`, `content`, `lead_id`). As novas colunas (`items`, `partner_company_id`, `notes`, `valid_until`, `payment_terms`, `discount_total`) serao adicionadas via migration
+- O campo `items` e um array jsonb onde cada item referencia um `product_id` mas tambem salva `name` e `unit_price` para historico (snapshot do preco no momento da proposta)
+- O calculo do `value` total da proposta e feito automaticamente somando os itens menos o desconto
+- Os dados de Chat e Agentes IA no Dashboard usam as tabelas `whatsapp_contacts`, `whatsapp_messages`, `client_ai_agents` e `ai_conversation_logs` que ja existem
+- As queries de mensagens usam cast `as any` no supabase client (padrao ja estabelecido em `useWhatsApp.ts`)
+- O CSV de exportacao e gerado no frontend com `Blob` + download (mesmo padrao do import de contatos)
+- RLS das novas tabelas segue o padrao multi-tenant com `is_member_of_org` e `has_role`
 
