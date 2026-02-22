@@ -25,7 +25,7 @@ const SaasBrandingPanel = () => {
           {/* Title */}
           <div className="pt-4 pb-6 text-center flex flex-col items-center shrink-0">
             <h2 className="text-3xl xl:text-4xl font-black tracking-tight text-black leading-tight max-w-lg">
-              Plataforma completa de marketing e vendas para acelerar seus resultados
+              Plataforma <span className="text-[hsl(355,78%,50%)]">completa de marketing e vendas</span> para acelerar seus resultados
             </h2>
           </div>
 
