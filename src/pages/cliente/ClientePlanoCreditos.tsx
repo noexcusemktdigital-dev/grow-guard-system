@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -6,33 +5,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
-import { mockPlans, getCreditConsumptionByModule } from "@/data/clienteData";
+
+const PLANS = [
+  { id: "starter", name: "Starter", price: 197, credits: 500, maxUsers: 2, popular: false, features: ["CRM completo", "500 créditos/mês", "2 usuários", "Suporte por chat"] },
+  { id: "growth", name: "Growth", price: 497, credits: 2000, maxUsers: 5, popular: true, features: ["Tudo do Starter", "2.000 créditos/mês", "5 usuários", "Agentes de IA", "Disparos WhatsApp"] },
+  { id: "scale", name: "Scale", price: 997, credits: 5000, maxUsers: 15, popular: false, features: ["Tudo do Growth", "5.000 créditos/mês", "15 usuários", "API avançada", "Gerente dedicado"] },
+];
 
 export default function ClientePlanoCreditos() {
   const { data: wallet, isLoading: walletLoading } = useClienteWallet();
   const { data: subscription, isLoading: subLoading } = useClienteSubscription();
   const isLoading = walletLoading || subLoading;
 
-  const pieData = getCreditConsumptionByModule();
-
-  // Map DB data or use defaults
   const balance = wallet?.balance ?? 0;
-  const totalIncluded = 2000; // from plan
-  const creditPercent = totalIncluded > 0 ? (balance / totalIncluded) * 100 : 0;
-
   const currentPlanSlug = subscription?.plan;
-  const planDetails = mockPlans.find(p => p.id === currentPlanSlug);
-  
+  const planDetails = PLANS.find(p => p.id === currentPlanSlug);
+  const totalIncluded = planDetails?.credits ?? 2000;
+  const creditPercent = totalIncluded > 0 ? Math.min((balance / totalIncluded) * 100, 100) : 0;
   const planName = planDetails?.name ?? "Sem plano";
-  const planStatus = subscription?.status ?? "inactive";
   const planPrice = planDetails?.price ?? 0;
-  const renewalDate = subscription?.expires_at;
-
-  const currentPlanId = currentPlanSlug ?? "";
 
   if (isLoading) {
     return (
@@ -50,15 +44,14 @@ export default function ClientePlanoCreditos() {
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader title="Plano & Créditos" subtitle="Gerencie sua assinatura e créditos" icon={<CreditCard className="w-5 h-5 text-primary" />} />
 
-      {/* Row 1: Plan Status + Wallet */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Plan Status */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Status do Plano</CardTitle>
-              <Badge variant={planStatus === "trial" ? "outline" : "default"} className="gap-1">
-                {planStatus === "trial" ? "🧪 Trial" : planName}
+              <Badge variant={subscription?.status === "trial" ? "outline" : "default"} className="gap-1">
+                {subscription?.status === "trial" ? "🧪 Trial" : planName}
               </Badge>
             </div>
           </CardHeader>
@@ -67,10 +60,10 @@ export default function ClientePlanoCreditos() {
               <span className="text-muted-foreground">Plano ativo</span>
               <span className="font-semibold text-foreground">{planName} — R$ {planPrice}/mês</span>
             </div>
-            {renewalDate && (
+            {subscription?.expires_at && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Renovação</span>
-                <span className="text-foreground">{new Date(renewalDate).toLocaleDateString("pt-BR")}</span>
+                <span className="text-foreground">{new Date(subscription.expires_at).toLocaleDateString("pt-BR")}</span>
               </div>
             )}
             <Button className="w-full gap-2" onClick={() => toast.success("Redirecionando para upgrade...")}>
@@ -103,47 +96,12 @@ export default function ClientePlanoCreditos() {
         </Card>
       </div>
 
-      {/* Row 2: Consumption Chart */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Consumo por Módulo</CardTitle>
-          <CardDescription>Distribuição de créditos consumidos este mês</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="w-48 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3}>
-                    {pieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => `${v} créditos`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 grid grid-cols-2 gap-3">
-              {pieData.map((item) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.fill }} />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.value} créditos</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Row 3: Plans */}
+      {/* Plans */}
       <div>
         <h2 className="text-xl font-semibold text-foreground mb-4">Planos Disponíveis</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {mockPlans.map((plan) => {
-            const isCurrent = plan.id === currentPlanId;
+          {PLANS.map((plan) => {
+            const isCurrent = plan.id === currentPlanSlug;
             return (
               <Card key={plan.id} className={`relative ${plan.popular ? "border-primary ring-2 ring-primary/20" : ""} ${isCurrent ? "bg-primary/5" : ""}`}>
                 {plan.popular && (
