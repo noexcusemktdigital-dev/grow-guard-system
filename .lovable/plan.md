@@ -1,55 +1,80 @@
-# Plan — Estado Atual e Proximos Blocos
 
-## Blocos Concluidos (1-7)
 
-- **Bloco 1-3**: Paginas da Franqueadora migradas para hooks reais (`useFinance`, `useContracts`, `useUnits`, `useGoals`, `useMarketing`, `usePermissions`, `useOnboarding`, `useSupportTickets`, `useAnnouncements`, `useCrmLeads`, `useCrmFunnels`, `useCrmActivities`, `useCrmTasks`, `useCalendar`, `useAcademy`, `useDailyMessages`)
-- **Bloco 4**: Paginas do Franqueado migradas para hooks reais
-- **Bloco 5**: Paginas do Cliente migradas para hooks reais (`useClienteSubscription`, `useClienteWallet`, `useClienteContent`, `useClienteCrm`, `useClienteDispatches`, `useClienteScripts`)
-- **Bloco 6**: `FeatureGateContext.tsx` e `ClienteSidebar.tsx` migrados para hooks reais; tipos movidos para `src/types/`
-- **Bloco 7**: Diretorio `src/data/` eliminado; todos os imports migrados para `src/mocks/`; 11 mocks nao usados deletados
+# Agentes de IA -- CRUD Completo
 
-## Estado Atual
+## Resumo
 
-- 25 hooks em `src/hooks/` conectados ao banco de dados
-- 14 tipos em `src/types/`
-- 14 arquivos mock restantes em `src/mocks/` (usados por 35 componentes)
-- 0 imports de `@/data/`
-- Helpers em `src/lib/helpers/` (agenda, academy, crm)
+Criar o modulo de Agentes de IA para o cliente SaaS, permitindo criar, editar, visualizar e excluir agentes inteligentes. Cada agente tera configuracoes organizadas em 6 abas: Identidade, Persona, Base de Conhecimento, Engenharia de Prompt, Simulador e Diagnostico.
 
-## Proximos Blocos
+## O que sera construido
 
-### Bloco 8 — Migrar componentes filhos para dados reais (por dominio)
+### 1. Tabela no banco de dados
 
-Substituir imports de `@/mocks/*` por hooks reais nos ~35 componentes restantes. Execucao em lotes:
+Criar a tabela `client_ai_agents` com os campos:
 
-- **Lote 1**: CRM (CrmLeadDetail, CrmKanban, CrmList, CrmAlerts, CrmConfig) — usar `useCrmLeads`, `useCrmActivities`, `useCrmTasks`, `useCrmFunnels`
-- **Lote 2**: Academy (AcademyAdmin, AcademyLesson, AcademyModuleDetail, AcademyCertificates, AcademyQuiz, AcademyReports, AcademyJourney, AcademyModules) — usar `useAcademy`
-- **Lote 3**: Agenda (AgendaCalendar, AgendaEventForm, AgendaEventDetail, AgendaListView, AgendaSidebar, AgendaConfig) — usar `useCalendar`
-- **Lote 4**: Atendimento (AtendimentoKanban, AtendimentoList, AtendimentoDetail, AtendimentoConfig) — usar `useSupportTickets`
-- **Lote 5**: Comunicados, Home, Metas, Marketing, Onboarding, Unidades, Matriz — usar hooks existentes
-- **Lote 6**: Limpar helpers em `src/lib/helpers/` que dependem de mocks
+- `id` (uuid, PK)
+- `organization_id` (uuid, FK para organizations)
+- `created_by` (uuid)
+- `name` (text) -- nome do agente
+- `avatar_url` (text, nullable) -- foto/icone
+- `status` (text, default 'draft') -- draft, active, paused
+- `description` (text, nullable)
+- `persona` (jsonb, default '{}') -- tom de voz, estilo, personalidade
+- `knowledge_base` (jsonb, default '[]') -- documentos/URLs de referencia
+- `prompt_config` (jsonb, default '{}') -- system prompt, temperatura, modelo
+- `channel` (text, default 'whatsapp') -- canal onde atua
+- `tags` (text[], default '{}')
+- `created_at`, `updated_at` (timestamps)
 
-### Bloco 9 — Deletar todos os mocks restantes
+RLS: membros da organizacao podem CRUD; isolamento por `organization_id` via `is_member_of_org`.
 
-Apos Bloco 8, os 14 arquivos em `src/mocks/` poderao ser deletados.
+### 2. Hook `useClienteAgents`
 
-### Bloco 10 — Revisao de Seguranca (RLS)
+- `useClienteAgents()` -- lista todos os agentes da organizacao
+- `useClienteAgentById(id)` -- agente individual para edicao
+- `useClienteAgentMutations()` -- create, update, delete
 
-Revisar todas as tabelas do banco para garantir que RLS esta ativo e as policies estao corretas.
+Seguindo o padrao existente em `useClienteContent.ts`.
 
-### Bloco 11 — Testes End-to-End
+### 3. Pagina principal (listagem)
 
-Testar fluxos principais em cada perfil (Franqueadora, Franqueado, Cliente) para garantir que dados reais carregam corretamente.
+Substituir o placeholder atual por:
+
+- Header com botao "+ Novo Agente"
+- Cards dos agentes com nome, status (badge), descricao curta, canal
+- Acoes: Editar, Duplicar, Excluir
+- Estado vazio estilizado quando nao ha agentes
+
+### 4. Dialog/Sheet de criacao e edicao
+
+Um dialog amplo (Sheet) com 6 abas (Tabs):
+
+- **Identidade**: nome, descricao, avatar, canal, tags, status
+- **Persona**: tom de voz, estilo de comunicacao, personalidade (campos em jsonb)
+- **Base de Conhecimento**: lista de URLs/textos de referencia que o agente deve usar
+- **Engenharia de Prompt**: system prompt customizado, temperatura, modelo preferido
+- **Simulador**: area para testar o agente (placeholder visual por ora, sem backend de IA conectado ainda)
+- **Diagnostico**: metricas e status do agente (placeholder visual)
+
+### 5. Tipo TypeScript
+
+Adicionar interface `AiAgent` em `src/types/cliente.ts`.
+
+## Arquivos envolvidos
+
+| Acao | Arquivo |
+|------|---------|
+| Criar | `src/hooks/useClienteAgents.ts` |
+| Criar | `src/components/cliente/AgentCard.tsx` |
+| Criar | `src/components/cliente/AgentFormSheet.tsx` |
+| Editar | `src/pages/cliente/ClienteAgentesIA.tsx` |
+| Editar | `src/types/cliente.ts` |
+| Migration | Nova tabela `client_ai_agents` |
 
 ## Detalhes Tecnicos
 
-Para o Bloco 8, cada componente que hoje faz:
-```
-import { mockLeads } from "@/mocks/crmData";
-```
-Passara a receber dados via props (do pai que ja usa hook) ou usara o hook diretamente:
-```
-const { leads } = useCrmLeads();
-```
+- A tabela usa `jsonb` para persona, knowledge_base e prompt_config, permitindo flexibilidade sem migracoes futuras para cada campo novo
+- O Simulador e Diagnostico serao abas visuais com placeholder -- a integracao real com Lovable AI sera feita em um passo posterior
+- RLS usa `is_member_of_org(auth.uid(), organization_id)` para ALL, consistente com as demais tabelas do cliente
+- Delete restrito a `cliente_admin` via `has_role`
 
-Constantes de UI (cores, labels, icones) permanecerao nos tipos (`src/types/`) ou inline nos componentes — nao precisam de banco de dados.
