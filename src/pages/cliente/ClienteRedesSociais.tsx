@@ -3,7 +3,7 @@ import {
   Palette, Edit3, Check, Plus, Sparkles, Copy, Download,
   Eye, Image, Upload, Calendar as CalendarIcon, ChevronLeft,
   ChevronRight, BookOpen, Clock, FolderOpen, Folder,
-  ArrowLeft, File, Hash, Layout,
+  ArrowLeft, File, Hash, Layout, CheckCircle2, Circle, Star,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,6 +70,7 @@ interface ArtFile {
   caption: string;
   hashtags: string;
   type: "Feed" | "Story";
+  approved: boolean;
 }
 
 interface MonthFolder {
@@ -80,35 +81,37 @@ interface MonthFolder {
   files: ArtFile[];
 }
 
+const CURRENT_MONTH = "2026-02";
+
 const mockFolders: MonthFolder[] = [
   {
     id: "feb-2026", month: "2026-02", label: "Fevereiro 2026", createdAt: "05/02/2026",
     files: [
-      { id: "1a", name: "Promo Fevereiro 20 Off — Feed.png", type: "Feed", caption: "Aproveite a promoção exclusiva de fevereiro! 20% de desconto no plano anual. Transforme a gestão da sua franquia com nossa plataforma completa.\n\nCondições especiais para novas assinaturas até 28/02.", hashtags: "#franquia #gestao #marketing #desconto #promocao" },
-      { id: "1b", name: "Promo Fevereiro 20 Off — Story.png", type: "Story", caption: "Aproveite a promoção exclusiva de fevereiro! 20% de desconto no plano anual. Transforme a gestão da sua franquia com nossa plataforma completa.\n\nCondições especiais para novas assinaturas até 28/02.", hashtags: "#franquia #gestao #marketing #desconto #promocao" },
-      { id: "2a", name: "5 Dicas de Marketing para Franquias — Feed.png", type: "Feed", caption: "Descubra 5 estratégias comprovadas para impulsionar o marketing da sua rede de franquias.\n\n1. Defina personas locais\n2. Invista em conteúdo educativo\n3. Use automação de leads\n4. Meça tudo com KPIs\n5. Teste e otimize constantemente", hashtags: "#marketing #franquias #dicas #crescimento #estrategia" },
-      { id: "2b", name: "5 Dicas de Marketing para Franquias — Story.png", type: "Story", caption: "Descubra 5 estratégias comprovadas para impulsionar o marketing da sua rede de franquias.\n\n1. Defina personas locais\n2. Invista em conteúdo educativo\n3. Use automação de leads\n4. Meça tudo com KPIs\n5. Teste e otimize constantemente", hashtags: "#marketing #franquias #dicas #crescimento #estrategia" },
-      { id: "3a", name: "Bastidores da Equipe — Feed.png", type: "Feed", caption: "Conheça quem está por trás das soluções que transformam franquias! Nossa equipe respira inovação e resultados.", hashtags: "#equipe #bastidores #cultura #time #inovacao" },
-      { id: "3b", name: "Bastidores da Equipe — Story.png", type: "Story", caption: "Conheça quem está por trás das soluções que transformam franquias! Nossa equipe respira inovação e resultados.", hashtags: "#equipe #bastidores #cultura #time #inovacao" },
-      { id: "4a", name: "Case de Sucesso Rede FastFood — Feed.png", type: "Feed", caption: "A Rede FastFood triplicou seus leads em 3 meses usando nossa plataforma. De 50 para 150 leads/mês por unidade.\n\nTaxa de conversão: 40% | ROI: 8x", hashtags: "#case #sucesso #resultados #franquia #roi" },
-      { id: "4b", name: "Case de Sucesso Rede FastFood — Story.png", type: "Story", caption: "A Rede FastFood triplicou seus leads em 3 meses usando nossa plataforma. De 50 para 150 leads/mês por unidade.\n\nTaxa de conversão: 40% | ROI: 8x", hashtags: "#case #sucesso #resultados #franquia #roi" },
-      { id: "5a", name: "Checklist Marketing Digital — Feed.png", type: "Feed", caption: "Seu marketing está completo? Confira nosso checklist essencial para franquias que querem crescer com consistência.", hashtags: "#checklist #marketing #organizacao #digital #franquias" },
-      { id: "5b", name: "Checklist Marketing Digital — Story.png", type: "Story", caption: "Seu marketing está completo? Confira nosso checklist essencial para franquias que querem crescer com consistência.", hashtags: "#checklist #marketing #organizacao #digital #franquias" },
-      { id: "6a", name: "Depoimento de Cliente — Feed.png", type: "Feed", caption: "'A NoExcuse mudou completamente nossa gestão comercial. Antes perdíamos 60% dos leads. Hoje convertemos 45%.' — João, franqueado.", hashtags: "#depoimento #cliente #satisfacao #resultados" },
-      { id: "6b", name: "Depoimento de Cliente — Story.png", type: "Story", caption: "'A NoExcuse mudou completamente nossa gestão comercial. Antes perdíamos 60% dos leads. Hoje convertemos 45%.' — João, franqueado.", hashtags: "#depoimento #cliente #satisfacao #resultados" },
-      { id: "7a", name: "Tendências 2026 — Feed.png", type: "Feed", caption: "As 3 maiores tendências de marketing para franquias em 2026:\n\n1. IA Generativa para conteúdo\n2. Hiperlocalização de anúncios\n3. Automação do funil completo", hashtags: "#tendencias #2026 #marketing #ia #futuro" },
-      { id: "7b", name: "Tendências 2026 — Story.png", type: "Story", caption: "As 3 maiores tendências de marketing para franquias em 2026:\n\n1. IA Generativa para conteúdo\n2. Hiperlocalização de anúncios\n3. Automação do funil completo", hashtags: "#tendencias #2026 #marketing #ia #futuro" },
-      { id: "8a", name: "Agende Sua Demo — Feed.png", type: "Feed", caption: "Pronto para transformar a gestão da sua franquia? Agende uma demo gratuita de 30 minutos.", hashtags: "#demo #gratuita #franquia #gestao #resultados" },
-      { id: "8b", name: "Agende Sua Demo — Story.png", type: "Story", caption: "Pronto para transformar a gestão da sua franquia? Agende uma demo gratuita de 30 minutos.", hashtags: "#demo #gratuita #franquia #gestao #resultados" },
+      { id: "1a", name: "Promo Fevereiro 20 Off — Feed.png", type: "Feed", caption: "Aproveite a promoção exclusiva de fevereiro! 20% de desconto no plano anual. Transforme a gestão da sua franquia com nossa plataforma completa.\n\nCondições especiais para novas assinaturas até 28/02.", hashtags: "#franquia #gestao #marketing #desconto #promocao", approved: true },
+      { id: "1b", name: "Promo Fevereiro 20 Off — Story.png", type: "Story", caption: "Aproveite a promoção exclusiva de fevereiro! 20% de desconto no plano anual. Transforme a gestão da sua franquia com nossa plataforma completa.\n\nCondições especiais para novas assinaturas até 28/02.", hashtags: "#franquia #gestao #marketing #desconto #promocao", approved: true },
+      { id: "2a", name: "5 Dicas de Marketing para Franquias — Feed.png", type: "Feed", caption: "Descubra 5 estratégias comprovadas para impulsionar o marketing da sua rede de franquias.\n\n1. Defina personas locais\n2. Invista em conteúdo educativo\n3. Use automação de leads\n4. Meça tudo com KPIs\n5. Teste e otimize constantemente", hashtags: "#marketing #franquias #dicas #crescimento #estrategia", approved: true },
+      { id: "2b", name: "5 Dicas de Marketing para Franquias — Story.png", type: "Story", caption: "Descubra 5 estratégias comprovadas para impulsionar o marketing da sua rede de franquias.\n\n1. Defina personas locais\n2. Invista em conteúdo educativo\n3. Use automação de leads\n4. Meça tudo com KPIs\n5. Teste e otimize constantemente", hashtags: "#marketing #franquias #dicas #crescimento #estrategia", approved: false },
+      { id: "3a", name: "Bastidores da Equipe — Feed.png", type: "Feed", caption: "Conheça quem está por trás das soluções que transformam franquias! Nossa equipe respira inovação e resultados.", hashtags: "#equipe #bastidores #cultura #time #inovacao", approved: false },
+      { id: "3b", name: "Bastidores da Equipe — Story.png", type: "Story", caption: "Conheça quem está por trás das soluções que transformam franquias! Nossa equipe respira inovação e resultados.", hashtags: "#equipe #bastidores #cultura #time #inovacao", approved: false },
+      { id: "4a", name: "Case de Sucesso Rede FastFood — Feed.png", type: "Feed", caption: "A Rede FastFood triplicou seus leads em 3 meses usando nossa plataforma. De 50 para 150 leads/mês por unidade.\n\nTaxa de conversão: 40% | ROI: 8x", hashtags: "#case #sucesso #resultados #franquia #roi", approved: false },
+      { id: "4b", name: "Case de Sucesso Rede FastFood — Story.png", type: "Story", caption: "A Rede FastFood triplicou seus leads em 3 meses usando nossa plataforma. De 50 para 150 leads/mês por unidade.\n\nTaxa de conversão: 40% | ROI: 8x", hashtags: "#case #sucesso #resultados #franquia #roi", approved: false },
+      { id: "5a", name: "Checklist Marketing Digital — Feed.png", type: "Feed", caption: "Seu marketing está completo? Confira nosso checklist essencial para franquias que querem crescer com consistência.", hashtags: "#checklist #marketing #organizacao #digital #franquias", approved: false },
+      { id: "5b", name: "Checklist Marketing Digital — Story.png", type: "Story", caption: "Seu marketing está completo? Confira nosso checklist essencial para franquias que querem crescer com consistência.", hashtags: "#checklist #marketing #organizacao #digital #franquias", approved: false },
+      { id: "6a", name: "Depoimento de Cliente — Feed.png", type: "Feed", caption: "'A NoExcuse mudou completamente nossa gestão comercial. Antes perdíamos 60% dos leads. Hoje convertemos 45%.' — João, franqueado.", hashtags: "#depoimento #cliente #satisfacao #resultados", approved: false },
+      { id: "6b", name: "Depoimento de Cliente — Story.png", type: "Story", caption: "'A NoExcuse mudou completamente nossa gestão comercial. Antes perdíamos 60% dos leads. Hoje convertemos 45%.' — João, franqueado.", hashtags: "#depoimento #cliente #satisfacao #resultados", approved: false },
+      { id: "7a", name: "Tendências 2026 — Feed.png", type: "Feed", caption: "As 3 maiores tendências de marketing para franquias em 2026:\n\n1. IA Generativa para conteúdo\n2. Hiperlocalização de anúncios\n3. Automação do funil completo", hashtags: "#tendencias #2026 #marketing #ia #futuro", approved: false },
+      { id: "7b", name: "Tendências 2026 — Story.png", type: "Story", caption: "As 3 maiores tendências de marketing para franquias em 2026:\n\n1. IA Generativa para conteúdo\n2. Hiperlocalização de anúncios\n3. Automação do funil completo", hashtags: "#tendencias #2026 #marketing #ia #futuro", approved: false },
+      { id: "8a", name: "Agende Sua Demo — Feed.png", type: "Feed", caption: "Pronto para transformar a gestão da sua franquia? Agende uma demo gratuita de 30 minutos.", hashtags: "#demo #gratuita #franquia #gestao #resultados", approved: false },
+      { id: "8b", name: "Agende Sua Demo — Story.png", type: "Story", caption: "Pronto para transformar a gestão da sua franquia? Agende uma demo gratuita de 30 minutos.", hashtags: "#demo #gratuita #franquia #gestao #resultados", approved: false },
     ],
   },
   {
     id: "jan-2026", month: "2026-01", label: "Janeiro 2026", createdAt: "03/01/2026",
     files: [
-      { id: "j1a", name: "Ano Novo Franquia Nova — Feed.png", type: "Feed", caption: "Começo de ano é o momento ideal para reestruturar o marketing da sua franquia. 2026 é o ano da transformação digital.", hashtags: "#planejamento2026 #franquias #marketing" },
-      { id: "j1b", name: "Ano Novo Franquia Nova — Story.png", type: "Story", caption: "Começo de ano é o momento ideal para reestruturar o marketing da sua franquia. 2026 é o ano da transformação digital.", hashtags: "#planejamento2026 #franquias #marketing" },
-      { id: "j2a", name: "Marketing Digital para Franquias — Feed.png", type: "Feed", caption: "92% dos consumidores pesquisam online antes de comprar. Sua franquia está preparada?", hashtags: "#marketingdigital #franquias #presencaonline" },
-      { id: "j2b", name: "Marketing Digital para Franquias — Story.png", type: "Story", caption: "92% dos consumidores pesquisam online antes de comprar. Sua franquia está preparada?", hashtags: "#marketingdigital #franquias #presencaonline" },
+      { id: "j1a", name: "Ano Novo Franquia Nova — Feed.png", type: "Feed", caption: "Começo de ano é o momento ideal para reestruturar o marketing da sua franquia. 2026 é o ano da transformação digital.", hashtags: "#planejamento2026 #franquias #marketing", approved: true },
+      { id: "j1b", name: "Ano Novo Franquia Nova — Story.png", type: "Story", caption: "Começo de ano é o momento ideal para reestruturar o marketing da sua franquia. 2026 é o ano da transformação digital.", hashtags: "#planejamento2026 #franquias #marketing", approved: true },
+      { id: "j2a", name: "Marketing Digital para Franquias — Feed.png", type: "Feed", caption: "92% dos consumidores pesquisam online antes de comprar. Sua franquia está preparada?", hashtags: "#marketingdigital #franquias #presencaonline", approved: true },
+      { id: "j2b", name: "Marketing Digital para Franquias — Story.png", type: "Story", caption: "92% dos consumidores pesquisam online antes de comprar. Sua franquia está preparada?", hashtags: "#marketingdigital #franquias #presencaonline", approved: true },
     ],
   },
 ];
@@ -123,7 +126,7 @@ const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 export default function ClienteRedesSociais() {
   const [sections, setSections] = useState(initialSections);
   const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [folders] = useState(mockFolders);
+  const [folders, setFolders] = useState(mockFolders);
   const [openFolder, setOpenFolder] = useState<string | null>(null);
   const [openFile, setOpenFile] = useState<ArtFile | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
@@ -151,7 +154,27 @@ export default function ClienteRedesSociais() {
     toast({ title: "Pacote gerado!", description: `${Number(bQtd) * 2} artes (Feed + Story) criadas para ${bMes}.` });
   };
 
+  const toggleApproval = (fileId: string) => {
+    setFolders(prev => prev.map(folder => ({
+      ...folder,
+      files: folder.files.map(f => f.id === fileId ? { ...f, approved: !f.approved } : f),
+    })));
+    if (openFile?.id === fileId) {
+      setOpenFile(prev => prev ? { ...prev, approved: !prev.approved } : null);
+    }
+  };
+
+  const approveAll = (folderId: string) => {
+    setFolders(prev => prev.map(folder =>
+      folder.id === folderId
+        ? { ...folder, files: folder.files.map(f => ({ ...f, approved: true })) }
+        : folder
+    ));
+    toast({ title: "Todas as artes aprovadas!" });
+  };
+
   const currentFolderData = folders.find(f => f.id === openFolder);
+  const isCurrentMonthFolder = (month: string) => month === CURRENT_MONTH;
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -343,6 +366,14 @@ export default function ClienteRedesSociais() {
                     <Badge variant="outline" className="text-[9px] mt-2">{openFile.type} ({typeIcons[openFile.type]})</Badge>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
+                    <Button
+                      variant={openFile.approved ? "outline" : "default"}
+                      size="sm"
+                      className={`h-8 text-xs gap-1 ${openFile.approved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
+                      onClick={() => { toggleApproval(openFile.id); toast({ title: openFile.approved ? "Aprovação removida" : "Arte aprovada!" }); }}
+                    >
+                      {openFile.approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Aprovado</> : <><Check className="w-3.5 h-3.5" /> Aprovar</>}
+                    </Button>
                     <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(openFile.caption + "\n\n" + openFile.hashtags); toast({ title: "Legenda copiada!" }); }}>
                       <Copy className="w-3.5 h-3.5" /> Legenda
                     </Button>
@@ -372,59 +403,120 @@ export default function ClienteRedesSociais() {
             </Card>
           ) : openFolder && currentFolderData ? (
             /* Files inside folder */
-            <div className="space-y-1">
-              {currentFolderData.files.map(file => (
-                <Card
-                  key={file.id}
-                  className="glass-card cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => setOpenFile(file)}
-                >
-                  <CardContent className="py-3 flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-primary/10 to-muted border border-dashed border-muted-foreground/20 shrink-0 ${
-                      file.type === "Story" ? "w-8 h-12" : ""
-                    }`}>
-                      <Palette className="w-3.5 h-3.5 text-muted-foreground/40" />
+            <div className="space-y-3">
+              {/* Approval summary */}
+              {(() => {
+                const approved = currentFolderData.files.filter(f => f.approved).length;
+                const total = currentFolderData.files.length;
+                const allApproved = approved === total;
+                return (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={allApproved ? "default" : "secondary"} className={`text-[10px] gap-1 ${allApproved ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" : ""}`}>
+                        <CheckCircle2 className="w-3 h-3" /> {approved}/{total} aprovados
+                      </Badge>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{file.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant="outline" className="text-[8px] h-4">{file.type}</Badge>
-                        <span className="text-[10px] text-muted-foreground truncate">{file.caption.slice(0, 60)}...</span>
+                    {!allApproved && (
+                      <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => approveAll(currentFolderData.id)}>
+                        <Check className="w-3 h-3" /> Aprovar Todos
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="space-y-1">
+                {currentFolderData.files.map(file => (
+                  <Card
+                    key={file.id}
+                    className={`cursor-pointer transition-all hover:bg-muted/30 ${file.approved ? "border-emerald-500/20 bg-emerald-500/[0.02]" : "glass-card"}`}
+                    onClick={() => setOpenFile(file)}
+                  >
+                    <CardContent className="py-3 flex items-center gap-3">
+                      <div className={`relative w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-primary/10 to-muted border border-dashed border-muted-foreground/20 shrink-0 ${
+                        file.type === "Story" ? "w-8 h-12" : ""
+                      }`}>
+                        <Palette className="w-3.5 h-3.5 text-muted-foreground/40" />
+                        {file.approved && (
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500 absolute -bottom-1 -right-1" />
+                        )}
                       </div>
-                    </div>
-                    <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { navigator.clipboard.writeText(file.caption + "\n\n" + file.hashtags); toast({ title: "Legenda copiada!" }); }}>
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Download iniciado!" })}>
-                        <Download className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{file.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge variant="outline" className="text-[8px] h-4">{file.type}</Badge>
+                          <span className="text-[10px] text-muted-foreground truncate">{file.caption.slice(0, 60)}...</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0 items-center" onClick={e => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 px-2 text-[10px] gap-1 ${file.approved ? "text-emerald-600" : "text-muted-foreground"}`}
+                          onClick={() => { toggleApproval(file.id); toast({ title: file.approved ? "Aprovação removida" : "Aprovado!" }); }}
+                        >
+                          {file.approved ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { navigator.clipboard.writeText(file.caption + "\n\n" + file.hashtags); toast({ title: "Legenda copiada!" }); }}>
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Download iniciado!" })}>
+                          <Download className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           ) : (
             /* Folder list */
-            <div className="space-y-2">
-              {folders.map(folder => (
-                <Card
-                  key={folder.id}
-                  className="glass-card cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => setOpenFolder(folder.id)}
-                >
-                  <CardContent className="py-4 flex items-center gap-4">
-                    <div className="p-2.5 rounded-xl bg-primary/10">
-                      <Folder className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">{folder.label}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{folder.files.length} arquivos — Criado em {folder.createdAt}</p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] shrink-0">{folder.files.length / 2} posts</Badge>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="space-y-3">
+              {folders.map(folder => {
+                const isCurrent = isCurrentMonthFolder(folder.month);
+                const approvedCount = folder.files.filter(f => f.approved).length;
+                const totalCount = folder.files.length;
+                const allApproved = approvedCount === totalCount;
+
+                return (
+                  <Card
+                    key={folder.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      isCurrent
+                        ? "ring-2 ring-primary/40 bg-primary/[0.03] shadow-md shadow-primary/10"
+                        : "glass-card hover:bg-muted/30"
+                    }`}
+                    onClick={() => setOpenFolder(folder.id)}
+                  >
+                    <CardContent className="py-4 flex items-center gap-4">
+                      <div className={`p-2.5 rounded-xl ${isCurrent ? "bg-primary/15" : "bg-primary/10"}`}>
+                        <Folder className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold">{folder.label}</p>
+                          {isCurrent && (
+                            <Badge className="text-[9px] bg-primary/15 text-primary border-primary/30 gap-1">
+                              <Star className="w-2.5 h-2.5" /> Mês Atual
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {totalCount} artes — Criado em {folder.createdAt}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] gap-1 ${allApproved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
+                        >
+                          <CheckCircle2 className="w-3 h-3" /> {approvedCount}/{totalCount}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
 
               {folders.length === 0 && (
                 <div className="text-center py-16">
