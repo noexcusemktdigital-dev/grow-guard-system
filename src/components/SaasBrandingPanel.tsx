@@ -21,25 +21,25 @@ const col3 = testimonials.slice(6, 9);
 const SaasBrandingPanel = () => {
   return (
     <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white">
-      <div className="flex flex-col h-full px-8 py-8 w-full">
+      <div className="flex flex-col h-screen px-8 py-8 w-full">
           {/* Header — badge + title + subtitle */}
-          <div className="pt-6 pb-8 text-center flex flex-col items-center gap-3">
+          <div className="pt-4 pb-6 text-center flex flex-col items-center gap-3 shrink-0">
             <span className="inline-block text-sm font-medium border rounded-full px-4 py-1.5 text-black/60 border-black/10">
               Depoimentos
             </span>
-            <h2 className="text-3xl xl:text-4xl font-black tracking-tight text-black leading-tight">
-              O que nossos clientes dizem
+            <h2 className="text-2xl xl:text-3xl font-black tracking-tight text-black leading-tight max-w-sm">
+              Plataforma completa de marketing e vendas para acelerar seus resultados
             </h2>
             <p className="text-black/50 text-sm max-w-xs">
-              Plataforma completa de marketing e vendas para acelerar seus resultados.
+              Veja o que nossos clientes dizem sobre nós.
             </p>
           </div>
 
-          {/* Testimonials columns — smooth fade edges */}
+          {/* Testimonials columns — fills remaining space */}
           <div className="flex-1 overflow-hidden relative min-h-0">
             <div className="flex gap-3 h-full" style={{
-              maskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)",
-              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)",
+              maskImage: "linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)",
             }}>
               <TestimonialsColumn testimonials={col1} duration={15} className="flex-1" />
               <TestimonialsColumn testimonials={col2} duration={19} className="flex-1 hidden xl:block" />
@@ -47,9 +47,9 @@ const SaasBrandingPanel = () => {
             </div>
           </div>
 
-          {/* Logo bottom */}
-          <div className="flex justify-center pt-4">
-            <img src={logoLight} alt="NoExcuse" className="h-7 object-contain opacity-60" />
+          {/* Logo bottom — larger */}
+          <div className="flex justify-center pt-4 shrink-0">
+            <img src={logoLight} alt="NoExcuse" className="h-10 object-contain opacity-70" />
           </div>
       </div>
     </div>

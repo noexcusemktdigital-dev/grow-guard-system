@@ -144,20 +144,20 @@ const SaasAuth = () => {
       <SaasBrandingPanel />
 
       {/* Right panel — login form */}
-      <div className="flex-1 flex flex-col justify-center p-8">
-        <div className="w-full max-w-sm mx-auto">
-          {/* Header area — tagline + trial badge */}
-          <div className="mb-6">
+      <div className="flex-1 flex flex-col p-8 overflow-auto">
+        <div className="w-full max-w-sm mx-auto flex flex-col justify-center min-h-full">
+          {/* Header area — rotating phrase + trial badge (fixed height) */}
+          <div className="mb-6 shrink-0">
             {/* Mobile logo */}
             <div className="lg:hidden text-center mb-6">
-              <img src={logoDark} alt="NoExcuse" className="h-8 mx-auto object-contain" />
+              <img src={logoDark} alt="NoExcuse" className="h-10 mx-auto object-contain" />
             </div>
 
-            {/* Rotating benefit phrase — larger */}
-            <div className="min-h-[80px] flex items-center">
+            {/* Rotating benefit phrase — fixed container so form doesn't jump */}
+            <div className="h-[72px] flex items-center overflow-hidden">
               <p
                 className={`text-2xl lg:text-3xl font-black uppercase italic tracking-tighter text-white leading-tight transition-all duration-400 ${
-                  fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                  fadeIn ? "opacity-100" : "opacity-0"
                 }`}
               >
                 {BENEFITS[benefitIndex]}
