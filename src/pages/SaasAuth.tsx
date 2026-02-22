@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,19 @@ import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
 import SaasBrandingPanel from "@/components/SaasBrandingPanel";
 
+const BENEFITS = [
+  "CRM completo para nunca perder uma venda",
+  "Automação de marketing que trabalha por você",
+  "Funil de vendas visual e inteligente",
+  "Relatórios que mostram onde está o dinheiro",
+  "Gestão de equipe comercial em tempo real",
+  "Campanhas de e-mail e WhatsApp integradas",
+  "Scripts de vendas prontos para sua equipe",
+  "Dashboard com métricas que importam",
+  "Controle total dos seus leads e clientes",
+  "Integração com redes sociais e tráfego pago",
+];
+
 const SaasAuth = () => {
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [mode, setMode] = useState<"form" | "forgot">("form");
@@ -20,7 +33,20 @@ const SaasAuth = () => {
   const [companyName, setCompanyName] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [benefitIndex, setBenefitIndex] = useState(0);
+  const [fadeIn, setFadeIn] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFadeIn(false);
+      setTimeout(() => {
+        setBenefitIndex((i) => (i + 1) % BENEFITS.length);
+        setFadeIn(true);
+      }, 400);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,22 +147,24 @@ const SaasAuth = () => {
       <div className="flex-1 flex flex-col justify-center p-8">
         <div className="w-full max-w-sm mx-auto">
           {/* Header area — tagline + trial badge */}
-          <div className="mb-8">
+          <div className="mb-6">
             {/* Mobile logo */}
             <div className="lg:hidden text-center mb-6">
               <img src={logoDark} alt="NoExcuse" className="h-8 mx-auto object-contain" />
             </div>
 
-            <p className="text-xl lg:text-2xl font-black uppercase italic tracking-tighter text-white leading-snug">
-              Plataforma{" "}
-              <span className="relative inline">
-                <span className="relative z-10">completa de marketing e vendas</span>
-                <span className="absolute inset-0 -skew-x-2 bg-[hsl(45,93%,52%)]/30 rounded-sm -mx-1 px-1" />
-              </span>{" "}
-              para acelerar seus resultados
-            </p>
+            {/* Rotating benefit phrase */}
+            <div className="min-h-[56px] flex items-center">
+              <p
+                className={`text-lg lg:text-xl font-black uppercase italic tracking-tighter text-white leading-snug transition-all duration-400 ${
+                  fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                }`}
+              >
+                {BENEFITS[benefitIndex]}
+              </p>
+            </div>
 
-            <div className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[hsl(355,78%,50%)] border border-[hsl(355,78%,60%)] shadow-lg shadow-[hsl(355,78%,50%)]/20">
+            <div className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[hsl(355,78%,50%)] border border-[hsl(355,78%,60%)] shadow-lg shadow-[hsl(355,78%,50%)]/20">
               <Sparkles className="h-5 w-5 text-[hsl(45,93%,52%)]" />
               <span className="text-base font-bold text-white tracking-wide">7 dias grátis</span>
             </div>
