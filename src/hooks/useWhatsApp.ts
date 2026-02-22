@@ -1,0 +1,165 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserOrgId } from "./useUserOrgId";
+
+export interface WhatsAppInstance {
+  id: string;
+  organization_id: string;
+  instance_id: string;
+  token: string;
+  client_token: string;
+  status: string;
+  phone_number: string | null;
+  webhook_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WhatsAppContact {
+  id: string;
+  organization_id: string;
+  phone: string;
+  name: string | null;
+  photo_url: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WhatsAppMessage {
+  id: string;
+  organization_id: string;
+  contact_id: string;
+  message_id_zapi: string | null;
+  direction: string;
+  type: string;
+  content: string | null;
+  media_url: string | null;
+  status: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export function useWhatsAppInstance() {
+  const { data: orgId } = useUserOrgId();
+
+  return useQuery({
+    queryKey: ["whatsapp-instance", orgId],
+    queryFn: async () => {
+      if (!orgId) return null;
+      const { data, error } = await supabase
+        .from("whatsapp_instances" as any)
+        .select("*")
+        .eq("organization_id", orgId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as unknown as WhatsAppInstance | null;
+    },
+    enabled: !!orgId,
+  });
+}
+
+export function useWhatsAppContacts() {
+  const { data: orgId } = useUserOrgId();
+
+  return useQuery({
+    queryKey: ["whatsapp-contacts", orgId],
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("whatsapp_contacts" as any)
+        .select("*")
+        .eq("organization_id", orgId)
+        .order("last_message_at", { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return (data || []) as unknown as WhatsAppContact[];
+    },
+    enabled: !!orgId,
+  });
+}
+
+export function useWhatsAppMessages(contactId: string | null) {
+  const { data: orgId } = useUserOrgId();
+
+  return useQuery({
+    queryKey: ["whatsapp-messages", orgId, contactId],
+    queryFn: async () => {
+      if (!orgId || !contactId) return [];
+      const { data, error } = await supabase
+        .from("whatsapp_messages" as any)
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("contact_id", contactId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data || []) as unknown as WhatsAppMessage[];
+    },
+    enabled: !!orgId && !!contactId,
+  });
+}
+
+export function useSetupWhatsApp() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      instanceId: string;
+      instanceToken: string;
+      clientToken: string;
+      action?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("whatsapp-setup", {
+        body: params,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-instance"] });
+    },
+  });
+}
+
+export function useSendWhatsAppMessage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      contactPhone?: string;
+      contactId?: string;
+      message: string;
+      type?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+        body: params,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    },
+  });
+}
+
+export function useMarkContactRead() {
+  const queryClient = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async (contactId: string) => {
+      if (!orgId) return;
+      const { error } = await supabase
+        .from("whatsapp_contacts" as any)
+        .update({ unread_count: 0 } as any)
+        .eq("id", contactId)
+        .eq("organization_id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    },
+  });
+}
