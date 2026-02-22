@@ -1,5 +1,4 @@
 import logoLight from "@/assets/noe2.png";
-import { BackgroundGradientAnimation } from "@/components/ui/background-gradient-animation";
 import { TestimonialsColumn } from "@/components/ui/testimonials-columns";
 import { Highlight } from "@/components/ui/hero-highlight";
 
@@ -21,23 +20,8 @@ const col3 = testimonials.slice(6, 9);
 
 const SaasBrandingPanel = () => {
   return (
-    <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-      <BackgroundGradientAnimation
-        gradientBackgroundStart="rgb(255, 255, 255)"
-        gradientBackgroundEnd="rgb(240, 240, 245)"
-        firstColor="230, 230, 240"
-        secondColor="220, 220, 235"
-        thirdColor="240, 240, 250"
-        fourthColor="210, 215, 230"
-        fifthColor="235, 235, 245"
-        pointerColor="225, 225, 240"
-        size="80%"
-        blendingValue="hard-light"
-        interactive={false}
-        containerClassName="absolute inset-0"
-        className="h-full w-full flex flex-col"
-      >
-        <div className="flex flex-col h-full px-8 py-8">
+    <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white">
+      <div className="flex flex-col h-full px-8 py-8 w-full">
           {/* Tagline with highlight — centered, smaller */}
           <div className="pt-4 pb-6 text-center">
             <p className="text-base xl:text-lg font-semibold text-black/80 leading-relaxed max-w-sm mx-auto">
@@ -65,8 +49,7 @@ const SaasBrandingPanel = () => {
           <div className="flex justify-center pt-4">
             <img src={logoLight} alt="NoExcuse" className="h-7 object-contain opacity-60" />
           </div>
-        </div>
-      </BackgroundGradientAnimation>
+      </div>
     </div>
   );
 };
