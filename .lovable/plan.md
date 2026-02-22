@@ -1,206 +1,182 @@
 
-# CRM Completo: Integracoes, Configuracoes, Roleta e Automacoes
+
+# CRM Final: Filtros, Contatos, Equipe, SLA, Automacoes e Integracoes com Make/Zapier
 
 ## Resumo
 
-Este plano finaliza o CRM com 6 grandes blocos: integracoes para captar leads de fontes externas, configuracoes avancadas (multiplos funis, times, atribuicao), roleta de leads, filtros detalhados, automacoes de CRM e automacoes de IA + CRM.
+Plano consolidado com todas as melhorias pendentes: filtros unificados com datas e responsaveis, base de contatos completa, gestao de times, SLA com minutos/horas, automacoes avancadas vinculadas a funis e equipes, limite de funis por plano, e integracoes com plataformas de automacao externas (Make, Zapier, n8n).
 
 ---
 
-## Bloco 1 -- Integracoes de Leads (Fontes Externas)
+## 1. Filtros Unificados em Painel Unico
 
-### Edge Function: `crm-lead-webhook`
+Substituir os filtros separados (barra + "Mais filtros") em `ClienteCRM.tsx` por um unico botao **"Filtros"** que abre um Popover com todos os filtros organizados:
 
-Nova edge function que recebe leads de qualquer fonte externa via POST. O cliente recebe uma URL unica por organizacao para configurar em:
-- Meta Leads (Facebook/Instagram Ads)
-- Google Ads
-- Landing pages e formularios
-- RD Station, HubSpot, etc.
-- Qualquer sistema que envie webhook
-
-**Endpoint:** `POST /crm-lead-webhook/{org_id}`
-
-**Payload aceito (flexivel):**
-```json
-{
-  "name": "Nome do Lead",
-  "email": "email@exemplo.com",
-  "phone": "11999999999",
-  "company": "Empresa",
-  "source": "Meta Leads",
-  "value": 5000,
-  "tags": ["ads", "campanha-jan"],
-  "custom_fields": { "utm_source": "facebook", "campanha": "promo-jan" }
-}
-```
-
-**Logica:**
-1. Valida campos obrigatorios (name)
-2. Verifica duplicata por telefone ou email na mesma org
-3. Se duplicata: atualiza tags e registra atividade "Lead atualizado via webhook"
-4. Se novo: cria lead na primeira etapa do funil padrao
-5. Aplica regra de roleta (se ativa) para atribuir `assigned_to`
-6. Retorna `{ success: true, lead_id: "..." }`
-
-### Importacao CSV
-
-Funcionalidade no frontend para importar leads em massa:
-- Upload de arquivo CSV
-- Preview dos dados com mapeamento de colunas
-- Importacao via `createLead` em batch
-- Relatorio de sucesso/erros
-
-### Interface de Integracoes (aba nas Configuracoes)
-
-Card para cada integracao mostrando:
-- URL do webhook unica da org (copiavel)
-- Instrucoes de como configurar em cada plataforma
-- Log das ultimas entradas recebidas
-- Toggle para ativar/desativar
+- Busca por texto (continua visivel fora do painel)
+- **Responsavel** (assigned_to) -- select com membros da equipe
+- **Periodo de criacao** (data de / data ate) -- usando inputs date
+- Origem (source)
+- Tags
+- Status (Ativo / Vendido / Perdido)
+- Valor minimo / maximo
+- Funil (quando ha multiplos)
+- Badge mostrando quantos filtros estao ativos
+- Botao "Limpar tudo"
 
 ---
 
-## Bloco 2 -- Configuracoes Avancadas do CRM
+## 2. Base de Contatos Completa
 
-### Pagina de Configuracoes (`/cliente/crm/config`)
+### Nova tabela `crm_contacts`
+- `id`, `organization_id`, `name`, `email`, `phone`, `company`, `position`, `notes`, `tags`, `source`, `custom_fields`, `created_at`, `updated_at`
+- RLS: membros podem SELECT/INSERT/UPDATE, admins podem DELETE
 
-Substituir o modal `CrmFunnelManager` por uma pagina completa de configuracoes acessivel pelo icone de engrenagem, com abas:
+### Coluna `contact_id` em `crm_leads`
+- Nullable, vincula lead a um contato existente
 
-**Aba Funis:**
-- Lista de todos os funis da organizacao (nao so o default)
-- Criar novo funil (ex: "Funil Pos-Venda", "Funil Parcerias")
-- Editar etapas de cada funil (nome, cor, icone, ordem)
-- Marcar qual e o funil padrao
-- Excluir funil (se nao tem leads vinculados)
+### Pagina `/cliente/contatos`
+- Tabela com busca e filtro por tags
+- Botao "+ Novo Contato" com dialog
+- Edicao via Sheet lateral
+- Importacao CSV de contatos
+- Botao "Criar Lead" a partir de um contato (pre-preenche dados)
+- Contagem de leads vinculados por contato
 
-**Aba Equipe:**
-- Lista de membros da organizacao (via `organization_memberships` + `profiles`)
-- Filtro por role
-- Toggle para ativar/desativar membro como "vendedor" no CRM
-- Cada membro mostra: nome, cargo, qtd de leads atribuidos
+### Sidebar
+- Adicionar item "Contatos" na secao Vendas, abaixo de "CRM", com icone `Users`
 
-**Aba Atribuicao:**
-- Selecionar funil e definir quais membros atuam nele
-- Configuracao da roleta (ativa/desativa por funil)
-- Ordem de atribuicao da roleta
-
-**Aba SLA e Alertas:**
-- Tempo maximo sem primeiro contato (horas)
-- Tempo maximo de tarefa aberta (dias)
-- Alertas habilitados (toggle)
-- Tarefas automaticas ao mover etapa (toggle)
-
-**Aba Integracoes:**
-- URL do webhook (gerada automaticamente)
-- Instrucoes para Meta Leads, Google Ads, formularios
-- Importacao CSV
-
-### Migration necessaria
-
-Nova tabela `crm_settings`:
-- `id` uuid PK
-- `organization_id` uuid (unique)
-- `lead_roulette_enabled` boolean default false
-- `roulette_members` jsonb default '[]' (lista de user_ids na roleta)
-- `sla_first_contact_hours` int default 24
-- `sla_task_open_days` int default 3
-- `alerts_enabled` boolean default true
-- `auto_tasks_on_stage_move` boolean default true
-- `created_at`, `updated_at`
-- RLS: membros da org podem SELECT, admins podem ALL
+### Dialog de Novo Lead
+- Adicionar campo Combobox "Contato" que busca na tabela `crm_contacts`
+- Ao selecionar, preenche nome, telefone, email, empresa automaticamente
+- Campo opcional
 
 ---
 
-## Bloco 3 -- Roleta de Leads
+## 3. Integracoes com Plataformas (Make, Zapier, n8n)
+
+### Na aba Integracoes (`CrmIntegrations.tsx`)
+
+Adicionar uma nova secao **"Plataformas de Automacao"** com cards para:
+
+**Make (Integromat)**
+- Campo para o usuario colar a URL do webhook do Make
+- Botao "Testar conexao" que envia um payload de teste
+- Instrucoes de como configurar o cenario no Make
+- Eventos disponiveis: novo lead criado, lead mudou de etapa, lead vendido/perdido
+
+**Zapier**
+- Campo para URL do webhook do Zapier
+- Botao "Testar" (usando `mode: "no-cors"`)
+- Instrucoes de como criar o Zap
+
+**n8n**
+- Campo para URL do webhook do n8n
+- Botao "Testar conexao"
+- Instrucoes basicas
+
+**Webhook Generico**
+- Campo para qualquer URL de webhook
+- Selecao de quais eventos disparar (checkboxes)
+- Headers customizados (opcional)
 
 ### Como funciona
 
-Quando um novo lead entra (manual, webhook ou importacao), se a roleta esta ativa:
-1. Busca a lista de `roulette_members` do `crm_settings`
-2. Busca o ultimo lead criado na org e ve qual membro foi atribuido
-3. Atribui o proximo membro da lista (round-robin)
-4. Salva o `assigned_to` no lead
+Os webhooks sao salvos na tabela `crm_settings` em um campo `outbound_webhooks` (jsonb array):
+```json
+[
+  { "name": "Make", "url": "https://hook.make.com/...", "events": ["lead_created", "stage_changed", "lead_won", "lead_lost"], "active": true },
+  { "name": "Zapier", "url": "https://hooks.zapier.com/...", "events": ["lead_created"], "active": true }
+]
+```
 
-### Onde aplica
-- Na criacao manual de lead (se roleta ativa, preenche `assigned_to` automaticamente)
-- No webhook de lead externo
-- Na importacao CSV
+Quando um evento acontece (criar lead, mover etapa, etc.), o frontend dispara os webhooks ativos correspondentes com o payload do lead.
 
-### Interface
-- No header do CRM, mostrar "Roleta: Ativa" ou "Desativada" com badge
-- Na configuracao, lista de membros na roleta com drag para reordenar
-- Toggle para ativar/desativar
+### Migration necessaria
+- Adicionar coluna `outbound_webhooks` (jsonb default '[]') na tabela `crm_settings`
 
 ---
 
-## Bloco 4 -- Filtros Detalhados
+## 4. Funis com Limite por Plano
 
-Expandir a barra de filtros existente:
-
-- **Responsavel** (assigned_to): select com membros da equipe
-- **Periodo de criacao**: date range (de/ate)
-- **Valor minimo/maximo**: dois inputs numericos
-- **Status**: Ativo / Vendido / Perdido (baseado em won_at/lost_at)
-- **Funil**: select para filtrar por funil_id (quando tem multiplos funis)
-- **Busca avancada**: busca em custom_fields tambem
-
-Layout: barra expansivel com botao "Mais filtros" que abre linha adicional com os filtros avancados.
+No `CrmFunnelManager.tsx`:
+- Consultar `useClienteSubscription` para verificar o plano
+- Plano basico: maximo 2 funis; planos superiores: sem limite
+- Se atingiu o limite, desabilitar botao "Criar novo funil" com mensagem de upgrade
+- Listar todos os funis (nao so o default)
+- Criar novos funis com nome e descricao
+- Marcar funil como padrao
+- Excluir funil (se nao tem leads vinculados)
 
 ---
 
-## Bloco 5 -- Automacoes de CRM
+## 5. Gestao de Equipe com Times
 
-### Tabela `crm_automations`
-- `id` uuid PK
-- `organization_id` uuid
-- `name` text
-- `trigger_type` text ('stage_change' | 'lead_created' | 'no_contact_sla' | 'task_overdue')
-- `trigger_config` jsonb (ex: { from_stage: "novo", to_stage: "contato" })
-- `action_type` text ('create_task' | 'send_whatsapp' | 'change_stage' | 'assign_to' | 'add_tag' | 'notify')
-- `action_config` jsonb (ex: { task_title: "Fazer follow-up", due_days: 2 })
-- `is_active` boolean default true
-- `created_at`, `updated_at`
+### Nova tabela `crm_teams`
+- `id`, `organization_id`, `name`, `description`, `members` (jsonb -- lista de user_ids), `funnel_ids` (jsonb -- funis vinculados), `created_at`, `updated_at`
 - RLS: membros podem SELECT, admins podem ALL
 
-### Interface de Automacoes
-
-Pagina/aba dentro das configuracoes do CRM:
-- Lista de automacoes com toggle ativo/inativo
-- Criar nova automacao:
-  - Selecionar trigger (Quando...)
-  - Selecionar acao (Entao...)
-  - Configurar parametros
-- Exemplos pre-prontos:
-  - "Quando lead entra em Contato, criar tarefa 'Agendar reuniao' em 2 dias"
-  - "Quando lead fica 24h sem contato, notificar responsavel"
-  - "Quando lead e marcado como Vendido, adicionar tag 'cliente'"
-
-### Motor de automacoes
-
-A execucao acontece em dois pontos:
-1. **No frontend** (ao mover lead de etapa): verifica automacoes com trigger `stage_change` e executa acoes simples (criar tarefa, adicionar tag, mudar estagio)
-2. **No webhook** (ao receber lead externo): aplica automacoes com trigger `lead_created`
+### `CrmTeamManager.tsx` reescrito:
+- Duas abas: "Times" e "Membros"
+- **Times:** Criar/editar/excluir times, atribuir membros, vincular a funis
+- **Membros:** Lista de membros da org com cargo, toggle para ativar como vendedor, contagem de leads
 
 ---
 
-## Bloco 6 -- Automacoes IA + CRM
+## 6. SLA com Minutos/Horas e Mais Opcoes
 
-### Automacoes com Agente de IA
+### Migration
+- Adicionar `sla_first_contact_minutes` (int default 1440), `sla_no_response_minutes` (int default 4320), `sla_stage_stuck_days` (int default 7) na tabela `crm_settings`
 
-Novas opcoes de `action_type` nas automacoes:
-- `ai_qualify`: Agente de IA analisa o lead e sugere qualificacao (temperatura)
-- `ai_first_contact`: Agente envia mensagem automatica de primeiro contato via WhatsApp
-- `ai_followup`: Agente envia follow-up automatico se lead nao responde em X dias
+### `CrmSlaConfig.tsx` reescrito:
+- Tempo maximo para 1o contato: input numerico + select "minutos" ou "horas"
+- Tempo maximo sem resposta do lead
+- Tempo maximo de lead na mesma etapa (dias)
+- Frequencia de follow-up automatico
+- Cada SLA com toggle individual para ativar/desativar
+- Salva internamente em minutos
 
-### Interface
-- Na lista de automacoes, acoes de IA aparecem com badge "IA"
-- Ao selecionar acao de IA, pode escolher qual agente usar
-- Preview do prompt que sera usado
+---
 
-### Execucao
-- As acoes de IA sao executadas via a edge function `ai-agent-reply` ja existente
-- O trigger `no_contact_sla` chama o agente para enviar follow-up
-- O trigger `lead_created` pode chamar o agente para primeiro contato
+## 7. Automacoes Completas
+
+### Migration
+- Adicionar colunas em `crm_automations`: `description`, `funnel_ids` (jsonb default '[]'), `team_ids` (jsonb default '[]'), `assigned_user_ids` (jsonb default '[]'), `priority` (int default 0)
+
+### `CrmAutomations.tsx` reescrito com:
+
+**Mais triggers:**
+- Mudanca de etapa (de X para Y)
+- Lead criado (filtro por origem)
+- Sem contato (SLA)
+- Tarefa atrasada
+- Lead parado na etapa (X dias)
+- Lead vendido
+- Lead perdido
+- Tag adicionada
+
+**Mais acoes:**
+- Criar tarefa (titulo, prazo, prioridade)
+- Adicionar/remover tag
+- Mudar etapa
+- Notificar responsavel
+- Enviar WhatsApp
+- Atribuir a pessoa/time
+- Mover para outro funil
+- IA: Qualificar lead
+- IA: Primeiro contato
+- IA: Follow-up
+
+**Vinculo a funis e equipes:**
+- Cada automacao pode ser vinculada a um ou mais funis (ou "todos")
+- Vinculada a times ou pessoas especificas
+- Filtro por funil na lista
+
+**Dialog de criacao expandido:**
+1. Nome e descricao
+2. Trigger com configs condicionais
+3. Escopo: selecao de funis e equipes
+4. Acao com configs condicionais
+5. Prioridade
 
 ---
 
@@ -208,45 +184,30 @@ Novas opcoes de `action_type` nas automacoes:
 
 | Acao | Arquivo |
 |------|---------|
-| Migration | Criar tabela `crm_settings` e `crm_automations` |
-| Criar | `supabase/functions/crm-lead-webhook/index.ts` |
-| Criar | `src/hooks/useCrmSettings.ts` |
-| Criar | `src/hooks/useCrmAutomations.ts` |
-| Criar | `src/hooks/useCrmTeam.ts` (buscar membros da org) |
-| Criar | `src/components/crm/CrmConfigPage.tsx` (pagina de config completa) |
-| Criar | `src/components/crm/CrmAutomations.tsx` |
-| Criar | `src/components/crm/CrmCsvImport.tsx` |
-| Criar | `src/components/crm/CrmIntegrations.tsx` |
-| Criar | `src/components/crm/CrmTeamManager.tsx` |
-| Criar | `src/components/crm/CrmRouletteConfig.tsx` |
-| Editar | `src/pages/cliente/ClienteCRM.tsx` (filtros avancados, badge roleta, assigned_to nos cards, navegacao para config) |
-| Editar | `src/components/crm/CrmLeadDetailSheet.tsx` (campo responsavel, campo funil) |
-| Editar | `src/components/crm/CrmNewLeadDialog.tsx` (selecao de funil, aplicar roleta) |
-| Editar | `src/hooks/useCrmLeads.ts` (filtros avancados na query) |
-| Editar | `supabase/config.toml` (registrar crm-lead-webhook) |
-| Editar | Roteamento (adicionar rota /cliente/crm/config) |
-
----
+| Migration | Criar `crm_contacts`, `crm_teams`; alterar `crm_settings` e `crm_automations`; adicionar `contact_id` em `crm_leads` |
+| Criar | `src/hooks/useCrmContacts.ts` |
+| Criar | `src/pages/cliente/ClienteContatos.tsx` |
+| Reescrever | `src/pages/cliente/ClienteCRM.tsx` (filtros unificados) |
+| Reescrever | `src/components/crm/CrmAutomations.tsx` (completo) |
+| Reescrever | `src/components/crm/CrmTeamManager.tsx` (times + membros) |
+| Reescrever | `src/components/crm/CrmSlaConfig.tsx` (minutos/horas) |
+| Reescrever | `src/components/crm/CrmIntegrations.tsx` (Make/Zapier/n8n) |
+| Editar | `src/components/crm/CrmFunnelManager.tsx` (multi-funil + limite plano) |
+| Editar | `src/components/crm/CrmNewLeadDialog.tsx` (select contato) |
+| Editar | `src/components/crm/CrmLeadDetailSheet.tsx` (contato vinculado) |
+| Editar | `src/components/ClienteSidebar.tsx` (item Contatos) |
+| Editar | `src/App.tsx` (rota /cliente/contatos) |
+| Editar | `src/hooks/useCrmTeam.ts` (CRUD de times) |
+| Editar | `src/hooks/useCrmAutomations.ts` (novos campos) |
 
 ## Detalhes Tecnicos
 
-- A tabela `crm_leads` ja tem `assigned_to` (uuid), `funnel_id` (uuid) e `custom_fields` (jsonb) -- nao precisa de migration para leads
-- Os membros da equipe vem de `organization_memberships` JOIN `profiles` -- nenhuma tabela nova para isso
-- A roleta usa round-robin simples baseado no ultimo lead atribuido
-- O webhook `crm-lead-webhook` usa `SUPABASE_SERVICE_ROLE_KEY` (nao precisa de auth do usuario)
-- Automacoes simples (criar tarefa, adicionar tag) rodam no frontend; automacoes de IA chamam edge functions
-- A deduplicacao no webhook compara `phone` e `email` na mesma `organization_id`
-- Cada organizacao pode ter multiplos funis, cada funil com suas etapas independentes
-- O seletor de funil no header do CRM permite alternar entre funis (filtro por `funnel_id`)
+- Contatos sao independentes de `whatsapp_contacts` -- bases separadas
+- `contact_id` em `crm_leads` e nullable para compatibilidade
+- Webhooks outbound (Make/Zapier) sao disparados no frontend via `fetch` com `mode: "no-cors"` para Zapier e POST normal para Make/n8n
+- A deduplicacao do Combobox de contatos usa busca por nome/telefone/email com debounce
+- O limite de funis por plano usa `useClienteSubscription` -- campo `plan` da subscription
+- SLA armazenado em minutos; UI converte para minutos ou horas conforme selecao
+- Automacoes com `funnel_ids = []` significam "todos os funis"
+- RLS segue padrao multi-tenant com `is_member_of_org`
 
-## Ordem de implementacao sugerida
-
-1. Migration (crm_settings + crm_automations)
-2. Hooks (useCrmSettings, useCrmTeam, useCrmAutomations)
-3. Edge function crm-lead-webhook
-4. Pagina de configuracoes (funis, equipe, roleta, SLA, integracoes)
-5. Filtros avancados no CRM principal
-6. Roleta de leads (logica + UI)
-7. Automacoes de CRM
-8. Automacoes IA + CRM
-9. Importacao CSV
