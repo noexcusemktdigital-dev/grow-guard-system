@@ -1,60 +1,68 @@
 
 
-# Bloco 6 — Migrar Sidebar e FeatureGate + Limpar componentes filhos
+# Atualizar plan.md — Estado Atual e Proximos Blocos
 
-## Situacao atual
+## Conteudo do novo plan.md
 
-Blocos 1-5 estao completos: todas as **paginas** (Franqueadora, Franqueado, Cliente) foram migradas para hooks reais. Porem, ainda restam:
+O arquivo sera reescrito com o historico completo dos blocos concluidos e a definicao dos proximos passos.
 
-1. **`ClienteSidebar.tsx`** e **`FeatureGateContext.tsx`** — importam `mockSubscription`, `mockWallet`, `getTrialDaysRemaining` de `clienteData`
-2. **~60 componentes filhos** — importam **tipos e constantes** de `@/data/*` (ex: `CrmKanban`, `CrmLeadDetail`, `AcademyAdmin`, `AtendimentoKanban`, etc.)
+---
 
-## O que sera feito
+### Secao 1: Blocos Concluidos (1-7)
 
-### 1. Migrar FeatureGateContext.tsx
-- Remover import de `mockSubscription` e `mockWallet`
-- Usar `useClienteSubscription` e `useClienteWallet` para obter dados reais
-- Manter os toggles de demo (`simulateTrialExpired`, `simulateNoCredits`)
+Resumo do que foi feito:
 
-### 2. Migrar ClienteSidebar.tsx
-- Remover import de `clienteData`
-- Usar `useClienteSubscription` e `useClienteWallet` para trial banner e creditos
-- Calcular `trialDays` a partir de `subscription.trial_end` real
+- **Bloco 1-3**: Paginas da Franqueadora migradas para hooks reais (`useFinance`, `useContracts`, `useUnits`, `useGoals`, `useMarketing`, `usePermissions`, `useOnboarding`, `useSupportTickets`, `useAnnouncements`, `useCrmLeads`, `useCrmFunnels`, `useCrmActivities`, `useCrmTasks`, `useCalendar`, `useAcademy`, `useDailyMessages`)
+- **Bloco 4**: Paginas do Franqueado migradas para hooks reais
+- **Bloco 5**: Paginas do Cliente migradas para hooks reais (`useClienteSubscription`, `useClienteWallet`, `useClienteContent`, `useClienteCrm`, `useClienteDispatches`, `useClienteScripts`)
+- **Bloco 6**: `FeatureGateContext.tsx` e `ClienteSidebar.tsx` migrados para hooks reais; tipos movidos para `src/types/`
+- **Bloco 7**: Diretorio `src/data/` eliminado; todos os imports migrados para `src/mocks/`; 11 mocks nao usados deletados
 
-### 3. Limpar componentes filhos (tipos e constantes)
-Os componentes filhos importam principalmente **tipos TypeScript** e **constantes de configuracao** (cores, stages de funil, icones). Estrategia:
+### Secao 2: Estado Atual
 
-- Mover tipos compartilhados para `src/types/` (ex: `crm.ts`, `academy.ts`, `atendimento.ts`)
-- Mover constantes de UI (cores, labels) para os proprios componentes ou para `src/constants/`
-- Remover funcoes de mock data dos arquivos `@/data/*`
+- 25 hooks em `src/hooks/` conectados ao banco de dados
+- 14 tipos em `src/types/`
+- 14 arquivos mock restantes em `src/mocks/` (usados por 35 componentes)
+- 0 imports de `@/data/`
+- Helpers em `src/lib/helpers/` (agenda, academy, crm)
 
-Principais componentes afetados:
-- `CrmKanban`, `CrmList`, `CrmLeadDetail`, `CrmConfig`, `CrmAlerts` — tipos e constantes de CRM
-- `AcademyAdmin`, `AcademyQuiz`, `AcademyJourney`, `AcademyModuleDetail`, `AcademyReports` — tipos de Academy
-- `AtendimentoKanban`, `AtendimentoList`, `AtendimentoDetail`, `AtendimentoConfig` — tipos de Atendimento
-- `AgendaSidebar`, `AgendaCalendar`, `AgendaEventForm` — tipos de Agenda
-- `ComunicadosList`, `ComunicadoForm`, `ComunicadoDetail` — constantes de cores
-- `OnboardingIndicadores`, `OnboardingList`, `OnboardingEtapas` — tipos de Onboarding
-- `UnidadesList`, `UnidadeDocumentos`, `UnidadeUsuarios`, `UnidadeFinanceiro` — tipos de Unidades
-- `MatrizSpecialPermissions`, `MatrizUserList`, `MatrizProfiles` — tipos de Matriz
-- `ContratosRepositorio` — constantes de contratos
-- `MetasCampaigns`, `MetasGoals`, `MetasRankingView`, `MetasDashboard`, `MetasConfig` — tipos de Metas
+### Secao 3: Proximos Blocos
 
-### 4. Resultado final
-- Nenhum componente importando de `@/data/*` para dados mock
-- Arquivos `@/data/*` podem ser deletados ou mantidos apenas como referencia de tipos (se necessario)
+**Bloco 8 — Migrar componentes filhos para dados reais (por dominio)**
 
-## Detalhes tecnicos
+Substituir imports de `@/mocks/*` por hooks reais nos ~35 componentes restantes. Execucao em lotes:
 
-- `FeatureGateContext` passara a receber `subscription` e `wallet` como props ou usara hooks internamente
-- `ClienteSidebar` mostrara skeleton enquanto carrega dados de subscription/wallet
-- Tipos serao extraidos dos arquivos `@/data/*` para `src/types/*.ts` mantendo compatibilidade com os componentes existentes
-- Constantes de UI (cores de status, labels) irao para `src/constants/*.ts`
+- Lote 1: CRM (CrmLeadDetail, CrmKanban, CrmList, CrmAlerts, CrmConfig) — usar `useCrmLeads`, `useCrmActivities`, `useCrmTasks`, `useCrmFunnels`
+- Lote 2: Academy (AcademyAdmin, AcademyLesson, AcademyModuleDetail, AcademyCertificates, AcademyQuiz, AcademyReports, AcademyJourney, AcademyModules) — usar `useAcademy`
+- Lote 3: Agenda (AgendaCalendar, AgendaEventForm, AgendaEventDetail, AgendaListView, AgendaSidebar, AgendaConfig) — usar `useCalendar`
+- Lote 4: Atendimento (AtendimentoKanban, AtendimentoList, AtendimentoDetail, AtendimentoConfig) — usar `useSupportTickets`
+- Lote 5: Comunicados, Home, Metas, Marketing, Onboarding, Unidades, Matriz — usar hooks existentes
+- Lote 6: Limpar helpers em `src/lib/helpers/` que dependem de mocks
 
-## Ordem de execucao
-1. Criar arquivos de tipos em `src/types/`
-2. Criar arquivos de constantes em `src/constants/`
-3. Atualizar FeatureGateContext e ClienteSidebar
-4. Atualizar componentes filhos (em lotes por dominio)
-5. Verificar build limpo
+**Bloco 9 — Deletar todos os mocks restantes**
+
+Apos Bloco 8, os 14 arquivos em `src/mocks/` poderao ser deletados.
+
+**Bloco 10 — Revisao de Seguranca (RLS)**
+
+Revisar todas as tabelas do banco para garantir que RLS esta ativo e as policies estao corretas.
+
+**Bloco 11 — Testes End-to-End**
+
+Testar fluxos principais em cada perfil (Franqueadora, Franqueado, Cliente) para garantir que dados reais carregam corretamente.
+
+---
+
+### Detalhes Tecnicos
+
+Para o Bloco 8, cada componente que hoje faz:
+```
+import { mockLeads } from "@/mocks/crmData";
+```
+Passara a receber dados via props (do pai que ja usa hook) ou usara o hook diretamente:
+```
+const { leads } = useCrmLeads();
+```
+
+Constantes de UI (cores, labels, icones) permanecerao nos tipos (`src/types/`) ou inline nos componentes — nao precisam de banco de dados.
 
