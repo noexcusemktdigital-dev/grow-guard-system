@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Zap, Clock, Trophy, Calendar, Gift, CheckCircle } from "lucide-react";
-import { mockCampaigns, goalTypeConfig, getRankingForMonth, formatBRL, type Campaign } from "@/data/metasRankingData";
+import { goalTypeConfig, formatBRL, type Campaign } from "@/types/metas";
+import { mockCampaigns, getRankingForMonth } from "@/data/metasRankingData";
 
 export default function MetasCampaigns() {
   const [campaigns] = useState<Campaign[]>(mockCampaigns);

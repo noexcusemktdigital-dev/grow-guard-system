@@ -2,7 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type AgendaEvent, getEventColor } from "@/data/agendaData";
+import type { AgendaEvent } from "@/types/agenda";
+import { getEventColor } from "@/data/agendaData";
 import { format, parseISO, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 

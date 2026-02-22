@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type Comunicado, getPrioridadeColor, getTipoColor } from "@/data/comunicadosData";
+import { type Comunicado, getPrioridadeColor, getTipoColor } from "@/types/comunicados";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 

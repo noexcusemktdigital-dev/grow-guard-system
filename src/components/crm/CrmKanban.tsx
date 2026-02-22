@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { Lead, Task, FunnelType } from "@/data/crmData";
-import { getStagesForFunnel, getTasksForLead, mockTasks } from "@/data/crmData";
+import type { Lead, Task, FunnelType } from "@/types/crm";
+import { getStagesForFunnel } from "@/types/crm";
 
 const tempColors: Record<string, string> = {
   Frio: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",

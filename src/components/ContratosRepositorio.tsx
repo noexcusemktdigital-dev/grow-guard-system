@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import {
   Contrato, CONTRATO_STATUS_COLORS,
-} from "@/data/contratosData";
+} from "@/types/contratos";
 
 interface RepositorioSection {
   key: string;

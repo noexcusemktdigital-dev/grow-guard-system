@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { MessageSquare, GraduationCap, Rocket, FileText, DollarSign, Megaphone, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PrioridadeDoDia } from "@/data/homeData";
+import type { PrioridadeDoDia } from "@/types/home";
 
 const tipoIcons: Record<string, React.ElementType> = {
   chamado: MessageSquare,

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Ticket, TicketMessage, TicketStatus, TICKET_STATUSES, RESPONSAVEIS, isSlaBreached, getSlaRemaining, getMessagesForTicket } from "@/data/atendimentoData";
+import { Ticket, TicketMessage, TicketStatus, TICKET_STATUSES, RESPONSAVEIS, isSlaBreached, getSlaRemaining } from "@/types/atendimento";
+import { getMessagesForTicket } from "@/data/atendimentoData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

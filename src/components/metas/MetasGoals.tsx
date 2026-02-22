@@ -9,10 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Target, Users, Building2 } from "lucide-react";
-import {
-  mockGoals, goalTypeConfig, getRankingForMonth, getAllFranchises, formatBRL,
-  type Goal, type GoalType,
-} from "@/data/metasRankingData";
+import { goalTypeConfig, formatBRL, type Goal, type GoalType } from "@/types/metas";
+import { mockGoals, getRankingForMonth, getAllFranchises } from "@/data/metasRankingData";
 
 const MONTH = "2026-02";
 

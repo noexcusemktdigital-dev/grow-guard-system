@@ -13,7 +13,7 @@ import {
   ComunicadoTipo,
   ComunicadoPrioridade,
   PublicoAlvo,
-} from "@/data/comunicadosData";
+} from "@/types/comunicados";
 import {
   FileText,
   Users,

@@ -3,12 +3,11 @@ import { BookOpen, Clock, Play, ArrowRight, TrendingUp, Target, Building2, Packa
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { AcademyModuleCategory } from "@/types/academy";
+import { categoryGradients, categoryColors } from "@/types/academy";
 import {
-  type AcademyModuleCategory,
   mockModules,
   getModuleProgress,
-  categoryGradients,
-  categoryColors,
   getCategoryModuleCount,
 } from "@/data/academyData";
 

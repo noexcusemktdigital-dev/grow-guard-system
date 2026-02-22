@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, CheckCircle2 } from "lucide-react";
-import type { ChecklistItem, OnboardingPhase } from "@/data/onboardingData";
+import type { ChecklistItem, OnboardingPhase } from "@/types/onboarding";
 
 const PHASES: OnboardingPhase[] = ["Pré-Implantação", "Estruturação", "Primeiros Movimentos", "Consolidação"];
 

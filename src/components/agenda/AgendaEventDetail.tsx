@@ -7,9 +7,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import type { AgendaEvent } from "@/types/agenda";
 import {
   mockEvents, getEventColor, getStatusColor, getInviteStatusColor, getLevelLabel,
-  getRecurrenceLabel, mockCalendars, type AgendaEvent
+  getRecurrenceLabel, mockCalendars
 } from "@/data/agendaData";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";

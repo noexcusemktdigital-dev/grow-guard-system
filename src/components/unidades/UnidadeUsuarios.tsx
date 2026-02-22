@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { UnidadeUser, UserRole, UserPermission, UserStatus } from "@/data/unidadesData";
+import { UnidadeUser, UserRole, UserPermission, UserStatus } from "@/types/unidades";
 
 const roles: UserRole[] = ["Franqueado", "Comercial", "Atendimento", "Performance", "Criativo", "Financeiro"];
 const permissions: UserPermission[] = ["Admin da Unidade", "Operador", "Somente leitura"];

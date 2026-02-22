@@ -4,10 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Trophy } from "lucide-react";
-import {
-  getRankingForMonth, levelThresholds, formatBRL, calculateTotalPoints, getFranchiseLevel,
-  type FranchiseScore,
-} from "@/data/metasRankingData";
+import { levelThresholds, formatBRL, getFranchiseLevel, type FranchiseScore } from "@/types/metas";
+import { getRankingForMonth, calculateTotalPoints } from "@/data/metasRankingData";
 
 export default function MetasRankingView() {
   const [month] = useState("2026-02");

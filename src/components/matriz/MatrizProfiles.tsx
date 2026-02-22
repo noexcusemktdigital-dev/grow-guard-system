@@ -2,7 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Crown, DollarSign, TrendingUp, Headphones, Megaphone, Check } from "lucide-react";
-import { perfisPreConfigurados, getUserModulosHabilitados, permissoesEspeciaisConfig, type PerfilPreConfigurado } from "@/data/matrizData";
+import { perfisPreConfigurados, permissoesEspeciaisConfig, type PerfilPreConfigurado } from "@/types/matriz";
+import { getUserModulosHabilitados } from "@/data/matrizData";
 
 const iconMap: Record<string, React.ElementType> = {
   Crown, DollarSign, TrendingUp, Headphones, Megaphone,

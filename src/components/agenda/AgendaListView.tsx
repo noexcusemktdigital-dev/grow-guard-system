@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { mockEvents, getEventColor, getStatusColor, getLevelLabel, type AgendaEvent } from "@/data/agendaData";
+import type { AgendaEvent } from "@/types/agenda";
+import { mockEvents, getEventColor, getStatusColor, getLevelLabel } from "@/data/agendaData";
 import { format, parseISO, addDays, isSameDay, isAfter, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Users, MapPin, Video, Clock } from "lucide-react";

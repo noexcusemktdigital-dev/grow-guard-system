@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, X, Cloud } from "lucide-react";
-import { mockCalendars, mockAgendaUsers, type AgendaEvent, type EventParticipant } from "@/data/agendaData";
+import type { AgendaEvent, EventParticipant } from "@/types/agenda";
+import { mockCalendars, mockAgendaUsers } from "@/data/agendaData";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {

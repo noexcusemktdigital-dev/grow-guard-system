@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { FRANCHISE_STAGES, CLIENT_STAGES, LEAD_ORIGINS, RESPONSAVEIS } from "@/data/crmData";
+import { FRANCHISE_STAGES, CLIENT_STAGES, LEAD_ORIGINS, RESPONSAVEIS } from "@/types/crm";
 
 interface CrmConfigProps {
   onBack: () => void;

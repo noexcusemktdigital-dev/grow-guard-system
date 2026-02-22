@@ -16,7 +16,7 @@ import {
   allProducts,
   getCategoryLabel,
   monthLabels,
-} from "@/data/marketingData";
+} from "@/types/marketing";
 
 interface MarketingUploadProps {
   open: boolean;

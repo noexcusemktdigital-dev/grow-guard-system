@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import type { OnboardingTask, TaskStatus } from "@/data/onboardingData";
-import { TASK_STATUS_COLORS } from "@/data/onboardingData";
+import type { OnboardingTask, TaskStatus } from "@/types/onboarding";
+import { TASK_STATUS_COLORS } from "@/types/onboarding";
 
 interface OnboardingPlanoAcaoProps {
   tasks: OnboardingTask[];
