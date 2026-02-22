@@ -1,19 +1,7 @@
-import { useState, useEffect } from "react";
 import logoDark from "@/assets/NOE3.png";
+import { BackgroundGradientAnimation } from "@/components/ui/background-gradient-animation";
 import { TestimonialsColumn } from "@/components/ui/testimonials-columns";
-
-const BENEFITS = [
-  "CRM completo para nunca perder uma venda",
-  "Automação de marketing que trabalha por você",
-  "Funil de vendas visual e inteligente",
-  "Relatórios que mostram onde está o dinheiro",
-  "Gestão de equipe comercial em tempo real",
-  "Campanhas de e-mail e WhatsApp integradas",
-  "Scripts de vendas prontos para sua equipe",
-  "Dashboard com métricas que importam",
-  "Controle total dos seus leads e clientes",
-  "Integração com redes sociais e tráfego pago",
-];
+import { Highlight } from "@/components/ui/hero-highlight";
 
 const testimonials = [
   { text: "Triplicamos nossas vendas em 4 meses usando a plataforma.", image: "https://randomuser.me/api/portraits/men/1.jpg", name: "Ricardo M.", role: "CEO — RM Consultoria" },
@@ -32,57 +20,53 @@ const col2 = testimonials.slice(3, 6);
 const col3 = testimonials.slice(6, 9);
 
 const SaasBrandingPanel = () => {
-  const [benefitIndex, setBenefitIndex] = useState(0);
-  const [fadeIn, setFadeIn] = useState(true);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFadeIn(false);
-      setTimeout(() => {
-        setBenefitIndex((i) => (i + 1) % BENEFITS.length);
-        setFadeIn(true);
-      }, 400);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(355,78%,50%)] via-[hsl(355,78%,40%)] to-[hsl(355,78%,25%)]" />
-      <div className="absolute inset-0 bg-black/10" />
+    <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+      <BackgroundGradientAnimation
+        gradientBackgroundStart="rgb(139, 0, 0)"
+        gradientBackgroundEnd="rgb(80, 0, 0)"
+        firstColor="200, 30, 30"
+        secondColor="255, 60, 60"
+        thirdColor="180, 0, 0"
+        fourthColor="255, 100, 50"
+        fifthColor="220, 20, 60"
+        pointerColor="255, 80, 80"
+        size="80%"
+        blendingValue="hard-light"
+        interactive={true}
+        containerClassName="absolute inset-0"
+        className="h-full w-full flex flex-col"
+      >
+        <div className="flex flex-col h-full px-8 py-8">
+          {/* Tagline with highlight */}
+          <div className="pt-4 pb-6">
+            <h2 className="text-2xl xl:text-3xl font-black uppercase italic tracking-tighter text-white leading-tight">
+              Plataforma{" "}
+              <Highlight className="text-white">
+                completa de marketing e vendas
+              </Highlight>{" "}
+              para acelerar seus resultados
+            </h2>
+          </div>
 
-      {/* Content */}
-      <div className="relative z-10 flex flex-col h-full px-10 py-10">
-        {/* Benefits phrase — title font */}
-        <div className="pt-4 pb-8 flex items-center justify-center min-h-[120px]">
-          <p
-            className={`text-2xl xl:text-3xl font-black uppercase italic tracking-tighter text-white text-center leading-tight max-w-md transition-all duration-400 ${
-              fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-            }`}
-          >
-            {BENEFITS[benefitIndex]}
-          </p>
-        </div>
+          {/* Testimonials columns — fills remaining space */}
+          <div className="flex-1 overflow-hidden relative min-h-0">
+            <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-black/20 to-transparent z-10 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/20 to-transparent z-10 pointer-events-none" />
 
-        {/* Testimonials columns */}
-        <div className="flex-1 overflow-hidden relative">
-          {/* Fade masks */}
-          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-[hsl(355,78%,40%)]/80 to-transparent z-10 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[hsl(355,78%,30%)]/80 to-transparent z-10 pointer-events-none" />
+            <div className="flex gap-3 h-full [mask-image:linear-gradient(to_bottom,transparent,black_5%,black_95%,transparent)]">
+              <TestimonialsColumn testimonials={col1} duration={15} className="flex-1" />
+              <TestimonialsColumn testimonials={col2} duration={19} className="flex-1 hidden xl:block" />
+              <TestimonialsColumn testimonials={col3} duration={17} className="flex-1 hidden 2xl:block" />
+            </div>
+          </div>
 
-          <div className="flex gap-4 h-full [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]">
-            <TestimonialsColumn testimonials={col1} duration={15} className="flex-1" />
-            <TestimonialsColumn testimonials={col2} duration={19} className="flex-1 hidden xl:block" />
-            <TestimonialsColumn testimonials={col3} duration={17} className="flex-1 hidden 2xl:block" />
+          {/* Logo bottom */}
+          <div className="flex justify-center pt-4">
+            <img src={logoDark} alt="NoExcuse" className="h-7 object-contain opacity-70" />
           </div>
         </div>
-
-        {/* Logo bottom */}
-        <div className="flex justify-center pt-6">
-          <img src={logoDark} alt="NoExcuse" className="h-7 object-contain opacity-70" />
-        </div>
-      </div>
+      </BackgroundGradientAnimation>
     </div>
   );
 };
