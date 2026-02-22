@@ -2,7 +2,7 @@ import { mockTickets, type Ticket } from "./atendimentoData";
 import { mockComunicados, type Comunicado } from "./comunicadosData";
 import { mockOnboardings, mockMeetings, mockTasks as onboardingTasks } from "./onboardingData";
 import { mockEvents, mockCalendars, type AgendaEvent } from "./agendaData";
-import { mockLeads } from "./crmData";
+import { mockLeads } from "./crm";
 import { getRankingForMonth } from "./metasRankingData";
 import type { Contrato } from "@/types/contratos";
 import { parseISO, isAfter, isBefore, addDays, format } from "date-fns";
