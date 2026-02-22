@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Users, Plus, Phone, Search, LayoutGrid, List, Clock,
   GripVertical, Settings2, Filter, X, Copy, MoreHorizontal,
-  MessageCircle, CircleDot, XCircle, Tag
+  MessageCircle, CircleDot, XCircle, Tag, Shuffle, ChevronDown,
+  Calendar, DollarSign, UserCircle
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,8 +15,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useClienteCrm";
 import { useCrmFunnels } from "@/hooks/useClienteCrm";
+import { useCrmSettings } from "@/hooks/useCrmSettings";
+import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useToast } from "@/hooks/use-toast";
 import { DndContext, DragOverlay, closestCorners, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
@@ -142,9 +147,12 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
 
 // ===== Main Component =====
 export default function ClienteCRM() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { data: leads, isLoading: leadsLoading } = useCrmLeads();
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();
+  const { data: crmSettings } = useCrmSettings();
+  const { data: team } = useCrmTeam();
   const { updateLead, deleteLead, markAsLost } = useCrmLeadMutations();
 
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -154,11 +162,16 @@ export default function ClienteCRM() {
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [funnelManagerOpen, setFunnelManagerOpen] = useState(false);
 
-  // Filters
+  // Basic Filters
   const [filterSource, setFilterSource] = useState<string>("");
   const [filterTag, setFilterTag] = useState("");
 
-  const isLoading = leadsLoading || funnelsLoading;
+  // Advanced Filters
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [filterAssigned, setFilterAssigned] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterValueMin, setFilterValueMin] = useState("");
+  const [filterValueMax, setFilterValueMax] = useState("");
 
   const stages: FunnelStage[] = useMemo(() => {
     if (funnelsData && funnelsData.length > 0) {
@@ -185,6 +198,8 @@ export default function ClienteCRM() {
     return Array.from(tags).sort();
   }, [allLeads]);
 
+  const isLoading = leadsLoading || funnelsLoading;
+
   const filteredLeads = useMemo(() => {
     let result = allLeads;
     if (search) {
@@ -202,8 +217,24 @@ export default function ClienteCRM() {
     if (filterTag) {
       result = result.filter(l => l.tags?.includes(filterTag));
     }
+    if (filterAssigned) {
+      result = result.filter(l => l.assigned_to === filterAssigned);
+    }
+    if (filterStatus === "won") {
+      result = result.filter(l => l.won_at);
+    } else if (filterStatus === "lost") {
+      result = result.filter(l => l.lost_at);
+    } else if (filterStatus === "active") {
+      result = result.filter(l => !l.won_at && !l.lost_at);
+    }
+    if (filterValueMin) {
+      result = result.filter(l => (l.value || 0) >= parseFloat(filterValueMin));
+    }
+    if (filterValueMax) {
+      result = result.filter(l => (l.value || 0) <= parseFloat(filterValueMax));
+    }
     return result;
-  }, [allLeads, search, filterSource, filterTag]);
+  }, [allLeads, search, filterSource, filterTag, filterAssigned, filterStatus, filterValueMin, filterValueMax]);
 
   const leadsByStage = useMemo(() => {
     const map: Record<string, LeadRow[]> = {};
@@ -228,7 +259,7 @@ export default function ClienteCRM() {
     }
   };
 
-  const hasFilters = !!filterSource || !!filterTag;
+  const hasFilters = !!filterSource || !!filterTag || !!filterAssigned || !!filterStatus || !!filterValueMin || !!filterValueMax;
 
   if (isLoading) {
     return (
@@ -250,7 +281,10 @@ export default function ClienteCRM() {
         subtitle={`${allLeads.length} leads · Gerencie seus leads e oportunidades`}
         icon={<Users className="w-5 h-5 text-primary" />}
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {crmSettings?.lead_roulette_enabled && (
+              <Badge variant="outline" className="text-[10px] gap-1"><Shuffle className="w-3 h-3" /> Roleta ativa</Badge>
+            )}
             <Button size="sm" onClick={() => setNewLeadOpen(true)} className="gap-1">
               <Plus className="w-3.5 h-3.5" /> Novo Lead
             </Button>
@@ -265,11 +299,11 @@ export default function ClienteCRM() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setFunnelManagerOpen(true)}>
+                  <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigate("/cliente/crm/config")}>
                     <Settings2 className="w-3.5 h-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Configurar funil</TooltipContent>
+                <TooltipContent>Configurações do CRM</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
@@ -305,11 +339,39 @@ export default function ClienteCRM() {
           </Select>
         )}
         {hasFilters && (
-          <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setFilterSource(""); setFilterTag(""); }}>
+          <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setFilterSource(""); setFilterTag(""); setFilterAssigned(""); setFilterStatus(""); setFilterValueMin(""); setFilterValueMax(""); }}>
             <X className="w-3 h-3" /> Limpar filtros
           </Button>
         )}
+        <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => setShowAdvanced(!showAdvanced)}>
+          <ChevronDown className={`w-3 h-3 transition-transform ${showAdvanced ? "rotate-180" : ""}`} /> Mais filtros
+        </Button>
       </div>
+
+      {showAdvanced && (
+        <div className="flex flex-wrap items-center gap-2">
+          {team && team.length > 0 && (
+            <Select value={filterAssigned} onValueChange={v => setFilterAssigned(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-8 w-40 text-xs"><UserCircle className="w-3 h-3 mr-1" /><SelectValue placeholder="Responsável" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                {team.map(m => <SelectItem key={m.user_id} value={m.user_id} className="text-xs">{m.full_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={filterStatus} onValueChange={v => setFilterStatus(v === "all" ? "" : v)}>
+            <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">Todos</SelectItem>
+              <SelectItem value="active" className="text-xs">Ativo</SelectItem>
+              <SelectItem value="won" className="text-xs">Vendido</SelectItem>
+              <SelectItem value="lost" className="text-xs">Perdido</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input type="number" placeholder="Valor mín" value={filterValueMin} onChange={e => setFilterValueMin(e.target.value)} className="h-8 w-28 text-xs" />
+          <Input type="number" placeholder="Valor máx" value={filterValueMax} onChange={e => setFilterValueMax(e.target.value)} className="h-8 w-28 text-xs" />
+        </div>
+      )}
 
       {allLeads.length === 0 ? (
         <Card className="border-dashed">

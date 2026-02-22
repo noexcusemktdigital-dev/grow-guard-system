@@ -1162,6 +1162,53 @@ export type Database = {
           },
         ]
       }
+      crm_automations: {
+        Row: {
+          action_config: Json
+          action_type: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          trigger_config: Json
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          action_config?: Json
+          action_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          trigger_config?: Json
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          action_config?: Json
+          action_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          trigger_config?: Json
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_automations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_files: {
         Row: {
           created_at: string
@@ -1438,6 +1485,53 @@ export type Database = {
             foreignKeyName: "crm_proposals_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_settings: {
+        Row: {
+          alerts_enabled: boolean
+          auto_tasks_on_stage_move: boolean
+          created_at: string
+          id: string
+          lead_roulette_enabled: boolean
+          organization_id: string
+          roulette_members: Json
+          sla_first_contact_hours: number
+          sla_task_open_days: number
+          updated_at: string
+        }
+        Insert: {
+          alerts_enabled?: boolean
+          auto_tasks_on_stage_move?: boolean
+          created_at?: string
+          id?: string
+          lead_roulette_enabled?: boolean
+          organization_id: string
+          roulette_members?: Json
+          sla_first_contact_hours?: number
+          sla_task_open_days?: number
+          updated_at?: string
+        }
+        Update: {
+          alerts_enabled?: boolean
+          auto_tasks_on_stage_move?: boolean
+          created_at?: string
+          id?: string
+          lead_roulette_enabled?: boolean
+          organization_id?: string
+          roulette_members?: Json
+          sla_first_contact_hours?: number
+          sla_task_open_days?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
