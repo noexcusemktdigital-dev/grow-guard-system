@@ -7,3 +7,6 @@ export { useCrmTasks, useCrmTaskMutations } from "./useCrmTasks";
 export { useCrmSettings, useCrmSettingsMutations } from "./useCrmSettings";
 export { useCrmAutomations, useCrmAutomationMutations } from "./useCrmAutomations";
 export { useCrmTeam } from "./useCrmTeam";
+export { useCrmProposals, useCrmProposalMutations } from "./useCrmProposals";
+export { useCrmProducts, useCrmProductMutations } from "./useCrmProducts";
+export { useCrmPartners, useCrmPartnerMutations } from "./useCrmPartners";
