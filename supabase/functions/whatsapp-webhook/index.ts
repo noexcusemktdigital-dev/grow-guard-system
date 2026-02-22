@@ -133,6 +133,31 @@ Deno.serve(async (req) => {
       metadata: body,
     });
 
+    // Trigger AI agent reply if contact is in AI mode and message has text
+    if (messageText) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const aiReplyUrl = `${supabaseUrl}/functions/v1/ai-agent-reply`;
+        
+        // Fire and forget — don't block webhook response
+        fetch(aiReplyUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            organization_id: orgId,
+            contact_id: contactId,
+            message_text: messageText,
+          }),
+        }).catch((e) => console.error("AI reply trigger error:", e));
+      } catch (e) {
+        console.error("AI reply trigger setup error:", e);
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

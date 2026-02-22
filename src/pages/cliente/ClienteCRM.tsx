@@ -7,8 +7,9 @@ import {
   Filter, DollarSign, Target, AlertTriangle, ChevronDown,
   Zap, BarChart3, X, Save, Palette, CirclePlus, CircleDot,
   Crosshair, Handshake, ShieldCheck, Ban, Sparkles, Star,
-  PhoneOutgoing, SearchCheck, Copy, MoreHorizontal
+  PhoneOutgoing, SearchCheck, Copy, MoreHorizontal, ExternalLink
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -369,49 +370,112 @@ export default function ClienteCRM() {
           <SheetHeader>
             <SheetTitle>{selectedLead?.name}</SheetTitle>
           </SheetHeader>
-          {selectedLead && (
-            <div className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-3">
-                {selectedLead.phone && (
-                  <div className="p-3 rounded-lg border">
-                    <p className="text-[10px] text-muted-foreground uppercase">Telefone</p>
-                    <p className="text-sm font-medium">{selectedLead.phone}</p>
-                  </div>
-                )}
-                {selectedLead.email && (
-                  <div className="p-3 rounded-lg border">
-                    <p className="text-[10px] text-muted-foreground uppercase">E-mail</p>
-                    <p className="text-sm font-medium truncate">{selectedLead.email}</p>
-                  </div>
-                )}
-                {selectedLead.company && (
-                  <div className="p-3 rounded-lg border">
-                    <p className="text-[10px] text-muted-foreground uppercase">Empresa</p>
-                    <p className="text-sm font-medium">{selectedLead.company}</p>
-                  </div>
-                )}
-                <div className="p-3 rounded-lg border">
-                  <p className="text-[10px] text-muted-foreground uppercase">Valor</p>
-                  <p className="text-sm font-bold text-primary">
-                    {selectedLead.value ? `R$ ${Number(selectedLead.value).toLocaleString()}` : "—"}
-                  </p>
-                </div>
-              </div>
-              {selectedLead.tags && selectedLead.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {selectedLead.tags.map(tag => (
-                    <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
-                  ))}
-                </div>
-              )}
-              <div className="p-3 rounded-lg border">
-                <p className="text-[10px] text-muted-foreground uppercase">Criado em</p>
-                <p className="text-sm">{new Date(selectedLead.created_at).toLocaleDateString("pt-BR")}</p>
-              </div>
-            </div>
-          )}
+          {selectedLead && <LeadDetailContent lead={selectedLead} stages={stages} />}
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+// ===== Lead Detail with WhatsApp Tab =====
+
+function LeadDetailContent({ lead, stages }: { lead: LeadRow; stages: FunnelStage[] }) {
+  const navigate = useNavigate();
+  const whatsappContactId = (lead as any).whatsapp_contact_id;
+  const stage = stages.find(s => s.key === lead.stage);
+
+  return (
+    <div className="space-y-4 mt-4">
+      <Tabs defaultValue="info" className="w-full">
+        <TabsList className="w-full grid grid-cols-2">
+          <TabsTrigger value="info" className="text-xs">Informações</TabsTrigger>
+          <TabsTrigger value="whatsapp" className="text-xs gap-1">
+            <MessageCircle className="w-3 h-3" /> WhatsApp
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="info" className="space-y-3 mt-3">
+          {stage && (
+            <Badge variant="outline" className={`text-xs ${getColorStyle(stage.color).text} ${getColorStyle(stage.color).border}`}>
+              {STAGE_ICONS[stage.icon] || <CircleDot className="w-3 h-3" />}
+              <span className="ml-1">{stage.label}</span>
+            </Badge>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            {lead.phone && (
+              <div className="p-3 rounded-lg border">
+                <p className="text-[10px] text-muted-foreground uppercase">Telefone</p>
+                <p className="text-sm font-medium">{lead.phone}</p>
+              </div>
+            )}
+            {lead.email && (
+              <div className="p-3 rounded-lg border">
+                <p className="text-[10px] text-muted-foreground uppercase">E-mail</p>
+                <p className="text-sm font-medium truncate">{lead.email}</p>
+              </div>
+            )}
+            {lead.company && (
+              <div className="p-3 rounded-lg border">
+                <p className="text-[10px] text-muted-foreground uppercase">Empresa</p>
+                <p className="text-sm font-medium">{lead.company}</p>
+              </div>
+            )}
+            <div className="p-3 rounded-lg border">
+              <p className="text-[10px] text-muted-foreground uppercase">Valor</p>
+              <p className="text-sm font-bold text-primary">
+                {lead.value ? `R$ ${Number(lead.value).toLocaleString()}` : "—"}
+              </p>
+            </div>
+          </div>
+          {lead.tags && lead.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {lead.tags.map(tag => (
+                <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+              ))}
+            </div>
+          )}
+          <div className="p-3 rounded-lg border">
+            <p className="text-[10px] text-muted-foreground uppercase">Criado em</p>
+            <p className="text-sm">{new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="whatsapp" className="mt-3">
+          {whatsappContactId ? (
+            <div className="space-y-3">
+              <Card>
+                <CardContent className="p-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4 text-emerald-500" />
+                    <div>
+                      <p className="text-sm font-medium">Conversa vinculada</p>
+                      <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1"
+                    onClick={() => navigate("/cliente/chat")}
+                  >
+                    <ExternalLink className="w-3 h-3" /> Abrir chat
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <MessageCircle className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">Nenhuma conversa vinculada</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {lead.phone
+                  ? "Quando este número enviar uma mensagem, será vinculado automaticamente."
+                  : "Adicione um telefone ao lead para vincular ao WhatsApp."}
+              </p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
