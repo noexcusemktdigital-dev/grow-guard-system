@@ -1,5 +1,22 @@
 // Cliente types (extracted from clienteData.ts)
 
+export interface AiAgent {
+  id: string;
+  organization_id: string;
+  created_by: string | null;
+  name: string;
+  avatar_url: string | null;
+  status: string;
+  description: string | null;
+  persona: Record<string, any>;
+  knowledge_base: any[];
+  prompt_config: Record<string, any>;
+  channel: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Organization {
   id: string;
   name: string;

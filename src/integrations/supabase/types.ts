@@ -486,6 +486,65 @@ export type Database = {
           },
         ]
       }
+      client_ai_agents: {
+        Row: {
+          avatar_url: string | null
+          channel: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          knowledge_base: Json
+          name: string
+          organization_id: string
+          persona: Json
+          prompt_config: Json
+          status: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          knowledge_base?: Json
+          name: string
+          organization_id: string
+          persona?: Json
+          prompt_config?: Json
+          status?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          knowledge_base?: Json
+          name?: string
+          organization_id?: string
+          persona?: Json
+          prompt_config?: Json
+          status?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_ai_agents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_campaigns: {
         Row: {
           budget: number | null
