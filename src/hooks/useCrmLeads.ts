@@ -88,6 +88,40 @@ export function useCrmLeadMutations() {
     },
   });
 
+  const markAsWon = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("crm_leads")
+        .update({ won_at: new Date().toISOString(), stage: "fechado" })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-lead"] });
+    },
+  });
+
+  const markAsLost = useMutation({
+    mutationFn: async ({ id, lost_reason }: { id: string; lost_reason?: string }) => {
+      const { data, error } = await supabase
+        .from("crm_leads")
+        .update({ lost_at: new Date().toISOString(), lost_reason, stage: "perdido" })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-lead"] });
+    },
+  });
+
   const deleteLead = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("crm_leads").delete().eq("id", id);
@@ -96,5 +130,5 @@ export function useCrmLeadMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
   });
 
-  return { createLead, updateLead, deleteLead };
+  return { createLead, updateLead, deleteLead, markAsWon, markAsLost };
 }
