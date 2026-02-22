@@ -2742,6 +2742,154 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          name: string | null
+          organization_id: string
+          phone: string
+          photo_url: string | null
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          name?: string | null
+          organization_id: string
+          phone: string
+          photo_url?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          name?: string | null
+          organization_id?: string
+          phone?: string
+          photo_url?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_instances: {
+        Row: {
+          client_token: string
+          created_at: string
+          id: string
+          instance_id: string
+          organization_id: string
+          phone_number: string | null
+          status: string
+          token: string
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          client_token: string
+          created_at?: string
+          id?: string
+          instance_id: string
+          organization_id: string
+          phone_number?: string | null
+          status?: string
+          token: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          client_token?: string
+          created_at?: string
+          id?: string
+          instance_id?: string
+          organization_id?: string
+          phone_number?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          contact_id: string
+          content: string | null
+          created_at: string
+          direction: string
+          id: string
+          media_url: string | null
+          message_id_zapi: string | null
+          metadata: Json
+          organization_id: string
+          status: string
+          type: string
+        }
+        Insert: {
+          contact_id: string
+          content?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          media_url?: string | null
+          message_id_zapi?: string | null
+          metadata?: Json
+          organization_id: string
+          status?: string
+          type?: string
+        }
+        Update: {
+          contact_id?: string
+          content?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          media_url?: string | null
+          message_id_zapi?: string | null
+          metadata?: Json
+          organization_id?: string
+          status?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

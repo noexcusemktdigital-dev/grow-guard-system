@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.seed-users]
 verify_jwt = false
+
+[functions.whatsapp-send]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.whatsapp-setup]
+verify_jwt = false
