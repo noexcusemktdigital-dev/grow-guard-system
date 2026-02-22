@@ -3,7 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { FranqueadoraLayout } from "./components/FranqueadoraLayout";
 import { FranqueadoLayout } from "./components/FranqueadoLayout";
@@ -55,7 +59,6 @@ import ClienteScripts from "./pages/cliente/ClienteScripts";
 import ClienteDisparos from "./pages/cliente/ClienteDisparos";
 import ClienteRelatorios from "./pages/cliente/ClienteRelatorios";
 import ClientePlanoMarketing from "./pages/cliente/ClientePlanoMarketing";
-
 import ClienteConteudos from "./pages/cliente/ClienteConteudos";
 import ClienteRedesSociais from "./pages/cliente/ClienteRedesSociais";
 import ClienteSites from "./pages/cliente/ClienteSites";
@@ -72,74 +75,77 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />}>
-            <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
-            <Route path="franqueadora" element={<FranqueadoraLayout />}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>}>
               <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
-              <Route path="dashboard" element={<Home />} />
-              <Route path="financeiro" element={<FinanceiroDashboard />} />
-              <Route path="financeiro/despesas" element={<FinanceiroDespesas />} />
-              <Route path="financeiro/receitas" element={<FinanceiroReceitas />} />
-              <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
-              <Route path="financeiro/fechamentos" element={<FinanceiroFechamentos />} />
-              <Route path="financeiro/configuracoes" element={<FinanceiroConfiguracoes />} />
-              <Route path="contratos" element={<ContratosGerenciamento />} />
-              <Route path="contratos/criar" element={<ContratosGerador />} />
-              <Route path="contratos/templates" element={<ContratosTemplates />} />
-              <Route path="contratos/configuracoes" element={<ContratosConfiguracoes />} />
-              <Route path="marketing" element={<Marketing />} />
-              <Route path="treinamentos" element={<Academy />} />
-              <Route path="metas" element={<MetasRanking />} />
-              <Route path="unidades" element={<Unidades />} />
-              <Route path="crm" element={<CrmExpansao />} />
-              <Route path="onboarding" element={<Onboarding />} />
-              <Route path="atendimento" element={<Atendimento />} />
-              <Route path="comunicados" element={<Comunicados />} />
-              <Route path="agenda" element={<Agenda />} />
-              <Route path="matriz" element={<Matriz />} />
+              <Route path="franqueadora" element={<FranqueadoraLayout />}>
+                <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
+                <Route path="dashboard" element={<Home />} />
+                <Route path="financeiro" element={<FinanceiroDashboard />} />
+                <Route path="financeiro/despesas" element={<FinanceiroDespesas />} />
+                <Route path="financeiro/receitas" element={<FinanceiroReceitas />} />
+                <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
+                <Route path="financeiro/fechamentos" element={<FinanceiroFechamentos />} />
+                <Route path="financeiro/configuracoes" element={<FinanceiroConfiguracoes />} />
+                <Route path="contratos" element={<ContratosGerenciamento />} />
+                <Route path="contratos/criar" element={<ContratosGerador />} />
+                <Route path="contratos/templates" element={<ContratosTemplates />} />
+                <Route path="contratos/configuracoes" element={<ContratosConfiguracoes />} />
+                <Route path="marketing" element={<Marketing />} />
+                <Route path="treinamentos" element={<Academy />} />
+                <Route path="metas" element={<MetasRanking />} />
+                <Route path="unidades" element={<Unidades />} />
+                <Route path="crm" element={<CrmExpansao />} />
+                <Route path="onboarding" element={<Onboarding />} />
+                <Route path="atendimento" element={<Atendimento />} />
+                <Route path="comunicados" element={<Comunicados />} />
+                <Route path="agenda" element={<Agenda />} />
+                <Route path="matriz" element={<Matriz />} />
+              </Route>
+              <Route path="franqueado" element={<FranqueadoLayout />}>
+                <Route index element={<Navigate to="/franqueado/dashboard" replace />} />
+                <Route path="dashboard" element={<FranqueadoDashboard />} />
+                <Route path="agenda" element={<FranqueadoAgenda />} />
+                <Route path="comunicados" element={<FranqueadoComunicados />} />
+                <Route path="suporte" element={<FranqueadoSuporte />} />
+                <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
+                <Route path="diagnostico" element={<FranqueadoDiagnostico />} />
+                <Route path="propostas" element={<FranqueadoPropostas />} />
+                <Route path="crm" element={<FranqueadoCRM />} />
+                <Route path="materiais" element={<FranqueadoMateriais />} />
+                <Route path="academy" element={<FranqueadoAcademy />} />
+                <Route path="financeiro" element={<FranqueadoFinanceiro />} />
+                <Route path="contratos" element={<FranqueadoContratos />} />
+              </Route>
+              <Route path="cliente" element={<ClienteLayout />}>
+                <Route index element={<Navigate to="/cliente/inicio" replace />} />
+                <Route path="inicio" element={<ClienteInicio />} />
+                <Route path="checklist" element={<ClienteChecklist />} />
+                <Route path="notificacoes" element={<ClienteNotificacoes />} />
+                <Route path="gamificacao" element={<ClienteGamificacao />} />
+                <Route path="plano-vendas" element={<ClientePlanoVendas />} />
+                <Route path="chat" element={<ClienteChat />} />
+                <Route path="crm" element={<ClienteCRM />} />
+                <Route path="agentes-ia" element={<ClienteAgentesIA />} />
+                <Route path="scripts" element={<ClienteScripts />} />
+                <Route path="disparos" element={<ClienteDisparos />} />
+                <Route path="relatorios" element={<ClienteRelatorios />} />
+                <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
+                <Route path="conteudos" element={<ClienteConteudos />} />
+                <Route path="redes-sociais" element={<ClienteRedesSociais />} />
+                <Route path="sites" element={<ClienteSites />} />
+                <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
+                <Route path="integracoes" element={<ClienteIntegracoes />} />
+                <Route path="plano-creditos" element={<ClientePlanoCreditos />} />
+                <Route path="configuracoes" element={<ClienteConfiguracoes />} />
+              </Route>
             </Route>
-            <Route path="franqueado" element={<FranqueadoLayout />}>
-              <Route index element={<Navigate to="/franqueado/dashboard" replace />} />
-              <Route path="dashboard" element={<FranqueadoDashboard />} />
-              <Route path="agenda" element={<FranqueadoAgenda />} />
-              <Route path="comunicados" element={<FranqueadoComunicados />} />
-              <Route path="suporte" element={<FranqueadoSuporte />} />
-              <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
-              <Route path="diagnostico" element={<FranqueadoDiagnostico />} />
-              <Route path="propostas" element={<FranqueadoPropostas />} />
-              <Route path="crm" element={<FranqueadoCRM />} />
-              <Route path="materiais" element={<FranqueadoMateriais />} />
-              <Route path="academy" element={<FranqueadoAcademy />} />
-              <Route path="financeiro" element={<FranqueadoFinanceiro />} />
-              <Route path="contratos" element={<FranqueadoContratos />} />
-            </Route>
-            <Route path="cliente" element={<ClienteLayout />}>
-              <Route index element={<Navigate to="/cliente/inicio" replace />} />
-              <Route path="inicio" element={<ClienteInicio />} />
-              <Route path="checklist" element={<ClienteChecklist />} />
-              <Route path="notificacoes" element={<ClienteNotificacoes />} />
-              <Route path="gamificacao" element={<ClienteGamificacao />} />
-              <Route path="plano-vendas" element={<ClientePlanoVendas />} />
-              <Route path="chat" element={<ClienteChat />} />
-              <Route path="crm" element={<ClienteCRM />} />
-              <Route path="agentes-ia" element={<ClienteAgentesIA />} />
-              <Route path="scripts" element={<ClienteScripts />} />
-              <Route path="disparos" element={<ClienteDisparos />} />
-              <Route path="relatorios" element={<ClienteRelatorios />} />
-              <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
-              
-              <Route path="conteudos" element={<ClienteConteudos />} />
-              <Route path="redes-sociais" element={<ClienteRedesSociais />} />
-              <Route path="sites" element={<ClienteSites />} />
-              <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
-              <Route path="integracoes" element={<ClienteIntegracoes />} />
-              <Route path="plano-creditos" element={<ClientePlanoCreditos />} />
-              <Route path="configuracoes" element={<ClienteConfiguracoes />} />
-            </Route>
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

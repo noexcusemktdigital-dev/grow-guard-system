@@ -8,32 +8,55 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-interface UserMenuProps {
-  level: string;
-}
+const roleLabels: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  franqueado: "Franqueado",
+  cliente_admin: "Admin Cliente",
+  cliente_user: "Operador",
+};
 
-export function UserMenu({ level }: UserMenuProps) {
-  const role = level === "FRANQUEADORA" ? "Franqueadora" : "Franqueado";
+export function UserMenu() {
+  const { user, profile, role, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "Usuário";
+  const email = user?.email || "";
+  const roleLabel = role ? roleLabels[role] || role : "—";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth");
+    toast.success("Logout realizado com sucesso");
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-secondary transition-colors">
           <Avatar className="h-7 w-7">
-            <AvatarFallback className="text-xs bg-primary text-primary-foreground">JD</AvatarFallback>
+            <AvatarFallback className="text-xs bg-primary text-primary-foreground">{initials}</AvatarFallback>
           </Avatar>
-          <span className="hidden sm:inline text-sm font-medium text-foreground">João Demo</span>
+          <span className="hidden sm:inline text-sm font-medium text-foreground">{displayName}</span>
           <ChevronDown className="h-3 w-3 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col">
-            <span className="text-sm font-medium">João Demo</span>
-            <span className="text-xs text-muted-foreground">joao@unidade.com</span>
-            <span className="text-xs text-primary mt-0.5">{role}</span>
+            <span className="text-sm font-medium">{displayName}</span>
+            <span className="text-xs text-muted-foreground">{email}</span>
+            <span className="text-xs text-primary mt-0.5">{roleLabel}</span>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -46,7 +69,7 @@ export function UserMenu({ level }: UserMenuProps) {
           Configurações
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => toast.info("Logout em desenvolvimento")}>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           Sair
         </DropdownMenuItem>
