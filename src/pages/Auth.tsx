@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,15 +6,36 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
-import SpaceLoginScene from "@/components/ui/space-login-scene";
-import logoLight from "@/assets/noe2.png";
+import logoDark from "@/assets/NOE3.png";
+
+const PHRASES = [
+  "SEM DESCULPAS.\nSÓ RESULTADOS.",
+  "SUA FRANQUIA\nNO PRÓXIMO NÍVEL.",
+  "GESTÃO INTELIGENTE,\nCRESCIMENTO REAL.",
+  "CADA DIA É UMA NOVA\nCHANCE DE LIDERAR.",
+  "DISCIPLINA HOJE,\nLIBERDADE AMANHÃ.",
+  "FOCO NO PROCESSO,\nO RESULTADO VEM.",
+];
 
 const Auth = () => {
   const [mode, setMode] = useState<"login" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [fadeIn, setFadeIn] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFadeIn(false);
+      setTimeout(() => {
+        setPhraseIndex((i) => (i + 1) % PHRASES.length);
+        setFadeIn(true);
+      }, 400);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,61 +65,77 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left panel — space scene */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <SpaceLoginScene />
+    <div className="min-h-screen flex">
+      {/* Left panel — red gradient with phrases */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-gradient-to-br from-[hsl(355,78%,50%)] via-[hsl(355,78%,40%)] to-[hsl(355,78%,25%)]">
+        <div className="relative z-10 text-center px-12 max-w-lg">
+          <p
+            className="text-white font-black uppercase italic tracking-tighter leading-[0.95] whitespace-pre-line"
+            style={{
+              fontSize: "clamp(2.5rem, 4.5vw, 4.5rem)",
+              opacity: fadeIn ? 1 : 0,
+              transform: fadeIn ? "translateY(0)" : "translateY(12px)",
+              transition: "opacity 0.4s ease, transform 0.4s ease",
+            }}
+          >
+            {PHRASES[phraseIndex]}
+          </p>
+        </div>
+        {/* Decorative shapes */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/3 -translate-x-1/3" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-black/10 rounded-full translate-y-1/2 translate-x-1/4" />
       </div>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      {/* Right panel — dark form */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-[hsl(0,0%,5%)]">
         <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-8">
-            <img src={logoLight} alt="NoExcuse" className="h-10 mx-auto object-contain" />
+          {/* Logo */}
+          <div className="text-center mb-10">
+            <img src={logoDark} alt="NoExcuse" className="h-8 mx-auto object-contain" />
           </div>
 
           {mode === "login" ? (
             <>
               <div className="mb-8">
-                <h2 className="text-2xl font-bold text-foreground">Bem-vindo de volta</h2>
-                <p className="text-muted-foreground text-sm mt-1">Entre com suas credenciais para acessar a plataforma</p>
+                <h2 className="text-2xl font-bold text-white">Bem-vindo de volta</h2>
+                <p className="text-white/50 text-sm mt-1">Entre com suas credenciais para acessar a plataforma</p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-white/70">Email</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                     <Input
                       id="email"
                       type="email"
                       placeholder="seu@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="password" className="text-white/70">Senha</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                     <Input
                       id="password"
                       type="password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]"
                       required
                     />
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Entrar
                 </Button>
@@ -106,7 +143,7 @@ const Auth = () => {
                 <button
                   type="button"
                   onClick={() => setMode("forgot")}
-                  className="text-sm text-primary hover:underline w-full text-center block mt-2"
+                  className="text-sm text-white/40 hover:text-white/70 w-full text-center block mt-2 transition-colors"
                 >
                   Esqueci minha senha
                 </button>
@@ -117,35 +154,35 @@ const Auth = () => {
               <div className="mb-8">
                 <button
                   onClick={() => setMode("login")}
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+                  className="flex items-center gap-1 text-sm text-white/50 hover:text-white mb-4 transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Voltar ao login
                 </button>
-                <h2 className="text-2xl font-bold text-foreground">Recuperar senha</h2>
-                <p className="text-muted-foreground text-sm mt-1">
+                <h2 className="text-2xl font-bold text-white">Recuperar senha</h2>
+                <p className="text-white/50 text-sm mt-1">
                   Informe seu email e enviaremos um link para redefinir sua senha
                 </p>
               </div>
 
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="reset-email">Email</Label>
+                  <Label htmlFor="reset-email" className="text-white/70">Email</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                     <Input
                       id="reset-email"
                       type="email"
                       placeholder="seu@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]"
                       required
                     />
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Enviar link de recuperação
                 </Button>
@@ -153,7 +190,7 @@ const Auth = () => {
             </>
           )}
 
-          <p className="text-center text-xs text-muted-foreground mt-8">
+          <p className="text-center text-xs text-white/30 mt-8">
             Acesso somente por convite do administrador
           </p>
         </div>
