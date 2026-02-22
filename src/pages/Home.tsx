@@ -1,24 +1,25 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronDown, Plus, MessageSquare, Calendar, Megaphone, TrendingUp } from "lucide-react";
+import { ChevronDown, Plus, MessageSquare, Calendar, Megaphone, TrendingUp, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import {
-  getSaudacao, getMensagemHoje, getAlertasFranqueadora, getPrioridadesDoDia,
-  getDadosComerciais, getProximosEventos, getComunicadosAtivos,
-} from "@/data/homeData";
 import { HomeHojePreciso } from "@/components/home/HomeHojePreciso";
 import { HomeMensagemDia } from "@/components/home/HomeMensagemDia";
 import { HomeComunicados } from "@/components/home/HomeComunicados";
 import { HomeAgenda } from "@/components/home/HomeAgenda";
-import { HomeComercial } from "@/components/home/HomeComercial";
-import { HomeAlertas } from "@/components/home/HomeAlertas";
 import { HomeAtalhos } from "@/components/home/HomeAtalhos";
 import { PageHeader } from "@/components/PageHeader";
-import { TaskListCard } from "@/components/premium/TaskListCard";
-import { ProgressCtaCard } from "@/components/premium/ProgressCtaCard";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDailyMessages } from "@/hooks/useDailyMessages";
+import { useAnnouncements } from "@/hooks/useAnnouncements";
+import { useCalendarEvents } from "@/hooks/useCalendar";
+import { useCrmLeads } from "@/hooks/useCrmLeads";
+import type { Comunicado, PublicoAlvo } from "@/data/comunicadosData";
+import type { AgendaEvent } from "@/data/agendaData";
+import type { MensagemDoDia } from "@/data/homeData";
 
 const quickActionIcons: Record<string, React.ElementType> = {
   MessageSquare, Calendar, Megaphone, TrendingUp,
@@ -26,17 +27,67 @@ const quickActionIcons: Record<string, React.ElementType> = {
 
 export default function Home() {
   const navigate = useNavigate();
-
-  const saudacao = getSaudacao();
-  const mensagem = getMensagemHoje();
-  const alertas = useMemo(() => getAlertasFranqueadora(), []);
-  const prioridades = useMemo(() => getPrioridadesDoDia(alertas), [alertas]);
-  const comercial = useMemo(() => getDadosComerciais(), []);
-  const eventos = useMemo(() => getProximosEventos(5), []);
-  const comunicados = useMemo(() => getComunicadosAtivos(3), []);
+  const { profile } = useAuth();
+  const { data: dailyMessage, isLoading: loadingMsg } = useDailyMessages();
+  const { data: announcements, isLoading: loadingAnn } = useAnnouncements();
+  const { data: events, isLoading: loadingEv } = useCalendarEvents();
+  const { data: leads } = useCrmLeads();
 
   const hoje = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const hojeCapitalized = hoje.charAt(0).toUpperCase() + hoje.slice(1);
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  const userName = profile?.full_name?.split(" ")[0] || "Usuário";
+
+  const mensagem: MensagemDoDia | null = dailyMessage ? {
+    id: dailyMessage.id,
+    texto: dailyMessage.message,
+    autor: dailyMessage.author || "",
+    categoria: "Mindset" as const,
+    publico: ["Franqueadora", "Franqueado"],
+    dataPublicacao: dailyMessage.date,
+    status: "Ativo",
+    criadoEm: dailyMessage.created_at,
+  } : null;
+
+  const comunicados: Comunicado[] = useMemo(() =>
+    (announcements ?? []).slice(0, 3).map(a => ({
+      id: a.id,
+      titulo: a.title,
+      conteudo: a.content || "",
+      tipo: (a.type || "Informativo") as any,
+      prioridade: (a.priority || "Normal") as any,
+      publico: (a.target_roles || []) as PublicoAlvo[],
+      unidadesEspecificas: [],
+      mostrarDashboard: true,
+      mostrarPopup: false,
+      exigirConfirmacao: false,
+      status: "Ativo",
+      autorId: a.created_by || "",
+      autorNome: "Admin",
+      criadoEm: a.created_at,
+      atualizadoEm: a.updated_at,
+    }))
+  , [announcements]);
+
+  const eventosFormatted: AgendaEvent[] = useMemo(() =>
+    (events ?? []).slice(0, 5).map(e => ({
+      id: e.id,
+      titulo: e.title,
+      descricao: e.description || "",
+      inicio: e.start_at,
+      fim: e.end_at,
+      allDay: e.all_day || false,
+      location: e.location || "",
+      tipo: "Evento",
+      calendarId: e.calendar_id || "",
+      calendarName: "Geral",
+      calendarColor: e.color || "#3b82f6",
+      participants: [],
+      status: "confirmed",
+      createdBy: e.created_by || "",
+    }))
+  , [events]);
 
   const quickActions = [
     { label: "Novo chamado", path: "/franqueadora/atendimento", icon: "MessageSquare" },
@@ -45,10 +96,12 @@ export default function Home() {
     { label: "CRM Expansão", path: "/franqueadora/crm", icon: "TrendingUp" },
   ];
 
+  const isLoading = loadingMsg || loadingAnn || loadingEv;
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <PageHeader
-        title={`${saudacao}, Davi`}
+        title={`${saudacao}, ${userName}`}
         subtitle={`Franqueadora · ${hojeCapitalized}`}
         actions={
           <DropdownMenu>
@@ -71,44 +124,68 @@ export default function Home() {
         }
       />
 
-      <HomeHojePreciso prioridades={prioridades} />
+      {isLoading ? (
+        <div className="space-y-6">
+          <Skeleton className="h-32 w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Prioridades - empty state */}
+          <div className="glass-card p-6">
+            <h3 className="text-sm font-semibold text-foreground mb-3">🎯 Hoje eu preciso de...</h3>
+            <div className="flex items-center justify-center py-4 text-muted-foreground text-sm">
+              <Inbox className="w-5 h-5 mr-2" />
+              Nenhuma prioridade pendente. Tudo em dia!
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <HomeMensagemDia mensagem={mensagem} isAdmin />
-        <HomeComunicados comunicados={comunicados} />
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {mensagem ? (
+              <HomeMensagemDia mensagem={mensagem} isAdmin />
+            ) : (
+              <div className="glass-card p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-2">💬 Mensagem do Dia</h3>
+                <p className="text-sm text-muted-foreground">Nenhuma mensagem configurada para hoje.</p>
+              </div>
+            )}
+            {comunicados.length > 0 ? (
+              <HomeComunicados comunicados={comunicados} />
+            ) : (
+              <div className="glass-card p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-2">📢 Comunicados</h3>
+                <p className="text-sm text-muted-foreground">Nenhum comunicado ativo no momento.</p>
+              </div>
+            )}
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <HomeAgenda eventos={eventos} />
-        <HomeComercial dados={comercial} />
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {eventosFormatted.length > 0 ? (
+              <HomeAgenda eventos={eventosFormatted} />
+            ) : (
+              <div className="glass-card p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-2">📅 Agenda</h3>
+                <p className="text-sm text-muted-foreground">Sua agenda está vazia. <button onClick={() => navigate("/franqueadora/agenda")} className="text-primary hover:underline">Crie seu primeiro evento.</button></p>
+              </div>
+            )}
+            <div className="glass-card p-6">
+              <h3 className="text-sm font-semibold text-foreground mb-2">📊 Comercial</h3>
+              {(leads ?? []).length > 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  <p><strong className="text-foreground">{leads!.length}</strong> leads no CRM</p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhum lead registrado. <button onClick={() => navigate("/franqueadora/crm")} className="text-primary hover:underline">Comece a prospectar.</button></p>
+              )}
+            </div>
+          </div>
 
-      <ProgressCtaCard
-        title="PERFORMANCE DA REDE"
-        level="FRANQUEADORA"
-        metaLabel="META DA REDE"
-        metaDescription="Faltam R$ 45.000 para atingir a meta consolidada do mês."
-        percent={78}
-        ctaTitle="AÇÃO NECESSÁRIA"
-        ctaSubtitle="REVISÃO DE METAS TRIMESTRAIS"
-        ctaDescription="Agende a reunião de revisão com os franqueados até sexta-feira."
-        ctaButtonLabel="AGENDAR REUNIÃO"
-        onCtaClick={() => navigate("/franqueadora/agenda")}
-      />
-
-      <TaskListCard
-        title="TAREFAS OPERACIONAIS"
-        tasks={[
-          { id: "t1", title: "Revisar relatórios financeiros", description: "Consolidar fechamento mensal de todas as unidades.", time: "09:00", done: true },
-          { id: "t2", title: "Aprovar materiais de marketing", description: "Validar artes da campanha de Março antes do envio.", time: "10:30" },
-          { id: "t3", title: "Reunião com novos franqueados", description: "Onboarding das 2 unidades aprovadas este mês.", time: "14:00" },
-          { id: "t4", title: "Atualizar comunicado da rede", description: "Publicar informativo sobre novas políticas comerciais.", time: "16:00" },
-        ]}
-        onTaskClick={() => navigate("/franqueadora/atendimento")}
-      />
-
-      <HomeAlertas alertas={alertas} />
-      <HomeAtalhos />
+          <HomeAtalhos />
+        </>
+      )}
     </div>
   );
 }

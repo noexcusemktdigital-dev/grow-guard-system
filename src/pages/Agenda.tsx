@@ -1,124 +1,112 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, ChevronLeft, ChevronRight, List, Plus, Settings, Bell } from "lucide-react";
-import { AgendaSidebar } from "@/components/agenda/AgendaSidebar";
-import { AgendaCalendar } from "@/components/agenda/AgendaCalendar";
-import { AgendaListView } from "@/components/agenda/AgendaListView";
-import { AgendaEventForm } from "@/components/agenda/AgendaEventForm";
-import { AgendaEventDetail } from "@/components/agenda/AgendaEventDetail";
-import { AgendaConfig } from "@/components/agenda/AgendaConfig";
-import { mockCalendars, getPendingInvites, type AgendaEvent } from "@/data/agendaData";
-import { addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, format } from "date-fns";
+import { Calendar, ChevronLeft, ChevronRight, Plus, Inbox } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
+import { useCalendarEvents, useCalendarEventMutations } from "@/hooks/useCalendar";
+import { addMonths, subMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-type View = "month" | "week" | "day" | "list";
-type Page = "calendar" | "detail" | "config";
-
-const viewLabels: Record<View, string> = { month: "Mês", week: "Semana", day: "Dia", list: "Lista" };
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Agenda() {
-  const [view, setView] = useState<View>("month");
-  const [page, setPage] = useState<Page>("calendar");
+  const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [activeCalendars, setActiveCalendars] = useState<string[]>(mockCalendars.map(c => c.id));
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<AgendaEvent | null>(null);
-  const [formDefaultDate, setFormDefaultDate] = useState<Date | undefined>();
+  const [showForm, setShowForm] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDate, setNewDate] = useState("");
+  const [newTime, setNewTime] = useState("09:00");
 
-  const pendingInvites = getPendingInvites("u-davi");
+  const startStr = startOfMonth(currentDate).toISOString();
+  const endStr = endOfMonth(currentDate).toISOString();
+  const { data: events, isLoading } = useCalendarEvents(startStr, endStr);
+  const { createEvent } = useCalendarEventMutations();
 
-  const toggleCalendar = (id: string) => {
-    setActiveCalendars(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  const days = eachDayOfInterval({ start: startOfMonth(currentDate), end: endOfMonth(currentDate) });
+  const startDay = getDay(startOfMonth(currentDate));
+
+  const handleCreate = () => {
+    if (!newTitle.trim() || !newDate) { toast({ title: "Preencha título e data", variant: "destructive" }); return; }
+    const startAt = `${newDate}T${newTime}:00`;
+    const endAt = `${newDate}T${String(Number(newTime.split(":")[0]) + 1).padStart(2, "0")}:${newTime.split(":")[1]}:00`;
+    createEvent.mutate({ title: newTitle, start_at: startAt, end_at: endAt });
+    setShowForm(false);
+    setNewTitle(""); setNewDate("");
+    toast({ title: "Evento criado" });
   };
 
-  const navigate = (dir: -1 | 0 | 1) => {
-    if (dir === 0) { setCurrentDate(new Date()); return; }
-    if (view === "month") setCurrentDate(d => dir === 1 ? addMonths(d, 1) : subMonths(d, 1));
-    else if (view === "week") setCurrentDate(d => dir === 1 ? addWeeks(d, 1) : subWeeks(d, 1));
-    else setCurrentDate(d => dir === 1 ? addDays(d, 1) : subDays(d, 1));
-  };
-
-  const periodLabel = () => {
-    if (view === "month") return format(currentDate, "MMMM 'de' yyyy", { locale: ptBR });
-    if (view === "day") return format(currentDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
-    return `Semana de ${format(currentDate, "d 'de' MMM", { locale: ptBR })}`;
-  };
-
-  const handleSelectEvent = (id: string) => { setSelectedEventId(id); setPage("detail"); };
-  const handleSelectDate = (date: Date) => { setCurrentDate(date); setView("day"); };
-  const handleNewEvent = () => { setEditingEvent(null); setFormDefaultDate(currentDate); setShowEventForm(true); };
-  const handleEditEvent = (ev: AgendaEvent) => { setEditingEvent(ev); setShowEventForm(true); };
+  if (isLoading) return <div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-96 w-full" /></div>;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-49px)] -m-6 lg:-m-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="border-b border-border bg-card px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-primary" />
-            <h1 className="page-header-title">Agenda</h1>
-            <Badge variant="outline" className="text-[10px]">Franqueadora</Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            {pendingInvites.length > 0 && (
-              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 animate-pulse gap-1">
-                <Bell className="w-3 h-3" /> {pendingInvites.length} convite{pendingInvites.length > 1 ? "s" : ""}
-              </Badge>
-            )}
-            <Button size="sm" variant="outline" onClick={() => setPage(page === "config" ? "calendar" : "config")}>
-              <Settings className="w-4 h-4" />
-            </Button>
-            <Button size="sm" onClick={handleNewEvent}><Plus className="w-4 h-4 mr-1" /> Novo Evento</Button>
-          </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Calendar className="w-5 h-5 text-primary" />
+          <h1 className="page-header-title">Agenda</h1>
+          <Badge variant="outline" className="text-[10px]">Franqueadora</Badge>
         </div>
-
-        {/* Navigation & view toggle */}
-        {page === "calendar" && (
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => navigate(-1)}><ChevronLeft className="w-4 h-4" /></Button>
-              <Button size="sm" variant="outline" onClick={() => navigate(0)}>Hoje</Button>
-              <Button size="sm" variant="outline" onClick={() => navigate(1)}><ChevronRight className="w-4 h-4" /></Button>
-              <span className="text-sm font-medium ml-2 capitalize">{periodLabel()}</span>
-            </div>
-            <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
-              {(["month", "week", "day", "list"] as View[]).map(v => (
-                <Button key={v} size="sm" variant={view === v ? "default" : "ghost"} className="text-xs h-7 px-3" onClick={() => setView(v)}>
-                  {viewLabels[v]}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
+        <Button size="sm" onClick={() => setShowForm(true)}><Plus className="w-4 h-4 mr-1" /> Novo Evento</Button>
       </div>
 
-      {/* Body */}
-      <div className="flex flex-1 overflow-hidden">
-        <AgendaSidebar
-          currentDate={currentDate}
-          onDateSelect={(d) => { setCurrentDate(d); setView("day"); setPage("calendar"); }}
-          activeCalendars={activeCalendars}
-          onToggleCalendar={toggleCalendar}
-          onOpenConfig={() => setPage("config")}
-        />
-        <div className="flex-1 overflow-hidden">
-          {page === "detail" && selectedEventId && (
-            <AgendaEventDetail eventId={selectedEventId} onBack={() => setPage("calendar")} onEdit={handleEditEvent} />
-          )}
-          {page === "config" && <AgendaConfig onBack={() => setPage("calendar")} />}
-          {page === "calendar" && view !== "list" && (
-            <AgendaCalendar view={view} currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={handleSelectEvent} onSelectDate={handleSelectDate} onCreateEvent={(date) => { setFormDefaultDate(date); setEditingEvent(null); setShowEventForm(true); }} />
-          )}
-          {page === "calendar" && view === "list" && (
-            <AgendaListView currentDate={currentDate} activeCalendars={activeCalendars} onSelectEvent={handleSelectEvent} />
-          )}
+      {/* Navigation */}
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" onClick={() => setCurrentDate(d => subMonths(d, 1))}><ChevronLeft className="w-4 h-4" /></Button>
+        <Button size="sm" variant="outline" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
+        <Button size="sm" variant="outline" onClick={() => setCurrentDate(d => addMonths(d, 1))}><ChevronRight className="w-4 h-4" /></Button>
+        <span className="text-sm font-medium ml-2 capitalize">{format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}</span>
+      </div>
+
+      {/* Calendar grid */}
+      <div className="border rounded-lg overflow-hidden">
+        <div className="grid grid-cols-7 bg-muted/50">
+          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
+            <div key={d} className="py-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="min-h-[80px] border-t border-r border-border/30" />)}
+          {days.map(day => {
+            const dayEvents = (events ?? []).filter(e => isSameDay(new Date(e.start_at), day));
+            const isToday = isSameDay(day, new Date());
+            return (
+              <div key={day.toISOString()} className={`min-h-[80px] border-t border-r border-border/30 p-1 ${isToday ? "bg-primary/5" : ""}`}>
+                <span className={`text-xs font-medium ${isToday ? "text-primary" : "text-muted-foreground"}`}>{format(day, "d")}</span>
+                {dayEvents.slice(0, 2).map(e => (
+                  <div key={e.id} className="mt-0.5 px-1 py-0.5 rounded text-[10px] bg-primary/15 text-primary truncate">{e.title}</div>
+                ))}
+                {dayEvents.length > 2 && <div className="text-[10px] text-muted-foreground px-1">+{dayEvents.length - 2}</div>}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Event Form Dialog */}
-      <AgendaEventForm open={showEventForm} onClose={() => setShowEventForm(false)} editingEvent={editingEvent} defaultDate={formDefaultDate} />
+      {(events ?? []).length === 0 && (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <Inbox className="w-10 h-10 text-muted-foreground mb-3" />
+          <p className="text-sm text-muted-foreground">Sua agenda está vazia. Crie seu primeiro evento.</p>
+        </div>
+      )}
+
+      {/* New Event Dialog */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Novo Evento</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Título *</Label><Input value={newTitle} onChange={e => setNewTitle(e.target.value)} /></div>
+            <div><Label>Data *</Label><Input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} /></div>
+            <div><Label>Horário</Label><Input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
+            <Button onClick={handleCreate}>Criar Evento</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
