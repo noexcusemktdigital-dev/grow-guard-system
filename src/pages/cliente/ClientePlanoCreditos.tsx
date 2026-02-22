@@ -1,36 +1,50 @@
 import { useState } from "react";
-import { CreditCard, Zap, ArrowUpRight, Plus, Calendar, Filter, Check, Star, Crown } from "lucide-react";
+import { CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
-import {
-  mockSubscription, mockWallet, mockTransactions, mockPlans,
-  getTrialDaysRemaining, getCreditConsumptionByModule,
-} from "@/data/clienteData";
-
-const typeLabels: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  consumo: { label: "Consumo", variant: "destructive" },
-  recarga: { label: "Recarga", variant: "default" },
-  compra_extra: { label: "Compra Extra", variant: "secondary" },
-  bonus: { label: "Bônus", variant: "outline" },
-};
+import { useClienteWallet } from "@/hooks/useClienteWallet";
+import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { mockPlans, getCreditConsumptionByModule } from "@/data/clienteData";
 
 export default function ClientePlanoCreditos() {
-  const [filterType, setFilterType] = useState<string>("todos");
-  const trialDays = getTrialDaysRemaining();
-  const trialTotal = 14;
-  const trialProgress = ((trialTotal - trialDays) / trialTotal) * 100;
-  const creditPercent = (mockWallet.currentBalance / mockWallet.totalIncluded) * 100;
+  const { data: wallet, isLoading: walletLoading } = useClienteWallet();
+  const { data: subscription, isLoading: subLoading } = useClienteSubscription();
+  const isLoading = walletLoading || subLoading;
+
   const pieData = getCreditConsumptionByModule();
 
-  const filteredTx = filterType === "todos"
-    ? mockTransactions
-    : mockTransactions.filter(t => t.type === filterType);
+  // Map DB data or use defaults
+  const balance = wallet?.balance ?? 0;
+  const totalIncluded = 2000; // from plan
+  const creditPercent = totalIncluded > 0 ? (balance / totalIncluded) * 100 : 0;
+
+  const currentPlanSlug = subscription?.plan;
+  const planDetails = mockPlans.find(p => p.id === currentPlanSlug);
+  
+  const planName = planDetails?.name ?? "Sem plano";
+  const planStatus = subscription?.status ?? "inactive";
+  const planPrice = planDetails?.price ?? 0;
+  const renewalDate = subscription?.expires_at;
+
+  const currentPlanId = currentPlanSlug ?? "";
+
+  if (isLoading) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-6">
+        <PageHeader title="Plano & Créditos" subtitle="Gerencie sua assinatura e créditos" icon={<CreditCard className="w-5 h-5 text-primary" />} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-56 rounded-xl" />
+          <Skeleton className="h-56 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -43,27 +57,20 @@ export default function ClientePlanoCreditos() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Status do Plano</CardTitle>
-              <Badge variant={mockSubscription.status === "trial" ? "outline" : "default"} className="gap-1">
-                {mockSubscription.status === "trial" ? "🧪 Trial" : mockSubscription.planName}
+              <Badge variant={planStatus === "trial" ? "outline" : "default"} className="gap-1">
+                {planStatus === "trial" ? "🧪 Trial" : planName}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Plano ativo</span>
-              <span className="font-semibold text-foreground">{mockSubscription.planName} — R$ {mockSubscription.price}/mês</span>
+              <span className="font-semibold text-foreground">{planName} — R$ {planPrice}/mês</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Renovação</span>
-              <span className="text-foreground">{new Date(mockSubscription.renewalDate).toLocaleDateString("pt-BR")}</span>
-            </div>
-            {mockSubscription.status === "trial" && (
-              <div className="space-y-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-amber-800 dark:text-amber-300">Trial: {trialDays} dias restantes</span>
-                  <span className="text-xs text-amber-600 dark:text-amber-400">{trialDays}/{trialTotal} dias</span>
-                </div>
-                <Progress value={trialProgress} className="h-1.5 [&>div]:bg-amber-500" />
+            {renewalDate && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Renovação</span>
+                <span className="text-foreground">{new Date(renewalDate).toLocaleDateString("pt-BR")}</span>
               </div>
             )}
             <Button className="w-full gap-2" onClick={() => toast.success("Redirecionando para upgrade...")}>
@@ -82,13 +89,12 @@ export default function ClientePlanoCreditos() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-3xl font-bold text-foreground">{mockWallet.currentBalance.toLocaleString("pt-BR")}</span>
-              <span className="text-sm text-muted-foreground">/ {mockWallet.totalIncluded.toLocaleString("pt-BR")}</span>
+              <span className="text-3xl font-bold text-foreground">{balance.toLocaleString("pt-BR")}</span>
+              <span className="text-sm text-muted-foreground">/ {totalIncluded.toLocaleString("pt-BR")}</span>
             </div>
             <Progress value={creditPercent} className="h-2" />
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Renovação: {new Date(mockWallet.renewalDate).toLocaleDateString("pt-BR")}</span>
-              <span>{creditPercent.toFixed(0)}% utilizado</span>
+              <span>{creditPercent.toFixed(0)}% disponível</span>
             </div>
             <Button variant="outline" className="w-full gap-2" onClick={() => toast.success("Em breve — compra de créditos extras")}>
               <Plus className="w-4 h-4" /> Comprar Créditos Extra
@@ -132,66 +138,12 @@ export default function ClientePlanoCreditos() {
         </CardContent>
       </Card>
 
-      {/* Row 3: Transactions */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <CardTitle className="text-lg">Histórico de Transações</CardTitle>
-              <CardDescription>Todos os movimentos de créditos</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              {["todos", "consumo", "recarga", "compra_extra", "bonus"].map((t) => (
-                <Button
-                  key={t}
-                  size="sm"
-                  variant={filterType === t ? "default" : "outline"}
-                  onClick={() => setFilterType(t)}
-                  className="text-xs capitalize"
-                >
-                  {t === "todos" ? "Todos" : typeLabels[t]?.label || t}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Módulo</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTx.sort((a, b) => b.date.localeCompare(a.date)).map((tx) => {
-                const meta = typeLabels[tx.type];
-                return (
-                  <TableRow key={tx.id}>
-                    <TableCell className="text-sm">{new Date(tx.date).toLocaleDateString("pt-BR")}</TableCell>
-                    <TableCell><Badge variant={meta?.variant || "secondary"}>{meta?.label || tx.type}</Badge></TableCell>
-                    <TableCell className="text-sm">{tx.description}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{tx.module}</TableCell>
-                    <TableCell className={`text-right font-medium text-sm ${tx.amount > 0 ? "text-emerald-600" : "text-destructive"}`}>
-                      {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString("pt-BR")}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Row 4: Plans */}
+      {/* Row 3: Plans */}
       <div>
         <h2 className="text-xl font-semibold text-foreground mb-4">Planos Disponíveis</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {mockPlans.map((plan) => {
-            const isCurrent = plan.id === mockSubscription.planId;
+            const isCurrent = plan.id === currentPlanId;
             return (
               <Card key={plan.id} className={`relative ${plan.popular ? "border-primary ring-2 ring-primary/20" : ""} ${isCurrent ? "bg-primary/5" : ""}`}>
                 {plan.popular && (
@@ -224,12 +176,7 @@ export default function ClientePlanoCreditos() {
                       </li>
                     ))}
                   </ul>
-                  <Button
-                    className="w-full"
-                    variant={isCurrent ? "outline" : "default"}
-                    disabled={isCurrent}
-                    onClick={() => toast.success(`Plano ${plan.name} selecionado! Redirecionando...`)}
-                  >
+                  <Button className="w-full" variant={isCurrent ? "outline" : "default"} disabled={isCurrent} onClick={() => toast.success(`Plano ${plan.name} selecionado!`)}>
                     {isCurrent ? "Plano Atual" : "Escolher Plano"}
                   </Button>
                 </CardContent>
