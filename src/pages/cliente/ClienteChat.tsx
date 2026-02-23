@@ -127,7 +127,7 @@ export default function ClienteChat() {
       />
 
       <Card className="overflow-hidden border-border/50">
-        <div className="grid grid-cols-[340px_1fr] h-[calc(100vh-160px)] min-h-[500px]">
+        <div className="grid grid-cols-[340px_1fr] h-[calc(100vh-160px)] min-h-[500px] overflow-hidden">
           {loadingContacts ? (
             <div className="p-4 space-y-3 border-r border-border">
               {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[68px] rounded-lg" />)}
