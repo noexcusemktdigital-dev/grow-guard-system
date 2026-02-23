@@ -15,12 +15,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
+import { useCreditAlert } from "@/hooks/useCreditAlert";
+import { getPlanBySlug } from "@/constants/plans";
 import { differenceInDays } from "date-fns";
 
 interface SidebarItem {
   label: string;
   icon: React.ElementType;
   path: string;
+  badgeKey?: string;
 }
 
 const globalSection: SidebarItem[] = [
@@ -48,14 +51,17 @@ const marketingSection: SidebarItem[] = [
 
 const sistemaSection: SidebarItem[] = [
   { label: "Integrações", icon: Link, path: "/cliente/integracoes" },
-  { label: "Plano & Créditos", icon: CreditCard, path: "/cliente/plano-creditos" },
+  { label: "Plano & Créditos", icon: CreditCard, path: "/cliente/plano-creditos", badgeKey: "plano-creditos" },
   { label: "Configurações", icon: Settings, path: "/cliente/configuracoes" },
-];
+] as SidebarItem[];
 
 function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: boolean; isGated: boolean }) {
   const location = useLocation();
+  const { level } = useCreditAlert();
   const Icon = item.icon;
   const isActive = location.pathname.startsWith(item.path);
+
+  const showBadge = item.badgeKey === "plano-creditos" && (level === "warning" || level === "critical" || level === "zero");
 
   const link = (
     <RouterNavLink
@@ -80,6 +86,11 @@ function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: b
       {!collapsed && (
         <>
           <span className="truncate flex-1">{item.label}</span>
+          {showBadge && (
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+              level === "warning" ? "bg-amber-400" : "bg-destructive"
+            }`} />
+          )}
           {isGated && <Lock className="w-3 h-3 text-sidebar-muted" />}
         </>
       )}
@@ -162,8 +173,8 @@ export function ClienteSidebar() {
   const trialUrgent = trialDays <= 3;
 
   const currentBalance = wallet?.balance ?? 0;
-  // Use a reasonable default for total included based on plan
-  const totalIncluded = 2000; // Could be derived from subscription plan config
+  const planConfig = getPlanBySlug(subscription?.plan);
+  const totalIncluded = planConfig?.credits ?? 2000;
   const creditPercent = totalIncluded > 0 ? (currentBalance / totalIncluded) * 100 : 0;
   const planName = subscription?.plan ?? "—";
 
