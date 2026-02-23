@@ -270,7 +270,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Premium Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
         <Avatar className="h-10 w-10">
