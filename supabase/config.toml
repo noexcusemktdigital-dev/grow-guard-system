@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.asaas-charge-franchisee]
 verify_jwt = false
+
+[functions.whatsapp-bulk-send]
+verify_jwt = false
