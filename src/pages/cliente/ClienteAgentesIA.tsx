@@ -66,7 +66,7 @@ export default function ClienteAgentesIA() {
   const hasAgents = agents && agents.length > 0;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader title="Agentes de IA" subtitle="Crie e gerencie seus agentes inteligentes" icon={<Bot className="w-5 h-5 text-primary" />}
         actions={<Button onClick={handleNew} size="sm" className="gap-1.5"><Plus className="w-4 h-4" /> Novo Agente</Button>}
       />

@@ -99,7 +99,7 @@ export default function ClienteDisparos() {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader title="Disparos WhatsApp" subtitle="Envie mensagens e campanhas" icon={<Send className="w-5 h-5 text-primary" />} />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 rounded-xl" />)}
@@ -109,7 +109,7 @@ export default function ClienteDisparos() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Disparos WhatsApp"
         subtitle="Envie mensagens, campanhas e follow-ups via WhatsApp"

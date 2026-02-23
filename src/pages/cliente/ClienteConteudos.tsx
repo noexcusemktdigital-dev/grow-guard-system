@@ -359,7 +359,7 @@ export default function ClienteConteudos() {
   } : { total: 0, approved: 0, changesRequested: 0, rejected: 0 };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Conteúdos"
         subtitle="Agência de IA — Gere campanhas mensais completas para suas redes sociais"

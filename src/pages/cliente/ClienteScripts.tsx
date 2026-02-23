@@ -81,7 +81,7 @@ export default function ClienteScripts() {
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader title="Scripts & Playbooks" subtitle="Scripts de prospecção e negociação" icon={<BookOpen className="w-5 h-5 text-primary" />} />
         <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
       </div>
@@ -89,7 +89,7 @@ export default function ClienteScripts() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Scripts & Playbooks"
         subtitle="Scripts de prospecção e negociação organizados por etapa do funil"

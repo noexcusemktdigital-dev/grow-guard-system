@@ -27,7 +27,7 @@ export default function FranqueadoPropostas() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-96" />
       </div>
@@ -38,7 +38,7 @@ export default function FranqueadoPropostas() {
   const total = items.reduce((s, p) => s + Number(p.value || 0), 0);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader title="Propostas" subtitle="Gerencie suas propostas comerciais" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

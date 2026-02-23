@@ -177,7 +177,7 @@ export default function ClienteInicio() {
   }, [activeGoals, goalProgress]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>

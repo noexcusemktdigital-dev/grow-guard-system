@@ -16,7 +16,7 @@ export default function CrmConfigPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" className="gap-1" onClick={() => navigate("/cliente/crm")}>
           <ArrowLeft className="w-4 h-4" /> Voltar

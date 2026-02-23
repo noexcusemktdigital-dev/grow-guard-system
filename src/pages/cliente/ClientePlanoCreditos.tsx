@@ -274,7 +274,7 @@ export default function ClientePlanoCreditos() {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader title="Plano & Créditos" subtitle="Gerencie sua assinatura e créditos" icon={<CreditCard className="w-5 h-5 text-primary" />} />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Skeleton className="h-56 rounded-xl" />
@@ -285,7 +285,7 @@ export default function ClientePlanoCreditos() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader title="Plano & Créditos" subtitle="Gerencie sua assinatura e créditos" icon={<CreditCard className="w-5 h-5 text-primary" />} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

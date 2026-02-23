@@ -22,7 +22,7 @@ export default function FranqueadoProspeccaoIA() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader title="Prospecção IA" subtitle="Planeje prospecções e gere scripts comerciais com IA" />
 
       <Tabs defaultValue="planejamento">

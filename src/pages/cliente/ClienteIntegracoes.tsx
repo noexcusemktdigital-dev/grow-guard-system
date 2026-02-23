@@ -49,7 +49,7 @@ export default function ClienteIntegracoes() {
   const hasAnyConnected = instances?.some((i) => i.status === "connected");
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Integrações"
         subtitle="Conecte ferramentas externas"

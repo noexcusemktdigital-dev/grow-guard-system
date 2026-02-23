@@ -147,7 +147,7 @@ export function AcademyQuiz({ quizId, onBack, onViewCertificate }: Props) {
     const pointsLabel = Math.round(100 / questions.length);
 
     return (
-      <div className="space-y-5 animate-fade-in max-w-2xl mx-auto">
+      <div className="space-y-5 animate-fade-in w-full">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Target className="w-4 h-4 text-primary" />

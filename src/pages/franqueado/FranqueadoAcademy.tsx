@@ -14,7 +14,7 @@ export default function FranqueadoAcademy() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <Skeleton className="h-10 w-64" />
         <div className="grid grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
         <div className="grid grid-cols-2 gap-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-40" />)}</div>
@@ -26,7 +26,7 @@ export default function FranqueadoAcademy() {
   const totalLessons = (lessons ?? []).length;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader title="Academy e Treinamentos" subtitle="Trilhas de aprendizado e certificações da rede" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -792,7 +792,7 @@ export default function ClientePlanoMarketing() {
 
   /* ── Main Render ── */
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Estratégia de Marketing"
         subtitle="Consultoria interativa para diagnosticar e evoluir seu marketing"

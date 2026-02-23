@@ -214,7 +214,7 @@ export default function ClienteSites() {
   // ── MAIN VIEW (history + create button)
   if (!creating && step !== 3) {
     return (
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader
           title="Sites & Landing Pages"
           subtitle="Gere sites profissionais com IA e publique no seu domínio"
@@ -243,7 +243,7 @@ export default function ClienteSites() {
   // ── PREVIEW VIEW (step 3)
   if (step === 3 && generatedHtml) {
     return (
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader
           title="Preview do Site"
           subtitle="Revise, aprove e baixe o código para publicar"
@@ -264,7 +264,7 @@ export default function ClienteSites() {
 
   // ── WIZARD VIEW (steps 0-2)
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Criar Novo Site"
         subtitle={STEP_LABELS[step]}

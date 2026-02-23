@@ -24,7 +24,7 @@ export default function ClienteConfiguracoes() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader title="Configurações" subtitle="Preferências da conta" icon={<Settings className="w-5 h-5 text-primary" />} />
         <Skeleton className="h-64 rounded-xl" />
       </div>
@@ -32,7 +32,7 @@ export default function ClienteConfiguracoes() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader title="Configurações" subtitle="Preferências da conta e organização" icon={<Settings className="w-5 h-5 text-primary" />} />
 
       <Tabs defaultValue="perfil">

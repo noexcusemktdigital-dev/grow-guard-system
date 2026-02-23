@@ -74,7 +74,7 @@ export default function ClienteAvaliacoes() {
 
   if (teamLoading || evalLoading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-5">
+      <div className="w-full space-y-5">
         <PageHeader title="Avaliações" subtitle="Avalie sua equipe" icon={<ClipboardCheck className="w-5 h-5 text-primary" />} />
         <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
       </div>
@@ -82,7 +82,7 @@ export default function ClienteAvaliacoes() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
       <PageHeader
         title="Avaliações"
         subtitle="Avalie o desempenho da sua equipe"

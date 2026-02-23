@@ -11,7 +11,7 @@ export default function FinanceiroFechamentos() {
   const hasData = (revenues ?? []).length > 0 || (expenses ?? []).length > 0;
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="page-header-title">Fechamentos (DRE)</h1>
         <p className="text-sm text-muted-foreground mt-1">Demonstrativo de Resultado por franqueado</p>

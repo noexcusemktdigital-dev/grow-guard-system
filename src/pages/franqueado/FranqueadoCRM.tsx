@@ -75,7 +75,7 @@ export default function FranqueadoCRM() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <Skeleton className="h-10 w-64" />
         <div className="grid grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
         <Skeleton className="h-96" />
@@ -84,7 +84,7 @@ export default function FranqueadoCRM() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -37,7 +37,7 @@ export default function FinanceiroDespesas() {
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div><h1 className="page-header-title">Despesas</h1><p className="text-sm text-muted-foreground mt-1">Logbook CRUD — Gestão completa de custos</p></div>
         <Button size="sm" onClick={() => setDialogOpen(true)} className="gap-2"><Plus className="w-4 h-4" /> Nova Despesa</Button>
