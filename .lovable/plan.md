@@ -1,59 +1,49 @@
 
-# Correção de 3 Bugs nos Agentes de IA
 
-## Bug 1: Erro ao excluir agente
+# Correcoes: Numero WhatsApp, Canal fixo e Transbordo
 
-**Causa**: A policy RLS de DELETE na tabela `client_ai_agents` permite apenas `super_admin`, `admin` ou `cliente_admin`. Se o usuario logado nao tiver uma dessas roles, o DELETE falha silenciosamente (retorna 0 rows affected), e o Supabase client nao retorna erro explicito -- mas o agente nao e excluido e o frontend mostra erro.
+## Resumo
 
-**Solucao**: Verificar a role do usuario. A policy ja inclui `cliente_admin`, que e a role principal de clientes. Provavelmente o usuario tem a role `cliente_user`, que nao tem permissao de DELETE. Vamos criar uma nova policy que permita tambem que o criador do agente (`created_by = auth.uid()`) possa excluir, ou ajustar a policy existente para incluir membros da org.
-
-**Acao**: Migration SQL para alterar a policy de DELETE, permitindo que membros da organizacao possam excluir agentes que eles criaram (`created_by = auth.uid()`).
+Tres ajustes: (1) buscar o numero real do telefone via endpoint `/device` da Z-API, (2) fixar o canal como WhatsApp removendo o seletor, (3) explicar e renomear "transbordo".
 
 ---
 
-## Bug 2: Foto do agente nao aparece apos upload
+## 1. Buscar numero real do WhatsApp via endpoint `/device`
 
-**Causa**: O bucket `agent-knowledge` e **privado** (`public: false`). O codigo usa `getPublicUrl()` que gera uma URL publica, mas como o bucket e privado, essa URL retorna erro 403. A imagem e salva corretamente, mas nao pode ser exibida.
+O endpoint `/status` da Z-API **nao retorna o numero do telefone**. O campo `phoneConnected` nao existe na resposta. O numero esta disponivel no endpoint `/device`.
 
-**Solucao**: Duas opcoes:
-1. Tornar o bucket publico (mais simples, adequado para avatares)
-2. Usar URLs assinadas (`createSignedUrl`) ao exibir
+**Mudanca em `supabase/functions/whatsapp-setup/index.ts`:**
+- Apos verificar que `connected === true` no `/status`, fazer uma segunda chamada a `GET /instances/{id}/token/{token}/device` com o header `Client-Token`
+- A resposta do `/device` contem o campo `phone` com o numero real (ex: `"5511999999999"`)
+- Salvar esse valor no campo `phone_number` da tabela `whatsapp_instances`
 
-Como os avatares nao sao dados sensiveis e precisam ser exibidos em cards publicamente, a opcao mais simples e tornar o bucket publico via migration.
+**Mudanca em `src/components/cliente/AgentFormSheet.tsx`:**
+- Trocar `window.location.reload()` por `queryClient.invalidateQueries` para UX mais fluida ao clicar "Atualizar numero"
 
-**Acao**: Migration SQL para atualizar o bucket para `public = true`.
+## 2. Canal fixo como WhatsApp
 
----
+Remover o `Select` de canal (WhatsApp, Instagram, E-mail, Website) da aba Identidade. O campo `channel` sera fixado como `"whatsapp"` no estado do formulario. O seletor nao sera exibido, liberando espaco na interface.
 
-## Bug 3: "Numero nao configurado" apesar de WhatsApp estar integrado
+## 3. Transbordo -- o que e e como renomear
 
-**Causa**: No banco, o campo `phone_number` da instancia WhatsApp esta `NULL`. A Z-API retorna o numero no campo `phoneConnected` durante o check-status, mas o `phone_number` so e salvo se `statusData.smartphoneConnected` for `true` (linha 92 do whatsapp-setup). Se essa flag nao vier da Z-API ou for `false`, o numero nao e salvo.
+**"Solicitar transbordo"** significa que o agente de IA pode pedir para um humano assumir a conversa. Quando o agente percebe que nao consegue resolver (ex: cliente irritado, assunto complexo), ele envia um sinal interno de "transbordo" -- ou seja, transfere o atendimento para uma pessoa real.
 
-O numero da instancia Z-API esta conectado (`status: connected`), mas a API pode usar um campo diferente. Alem disso, o campo pode nao ter sido populado durante o setup inicial.
-
-**Solucao**:
-1. Na edge function `whatsapp-setup`, no action `check-status`, salvar o `phoneConnected` sempre que disponivel, sem depender do flag `smartphoneConnected`
-2. No frontend (`AgentFormSheet.tsx`), quando `phone_number` for null mas a instancia existir e estiver connected, fazer um fetch ao check-status para tentar obter o numero
-3. Como alternativa imediata, buscar o numero diretamente da Z-API na edge function e garantir que ele seja salvo
-
-**Acao**: 
-- Editar `supabase/functions/whatsapp-setup/index.ts` -- simplificar a logica de `phone_number` no check-status para salvar `statusData.phoneConnected` diretamente quando disponivel
-- Editar `src/components/cliente/AgentFormSheet.tsx` -- quando a instancia existir mas `phone_number` for null, exibir o instance_id mascarado e um botao "Atualizar numero" que chama check-status
+**Acao**: Renomear o label de "Solicitar transbordo" para **"Transferir para atendente humano"**, que e mais claro para o usuario.
 
 ---
 
 ## Arquivos a editar
 
-| Acao | Arquivo |
-|------|---------|
-| Migration | Alterar policy DELETE em `client_ai_agents` para permitir `created_by = auth.uid()` |
-| Migration | Atualizar bucket `agent-knowledge` para publico |
-| Editar | `supabase/functions/whatsapp-setup/index.ts` -- corrigir logica de phone_number no check-status |
-| Editar | `src/components/cliente/AgentFormSheet.tsx` -- fallback quando phone_number e null, botao atualizar |
+| Arquivo | Mudanca |
+|---------|---------|
+| `supabase/functions/whatsapp-setup/index.ts` | Adicionar chamada ao `/device` da Z-API para obter o numero real quando conectado |
+| `src/components/cliente/AgentFormSheet.tsx` | Remover Select de canal (fixar "whatsapp"), trocar reload por invalidateQueries, renomear "transbordo" |
 
 ## Detalhes Tecnicos
 
-- A policy de DELETE sera: `USING (is_member_of_org(auth.uid(), organization_id) AND created_by = auth.uid())` OU manter a original para admins. Combinar ambas com OR
-- O bucket sera atualizado com `UPDATE storage.buckets SET public = true WHERE id = 'agent-knowledge'`
-- No check-status, a linha 92 sera simplificada para: `phone_number: statusData.phoneConnected || instance.phone_number || null`
-- No frontend, ao montar o formulario, se `whatsappInstance` existir com status `connected` mas sem `phone_number`, chamar automaticamente o check-status via edge function para tentar obter o numero
+- Endpoint Z-API: `GET https://api.z-api.io/instances/{instanceId}/token/{token}/device` com header `Client-Token: {clientToken}`
+- Resposta esperada: `{ phone: "5511999999999", ... }`
+- O `phone` sera salvo em `whatsapp_instances.phone_number`
+- No formulario, o campo `channel` sera inicializado como `"whatsapp"` e nao tera selector visivel
+- O label "Solicitar transbordo" sera trocado por "Transferir para atendente humano"
+
