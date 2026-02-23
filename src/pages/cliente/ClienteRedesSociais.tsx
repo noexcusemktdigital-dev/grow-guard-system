@@ -335,7 +335,7 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 export default function ClienteRedesSociais() {
   const { data: subscription } = useClienteSubscription();
   const plan = getPlanBySlug(subscription?.plan);
-  const maxArts = plan?.maxSocialArts ?? 8;
+  const maxArts = plan?.maxSocialArts ?? 4;
   const planName = plan?.name ?? "Starter";
 
   // Knowledge base
@@ -387,6 +387,10 @@ export default function ClienteRedesSociais() {
 
   // Calendar
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
+
+  // Arts quota calculations
+  const artsThisMonth = campaigns.reduce((acc, c) => acc + c.arts.length, 0);
+  const saldoRestanteArtes = maxArts === -1 ? Infinity : Math.max(0, maxArts - artsThisMonth);
 
   // Loading phrases rotation
   useEffect(() => {
@@ -630,7 +634,7 @@ export default function ClienteRedesSociais() {
         <TabsContent value="campanhas" className="space-y-4 mt-4">
           {/* Quota banner */}
           <UsageQuotaBanner
-            used={campaigns.reduce((acc, c) => acc + c.arts.length, 0)}
+            used={artsThisMonth}
             limit={maxArts}
             label="artes sociais"
             planName={planName}
@@ -638,8 +642,14 @@ export default function ClienteRedesSociais() {
 
           <Button
             className="w-full gap-2 h-12 text-sm font-semibold"
-            onClick={() => { setWizardOpen(true); setWizardFlow("choose"); setWizardStep(1); loadContentCampaigns(); setSelectedContents([]); }}
-            disabled={maxArts !== -1 && campaigns.reduce((acc, c) => acc + c.arts.length, 0) >= maxArts}
+            onClick={() => {
+              if (maxArts !== -1 && artsThisMonth >= maxArts) {
+                toast({ title: "Limite atingido", description: "Faça upgrade para gerar mais artes.", variant: "destructive" });
+                return;
+              }
+              setWizardOpen(true); setWizardFlow("choose"); setWizardStep(1); loadContentCampaigns(); setSelectedContents([]);
+            }}
+            disabled={maxArts !== -1 && artsThisMonth >= maxArts}
           >
             <Plus className="w-4 h-4" /> Nova Criação Mensal
           </Button>
@@ -745,37 +755,52 @@ export default function ClienteRedesSociais() {
                   {wizardStep === 1 && (
                     <div className="space-y-4 mt-2">
                       <p className="text-xs text-muted-foreground">Selecione os conteúdos que deseja transformar em artes visuais.</p>
+
+                      {/* Saldo info */}
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                        <p className="text-xs font-semibold">Saldo: {maxArts === -1 ? "Ilimitado" : `${saldoRestanteArtes} artes restantes`}</p>
+                        <p className="text-[10px] text-muted-foreground">{artsThisMonth} de {maxArts === -1 ? "∞" : maxArts} usadas este mês</p>
+                      </div>
+
                       <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-2">
                         {contentCampaigns.map((camp: any) => (
                           <div key={camp.id}>
                             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{camp.label}</p>
-                            {(camp.conteudos || []).map((c: any) => (
-                              <label key={c.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/30 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedContents.includes(c.id)}
-                                  onChange={(e) => {
-                                    setSelectedContents(prev => e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id));
-                                  }}
-                                  className="rounded"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-medium truncate">{c.titulo}</p>
-                                  <div className="flex gap-1 mt-0.5">
-                                    <Badge variant="outline" className="text-[8px]">{c.formato}</Badge>
-                                    <Badge variant="outline" className="text-[8px]">{c.funil}</Badge>
+                            {(camp.conteudos || []).map((c: any) => {
+                              const isChecked = selectedContents.includes(c.id);
+                              const wouldExceed = !isChecked && maxArts !== -1 && selectedContents.length >= saldoRestanteArtes;
+                              return (
+                                <label key={c.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${wouldExceed && !isChecked ? "opacity-50" : "hover:bg-muted/30"}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    disabled={wouldExceed && !isChecked}
+                                    onChange={(e) => {
+                                      setSelectedContents(prev => e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id));
+                                    }}
+                                    className="rounded"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium truncate">{c.titulo}</p>
+                                    <div className="flex gap-1 mt-0.5">
+                                      <Badge variant="outline" className="text-[8px]">{c.formato}</Badge>
+                                      <Badge variant="outline" className="text-[8px]">{c.funil}</Badge>
+                                    </div>
                                   </div>
-                                </div>
-                              </label>
-                            ))}
+                                </label>
+                              );
+                            })}
                           </div>
                         ))}
                       </div>
+                      {maxArts !== -1 && selectedContents.length >= saldoRestanteArtes && (
+                        <p className="text-xs text-amber-600 font-medium">Limite de artes atingido. Desmarque itens ou faça upgrade.</p>
+                      )}
                       <div className="flex gap-2">
                         <Button variant="outline" className="flex-1" onClick={() => setWizardFlow("choose")}>
                           <ArrowLeft className="w-4 h-4" /> Voltar
                         </Button>
-                        <Button className="flex-1" onClick={() => { setBQtd(String(Math.min(selectedContents.length, 10))); setWizardStep(2); }} disabled={selectedContents.length === 0}>
+                        <Button className="flex-1" onClick={() => { setBQtd(String(Math.min(selectedContents.length, maxArts === -1 ? 10 : saldoRestanteArtes))); setWizardStep(2); }} disabled={selectedContents.length === 0}>
                           {selectedContents.length} selecionado(s) <ArrowRight className="w-4 h-4" />
                         </Button>
                       </div>
@@ -900,8 +925,8 @@ export default function ClienteRedesSociais() {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs font-medium">Qtd de Posts *</Label>
-                        <Input type="number" min={1} max={10} value={bQtd} onChange={(e) => setBQtd(e.target.value)} />
-                        <p className="text-[10px] text-muted-foreground">Máx 10 • Gera {Number(bQtd) * 2 || 0} artes</p>
+                        <Input type="number" min={1} max={maxArts === -1 ? 10 : Math.min(10, saldoRestanteArtes)} value={bQtd} onChange={(e) => setBQtd(e.target.value)} />
+                        <p className="text-[10px] text-muted-foreground">Máx {maxArts === -1 ? 10 : Math.min(10, saldoRestanteArtes)} • Gera {Number(bQtd) * 2 || 0} artes • Saldo: {maxArts === -1 ? "Ilimitado" : `${saldoRestanteArtes} artes`}</p>
                       </div>
                     </div>
 
