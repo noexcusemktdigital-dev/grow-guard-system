@@ -119,7 +119,7 @@ export default function ClienteChat() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-3">
+    <div className="flex flex-col flex-1 min-h-0 gap-3">
       <PageHeader
         title="Conversas"
         subtitle="Central de atendimento WhatsApp"
