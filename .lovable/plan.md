@@ -1,53 +1,42 @@
 
-# Fix: Chat Layout Overflow (Definitive)
+# Fix: Chat Layout -- Definitive Overflow Fix
 
-## Root Cause
+## Problem
 
-The chat grid uses `h-[calc(100vh-160px)]` but it sits inside:
-1. `ClienteLayout` content div with `p-6 lg:p-8` padding (~48px)
-2. A `PageHeader` component above it (~40px)
-3. `ActionAlertsBanner` above that
-4. The parent has `overflow-y-auto`, so content just scrolls instead of being constrained
+When clicking a conversation, the entire chat page scrolls up inside the `ClienteLayout` content wrapper, hiding the PageHeader, filters, and contact list header. This happens because:
 
-The `100vh - 160px` calculation cannot account for all these dynamic ancestors. When a conversation is selected and messages load, the content overflows the grid cell, the parent detects overflow and scrolls, which hides the contact list off-screen.
+1. `ClienteLayout` content div has `overflow-y-auto` (it scrolls)
+2. Chat page uses `h-full` (= 100% of parent height)
+3. But the PageHeader sits above, so total content = PageHeader + 100% = more than available space
+4. Parent scrolls, pushing everything up
 
-## Fix
+## Solution
 
-Replace the fixed `vh` calculation with a proper flex layout that fills the available space automatically.
+Two small CSS changes to create a proper flex chain:
 
-### File: `src/pages/cliente/ClienteChat.tsx` (connected state return, line 121-154)
-
-Change the wrapper from `space-y-3` (which is just a vertical stack) to a flex column that fills the parent height:
+### 1. `src/components/ClienteLayout.tsx` (line 17)
+Add `flex flex-col` to the content wrapper div so child pages can use `flex-1` to fill remaining space.
 
 ```
-Before:
-<div className="space-y-3">
-  <PageHeader ... />
-  <Card>
-    <div className="grid ... h-[calc(100vh-160px)] min-h-[500px]">
-
-After:
-<div className="flex flex-col h-full gap-3">
-  <PageHeader ... />
-  <Card className="flex-1 min-h-0 overflow-hidden ...">
-    <div className="grid ... h-full">
+Before: "flex-1 min-h-0 overflow-y-auto page-enter p-6 lg:p-8"
+After:  "flex-1 min-h-0 overflow-y-auto flex flex-col page-enter p-6 lg:p-8"
 ```
 
-Key changes:
-- Outer div: `flex flex-col h-full gap-3` -- fills parent, uses flex
-- Card: add `flex-1 min-h-0` -- takes remaining space, prevents overflow
-- Grid: replace `h-[calc(100vh-160px)] min-h-[500px]` with just `h-full` -- fills the Card
+Other pages are unaffected -- they use natural height and the parent scrolls normally.
 
-This way the grid height is determined by the actual available space, not a hardcoded viewport calculation. The flex chain from `ClienteLayout` (h-screen) down through the content div (flex-1 min-h-0) to the chat page (h-full) to the Card (flex-1 min-h-0) to the grid (h-full) will properly constrain everything.
+### 2. `src/pages/cliente/ClienteChat.tsx` (line 122)
+Replace `h-full` with `flex-1 min-h-0` so the chat fills only the **remaining** space after PageHeader, instead of claiming 100% of parent.
 
-### No other files need changes
+```
+Before: "flex flex-col h-full gap-3"
+After:  "flex flex-col flex-1 min-h-0 gap-3"
+```
 
-The `ClienteLayout` and `ChatConversation` already have the correct overflow containment from the previous fix.
+This way the flex chain is: Layout (h-screen) -> content div (flex-1, flex-col) -> PageHeader (auto height) -> Card (flex-1 min-h-0) -> grid (h-full). Everything stays within bounds.
 
 ## Technical Summary
 
-| File | Change |
-|------|--------|
-| `src/pages/cliente/ClienteChat.tsx` line 122 | `space-y-3` to `flex flex-col h-full gap-3` |
-| `src/pages/cliente/ClienteChat.tsx` line 129 | Card: add `flex-1 min-h-0` |
-| `src/pages/cliente/ClienteChat.tsx` line 130 | Grid: `h-[calc(100vh-160px)] min-h-[500px]` to `h-full` |
+| File | Line | Change |
+|------|------|--------|
+| `src/components/ClienteLayout.tsx` | 17 | Add `flex flex-col` to content wrapper classes |
+| `src/pages/cliente/ClienteChat.tsx` | 122 | Replace `h-full` with `flex-1 min-h-0` |
