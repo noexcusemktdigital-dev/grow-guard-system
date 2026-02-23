@@ -118,6 +118,48 @@ Deno.serve(async (req) => {
       results.cliente = { message: "User already exists" };
     }
 
+    // ── 3. Franqueado ──
+    const { data: franqueadoUser, error: franqueadoErr } =
+      await supabaseAdmin.auth.admin.createUser({
+        email: "franqueado.teste@noexcuse.com",
+        password: "19961996",
+        email_confirm: true,
+        user_metadata: { full_name: "Franqueado Teste" },
+      });
+
+    if (franqueadoErr && !franqueadoErr.message.includes("already been registered")) {
+      throw franqueadoErr;
+    }
+
+    const franqueadoId = franqueadoUser?.user?.id;
+
+    if (franqueadoId) {
+      // Create franqueado org
+      const { data: franqueadoOrg } = await supabaseAdmin
+        .from("organizations")
+        .insert({ name: "Unidade Teste", type: "franqueado" })
+        .select("id")
+        .single();
+
+      if (franqueadoOrg) {
+        await supabaseAdmin
+          .from("organization_memberships")
+          .insert({
+            user_id: franqueadoId,
+            organization_id: franqueadoOrg.id,
+            role: "franqueado",
+          });
+      }
+
+      await supabaseAdmin
+        .from("user_roles")
+        .insert({ user_id: franqueadoId, role: "franqueado" });
+
+      results.franqueado = { id: franqueadoId, email: "franqueado.teste@noexcuse.com" };
+    } else {
+      results.franqueado = { message: "User already exists" };
+    }
+
     return new Response(JSON.stringify({ success: true, results }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
