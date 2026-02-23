@@ -77,7 +77,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados } = await req.json();
+    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -91,10 +91,45 @@ ${roteiros_importados.map((r: any, i: number) => `
 Script ${i + 1}:
 - Title: ${r.titulo || "N/A"}
 - Caption/Body: ${r.legenda || r.roteiro || "N/A"}
-- Funnel Stage: ${r.etapa || "N/A"}
+- Funnel Stage: ${r.etapa || r.funil || "N/A"}
 - Format: ${r.formato || "N/A"}
 `).join("")}
 Use these scripts to create more contextually relevant visual prompts and pre-fill captions.`;
+    }
+
+    let personaContext = "";
+    if (persona?.nome || persona?.descricao) {
+      personaContext = `\n\nTARGET AUDIENCE (PERSONA):
+${persona.nome ? `Name: ${persona.nome}` : ""}
+${persona.descricao ? `Description: ${persona.descricao}` : ""}
+
+Adapt ALL content (captions, CTAs, visual prompts) to resonate with this specific persona.
+Visual prompts must reflect the aesthetic preferences and world of this persona.
+Use language, tone, and references that connect with this audience.`;
+    }
+
+    let identityContext = "";
+    if (identidade_visual) {
+      const iv = identidade_visual;
+      identityContext = `\n\nBRAND IDENTITY:
+${iv.paleta ? `- Colors: ${iv.paleta}` : ""}
+${iv.fontes ? `- Fonts: ${iv.fontes}` : ""}
+${iv.estilo ? `- Style: ${iv.estilo}` : ""}
+${iv.referencias ? `- Visual References: ${iv.referencias}` : ""}
+${iv.concorrencia ? `- Competitors Visual Style: ${iv.concorrencia}` : ""}
+${iv.tom_visual ? `- Visual Tone: ${iv.tom_visual}` : ""}
+
+Use these brand guidelines to ensure visual consistency across all generated prompts.
+The visual prompts MUST reflect this brand identity.`;
+    }
+
+    let referenciasTipoContext = "";
+    if (referencias_tipo) {
+      referenciasTipoContext = `\n\nTYPE-SPECIFIC REFERENCES (${tipo_post || "general"}):
+${referencias_tipo}
+
+Use these references as inspiration for the visual style, composition, and aesthetic of the generated prompts.
+Match the quality level and visual approach shown in these references.`;
     }
 
     const systemPrompt = `Você é um diretor criativo SÊNIOR de uma agência de marketing digital premiada, especializado em artes para redes sociais de altíssima qualidade.
@@ -108,6 +143,9 @@ ${nivelGuide}
 
 ${descricao_produto ? `PRODUTO/SERVIÇO: ${descricao_produto}` : ""}
 ${importedContext}
+${personaContext}
+${identityContext}
+${referenciasTipoContext}
 
 Cada conceito DEVE ter:
 - titulo: título curto e chamativo do post (máx 60 caracteres)
@@ -122,7 +160,7 @@ REGRAS CRÍTICAS para os prompts visuais:
 2. SEMPRE inclua "Leave compositional space for text overlay" 
 3. Descreva EXATAMENTE: composição, iluminação, ângulo de câmera, texturas, materiais, profundidade de campo
 4. Especifique o estilo: ${estilo}
-5. Cores: ${briefing.cores || "cores vibrantes e profissionais"}
+5. Cores: ${briefing.cores || identidade_visual?.paleta || "cores vibrantes e profissionais"}
 6. Cada prompt deve ter pelo menos 80 palavras de descrição visual detalhada
 7. Feed é quadrado (1:1), Story é vertical (9:16) - adapte a composição para cada formato
 8. Para Story, use composição vertical com elementos empilhados
@@ -135,7 +173,7 @@ REGRAS CRÍTICAS para os prompts visuais:
 - Tipo de Post: ${tipo_post || "Institucional"}
 - Nível de Qualidade: ${nivel || "simples"}
 - Estilo Visual: ${estilo}
-- Cores: ${briefing.cores || "A critério criativo"}
+- Cores: ${briefing.cores || identidade_visual?.paleta || "A critério criativo"}
 - Temas: ${briefing.temas || "Variados"}
 - Promoções: ${briefing.promocoes || "Nenhuma"}
 - Observações: ${briefing.observacoes || "Nenhuma"}

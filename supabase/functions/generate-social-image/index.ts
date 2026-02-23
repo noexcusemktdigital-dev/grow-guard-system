@@ -29,7 +29,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, format, file_path, nivel } = await req.json();
+    const { prompt, format, file_path, nivel, persona, identidade_visual } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -39,11 +39,31 @@ serve(async (req) => {
       ? "Square format (1:1 aspect ratio), 1080x1080 pixels. Centered, balanced composition."
       : "Vertical format (9:16 aspect ratio), 1080x1920 pixels. Vertical composition with stacked visual elements.";
 
+    let brandContext = "";
+    if (identidade_visual) {
+      const iv = identidade_visual;
+      brandContext = `\nBRAND IDENTITY:
+${iv.paleta ? `- Primary colors: ${iv.paleta}` : ""}
+${iv.estilo ? `- Visual style: ${iv.estilo}` : ""}
+${iv.tom_visual ? `- Visual tone: ${iv.tom_visual}` : ""}
+
+Match these brand guidelines precisely in the generated image.
+Use the brand colors as dominant palette elements.`;
+    }
+
+    let audienceContext = "";
+    if (persona?.descricao || persona?.nome) {
+      audienceContext = `\nTARGET AUDIENCE: ${persona.nome ? `${persona.nome} — ` : ""}${persona.descricao || ""}
+Ensure the visual style, color palette, and composition appeal to this specific audience.`;
+    }
+
     const fullPrompt = `You are a world-class art director and visual designer for premium social media campaigns.
 
 ${qualityInstructions}
 
 ${aspectInstruction}
+${brandContext}
+${audienceContext}
 
 COMPOSITION RULES:
 - Leave clear space for text overlay (top 20% or bottom 25% of the image should have simpler areas)

@@ -5,7 +5,7 @@ import {
   ChevronRight, BookOpen, Clock, FolderOpen, Folder,
   ArrowLeft, Hash, Layout, CheckCircle2, Circle, Star,
   Type, AlignCenter, AlignLeft, AlignRight, Minus,
-  ZoomIn, ArrowRight,
+  ZoomIn, ArrowRight, Users, FileText,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -77,6 +77,13 @@ const initialSections: KBSection[] = [
       { key: "fontes", label: "Fontes", type: "text", value: "Inter (títulos), DM Sans (corpo)" },
       { key: "estilo", label: "Estilo Visual Preferido", type: "text", value: "Moderno, Minimalista, Bold" },
       { key: "logo", label: "Logo", type: "upload", value: "" },
+    ],
+  },
+  {
+    id: "persona", title: "Persona / Público-Alvo", icon: <Users className="w-4 h-4" />,
+    fields: [
+      { key: "persona_nome", label: "Nome da Persona", type: "text", value: "" },
+      { key: "persona_descricao", label: "Descrição (idade, profissão, dores, desejos, comportamento)", type: "textarea", value: "" },
     ],
   },
   {
@@ -354,6 +361,18 @@ export default function ClienteRedesSociais() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importedScripts, setImportedScripts] = useState<any[]>([]);
 
+  // New flow state
+  const [wizardFlow, setWizardFlow] = useState<"choose" | "content" | "briefing">("choose");
+  const [contentCampaigns, setContentCampaigns] = useState<any[]>([]);
+  const [selectedContents, setSelectedContents] = useState<string[]>([]);
+
+  // Persona
+  const [personaNome, setPersonaNome] = useState("");
+  const [personaDescricao, setPersonaDescricao] = useState("");
+
+  // References per type
+  const [referenciasTipo, setReferenciasTipo] = useState("");
+
   // Calendar
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
 
@@ -368,11 +387,60 @@ export default function ClienteRedesSociais() {
     setSections(prev => prev.map(s => s.id === sectionId ? { ...s, fields: s.fields.map(f => f.key === fieldKey ? { ...f, value } : f) } : s));
   };
 
+  /* ── Build identity visual object from sections ── */
+  const getIdentidadeVisual = () => {
+    const getField = (sectionId: string, fieldKey: string) => {
+      const section = sections.find(s => s.id === sectionId);
+      return section?.fields.find(f => f.key === fieldKey)?.value || "";
+    };
+    return {
+      paleta: getField("identidade", "paleta"),
+      fontes: getField("identidade", "fontes"),
+      estilo: getField("identidade", "estilo"),
+      referencias: getField("referencias", "refs"),
+      concorrencia: getField("concorrencia", "conc"),
+      tom_visual: getField("tom", "tom"),
+    };
+  };
+
+  /* ── Get saved persona from identity visual ── */
+  const getSavedPersona = () => {
+    const section = sections.find(s => s.id === "persona");
+    const nome = section?.fields.find(f => f.key === "persona_nome")?.value || "";
+    const descricao = section?.fields.find(f => f.key === "persona_descricao")?.value || "";
+    return { nome, descricao };
+  };
+
+  /* ── Load content campaigns from localStorage ── */
+  const loadContentCampaigns = () => {
+    try {
+      const stored = localStorage.getItem("content-campaigns");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setContentCampaigns(Array.isArray(parsed) ? parsed : []);
+      }
+    } catch {}
+  };
+
   /* ── Generate Arts ── */
   const handleGenerate = async () => {
     if (!bObjetivo || !bEstilo) {
       toast({ title: "Preencha os campos obrigatórios", variant: "destructive" });
       return;
+    }
+
+    // Build scripts from selected content if using content flow
+    let scriptsToUse = importedScripts;
+    if (wizardFlow === "content" && selectedContents.length > 0) {
+      const allScripts: any[] = [];
+      contentCampaigns.forEach((camp: any) => {
+        (camp.conteudos || []).forEach((c: any) => {
+          if (selectedContents.includes(c.id)) {
+            allScripts.push({ titulo: c.titulo, roteiro: c.roteiro, funil: c.funil, formato: c.formato });
+          }
+        });
+      });
+      scriptsToUse = allScripts;
     }
 
     const qty = Math.max(1, Math.min(10, Number(bQtd) || 4));
@@ -381,17 +449,30 @@ export default function ClienteRedesSociais() {
     setGenTotal(qty * 2);
     setGenMessage("Gerando conceitos com IA...");
 
+    // Build persona (prefer wizard fields, fall back to saved)
+    const savedPersona = getSavedPersona();
+    const personaData = (personaNome || personaDescricao)
+      ? { nome: personaNome, descricao: personaDescricao }
+      : (savedPersona.nome || savedPersona.descricao)
+        ? savedPersona
+        : undefined;
+
+    const identidade_visual = getIdentidadeVisual();
+
     try {
       // Step 1: Generate concepts
       const { data: conceptsData, error: conceptsError } = await supabase.functions.invoke("generate-social-concepts", {
         body: {
-          briefing: { mes: bMes, objetivo: bObjetivo, cores: bCores, temas: bTemas, promocoes: bPromocoes, observacoes: bObs },
+          briefing: { mes: bMes, objetivo: bObjetivo, cores: bCores || identidade_visual.paleta, temas: bTemas, promocoes: bPromocoes, observacoes: bObs },
           quantidade: qty,
           estilo: bEstilo,
           tipo_post: bTipoPost,
           nivel: bNivel,
           descricao_produto: bDescricaoProduto || undefined,
-          roteiros_importados: importedScripts.length > 0 ? importedScripts : undefined,
+          roteiros_importados: scriptsToUse.length > 0 ? scriptsToUse : undefined,
+          persona: personaData,
+          identidade_visual,
+          referencias_tipo: referenciasTipo || undefined,
         },
       });
 
@@ -419,6 +500,8 @@ export default function ClienteRedesSociais() {
               format: "feed",
               file_path: `${timestamp}/${slug}-feed.png`,
               nivel: bNivel,
+              persona: personaData,
+              identidade_visual,
             },
           });
           if (!feedError && feedData?.url) feedUrl = feedData.url;
@@ -438,6 +521,8 @@ export default function ClienteRedesSociais() {
               format: "story",
               file_path: `${timestamp}/${slug}-story.png`,
               nivel: bNivel,
+              persona: personaData,
+              identidade_visual,
             },
           });
           if (!storyError && storyData?.url) storyUrl = storyData.url;
@@ -469,6 +554,7 @@ export default function ClienteRedesSociais() {
       setOpenCampaign(newCampaign.id);
       setWizardOpen(false);
       setWizardStep(1);
+      setWizardFlow("choose");
       toast({ title: "Artes geradas!", description: `${arts.length} posts (${arts.length * 2} artes) criados para ${bMes}.` });
     } catch (err: any) {
       console.error("Generation error:", err);
@@ -525,12 +611,12 @@ export default function ClienteRedesSociais() {
 
         {/* ═══ CAMPANHAS ═══ */}
         <TabsContent value="campanhas" className="space-y-4 mt-4">
-          <Button className="w-full gap-2 h-12 text-sm font-semibold" onClick={() => { setWizardOpen(true); setWizardStep(1); }}>
+          <Button className="w-full gap-2 h-12 text-sm font-semibold" onClick={() => { setWizardOpen(true); setWizardFlow("choose"); setWizardStep(1); loadContentCampaigns(); setSelectedContents([]); }}>
             <Plus className="w-4 h-4" /> Nova Criação Mensal
           </Button>
 
           {/* Wizard */}
-          <Dialog open={wizardOpen} onOpenChange={(open) => { if (!isGenerating) setWizardOpen(open); }}>
+          <Dialog open={wizardOpen} onOpenChange={(open) => { if (!isGenerating) { setWizardOpen(open); if (!open) setWizardFlow("choose"); } }}>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               {isGenerating ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-5">
@@ -551,7 +637,196 @@ export default function ClienteRedesSociais() {
                   )}
                   <p className="text-xs text-muted-foreground/60">A geração de imagens pode levar alguns minutos...</p>
                 </div>
+              ) : wizardFlow === "choose" ? (
+                /* ── FLOW CHOOSER ── */
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" /> Nova Criação Mensal
+                    </DialogTitle>
+                  </DialogHeader>
+                  <p className="text-xs text-muted-foreground">Escolha como deseja criar suas artes para redes sociais.</p>
+
+                  <div className="space-y-3 mt-2">
+                    {/* Primary: From Content */}
+                    <Card
+                      className="cursor-pointer ring-2 ring-primary/30 bg-primary/[0.03] hover:bg-primary/[0.06] transition-all"
+                      onClick={() => {
+                        if (contentCampaigns.length > 0) {
+                          setWizardFlow("content");
+                          setWizardStep(1);
+                        } else {
+                          toast({ title: "Nenhuma campanha de conteúdo", description: "Crie conteúdos primeiro na aba Conteúdos.", variant: "destructive" });
+                        }
+                      }}
+                    >
+                      <CardContent className="py-5 flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-primary/15">
+                          <FileText className="w-6 h-6 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold">Gerar a partir dos Conteúdos</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Selecione conteúdos já criados e transforme em artes visuais. Título, legenda e CTA já vêm preenchidos.
+                          </p>
+                          {contentCampaigns.length > 0 ? (
+                            <Badge variant="secondary" className="text-[10px] mt-2">
+                              {contentCampaigns.reduce((acc: number, c: any) => acc + (c.conteudos?.length || 0), 0)} conteúdos disponíveis
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] mt-2 text-muted-foreground">Nenhum conteúdo — crie primeiro</Badge>
+                          )}
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-primary" />
+                      </CardContent>
+                    </Card>
+
+                    {/* Secondary: From scratch */}
+                    <Card
+                      className="cursor-pointer glass-card hover:bg-muted/30 transition-all"
+                      onClick={() => { setWizardFlow("briefing"); setWizardStep(1); }}
+                    >
+                      <CardContent className="py-4 flex items-center gap-4">
+                        <div className="p-2.5 rounded-xl bg-muted">
+                          <Edit3 className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">Criar do zero (briefing)</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">Preencha um briefing completo e deixe a IA criar tudo.</p>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              ) : wizardFlow === "content" ? (
+                /* ── CONTENT FLOW ── */
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-primary" /> A partir dos Conteúdos — Etapa {wizardStep} de 2
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="flex gap-2 mb-2">
+                    {[1, 2].map((s) => (
+                      <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= wizardStep ? "bg-primary" : "bg-muted"}`} />
+                    ))}
+                  </div>
+
+                  {wizardStep === 1 && (
+                    <div className="space-y-4 mt-2">
+                      <p className="text-xs text-muted-foreground">Selecione os conteúdos que deseja transformar em artes visuais.</p>
+                      <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-2">
+                        {contentCampaigns.map((camp: any) => (
+                          <div key={camp.id}>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{camp.label}</p>
+                            {(camp.conteudos || []).map((c: any) => (
+                              <label key={c.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/30 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedContents.includes(c.id)}
+                                  onChange={(e) => {
+                                    setSelectedContents(prev => e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id));
+                                  }}
+                                  className="rounded"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-medium truncate">{c.titulo}</p>
+                                  <div className="flex gap-1 mt-0.5">
+                                    <Badge variant="outline" className="text-[8px]">{c.formato}</Badge>
+                                    <Badge variant="outline" className="text-[8px]">{c.funil}</Badge>
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" onClick={() => setWizardFlow("choose")}>
+                          <ArrowLeft className="w-4 h-4" /> Voltar
+                        </Button>
+                        <Button className="flex-1" onClick={() => { setBQtd(String(Math.min(selectedContents.length, 10))); setWizardStep(2); }} disabled={selectedContents.length === 0}>
+                          {selectedContents.length} selecionado(s) <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {wizardStep === 2 && (
+                    <div className="space-y-4 mt-2">
+                      <p className="text-xs text-muted-foreground">Configure os detalhes visuais para a geração.</p>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Tipo de Post *</Label>
+                          <Select value={bTipoPost} onValueChange={setBTipoPost}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>{TIPOS_POST.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Nível de Qualidade *</Label>
+                          <Select value={bNivel} onValueChange={setBNivel}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>{NIVEIS.map((n) => (<SelectItem key={n.value} value={n.value}><span>{n.label}</span> <span className="text-muted-foreground ml-1">— {n.desc}</span></SelectItem>))}</SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Objetivo *</Label>
+                          <Select value={bObjetivo} onValueChange={setBObjetivo}>
+                            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>{OBJETIVOS.map((o) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Estilo Visual *</Label>
+                          <Select value={bEstilo} onValueChange={setBEstilo}>
+                            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>{ESTILOS.map((e) => (<SelectItem key={e} value={e}>{e}</SelectItem>))}</SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Persona */}
+                      <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                        <p className="text-xs font-semibold flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-primary" /> Persona / Público-Alvo
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-[11px]">Nome da Persona</Label>
+                            <Input value={personaNome} onChange={(e) => setPersonaNome(e.target.value)} placeholder='Ex: "Maria, 38 anos"' className="h-8 text-xs" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[11px]">Descrição</Label>
+                            <Input value={personaDescricao} onChange={(e) => setPersonaDescricao(e.target.value)} placeholder="Dores, desejos, perfil..." className="h-8 text-xs" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* References per type */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Referências para este tipo de post</Label>
+                        <Textarea value={referenciasTipo} onChange={(e) => setReferenciasTipo(e.target.value)} rows={2} placeholder="Descreva ou cole links de posts que você gosta para este tipo de conteúdo..." />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" onClick={() => setWizardStep(1)}>
+                          <ArrowLeft className="w-4 h-4" /> Voltar
+                        </Button>
+                        <Button className="flex-1 gap-2" onClick={handleGenerate} disabled={!bObjetivo || !bEstilo}>
+                          <Sparkles className="w-4 h-4" /> Gerar {Math.min(selectedContents.length, 10) * 2} Artes
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
+                /* ── BRIEFING FLOW (existing) ── */
                 <>
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -561,33 +836,6 @@ export default function ClienteRedesSociais() {
 
                   <div className="space-y-4 mt-2">
                     <p className="text-xs text-muted-foreground">Cada post gera 1 arte Feed (1:1) + 1 arte Story (9:16). A IA cria o visual e sugere legenda + hashtags.</p>
-
-                    {/* Import from Conteúdos */}
-                    <Button variant="outline" className="w-full gap-2 text-xs border-dashed" onClick={() => {
-                      try {
-                        const stored = localStorage.getItem("social-content-campaigns");
-                        if (stored) {
-                          const parsed = JSON.parse(stored);
-                          const allScripts: any[] = [];
-                          (Array.isArray(parsed) ? parsed : [parsed]).forEach((camp: any) => {
-                            if (camp.scripts) allScripts.push(...camp.scripts);
-                            if (camp.roteiros) allScripts.push(...camp.roteiros);
-                          });
-                          if (allScripts.length > 0) {
-                            setImportedScripts(allScripts);
-                            setBQtd(String(Math.min(allScripts.length, 10)));
-                            toast({ title: `${allScripts.length} conteúdo(s) importado(s)!`, description: "Títulos e legendas serão usados como base." });
-                          } else {
-                            toast({ title: "Nenhum conteúdo encontrado", description: "Crie conteúdos primeiro em Conteúdos.", variant: "destructive" });
-                          }
-                        } else {
-                          toast({ title: "Nenhuma campanha de conteúdo", description: "Crie conteúdos primeiro na aba Conteúdos.", variant: "destructive" });
-                        }
-                      } catch { toast({ title: "Erro ao importar", variant: "destructive" }); }
-                    }}>
-                      <FolderOpen className="w-3.5 h-3.5" /> Importar de Conteúdos
-                      {importedScripts.length > 0 && <Badge variant="secondary" className="text-[10px] ml-1">{importedScripts.length} importados</Badge>}
-                    </Button>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -665,9 +913,35 @@ export default function ClienteRedesSociais() {
                       <Textarea value={bObs} onChange={(e) => setBObs(e.target.value)} rows={2} placeholder="Instruções adicionais..." />
                     </div>
 
-                    <Button className="w-full gap-2 h-11 font-semibold" onClick={handleGenerate}>
-                      <Sparkles className="w-4 h-4" /> Gerar {Number(bQtd) * 2 || 0} Artes com IA
-                    </Button>
+                    {/* Persona */}
+                    <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                      <p className="text-xs font-semibold flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-primary" /> Persona / Público-Alvo
+                      </p>
+                      <div className="space-y-2">
+                        <Label className="text-[11px]">Nome da Persona</Label>
+                        <Input value={personaNome} onChange={(e) => setPersonaNome(e.target.value)} placeholder='Ex: "Maria, dona de franquia, 38 anos"' className="h-8 text-xs" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[11px]">Descrição</Label>
+                        <Textarea value={personaDescricao} onChange={(e) => setPersonaDescricao(e.target.value)} rows={2} placeholder="Idade, profissão, dores, desejos, comportamento..." className="text-xs" />
+                      </div>
+                    </div>
+
+                    {/* References per type */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Referências para este tipo de post</Label>
+                      <Textarea value={referenciasTipo} onChange={(e) => setReferenciasTipo(e.target.value)} rows={2} placeholder="Descreva ou cole links de posts que você gosta para este tipo de conteúdo..." />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-none" onClick={() => setWizardFlow("choose")}>
+                        <ArrowLeft className="w-4 h-4" />
+                      </Button>
+                      <Button className="flex-1 gap-2 h-11 font-semibold" onClick={handleGenerate}>
+                        <Sparkles className="w-4 h-4" /> Gerar {Number(bQtd) * 2 || 0} Artes com IA
+                      </Button>
+                    </div>
                   </div>
                 </>
               )}
