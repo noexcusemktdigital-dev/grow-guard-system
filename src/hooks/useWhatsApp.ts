@@ -84,7 +84,11 @@ export function useWhatsAppContacts() {
         .eq("organization_id", orgId)
         .order("last_message_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
-      return (data || []) as unknown as WhatsAppContact[];
+      const filtered = (data || []).filter((c: any) => {
+        const phone = c.phone || "";
+        return !phone.endsWith("-group") && !phone.includes("@broadcast");
+      });
+      return filtered as unknown as WhatsAppContact[];
     },
     enabled: !!orgId,
   });

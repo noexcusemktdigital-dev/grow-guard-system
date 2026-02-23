@@ -90,7 +90,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { organization_id, contact_id, message_text, message_type } = await req.json();
+    const { organization_id, contact_id, message_text, message_type, contact_phone } = await req.json();
+
+    // Skip groups and broadcasts
+    if (contact_phone) {
+      const isGroupOrBroadcast = contact_phone.endsWith("-group") || contact_phone.includes("@broadcast");
+      if (isGroupOrBroadcast) {
+        return new Response(JSON.stringify({ skipped: true, reason: "group_or_broadcast" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     if (!organization_id || !contact_id || !message_text) {
       return new Response(JSON.stringify({ error: "Missing params" }), {
