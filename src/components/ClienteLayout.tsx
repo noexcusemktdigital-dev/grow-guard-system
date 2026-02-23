@@ -7,6 +7,7 @@ import { ActionAlertsBanner } from "./cliente/ActionAlertsBanner";
 
 export function ClienteLayout() {
   const location = useLocation();
+  const isChatRoute = location.pathname === "/cliente/chat";
 
   return (
     <FeatureGateProvider>
@@ -14,8 +15,13 @@ export function ClienteLayout() {
         <ClienteSidebar />
         <main className="flex-1 h-screen overflow-hidden flex flex-col relative">
           <CreditAlertBanner />
-          <div key={location.pathname} className="flex-1 min-h-0 overflow-y-auto flex flex-col page-enter p-6 lg:p-8">
-            <ActionAlertsBanner />
+          <div
+            key={location.pathname}
+            className={`flex-1 min-h-0 flex flex-col page-enter ${
+              isChatRoute ? "overflow-hidden p-0" : "overflow-y-auto p-6 lg:p-8"
+            }`}
+          >
+            {!isChatRoute && <ActionAlertsBanner />}
             <Outlet />
           </div>
           <FeatureGateOverlay />
