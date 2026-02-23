@@ -84,7 +84,23 @@ Deno.serve(async (req) => {
         );
         const statusData = await statusRes.json();
         const connected = statusData.connected === true;
-        const phoneNumber = statusData.phoneConnected || instance.phone_number || null;
+        let phoneNumber = instance.phone_number || null;
+
+        // If connected, fetch the real phone number from /device endpoint
+        if (connected) {
+          try {
+            const deviceRes = await fetch(
+              `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/device`,
+              { headers: { "Client-Token": instance.client_token } }
+            );
+            const deviceData = await deviceRes.json();
+            if (deviceData.phone) {
+              phoneNumber = deviceData.phone;
+            }
+          } catch (err) {
+            console.error("Failed to fetch device info:", err);
+          }
+        }
 
         await adminClient
           .from("whatsapp_instances")
@@ -96,7 +112,7 @@ Deno.serve(async (req) => {
 
         return new Response(JSON.stringify({
           status: connected ? "connected" : "disconnected",
-          phone: statusData.phoneConnected || null,
+          phone: phoneNumber,
           details: statusData,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -154,7 +170,19 @@ Deno.serve(async (req) => {
       const statusData = await statusRes.json();
       if (statusData.connected) {
         connStatus = "connected";
-        phoneNumber = statusData.phoneConnected || null;
+        // Fetch real phone number from /device endpoint
+        try {
+          const deviceRes = await fetch(
+            `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/device`,
+            { headers: { "Client-Token": clientToken } }
+          );
+          const deviceData = await deviceRes.json();
+          if (deviceData.phone) {
+            phoneNumber = deviceData.phone;
+          }
+        } catch {
+          // device endpoint failed, continue without phone
+        }
       }
     } catch {
       // keep disconnected
