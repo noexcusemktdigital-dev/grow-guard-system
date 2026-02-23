@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Palette, Edit3, Check, Plus, Sparkles, Copy, Download,
   Eye, Image, Upload, Calendar as CalendarIcon, ChevronLeft,
   ChevronRight, BookOpen, Clock, FolderOpen, Folder,
-  ArrowLeft, File, Hash, Layout, CheckCircle2, Circle, Star,
+  ArrowLeft, Hash, Layout, CheckCircle2, Circle, Star,
+  Type, AlignCenter, AlignLeft, AlignRight, Minus,
+  ZoomIn, ArrowRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,9 +17,49 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+/* ── Types ── */
+interface SocialConcept {
+  titulo: string;
+  legenda: string;
+  cta: string;
+  hashtags: string[];
+  visual_prompt_feed: string;
+  visual_prompt_story: string;
+}
+
+interface GeneratedArt {
+  id: string;
+  titulo: string;
+  legenda: string;
+  cta: string;
+  hashtags: string[];
+  feedUrl: string | null;
+  storyUrl: string | null;
+  approved: boolean;
+}
+
+interface ArtCampaign {
+  id: string;
+  mes: string;
+  label: string;
+  createdAt: string;
+  arts: GeneratedArt[];
+}
+
+/* ── Canvas text config ── */
+interface TextConfig {
+  text: string;
+  position: "top" | "center" | "bottom";
+  color: "white" | "black" | "primary";
+  size: "sm" | "md" | "lg";
+}
 
 /* ── Base de Conhecimento ── */
 interface KBSection {
@@ -63,119 +105,380 @@ const initialSections: KBSection[] = [
   },
 ];
 
-/* ── Art files ── */
-interface ArtFile {
-  id: string;
-  name: string;
-  caption: string;
-  hashtags: string;
-  type: "Feed" | "Story";
-  approved: boolean;
-}
-
-interface MonthFolder {
-  id: string;
-  month: string;
-  label: string;
-  createdAt: string;
-  files: ArtFile[];
-}
-
-const CURRENT_MONTH = "2026-02";
-
-const mockFolders: MonthFolder[] = [
-  {
-    id: "feb-2026", month: "2026-02", label: "Fevereiro 2026", createdAt: "05/02/2026",
-    files: [
-      { id: "1a", name: "Promo Fevereiro 20 Off — Feed.png", type: "Feed", caption: "Aproveite a promoção exclusiva de fevereiro! 20% de desconto no plano anual. Transforme a gestão da sua franquia com nossa plataforma completa.\n\nCondições especiais para novas assinaturas até 28/02.", hashtags: "#franquia #gestao #marketing #desconto #promocao", approved: true },
-      { id: "1b", name: "Promo Fevereiro 20 Off — Story.png", type: "Story", caption: "Aproveite a promoção exclusiva de fevereiro! 20% de desconto no plano anual. Transforme a gestão da sua franquia com nossa plataforma completa.\n\nCondições especiais para novas assinaturas até 28/02.", hashtags: "#franquia #gestao #marketing #desconto #promocao", approved: true },
-      { id: "2a", name: "5 Dicas de Marketing para Franquias — Feed.png", type: "Feed", caption: "Descubra 5 estratégias comprovadas para impulsionar o marketing da sua rede de franquias.\n\n1. Defina personas locais\n2. Invista em conteúdo educativo\n3. Use automação de leads\n4. Meça tudo com KPIs\n5. Teste e otimize constantemente", hashtags: "#marketing #franquias #dicas #crescimento #estrategia", approved: true },
-      { id: "2b", name: "5 Dicas de Marketing para Franquias — Story.png", type: "Story", caption: "Descubra 5 estratégias comprovadas para impulsionar o marketing da sua rede de franquias.\n\n1. Defina personas locais\n2. Invista em conteúdo educativo\n3. Use automação de leads\n4. Meça tudo com KPIs\n5. Teste e otimize constantemente", hashtags: "#marketing #franquias #dicas #crescimento #estrategia", approved: false },
-      { id: "3a", name: "Bastidores da Equipe — Feed.png", type: "Feed", caption: "Conheça quem está por trás das soluções que transformam franquias! Nossa equipe respira inovação e resultados.", hashtags: "#equipe #bastidores #cultura #time #inovacao", approved: false },
-      { id: "3b", name: "Bastidores da Equipe — Story.png", type: "Story", caption: "Conheça quem está por trás das soluções que transformam franquias! Nossa equipe respira inovação e resultados.", hashtags: "#equipe #bastidores #cultura #time #inovacao", approved: false },
-      { id: "4a", name: "Case de Sucesso Rede FastFood — Feed.png", type: "Feed", caption: "A Rede FastFood triplicou seus leads em 3 meses usando nossa plataforma. De 50 para 150 leads/mês por unidade.\n\nTaxa de conversão: 40% | ROI: 8x", hashtags: "#case #sucesso #resultados #franquia #roi", approved: false },
-      { id: "4b", name: "Case de Sucesso Rede FastFood — Story.png", type: "Story", caption: "A Rede FastFood triplicou seus leads em 3 meses usando nossa plataforma. De 50 para 150 leads/mês por unidade.\n\nTaxa de conversão: 40% | ROI: 8x", hashtags: "#case #sucesso #resultados #franquia #roi", approved: false },
-      { id: "5a", name: "Checklist Marketing Digital — Feed.png", type: "Feed", caption: "Seu marketing está completo? Confira nosso checklist essencial para franquias que querem crescer com consistência.", hashtags: "#checklist #marketing #organizacao #digital #franquias", approved: false },
-      { id: "5b", name: "Checklist Marketing Digital — Story.png", type: "Story", caption: "Seu marketing está completo? Confira nosso checklist essencial para franquias que querem crescer com consistência.", hashtags: "#checklist #marketing #organizacao #digital #franquias", approved: false },
-      { id: "6a", name: "Depoimento de Cliente — Feed.png", type: "Feed", caption: "'A NoExcuse mudou completamente nossa gestão comercial. Antes perdíamos 60% dos leads. Hoje convertemos 45%.' — João, franqueado.", hashtags: "#depoimento #cliente #satisfacao #resultados", approved: false },
-      { id: "6b", name: "Depoimento de Cliente — Story.png", type: "Story", caption: "'A NoExcuse mudou completamente nossa gestão comercial. Antes perdíamos 60% dos leads. Hoje convertemos 45%.' — João, franqueado.", hashtags: "#depoimento #cliente #satisfacao #resultados", approved: false },
-      { id: "7a", name: "Tendências 2026 — Feed.png", type: "Feed", caption: "As 3 maiores tendências de marketing para franquias em 2026:\n\n1. IA Generativa para conteúdo\n2. Hiperlocalização de anúncios\n3. Automação do funil completo", hashtags: "#tendencias #2026 #marketing #ia #futuro", approved: false },
-      { id: "7b", name: "Tendências 2026 — Story.png", type: "Story", caption: "As 3 maiores tendências de marketing para franquias em 2026:\n\n1. IA Generativa para conteúdo\n2. Hiperlocalização de anúncios\n3. Automação do funil completo", hashtags: "#tendencias #2026 #marketing #ia #futuro", approved: false },
-      { id: "8a", name: "Agende Sua Demo — Feed.png", type: "Feed", caption: "Pronto para transformar a gestão da sua franquia? Agende uma demo gratuita de 30 minutos.", hashtags: "#demo #gratuita #franquia #gestao #resultados", approved: false },
-      { id: "8b", name: "Agende Sua Demo — Story.png", type: "Story", caption: "Pronto para transformar a gestão da sua franquia? Agende uma demo gratuita de 30 minutos.", hashtags: "#demo #gratuita #franquia #gestao #resultados", approved: false },
-    ],
-  },
-  {
-    id: "jan-2026", month: "2026-01", label: "Janeiro 2026", createdAt: "03/01/2026",
-    files: [
-      { id: "j1a", name: "Ano Novo Franquia Nova — Feed.png", type: "Feed", caption: "Começo de ano é o momento ideal para reestruturar o marketing da sua franquia. 2026 é o ano da transformação digital.", hashtags: "#planejamento2026 #franquias #marketing", approved: true },
-      { id: "j1b", name: "Ano Novo Franquia Nova — Story.png", type: "Story", caption: "Começo de ano é o momento ideal para reestruturar o marketing da sua franquia. 2026 é o ano da transformação digital.", hashtags: "#planejamento2026 #franquias #marketing", approved: true },
-      { id: "j2a", name: "Marketing Digital para Franquias — Feed.png", type: "Feed", caption: "92% dos consumidores pesquisam online antes de comprar. Sua franquia está preparada?", hashtags: "#marketingdigital #franquias #presencaonline", approved: true },
-      { id: "j2b", name: "Marketing Digital para Franquias — Story.png", type: "Story", caption: "92% dos consumidores pesquisam online antes de comprar. Sua franquia está preparada?", hashtags: "#marketingdigital #franquias #presencaonline", approved: true },
-    ],
-  },
-];
-
-const typeIcons: Record<string, string> = {
-  Feed: "1:1",
-  Story: "9:16",
-};
-
+/* ── Constants ── */
+const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const OBJETIVOS = ["Promoção", "Engajamento", "Institucional", "Lançamento", "Depoimento"];
+const ESTILOS = ["Minimalista", "Bold", "Corporativo", "Criativo", "Elegante"];
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
+const loadingPhrases = [
+  "Analisando seu briefing...",
+  "Criando conceitos visuais...",
+  "Definindo paleta de cores...",
+  "Gerando prompts otimizados...",
+  "Preparando artes de Feed...",
+  "Preparando artes de Story...",
+  "Aplicando identidade visual...",
+  "Finalizando composição...",
+];
+
+/* ── Canvas Editor Component ── */
+function CanvasEditor({ imageUrl, textConfig, onTextChange, format }: {
+  imageUrl: string;
+  textConfig: TextConfig;
+  onTextChange: (cfg: TextConfig) => void;
+  format: "feed" | "story";
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  const canvasW = format === "feed" ? 540 : 270;
+  const canvasH = format === "feed" ? 540 : 480;
+  const realW = format === "feed" ? 1080 : 1080;
+  const realH = format === "feed" ? 1080 : 1920;
+
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img) return;
+
+    canvas.width = realW;
+    canvas.height = realH;
+    const ctx = canvas.getContext("2d")!;
+
+    ctx.drawImage(img, 0, 0, realW, realH);
+
+    if (!textConfig.text.trim()) return;
+
+    const fontSize = textConfig.size === "sm" ? realW * 0.04 : textConfig.size === "md" ? realW * 0.06 : realW * 0.08;
+    ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+
+    const fillColor = textConfig.color === "white" ? "#FFFFFF" : textConfig.color === "black" ? "#000000" : "#E63946";
+    ctx.fillStyle = fillColor;
+    ctx.textAlign = "center";
+
+    // Shadow for readability
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = fontSize * 0.3;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+
+    const maxWidth = realW * 0.85;
+    const lines = wrapText(ctx, textConfig.text, maxWidth);
+    const lineHeight = fontSize * 1.3;
+    const totalTextH = lines.length * lineHeight;
+
+    let startY: number;
+    if (textConfig.position === "top") startY = realH * 0.12;
+    else if (textConfig.position === "bottom") startY = realH - totalTextH - realH * 0.08;
+    else startY = (realH - totalTextH) / 2;
+
+    // Background strip
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(0, startY - lineHeight * 0.4, realW, totalTextH + lineHeight * 0.8);
+
+    ctx.fillStyle = fillColor;
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = fontSize * 0.3;
+
+    lines.forEach((line, i) => {
+      ctx.fillText(line, realW / 2, startY + i * lineHeight + fontSize);
+    });
+  }, [imageUrl, textConfig, realW, realH]);
+
+  useEffect(() => {
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      imgRef.current = img;
+      drawCanvas();
+    };
+    img.src = imageUrl;
+  }, [imageUrl, drawCanvas]);
+
+  useEffect(() => {
+    if (imgRef.current) drawCanvas();
+  }, [textConfig, drawCanvas]);
+
+  const downloadImage = (withText: boolean) => {
+    if (!canvasRef.current || !imgRef.current) return;
+    if (!withText) {
+      const link = document.createElement("a");
+      link.href = imageUrl;
+      link.download = `arte-${format}.png`;
+      link.click();
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = canvasRef.current.toDataURL("image/png");
+    link.download = `arte-${format}-com-texto.png`;
+    link.click();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-center bg-muted/30 rounded-xl p-3">
+        <canvas
+          ref={canvasRef}
+          style={{ width: canvasW, height: canvasH }}
+          className="rounded-lg shadow-lg"
+        />
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium flex items-center gap-1.5"><Type className="w-3.5 h-3.5" /> Texto sobre a imagem</Label>
+          <Textarea
+            value={textConfig.text}
+            onChange={(e) => onTextChange({ ...textConfig, text: e.target.value })}
+            rows={2}
+            placeholder="Ex: 20% OFF em Fevereiro"
+            className="text-sm"
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-[11px] text-muted-foreground">Posição</Label>
+            <Select value={textConfig.position} onValueChange={(v) => onTextChange({ ...textConfig, position: v as any })}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="top">Topo</SelectItem>
+                <SelectItem value="center">Centro</SelectItem>
+                <SelectItem value="bottom">Rodapé</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] text-muted-foreground">Cor</Label>
+            <Select value={textConfig.color} onValueChange={(v) => onTextChange({ ...textConfig, color: v as any })}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="white">Branco</SelectItem>
+                <SelectItem value="black">Preto</SelectItem>
+                <SelectItem value="primary">Primária</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] text-muted-foreground">Tamanho</Label>
+            <Select value={textConfig.size} onValueChange={(v) => onTextChange({ ...textConfig, size: v as any })}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sm">Pequeno</SelectItem>
+                <SelectItem value="md">Médio</SelectItem>
+                <SelectItem value="lg">Grande</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="flex-1 text-xs gap-1.5" onClick={() => downloadImage(true)}>
+            <Download className="w-3.5 h-3.5" /> Com Texto
+          </Button>
+          <Button size="sm" variant="ghost" className="flex-1 text-xs gap-1.5" onClick={() => downloadImage(false)}>
+            <Download className="w-3.5 h-3.5" /> Sem Texto
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+/* ── Main Page ── */
 export default function ClienteRedesSociais() {
+  // Knowledge base
   const [sections, setSections] = useState(initialSections);
   const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [folders, setFolders] = useState(mockFolders);
-  const [openFolder, setOpenFolder] = useState<string | null>(null);
-  const [openFile, setOpenFile] = useState<ArtFile | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
-  const [briefOpen, setBriefOpen] = useState(false);
+
+  // Campaigns
+  const [campaigns, setCampaigns] = useState<ArtCampaign[]>([]);
+  const [openCampaign, setOpenCampaign] = useState<string | null>(null);
+  const [selectedArt, setSelectedArt] = useState<GeneratedArt | null>(null);
+  const [editorFormat, setEditorFormat] = useState<"feed" | "story">("feed");
+  const [textConfig, setTextConfig] = useState<TextConfig>({ text: "", position: "bottom", color: "white", size: "md" });
+
+  // Wizard
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genProgress, setGenProgress] = useState(0);
+  const [genTotal, setGenTotal] = useState(0);
+  const [genMessage, setGenMessage] = useState("");
+  const [loadingPhrase, setLoadingPhrase] = useState(0);
 
   // Briefing
   const [bMes, setBMes] = useState("Março 2026");
   const [bObjetivo, setBObjetivo] = useState("");
-  const [bPromocoes, setBPromocoes] = useState("");
-  const [bDestaques, setBDestaques] = useState("");
-  const [bEventos, setBEventos] = useState("");
-  const [bTemas, setBTemas] = useState("");
   const [bEstilo, setBEstilo] = useState("");
-  const [bQtd, setBQtd] = useState("10");
   const [bCores, setBCores] = useState("");
-  const [bReferencias, setBReferencias] = useState("");
+  const [bTemas, setBTemas] = useState("");
+  const [bPromocoes, setBPromocoes] = useState("");
   const [bObs, setBObs] = useState("");
+  const [bQtd, setBQtd] = useState("4");
+
+  // Calendar
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
+
+  // Loading phrases rotation
+  useEffect(() => {
+    if (!isGenerating || genProgress > 0) return;
+    const interval = setInterval(() => setLoadingPhrase((p) => (p + 1) % loadingPhrases.length), 2500);
+    return () => clearInterval(interval);
+  }, [isGenerating, genProgress]);
 
   const updateField = (sectionId: string, fieldKey: string, value: string) => {
     setSections(prev => prev.map(s => s.id === sectionId ? { ...s, fields: s.fields.map(f => f.key === fieldKey ? { ...f, value } : f) } : s));
   };
 
-  const handleGenerate = () => {
-    setBriefOpen(false);
-    toast({ title: "Pacote gerado!", description: `${Number(bQtd) * 2} artes (Feed + Story) criadas para ${bMes}.` });
-  };
+  /* ── Generate Arts ── */
+  const handleGenerate = async () => {
+    if (!bObjetivo || !bEstilo) {
+      toast({ title: "Preencha os campos obrigatórios", variant: "destructive" });
+      return;
+    }
 
-  const toggleApproval = (fileId: string) => {
-    setFolders(prev => prev.map(folder => ({
-      ...folder,
-      files: folder.files.map(f => f.id === fileId ? { ...f, approved: !f.approved } : f),
-    })));
-    if (openFile?.id === fileId) {
-      setOpenFile(prev => prev ? { ...prev, approved: !prev.approved } : null);
+    const qty = Math.max(1, Math.min(10, Number(bQtd) || 4));
+    setIsGenerating(true);
+    setGenProgress(0);
+    setGenTotal(qty * 2);
+    setGenMessage("Gerando conceitos com IA...");
+
+    try {
+      // Step 1: Generate concepts
+      const { data: conceptsData, error: conceptsError } = await supabase.functions.invoke("generate-social-concepts", {
+        body: {
+          briefing: { mes: bMes, objetivo: bObjetivo, cores: bCores, temas: bTemas, promocoes: bPromocoes, observacoes: bObs },
+          quantidade: qty,
+          estilo: bEstilo,
+        },
+      });
+
+      if (conceptsError) throw conceptsError;
+      const concepts: SocialConcept[] = conceptsData?.concepts || [];
+      if (!concepts.length) throw new Error("Nenhum conceito gerado");
+
+      // Step 2: Generate images sequentially
+      const arts: GeneratedArt[] = [];
+      const timestamp = Date.now();
+
+      for (let i = 0; i < concepts.length; i++) {
+        const concept = concepts[i];
+        const slug = concept.titulo.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30);
+
+        // Feed image
+        setGenMessage(`Gerando arte ${i * 2 + 1} de ${qty * 2}...`);
+        setGenProgress(i * 2 + 1);
+
+        let feedUrl: string | null = null;
+        try {
+          const { data: feedData, error: feedError } = await supabase.functions.invoke("generate-social-image", {
+            body: {
+              prompt: concept.visual_prompt_feed,
+              format: "feed",
+              file_path: `${timestamp}/${slug}-feed.png`,
+            },
+          });
+          if (!feedError && feedData?.url) feedUrl = feedData.url;
+        } catch (e) {
+          console.error("Feed image error:", e);
+        }
+
+        // Story image
+        setGenMessage(`Gerando arte ${i * 2 + 2} de ${qty * 2}...`);
+        setGenProgress(i * 2 + 2);
+
+        let storyUrl: string | null = null;
+        try {
+          const { data: storyData, error: storyError } = await supabase.functions.invoke("generate-social-image", {
+            body: {
+              prompt: concept.visual_prompt_story,
+              format: "story",
+              file_path: `${timestamp}/${slug}-story.png`,
+            },
+          });
+          if (!storyError && storyData?.url) storyUrl = storyData.url;
+        } catch (e) {
+          console.error("Story image error:", e);
+        }
+
+        arts.push({
+          id: `art-${timestamp}-${i}`,
+          titulo: concept.titulo,
+          legenda: concept.legenda,
+          cta: concept.cta,
+          hashtags: concept.hashtags,
+          feedUrl,
+          storyUrl,
+          approved: false,
+        });
+      }
+
+      const newCampaign: ArtCampaign = {
+        id: `campaign-${timestamp}`,
+        mes: bMes,
+        label: bMes,
+        createdAt: new Date().toLocaleDateString("pt-BR"),
+        arts,
+      };
+
+      setCampaigns((prev) => [newCampaign, ...prev]);
+      setOpenCampaign(newCampaign.id);
+      setWizardOpen(false);
+      setWizardStep(1);
+      toast({ title: "Artes geradas!", description: `${arts.length} posts (${arts.length * 2} artes) criados para ${bMes}.` });
+    } catch (err: any) {
+      console.error("Generation error:", err);
+      toast({ title: "Erro ao gerar artes", description: err?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+      setGenProgress(0);
     }
   };
 
-  const approveAll = (folderId: string) => {
-    setFolders(prev => prev.map(folder =>
-      folder.id === folderId
-        ? { ...folder, files: folder.files.map(f => ({ ...f, approved: true })) }
-        : folder
-    ));
+  const toggleApproval = (artId: string) => {
+    setCampaigns((prev) => prev.map((c) => ({
+      ...c,
+      arts: c.arts.map((a) => a.id === artId ? { ...a, approved: !a.approved } : a),
+    })));
+    if (selectedArt?.id === artId) {
+      setSelectedArt((prev) => prev ? { ...prev, approved: !prev.approved } : null);
+    }
+  };
+
+  const approveAll = (campaignId: string) => {
+    setCampaigns((prev) => prev.map((c) => c.id === campaignId ? { ...c, arts: c.arts.map((a) => ({ ...a, approved: true })) } : c));
     toast({ title: "Todas as artes aprovadas!" });
   };
 
-  const currentFolderData = folders.find(f => f.id === openFolder);
-  const isCurrentMonthFolder = (month: string) => month === CURRENT_MONTH;
+  const openEditor = (art: GeneratedArt, fmt: "feed" | "story") => {
+    setSelectedArt(art);
+    setEditorFormat(fmt);
+    setTextConfig({ text: art.cta || art.titulo, position: "bottom", color: "white", size: "md" });
+  };
 
+  const currentCampaign = campaigns.find((c) => c.id === openCampaign);
+
+  // Calendar
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -185,18 +488,281 @@ export default function ClienteRedesSociais() {
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
         title="Redes Sociais"
-        subtitle="Base visual, artes mensais e calendário de publicações"
+        subtitle="Gere artes profissionais com IA e edite textos antes de publicar"
         icon={<Palette className="w-5 h-5 text-primary" />}
       />
 
-      <Tabs defaultValue="base">
+      <Tabs defaultValue="campanhas">
         <TabsList>
-          <TabsTrigger value="base" className="text-xs gap-1.5"><BookOpen className="w-3.5 h-3.5" /> Base de Conhecimento</TabsTrigger>
-          <TabsTrigger value="arquivos" className="text-xs gap-1.5"><FolderOpen className="w-3.5 h-3.5" /> Arquivos</TabsTrigger>
+          <TabsTrigger value="campanhas" className="text-xs gap-1.5"><FolderOpen className="w-3.5 h-3.5" /> Campanhas</TabsTrigger>
+          <TabsTrigger value="base" className="text-xs gap-1.5"><BookOpen className="w-3.5 h-3.5" /> Identidade Visual</TabsTrigger>
           <TabsTrigger value="calendario" className="text-xs gap-1.5"><CalendarIcon className="w-3.5 h-3.5" /> Calendário</TabsTrigger>
         </TabsList>
 
-        {/* ═══ BASE ═══ */}
+        {/* ═══ CAMPANHAS ═══ */}
+        <TabsContent value="campanhas" className="space-y-4 mt-4">
+          <Button className="w-full gap-2 h-12 text-sm font-semibold" onClick={() => { setWizardOpen(true); setWizardStep(1); }}>
+            <Plus className="w-4 h-4" /> Nova Criação Mensal
+          </Button>
+
+          {/* Wizard */}
+          <Dialog open={wizardOpen} onOpenChange={(open) => { if (!isGenerating) setWizardOpen(open); }}>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+              {isGenerating ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-5">
+                  <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 2 }} className="p-4 rounded-full bg-primary/10">
+                    <Sparkles className="w-10 h-10 text-primary" />
+                  </motion.div>
+                  {genProgress > 0 ? (
+                    <div className="w-full max-w-xs space-y-3">
+                      <Progress value={(genProgress / genTotal) * 100} className="h-2" />
+                      <p className="text-sm text-center text-muted-foreground">{genMessage}</p>
+                    </div>
+                  ) : (
+                    <AnimatePresence mode="wait">
+                      <motion.p key={loadingPhrase} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="text-sm text-muted-foreground text-center">
+                        {loadingPhrases[loadingPhrase]}
+                      </motion.p>
+                    </AnimatePresence>
+                  )}
+                  <p className="text-xs text-muted-foreground/60">A geração de imagens pode levar alguns minutos...</p>
+                </div>
+              ) : (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" /> Briefing Visual — Artes para Redes Sociais
+                    </DialogTitle>
+                  </DialogHeader>
+
+                  <div className="space-y-4 mt-2">
+                    <p className="text-xs text-muted-foreground">Cada post gera 1 arte Feed (1:1) + 1 arte Story (9:16). A IA cria o visual e sugere legenda + hashtags.</p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Mês de Referência *</Label>
+                        <Select value={bMes} onValueChange={setBMes}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{MESES.map((m) => (<SelectItem key={m} value={`${m} 2026`}>{m} 2026</SelectItem>))}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Qtd de Posts *</Label>
+                        <Input type="number" min={1} max={10} value={bQtd} onChange={(e) => setBQtd(e.target.value)} />
+                        <p className="text-[10px] text-muted-foreground">Máx 10 • Gera {Number(bQtd) * 2 || 0} artes</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Objetivo *</Label>
+                        <Select value={bObjetivo} onValueChange={setBObjetivo}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>{OBJETIVOS.map((o) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Estilo Visual *</Label>
+                        <Select value={bEstilo} onValueChange={setBEstilo}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>{ESTILOS.map((e) => (<SelectItem key={e} value={e}>{e}</SelectItem>))}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Cores Predominantes</Label>
+                      <Input value={bCores} onChange={(e) => setBCores(e.target.value)} placeholder="Ex: Azul escuro, dourado, branco" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Temas Visuais</Label>
+                      <Input value={bTemas} onChange={(e) => setBTemas(e.target.value)} placeholder="Ex: Tecnologia, crescimento, equipe" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Promoções / Ofertas</Label>
+                      <Textarea value={bPromocoes} onChange={(e) => setBPromocoes(e.target.value)} rows={2} placeholder="Ex: 20% OFF no plano anual em fevereiro" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Observações</Label>
+                      <Textarea value={bObs} onChange={(e) => setBObs(e.target.value)} rows={2} placeholder="Instruções adicionais..." />
+                    </div>
+
+                    <Button className="w-full gap-2 h-11 font-semibold" onClick={handleGenerate}>
+                      <Sparkles className="w-4 h-4" /> Gerar {Number(bQtd) * 2 || 0} Artes com IA
+                    </Button>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Editor Modal */}
+          <Dialog open={!!selectedArt} onOpenChange={(open) => { if (!open) setSelectedArt(null); }}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              {selectedArt && (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-base">
+                      <Edit3 className="w-4 h-4 text-primary" /> {selectedArt.titulo}
+                    </DialogTitle>
+                  </DialogHeader>
+
+                  <div className="flex gap-2 mb-3">
+                    <Button size="sm" variant={editorFormat === "feed" ? "default" : "outline"} className="text-xs" onClick={() => setEditorFormat("feed")}>
+                      Feed (1:1)
+                    </Button>
+                    <Button size="sm" variant={editorFormat === "story" ? "default" : "outline"} className="text-xs" onClick={() => setEditorFormat("story")}>
+                      Story (9:16)
+                    </Button>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Canvas */}
+                    <div>
+                      {(editorFormat === "feed" ? selectedArt.feedUrl : selectedArt.storyUrl) ? (
+                        <CanvasEditor
+                          imageUrl={(editorFormat === "feed" ? selectedArt.feedUrl : selectedArt.storyUrl)!}
+                          textConfig={textConfig}
+                          onTextChange={setTextConfig}
+                          format={editorFormat}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-64 bg-muted/30 rounded-xl">
+                          <p className="text-sm text-muted-foreground">Imagem não gerada</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Legenda</Label>
+                        <div className="mt-1 p-3 rounded-lg bg-muted/30 text-sm whitespace-pre-line max-h-48 overflow-y-auto">{selectedArt.legenda}</div>
+                        <Button size="sm" variant="ghost" className="mt-1 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(selectedArt.legenda); toast({ title: "Legenda copiada!" }); }}>
+                          <Copy className="w-3 h-3" /> Copiar Legenda
+                        </Button>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">CTA</Label>
+                        <p className="text-sm font-medium mt-1">{selectedArt.cta}</p>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Hashtags</Label>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {selectedArt.hashtags.map((h) => (
+                            <Badge key={h} variant="secondary" className="text-[10px]">#{h}</Badge>
+                          ))}
+                        </div>
+                        <Button size="sm" variant="ghost" className="mt-1 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(selectedArt.hashtags.map(h => `#${h}`).join(" ")); toast({ title: "Hashtags copiadas!" }); }}>
+                          <Copy className="w-3 h-3" /> Copiar Hashtags
+                        </Button>
+                      </div>
+
+                      <Button
+                        className="w-full gap-2"
+                        variant={selectedArt.approved ? "outline" : "default"}
+                        onClick={() => toggleApproval(selectedArt.id)}
+                      >
+                        {selectedArt.approved ? <><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Aprovada</> : <><Circle className="w-4 h-4" /> Aprovar Arte</>}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Campaign list / detail */}
+          {openCampaign && currentCampaign ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setOpenCampaign(null)}>
+                  <ArrowLeft className="w-3.5 h-3.5" /> Voltar
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">{currentCampaign.arts.length} posts • {currentCampaign.arts.length * 2} artes</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {currentCampaign.arts.filter((a) => a.approved).length}/{currentCampaign.arts.length} aprovados
+                  </Badge>
+                  <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => approveAll(currentCampaign.id)}>
+                    <Check className="w-3 h-3" /> Aprovar Tudo
+                  </Button>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold">{currentCampaign.label}</h3>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {currentCampaign.arts.map((art) => (
+                  <Card key={art.id} className="overflow-hidden group cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all">
+                    <div className="relative aspect-square bg-muted/30">
+                      {art.feedUrl ? (
+                        <img src={art.feedUrl} alt={art.titulo} className="w-full h-full object-cover" onClick={() => openEditor(art, "feed")} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full" onClick={() => openEditor(art, "feed")}>
+                          <Image className="w-8 h-8 text-muted-foreground/40" />
+                        </div>
+                      )}
+                      {art.approved && (
+                        <div className="absolute top-2 right-2">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500 drop-shadow" />
+                        </div>
+                      )}
+                      <div className="absolute bottom-2 left-2 flex gap-1">
+                        <Badge className="text-[9px] bg-blue-500/80 text-white border-0 cursor-pointer" onClick={(e) => { e.stopPropagation(); openEditor(art, "feed"); }}>Feed</Badge>
+                        <Badge className="text-[9px] bg-amber-500/80 text-white border-0 cursor-pointer" onClick={(e) => { e.stopPropagation(); openEditor(art, "story"); }}>Story</Badge>
+                      </div>
+                    </div>
+                    <CardContent className="p-3">
+                      <p className="text-xs font-semibold line-clamp-2">{art.titulo}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{art.legenda.slice(0, 80)}...</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {campaigns.length === 0 ? (
+                <Card className="glass-card">
+                  <CardContent className="py-12 text-center">
+                    <Sparkles className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Nenhuma campanha criada ainda</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">Clique em "Nova Criação Mensal" para começar</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                campaigns.map((campaign) => {
+                  const approvedCount = campaign.arts.filter((a) => a.approved).length;
+                  return (
+                    <Card key={campaign.id} className="glass-card cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all" onClick={() => setOpenCampaign(campaign.id)}>
+                      <CardContent className="py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 rounded-xl bg-primary/10"><FolderOpen className="w-5 h-5 text-primary" /></div>
+                          <div>
+                            <p className="text-sm font-bold">{campaign.label}</p>
+                            <p className="text-xs text-muted-foreground">Criada em {campaign.createdAt} • {campaign.arts.length} posts</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">{approvedCount}/{campaign.arts.length} aprovados</Badge>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ═══ IDENTIDADE VISUAL ═══ */}
         <TabsContent value="base" className="space-y-5 mt-4">
           {sections.map(section => {
             const isEditing = editingSection === section.id;
@@ -247,312 +813,26 @@ export default function ClienteRedesSociais() {
           })}
         </TabsContent>
 
-        {/* ═══ ARQUIVOS ═══ */}
-        <TabsContent value="arquivos" className="space-y-4 mt-4">
-          {/* Create button */}
-          <Dialog open={briefOpen} onOpenChange={setBriefOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full gap-2 h-12 text-sm font-semibold">
-                <Plus className="w-4 h-4" /> Nova Criação Mensal
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" /> Briefing para Artes e Posts
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-2">
-                <p className="text-xs text-muted-foreground">Cada arte será gerada nos formatos Feed (1080x1080) e Story (1080x1920). Uma pasta será criada para o mês.</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Mês de Referência</Label>
-                    <Input value={bMes} onChange={e => setBMes(e.target.value)} placeholder="Ex: Março 2026" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Quantidade de Posts</Label>
-                    <Input type="number" value={bQtd} onChange={e => setBQtd(e.target.value)} placeholder="10" />
-                    <p className="text-[10px] text-muted-foreground">Gera 1 Feed + 1 Story por post</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Objetivo Principal</Label>
-                  <Textarea value={bObjetivo} onChange={e => setBObjetivo(e.target.value)} placeholder="Ex: Aumentar awareness e gerar leads" rows={2} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Promoções e Ofertas</Label>
-                    <Textarea value={bPromocoes} onChange={e => setBPromocoes(e.target.value)} placeholder="Ex: 30% off, frete grátis..." rows={2} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Destaques e Novidades</Label>
-                    <Textarea value={bDestaques} onChange={e => setBDestaques(e.target.value)} placeholder="Ex: Novo produto, case..." rows={2} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Eventos e Datas</Label>
-                    <Textarea value={bEventos} onChange={e => setBEventos(e.target.value)} placeholder="Ex: Dia da Mulher, aniversário..." rows={2} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Temas Visuais</Label>
-                    <Textarea value={bTemas} onChange={e => setBTemas(e.target.value)} placeholder="Ex: Tecnologia, crescimento..." rows={2} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Estilo Visual</Label>
-                    <Select value={bEstilo} onValueChange={setBEstilo}>
-                      <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="minimalista">Minimalista</SelectItem>
-                        <SelectItem value="bold">Bold e Impactante</SelectItem>
-                        <SelectItem value="corporativo">Corporativo</SelectItem>
-                        <SelectItem value="criativo">Criativo e Colorido</SelectItem>
-                        <SelectItem value="elegante">Elegante e Sofisticado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Cores Predominantes</Label>
-                    <Input value={bCores} onChange={e => setBCores(e.target.value)} placeholder="Ex: Azul marinho, branco" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Referências Visuais</Label>
-                  <Input value={bReferencias} onChange={e => setBReferencias(e.target.value)} placeholder="Links ou perfis de referência" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Observações Adicionais</Label>
-                  <Textarea value={bObs} onChange={e => setBObs(e.target.value)} placeholder="Restrições visuais, textos obrigatórios..." rows={3} />
-                </div>
-                <Button className="w-full gap-2 h-11" onClick={handleGenerate}>
-                  <Sparkles className="w-4 h-4" /> Gerar Artes do Mês
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Breadcrumb */}
-          {openFolder && !openFile && (
-            <div className="flex items-center gap-2 text-sm">
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => setOpenFolder(null)}>
-                <ArrowLeft className="w-3 h-3" /> Voltar
-              </Button>
-              <span className="text-muted-foreground">/</span>
-              <span className="font-medium">{currentFolderData?.label}</span>
-            </div>
-          )}
-
-          {openFile && (
-            <div className="flex items-center gap-2 text-sm">
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => setOpenFile(null)}>
-                <ArrowLeft className="w-3 h-3" /> Voltar
-              </Button>
-              <span className="text-muted-foreground">/</span>
-              <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => setOpenFile(null)}>{currentFolderData?.label}</button>
-              <span className="text-muted-foreground">/</span>
-              <span className="font-medium text-xs truncate max-w-xs">{openFile.name}</span>
-            </div>
-          )}
-
-          {/* File viewer */}
-          {openFile ? (
-            <Card className="glass-card">
-              <CardContent className="py-5 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold">{openFile.name}</p>
-                    <Badge variant="outline" className="text-[9px] mt-2">{openFile.type} ({typeIcons[openFile.type]})</Badge>
-                  </div>
-                  <div className="flex gap-1.5 shrink-0">
-                    <Button
-                      variant={openFile.approved ? "outline" : "default"}
-                      size="sm"
-                      className={`h-8 text-xs gap-1 ${openFile.approved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
-                      onClick={() => { toggleApproval(openFile.id); toast({ title: openFile.approved ? "Aprovação removida" : "Arte aprovada!" }); }}
-                    >
-                      {openFile.approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Aprovado</> : <><Check className="w-3.5 h-3.5" /> Aprovar</>}
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(openFile.caption + "\n\n" + openFile.hashtags); toast({ title: "Legenda copiada!" }); }}>
-                      <Copy className="w-3.5 h-3.5" /> Legenda
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => toast({ title: "Download iniciado!" })}>
-                      <Download className="w-3.5 h-3.5" /> Baixar
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Art preview placeholder */}
-                <div className={`rounded-xl bg-gradient-to-br from-primary/10 to-muted border border-dashed border-muted-foreground/20 flex items-center justify-center mx-auto ${
-                  openFile.type === "Story" ? "w-48 h-80" : "w-72 h-72"
-                }`}>
-                  <div className="text-center">
-                    <Palette className="w-10 h-10 text-muted-foreground/30 mx-auto" />
-                    <span className="text-[10px] text-muted-foreground mt-2 block">Preview — {openFile.type}</span>
-                    <span className="text-[9px] text-muted-foreground">{openFile.type === "Story" ? "1080x1920" : "1080x1080"}</span>
-                  </div>
-                </div>
-
-                <div className="bg-muted/30 rounded-xl p-4 border border-border/50 space-y-2">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Legenda</p>
-                  <p className="text-xs text-foreground whitespace-pre-line">{openFile.caption}</p>
-                  <p className="text-[10px] text-primary flex items-center gap-1"><Hash className="w-3 h-3" /> {openFile.hashtags}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : openFolder && currentFolderData ? (
-            /* Files inside folder */
-            <div className="space-y-3">
-              {/* Approval summary */}
-              {(() => {
-                const approved = currentFolderData.files.filter(f => f.approved).length;
-                const total = currentFolderData.files.length;
-                const allApproved = approved === total;
-                return (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={allApproved ? "default" : "secondary"} className={`text-[10px] gap-1 ${allApproved ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" : ""}`}>
-                        <CheckCircle2 className="w-3 h-3" /> {approved}/{total} aprovados
-                      </Badge>
-                    </div>
-                    {!allApproved && (
-                      <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => approveAll(currentFolderData.id)}>
-                        <Check className="w-3 h-3" /> Aprovar Todos
-                      </Button>
-                    )}
-                  </div>
-                );
-              })()}
-
-              <div className="space-y-1">
-                {currentFolderData.files.map(file => (
-                  <Card
-                    key={file.id}
-                    className={`cursor-pointer transition-all hover:bg-muted/30 ${file.approved ? "border-emerald-500/20 bg-emerald-500/[0.02]" : "glass-card"}`}
-                    onClick={() => setOpenFile(file)}
-                  >
-                    <CardContent className="py-3 flex items-center gap-3">
-                      <div className={`relative w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-primary/10 to-muted border border-dashed border-muted-foreground/20 shrink-0 ${
-                        file.type === "Story" ? "w-8 h-12" : ""
-                      }`}>
-                        <Palette className="w-3.5 h-3.5 text-muted-foreground/40" />
-                        {file.approved && (
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500 absolute -bottom-1 -right-1" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="outline" className="text-[8px] h-4">{file.type}</Badge>
-                          <span className="text-[10px] text-muted-foreground truncate">{file.caption.slice(0, 60)}...</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-1 shrink-0 items-center" onClick={e => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`h-7 px-2 text-[10px] gap-1 ${file.approved ? "text-emerald-600" : "text-muted-foreground"}`}
-                          onClick={() => { toggleApproval(file.id); toast({ title: file.approved ? "Aprovação removida" : "Aprovado!" }); }}
-                        >
-                          {file.approved ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { navigator.clipboard.writeText(file.caption + "\n\n" + file.hashtags); toast({ title: "Legenda copiada!" }); }}>
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Download iniciado!" })}>
-                          <Download className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ) : (
-            /* Folder list */
-            <div className="space-y-3">
-              {folders.map(folder => {
-                const isCurrent = isCurrentMonthFolder(folder.month);
-                const approvedCount = folder.files.filter(f => f.approved).length;
-                const totalCount = folder.files.length;
-                const allApproved = approvedCount === totalCount;
-
-                return (
-                  <Card
-                    key={folder.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      isCurrent
-                        ? "ring-2 ring-primary/40 bg-primary/[0.03] shadow-md shadow-primary/10"
-                        : "glass-card hover:bg-muted/30"
-                    }`}
-                    onClick={() => setOpenFolder(folder.id)}
-                  >
-                    <CardContent className="py-4 flex items-center gap-4">
-                      <div className={`p-2.5 rounded-xl ${isCurrent ? "bg-primary/15" : "bg-primary/10"}`}>
-                        <Folder className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold">{folder.label}</p>
-                          {isCurrent && (
-                            <Badge className="text-[9px] bg-primary/15 text-primary border-primary/30 gap-1">
-                              <Star className="w-2.5 h-2.5" /> Mês Atual
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {totalCount} artes — Criado em {folder.createdAt}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] gap-1 ${allApproved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
-                        >
-                          <CheckCircle2 className="w-3 h-3" /> {approvedCount}/{totalCount}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-
-              {folders.length === 0 && (
-                <div className="text-center py-16">
-                  <FolderOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">Nenhuma criação mensal ainda</p>
-                  <p className="text-xs text-muted-foreground mt-1">Clique em "Nova Criação Mensal" para gerar suas primeiras artes</p>
-                </div>
-              )}
-            </div>
-          )}
-        </TabsContent>
-
         {/* ═══ CALENDÁRIO ═══ */}
-        <TabsContent value="calendario" className="space-y-5 mt-4">
+        <TabsContent value="calendario" className="mt-4">
           <Card className="glass-card">
             <CardContent className="py-5">
               <div className="flex items-center justify-between mb-4">
-                <Button variant="ghost" size="sm" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="w-4 h-4" /></Button>
-                <span className="text-sm font-semibold capitalize">{format(currentMonth, "MMMM yyyy", { locale: ptBR })}</span>
-                <Button variant="ghost" size="sm" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="w-4 h-4" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="w-4 h-4" /></Button>
+                <h3 className="text-sm font-bold capitalize">{format(currentMonth, "MMMM yyyy", { locale: ptBR })}</h3>
+                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="w-4 h-4" /></Button>
               </div>
-              <div className="grid grid-cols-7 gap-1 mb-1">
-                {WEEKDAYS.map(d => <div key={d} className="text-center text-[10px] font-medium text-muted-foreground py-1">{d}</div>)}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {WEEKDAYS.map(d => (<div key={d} className="text-center text-[10px] font-medium text-muted-foreground py-1">{d}</div>))}
               </div>
               <div className="grid grid-cols-7 gap-1">
-                {Array.from({ length: startPadding }).map((_, i) => <div key={`p-${i}`} className="h-20" />)}
-                {days.map(day => {
-                  const dateStr = format(day, "yyyy-MM-dd");
-                  return (
-                    <div key={dateStr} className={`h-20 border rounded-md p-1 ${isSameDay(day, new Date()) ? "border-primary/50 bg-primary/5" : "border-border"}`}>
-                      <span className="text-[10px] font-medium text-muted-foreground">{format(day, "d")}</span>
-                    </div>
-                  );
-                })}
+                {Array.from({ length: startPadding }).map((_, i) => (<div key={`pad-${i}`} />))}
+                {days.map(day => (
+                  <div key={day.toISOString()} className="aspect-square flex items-center justify-center text-xs rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                    {format(day, "d")}
+                  </div>
+                ))}
               </div>
-              <p className="text-xs text-muted-foreground text-center mt-4">Arraste os posts das entregas para organizar no calendário</p>
             </CardContent>
           </Card>
         </TabsContent>
