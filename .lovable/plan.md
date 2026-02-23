@@ -1,85 +1,71 @@
 
-# Suporte a Multiplas Instancias WhatsApp por Organizacao
+# Alerta de Consumo de Tokens para o Usuario Final
 
-## Resumo
+## Contexto
 
-Permitir que cada organizacao tenha mais de um numero de WhatsApp conectado. O usuario podera configurar varios numeros na pagina de Integracoes e escolher qual(is) vincular a cada agente de IA.
+O usuario final (cliente SaaS) nao tem acesso ao Lovable. Os tokens sao registrados na tabela `ai_conversation_logs` (coluna `tokens_used`) e os creditos ficam na tabela `credit_wallets` (coluna `balance`). Atualmente, o saldo de creditos aparece na pagina "Plano e Creditos" mas **nao existe nenhum alerta** quando o consumo esta alto.
 
----
+## Estrategia
 
-## 1. Banco de Dados -- Remover constraint de unicidade
+Criar um sistema de alertas em 3 camadas, tudo dentro do proprio app:
 
-A tabela `whatsapp_instances` possui atualmente uma constraint `UNIQUE` na coluna `organization_id` (indicada por `isOneToOne: true`). Isso impede mais de uma instancia por organizacao.
+1. **Banner global** no layout do cliente quando os creditos atingem niveis criticos
+2. **Card de consumo** na pagina de Plano e Creditos com grafico de uso por modulo
+3. **Alerta na aba Agentes IA** do Dashboard mostrando tokens consumidos vs limite
 
-**Migracao SQL:**
-- Remover a constraint unique de `organization_id` na tabela `whatsapp_instances`
-- Adicionar um campo opcional `label` (text) para o usuario nomear cada instancia (ex: "Comercial", "Suporte")
+## Regras de Alerta
 
----
+| Nivel | Condicao | Visual |
+|-------|----------|--------|
+| Normal | Saldo > 30% do plano | Nenhum alerta |
+| Atencao | Saldo entre 10% e 30% | Banner amarelo + badge no menu |
+| Critico | Saldo <= 10% | Banner vermelho persistente |
+| Zerado | Saldo = 0 | Banner vermelho + funcoes IA bloqueadas (ja existe via FeatureGate) |
 
-## 2. Edge Function `whatsapp-setup` -- Suporte a multiplas instancias
+## Implementacao
 
-Atualmente o connect faz upsert buscando por `organization_id` (sobrescreve a unica instancia). E o `check-status` busca `.maybeSingle()`.
+### 1. Hook `useCreditAlert` (novo)
 
-**Mudancas:**
-- **Connect**: Sempre inserir uma nova instancia ao inves de fazer upsert. Verificar se ja existe uma instancia com o mesmo `instance_id` para evitar duplicatas (upsert por `instance_id` ao inves de `organization_id`)
-- **Check-status**: Receber um parametro opcional `instanceId` para checar uma instancia especifica. Se nao receber, checar todas da organizacao
-- **Disconnect**: Receber o `instanceId` para desconectar uma instancia especifica (ao inves de deletar todas)
+Centraliza a logica de calculo do nivel de alerta:
+- Recebe dados de `useClienteWallet` e `useClienteSubscription`
+- Calcula percentual de creditos restantes com base no plano ativo
+- Retorna `{ level: "normal" | "warning" | "critical" | "zero", percent, balance, total }`
 
----
+### 2. Componente `CreditAlertBanner` (novo)
 
-## 3. Hook `useWhatsApp.ts` -- Retornar lista de instancias
+Banner fino no topo do layout do cliente:
+- **Atencao (amarelo)**: "Voce tem X% dos creditos restantes. Considere fazer upgrade."
+- **Critico (vermelho)**: "Creditos quase esgotados! Apenas X creditos restantes."
+- **Zerado**: "Creditos esgotados. Funcoes de IA estao pausadas."
+- Botao "Ver Plano" que redireciona para `/cliente/plano-creditos`
+- Pode ser dispensado temporariamente (volta apos 24h ou novo login)
 
-**Mudancas:**
-- Renomear `useWhatsAppInstance` para `useWhatsAppInstances` (plural)
-- Alterar a query para buscar todas as instancias da organizacao (remover `.maybeSingle()`, usar array)
-- Manter export do nome antigo como alias para nao quebrar outros usos
-- Adicionar hook `useWhatsAppInstanceById(id)` para casos onde se precisa de uma especifica
+### 3. Card de Consumo na pagina Plano e Creditos
 
----
+Adicionar um card novo mostrando:
+- Grafico de barras horizontal com consumo por modulo (dados de `ai_conversation_logs` agrupados por `agent_id`)
+- Total de tokens usados no periodo atual
+- Barra de progresso com cores dinamicas (verde > amarelo > vermelho)
 
-## 4. Frontend `AgentFormSheet.tsx` -- Selecionar multiplos numeros
+### 4. Badge no menu lateral
 
-Atualmente exibe um unico checkbox com uma instancia. Com multiplas instancias, exibir uma lista de checkboxes onde cada instancia mostra o numero (ou label + numero).
+No `ClienteSidebar`, exibir um ponto vermelho ou badge numerico ao lado de "Plano e Creditos" quando o nivel for `warning` ou `critical`.
 
-**Mudancas:**
-- Usar `useWhatsAppInstances()` (plural)
-- Renderizar um checkbox para cada instancia disponivel
-- O campo `whatsapp_instance_ids` do agente ja suporta array, entao nada muda no modelo do agente
-- Auto-sync de phone_number para todas as instancias que estejam `connected` mas sem `phone_number`
+## Arquivos a criar/editar
 
----
-
-## 5. Frontend `WhatsAppSetupWizard.tsx` -- Adicionar nova instancia
-
-Atualmente o wizard sobrescreve a instancia existente.
-
-**Mudancas:**
-- O wizard sempre cria uma nova instancia (nao sobrescreve)
-- Apos conectar, invalidar `whatsapp-instances` (plural)
-
----
-
-## 6. Pagina de Integracoes -- Listar instancias
-
-Permitir ao usuario ver todas as instancias conectadas com opcao de desconectar cada uma individualmente.
-
----
-
-## Arquivos a editar
-
-| Arquivo | Mudanca |
-|---------|---------|
-| Migracao SQL | Remover unique constraint de `organization_id`, adicionar campo `label` |
-| `supabase/functions/whatsapp-setup/index.ts` | Upsert por `instance_id`, check-status individual, disconnect individual |
-| `src/hooks/useWhatsApp.ts` | `useWhatsAppInstances` retorna array, auto-sync de todas |
-| `src/components/cliente/AgentFormSheet.tsx` | Lista de checkboxes com todas as instancias |
-| `src/components/cliente/WhatsAppSetupWizard.tsx` | Sempre criar nova instancia |
+| Arquivo | Acao |
+|---------|------|
+| `src/hooks/useCreditAlert.ts` | **Criar** -- hook com logica de niveis |
+| `src/components/cliente/CreditAlertBanner.tsx` | **Criar** -- banner de alerta |
+| `src/components/ClienteLayout.tsx` | **Editar** -- inserir banner acima do conteudo |
+| `src/components/ClienteSidebar.tsx` | **Editar** -- badge no item "Plano e Creditos" |
+| `src/pages/cliente/ClientePlanoCreditos.tsx` | **Editar** -- card de consumo por modulo |
 
 ## Detalhes Tecnicos
 
-- A constraint a remover e provavelmente um `UNIQUE INDEX` em `organization_id` na tabela `whatsapp_instances`
-- O upsert no edge function passara a usar `.eq("instance_id", instanceId).eq("organization_id", orgId)` como criterio
-- O campo `label` sera `text NULL DEFAULT NULL` -- opcional para o usuario
-- O `whatsapp_instance_ids` no agente ja e `jsonb DEFAULT '[]'` -- nao precisa de migracao
-- O webhook URL continuara usando `orgId` no path, sem mudancas no webhook receiver
+- O hook `useCreditAlert` usa os dados ja carregados de `useClienteWallet` e `useClienteSubscription`, sem queries adicionais
+- O percentual e calculado como `(balance / totalCreditsDePlano) * 100`
+- Os planos ja estao definidos no array `PLANS` em `ClientePlanoCreditos.tsx` -- extrair para constante compartilhada
+- O banner usa `localStorage` para guardar timestamp de dismiss, respeitando 24h
+- O card de consumo faz uma query em `ai_conversation_logs` agrupando `SUM(tokens_used)` por agente, reusando o pattern ja existente no Dashboard
+- Nao precisa de migracao no banco -- todos os dados necessarios ja existem
