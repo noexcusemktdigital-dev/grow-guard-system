@@ -1,108 +1,66 @@
 
-# Correcoes e Novas Funcionalidades
+# Correcoes no Chat: Imagens, Anexo e Performance
 
-## 1. Exclusao de Agente IA -- Foreign Key Constraint (Bug Fix)
+## Problema 1 -- Imagens nao aparecem
 
-O erro real e HTTP 409: a tabela `ai_conversation_logs` referencia `client_ai_agents.id` com `NO ACTION` on delete. Quando existem logs de conversa associados ao agente, a exclusao falha.
+Em `ChatMessageBubble.tsx`, quando a mensagem tem `media_url`, o componente mostra apenas um placeholder cinza com icone generico (linhas 36-42). Ele nunca tenta renderizar a imagem real com `<img>`.
 
-**Correcao**: Migracao SQL para alterar a foreign key para `ON DELETE CASCADE`, fazendo com que os logs sejam removidos automaticamente ao excluir o agente.
+**Correcao**: Detectar o tipo de midia pelo URL/type e renderizar um `<img>` real quando for imagem, com fallback para o placeholder generico em caso de erro de carregamento.
 
-```sql
-ALTER TABLE public.ai_conversation_logs
-  DROP CONSTRAINT ai_conversation_logs_agent_id_fkey,
-  ADD CONSTRAINT ai_conversation_logs_agent_id_fkey
-    FOREIGN KEY (agent_id) REFERENCES public.client_ai_agents(id)
-    ON DELETE CASCADE;
-```
+## Problema 2 -- Botao de anexo nao funciona
 
----
+Em `ChatConversation.tsx` linha 342-344, o botao `<Paperclip>` e apenas visual (`type="button"` sem `onClick`). Nao ha logica de upload conectada.
 
-## 2. Edicao de Metas (Feature)
+**Correcao**: Adicionar um `<input type="file" accept="image/*">` escondido, com ref. O clique no botao de Paperclip aciona o file input. Ao selecionar um arquivo, fazer upload para o Supabase Storage (bucket `chat-media`) e enviar a URL como mensagem com tipo `image`. Sera necessario criar o bucket via migracao SQL.
 
-Atualmente o `GoalCard` tem um botao "Editar" mas o `onEdit` no `ClientePlanoVendas.tsx` faz `{ /* TODO */ }` (linha 1309).
+## Problema 3 -- Conversa grande fica bugada
 
-**Correcao**: Implementar um dialog de edicao reutilizando o mesmo formulario do "Nova Meta", pre-preenchido com os dados da meta selecionada.
+O `ScrollArea` (linha 314) renderiza **todas** as mensagens de uma vez. Com centenas de mensagens, o DOM fica pesado e o scroll trava. Alem disso, o `useEffect` com `scrollIntoView` (linha 83) dispara a cada mudanca de `messages.length`, o que pode causar loops de re-render.
 
-### Mudancas em `ClientePlanoVendas.tsx`:
-- Adicionar estado `editingGoal` (null ou goal object)
-- Ao clicar "Editar" no GoalCard, preencher `editingGoal` e abrir o dialog
-- Reusar o dialog de Nova Meta, adaptando titulo para "Editar Meta" e usando `updateGoal.mutate` ao inves de `createGoal.mutate`
-- Limpar `editingGoal` ao fechar
-
----
-
-## 3. Gamificacao -- Avaliacoes e Pontuacao (Feature)
-
-Melhorar o sistema de gamificacao em `ClienteGamificacao.tsx`:
-
-- Adicionar secao "Avaliacoes" que mostra um resumo de acoes do usuario (leads criados, contratos fechados, dias de sequencia)
-- Calcular pontos baseados em acoes reais do CRM: cada lead criado = 10pts, lead ganho = 50pts, checklist completo = 5pts
-- Mostrar ranking entre membros da organizacao (se houver mais de 1)
-- Adicionar animacao visual ao ganhar pontos
-
-### Dados utilizados:
-- `useCrmLeads` para contar leads do usuario
-- `useClienteChecklist` para streak de checklist
-- `client_gamification` tabela existente para persistir pontos
-
----
-
-## 4. Alertas de Acoes Importantes (Feature)
-
-Criar um sistema de alertas globais que aparece como banner no topo do layout do cliente.
-
-### Novo componente: `src/components/cliente/ActionAlertsBanner.tsx`
-- Verifica condicoes criticas e mostra banners de alerta:
-  - Leads sem contato ha mais de 48h
-  - Metas abaixo de 30% do ritmo ideal
-  - Conversas WhatsApp nao respondidas ha mais de 24h
-  - Creditos baixos (wallet < 50)
-- Cada alerta tem icone, mensagem e botao de acao que navega para o modulo relevante
-- Alerta pode ser dispensado temporariamente (sessionStorage)
-- Maximo de 3 alertas visiveis por vez
-
-### Integracao em `ClienteLayout.tsx`:
-- Adicionar `<ActionAlertsBanner />` acima do `<Outlet />`
-
-### Hooks utilizados:
-- `useCrmLeads`, `useActiveGoals`, `useGoalProgress`, `useClienteWallet`
-
----
-
-## 5. Efeitos Sonoros (Feature)
-
-Criar um utilitario de sons para acoes importantes do cliente.
-
-### Novo arquivo: `src/lib/sounds.ts`
-- Funcao `playSound(type)` que toca sons curtos usando Web Audio API (osciladores sinteticos, sem arquivos externos)
-- Tipos de som:
-  - `success`: tom agudo ascendente (meta batida, lead ganho, agente criado)
-  - `notification`: bip duplo curto (novo lead, nova mensagem)
-  - `warning`: tom grave (alerta, erro)
-  - `click`: click suave (toggle, botao importante)
-
-### Integracao nos componentes:
-- `ClienteAgentesIA.tsx`: som `success` ao criar/duplicar agente
-- `ClientePlanoVendas.tsx`: som `success` ao criar meta
-- `GoalCard.tsx`: som `success` quando meta atinge 100%
-- `ChatConversation.tsx`: som `notification` ao receber nova mensagem
-- Toast de erro: som `warning`
+**Correcao**:
+- Limitar a renderizacao inicial para as ultimas 100 mensagens, com botao "Carregar anteriores" no topo
+- Melhorar o scroll para so rolar automaticamente se o usuario ja estiver proximo do final (evitar scroll forçado quando usuario esta lendo historico)
+- Mover o `playSound` para fora do `useEffect` de scroll, evitando tocar som repetidamente
 
 ---
 
 ## Detalhes Tecnicos
 
+### Migracao SQL -- Bucket de Storage
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('chat-media', 'chat-media', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Members can upload chat media"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'chat-media' AND auth.uid() IS NOT NULL);
+
+CREATE POLICY "Anyone can view chat media"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'chat-media');
+```
+
+### ChatMessageBubble.tsx
+- Substituir o placeholder por `<img src={message.media_url}>` com `onError` fallback
+- Detectar tipo (image, audio, video, document) via `message.type` ou extensao do URL
+- Imagens: `<img>` com `object-cover`, clicavel para abrir em nova aba
+- Outros tipos: manter placeholder com icone apropriado
+
+### ChatConversation.tsx
+- **Anexo funcional**: ref para `<input type="file">`, handler `handleFileUpload` que faz upload ao Supabase Storage e chama `sendMutation` com `type: "image"` e a URL publica
+- **Performance**: estado `displayCount` (inicia em 100), slice das mensagens renderizadas, botao "Carregar anteriores" que incrementa `displayCount`
+- **Scroll inteligente**: detectar se usuario esta no final antes de auto-scroll, usando `scrollHeight - scrollTop - clientHeight < 100`
+- **Som de notificacao**: mover para um `useEffect` separado que so toca quando uma mensagem inbound **nova** aparece (comparar IDs, nao length)
+
+### useWhatsApp.ts
+- Adicionar parametro `mediaUrl` ao `useSendWhatsAppMessage` para enviar mensagens com midia
+
+### Arquivos modificados
+
 | Arquivo | Acao |
 |---------|------|
-| Migracao SQL | ALTER FK `ai_conversation_logs_agent_id_fkey` para ON DELETE CASCADE |
-| `src/pages/cliente/ClientePlanoVendas.tsx` | Implementar edicao de metas (dialog + updateGoal) |
-| `src/pages/cliente/ClienteGamificacao.tsx` | Melhorar com dados reais do CRM e avaliacoes |
-| `src/components/cliente/ActionAlertsBanner.tsx` | **NOVO** - sistema de alertas globais |
-| `src/components/ClienteLayout.tsx` | Adicionar ActionAlertsBanner |
-| `src/lib/sounds.ts` | **NOVO** - utilitario de efeitos sonoros (Web Audio API) |
-| `src/pages/cliente/ClienteAgentesIA.tsx` | Adicionar efeitos sonoros |
-| `src/components/cliente/ChatConversation.tsx` | Adicionar som de notificacao |
-
-### Nenhuma dependencia externa necessaria
-- Sons sao gerados via Web Audio API (nativa do browser)
-- Todos os dados ja existem nas tabelas e hooks atuais
+| Migracao SQL | Criar bucket `chat-media` + policies |
+| `src/components/cliente/ChatMessageBubble.tsx` | Renderizar imagens reais com `<img>`, fallback |
+| `src/components/cliente/ChatConversation.tsx` | Input de arquivo funcional, paginacao de mensagens, scroll inteligente |
+| `src/hooks/useWhatsApp.ts` | Adicionar `mediaUrl` no `useSendWhatsAppMessage` |
