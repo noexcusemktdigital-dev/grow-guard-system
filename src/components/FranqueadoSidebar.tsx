@@ -17,7 +17,7 @@ const principalSection: SidebarItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/franqueado/dashboard" },
   { label: "Agenda", icon: Calendar, path: "/franqueado/agenda" },
   { label: "Comunicados Matriz", icon: Megaphone, path: "/franqueado/comunicados" },
-  { label: "Suporte Matriz", icon: MessageSquare, path: "/franqueado/suporte" },
+  { label: "Suporte", icon: MessageSquare, path: "/franqueado/suporte" },
 ];
 
 const comercialSection: SidebarItem[] = [
