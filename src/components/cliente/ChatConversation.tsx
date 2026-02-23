@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Send, Loader2, MessageCircle, Bot, User, UserPlus, ExternalLink,
   ArrowRight, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Paperclip, Smile,
@@ -25,6 +25,7 @@ import { playSound } from "@/lib/sounds";
 import { useNavigate } from "react-router-dom";
 import { isToday, isYesterday, format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   contact: WhatsAppContact | null;
@@ -32,6 +33,8 @@ interface Props {
   isLoading: boolean;
   agents?: { id: string; name: string }[];
 }
+
+const DISPLAY_STEP = 100;
 
 function DateSeparator({ date }: { date: Date }) {
   let label: string;
@@ -51,6 +54,8 @@ function DateSeparator({ date }: { date: Date }) {
 export function ChatConversation({ contact, messages, isLoading, agents = [] }: Props) {
   const [text, setText] = useState("");
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [displayCount, setDisplayCount] = useState(DISPLAY_STEP);
+  const [uploading, setUploading] = useState(false);
   const sendMutation = useSendWhatsAppMessage();
   const updateMode = useUpdateAttendingMode();
   const updateAgent = useUpdateContactAgent();
@@ -59,7 +64,11 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
   const { data: funnelsData } = useCrmFunnels();
   const navigate = useNavigate();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastSeenIdRef = useRef<string | null>(null);
+  const isNearBottomRef = useRef(true);
 
   const contactAny = contact as any;
   const attendingMode = contactAny?.attending_mode || "ai";
@@ -79,24 +88,82 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
     }));
   }, [funnelsData]);
 
+  // Reset display count when contact changes
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    if (messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      if (lastMsg.direction === "inbound") playSound("notification");
+    setDisplayCount(DISPLAY_STEP);
+    lastSeenIdRef.current = null;
+    isNearBottomRef.current = true;
+  }, [contact?.id]);
+
+  // Smart scroll: track if user is near bottom
+  const handleScroll = useCallback(() => {
+    const el = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+    if (!el) return;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+  }, []);
+
+  // Auto-scroll only when near bottom
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages.length]);
+
+  // Sound effect on new inbound message
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.direction === "inbound" && lastSeenIdRef.current && lastMsg.id !== lastSeenIdRef.current) {
+      playSound("notification");
+    }
+    lastSeenIdRef.current = lastMsg.id;
+  }, [messages]);
 
   const handleSend = () => {
     if (!text.trim() || !contact) return;
     sendMutation.mutate(
       { contactId: contact.id, contactPhone: contact.phone, message: text.trim() },
       {
-        onSuccess: () => setText(""),
+        onSuccess: () => { setText(""); isNearBottomRef.current = true; },
         onError: (err: any) =>
           toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" }),
       }
     );
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !contact) return;
+    e.target.value = "";
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "Máximo 10MB", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${contact.organization_id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("chat-media").upload(path, file);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(path);
+      const publicUrl = urlData.publicUrl;
+
+      sendMutation.mutate(
+        { contactId: contact.id, contactPhone: contact.phone, message: "", mediaUrl: publicUrl, type: "image" },
+        {
+          onSuccess: () => { isNearBottomRef.current = true; },
+          onError: (err: any) =>
+            toast({ title: "Erro ao enviar mídia", description: err.message, variant: "destructive" }),
+        }
+      );
+    } catch (err: any) {
+      toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleToggleMode = () => {
@@ -161,24 +228,32 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
   const linkedLead = crmLeadId ? matchedLead : null;
   const isHandoffAlert = attendingMode === "human" && (contact?.unread_count ?? 0) > 0;
 
+  // Paginated messages
+  const displayedMessages = useMemo(() => {
+    if (messages.length <= displayCount) return messages;
+    return messages.slice(messages.length - displayCount);
+  }, [messages, displayCount]);
+
+  const hasMore = messages.length > displayCount;
+
   // Group messages by date
   const messagesWithSeparators = useMemo(() => {
     const items: { type: "date" | "message"; date?: Date; message?: WhatsAppMessage; isGrouped?: boolean }[] = [];
     let lastDate: Date | null = null;
 
-    messages.forEach((msg, i) => {
+    displayedMessages.forEach((msg, i) => {
       const msgDate = new Date(msg.created_at);
       if (!lastDate || !isSameDay(lastDate, msgDate)) {
         items.push({ type: "date", date: msgDate });
         lastDate = msgDate;
       }
-      const prev = messages[i - 1];
+      const prev = displayedMessages[i - 1];
       const isGrouped = prev && prev.direction === msg.direction && (msgDate.getTime() - new Date(prev.created_at).getTime()) < 60000;
       items.push({ type: "message", message: msg, isGrouped });
     });
 
     return items;
-  }, [messages]);
+  }, [displayedMessages]);
 
   if (!contact) {
     return (
@@ -311,8 +386,20 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
       </Collapsible>
 
       {/* Messages area with WhatsApp background */}
-      <ScrollArea className="flex-1 whatsapp-bg">
+      <ScrollArea className="flex-1 whatsapp-bg" ref={scrollAreaRef} onScrollCapture={handleScroll}>
         <div className="px-4 py-3">
+          {hasMore && (
+            <div className="flex justify-center mb-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[11px] text-muted-foreground rounded-full bg-muted/60 hover:bg-muted"
+                onClick={() => setDisplayCount((c) => c + DISPLAY_STEP)}
+              >
+                Carregar anteriores
+              </Button>
+            </div>
+          )}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -335,12 +422,26 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
 
       {/* WhatsApp-style Input */}
       <div className="px-3 py-2.5 border-t border-border bg-card">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,application/pdf"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
         <form
           onSubmit={(e) => { e.preventDefault(); handleSend(); }}
           className="flex items-end gap-2"
         >
-          <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground">
-            <Paperclip className="w-4 h-4" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
           </Button>
           <div className="flex-1 relative">
             <textarea
