@@ -48,7 +48,7 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
     const q = search.toLowerCase();
     const matchSearch = !q || (c.name?.toLowerCase().includes(q) || c.phone.includes(q));
     const contactAny = c as any;
-    const mode = contactAny.attending_mode || "ai";
+    const mode = contactAny.attending_mode || null;
     let matchMode = true;
     if (modeFilter === "ai") matchMode = mode === "ai";
     else if (modeFilter === "human") matchMode = mode === "human";
@@ -173,7 +173,7 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
         ) : (
           sorted.map((contact) => {
             const contactAny = contact as any;
-            const mode = contactAny.attending_mode || "ai";
+            const mode = contactAny.attending_mode || null;
             const stageLabel = leadStages?.get(contact.id);
             const preview = lastMessages?.get(contact.id);
             const group = getDateGroup(contact.last_message_at);
@@ -207,11 +207,13 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
                         {(contact.name || contact.phone).substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card flex items-center justify-center ${
-                      mode === "ai" ? "bg-purple-500" : "bg-emerald-500"
-                    }`}>
-                      {mode === "ai" ? <Bot className="w-2.5 h-2.5 text-white" /> : <User className="w-2.5 h-2.5 text-white" />}
-                    </div>
+                    {mode && (
+                      <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card flex items-center justify-center ${
+                        mode === "ai" ? "bg-purple-500" : "bg-emerald-500"
+                      }`}>
+                        {mode === "ai" ? <Bot className="w-2.5 h-2.5 text-white" /> : <User className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">

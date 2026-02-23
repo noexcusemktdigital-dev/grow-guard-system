@@ -120,11 +120,13 @@ export default function ClienteChat() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-3">
-      <PageHeader
-        title="Conversas"
-        subtitle="Central de atendimento WhatsApp"
-        icon={<MessageCircle className="w-5 h-5 text-primary" />}
-      />
+      <div className="shrink-0">
+        <PageHeader
+          title="Conversas"
+          subtitle="Central de atendimento WhatsApp"
+          icon={<MessageCircle className="w-5 h-5 text-primary" />}
+        />
+      </div>
 
       <Card className="flex-1 min-h-0 overflow-hidden border-border/50">
         <div className="grid grid-cols-[340px_1fr] h-full overflow-hidden">
