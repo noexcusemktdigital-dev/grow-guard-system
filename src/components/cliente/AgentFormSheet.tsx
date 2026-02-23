@@ -280,69 +280,52 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Canal</Label>
-                <Select value={form.channel ?? "whatsapp"} onValueChange={(v) => setForm((f) => ({ ...f, channel: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="email">E-mail</SelectItem>
-                    <SelectItem value="website">Website</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Números de WhatsApp</Label>
-                {whatsappInstance ? (
-                  <div className="space-y-2 pt-1">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={(form.whatsapp_instance_ids ?? []).includes(whatsappInstance.id)}
-                        onCheckedChange={(checked) => {
-                          const ids = form.whatsapp_instance_ids ?? [];
-                          setForm((f) => ({
-                            ...f,
-                            whatsapp_instance_ids: checked ? [...ids, whatsappInstance.id] : ids.filter((i: string) => i !== whatsappInstance.id),
-                          }));
-                        }}
-                      />
-                      <span className="text-xs">
-                        {whatsappInstance.phone_number
-                          ? whatsappInstance.phone_number
-                          : whatsappInstance.status === "connected"
-                            ? `Instância ${whatsappInstance.instance_id?.slice(0, 6)}... (número pendente)`
-                            : "Número não configurado"}
-                      </span>
-                    </div>
-                    {whatsappInstance.status === "connected" && !whatsappInstance.phone_number && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs gap-1"
-                        onClick={async () => {
-                          try {
-                            await supabase.functions.invoke("whatsapp-setup", {
-                              body: { action: "check-status" },
-                            });
-                            // Refetch will happen via query invalidation
-                            window.location.reload();
-                          } catch {}
-                        }}
-                      >
-                        <Loader2 className="w-3 h-3" /> Atualizar número
-                      </Button>
-                    )}
+            <div className="space-y-2">
+              <Label>Número de WhatsApp</Label>
+              {whatsappInstance ? (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={(form.whatsapp_instance_ids ?? []).includes(whatsappInstance.id)}
+                      onCheckedChange={(checked) => {
+                        const ids = form.whatsapp_instance_ids ?? [];
+                        setForm((f) => ({
+                          ...f,
+                          whatsapp_instance_ids: checked ? [...ids, whatsappInstance.id] : ids.filter((i: string) => i !== whatsappInstance.id),
+                        }));
+                      }}
+                    />
+                    <span className="text-xs">
+                      {whatsappInstance.phone_number
+                        ? whatsappInstance.phone_number
+                        : whatsappInstance.status === "connected"
+                          ? `Instância ${whatsappInstance.instance_id?.slice(0, 6)}... (número pendente)`
+                          : "Número não configurado"}
+                    </span>
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground pt-2">Nenhum WhatsApp configurado</p>
-                )}
-              </div>
+                  {whatsappInstance.status === "connected" && !whatsappInstance.phone_number && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={async () => {
+                        try {
+                          await supabase.functions.invoke("whatsapp-setup", {
+                            body: { action: "check-status" },
+                          });
+                          window.location.reload();
+                        } catch {}
+                      }}
+                    >
+                      <Loader2 className="w-3 h-3" /> Atualizar número
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground pt-2">Nenhum WhatsApp configurado</p>
+              )}
             </div>
-
-            {/* Tags removed from UI */}
           </TabsContent>
 
           {/* ─── Aba 2: Persona (Guiada) ─── */}
@@ -539,7 +522,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                   { key: "can_move_stage", label: "Mover lead de etapa" },
                   { key: "can_update_value", label: "Atualizar valor" },
                   { key: "can_add_tags", label: "Adicionar tags" },
-                  { key: "can_handoff", label: "Solicitar transbordo" },
+                  { key: "can_handoff", label: "Transferir para atendente humano" },
                   { key: "can_create_tasks", label: "Criar tarefas" },
                 ].map(({ key, label }) => (
                   <div key={key} className="flex items-center gap-2">
