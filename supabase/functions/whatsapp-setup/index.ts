@@ -84,12 +84,13 @@ Deno.serve(async (req) => {
         );
         const statusData = await statusRes.json();
         const connected = statusData.connected === true;
+        const phoneNumber = statusData.phoneConnected || instance.phone_number || null;
 
         await adminClient
           .from("whatsapp_instances")
           .update({
             status: connected ? "connected" : "disconnected",
-            phone_number: statusData.smartphoneConnected ? statusData.phoneConnected || instance.phone_number : null,
+            phone_number: phoneNumber,
           })
           .eq("id", instance.id);
 
