@@ -34,8 +34,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Only process confirmed payments
-    if (event !== "PAYMENT_CONFIRMED" && event !== "PAYMENT_RECEIVED") {
+    const handledEvents = [
+      "PAYMENT_CONFIRMED",
+      "PAYMENT_RECEIVED",
+      "PAYMENT_OVERDUE",
+      "PAYMENT_REFUNDED",
+      "PAYMENT_DELETED",
+    ];
+
+    if (!handledEvents.includes(event)) {
       return new Response(JSON.stringify({ ok: true, ignored: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -63,62 +70,125 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Determine credits from payment value (configurable — here 1 real = 100 credits)
     const creditsPerReal = 100;
     const paymentValue = payment.value || 0;
-    const creditsToAdd = Math.round(paymentValue * creditsPerReal);
+    const creditsAmount = Math.round(paymentValue * creditsPerReal);
 
-    if (creditsToAdd <= 0) {
-      return new Response(JSON.stringify({ ok: true, credits: 0 }), {
+    // ── PAYMENT_CONFIRMED / PAYMENT_RECEIVED ──
+    if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
+      if (creditsAmount <= 0) {
+        return new Response(JSON.stringify({ ok: true, credits: 0 }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const wallet = await getOrCreateWallet(adminClient, org.id);
+      if (!wallet) {
+        return new Response(JSON.stringify({ error: "Failed to get/create wallet" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const newBalance = wallet.balance + creditsAmount;
+      await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
+
+      await adminClient.from("credit_transactions").insert({
+        organization_id: org.id,
+        type: "purchase",
+        amount: creditsAmount,
+        balance_after: newBalance,
+        description: `Pagamento Asaas — R$ ${paymentValue.toFixed(2)}`,
+        metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, asaas_customer_id: payment.customer, payment_value: paymentValue, event },
+      });
+
+      console.log(`Credited ${creditsAmount} to org ${org.id} (${org.name}). New balance: ${newBalance}`);
+      return new Response(JSON.stringify({ success: true, event, credits_added: creditsAmount, new_balance: newBalance }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get or create wallet
-    let { data: wallet } = await adminClient
-      .from("credit_wallets")
-      .select("id, balance")
-      .eq("organization_id", org.id)
-      .maybeSingle();
+    // ── PAYMENT_REFUNDED ──
+    if (event === "PAYMENT_REFUNDED") {
+      const wallet = await getOrCreateWallet(adminClient, org.id);
+      if (!wallet) {
+        return new Response(JSON.stringify({ error: "Failed to get/create wallet" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    if (!wallet) {
-      const { data: newWallet } = await adminClient
-        .from("credit_wallets")
-        .insert({ organization_id: org.id, balance: 0 })
-        .select()
-        .single();
-      wallet = newWallet;
-    }
+      const newBalance = Math.max(0, wallet.balance - creditsAmount);
+      await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
 
-    if (!wallet) {
-      return new Response(JSON.stringify({ error: "Failed to get/create wallet" }), {
-        status: 500,
+      await adminClient.from("credit_transactions").insert({
+        organization_id: org.id,
+        type: "refund",
+        amount: -creditsAmount,
+        balance_after: newBalance,
+        description: `Estorno Asaas — R$ ${paymentValue.toFixed(2)}`,
+        metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, asaas_customer_id: payment.customer, payment_value: paymentValue, event },
+      });
+
+      console.log(`Refunded ${creditsAmount} from org ${org.id} (${org.name}). New balance: ${newBalance}`);
+      return new Response(JSON.stringify({ success: true, event, credits_removed: creditsAmount, new_balance: newBalance }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const newBalance = wallet.balance + creditsToAdd;
+    // ── PAYMENT_OVERDUE ──
+    if (event === "PAYMENT_OVERDUE") {
+      // Get all members of the org to notify
+      const { data: members } = await adminClient
+        .from("organization_memberships")
+        .select("user_id")
+        .eq("organization_id", org.id);
 
-    await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
+      if (members && members.length > 0) {
+        const notifications = members.map((m: any) => ({
+          organization_id: org.id,
+          user_id: m.user_id,
+          title: "Pagamento em atraso",
+          message: `A cobrança de R$ ${paymentValue.toFixed(2)} está vencida. Regularize para manter seus créditos.`,
+          type: "warning",
+        }));
+        await adminClient.from("client_notifications").insert(notifications);
+      }
 
-    await adminClient.from("credit_transactions").insert({
-      organization_id: org.id,
-      type: "purchase",
-      amount: creditsToAdd,
-      balance_after: newBalance,
-      description: `Pagamento Asaas — R$ ${paymentValue.toFixed(2)}`,
-      metadata: {
-        source: "asaas_webhook",
-        asaas_payment_id: payment.id,
-        asaas_customer_id: payment.customer,
-        payment_value: paymentValue,
-        event,
-      },
-    });
+      // Log informational transaction (no balance change)
+      await adminClient.from("credit_transactions").insert({
+        organization_id: org.id,
+        type: "alert",
+        amount: 0,
+        balance_after: 0,
+        description: `Cobrança vencida Asaas — R$ ${paymentValue.toFixed(2)}`,
+        metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, asaas_customer_id: payment.customer, payment_value: paymentValue, event },
+      });
 
-    console.log(`Credited ${creditsToAdd} to org ${org.id} (${org.name}). New balance: ${newBalance}`);
+      console.log(`Overdue notification sent for org ${org.id} (${org.name})`);
+      return new Response(JSON.stringify({ success: true, event, notified: members?.length || 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    return new Response(JSON.stringify({ success: true, credits_added: creditsToAdd, new_balance: newBalance }), {
+    // ── PAYMENT_DELETED ──
+    if (event === "PAYMENT_DELETED") {
+      await adminClient.from("credit_transactions").insert({
+        organization_id: org.id,
+        type: "info",
+        amount: 0,
+        balance_after: 0,
+        description: `Cobrança cancelada Asaas — R$ ${paymentValue.toFixed(2)}`,
+        metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, asaas_customer_id: payment.customer, payment_value: paymentValue, event },
+      });
+
+      console.log(`Payment deleted logged for org ${org.id} (${org.name})`);
+      return new Response(JSON.stringify({ success: true, event }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
@@ -129,3 +199,22 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+async function getOrCreateWallet(adminClient: any, orgId: string) {
+  let { data: wallet } = await adminClient
+    .from("credit_wallets")
+    .select("id, balance")
+    .eq("organization_id", orgId)
+    .maybeSingle();
+
+  if (!wallet) {
+    const { data: newWallet } = await adminClient
+      .from("credit_wallets")
+      .insert({ organization_id: orgId, balance: 0 })
+      .select()
+      .single();
+    wallet = newWallet;
+  }
+
+  return wallet;
+}
