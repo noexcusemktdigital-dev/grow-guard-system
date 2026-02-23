@@ -537,6 +537,53 @@ export type Database = {
           },
         ]
       }
+      checklist_templates: {
+        Row: {
+          category: string | null
+          conditions: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          frequency: string | null
+          id: string
+          is_active: boolean | null
+          organization_id: string
+          title: string
+        }
+        Insert: {
+          category?: string | null
+          conditions?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id: string
+          title: string
+        }
+        Update: {
+          category?: string | null
+          conditions?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_ai_agents: {
         Row: {
           avatar_url: string | null
@@ -666,29 +713,35 @@ export type Database = {
       }
       client_checklist_items: {
         Row: {
+          category: string | null
           created_at: string
           date: string
           id: string
           is_completed: boolean | null
           organization_id: string
+          source: string | null
           title: string
           user_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           date?: string
           id?: string
           is_completed?: boolean | null
           organization_id: string
+          source?: string | null
           title: string
           user_id: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           date?: string
           id?: string
           is_completed?: boolean | null
           organization_id?: string
+          source?: string | null
           title?: string
           user_id?: string
         }
@@ -833,8 +886,10 @@ export type Database = {
           organization_id: string
           points: number | null
           streak_days: number | null
+          title: string | null
           updated_at: string
           user_id: string
+          xp: number | null
         }
         Insert: {
           badges?: Json | null
@@ -845,8 +900,10 @@ export type Database = {
           organization_id: string
           points?: number | null
           streak_days?: number | null
+          title?: string | null
           updated_at?: string
           user_id: string
+          xp?: number | null
         }
         Update: {
           badges?: Json | null
@@ -857,8 +914,10 @@ export type Database = {
           organization_id?: string
           points?: number | null
           streak_days?: number | null
+          title?: string | null
           updated_at?: string
           user_id?: string
+          xp?: number | null
         }
         Relationships: [
           {
@@ -3280,6 +3339,53 @@ export type Database = {
           {
             foreignKeyName: "units_unit_org_id_fkey"
             columns: ["unit_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_evaluations: {
+        Row: {
+          categories: Json | null
+          comment: string | null
+          created_at: string | null
+          evaluator_id: string
+          id: string
+          organization_id: string
+          period: string
+          score: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          categories?: Json | null
+          comment?: string | null
+          created_at?: string | null
+          evaluator_id: string
+          id?: string
+          organization_id: string
+          period: string
+          score: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          categories?: Json | null
+          comment?: string | null
+          created_at?: string | null
+          evaluator_id?: string
+          id?: string
+          organization_id?: string
+          period?: string
+          score?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_evaluations_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
