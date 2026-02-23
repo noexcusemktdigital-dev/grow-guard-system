@@ -281,4 +281,45 @@
   .card-shine:hover::before {
     left: 100%;
   }
+
+  /* WhatsApp-style background pattern */
+  .whatsapp-bg {
+    background-color: hsl(var(--background));
+    background-image: 
+      radial-gradient(circle at 20% 50%, hsl(var(--muted) / 0.3) 1px, transparent 1px),
+      radial-gradient(circle at 80% 20%, hsl(var(--muted) / 0.2) 1px, transparent 1px),
+      radial-gradient(circle at 40% 80%, hsl(var(--muted) / 0.15) 1px, transparent 1px);
+    background-size: 60px 60px, 80px 80px, 100px 100px;
+  }
+
+  .dark .whatsapp-bg {
+    background-color: hsl(220 20% 8%);
+    background-image: 
+      radial-gradient(circle at 20% 50%, hsl(220 15% 12% / 0.5) 1px, transparent 1px),
+      radial-gradient(circle at 80% 20%, hsl(220 15% 14% / 0.3) 1px, transparent 1px);
+    background-size: 60px 60px, 80px 80px;
+  }
+
+  /* Chat bubble tails */
+  .chat-bubble-out::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -6px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid hsl(var(--primary) / 0.9);
+    border-top: 6px solid transparent;
+  }
+
+  .chat-bubble-in::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -6px;
+    width: 0;
+    height: 0;
+    border-right: 6px solid hsl(var(--card));
+    border-top: 6px solid transparent;
+  }
 }
