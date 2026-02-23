@@ -25,7 +25,11 @@ export default function ClienteChat() {
   const queryClient = useQueryClient();
   const { data: instance, isLoading: loadingInstance } = useWhatsAppInstance();
   const { data: contacts = [], isLoading: loadingContacts } = useWhatsAppContacts();
-  const [selectedContact, setSelectedContact] = useState<WhatsAppContact | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const selectedContact = useMemo(
+    () => contacts.find((c) => c.id === selectedContactId) ?? null,
+    [contacts, selectedContactId]
+  );
   const { data: messages = [], isLoading: loadingMessages } = useWhatsAppMessages(selectedContact?.id ?? null);
   const markRead = useMarkContactRead();
   const { data: agentsData } = useClienteAgents();
@@ -62,7 +66,7 @@ export default function ClienteChat() {
   }, []);
 
   const handleSelectContact = (contact: WhatsAppContact) => {
-    setSelectedContact(contact);
+    setSelectedContactId(contact.id);
     if (contact.unread_count > 0) {
       markRead.mutate(contact.id);
     }
