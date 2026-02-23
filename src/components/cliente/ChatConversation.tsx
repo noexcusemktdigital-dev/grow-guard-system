@@ -21,6 +21,7 @@ import {
 import { useCrmLeadMutations, useCrmFunnels } from "@/hooks/useClienteCrm";
 import type { WhatsAppContact, WhatsAppMessage } from "@/hooks/useWhatsApp";
 import { toast } from "@/hooks/use-toast";
+import { playSound } from "@/lib/sounds";
 import { useNavigate } from "react-router-dom";
 import { isToday, isYesterday, format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -80,7 +81,11 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.direction === "inbound") playSound("notification");
+    }
+  }, [messages.length]);
 
   const handleSend = () => {
     if (!text.trim() || !contact) return;
