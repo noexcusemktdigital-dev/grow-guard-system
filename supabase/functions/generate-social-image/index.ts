@@ -6,25 +6,62 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function getQualityInstructions(nivel: string): string {
+  switch (nivel) {
+    case "alto_padrao":
+      return `QUALITY: Ultra-premium, luxury brand quality. Magazine-level photography or design.
+Rich textures, dramatic lighting with deep shadows and golden-hour highlights.
+Cinematic color grading. Every pixel must be perfect. Think high-end advertising campaign.
+Depth of field, bokeh effects, premium materials visible in textures.`;
+    case "elaborado":
+      return `QUALITY: High-quality professional design. Strong composition with visual depth.
+Vibrant but harmonious colors, polished finish. Professional lighting setup.
+Layered visual interest with foreground/midground/background elements.
+Agency-quality creative work with attention to detail.`;
+    default:
+      return `QUALITY: Clean, professional design. Simple but effective composition.
+Clear focal point, balanced layout. Professional and trustworthy appearance.
+Well-lit, properly exposed, ready for social media publishing.`;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, format, file_path } = await req.json();
+    const { prompt, format, file_path, nivel } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const aspectInstruction = format === "feed"
-      ? "Square format (1:1 aspect ratio), 1080x1080 pixels."
-      : "Vertical format (9:16 aspect ratio), 1080x1920 pixels.";
+    const qualityInstructions = getQualityInstructions(nivel || "simples");
 
-    const fullPrompt = `${prompt}
+    const aspectInstruction = format === "feed"
+      ? "Square format (1:1 aspect ratio), 1080x1080 pixels. Centered, balanced composition."
+      : "Vertical format (9:16 aspect ratio), 1080x1920 pixels. Vertical composition with stacked visual elements.";
+
+    const fullPrompt = `You are a world-class art director and visual designer for premium social media campaigns.
+
+${qualityInstructions}
 
 ${aspectInstruction}
-Professional social media post design. High quality, vibrant, modern.
-Do NOT include any text, letters, numbers or words in the image.`;
 
-    console.log(`Generating ${format} image...`);
+COMPOSITION RULES:
+- Leave clear space for text overlay (top 20% or bottom 25% of the image should have simpler areas)
+- Create visual hierarchy with a clear focal point
+- Use professional color theory and complementary colors
+- Ensure the image works at small mobile screen sizes
+
+CRITICAL RULES:
+- Do NOT include any text, letters, numbers, words, or watermarks in the image
+- No generic stock photo aesthetics
+- Every element must serve the composition
+
+VISUAL BRIEF:
+${prompt}
+
+Generate this image now with the highest possible quality and attention to detail.`;
+
+    console.log(`Generating ${format} image (nivel: ${nivel || "simples"})...`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -63,11 +100,9 @@ Do NOT include any text, letters, numbers or words in the image.`;
       throw new Error("No image generated");
     }
 
-    // Extract base64 data
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
     const binaryData = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
 
-    // Upload to Supabase Storage
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
