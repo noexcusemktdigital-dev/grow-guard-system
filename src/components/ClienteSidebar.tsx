@@ -34,7 +34,7 @@ const globalSection: SidebarItem[] = [
 const vendasSection: SidebarItem[] = [
   { label: "Plano de Vendas", icon: Target, path: "/cliente/plano-vendas" },
   { label: "CRM", icon: Users, path: "/cliente/crm" },
-  { label: "Chat", icon: MessageCircle, path: "/cliente/chat" },
+  { label: "Conversas", icon: MessageCircle, path: "/cliente/chat" },
   { label: "Agentes IA", icon: Bot, path: "/cliente/agentes-ia" },
   { label: "Scripts", icon: BookOpen, path: "/cliente/scripts" },
   { label: "Disparos", icon: Send, path: "/cliente/disparos" },

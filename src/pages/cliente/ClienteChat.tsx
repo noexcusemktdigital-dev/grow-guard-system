@@ -33,7 +33,6 @@ export default function ClienteChat() {
 
   const isConnected = instance?.status === "connected";
 
-  // Build agents list for filters
   const agents = useMemo(() =>
     (agentsData || [])
       .filter((a) => a.status === "active")
@@ -41,7 +40,6 @@ export default function ClienteChat() {
     [agentsData]
   );
 
-  // Build leadStages map: contactId -> stage label
   const leadStages = useMemo(() => {
     const map = new Map<string, string>();
     if (!leadsData) return map;
@@ -55,6 +53,14 @@ export default function ClienteChat() {
     return map;
   }, [contacts, leadsData]);
 
+  // Build last message preview map
+  const lastMessages = useMemo(() => {
+    const map = new Map<string, string>();
+    // We don't have all messages loaded, but we can use contacts' last_message_at as hint
+    // For now, just use phone as fallback — real previews would need a separate query
+    return map;
+  }, []);
+
   const handleSelectContact = (contact: WhatsAppContact) => {
     setSelectedContact(contact);
     if (contact.unread_count > 0) {
@@ -65,35 +71,23 @@ export default function ClienteChat() {
   // Realtime subscriptions
   useEffect(() => {
     if (!instance?.organization_id) return;
-
     const channel = supabase
       .channel("whatsapp-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+      })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [instance?.organization_id, queryClient]);
 
   if (loadingInstance) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <PageHeader title="Chat WhatsApp" subtitle="Central de atendimento" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
+      <div className="space-y-4">
+        <PageHeader title="Conversas" subtitle="Central de atendimento WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
         <Skeleton className="h-[500px] rounded-xl" />
       </div>
     );
@@ -102,7 +96,7 @@ export default function ClienteChat() {
   if (!isConnected) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
-        <PageHeader title="Chat WhatsApp" subtitle="Central de atendimento integrada ao WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
+        <PageHeader title="Conversas" subtitle="Central de atendimento integrada ao WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-4">
@@ -111,7 +105,7 @@ export default function ClienteChat() {
             <Badge variant="outline" className="gap-1.5 mb-3 text-orange-400 border-orange-500/30">
               WhatsApp não conectado
             </Badge>
-            <p className="text-sm font-medium">Configure o WhatsApp para usar o chat</p>
+            <p className="text-sm font-medium">Configure o WhatsApp para usar as conversas</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-md mb-4">
               Vá em Integrações para conectar sua instância Z-API e começar a enviar e receber mensagens.
             </p>
@@ -125,18 +119,18 @@ export default function ClienteChat() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4">
+    <div className="space-y-3">
       <PageHeader
-        title="Chat WhatsApp"
-        subtitle="Central de atendimento integrada ao WhatsApp"
+        title="Conversas"
+        subtitle="Central de atendimento WhatsApp"
         icon={<MessageCircle className="w-5 h-5 text-primary" />}
       />
 
-      <Card className="overflow-hidden">
-        <div className="grid grid-cols-[320px_1fr] h-[calc(100vh-220px)] min-h-[500px]">
+      <Card className="overflow-hidden border-border/50">
+        <div className="grid grid-cols-[340px_1fr] h-[calc(100vh-160px)] min-h-[500px]">
           {loadingContacts ? (
             <div className="p-4 space-y-3 border-r border-border">
-              {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+              {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[68px] rounded-lg" />)}
             </div>
           ) : (
             <ChatContactList
@@ -145,6 +139,8 @@ export default function ClienteChat() {
               onSelect={handleSelectContact}
               agents={agents}
               leadStages={leadStages}
+              isConnected={isConnected}
+              lastMessages={lastMessages}
             />
           )}
           <ChatConversation
