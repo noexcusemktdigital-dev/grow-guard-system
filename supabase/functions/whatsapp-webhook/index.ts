@@ -80,6 +80,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Skip groups and broadcast lists
+    const isGroupOrBroadcast = phone.endsWith("-group") || phone.includes("@broadcast");
+    if (isGroupOrBroadcast) {
+      return new Response(JSON.stringify({ ok: true, skipped: "group_or_broadcast" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const senderName = body.senderName || body.pushName || null;
     const messageText = body.text?.message || body.text || body.caption || null;
     const messageType = body.image ? "image" : body.audio ? "audio" : body.video ? "video" : body.document ? "document" : "text";
@@ -151,6 +159,7 @@ Deno.serve(async (req) => {
             organization_id: orgId,
             contact_id: contactId,
             message_text: messageText,
+            contact_phone: phone,
           }),
         }).catch((e) => console.error("AI reply trigger error:", e));
       } catch (e) {
