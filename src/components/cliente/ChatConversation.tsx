@@ -173,6 +173,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
     });
 
     return items;
+  }, [messages]);
 
   if (!contact) {
     return (
