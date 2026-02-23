@@ -63,9 +63,8 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!org) {
-      console.error("No org found for asaas customer:", payment.customer);
-      return new Response(JSON.stringify({ error: "Organization not found for customer" }), {
-        status: 404,
+      console.warn("No org found for asaas customer:", payment.customer);
+      return new Response(JSON.stringify({ ok: true, skipped: true, reason: "Organization not found for customer" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
