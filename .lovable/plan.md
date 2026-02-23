@@ -1,147 +1,178 @@
 
-
-# Editor de Video -- Novo Modulo no Menu Marketing
+# Editor de Video -- Timeline estilo CapCut + Legendas Automaticas
 
 ## Resumo
 
-Adicionar "Editor de Video" como um item proprio na secao **Marketing** da sidebar do cliente, com rota dedicada `/cliente/editor-video`. O editor permite upload de video gravado e oferece ferramentas de corte, legendas, inserts de imagem e musica de fundo, tudo processado no navegador via FFmpeg.wasm.
+Reformular o editor de video para ter uma **timeline visual** no estilo CapCut (simplificada), com sistema de **corte e juncao** intuitivo e **legendas geradas automaticamente** via IA (transcricao do audio do video).
 
 ---
 
-## Posicionamento na Sidebar
+## O que muda
 
-A secao Marketing ficara assim:
+### 1. Timeline Visual estilo CapCut (embaixo do player)
+
+Substituir a timeline atual (barra simples) por uma timeline horizontal rica:
 
 ```text
-MARKETING
-  Estrategia
-  Conteudos
-  Redes Sociais
-  Editor de Video   <-- NOVO (icone: Film ou Clapperboard)
-  Sites
-  Trafego Pago
++---------------------------------------------------------------+
+|  [Player de Video com overlays]                               |
++---------------------------------------------------------------+
+|  Toolbar: [Cortar] [Desfazer] [Deletar segmento]             |
++---------------------------------------------------------------+
+|  Timeline (scroll horizontal):                                |
+|  +--------+  +--------+  +--------+                          |
+|  | Seg 1  |  | Seg 2  |  | Seg 3  |   <-- thumbnails         |
+|  | 0:00   |  | 0:15   |  | 0:28   |                          |
+|  +--------+  +--------+  +--------+                          |
+|                                                               |
+|  [Legendas] ====[Texto 1]=====  ==[Texto 2]==                |
+|  [Musica]   ====================================              |
+|  [Inserts]       =====[Logo]====                              |
+|                                                               |
+|  Playhead (linha vermelha vertical que acompanha o tempo)     |
++---------------------------------------------------------------+
 ```
+
+**Tracks da timeline:**
+- **Track de Video** (principal): mostra segmentos como blocos com thumbnails geradas via canvas. Clicando no bloco, seleciona o segmento. Playhead vermelho se move conforme o video toca.
+- **Track de Legendas**: blocos coloridos representando cada legenda com texto visivel.
+- **Track de Musica**: barra unica representando o audio de fundo (se houver).
+- **Track de Inserts**: blocos para cada insert de imagem.
+
+**Interacoes:**
+- Clicar na timeline para posicionar o playhead
+- Scroll horizontal para navegar pela duracao
+- Zoom in/out da timeline (slider ou +/-)
+
+### 2. Cortes: ferramenta de dividir e remover
+
+O sistema de cortes funciona assim:
+1. Posicione o playhead onde quer cortar
+2. Clique em "Cortar" (icone tesoura) -- divide o segmento em dois
+3. Selecione o segmento indesejado e clique "Deletar" (ou tecla Delete)
+4. O video resultante sera a juncao dos segmentos restantes
+
+**Mudancas no hook `useVideoEditor`:**
+- Adicionar `selectedSegmentId` para rastrear segmento selecionado
+- `splitAtCurrentTime()` divide o segmento onde esta o playhead
+- `deleteSegment(id)` remove o segmento selecionado
+- O player pula segmentos deletados durante a reproducao (ao chegar no fim de um segmento, vai para o inicio do proximo)
+
+### 3. Legendas Automaticas via IA
+
+Em vez de adicionar legendas manualmente, o usuario clica **"Gerar Legendas"** e o sistema:
+
+1. Extrai o audio do video (via FFmpeg.wasm no browser -- converte para WAV/MP3)
+2. Envia o audio para uma edge function que usa o modelo Gemini para transcrever
+3. Recebe o texto com timestamps (formato SRT/segmentado)
+4. Popula automaticamente a lista de legendas com timing correto
+
+**Edge function `transcribe-video-audio`:**
+- Recebe o audio em base64 ou como upload
+- Usa Gemini 2.5 Flash (suporta audio) via LOVABLE_API_KEY
+- Retorna array de `{ text, startTime, endTime }`
+
+**Painel de legendas apos geracao:**
+- Lista editavel (o usuario pode corrigir texto, ajustar timing, mudar estilo)
+- Botao "Gerar Legendas" com loading state
+- Opcao de limpar todas e regerar
 
 ---
 
-## Nova Rota e Pagina
+## Arquivos
 
-| Item | Valor |
-|------|-------|
-| Rota | `/cliente/editor-video` |
-| Pagina | `src/pages/cliente/ClienteEditorVideo.tsx` |
-| Icone sidebar | `Film` (Lucide) |
+### Novos
 
-### Pagina Principal (`ClienteEditorVideo.tsx`)
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/components/video/EditorTimeline.tsx` | Timeline visual multi-track com playhead, zoom, scroll horizontal |
+| `src/components/video/TimelineTrack.tsx` | Componente generico de track (video, legendas, musica, inserts) |
+| `src/components/video/TimelineToolbar.tsx` | Barra de ferramentas (Cortar, Deletar, Desfazer, Zoom) |
+| `supabase/functions/transcribe-video-audio/index.ts` | Edge function para transcricao via Gemini |
 
-Tela com dois estados:
+### Modificados
 
-**Estado 1 -- Sem video carregado:**
-- Area de drag-and-drop grande e centralizada para upload de video
-- Aceita MP4, MOV, WebM (max 500MB)
-- Texto: "Arraste seu video aqui ou clique para selecionar"
-- Card lateral com dica: "Grave seguindo o roteiro gerado em Conteudos e edite aqui"
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/hooks/useVideoEditor.ts` | Adicionar `selectedSegmentId`, `splitAtCurrentTime`, `deleteSelectedSegment`, logica de playback que pula segmentos removidos, funcao `generateSubtitles` |
+| `src/components/video/VideoEditor.tsx` | Substituir layout: player em cima, timeline embaixo (full width), painel lateral com tabs (Legendas, Inserts, Musica). Remover tab "Cortes" (agora e via toolbar da timeline) |
+| `src/components/video/VideoTimeline.tsx` | Sera substituido pelo novo `EditorTimeline.tsx` |
+| `src/components/video/SubtitlePanel.tsx` | Adicionar botao "Gerar Legendas Automaticas" com estado de loading, manter edicao manual como fallback |
+| `src/components/video/VideoPlayer.tsx` | Adicionar logica para pular segmentos deletados durante reproducao |
 
-**Estado 2 -- Video carregado (Editor ativo):**
-- Layout fullscreen dividido em 3 areas (preview, timeline, painel de edicao)
+### Removidos
 
----
-
-## Componentes do Editor
-
-### Layout do Editor
-
-```text
-+--------------------------------------------------+
-|  [Player de Video]          |  [Painel Lateral]   |
-|  Preview com controles      |  Tabs:              |
-|  play/pause/seek            |  Cortes | Legendas  |
-|                             |  Inserts | Musica   |
-+--------------------------------------------------+
-|  [Timeline Visual]                                |
-|  Barra com handles de corte e segmentos           |
-+--------------------------------------------------+
-|  [Cancelar]                    [Exportar Video]   |
-+--------------------------------------------------+
-```
-
-### 1. Player de Video (`VideoPlayer.tsx`)
-- Player HTML5 nativo com controles de play/pause/seek
-- Overlay de legendas e inserts em tempo real (CSS, sem FFmpeg ate exportar)
-- Indicador de tempo atual sincronizado com timeline
-
-### 2. Timeline de Cortes (`VideoTimeline.tsx`)
-- Barra visual da duracao total
-- Handles arrastáveis para definir inicio/fim de cada segmento
-- Botao "Adicionar Corte" no ponto atual
-- Lista de segmentos reordenaveis
-- Botao para remover segmento
-
-### 3. Painel de Legendas (`SubtitlePanel.tsx`)
-- Lista de legendas com: texto, tempo inicio, tempo fim, posicao (topo/centro/baixo)
-- 3 estilos pre-definidos: Classico (branco+sombra), Destaque (fundo colorido), Minimalista
-- Botao "Adicionar Legenda" no tempo atual do player
-
-### 4. Painel de Inserts (`InsertPanel.tsx`)
-- Upload de imagem (logo, selo, watermark)
-- Posicao: canto superior, inferior, centro, tela cheia
-- Tempo de inicio e fim
-- Slider de opacidade
-
-### 5. Painel de Musica (`MusicPanel.tsx`)
-- Upload de audio (MP3, WAV, max 20MB)
-- Slider de volume (0-100%)
-- Opcao: manter audio original + musica, ou substituir audio
-- Trim automatico do audio para caber no video
-
-### 6. Exportacao (`VideoExporter.tsx`)
-- Barra de progresso durante processamento
-- Cadeia de filtros FFmpeg: cortes (concat), legendas (drawtext), inserts (overlay), audio (amix)
-- Saida: MP4 H.264 1080p
-- Download automatico + opcao de salvar no storage
+| Arquivo | Motivo |
+|---------|--------|
+| `src/components/video/VideoTimeline.tsx` | Substituido por `EditorTimeline.tsx` |
 
 ---
 
 ## Detalhes Tecnicos
 
-### Nova Dependencia
+### EditorTimeline -- Layout
 
-- `@ffmpeg/ffmpeg` e `@ffmpeg/util` para processamento client-side via WebAssembly
+- Container com `overflow-x: auto` para scroll horizontal
+- Largura total calculada: `duration * pixelsPerSecond` (ex: 60s * 20px = 1200px)
+- Zoom controlado por slider que altera `pixelsPerSecond` (10-80px)
+- Playhead: div absoluto posicionado em `currentTime * pixelsPerSecond`, linha vermelha vertical full-height
+- Clique na timeline: calcula tempo a partir da posicao X do click
 
-### Arquivos Novos
+### Thumbnails dos segmentos
 
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/pages/cliente/ClienteEditorVideo.tsx` | Pagina principal com upload e estado do editor |
-| `src/components/video/VideoEditor.tsx` | Container principal do editor (layout 3 areas) |
-| `src/components/video/VideoPlayer.tsx` | Player HTML5 com overlays CSS |
-| `src/components/video/VideoTimeline.tsx` | Timeline visual com handles de corte |
-| `src/components/video/SubtitlePanel.tsx` | CRUD de legendas com estilos |
-| `src/components/video/InsertPanel.tsx` | CRUD de inserts de imagem |
-| `src/components/video/MusicPanel.tsx` | Upload e mix de audio |
-| `src/components/video/VideoExporter.tsx` | Logica de exportacao FFmpeg |
-| `src/hooks/useVideoEditor.ts` | Hook central de estado (cuts, subtitles, inserts, music, videoFile) |
+- Geradas via `<canvas>` + `video.currentTime` seek
+- 1 thumbnail por segmento (no centro temporal do segmento)
+- Armazenadas em state como data URLs
+- Geradas de forma lazy apos o video carregar
 
-### Arquivos Modificados
+### Playback inteligente (pular segmentos removidos)
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/components/ClienteSidebar.tsx` | Adicionar item "Editor de Video" com icone `Film` na secao `marketingSection` |
-| `src/App.tsx` | Adicionar rota `/cliente/editor-video` com lazy import da pagina |
+No `onTimeUpdate` do player:
+- Verificar se o currentTime esta dentro de algum segmento ativo
+- Se nao esta (caiu em um "buraco" entre segmentos), pular para o inicio do proximo segmento
+- Se chegou ao fim do ultimo segmento, pausar
 
-### Cota por Plano
+### Transcricao de audio (Edge Function)
 
-O editor de video em si nao tem limite de uso (o cliente edita quantas vezes quiser). O limite ja existe nos conteudos gerados e artes. O editor e uma ferramenta, nao um gerador.
+```text
+POST /transcribe-video-audio
+Body: { audioBase64: string, mimeType: "audio/wav" }
+Response: { subtitles: [{ text, startTime, endTime }] }
+```
 
-### Storage (bucket para videos editados)
+- Usa Gemini 2.5 Flash que aceita input de audio
+- Prompt solicita transcricao com timestamps em formato estruturado
+- Limite de audio: ~10 min (para caber no contexto do modelo)
 
-Criar bucket `edited-videos` para salvar opcionalmente os videos finalizados, com RLS para que apenas o dono possa fazer upload/leitura.
+### Extracao de audio no browser
 
-### Limitacoes e Avisos
+Usando FFmpeg.wasm ja instalado:
+1. Carregar video no filesystem virtual
+2. Comando: `ffmpeg -i input.mp4 -vn -acodec pcm_s16le -ar 16000 -ac 1 output.wav`
+3. Ler o WAV resultante como base64
+4. Enviar para a edge function
 
-- Banner de compatibilidade: funciona melhor em Chrome/Edge (SharedArrayBuffer)
-- Safari tem suporte limitado
-- Videos > 500MB podem causar problemas de memoria
-- Primeira carga do FFmpeg.wasm: ~30MB (cached depois)
-- Processamento pode levar 1-5 minutos dependendo do tamanho
+---
 
+## Layout final do editor
+
+```text
++--------------------------------------------------+
+|  [<- Voltar]  Editor de Video        [Exportar]   |
++--------------------------------------------------+
+|                                  |                |
+|  [Player de Video]               |  [Painel]      |
+|  Preview com overlays            |  Tabs:         |
+|  de legendas e inserts           |  Legendas      |
+|                                  |  Inserts       |
+|                                  |  Musica        |
++----------------------------------+                |
+|  [Toolbar: Cortar | Del | Zoom]  |                |
++----------------------------------+----------------+
+|  [Timeline multi-track full width]                |
+|  Video:    [===Seg1===][===Seg2===][===Seg3===]   |
+|  Legendas: [==Txt1==]    [==Txt2==]               |
+|  Musica:   [================================]     |
+|  Inserts:       [==Logo==]                        |
++--------------------------------------------------+
+```
