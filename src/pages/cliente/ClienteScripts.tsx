@@ -128,9 +128,9 @@ export default function ClienteScripts() {
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mb-4" />
             <p className="text-sm font-medium">Nenhum script cadastrado</p>
-            <p className="text-xs text-muted-foreground mt-1 mb-4">Crie scripts com IA ou manualmente para padronizar suas abordagens comerciais.</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-4">Crie scripts com IA ou escreva manualmente para padronizar suas abordagens comerciais.</p>
             <Button size="sm" onClick={() => setShowCreate(true)}>
-              <Sparkles className="w-4 h-4 mr-1" /> Criar com IA
+              <Plus className="w-4 h-4 mr-1" /> Novo Script
             </Button>
           </CardContent>
         </Card>
