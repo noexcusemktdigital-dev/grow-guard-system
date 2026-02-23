@@ -12,7 +12,7 @@ export default function FranqueadoContratos() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <Skeleton className="h-10 w-64" />
         <div className="grid grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
       </div>
@@ -23,7 +23,7 @@ export default function FranqueadoContratos() {
   const ativos = items.filter(c => c.status === "active").length;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader title="Meus Contratos" subtitle="Gerencie contratos de clientes da unidade" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

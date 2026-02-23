@@ -145,7 +145,7 @@ export default function ClienteDashboard() {
 
   if (leadsLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader title="Dashboard" subtitle="Análises e métricas" icon={<BarChart3 className="w-5 h-5 text-primary" />} />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
       </div>
@@ -153,7 +153,7 @@ export default function ClienteDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Relatórios"
         subtitle="Analise e exporte relatórios das suas frentes comerciais"

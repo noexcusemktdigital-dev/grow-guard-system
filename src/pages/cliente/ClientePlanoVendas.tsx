@@ -863,7 +863,7 @@ export default function ClientePlanoVendas() {
      ══════════════════════════════════════════════ */
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Plano de Vendas"
         subtitle="Consultoria comercial interativa para diagnosticar e evoluir seu comercial"

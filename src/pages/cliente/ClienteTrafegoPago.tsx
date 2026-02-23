@@ -143,7 +143,7 @@ export default function ClienteTrafegoPago() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Tráfego Pago"
         subtitle="Base de conhecimento, campanhas e tutoriais por plataforma"

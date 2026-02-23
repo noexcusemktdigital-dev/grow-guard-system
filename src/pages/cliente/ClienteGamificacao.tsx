@@ -93,7 +93,7 @@ export default function ClienteGamificacao() {
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader title="Gamificação" subtitle="Seus pontos, medalhas e ranking" icon={<Trophy className="w-5 h-5 text-primary" />} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Skeleton className="h-40 rounded-xl" />
@@ -104,7 +104,7 @@ export default function ClienteGamificacao() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader title="Gamificação" subtitle="Seus pontos, evolução e ranking" icon={<Trophy className="w-5 h-5 text-primary" />} />
 
       {/* Evolution Card */}

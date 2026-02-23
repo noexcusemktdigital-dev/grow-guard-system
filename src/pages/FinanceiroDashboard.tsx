@@ -19,7 +19,7 @@ export default function FinanceiroDashboard() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-[1400px]">
+      <div className="w-full space-y-6">
         <Skeleton className="h-12 w-full" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
@@ -32,7 +32,7 @@ export default function FinanceiroDashboard() {
   const hasData = (revenues ?? []).length > 0 || (expenses ?? []).length > 0;
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="page-header-title">Gestão Financeira</h1>
         <p className="text-sm text-muted-foreground mt-1">Resumo geral + Projeção Inteligente</p>

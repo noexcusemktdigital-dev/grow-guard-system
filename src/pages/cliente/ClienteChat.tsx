@@ -95,7 +95,7 @@ export default function ClienteChat() {
 
   if (!isConnected) {
     return (
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader title="Conversas" subtitle="Central de atendimento integrada ao WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-20 text-center">

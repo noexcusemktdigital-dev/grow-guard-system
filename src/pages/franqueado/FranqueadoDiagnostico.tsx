@@ -4,7 +4,7 @@ import { Inbox, ClipboardCheck } from "lucide-react";
 
 export default function FranqueadoDiagnostico() {
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader title="Diagnóstico NOE" subtitle="Formulário estruturado de diagnóstico do cliente" />
 
       <div className="text-center py-16">

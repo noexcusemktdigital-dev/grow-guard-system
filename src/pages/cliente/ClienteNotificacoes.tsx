@@ -28,7 +28,7 @@ export default function ClienteNotificacoes() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <PageHeader title="Notificações" subtitle="Central de alertas e atualizações" icon={<Bell className="w-5 h-5 text-primary" />} />
         <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
       </div>
@@ -36,7 +36,7 @@ export default function ClienteNotificacoes() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Notificações"
         subtitle="Central de alertas e atualizações"

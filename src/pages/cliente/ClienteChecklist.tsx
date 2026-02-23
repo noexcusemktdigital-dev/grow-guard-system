@@ -78,7 +78,7 @@ export default function ClienteChecklist() {
 
   if (isLoading || generating) {
     return (
-      <div className="max-w-3xl mx-auto space-y-5">
+      <div className="w-full space-y-5">
         <PageHeader title="Checklist do Dia" subtitle="Suas tarefas operacionais para hoje" icon={<CheckSquare className="w-5 h-5 text-primary" />} />
         <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
       </div>
@@ -88,7 +88,7 @@ export default function ClienteChecklist() {
   const pendingGroups = groupByCategory(pendingItems);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
       <PageHeader
         title="Checklist do Dia"
         subtitle="Suas tarefas operacionais para hoje"

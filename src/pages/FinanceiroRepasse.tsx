@@ -65,7 +65,7 @@ export default function FinanceiroRepasse() {
   const totalPaid = charges?.filter(c => c.status === "paid").reduce((s, c) => s + Number(c.total_amount), 0) ?? 0;
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-header-title">Repasse</h1>

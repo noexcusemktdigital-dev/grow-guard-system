@@ -103,7 +103,7 @@ export default function Home() {
   const isLoading = loadingMsg || loadingAnn || loadingEv;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title={`${saudacao}, ${userName}`}
         subtitle={`Franqueadora · ${hojeCapitalized}`}

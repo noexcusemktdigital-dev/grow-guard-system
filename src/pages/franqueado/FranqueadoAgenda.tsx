@@ -18,7 +18,7 @@ export default function FranqueadoAgenda() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-96" />
       </div>
@@ -30,7 +30,7 @@ export default function FranqueadoAgenda() {
     .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Calendar className="w-5 h-5 text-primary" />

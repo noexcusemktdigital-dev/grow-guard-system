@@ -616,7 +616,7 @@ export default function ClienteRedesSociais() {
   const startPadding = (getDay(monthStart) + 6) % 7;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Redes Sociais"
         subtitle="Gere artes profissionais com IA e edite textos antes de publicar"
