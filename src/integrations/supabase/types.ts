@@ -394,6 +394,7 @@ export type Database = {
           priority: string
           published_at: string | null
           target_roles: string[] | null
+          target_unit_ids: string[] | null
           title: string
           type: string
           updated_at: string
@@ -408,6 +409,7 @@ export type Database = {
           priority?: string
           published_at?: string | null
           target_roles?: string[] | null
+          target_unit_ids?: string[] | null
           title: string
           type?: string
           updated_at?: string
@@ -422,6 +424,7 @@ export type Database = {
           priority?: string
           published_at?: string | null
           target_roles?: string[] | null
+          target_unit_ids?: string[] | null
           title?: string
           type?: string
           updated_at?: string
@@ -432,6 +435,38 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_event_invites: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_invites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
             referencedColumns: ["id"]
           },
         ]
@@ -448,10 +483,13 @@ export type Database = {
           id: string
           location: string | null
           organization_id: string
+          readonly: boolean | null
           recurrence: string | null
           start_at: string
           title: string
+          unit_id: string | null
           updated_at: string
+          visibility: string | null
         }
         Insert: {
           all_day?: boolean | null
@@ -464,10 +502,13 @@ export type Database = {
           id?: string
           location?: string | null
           organization_id: string
+          readonly?: boolean | null
           recurrence?: string | null
           start_at: string
           title: string
+          unit_id?: string | null
           updated_at?: string
+          visibility?: string | null
         }
         Update: {
           all_day?: boolean | null
@@ -480,10 +521,13 @@ export type Database = {
           id?: string
           location?: string | null
           organization_id?: string
+          readonly?: boolean | null
           recurrence?: string | null
           start_at?: string
           title?: string
+          unit_id?: string | null
           updated_at?: string
+          visibility?: string | null
         }
         Relationships: [
           {
@@ -498,6 +542,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
