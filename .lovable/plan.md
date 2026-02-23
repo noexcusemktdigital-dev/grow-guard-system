@@ -1,78 +1,32 @@
 
 
-# Separar Diagnostico e Metas + Adicionar Graficos de Acompanhamento
+# Metas como aba dentro de Plano de Vendas
 
 ## Resumo
 
-O Diagnostico Comercial e as Metas estao atualmente misturados na mesma pagina (`ClientePlanoVendas`). Precisam ser separados em paginas independentes. A pagina de Metas precisa ter graficos de acompanhamento que puxam dados reais do CRM.
+Mover todo o conteudo da pagina separada `ClienteMetas.tsx` para dentro de `ClientePlanoVendas.tsx` como uma segunda aba. A pagina tera duas abas: **Diagnostico** e **Metas**.
 
 ---
 
-## Mudancas na Sidebar
+## Mudancas
 
-```text
-VENDAS (antes)                    VENDAS (depois)
-  Plano de Vendas                   Plano de Vendas (diagnostico)
-  CRM                              Metas            <-- NOVA entrada
-  Chat                             CRM
-  ...                              Chat
-                                   ...
-```
+### 1. `ClientePlanoVendas.tsx` -- Adicionar sistema de abas
 
-Adicionar um item "Metas" com icone `BarChart3` na sidebar, apontando para `/cliente/metas`.
+Usar `<Tabs>` com duas abas:
+- **Diagnostico**: conteudo atual da pagina (consultoria interativa, resultados, historico)
+- **Metas**: todo o conteudo que esta em `ClienteMetas.tsx` (filtros de escopo, KPIs, graficos, goal cards, historico de metas, dialog nova meta)
 
----
+O header "Plano de Vendas" fica acima das abas. As abas ficam logo abaixo.
 
-## Pagina `ClientePlanoVendas.tsx` -- Somente Diagnostico
+### 2. Remover pagina separada e rota
 
-Remover toda a secao de Metas (linhas ~992-1234) desta pagina. Ela ficara apenas com:
-- Header "Plano de Vendas"
-- Diagnostico interativo (perguntas em secoes)
-- Resultado do diagnostico (termometro, radar, insights, plano de acao, projecoes)
-- Historico de diagnosticos
+- Remover rota `/cliente/metas` do `App.tsx`
+- Remover import de `ClienteMetas`
+- Deletar arquivo `src/pages/cliente/ClienteMetas.tsx`
 
----
+### 3. Remover "Metas" da sidebar
 
-## Nova Pagina `ClienteMetas.tsx` -- Metas com Graficos
-
-Pagina dedicada com:
-
-### 1. Header + Filtros (sem abas)
-- Titulo "Metas Comerciais" com subtitulo e mes atual
-- Filtros inline: [Todas] [Empresa] [Equipe] [Individual]
-- Botao "Nova Meta"
-
-### 2. KPI Summary (4 cards)
-- Metas Ativas / Batidas / Progresso Medio / Alta Prioridade
-- Igual ao que ja existe, mantido
-
-### 3. Graficos de Acompanhamento (NOVO)
-
-Secao com 2-3 graficos que puxam dados reais do CRM via `useGoalProgress`:
-
-**Grafico 1 -- Progresso das Metas (BarChart horizontal)**
-- Cada barra representa uma meta ativa
-- Barra mostra valor atual vs valor alvo
-- Cores: verde (>=80%), amarelo (>=50%), vermelho (<50%)
-
-**Grafico 2 -- Evolucao Diaria do Mes (AreaChart)**
-- Eixo X: dias do mes (1-28/30/31)
-- Linhas: progresso acumulado de cada meta (dados vindos de `crm_leads.created_at` e `crm_leads.won_at`)
-- Linha pontilhada mostrando o ritmo ideal (linear do 0 ao target)
-
-**Grafico 3 -- Comparativo por Escopo (BarChart agrupado)**
-- Agrupa metas por escopo (Empresa, Equipe, Individual)
-- Mostra media de progresso por grupo
-
-### 4. Lista de Goal Cards
-- Cards visuais com progress ring, barra, status, ritmo (GoalCard existente)
-- Sem abas, tudo junto, filtrado pelos botoes de escopo
-
-### 5. Historico de Metas (Collapsible)
-- Metas de meses anteriores, igual ao existente
-
-### 6. Dialog Nova Meta
-- Migrado da pagina atual sem alteracoes
+- Remover o item `{ label: "Metas", icon: BarChart3, path: "/cliente/metas" }` de `vendasSection` em `ClienteSidebar.tsx`
 
 ---
 
@@ -82,25 +36,32 @@ Secao com 2-3 graficos que puxam dados reais do CRM via `useGoalProgress`:
 
 | Arquivo | Acao |
 |---------|------|
-| `src/pages/cliente/ClienteMetas.tsx` | **NOVO** -- Pagina dedicada de metas com graficos |
-| `src/pages/cliente/ClientePlanoVendas.tsx` | **MODIFICAR** -- Remover secao de metas (linhas 992-1234), manter somente diagnostico |
-| `src/components/ClienteSidebar.tsx` | **MODIFICAR** -- Adicionar item "Metas" na secao de vendas |
-| `src/App.tsx` | **MODIFICAR** -- Adicionar rota `/cliente/metas` |
+| `src/pages/cliente/ClientePlanoVendas.tsx` | Adicionar `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent`, importar hooks e componentes de metas, mover todo o conteudo de `ClienteMetas` para dentro da aba "Metas" |
+| `src/pages/cliente/ClienteMetas.tsx` | **DELETAR** |
+| `src/components/ClienteSidebar.tsx` | Remover item "Metas" da `vendasSection` |
+| `src/App.tsx` | Remover rota `/cliente/metas` e import de `ClienteMetas` |
 
-### Graficos
+### Imports adicionais em ClientePlanoVendas
 
-Usarao `recharts` (ja instalado):
-- `BarChart` horizontal para progresso de cada meta
-- `AreaChart` para evolucao diaria
-- `BarChart` agrupado para comparativo por escopo
+Trazer de `ClienteMetas.tsx`:
+- `useActiveGoals`, `useHistoricGoals`, `useGoalMutations` de `useGoals`
+- `useGoalProgress` de `useGoalProgress`
+- `useCrmTeams` de `useCrmTeams`
+- `useCrmTeam` de `useCrmTeam`
+- `GoalCard` de `metas/GoalCard`
+- `GoalProgressRing` de `metas/GoalProgressRing`
+- `BarChart`, `Bar`, `Cell`, `Legend`, `ReferenceLine` de `recharts`
 
-Os dados vem do hook `useGoalProgress` que ja calcula `currentValue`, `percent`, `pacePerDay`, `remaining` e `daysLeft` a partir dos dados reais de `crm_leads` e `crm_activities`.
+### Layout final
 
-### Hook useGoalProgress
-
-Ja existe e retorna dados suficientes para os graficos. Nenhuma alteracao necessaria no hook.
-
-### Nenhuma migracao SQL necessaria
-
-Todas as colunas necessarias ja existem na tabela `goals`.
+```text
++--------------------------------------------+
+| PLANO DE VENDAS                            |
+| [Diagnostico]  [Metas]   <-- abas          |
++--------------------------------------------+
+|                                            |
+|  (conteudo da aba selecionada)             |
+|                                            |
++--------------------------------------------+
+```
 
