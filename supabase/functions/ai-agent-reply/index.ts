@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     // Get contact and check attending_mode
     const { data: contact } = await adminClient
       .from("whatsapp_contacts")
-      .select("*, agent_id, attending_mode, phone")
+      .select("*, agent_id, attending_mode, phone, crm_lead_id")
       .eq("id", contact_id)
       .eq("organization_id", organization_id)
       .single();
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find active AI agent for this org (use contact's agent_id or first active)
+    // Find active AI agent for this org
     let agentQuery = adminClient
       .from("client_ai_agents")
       .select("*")
@@ -69,12 +69,60 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If contact has no agent_id assigned, assign this one
+    // Assign agent if not set
     if (!contact.agent_id) {
       await adminClient
         .from("whatsapp_contacts")
         .update({ agent_id: agent.id })
         .eq("id", contact_id);
+    }
+
+    // Fetch CRM lead context if linked
+    let leadContext = "";
+    let leadData: any = null;
+    let funnelStages: any[] = [];
+
+    if (contact.crm_lead_id) {
+      const { data: lead } = await adminClient
+        .from("crm_leads")
+        .select("id, name, stage, value, tags, funnel_id")
+        .eq("id", contact.crm_lead_id)
+        .single();
+
+      if (lead) {
+        leadData = lead;
+
+        // Fetch funnel stages
+        if (lead.funnel_id) {
+          const { data: funnel } = await adminClient
+            .from("crm_funnels")
+            .select("stages")
+            .eq("id", lead.funnel_id)
+            .single();
+          if (funnel?.stages && Array.isArray(funnel.stages)) {
+            funnelStages = funnel.stages;
+          }
+        }
+
+        const stageNames = funnelStages.map((s: any) => s.label || s.key).join(", ");
+        leadContext = `\n\nInformações do lead vinculado:
+- Nome: ${lead.name}
+- Etapa atual: ${lead.stage}
+- Valor potencial: R$ ${lead.value || 0}
+- Tags: ${(lead.tags || []).join(", ") || "nenhuma"}
+${stageNames ? `- Etapas disponíveis: ${stageNames}` : ""}
+
+Você pode executar ações automáticas incluindo tags especiais no FINAL da sua resposta (o usuário NÃO verá essas tags):
+- Para mover o lead de etapa: [AI_ACTION:MOVE_STAGE:nome_da_etapa]
+- Para transferir para atendimento humano: [AI_ACTION:HANDOFF:motivo]
+- Para atualizar valor do lead: [AI_ACTION:UPDATE_LEAD:value=10000]
+- Para adicionar tag: [AI_ACTION:UPDATE_LEAD:tags_add=nome_da_tag]
+
+Use essas ações quando a conversa indicar mudança de status. Por exemplo:
+- Cliente confirmou interesse → mova para etapa de proposta/diagnóstico
+- Cliente quer falar com humano → faça handoff
+- Cliente informou orçamento → atualize o valor`;
+      }
     }
 
     // Fetch last 20 messages for context
@@ -109,6 +157,7 @@ Deno.serve(async (req) => {
       systemPrompt += `\n\nBase de conhecimento:\n${kbText}`;
     }
 
+    systemPrompt += leadContext;
     systemPrompt += "\n\nResponda de forma concisa e natural, como em uma conversa de WhatsApp. Use parágrafos curtos.";
 
     const model = promptConfig.model || "google/gemini-3-flash-preview";
@@ -135,7 +184,6 @@ Deno.serve(async (req) => {
       const errText = await aiResponse.text();
       console.error("AI gateway error:", status, errText);
 
-      // Log the failure
       await adminClient.from("ai_conversation_logs").insert({
         organization_id,
         contact_id,
@@ -153,7 +201,7 @@ Deno.serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    const replyText = aiData.choices?.[0]?.message?.content || "";
+    let replyText = aiData.choices?.[0]?.message?.content || "";
     const tokensUsed = aiData.usage?.total_tokens || 0;
 
     if (!replyText) {
@@ -162,7 +210,98 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Send reply via Z-API
+    // Parse and execute AI actions
+    const actionRegex = /\[AI_ACTION:([A-Z_]+):([^\]]+)\]/g;
+    const actions: { type: string; value: string }[] = [];
+    let match;
+    while ((match = actionRegex.exec(replyText)) !== null) {
+      actions.push({ type: match[1], value: match[2] });
+    }
+
+    // Remove action tags from reply text
+    const cleanReply = replyText.replace(/\[AI_ACTION:[^\]]+\]/g, "").trim();
+
+    // Execute actions
+    for (const action of actions) {
+      try {
+        if (action.type === "MOVE_STAGE" && leadData) {
+          // Find matching stage key
+          const targetStage = funnelStages.find(
+            (s: any) => (s.label || "").toLowerCase() === action.value.toLowerCase() || (s.key || "") === action.value
+          );
+          const stageKey = targetStage?.key || action.value;
+
+          await adminClient
+            .from("crm_leads")
+            .update({ stage: stageKey })
+            .eq("id", leadData.id);
+
+          // Log activity
+          await adminClient.from("crm_activities").insert({
+            organization_id,
+            lead_id: leadData.id,
+            type: "note",
+            title: `IA moveu lead para etapa "${targetStage?.label || stageKey}"`,
+            description: `Ação automática da IA durante conversa WhatsApp`,
+          });
+
+          console.log(`AI ACTION: Moved lead ${leadData.id} to stage ${stageKey}`);
+        }
+
+        if (action.type === "HANDOFF") {
+          // Switch to human mode
+          await adminClient
+            .from("whatsapp_contacts")
+            .update({ attending_mode: "human" })
+            .eq("id", contact_id);
+
+          // Create notification for all org members (simplified: notify admins)
+          // Get org members
+          const { data: members } = await adminClient
+            .from("organization_memberships")
+            .select("user_id")
+            .eq("organization_id", organization_id);
+
+          if (members) {
+            const notifications = members.map((m: any) => ({
+              organization_id,
+              user_id: m.user_id,
+              title: "IA solicitou transbordo",
+              message: `Motivo: ${action.value}. Contato: ${contact.name || contact.phone}`,
+              type: "warning",
+              action_url: "/cliente/chat",
+            }));
+
+            await adminClient.from("client_notifications").insert(notifications);
+          }
+
+          console.log(`AI ACTION: Handoff requested for contact ${contact_id} - reason: ${action.value}`);
+        }
+
+        if (action.type === "UPDATE_LEAD" && leadData) {
+          const [field, val] = action.value.split("=");
+          if (field === "value") {
+            await adminClient
+              .from("crm_leads")
+              .update({ value: parseFloat(val) })
+              .eq("id", leadData.id);
+          } else if (field === "tags_add") {
+            const currentTags = leadData.tags || [];
+            if (!currentTags.includes(val)) {
+              await adminClient
+                .from("crm_leads")
+                .update({ tags: [...currentTags, val] })
+                .eq("id", leadData.id);
+            }
+          }
+          console.log(`AI ACTION: Updated lead ${leadData.id} - ${action.value}`);
+        }
+      } catch (actionErr) {
+        console.error(`Error executing AI action ${action.type}:`, actionErr);
+      }
+    }
+
+    // Send reply via Z-API (use clean text without action tags)
     const { data: instance } = await adminClient
       .from("whatsapp_instances")
       .select("*")
@@ -185,22 +324,27 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
         "Client-Token": instance.client_token,
       },
-      body: JSON.stringify({ phone: cleanPhone, message: replyText }),
+      body: JSON.stringify({ phone: cleanPhone, message: cleanReply }),
     });
 
     const zapiData = await zapiRes.json();
     const messageStatus = zapiRes.ok ? "sent" : "failed";
 
-    // Save outbound message
+    // Save outbound message (with clean text)
     await adminClient.from("whatsapp_messages").insert({
       organization_id,
       contact_id,
       message_id_zapi: zapiData?.messageId || null,
       direction: "outbound",
       type: "text",
-      content: replyText,
+      content: cleanReply,
       status: messageStatus,
-      metadata: { ...zapiData, ai_generated: true, agent_id: agent.id },
+      metadata: {
+        ...zapiData,
+        ai_generated: true,
+        agent_id: agent.id,
+        ai_actions: actions.length > 0 ? actions : undefined,
+      },
     });
 
     // Update contact last_message_at
@@ -215,12 +359,12 @@ Deno.serve(async (req) => {
       contact_id,
       agent_id: agent.id,
       input_message: message_text,
-      output_message: replyText,
+      output_message: cleanReply,
       tokens_used: tokensUsed,
       model,
     });
 
-    return new Response(JSON.stringify({ success: true, reply: replyText }), {
+    return new Response(JSON.stringify({ success: true, reply: cleanReply, actions }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

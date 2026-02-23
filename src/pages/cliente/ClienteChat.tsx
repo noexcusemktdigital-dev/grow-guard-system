@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MessageCircle, Settings2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,8 @@ import {
   useMarkContactRead,
   type WhatsAppContact,
 } from "@/hooks/useWhatsApp";
+import { useClienteAgents } from "@/hooks/useClienteAgents";
+import { useCrmLeads } from "@/hooks/useClienteCrm";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -26,10 +28,33 @@ export default function ClienteChat() {
   const [selectedContact, setSelectedContact] = useState<WhatsAppContact | null>(null);
   const { data: messages = [], isLoading: loadingMessages } = useWhatsAppMessages(selectedContact?.id ?? null);
   const markRead = useMarkContactRead();
+  const { data: agentsData } = useClienteAgents();
+  const { data: leadsData } = useCrmLeads();
 
   const isConnected = instance?.status === "connected";
 
-  // Mark contact as read on select
+  // Build agents list for filters
+  const agents = useMemo(() =>
+    (agentsData || [])
+      .filter((a) => a.status === "active")
+      .map((a) => ({ id: a.id, name: a.name })),
+    [agentsData]
+  );
+
+  // Build leadStages map: contactId -> stage label
+  const leadStages = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!leadsData) return map;
+    contacts.forEach((c) => {
+      const contactAny = c as any;
+      if (contactAny.crm_lead_id) {
+        const lead = leadsData.find((l) => l.id === contactAny.crm_lead_id);
+        if (lead) map.set(c.id, lead.stage);
+      }
+    });
+    return map;
+  }, [contacts, leadsData]);
+
   const handleSelectContact = (contact: WhatsAppContact) => {
     setSelectedContact(contact);
     if (contact.unread_count > 0) {
@@ -118,12 +143,15 @@ export default function ClienteChat() {
               contacts={contacts}
               selectedId={selectedContact?.id ?? null}
               onSelect={handleSelectContact}
+              agents={agents}
+              leadStages={leadStages}
             />
           )}
           <ChatConversation
             contact={selectedContact}
             messages={messages}
             isLoading={loadingMessages}
+            agents={agents}
           />
         </div>
       </Card>

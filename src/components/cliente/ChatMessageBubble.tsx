@@ -1,4 +1,5 @@
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Bot, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { WhatsAppMessage } from "@/hooks/useWhatsApp";
 
 interface Props {
@@ -18,6 +19,9 @@ export function ChatMessageBubble({ message }: Props) {
     minute: "2-digit",
   });
 
+  const metadata = (message.metadata || {}) as Record<string, unknown>;
+  const isAiGenerated = !!metadata.ai_generated;
+
   return (
     <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} mb-2`}>
       <div
@@ -27,6 +31,20 @@ export function ChatMessageBubble({ message }: Props) {
             : "bg-muted text-foreground rounded-bl-md"
         }`}
       >
+        {/* AI/Human badge for outbound messages */}
+        {isOutbound && (
+          <div className="mb-1">
+            {isAiGenerated ? (
+              <Badge variant="outline" className="text-[8px] px-1 py-0 gap-0.5 bg-purple-500/10 text-purple-300 border-purple-500/30">
+                <Bot className="w-2.5 h-2.5" /> IA
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[8px] px-1 py-0 gap-0.5 bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
+                <User className="w-2.5 h-2.5" /> Humano
+              </Badge>
+            )}
+          </div>
+        )}
         {message.content && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
         {message.media_url && (
           <a href={message.media_url} target="_blank" rel="noopener noreferrer" className="text-xs underline">

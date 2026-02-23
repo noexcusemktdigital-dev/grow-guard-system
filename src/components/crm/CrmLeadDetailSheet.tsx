@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Phone, Mail, Building2, DollarSign, Tag, Clock, CheckCircle, XCircle,
   MessageCircle, ExternalLink, CircleDot, Plus, Trash2, CalendarDays,
   PhoneCall, Video, Send, StickyNote, AlertTriangle, FileText, Copy,
-  MoreHorizontal, ArrowRight
+  MoreHorizontal, ArrowRight, Loader2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -26,6 +26,8 @@ import { useCrmTasks, useCrmTaskMutations } from "@/hooks/useCrmTasks";
 import { useCrmProposals, useCrmProposalMutations, type CrmProposal, type ProposalItem } from "@/hooks/useCrmProposals";
 import { useCrmProducts, type CrmProduct } from "@/hooks/useCrmProducts";
 import { useCrmPartners } from "@/hooks/useCrmPartners";
+import { useWhatsAppMessages, useSendWhatsAppMessage } from "@/hooks/useWhatsApp";
+import { ChatMessageBubble } from "@/components/cliente/ChatMessageBubble";
 import { useToast } from "@/hooks/use-toast";
 import type { FunnelStage } from "./CrmStageSystem";
 import { STAGE_ICONS, getColorStyle } from "./CrmStageSystem";
@@ -349,30 +351,7 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
 
         {/* === WHATSAPP TAB === */}
         <TabsContent value="whatsapp" className="mt-3">
-          {whatsappContactId ? (
-            <Card>
-              <CardContent className="p-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-emerald-500" />
-                  <div>
-                    <p className="text-sm font-medium">Conversa vinculada</p>
-                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate("/cliente/chat")}>
-                  <ExternalLink className="w-3 h-3" /> Abrir chat
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="text-center py-8">
-              <MessageCircle className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhuma conversa vinculada</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {lead.phone ? "Quando este número enviar uma mensagem, será vinculado automaticamente." : "Adicione um telefone ao lead para vincular ao WhatsApp."}
-              </p>
-            </div>
-          )}
+          <WhatsAppTab lead={lead} />
         </TabsContent>
       </Tabs>
 
@@ -667,6 +646,89 @@ function ProposalsTab({ leadId }: { leadId: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ========== WHATSAPP TAB COMPONENT ========== */
+
+function WhatsAppTab({ lead }: { lead: LeadRow }) {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const whatsappContactId = (lead as any).whatsapp_contact_id;
+  const { data: messages = [], isLoading } = useWhatsAppMessages(whatsappContactId || null);
+  const sendMutation = useSendWhatsAppMessage();
+  const [text, setText] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = () => {
+    if (!text.trim() || !whatsappContactId) return;
+    sendMutation.mutate(
+      { contactId: whatsappContactId, contactPhone: lead.phone || "", message: text.trim() },
+      {
+        onSuccess: () => setText(""),
+        onError: (err: any) =>
+          toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" }),
+      }
+    );
+  };
+
+  if (!whatsappContactId) {
+    return (
+      <div className="text-center py-8">
+        <MessageCircle className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">Nenhuma conversa vinculada</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {lead.phone ? "Quando este número enviar uma mensagem, será vinculado automaticamente." : "Adicione um telefone ao lead para vincular ao WhatsApp."}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col" style={{ maxHeight: "400px" }}>
+      {/* Header */}
+      <div className="flex items-center justify-between pb-2">
+        <p className="text-xs font-semibold">Mensagens ({messages.length})</p>
+        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => navigate("/cliente/chat")}>
+          <ExternalLink className="w-3 h-3" /> Abrir no Chat
+        </Button>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto border rounded-lg p-2 bg-muted/10 min-h-[200px] max-h-[280px]">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : messages.length === 0 ? (
+          <p className="text-center text-xs text-muted-foreground py-8">Nenhuma mensagem</p>
+        ) : (
+          messages.map((msg) => <ChatMessageBubble key={msg.id} message={msg} />)
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <form
+        onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+        className="flex items-center gap-2 mt-2"
+      >
+        <Input
+          placeholder="Enviar mensagem..."
+          className="flex-1 h-8 text-xs rounded-full"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          disabled={sendMutation.isPending}
+        />
+        <Button type="submit" size="icon" className="h-8 w-8 rounded-full shrink-0" disabled={!text.trim() || sendMutation.isPending}>
+          {sendMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+        </Button>
+      </form>
     </div>
   );
 }
