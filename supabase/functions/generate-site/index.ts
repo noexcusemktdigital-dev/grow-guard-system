@@ -13,8 +13,14 @@ serve(async (req) => {
     const body = await req.json();
     const {
       tipo, objetivo, estilo, cta_principal,
-      persona, identidade_visual, servicos, diferencial,
-      depoimentos, contato, instrucoes_adicionais, estrategia,
+      nome_empresa, slogan, descricao_negocio, segmento,
+      servicos, diferencial, faixa_preco,
+      publico_alvo, faixa_etaria, dores,
+      depoimentos, numeros_impacto, logos_clientes,
+      cores_principais, fontes_preferidas, tom_comunicacao, referencia_visual,
+      telefone, email_contato, endereco, redes_sociais, link_whatsapp,
+      instrucoes_adicionais,
+      persona, identidade_visual, estrategia,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -27,6 +33,13 @@ serve(async (req) => {
       "8pages": "Site com 8 páginas: Home, Sobre, Serviços, Portfólio, Blog, Depoimentos, FAQ, Contato",
     };
 
+    const tomDescricao: Record<string, string> = {
+      formal: "Formal e corporativo — linguagem profissional, vocabulário técnico",
+      descontraido: "Descontraído e amigável — linguagem leve, próxima do leitor",
+      tecnico: "Técnico e especializado — foco em dados, especificações, autoridade",
+      inspiracional: "Inspiracional e motivador — frases de impacto, storytelling emocional",
+    };
+
     const systemPrompt = `Você é um desenvolvedor web expert e designer UI/UX de altíssimo nível. Seu trabalho é gerar código HTML/CSS/JS COMPLETO, RESPONSIVO e PRONTO PARA PRODUÇÃO.
 
 REGRAS OBRIGATÓRIAS:
@@ -37,7 +50,7 @@ REGRAS OBRIGATÓRIAS:
 5. Design mobile-first com media queries para responsividade
 6. Textos REAIS baseados nos dados fornecidos (NUNCA lorem ipsum)
 7. Cores e fontes do cliente aplicadas como CSS variables
-8. Animações suaves com CSS (hover effects, transitions)
+8. Animações suaves com CSS (hover effects, transitions, scroll animations)
 9. Meta tags SEO (title, description, og:tags)
 10. HTML5 semântico (header, main, section, footer, nav)
 11. Formulário de contato estilizado (sem backend, apenas visual)
@@ -45,7 +58,13 @@ REGRAS OBRIGATÓRIAS:
 13. Se for site multi-página, gere TODAS as páginas em um único HTML usando navegação por âncoras/seções
 14. Inclua smooth scrolling
 15. Adicione ícones usando SVG inline quando necessário
-16. O site deve parecer profissional e moderno, como se tivesse sido feito por uma agência top`;
+16. O site deve parecer profissional e moderno, como se tivesse sido feito por uma agência top
+17. Use o nome real da empresa em todos os lugares (header, footer, title, meta tags)
+18. Se houver slogan, use no hero
+19. Se houver depoimentos, crie cards de testimonial com aspas e nome do autor
+20. Se houver números de impacto, crie uma seção de "Números" com counters visuais grandes
+21. Se houver link de WhatsApp, use nos botões de CTA como href
+22. Inclua seção de FAQ quando o tipo permitir`;
 
     const userPrompt = `Gere um site completo com as seguintes especificações:
 
@@ -54,28 +73,44 @@ OBJETIVO: ${objetivo}
 ESTILO VISUAL: ${estilo}
 CTA PRINCIPAL: ${cta_principal || "Entre em contato"}
 
-DADOS DA EMPRESA:
-- Serviços/Produtos: ${servicos || "Não informado"}
+EMPRESA:
+- Nome: ${nome_empresa || "Não informado"}
+- Slogan: ${slogan || "Não informado"}
+- Descrição: ${descricao_negocio || "Não informado"}
+- Segmento: ${segmento || "Não informado"}
+
+SERVIÇOS/PRODUTOS:
+- Serviços: ${servicos || "Não informado"}
 - Diferencial: ${diferencial || "Não informado"}
+- Faixa de preço: ${faixa_preco || "Não informado"}
+
+PÚBLICO-ALVO:
+- Cliente ideal: ${publico_alvo || "Não informado"}
+- Faixa etária: ${faixa_etaria || "Não informado"}
+- Dores que resolve: ${dores || "Não informado"}
+
+PROVA SOCIAL:
 - Depoimentos: ${depoimentos || "Não informado"}
-- Contato: ${contato || "Não informado"}
+- Números de impacto: ${numeros_impacto || "Não informado"}
+- Clientes/Parceiros: ${logos_clientes || "Não informado"}
 
-${persona ? `PERSONA DO CLIENTE:
-- Nome: ${persona.nome || "Não definida"}
-- Descrição: ${persona.descricao || "Não definida"}` : ""}
+IDENTIDADE VISUAL:
+- Cores: ${cores_principais || identidade_visual?.paleta || "Usar cores modernas e profissionais"}
+- Fontes: ${fontes_preferidas || identidade_visual?.fontes || "Usar Google Fonts modernas"}
+- Tom: ${tom_comunicacao ? tomDescricao[tom_comunicacao] || tom_comunicacao : identidade_visual?.tom_visual || "Profissional e confiável"}
+- Estilo: ${identidade_visual?.estilo || estilo}
+${referencia_visual ? `- Site de referência: ${referencia_visual}` : ""}
 
-${identidade_visual ? `IDENTIDADE VISUAL:
-- Paleta de cores: ${identidade_visual.paleta || "Usar cores modernas e profissionais"}
-- Fontes: ${identidade_visual.fontes || "Usar Google Fonts modernas"}
-- Estilo: ${identidade_visual.estilo || estilo}
-- Tom visual: ${identidade_visual.tom_visual || "Profissional e confiável"}` : ""}
+CONTATO:
+- Telefone/WhatsApp: ${telefone || "Não informado"}
+- Email: ${email_contato || "Não informado"}
+- Endereço: ${endereco || "Não informado"}
+- Redes sociais: ${redes_sociais || "Não informado"}
+- Link WhatsApp para CTA: ${link_whatsapp || "Não informado"}
 
-${estrategia ? `CONTEXTO ESTRATÉGICO:
-- Segmento: ${estrategia.segmento || ""}
-- Modelo de negócio: ${estrategia.modelo_negocio || ""}
-- Cliente ideal: ${estrategia.cliente_ideal || ""}
-- Diferencial competitivo: ${estrategia.diferencial || ""}
-- Objetivo de marketing: ${estrategia.meta_principal || ""}` : ""}
+${persona ? `PERSONA:\n- Nome: ${persona.nome || "Não definida"}\n- Descrição: ${persona.descricao || "Não definida"}` : ""}
+
+${estrategia ? `CONTEXTO ESTRATÉGICO:\n- Segmento: ${estrategia.segmento || ""}\n- Modelo de negócio: ${estrategia.modelo_negocio || ""}\n- Cliente ideal: ${estrategia.cliente_ideal || ""}\n- Diferencial competitivo: ${estrategia.diferencial || ""}\n- Objetivo de marketing: ${estrategia.meta_principal || ""}` : ""}
 
 ${instrucoes_adicionais ? `INSTRUÇÕES ADICIONAIS: ${instrucoes_adicionais}` : ""}
 
