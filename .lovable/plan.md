@@ -1,61 +1,51 @@
 
-# Fix: Lead Created from Chat Not Appearing in CRM
 
-## Root Cause
+# Filter Out WhatsApp Groups and Broadcasts
 
-When clicking "Criar Lead" in a chat conversation, the `handleCreateLead` function (line 183-198 of `ChatConversation.tsx`) creates the lead without a `funnel_id`:
+## Problem
+
+The database contains contacts that are actually WhatsApp groups and broadcast lists. They can be identified by their `phone` field:
+- Groups: phone ends with `-group` (e.g., `120363327736786495-group`)
+- Broadcasts: phone is `status@broadcast`
+
+These should not appear in the contact list, should not trigger AI responses, and should not be linkable to CRM leads.
+
+## Solution
+
+### 1. Frontend: Filter groups from contact list
+
+**File: `src/hooks/useWhatsApp.ts`**
+
+Add a filter after fetching contacts to exclude groups and broadcasts:
 
 ```typescript
-const lead = await createLead.mutateAsync({
-  name: contact.name || contact.phone,
-  phone: contact.phone,
-  source: "whatsapp",
-  tags: ["whatsapp"],
-  // funnel_id is missing!
+const filtered = (data || []).filter((c: any) => {
+  const phone = c.phone || "";
+  return !phone.endsWith("-group") && !phone.includes("@broadcast");
 });
 ```
 
-The CRM page displays leads grouped by funnel. A lead without a `funnel_id` doesn't belong to any funnel and is invisible in the Kanban/list views.
+### 2. Backend: Prevent AI from replying to groups
 
-## Fix
+**File: `supabase/functions/ai-agent-reply/index.ts`**
 
-### File: `src/components/cliente/ChatConversation.tsx`
+Add an early return at the top of the function when the incoming phone number matches a group or broadcast pattern, so the AI agent never processes group messages.
 
-Update `handleCreateLead` to assign the lead to the **default funnel** (or the first available funnel) and set the initial stage to the first stage of that funnel:
+### 3. Backend: Prevent webhook from creating group contacts (optional improvement)
 
-```typescript
-const handleCreateLead = async () => {
-  if (!contact) return;
-  try {
-    const defaultFunnel = funnelsData?.find(f => f.is_default) || funnelsData?.[0];
-    const firstStage = defaultFunnel
-      ? (Array.isArray(defaultFunnel.stages) && (defaultFunnel.stages as any[]).length > 0
-          ? (defaultFunnel.stages as any[])[0].key || "novo"
-          : "novo")
-      : "novo";
+**File: `supabase/functions/whatsapp-webhook/index.ts`**
 
-    const lead = await createLead.mutateAsync({
-      name: contact.name || contact.phone,
-      phone: contact.phone,
-      source: "whatsapp",
-      tags: ["whatsapp"],
-      funnel_id: defaultFunnel?.id,
-      stage: firstStage,
-    });
-    // ... rest stays the same
-  }
-};
-```
-
-This ensures every lead created from the chat:
-1. Gets assigned to the default CRM funnel
-2. Starts at the first stage of that funnel
-3. Appears immediately in the CRM Kanban/list view
+Add a check in the webhook handler to skip creating contacts for group/broadcast messages entirely, preventing future pollution of the contacts table.
 
 ## Scope
 
 | File | Change |
 |------|--------|
-| `src/components/cliente/ChatConversation.tsx` | Add `funnel_id` and `stage` to `handleCreateLead` |
+| `src/hooks/useWhatsApp.ts` | Filter out group/broadcast contacts from query results |
+| `supabase/functions/ai-agent-reply/index.ts` | Skip AI replies for group messages |
+| `supabase/functions/whatsapp-webhook/index.ts` | Skip contact creation for group messages |
 
-Single file, ~5 lines changed.
+## Existing Data Cleanup
+
+After the code changes, we can also clean up the existing group contacts from the database if desired.
+
