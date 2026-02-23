@@ -13,6 +13,64 @@ const rolePrompts: Record<string, string> = {
   suporte: "Você atua como agente de Suporte/Atendimento. Seu foco é resolver problemas do cliente com empatia e eficiência, coletar informações relevantes sobre o problema, e escalar para humano quando não conseguir resolver.",
 };
 
+// ─── Engagement rule helpers ───
+
+function isWithinWorkingHours(workingHours: any): boolean {
+  if (!workingHours?.enabled) return true;
+  const tz = workingHours.timezone || "America/Sao_Paulo";
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz });
+  const parts = formatter.formatToParts(now);
+  const hour = parseInt(parts.find((p: any) => p.type === "hour")?.value || "0");
+  const minute = parseInt(parts.find((p: any) => p.type === "minute")?.value || "0");
+  const currentMinutes = hour * 60 + minute;
+  const [startH, startM] = (workingHours.start || "08:00").split(":").map(Number);
+  const [endH, endM] = (workingHours.end || "18:00").split(":").map(Number);
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
+  return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+}
+
+function hoursSince(dateStr: string): number {
+  return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
+}
+
+async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string) {
+  const { data: wallet } = await adminClient
+    .from("credit_wallets")
+    .select("id, balance")
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  if (!wallet) return;
+  const newBalance = Math.max(0, wallet.balance - tokensUsed);
+  await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
+  await adminClient.from("credit_transactions").insert({
+    organization_id: orgId,
+    type: "consumption",
+    amount: -tokensUsed,
+    balance_after: newBalance,
+    description: `Consumo IA — ${agentName}`,
+    metadata: { source: "ai-agent-reply" },
+  });
+}
+
+async function executeHandoff(adminClient: any, orgId: string, contactId: string, agentName: string, reason: string) {
+  await adminClient.from("whatsapp_contacts").update({ attending_mode: "human" }).eq("id", contactId);
+  const { data: members } = await adminClient.from("organization_memberships").select("user_id").eq("organization_id", orgId);
+  if (members) {
+    await adminClient.from("client_notifications").insert(
+      members.map((m: any) => ({
+        organization_id: orgId,
+        user_id: m.user_id,
+        title: "IA transferiu atendimento",
+        message: `Agente ${agentName}: ${reason}`,
+        type: "warning",
+        action_url: "/cliente/chat",
+      }))
+    );
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -37,6 +95,19 @@ Deno.serve(async (req) => {
     if (!organization_id || !contact_id || !message_text) {
       return new Response(JSON.stringify({ error: "Missing params" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── CHECK 1: Credit balance ───
+    const { data: wallet } = await adminClient
+      .from("credit_wallets")
+      .select("balance")
+      .eq("organization_id", organization_id)
+      .maybeSingle();
+
+    if (wallet && wallet.balance <= 0) {
+      return new Response(JSON.stringify({ skipped: true, reason: "no_credits" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -79,7 +150,6 @@ Deno.serve(async (req) => {
     // Check whatsapp_instance_ids restriction
     const instanceIds = agent.whatsapp_instance_ids || [];
     if (instanceIds.length > 0) {
-      // Get instance for this org
       const { data: instance } = await adminClient
         .from("whatsapp_instances")
         .select("id")
@@ -97,11 +167,71 @@ Deno.serve(async (req) => {
       await adminClient.from("whatsapp_contacts").update({ agent_id: agent.id }).eq("id", contact_id);
     }
 
+    const promptConfig = agent.prompt_config || {};
+    const engagementRules = promptConfig.engagement_rules || {};
+
+    // ─── CHECK 2: Working hours ───
+    if (!isWithinWorkingHours(engagementRules.working_hours)) {
+      return new Response(JSON.stringify({ skipped: true, reason: "outside_working_hours" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── CHECK 3: Message count limit ───
+    const maxMessages = engagementRules.max_messages ?? 30;
+    const { count: msgCount } = await adminClient
+      .from("whatsapp_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("contact_id", contact_id)
+      .eq("organization_id", organization_id);
+
+    if ((msgCount ?? 0) >= maxMessages) {
+      const limitAction = engagementRules.limit_action || "handoff";
+      if (limitAction === "handoff") {
+        await executeHandoff(adminClient, organization_id, contact_id, agent.name, `Limite de ${maxMessages} mensagens atingido`);
+      }
+      return new Response(JSON.stringify({ skipped: true, reason: "message_limit_reached", action: limitAction }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── CHECK 4: Inactivity timeout ───
+    const timeoutHours = engagementRules.inactivity_timeout_hours ?? 48;
+    const { data: lastContactMsg } = await adminClient
+      .from("whatsapp_messages")
+      .select("created_at")
+      .eq("contact_id", contact_id)
+      .eq("organization_id", organization_id)
+      .eq("direction", "inbound")
+      .order("created_at", { ascending: false })
+      .limit(2);
+
+    // If there's a previous inbound message and the gap is > timeout
+    if (lastContactMsg && lastContactMsg.length >= 2) {
+      const previousMsgTime = lastContactMsg[1].created_at;
+      if (hoursSince(previousMsgTime) > timeoutHours) {
+        const timeoutAction = engagementRules.timeout_action || "handoff";
+        if (timeoutAction === "handoff") {
+          await executeHandoff(adminClient, organization_id, contact_id, agent.name, `Contato retornou após ${timeoutHours}h de inatividade`);
+          return new Response(JSON.stringify({ skipped: true, reason: "inactivity_timeout", action: "handoff" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (timeoutAction === "ignore") {
+          return new Response(JSON.stringify({ skipped: true, reason: "inactivity_timeout", action: "ignore" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        // "restart" — continue normally (reset context effectively by limiting history)
+      }
+    }
+
+    // ─── All checks passed — process message ───
+
     // Handle audio transcription if message_type is audio
     let processedMessage = message_text;
     if (message_type === "audio" && message_text.startsWith("http")) {
       try {
-        // Use Gemini multimodal to transcribe audio
         const transcribeRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
@@ -160,14 +290,17 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
       }
     }
 
-    // Fetch message history
+    // Fetch message history — if "restart" after timeout, limit to recent only
+    const timeoutAction = engagementRules.timeout_action || "handoff";
+    const historyLimit = (timeoutAction === "restart" && lastContactMsg && lastContactMsg.length >= 2 && hoursSince(lastContactMsg[1].created_at) > timeoutHours) ? 2 : 20;
+
     const { data: history } = await adminClient
       .from("whatsapp_messages")
       .select("direction, content, created_at")
       .eq("contact_id", contact_id)
       .eq("organization_id", organization_id)
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(historyLimit);
 
     const chatHistory = (history || []).reverse().map((m: any) => ({
       role: m.direction === "inbound" ? "user" : "assistant",
@@ -176,17 +309,14 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
 
     // Build system prompt with role-specific instructions
     const persona = agent.persona || {};
-    const promptConfig = agent.prompt_config || {};
     const knowledgeBase = agent.knowledge_base || [];
     const role = agent.role || "sdr";
     const objectives = agent.objectives || [];
 
     let systemPrompt = promptConfig.system_prompt || `Você é ${agent.name}, um assistente virtual.`;
 
-    // Add role-specific instructions
     if (rolePrompts[role]) systemPrompt += `\n\n${rolePrompts[role]}`;
 
-    // Add persona details
     if (persona.generated_description) {
       systemPrompt += `\n\nPersona: ${persona.generated_description}`;
     } else {
@@ -200,12 +330,16 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     if (agent.gender) systemPrompt += `\nGênero da persona: ${agent.gender}`;
     if (agent.description) systemPrompt += `\nDescrição: ${agent.description}`;
 
-    // Add objectives
     if (objectives.length > 0) {
       systemPrompt += `\n\nSeus objetivos nesta conversa: ${objectives.join(", ")}`;
     }
 
-    // Add knowledge base
+    // Add objections from prompt_config
+    const objections = promptConfig.objections || [];
+    if (objections.length > 0) {
+      systemPrompt += `\n\nObjeções comuns e como responder:\n${objections.map((o: any) => `- Objeção: "${o.objection}" → Resposta sugerida: "${o.response}"`).join("\n")}`;
+    }
+
     if (Array.isArray(knowledgeBase) && knowledgeBase.length > 0) {
       const kbText = knowledgeBase
         .map((item: any) => typeof item === "string" ? item : item.content || JSON.stringify(item))
@@ -265,7 +399,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
     const cleanReply = replyText.replace(/\[AI_ACTION:[^\]]+\]/g, "").trim();
 
-    // Execute actions (only if permitted by crm_actions)
+    // Execute actions
     for (const action of actions) {
       try {
         if (action.type === "MOVE_STAGE" && leadData && crmActions.can_move_stage) {
@@ -282,18 +416,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
         }
 
         if (action.type === "HANDOFF" && crmActions.can_handoff) {
-          await adminClient.from("whatsapp_contacts").update({ attending_mode: "human" }).eq("id", contact_id);
-          const { data: members } = await adminClient.from("organization_memberships").select("user_id").eq("organization_id", organization_id);
-          if (members) {
-            await adminClient.from("client_notifications").insert(
-              members.map((m: any) => ({
-                organization_id, user_id: m.user_id,
-                title: "IA solicitou transbordo",
-                message: `Agente ${agent.name} (${(agent.role || "sdr").toUpperCase()}): ${action.value}. Contato: ${contact.name || contact.phone}`,
-                type: "warning", action_url: "/cliente/chat",
-              }))
-            );
-          }
+          await executeHandoff(adminClient, organization_id, contact_id, agent.name, action.value);
         }
 
         if (action.type === "UPDATE_LEAD" && leadData) {
@@ -344,6 +467,9 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
       organization_id, contact_id, agent_id: agent.id,
       input_message: processedMessage, output_message: cleanReply, tokens_used: tokensUsed, model,
     });
+
+    // ─── Debit credits after successful response ───
+    await debitCredits(adminClient, organization_id, tokensUsed, agent.name);
 
     return new Response(JSON.stringify({ success: true, reply: cleanReply, actions }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

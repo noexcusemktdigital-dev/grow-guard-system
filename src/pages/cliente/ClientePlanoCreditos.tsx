@@ -1,4 +1,4 @@
-import { CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3 } from "lucide-react";
+import { CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3, History } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useCreditAlert } from "@/hooks/useCreditAlert";
+import { useCreditTransactions } from "@/hooks/useCreditTransactions";
 import { PLANS, getPlanBySlug } from "@/constants/plans";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,6 +114,60 @@ function TokenUsageCard() {
   );
 }
 
+function TransactionHistoryCard() {
+  const { data: transactions, isLoading } = useCreditTransactions();
+
+  const typeLabels: Record<string, { label: string; color: string }> = {
+    purchase: { label: "Compra", color: "text-green-600" },
+    consumption: { label: "Consumo", color: "text-destructive" },
+    bonus: { label: "Bônus", color: "text-blue-600" },
+    renewal: { label: "Renovação", color: "text-primary" },
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Histórico de Transações</CardTitle>
+          <History className="w-5 h-5 text-muted-foreground" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        ) : transactions && transactions.length > 0 ? (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {transactions.map((tx: any) => {
+              const info = typeLabels[tx.type] || { label: tx.type, color: "text-foreground" };
+              return (
+                <div key={tx.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                  <div className="flex-1">
+                    <span className="font-medium text-foreground">{tx.description || info.label}</span>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(tx.created_at).toLocaleDateString("pt-BR")} {new Date(tx.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className={`font-semibold tabular-nums ${info.color}`}>
+                      {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString("pt-BR")}
+                    </span>
+                    <p className="text-xs text-muted-foreground">Saldo: {tx.balance_after.toLocaleString("pt-BR")}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">Nenhuma transação registrada.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ClientePlanoCreditos() {
   const { data: wallet, isLoading: walletLoading } = useClienteWallet();
   const { data: subscription, isLoading: subLoading } = useClienteSubscription();
@@ -196,6 +251,9 @@ export default function ClientePlanoCreditos() {
 
       {/* Token Usage Card */}
       <TokenUsageCard />
+
+      {/* Transaction History */}
+      <TransactionHistoryCard />
 
       {/* Plans */}
       <div>

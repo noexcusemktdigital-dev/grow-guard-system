@@ -11,7 +11,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User, Camera, Trash2, Lock, ChevronRight } from "lucide-react";
+import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User, Camera, Trash2, Lock, ChevronRight, Clock, Shield, RotateCcw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useWhatsAppInstances } from "@/hooks/useWhatsApp";
@@ -146,6 +147,31 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const updatePersona = (key: string, value: any) => setForm((f) => ({ ...f, persona: { ...persona, [key]: value } }));
   const updatePrompt = (key: string, value: any) => setForm((f) => ({ ...f, prompt_config: { ...promptConfig, [key]: value } }));
   const updateCrmAction = (key: string, value: boolean) => setForm((f) => ({ ...f, crm_actions: { ...crmActions, [key]: value } }));
+
+  const engagementRules = promptConfig.engagement_rules || { max_messages: 30, inactivity_timeout_hours: 48, timeout_action: "handoff", limit_action: "handoff", working_hours: { enabled: false, start: "08:00", end: "18:00" } };
+  const followupConfig = promptConfig.followup || { enabled: false, delay_hours: 24, max_attempts: 3, style: "ai_generated" };
+  const objectionsConfig = promptConfig.objections || [];
+
+  const updateEngagement = (key: string, value: any) => {
+    updatePrompt("engagement_rules", { ...engagementRules, [key]: value });
+  };
+  const updateWorkingHours = (key: string, value: any) => {
+    updateEngagement("working_hours", { ...engagementRules.working_hours, [key]: value });
+  };
+  const updateFollowup = (key: string, value: any) => {
+    updatePrompt("followup", { ...followupConfig, [key]: value });
+  };
+  const addObjection = () => {
+    updatePrompt("objections", [...objectionsConfig, { objection: "", response: "" }]);
+  };
+  const updateObjection = (idx: number, field: string, value: string) => {
+    const updated = [...objectionsConfig];
+    updated[idx] = { ...updated[idx], [field]: value };
+    updatePrompt("objections", updated);
+  };
+  const removeObjection = (idx: number) => {
+    updatePrompt("objections", objectionsConfig.filter((_: any, i: number) => i !== idx));
+  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -627,6 +653,105 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Engagement Rules */}
+            <div className="space-y-3 pt-4 border-t">
+              <Label className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> Regras de Engajamento</Label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Limite de mensagens por conversa</Label>
+                  <Input type="number" min={5} max={200} value={engagementRules.max_messages} onChange={(e) => updateEngagement("max_messages", parseInt(e.target.value) || 30)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Ação ao atingir limite</Label>
+                  <Select value={engagementRules.limit_action || "handoff"} onValueChange={(v) => updateEngagement("limit_action", v)}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="handoff">Transferir para humano</SelectItem>
+                      <SelectItem value="ignore">Parar de responder</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Timeout de inatividade (horas)</Label>
+                  <Input type="number" min={1} max={720} value={engagementRules.inactivity_timeout_hours} onChange={(e) => updateEngagement("inactivity_timeout_hours", parseInt(e.target.value) || 48)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Ação após timeout</Label>
+                  <Select value={engagementRules.timeout_action || "handoff"} onValueChange={(v) => updateEngagement("timeout_action", v)}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="handoff">Transferir para humano</SelectItem>
+                      <SelectItem value="restart">Reiniciar conversa</SelectItem>
+                      <SelectItem value="ignore">Ignorar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2 bg-muted/30 rounded-md p-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs flex items-center gap-1.5"><Clock className="w-3 h-3" /> Horário de funcionamento</Label>
+                  <Switch checked={engagementRules.working_hours?.enabled ?? false} onCheckedChange={(v) => updateWorkingHours("enabled", v)} />
+                </div>
+                {engagementRules.working_hours?.enabled && (
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Início</Label>
+                      <Input type="time" value={engagementRules.working_hours.start || "08:00"} onChange={(e) => updateWorkingHours("start", e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Fim</Label>
+                      <Input type="time" value={engagementRules.working_hours.end || "18:00"} onChange={(e) => updateWorkingHours("end", e.target.value)} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Follow-up Config */}
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5"><RotateCcw className="w-3.5 h-3.5" /> Follow-ups Automáticos</Label>
+                <Switch checked={followupConfig.enabled} onCheckedChange={(v) => updateFollowup("enabled", v)} />
+              </div>
+              {followupConfig.enabled && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tempo sem resposta (horas)</Label>
+                    <Input type="number" min={1} max={168} value={followupConfig.delay_hours} onChange={(e) => updateFollowup("delay_hours", parseInt(e.target.value) || 24)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Máximo de tentativas</Label>
+                    <Input type="number" min={1} max={10} value={followupConfig.max_attempts} onChange={(e) => updateFollowup("max_attempts", parseInt(e.target.value) || 3)} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Objections */}
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Objeções Comuns</Label>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addObjection}>
+                  <Plus className="w-3 h-3" /> Adicionar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Ensine o agente a contra-argumentar objeções frequentes.</p>
+              {objectionsConfig.map((obj: any, idx: number) => (
+                <div key={idx} className="space-y-1.5 bg-muted/30 rounded-md p-3 relative">
+                  <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => removeObjection(idx)}>
+                    <X className="w-3 h-3" />
+                  </Button>
+                  <Input placeholder='Ex: "Está caro demais"' value={obj.objection} onChange={(e) => updateObjection(idx, "objection", e.target.value)} className="text-xs" />
+                  <Textarea placeholder="Resposta sugerida para o agente..." value={obj.response} onChange={(e) => updateObjection(idx, "response", e.target.value)} rows={2} className="text-xs" />
+                </div>
+              ))}
             </div>
 
             {!isEditing && (
