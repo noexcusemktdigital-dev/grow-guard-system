@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User, Camera, Trash2, Lock, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { useWhatsAppInstance } from "@/hooks/useWhatsApp";
+import { useWhatsAppInstances } from "@/hooks/useWhatsApp";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AiAgent, AgentRole } from "@/types/cliente";
 import { agentRoleConfig } from "@/types/cliente";
@@ -68,7 +68,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { data: orgId } = useUserOrgId();
-  const { data: whatsappInstance } = useWhatsAppInstance();
+  const { data: whatsappInstances } = useWhatsAppInstances();
   const queryClient = useQueryClient();
 
   const isEditing = !!agent?.id;
@@ -91,18 +91,21 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     setSimMessages([]);
   }, [agent, open]);
 
-  // Auto-sync: fetch phone number if connected but missing
+  // Auto-sync: fetch phone number for connected instances missing it
   useEffect(() => {
-    if (!open || !whatsappInstance) return;
-    if (whatsappInstance.status === "connected" && !whatsappInstance.phone_number && !syncingPhone) {
+    if (!open || !whatsappInstances || whatsappInstances.length === 0) return;
+    const needsSync = whatsappInstances.some(
+      (inst) => inst.status === "connected" && !inst.phone_number
+    );
+    if (needsSync && !syncingPhone) {
       setSyncingPhone(true);
       supabase.functions.invoke("whatsapp-setup", { body: { action: "check-status" } })
         .then(() => {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-instance"] });
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
         })
         .finally(() => setSyncingPhone(false));
     }
-  }, [open, whatsappInstance]);
+  }, [open, whatsappInstances]);
 
   const persona = (form.persona ?? {}) as Record<string, any>;
   const promptConfig = (form.prompt_config ?? {}) as Record<string, any>;
@@ -363,48 +366,34 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
 
             <div className="space-y-2">
               <Label>Número de WhatsApp</Label>
-              {whatsappInstance ? (
+              {whatsappInstances && whatsappInstances.length > 0 ? (
                 <div className="space-y-2 pt-1">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={(form.whatsapp_instance_ids ?? []).includes(whatsappInstance.id)}
-                      onCheckedChange={(checked) => {
-                        const ids = form.whatsapp_instance_ids ?? [];
-                        setForm((f) => ({
-                          ...f,
-                          whatsapp_instance_ids: checked ? [...ids, whatsappInstance.id] : ids.filter((i: string) => i !== whatsappInstance.id),
-                        }));
-                      }}
-                    />
-                    <span className="text-xs">
-                      {syncingPhone
-                        ? "Buscando número..."
-                        : whatsappInstance.phone_number
-                          ? whatsappInstance.phone_number
-                          : whatsappInstance.status === "connected"
-                            ? "Sincronizando número..."
-                            : "Número não configurado"}
-                    </span>
-                    {syncingPhone && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
-                  </div>
-                  {whatsappInstance.status === "connected" && !whatsappInstance.phone_number && !syncingPhone && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs gap-1"
-                      onClick={async () => {
-                        setSyncingPhone(true);
-                        try {
-                          await supabase.functions.invoke("whatsapp-setup", { body: { action: "check-status" } });
-                          queryClient.invalidateQueries({ queryKey: ["whatsapp-instance"] });
-                        } finally {
-                          setSyncingPhone(false);
-                        }
-                      }}
-                    >
-                      <Loader2 className="w-3 h-3" /> Atualizar número
-                    </Button>
+                  {whatsappInstances.filter((inst) => inst.status === "connected").map((inst) => (
+                    <div key={inst.id} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={(form.whatsapp_instance_ids ?? []).includes(inst.id)}
+                        onCheckedChange={(checked) => {
+                          const ids = form.whatsapp_instance_ids ?? [];
+                          setForm((f) => ({
+                            ...f,
+                            whatsapp_instance_ids: checked ? [...ids, inst.id] : ids.filter((i: string) => i !== inst.id),
+                          }));
+                        }}
+                      />
+                      <span className="text-xs">
+                        {inst.phone_number
+                          ? `${inst.label ? inst.label + " — " : ""}${inst.phone_number}`
+                          : inst.label || `Instância ${inst.instance_id.slice(0, 8)}...`}
+                      </span>
+                    </div>
+                  ))}
+                  {syncingPhone && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Sincronizando números...
+                    </div>
+                  )}
+                  {whatsappInstances.filter((inst) => inst.status === "connected").length === 0 && (
+                    <p className="text-xs text-muted-foreground">Nenhum número conectado</p>
                   )}
                 </div>
               ) : (
