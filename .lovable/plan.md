@@ -1,148 +1,114 @@
 
-
-# Propostas/Produtos no CRM + Dashboard Unificado
+# Chat Avancado + IA com Leads + Permissao por Funil
 
 ## Resumo
 
-Duas grandes mudancas: (1) criar um sistema completo de propostas e negociacao dentro do CRM com cadastro de produtos e empresas parceiras, e (2) transformar a pagina "Relatorios" em um "Dashboard" com abas para CRM, Chat e Agentes IA.
+Tres grandes frentes: (1) reestruturar o Chat WhatsApp com separacao IA/Humano, filtros por etapa/agente, painel de acoes destacado e chat integrado no CRM; (2) IA inteligente que atualiza leads automaticamente (mudanca de etapa, transbordo com alerta); (3) sistema de permissoes por funil no CRM, permitindo intercalar entre funis com acesso controlado por usuario/time.
 
 ---
 
-## Parte 1: Propostas e Negociacao no CRM
+## Parte 1: Chat Reestruturado
 
-### 1.1 Nova tabela `crm_products`
+### 1.1 Filtros na lista de contatos (ChatContactList)
 
-Cadastro de produtos/servicos que podem ser adicionados a propostas.
+Adicionar pilulas de filtro acima da busca:
+- **Todos** | **IA** | **Humano** | **Espera** (contatos com mensagens nao lidas)
+- **Por agente**: dropdown com agentes ativos (busca em `client_ai_agents`)
+- **Por etapa do lead**: dropdown com etapas do funil (busca a etapa via `crm_lead_id` -> `crm_leads.stage`)
 
-Colunas:
-- `id` uuid PK
-- `organization_id` uuid NOT NULL (FK organizations)
-- `name` text NOT NULL
-- `description` text nullable
-- `price` numeric default 0
-- `unit` text default 'un' (un, hora, mes, projeto)
-- `category` text nullable
-- `is_active` boolean default true
-- `created_at`, `updated_at` timestamps
+Cada contato na lista exibira badges visuais:
+- Badge roxa "IA" ou verde "Humano" no avatar
+- Badge com nome da etapa do lead vinculado (se houver)
+- Badge com nome do agente IA atribuido
 
-RLS: membros podem SELECT, admins (super_admin, admin, cliente_admin) podem ALL.
+### 1.2 Painel de acoes na conversa (ChatConversation)
 
-### 1.2 Nova tabela `crm_partner_companies`
+Destacar as acoes do header em um painel mais robusto:
+- **Transbordo**: botao "Assumir" / "Devolver p/ IA" com destaque visual
+- **Lead vinculado**: card compacto mostrando nome do lead, etapa atual e valor. Clicar abre o lead detail sheet direto
+- **Criar Lead**: se nao houver lead vinculado, botao "Criar Lead" com pre-preenchimento
+- **Transferir agente**: dropdown para mudar o agente IA atribuido ao contato
+- **Alterar etapa**: select rapido para mover a etapa do lead vinculado sem sair do chat
+- **Alerta de transbordo**: quando a IA solicitar transbordo, exibir banner amarelo/laranja no topo da conversa
 
-Empresas parceiras que podem ser vinculadas a propostas.
+### 1.3 Indicadores visuais nas mensagens (ChatMessageBubble)
 
-Colunas:
-- `id` uuid PK
-- `organization_id` uuid NOT NULL
-- `name` text NOT NULL
-- `document` text nullable (CNPJ)
-- `contact_name` text nullable
-- `contact_email` text nullable
-- `contact_phone` text nullable
-- `notes` text nullable
-- `created_at`, `updated_at` timestamps
-
-RLS: membros podem SELECT/INSERT/UPDATE, admins podem DELETE.
-
-### 1.3 Alterar tabela `crm_proposals`
-
-Adicionar colunas:
-- `items` jsonb default '[]' -- lista de produtos: `[{product_id, name, quantity, unit_price, discount, total}]`
-- `partner_company_id` uuid nullable (FK crm_partner_companies)
-- `notes` text nullable -- observacoes internas
-- `valid_until` date nullable -- validade da proposta
-- `payment_terms` text nullable -- condicoes de pagamento
-- `discount_total` numeric default 0
-
-### 1.4 Nova aba "Propostas" no Lead Detail Sheet
-
-No `CrmLeadDetailSheet.tsx`, adicionar uma 5a aba "Propostas" (ao lado de Dados, Atividades, Tarefas, WhatsApp) com:
-
-- Lista de propostas vinculadas ao lead
-- Badge de status colorido (Rascunho, Enviada, Aceita, Rejeitada)
-- Botao "+ Nova Proposta" que abre um Dialog/Sheet com:
-  - Titulo da proposta
-  - Empresa parceira (select com busca)
-  - Tabela de itens: selecionar produto do catalogo, quantidade, preco unitario, desconto -- calculo automatico do total por linha
-  - Botao "Adicionar item" para mais linhas
-  - Resumo: subtotal, desconto total, valor final
-  - Condicoes de pagamento (texto livre)
-  - Validade da proposta (date)
-  - Observacoes internas
-- Acoes por proposta: Editar, Enviar (muda status), Marcar como Aceita, Marcar como Rejeitada, Duplicar, Excluir
-
-### 1.5 Gestao de Produtos (dentro do CRM Config)
-
-No `CrmConfigPage.tsx`, adicionar uma nova aba "Produtos" com:
-- Lista de produtos cadastrados com nome, preco, unidade, categoria
-- Busca e filtro por categoria
-- Dialog para criar/editar produto
-- Toggle ativo/inativo
-- Importacao simples (manual)
-
-### 1.6 Gestao de Empresas Parceiras (dentro do CRM Config)
-
-No `CrmConfigPage.tsx`, adicionar uma nova aba "Parceiros" com:
-- Lista de empresas parceiras
-- Dialog para criar/editar
-- Campos: nome, CNPJ, contato, email, telefone, notas
-
-### 1.7 Hook `useCrmProposals`
-
-Novo hook com:
-- `useCrmProposals(leadId?)` -- lista propostas (filtro opcional por lead)
-- `useCrmProposalMutations()` -- create, update, delete, duplicate
-
-### 1.8 Hook `useCrmProducts`
-
-Novo hook com:
-- `useCrmProducts()` -- lista todos os produtos ativos
-- `useCrmProductMutations()` -- CRUD
-
-### 1.9 Hook `useCrmPartners`
-
-Novo hook com:
-- `useCrmPartners()` -- lista parceiros
-- `useCrmPartnerMutations()` -- CRUD
+- Badge "IA" em mensagens enviadas pelo agente (detectar via `metadata.ai_generated`)
+- Badge "Humano" em mensagens enviadas manualmente
 
 ---
 
-## Parte 2: Dashboard Unificado (substituir Relatorios)
+## Parte 2: Chat Integrado no Lead (CRM)
 
-### 2.1 Renomear pagina
+### 2.1 Aba WhatsApp expandida no Lead Detail Sheet
 
-- Mudar `ClienteRelatorios.tsx` para `ClienteDashboard.tsx`
-- Atualizar sidebar: "Relatorios" -> "Dashboard" com mesmo icone `BarChart3`
-- Atualizar rota de `/cliente/relatorios` para `/cliente/dashboard`
+Expandir a aba "WA" do `CrmLeadDetailSheet` para exibir:
+- Historico completo de mensagens do contato vinculado
+- Input de envio de mensagem no rodape
+- Botao "Abrir no Chat" para ir a pagina completa
+- Se nao houver contato vinculado mas o lead tem telefone, exibir botao "Iniciar conversa"
 
-### 2.2 Abas do Dashboard
+---
 
-Tres abas principais usando `Tabs`:
+## Parte 3: IA Inteligente -- Atualizacao Automatica de Leads
 
-**Aba "CRM" (padrao):**
-- KPIs: Receita total, Leads captados, Taxa de conversao, Ticket medio (ja existem)
-- Grafico radial de conversao (ja existe)
-- Grafico de barras: leads por etapa do funil
-- Grafico de barras: leads por origem
-- Grafico de linha: evolucao de leads no tempo (7d/30d/90d)
-- Tabela: top leads por valor
-- Card: propostas em aberto (quantidade e valor total)
+### 3.1 Contexto CRM no system prompt (ai-agent-reply)
 
-**Aba "Chat":**
-- KPIs: Total de conversas, Mensagens hoje, Tempo medio de resposta, Conversas ativas
-- Dados vindos de `whatsapp_contacts` e `whatsapp_messages`
-- Grafico: volume de mensagens por dia
-- Lista: ultimas conversas
+Modificar a edge function para incluir no system prompt:
+- Informacoes do lead vinculado (nome, etapa atual, valor, tags)
+- Etapas disponiveis do funil
+- Instrucoes para acoes estruturadas: `[AI_ACTION:MOVE_STAGE:nome]`, `[AI_ACTION:HANDOFF:motivo]`, `[AI_ACTION:UPDATE_LEAD:campo=valor]`
 
-**Aba "Agentes IA":**
-- KPIs: Total de agentes, Agentes ativos, Mensagens processadas pela IA, Tokens utilizados
-- Dados vindos de `client_ai_agents` e `ai_conversation_logs`
-- Grafico: uso por agente
-- Lista: ultimos logs de conversa IA
+### 3.2 Processamento de acoes na edge function
 
-### 2.3 Exportacao de Relatorios
+Apos receber a resposta da IA:
+1. Parsear acoes `[AI_ACTION:...]` do texto
+2. Remover as acoes do texto antes de enviar ao usuario
+3. Executar no banco:
+   - `MOVE_STAGE`: atualizar `crm_leads.stage` e registrar atividade
+   - `HANDOFF`: mudar `attending_mode` para `human`, criar notificacao em `client_notifications`
+   - `UPDATE_LEAD`: atualizar campos do lead (value, tags)
+4. Inserir alerta em `client_notifications` no transbordo
 
-Em cada aba, botao "Exportar" que gera um CSV com os dados filtrados pelo periodo selecionado.
+### 3.3 Alerta de transbordo
+
+Quando a IA executa `HANDOFF`:
+1. Mudar `attending_mode` do contato para `human`
+2. Criar notificacao em `client_notifications` com titulo "IA solicitou transbordo" e link para o chat
+3. No frontend, exibir banner amarelo quando `attending_mode` acabou de mudar para `human`
+
+---
+
+## Parte 4: Permissoes por Funil no CRM
+
+### 4.1 Intercalar entre funis
+
+Atualmente o CRM usa apenas o funil padrao (ou o primeiro). Adicionar:
+- Um **seletor de funil** no header do CRM (Select/Tabs) que permite intercalar entre funis
+- Os leads sao filtrados por `funnel_id` do funil selecionado
+- O estado `selectedFunnelId` controla qual funil esta ativo
+
+### 4.2 Controle de acesso por funil
+
+A tabela `crm_teams` ja possui `funnel_ids` (lista de funis a que o time tem acesso) e `members` (lista de user_ids). Usar essa estrutura para controlar visibilidade:
+
+- Ao carregar os funis, filtrar apenas os que o usuario logado tem acesso:
+  - Se o usuario e `cliente_admin` -> ve todos os funis
+  - Senao -> buscar em `crm_teams` onde o `user_id` esta em `members` e retornar os `funnel_ids` desses times
+- Criar um hook `useUserFunnelAccess()` que retorna os IDs de funis acessiveis
+- Os funis que o usuario nao tem acesso nao aparecem no seletor
+
+### 4.3 Configuracao no CRM Config
+
+Na aba "Times" do CRM Config (ja existe `CrmTeamManager`), garantir que a vinculacao de funis aos times esteja clara:
+- Cada time ja tem campo `funnel_ids` para definir quais funis aquele time pode acessar
+- A interface ja permite selecionar funis por time
+
+### 4.4 Impacto nos leads
+
+- Quando o usuario cria um lead, ele e criado no funil selecionado (campo `funnel_id`)
+- Quando o usuario muda de funil, os leads mostrados mudam
+- A barra de acoes em massa respeita o funil ativo
 
 ---
 
@@ -150,24 +116,32 @@ Em cada aba, botao "Exportar" que gera um CSV com os dados filtrados pelo period
 
 | Acao | Arquivo |
 |------|---------|
-| Migration | Criar `crm_products`, `crm_partner_companies`; alterar `crm_proposals` |
-| Criar | `src/hooks/useCrmProposals.ts` |
-| Criar | `src/hooks/useCrmProducts.ts` |
-| Criar | `src/hooks/useCrmPartners.ts` |
-| Reescrever | `src/pages/cliente/ClienteRelatorios.tsx` -> `src/pages/cliente/ClienteDashboard.tsx` |
-| Editar | `src/components/crm/CrmLeadDetailSheet.tsx` -- adicionar aba Propostas |
-| Editar | `src/components/crm/CrmConfigPage.tsx` -- adicionar abas Produtos e Parceiros |
-| Editar | `src/components/ClienteSidebar.tsx` -- renomear Relatorios para Dashboard |
-| Editar | `src/App.tsx` -- atualizar rota |
-| Editar | `src/hooks/useClienteCrm.ts` -- exportar novos hooks |
+| Criar | `src/hooks/useUserFunnelAccess.ts` -- hook que retorna funis acessiveis pelo usuario logado |
+| Reescrever | `src/pages/cliente/ClienteChat.tsx` -- filtros por modo/agente/etapa |
+| Reescrever | `src/components/cliente/ChatContactList.tsx` -- pilulas de filtro, badges visuais |
+| Reescrever | `src/components/cliente/ChatConversation.tsx` -- painel de acoes expandido, alerta transbordo, select de etapa/agente |
+| Editar | `src/components/cliente/ChatMessageBubble.tsx` -- badge IA/Humano |
+| Editar | `src/components/crm/CrmLeadDetailSheet.tsx` -- aba WA com historico completo e input de envio |
+| Editar | `src/pages/cliente/ClienteCRM.tsx` -- seletor de funil, filtro por funnel_id, acesso por permissao |
+| Editar | `src/hooks/useWhatsApp.ts` -- adicionar `useUpdateContactAgent` mutation |
+| Reescrever | `supabase/functions/ai-agent-reply/index.ts` -- contexto CRM, acoes automaticas, transbordo |
+
+## Sem migration necessaria
+
+Todos os campos ja existem:
+- `whatsapp_contacts.attending_mode`, `agent_id`, `crm_lead_id`
+- `crm_leads.stage`, `value`, `tags`, `funnel_id`
+- `crm_teams.funnel_ids`, `members`
+- `client_notifications` para alertas
+- `whatsapp_messages.metadata` para flag `ai_generated`
 
 ## Detalhes Tecnicos
 
-- A tabela `crm_proposals` ja existe com campos basicos (`title`, `value`, `status`, `content`, `lead_id`). As novas colunas (`items`, `partner_company_id`, `notes`, `valid_until`, `payment_terms`, `discount_total`) serao adicionadas via migration
-- O campo `items` e um array jsonb onde cada item referencia um `product_id` mas tambem salva `name` e `unit_price` para historico (snapshot do preco no momento da proposta)
-- O calculo do `value` total da proposta e feito automaticamente somando os itens menos o desconto
-- Os dados de Chat e Agentes IA no Dashboard usam as tabelas `whatsapp_contacts`, `whatsapp_messages`, `client_ai_agents` e `ai_conversation_logs` que ja existem
-- As queries de mensagens usam cast `as any` no supabase client (padrao ja estabelecido em `useWhatsApp.ts`)
-- O CSV de exportacao e gerado no frontend com `Blob` + download (mesmo padrao do import de contatos)
-- RLS das novas tabelas segue o padrao multi-tenant com `is_member_of_org` e `has_role`
-
+- O hook `useUserFunnelAccess` busca o usuario logado com `auth.uid()`, consulta `crm_teams` onde `members` contem o user_id (via filtro local no array JSONB), e retorna a uniao de `funnel_ids`. Se o usuario tiver role `cliente_admin`, retorna todos os funis sem filtro.
+- Os filtros do chat usam os dados ja carregados em memoria (contacts array), sem queries extras, exceto para cruzar `crm_lead_id` com leads (uma query batch)
+- As acoes da IA usam regex para parsear `[AI_ACTION:...]` do texto retornado pelo modelo
+- O transbordo cria uma notificacao via `adminClient.from("client_notifications").insert(...)` na edge function
+- A aba WhatsApp no CRM reutiliza `useWhatsAppMessages` e `useSendWhatsAppMessage` existentes
+- O seletor de funil no CRM fica no header ao lado da busca, como um Select compacto que lista apenas funis acessiveis
+- Ao mudar de funil, `useCrmLeads(funnelId)` busca leads filtrados por aquele funil
+- Leads criados via "Novo Lead" sao automaticamente associados ao funil selecionado
