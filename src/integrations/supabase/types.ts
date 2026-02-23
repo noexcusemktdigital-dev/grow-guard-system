@@ -2333,6 +2333,66 @@ export type Database = {
           },
         ]
       }
+      franchisee_charges: {
+        Row: {
+          asaas_payment_id: string | null
+          created_at: string
+          franchisee_org_id: string
+          id: string
+          month: string
+          organization_id: string
+          paid_at: string | null
+          royalty_amount: number
+          status: string
+          system_fee: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          asaas_payment_id?: string | null
+          created_at?: string
+          franchisee_org_id: string
+          id?: string
+          month: string
+          organization_id: string
+          paid_at?: string | null
+          royalty_amount?: number
+          status?: string
+          system_fee?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          asaas_payment_id?: string | null
+          created_at?: string
+          franchisee_org_id?: string
+          id?: string
+          month?: string
+          organization_id?: string
+          paid_at?: string | null
+          royalty_amount?: number
+          status?: string
+          system_fee?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franchisee_charges_franchisee_org_id_fkey"
+            columns: ["franchisee_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "franchisee_charges_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           assigned_to: string | null
@@ -3000,6 +3060,8 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          asaas_billing_type: string | null
+          asaas_subscription_id: string | null
           created_at: string
           expires_at: string | null
           id: string
@@ -3010,6 +3072,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asaas_billing_type?: string | null
+          asaas_subscription_id?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
@@ -3020,6 +3084,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asaas_billing_type?: string | null
+          asaas_subscription_id?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
