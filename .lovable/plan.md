@@ -1,178 +1,143 @@
 
-# Sites & Landing Pages -- Geracao de Codigo HTML Real com Preview Visual
+# Fluxo Didatico de Aprovacao + Limites para Sites, Artes e Conteudos
 
-## Resumo
+## Problema Atual
 
-A plataforma atua como intermediario: coleta tudo que sabe do cliente, monta um briefing, envia para a IA que gera **codigo HTML/CSS/JS completo e responsivo**, renderiza num **iframe real dentro da plataforma** para o cliente ver e aprovar, e so depois permite baixar o codigo para hospedar no dominio dele.
+Os tres modulos (Conteudos, Redes Sociais e Sites) possuem aprovacao basica (toggle simples) sem guia didatico, e nenhum deles valida limites de uso por plano antes de gerar.
 
----
+## O que muda
 
-## 1. Limites por Plano
+### 1. Limites de Uso por Plano (enforced no frontend)
 
-Atualizar `src/constants/plans.ts`:
+Antes de gerar qualquer conteudo, o sistema verifica o consumo do mes atual e bloqueia se atingiu o limite.
 
-| Plano | Sites Ativos | Tipos Permitidos |
-|-------|-------------|-----------------|
-| Starter | 1 | Landing Page (1 pagina) |
-| Growth | 2 | LP, 3 paginas, 5 paginas |
-| Scale | 5 | LP, 3, 5 e 8 paginas |
+| Modulo | Starter | Growth | Scale |
+|--------|---------|--------|-------|
+| Campanhas de Conteudo/mes | 1 | 3 | Ilimitado |
+| Artes Sociais/mes | 8 | 20 | Ilimitado |
+| Sites ativos | 1 (LP) | 2 (LP, 3p, 5p) | 5 (LP, 3p, 5p, 8p) |
 
-Adicionar `maxSites: number` e `siteTypes: string[]` ao `PlanConfig`.
+- Um banner de cota aparece no topo de cada modulo mostrando "X de Y usados este mes"
+- Ao atingir o limite, o botao de gerar e desabilitado e aparece sugestao de upgrade
+- Os limites `maxContentCampaigns` e `maxSocialArts` ja existem em `plans.ts`
 
----
+### 2. Fluxo de Aprovacao Didatico (padrao nos 3 modulos)
 
-## 2. Edge Function `generate-site` (NOVA)
+Criar um componente reutilizavel `ApprovalPanel` com:
 
-Nova edge function que recebe o briefing completo e retorna **codigo HTML completo** (nao JSON, nao mockup).
+**Barra de Progresso de Aprovacao**
+- "3 de 8 aprovados" com barra visual de progresso
+- Cores: cinza (pendente), verde (aprovado)
 
-**System prompt:** Instrui a IA a atuar como um desenvolvedor web expert e gerar:
-- HTML5 semantico completo (doctype, head com meta tags, body)
-- CSS embutido em tag `<style>` (autocontido, sem dependencias externas exceto Google Fonts)
-- Design responsivo mobile-first com media queries
-- Secoes corretas para o tipo (hero, features, testimonials, contact form, footer, etc.)
-- Textos reais baseados nos dados do cliente (nao lorem ipsum)
-- Cores e fontes do cliente aplicadas como CSS variables
-- Animacoes suaves com CSS (scroll reveal, hover effects)
-- Meta tags SEO basicas (title, description, og:tags)
-- Favicon placeholder
+**Acoes por Item**
+- Botao "Aprovar" grande e claro com icone de check
+- Botao "Solicitar Alteracao" que abre campo de texto para o usuario descrever o que quer mudar
+- Botao "Rejeitar" (com confirmacao)
+- Cada item mostra status visual claro: pendente (cinza), aprovado (verde), alteracao solicitada (amarelo), rejeitado (vermelho)
 
-**Input do body:**
+**Acoes em Lote**
+- "Aprovar Todos" (ja existe parcialmente)
+- "Aprovar Pendentes" para aprovar apenas os que ainda nao foram revisados
+
+**Tooltip de Ajuda**
+- Ao lado do botao de aprovar, um icone (?) com tooltip explicando: "Ao aprovar, este conteudo esta pronto para publicacao/uso."
+
+### 3. Aplicacao por Modulo
+
+**Conteudos (`ClienteConteudos.tsx`)**
+- Antes do botao "Nova Campanha": banner de cota com contagem de campanhas usadas no mes
+- Na view de detalhe do conteudo: substituir botao simples pelo `ApprovalPanel` com acoes Aprovar / Solicitar Alteracao / Rejeitar
+- Na lista de conteudos da campanha: status visual colorido em cada card
+- Adicionar campo "notas de alteracao" que fica visivel quando status = alteracao_solicitada
+
+**Redes Sociais (`ClienteRedesSociais.tsx`)**
+- Antes do botao "Nova Criacao Mensal": banner de cota com contagem de artes geradas no mes
+- No editor modal de cada arte: painel de aprovacao abaixo do canvas com as mesmas acoes
+- Na grid de artes: overlay colorido indicando status (verde = aprovada, amarelo = alteracao, vermelho = rejeitada)
+
+**Sites (`ClienteSites.tsx`)**
+- Antes do botao "Criar Novo Site": banner de cota mostrando sites ativos vs. limite (ja tem parcialmente)
+- No `SitePreview`: substituir botao "Aprovar e Baixar" por fluxo em 2 passos:
+  1. Primeiro "Aprovar" (muda status para aprovado)
+  2. Depois "Baixar Codigo" (disponivel so apos aprovacao)
+  3. Opcao "Solicitar Ajustes" que volta ao briefing com campo para descrever mudancas
+
+### 4. Componente Reutilizavel `ApprovalPanel`
+
+Novo componente `src/components/approval/ApprovalPanel.tsx` com props:
+
 ```text
-{
-  tipo: "lp" | "3pages" | "5pages" | "8pages",
-  objetivo: "leads" | "institucional" | "vendas" | "portfolio",
-  estilo: "moderno" | "corporativo" | "ousado" | "minimalista",
-  cta_principal: string,
-  persona: { nome, descricao },
-  identidade_visual: { paleta, fontes, estilo, referencias, tom_visual },
-  servicos: string,
-  diferencial: string,
-  depoimentos: string,
-  contato: string,
-  instrucoes_adicionais: string,
-  estrategia: { segmento, modelo_negocio, cliente_ideal, diferencial, ... }
+interface ApprovalPanelProps {
+  status: "pending" | "approved" | "changes_requested" | "rejected";
+  onApprove: () => void;
+  onRequestChanges: (note: string) => void;
+  onReject?: () => void;
+  changeNote?: string;
+  showReject?: boolean;
+  helpText?: string;
 }
 ```
 
-**Output:** `{ html: string }` -- string HTML completa pronta para `srcdoc` de iframe.
+E um componente de resumo `ApprovalSummary`:
 
-Usa `google/gemini-3-flash-preview` sem streaming (precisa do HTML inteiro).
+```text
+interface ApprovalSummaryProps {
+  total: number;
+  approved: number;
+  changesRequested: number;
+  rejected: number;
+  onApproveAll: () => void;
+}
+```
 
----
+### 5. Componente `UsageQuotaBanner`
 
-## 3. Reescrita de `ClienteSites.tsx`
+Novo componente `src/components/quota/UsageQuotaBanner.tsx`:
 
-### Wizard de 4 Etapas
+```text
+interface UsageQuotaBannerProps {
+  used: number;
+  limit: number; // -1 = ilimitado
+  label: string; // "campanhas de conteudo" | "artes sociais" | "sites"
+  planName: string;
+}
+```
 
-**Etapa 1 -- Tipo de Site**
-- Cards para cada tipo (LP, 3, 5, 8 paginas)
-- Descricao das paginas incluidas em cada tipo
-- Tipos fora do plano mostram badge "Disponivel no plano Growth/Scale" e ficam desabilitados
-- Contagem de sites ativos vs. limite do plano
-
-**Etapa 2 -- Objetivo e Estilo**
-- Objetivo: Captura de Leads / Institucional / Vendas / Portfolio
-- Estilo visual: Moderno e clean / Corporativo / Ousado / Minimalista
-- CTA principal (input de texto, ex: "Agendar demo gratuita")
-
-**Etapa 3 -- Briefing (revisao)**
-- Exibe automaticamente todos os dados coletados:
-  - Estrategia (de `localStorage` key `estrategia_data`)
-  - Persona (de `localStorage`)
-  - Identidade visual (da base de conhecimento local do modulo)
-  - Servicos, diferencial, depoimentos, contato (dos campos da base de conhecimento)
-- Cada bloco editavel inline
-- Campos vazios com indicador visual e sugestao de preencher
-- Textarea "Instrucoes adicionais" para complementar
-
-**Etapa 4 -- Geracao e Preview**
-- Botao "Gerar Site com IA"
-- Barra de progresso animada durante geracao (loading state)
-- Apos gerar:
-  - **iframe com `srcdoc`** renderizando o HTML completo -- o cliente ve o site real
-  - Toggle Desktop (100%) / Tablet (768px) / Mobile (375px) -- muda a largura do iframe
-  - Botao fullscreen para ver em tela cheia
-  - **Botoes de acao:**
-    - "Aprovar e Baixar" -- gera download do HTML como arquivo
-    - "Regenerar" -- gera novamente com mesmo briefing
-    - "Editar Briefing" -- volta ao passo 3
-  - Card de guia de publicacao com instrucoes para hospedar no dominio
-
-### Preview Visual (o ponto principal)
-O preview usa `<iframe srcdoc={generatedHtml} />` que renderiza o HTML completo como se fosse um site real. O cliente ve exatamente o que vai publicar: cores, fontes, layout, textos, responsividade -- tudo visivel e interativo dentro do iframe.
-
-### Guia de Publicacao
-Card com instrucoes claras:
-1. Clique em "Aprovar e Baixar"
-2. Descompacte o arquivo no seu computador
-3. Acesse o painel da sua hospedagem
-4. Faca upload dos arquivos na pasta raiz do seu dominio
-5. Aguarde a propagacao (ate 24h)
-
-Campo para o usuario informar a URL apos publicar (status muda para "Publicado").
-
-### Historico
-Lista de sites gerados salvos em localStorage (`client-sites`) com:
-- Nome, tipo, data, status (Rascunho/Publicado), URL informada
-- Botao para re-visualizar (abre preview do HTML salvo)
-- Botao para re-baixar
-
----
-
-## 4. Persistencia da Estrategia
-
-`ClientePlanoMarketing.tsx` linha 686: quando `setCompleted(true)` e chamado, adicionar `localStorage.setItem("estrategia_data", JSON.stringify(answers))` para que Sites e Conteudos possam ler os dados.
+Exibe:
+- Barra de progresso com cor (verde < 50%, amarelo 50-80%, vermelho > 80%)
+- Texto "X de Y [label] usados este mes"
+- Quando limit = -1: "Ilimitado no plano Scale"
+- Quando usado >= limite: alerta vermelho + botao "Fazer Upgrade"
 
 ---
 
 ## Detalhes Tecnicos
 
-### `src/constants/plans.ts`
+### Arquivos Novos
 
-```typescript
-// Adicionar ao PlanConfig:
-maxSites: number;
-siteTypes: string[];
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/components/approval/ApprovalPanel.tsx` | Componente de aprovacao com acoes Aprovar/Alterar/Rejeitar |
+| `src/components/approval/ApprovalSummary.tsx` | Barra de resumo de aprovacao de uma campanha |
+| `src/components/quota/UsageQuotaBanner.tsx` | Banner de cota de uso por plano |
 
-// Valores:
-// Starter: maxSites: 1, siteTypes: ["lp"]
-// Growth: maxSites: 2, siteTypes: ["lp", "3pages", "5pages"]
-// Scale: maxSites: 5, siteTypes: ["lp", "3pages", "5pages", "8pages"]
-```
-
-### `supabase/functions/generate-site/index.ts` (NOVO)
-
-- Recebe briefing completo via POST
-- Monta system prompt instruindo a gerar HTML/CSS autocontido
-- Chama Lovable AI gateway com `google/gemini-3-flash-preview`
-- Retorna `{ html: string }`
-- Trata erros 429/402
-
-### `src/pages/cliente/ClienteSites.tsx` (REESCRITA)
-
-- Wizard animado com 4 etapas (framer-motion)
-- Leitura automatica de estrategia, persona, identidade visual
-- Chamada via `supabase.functions.invoke("generate-site", { body })`
-- Preview em `<iframe srcdoc={html} sandbox="allow-scripts" />` com toggle de viewport
-- Download via `new Blob([html], { type: "text/html" })` + `URL.createObjectURL`
-- Historico persistido em localStorage
-
-### `src/pages/cliente/ClientePlanoMarketing.tsx`
-
-- Adicionar 1 linha em `handleNext`: salvar answers no localStorage quando completa
-
-### `supabase/config.toml`
-
-- Adicionar `[functions.generate-site]` com `verify_jwt = false`
-
----
-
-## Arquivos Modificados
+### Arquivos Modificados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/constants/plans.ts` | Adicionar `maxSites` e `siteTypes` |
-| `src/pages/cliente/ClienteSites.tsx` | Reescrita completa: wizard 4 etapas, geracao real, preview iframe, download |
-| `src/pages/cliente/ClientePlanoMarketing.tsx` | Salvar answers no localStorage |
-| `supabase/functions/generate-site/index.ts` | Nova edge function (Lovable AI -> HTML completo) |
-| `supabase/config.toml` | Adicionar config do generate-site |
+| `src/pages/cliente/ClienteConteudos.tsx` | Adicionar banner de cota, substituir toggle de aprovacao por ApprovalPanel, adicionar status "changes_requested"/"rejected" ao type GeneratedContent |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Adicionar banner de cota, usar ApprovalPanel no editor modal, overlay de status na grid |
+| `src/pages/cliente/ClienteSites.tsx` | Adicionar banner de cota (ja parcial), separar aprovacao e download no SitePreview |
+| `src/components/sites/SitePreview.tsx` | Separar fluxo: primeiro aprovar, depois baixar; adicionar campo de solicitar alteracoes |
+| `src/types/cliente.ts` | Adicionar type `ApprovalStatus = "pending" \| "approved" \| "changes_requested" \| "rejected"` |
+
+### Mudancas no Type System
+
+O campo `approved: boolean` nos types `GeneratedContent`, `GeneratedArt` e `SavedSite` sera substituido por:
+
+```text
+status: "pending" | "approved" | "changes_requested" | "rejected";
+changeNote?: string;
+```
+
+Retrocompatibilidade: ao carregar dados antigos com `approved: boolean`, converter automaticamente para `status: approved ? "approved" : "pending"`.
