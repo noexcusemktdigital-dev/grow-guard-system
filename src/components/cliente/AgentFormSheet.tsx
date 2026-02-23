@@ -148,7 +148,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const updatePrompt = (key: string, value: any) => setForm((f) => ({ ...f, prompt_config: { ...promptConfig, [key]: value } }));
   const updateCrmAction = (key: string, value: boolean) => setForm((f) => ({ ...f, crm_actions: { ...crmActions, [key]: value } }));
 
-  const engagementRules = promptConfig.engagement_rules || { max_messages: 30, inactivity_timeout_hours: 48, timeout_action: "handoff", limit_action: "handoff", working_hours: { enabled: false, start: "08:00", end: "18:00" } };
+  const engagementRules = promptConfig.engagement_rules || { max_messages: 10, inactivity_timeout_hours: 48, timeout_action: "handoff", limit_action: "handoff", working_hours: { enabled: false, start: "08:00", end: "18:00" } };
   const followupConfig = promptConfig.followup || { enabled: false, delay_hours: 24, max_attempts: 3, style: "ai_generated" };
   const objectionsConfig = promptConfig.objections || [];
 
@@ -662,7 +662,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Limite de mensagens por conversa</Label>
-                  <Input type="number" min={5} max={200} value={engagementRules.max_messages} onChange={(e) => updateEngagement("max_messages", parseInt(e.target.value) || 30)} />
+                  <Input type="number" min={5} max={200} value={engagementRules.max_messages} onChange={(e) => updateEngagement("max_messages", parseInt(e.target.value) || 10)} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Ação ao atingir limite</Label>

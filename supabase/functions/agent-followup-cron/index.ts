@@ -92,7 +92,24 @@ Deno.serve(async (req) => {
           (m: any) => m.direction === "outbound" && m.metadata?.followup === true
         ).length;
 
-        if (followupCount >= maxAttempts) continue;
+        if (followupCount >= maxAttempts) {
+          // Handoff: agent exhausted all follow-up attempts — transfer to human
+          await adminClient.from("whatsapp_contacts").update({ attending_mode: "human" }).eq("id", contact.id);
+          const { data: members } = await adminClient.from("organization_memberships").select("user_id").eq("organization_id", agent.organization_id);
+          if (members) {
+            await adminClient.from("client_notifications").insert(
+              members.map((m: any) => ({
+                organization_id: agent.organization_id,
+                user_id: m.user_id,
+                title: "Follow-up esgotado",
+                message: `Agente ${agent.name}: contato ${contact.name || contact.phone} não respondeu após ${maxAttempts} tentativas de follow-up. Transferido para atendimento humano.`,
+                type: "warning",
+                action_url: "/cliente/chat",
+              }))
+            );
+          }
+          continue;
+        }
 
         // Generate follow-up message
         const { data: history } = await adminClient

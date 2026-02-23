@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
     }
 
     // ─── CHECK 3: Message count limit ───
-    const maxMessages = engagementRules.max_messages ?? 30;
+    const maxMessages = engagementRules.max_messages ?? 10;
     const { count: msgCount } = await adminClient
       .from("whatsapp_messages")
       .select("id", { count: "exact", head: true })
@@ -348,6 +348,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     systemPrompt += leadContext;
+    systemPrompt += `\n\nVocê tem no máximo ${maxMessages} mensagens nesta conversa para cumprir seu objetivo. Seja direto, eficiente e conduza a conversa de forma objetiva. Se não conseguir cumprir o objetivo dentro desse limite, use [AI_ACTION:HANDOFF:Limite de mensagens atingido sem conclusão do objetivo].`;
     systemPrompt += "\n\nResponda de forma concisa e natural, como em uma conversa de WhatsApp. Use parágrafos curtos.";
 
     const model = promptConfig.model || "google/gemini-3-flash-preview";
