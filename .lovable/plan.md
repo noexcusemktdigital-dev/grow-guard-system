@@ -1,50 +1,44 @@
 
-# Ajustes no Agente de IA -- Refinamentos
+# Correção de 3 Bugs nos Agentes de IA
 
-## Resumo
+## Bug 1: Erro ao excluir agente
 
-Corrigir e simplificar varios pontos do formulario e card do agente: foto por upload (nao URL), sexo apenas Masculino/Feminino, remover Tags, mostrar numero do WhatsApp ao inves de instancia, remover Temperatura e Modelo da interface (usar valores fixos otimos), e adicionar botao "Gerar saudacao com IA".
+**Causa**: A policy RLS de DELETE na tabela `client_ai_agents` permite apenas `super_admin`, `admin` ou `cliente_admin`. Se o usuario logado nao tiver uma dessas roles, o DELETE falha silenciosamente (retorna 0 rows affected), e o Supabase client nao retorna erro explicito -- mas o agente nao e excluido e o frontend mostra erro.
+
+**Solucao**: Verificar a role do usuario. A policy ja inclui `cliente_admin`, que e a role principal de clientes. Provavelmente o usuario tem a role `cliente_user`, que nao tem permissao de DELETE. Vamos criar uma nova policy que permita tambem que o criador do agente (`created_by = auth.uid()`) possa excluir, ou ajustar a policy existente para incluir membros da org.
+
+**Acao**: Migration SQL para alterar a policy de DELETE, permitindo que membros da organizacao possam excluir agentes que eles criaram (`created_by = auth.uid()`).
 
 ---
 
-## 1. Foto do agente por Upload (nao URL)
+## Bug 2: Foto do agente nao aparece apos upload
 
-Atualmente a aba Identidade tem um input de URL para o avatar. Trocar por um botao de upload de imagem que:
-- Faz upload para o bucket `agent-knowledge` no path `{org_id}/avatars/{timestamp}_{filename}`
-- Exibe preview circular da imagem
-- Botao "Alterar foto" / "Remover foto"
-- Salva a URL publica no campo `avatar_url`
+**Causa**: O bucket `agent-knowledge` e **privado** (`public: false`). O codigo usa `getPublicUrl()` que gera uma URL publica, mas como o bucket e privado, essa URL retorna erro 403. A imagem e salva corretamente, mas nao pode ser exibida.
 
-## 2. Sexo: apenas Masculino e Feminino
+**Solucao**: Duas opcoes:
+1. Tornar o bucket publico (mais simples, adequado para avatares)
+2. Usar URLs assinadas (`createSignedUrl`) ao exibir
 
-Remover a opcao "Neutro" do RadioGroup. Manter apenas:
-- Masculino
-- Feminino
+Como os avatares nao sao dados sensiveis e precisam ser exibidos em cards publicamente, a opcao mais simples e tornar o bucket publico via migration.
 
-## 3. Remover campo Tags
+**Acao**: Migration SQL para atualizar o bucket para `public = true`.
 
-Remover completamente a secao de Tags da aba Identidade (input, badges, funcoes `addTag`/`removeTag`). O campo `tags` no form pode continuar existindo como array vazio por padrao, mas nao sera exibido na interface.
+---
 
-## 4. WhatsApp: mostrar numero ao inves de instancia
+## Bug 3: "Numero nao configurado" apesar de WhatsApp estar integrado
 
-Trocar o label "Instancias WhatsApp" por "Numeros de WhatsApp". Exibir o `phone_number` da instancia (que ja vem do hook `useWhatsAppInstance`). Se houver multiplas instancias no futuro, listar todas com seus numeros. O comportamento interno (salvar `instance_id`) continua o mesmo, mas o usuario ve o numero.
+**Causa**: No banco, o campo `phone_number` da instancia WhatsApp esta `NULL`. A Z-API retorna o numero no campo `phoneConnected` durante o check-status, mas o `phone_number` so e salvo se `statusData.smartphoneConnected` for `true` (linha 92 do whatsapp-setup). Se essa flag nao vier da Z-API ou for `false`, o numero nao e salvo.
 
-## 5. Remover Temperatura e Modelo da interface
+O numero da instancia Z-API esta conectado (`status: connected`), mas a API pode usar um campo diferente. Alem disso, o campo pode nao ter sido populado durante o setup inicial.
 
-O usuario nao precisa escolher esses parametros. Remover o bloco com Slider de temperatura e Select de modelo da aba "Prompt e Objetivos". Usar valores fixos no codigo:
-- Modelo: `google/gemini-3-flash-preview` (o melhor equilibrio velocidade/qualidade, ja usado na edge function)
-- Temperatura: omitir (usar o padrao do modelo)
+**Solucao**:
+1. Na edge function `whatsapp-setup`, no action `check-status`, salvar o `phoneConnected` sempre que disponivel, sem depender do flag `smartphoneConnected`
+2. No frontend (`AgentFormSheet.tsx`), quando `phone_number` for null mas a instancia existir e estiver connected, fazer um fetch ao check-status para tentar obter o numero
+3. Como alternativa imediata, buscar o numero diretamente da Z-API na edge function e garantir que ele seja salvo
 
-O campo `prompt_config` continua existindo mas sem `temperatura` e `modelo` expostos ao usuario.
-
-## 6. Gerar saudacao com IA
-
-Na aba Persona, quando o usuario selecionar "Personalizado" na saudacao, alem do input de texto, adicionar um botao "Gerar com IA" que:
-- Chama a edge function `ai-generate-agent-config` com `type: "greeting"`, `role`, `persona` e `name`
-- Retorna uma sugestao de saudacao personalizada
-- Preenche o campo `custom_greeting` com o resultado
-
-Tambem atualizar a edge function `ai-generate-agent-config` para aceitar `type: "greeting"`.
+**Acao**: 
+- Editar `supabase/functions/whatsapp-setup/index.ts` -- simplificar a logica de `phone_number` no check-status para salvar `statusData.phoneConnected` diretamente quando disponivel
+- Editar `src/components/cliente/AgentFormSheet.tsx` -- quando a instancia existir mas `phone_number` for null, exibir o instance_id mascarado e um botao "Atualizar numero" que chama check-status
 
 ---
 
@@ -52,12 +46,14 @@ Tambem atualizar a edge function `ai-generate-agent-config` para aceitar `type: 
 
 | Acao | Arquivo |
 |------|---------|
-| Editar | `src/components/cliente/AgentFormSheet.tsx` -- upload de foto, remover tags, remover temperatura/modelo, sexo sem neutro, label WhatsApp, botao gerar saudacao |
-| Editar | `supabase/functions/ai-generate-agent-config/index.ts` -- suportar `type: "greeting"` |
+| Migration | Alterar policy DELETE em `client_ai_agents` para permitir `created_by = auth.uid()` |
+| Migration | Atualizar bucket `agent-knowledge` para publico |
+| Editar | `supabase/functions/whatsapp-setup/index.ts` -- corrigir logica de phone_number no check-status |
+| Editar | `src/components/cliente/AgentFormSheet.tsx` -- fallback quando phone_number e null, botao atualizar |
 
 ## Detalhes Tecnicos
 
-- O upload da foto reutiliza o mesmo bucket `agent-knowledge` e a mesma logica de `handleFileUpload` ja existente, adaptada para imagem unica
-- O modelo fixo `google/gemini-3-flash-preview` e o melhor dos tres para este caso: rapido, barato e com qualidade suficiente para conversas. O Pro e mais caro/lento sem ganho significativo para chat, e o GPT-5 Mini tambem nao justifica o custo extra
-- A temperatura padrao do Gemini Flash ja e adequada para conversas naturais, nao precisa de ajuste manual
-- Na edge function `ai-agent-reply`, o campo `promptConfig.model` ja tem fallback para `google/gemini-3-flash-preview`, entao remover da UI nao quebra nada
+- A policy de DELETE sera: `USING (is_member_of_org(auth.uid(), organization_id) AND created_by = auth.uid())` OU manter a original para admins. Combinar ambas com OR
+- O bucket sera atualizado com `UPDATE storage.buckets SET public = true WHERE id = 'agent-knowledge'`
+- No check-status, a linha 92 sera simplificada para: `phone_number: statusData.phoneConnected || instance.phone_number || null`
+- No frontend, ao montar o formulario, se `whatsappInstance` existir com status `connected` mas sem `phone_number`, chamar automaticamente o check-status via edge function para tentar obter o numero
