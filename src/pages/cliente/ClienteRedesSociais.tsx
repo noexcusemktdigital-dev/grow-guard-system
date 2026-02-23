@@ -109,6 +109,19 @@ const initialSections: KBSection[] = [
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const OBJETIVOS = ["Promoção", "Engajamento", "Institucional", "Lançamento", "Depoimento"];
 const ESTILOS = ["Minimalista", "Bold", "Corporativo", "Criativo", "Elegante"];
+const TIPOS_POST = [
+  { value: "produto", label: "Produto" },
+  { value: "servico", label: "Serviço" },
+  { value: "promocao", label: "Promoção" },
+  { value: "institucional", label: "Institucional" },
+  { value: "educativo", label: "Educativo" },
+  { value: "depoimento", label: "Depoimento" },
+];
+const NIVEIS = [
+  { value: "simples", label: "Simples", desc: "Clean e profissional" },
+  { value: "elaborado", label: "Elaborado", desc: "Composição forte e vibrante" },
+  { value: "alto_padrao", label: "Alto Padrão", desc: "Ultra-premium, qualidade de revista" },
+];
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 const loadingPhrases = [
@@ -335,6 +348,11 @@ export default function ClienteRedesSociais() {
   const [bPromocoes, setBPromocoes] = useState("");
   const [bObs, setBObs] = useState("");
   const [bQtd, setBQtd] = useState("4");
+  const [bTipoPost, setBTipoPost] = useState("institucional");
+  const [bNivel, setBNivel] = useState("elaborado");
+  const [bDescricaoProduto, setBDescricaoProduto] = useState("");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importedScripts, setImportedScripts] = useState<any[]>([]);
 
   // Calendar
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
@@ -370,6 +388,10 @@ export default function ClienteRedesSociais() {
           briefing: { mes: bMes, objetivo: bObjetivo, cores: bCores, temas: bTemas, promocoes: bPromocoes, observacoes: bObs },
           quantidade: qty,
           estilo: bEstilo,
+          tipo_post: bTipoPost,
+          nivel: bNivel,
+          descricao_produto: bDescricaoProduto || undefined,
+          roteiros_importados: importedScripts.length > 0 ? importedScripts : undefined,
         },
       });
 
@@ -396,6 +418,7 @@ export default function ClienteRedesSociais() {
               prompt: concept.visual_prompt_feed,
               format: "feed",
               file_path: `${timestamp}/${slug}-feed.png`,
+              nivel: bNivel,
             },
           });
           if (!feedError && feedData?.url) feedUrl = feedData.url;
@@ -414,6 +437,7 @@ export default function ClienteRedesSociais() {
               prompt: concept.visual_prompt_story,
               format: "story",
               file_path: `${timestamp}/${slug}-story.png`,
+              nivel: bNivel,
             },
           });
           if (!storyError && storyData?.url) storyUrl = storyData.url;
@@ -537,6 +561,57 @@ export default function ClienteRedesSociais() {
 
                   <div className="space-y-4 mt-2">
                     <p className="text-xs text-muted-foreground">Cada post gera 1 arte Feed (1:1) + 1 arte Story (9:16). A IA cria o visual e sugere legenda + hashtags.</p>
+
+                    {/* Import from Conteúdos */}
+                    <Button variant="outline" className="w-full gap-2 text-xs border-dashed" onClick={() => {
+                      try {
+                        const stored = localStorage.getItem("social-content-campaigns");
+                        if (stored) {
+                          const parsed = JSON.parse(stored);
+                          const allScripts: any[] = [];
+                          (Array.isArray(parsed) ? parsed : [parsed]).forEach((camp: any) => {
+                            if (camp.scripts) allScripts.push(...camp.scripts);
+                            if (camp.roteiros) allScripts.push(...camp.roteiros);
+                          });
+                          if (allScripts.length > 0) {
+                            setImportedScripts(allScripts);
+                            setBQtd(String(Math.min(allScripts.length, 10)));
+                            toast({ title: `${allScripts.length} conteúdo(s) importado(s)!`, description: "Títulos e legendas serão usados como base." });
+                          } else {
+                            toast({ title: "Nenhum conteúdo encontrado", description: "Crie conteúdos primeiro em Conteúdos.", variant: "destructive" });
+                          }
+                        } else {
+                          toast({ title: "Nenhuma campanha de conteúdo", description: "Crie conteúdos primeiro na aba Conteúdos.", variant: "destructive" });
+                        }
+                      } catch { toast({ title: "Erro ao importar", variant: "destructive" }); }
+                    }}>
+                      <FolderOpen className="w-3.5 h-3.5" /> Importar de Conteúdos
+                      {importedScripts.length > 0 && <Badge variant="secondary" className="text-[10px] ml-1">{importedScripts.length} importados</Badge>}
+                    </Button>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Tipo de Post *</Label>
+                        <Select value={bTipoPost} onValueChange={setBTipoPost}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{TIPOS_POST.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Nível de Qualidade *</Label>
+                        <Select value={bNivel} onValueChange={setBNivel}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{NIVEIS.map((n) => (<SelectItem key={n.value} value={n.value}><span>{n.label}</span> <span className="text-muted-foreground ml-1">— {n.desc}</span></SelectItem>))}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {(bTipoPost === "produto" || bTipoPost === "servico") && (
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Descrição do {bTipoPost === "produto" ? "Produto" : "Serviço"}</Label>
+                        <Textarea value={bDescricaoProduto} onChange={(e) => setBDescricaoProduto(e.target.value)} rows={2} placeholder={`Descreva o ${bTipoPost === "produto" ? "produto" : "serviço"}: materiais, cores, formato, público-alvo...`} />
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
