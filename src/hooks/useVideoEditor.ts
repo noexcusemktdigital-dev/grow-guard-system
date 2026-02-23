@@ -32,18 +32,6 @@ export interface MusicTrack {
   mode: "mix" | "replace";
 }
 
-export interface VideoEditorState {
-  videoFile: File | null;
-  videoUrl: string | null;
-  duration: number;
-  currentTime: number;
-  isPlaying: boolean;
-  segments: VideoSegment[];
-  subtitles: Subtitle[];
-  inserts: ImageInsert[];
-  music: MusicTrack | null;
-}
-
 let idCounter = 0;
 const genId = () => `ve_${++idCounter}_${Date.now()}`;
 
@@ -58,6 +46,8 @@ export function useVideoEditor() {
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [inserts, setInserts] = useState<ImageInsert[]>([]);
   const [music, setMusic] = useState<MusicTrack | null>(null);
+  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
+  const [isGeneratingSubtitles, setIsGeneratingSubtitles] = useState(false);
 
   const loadVideo = useCallback((file: File) => {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
@@ -70,6 +60,7 @@ export function useVideoEditor() {
     setMusic(null);
     setCurrentTime(0);
     setIsPlaying(false);
+    setSelectedSegmentId(null);
   }, [videoUrl]);
 
   const onDurationLoaded = useCallback((dur: number) => {
@@ -77,7 +68,8 @@ export function useVideoEditor() {
     setSegments([{ id: genId(), startTime: 0, endTime: dur }]);
   }, []);
 
-  const addSegmentAtCurrentTime = useCallback(() => {
+  // Split segment at playhead position
+  const splitAtCurrentTime = useCallback(() => {
     if (currentTime <= 0 || currentTime >= duration) return;
     setSegments(prev => {
       const seg = prev.find(s => currentTime > s.startTime && currentTime < s.endTime);
@@ -93,13 +85,41 @@ export function useVideoEditor() {
     });
   }, [currentTime, duration]);
 
+  // Delete selected segment
+  const deleteSelectedSegment = useCallback(() => {
+    if (!selectedSegmentId) return;
+    setSegments(prev => {
+      if (prev.length <= 1) return prev;
+      return prev.filter(s => s.id !== selectedSegmentId);
+    });
+    setSelectedSegmentId(null);
+  }, [selectedSegmentId]);
+
   const removeSegment = useCallback((id: string) => {
-    setSegments(prev => prev.filter(s => s.id !== id));
-  }, []);
+    setSegments(prev => {
+      if (prev.length <= 1) return prev;
+      return prev.filter(s => s.id !== id);
+    });
+    if (selectedSegmentId === id) setSelectedSegmentId(null);
+  }, [selectedSegmentId]);
 
   const updateSegment = useCallback((id: string, updates: Partial<VideoSegment>) => {
     setSegments(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
   }, []);
+
+  // Smart playback: find next segment when current time falls in a gap
+  const getNextSegmentStart = useCallback((time: number): number | null => {
+    const sorted = [...segments].sort((a, b) => a.startTime - b.startTime);
+    for (const seg of sorted) {
+      if (time >= seg.startTime && time < seg.endTime) return null; // within a segment
+      if (seg.startTime > time) return seg.startTime; // next segment
+    }
+    return null;
+  }, [segments]);
+
+  const isTimeInSegment = useCallback((time: number): boolean => {
+    return segments.some(s => time >= s.startTime && time < s.endTime);
+  }, [segments]);
 
   const addSubtitle = useCallback(() => {
     setSubtitles(prev => [...prev, {
@@ -118,6 +138,10 @@ export function useVideoEditor() {
 
   const removeSubtitle = useCallback((id: string) => {
     setSubtitles(prev => prev.filter(s => s.id !== id));
+  }, []);
+
+  const setSubtitlesList = useCallback((subs: Subtitle[]) => {
+    setSubtitles(subs);
   }, []);
 
   const addInsert = useCallback((file: File) => {
@@ -177,17 +201,21 @@ export function useVideoEditor() {
     setSubtitles([]);
     setInserts([]);
     setMusic(null);
+    setSelectedSegmentId(null);
   }, [videoUrl, inserts, music]);
 
   return {
     videoRef,
     videoFile, videoUrl, duration, currentTime, isPlaying,
     segments, subtitles, inserts, music,
-    setCurrentTime, setIsPlaying,
+    selectedSegmentId, isGeneratingSubtitles,
+    setCurrentTime, setIsPlaying, setSelectedSegmentId, setIsGeneratingSubtitles,
     loadVideo, onDurationLoaded, resetEditor,
-    addSegmentAtCurrentTime, removeSegment, updateSegment,
-    addSubtitle, updateSubtitle, removeSubtitle,
+    splitAtCurrentTime, deleteSelectedSegment,
+    removeSegment, updateSegment,
+    addSubtitle, updateSubtitle, removeSubtitle, setSubtitlesList,
     addInsert, updateInsert, removeInsert,
     setMusicTrack, updateMusic, removeMusic,
+    getNextSegmentStart, isTimeInSegment,
   };
 }

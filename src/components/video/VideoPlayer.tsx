@@ -1,8 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import type { Subtitle, ImageInsert } from "@/hooks/useVideoEditor";
+import type { Subtitle, ImageInsert, VideoSegment } from "@/hooks/useVideoEditor";
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -12,9 +11,12 @@ interface VideoPlayerProps {
   isPlaying: boolean;
   subtitles: Subtitle[];
   inserts: ImageInsert[];
+  segments: VideoSegment[];
   onTimeUpdate: (time: number) => void;
   onDurationLoaded: (dur: number) => void;
   onPlayingChange: (playing: boolean) => void;
+  isTimeInSegment: (time: number) => boolean;
+  getNextSegmentStart: (time: number) => number | null;
 }
 
 function formatTime(s: number) {
@@ -25,14 +27,47 @@ function formatTime(s: number) {
 
 export function VideoPlayer({
   videoUrl, videoRef, currentTime, duration, isPlaying,
-  subtitles, inserts,
+  subtitles, inserts, segments,
   onTimeUpdate, onDurationLoaded, onPlayingChange,
+  isTimeInSegment, getNextSegmentStart,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleTimeUpdate = useCallback(() => {
-    if (videoRef.current) onTimeUpdate(videoRef.current.currentTime);
-  }, [onTimeUpdate, videoRef]);
+    if (!videoRef.current) return;
+    const time = videoRef.current.currentTime;
+
+    // Smart playback: skip gaps between segments
+    if (!isTimeInSegment(time)) {
+      const next = getNextSegmentStart(time);
+      if (next !== null) {
+        videoRef.current.currentTime = next;
+        onTimeUpdate(next);
+        return;
+      } else {
+        // No more segments, pause
+        videoRef.current.pause();
+        onPlayingChange(false);
+        return;
+      }
+    }
+
+    // Check if we hit the end of current segment
+    const currentSeg = segments.find(s => time >= s.startTime && time < s.endTime);
+    if (!currentSeg) {
+      const next = getNextSegmentStart(time);
+      if (next !== null) {
+        videoRef.current.currentTime = next;
+        onTimeUpdate(next);
+      } else {
+        videoRef.current.pause();
+        onPlayingChange(false);
+      }
+      return;
+    }
+
+    onTimeUpdate(time);
+  }, [onTimeUpdate, videoRef, isTimeInSegment, getNextSegmentStart, segments, onPlayingChange]);
 
   const handleLoadedMetadata = useCallback(() => {
     if (videoRef.current) onDurationLoaded(videoRef.current.duration);
@@ -44,30 +79,36 @@ export function VideoPlayer({
       videoRef.current.pause();
       onPlayingChange(false);
     } else {
+      // If not in a segment, jump to nearest
+      if (!isTimeInSegment(videoRef.current.currentTime)) {
+        const next = getNextSegmentStart(videoRef.current.currentTime);
+        if (next !== null) videoRef.current.currentTime = next;
+        else {
+          // Start from first segment
+          const first = [...segments].sort((a, b) => a.startTime - b.startTime)[0];
+          if (first) videoRef.current.currentTime = first.startTime;
+        }
+      }
       videoRef.current.play();
       onPlayingChange(true);
     }
-  }, [isPlaying, onPlayingChange, videoRef]);
-
-  const handleSeek = useCallback((val: number[]) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = val[0];
-      onTimeUpdate(val[0]);
-    }
-  }, [onTimeUpdate, videoRef]);
+  }, [isPlaying, onPlayingChange, videoRef, isTimeInSegment, getNextSegmentStart, segments]);
 
   const restart = useCallback(() => {
     if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      onTimeUpdate(0);
+      const first = [...segments].sort((a, b) => a.startTime - b.startTime)[0];
+      const t = first ? first.startTime : 0;
+      videoRef.current.currentTime = t;
+      onTimeUpdate(t);
     }
-  }, [onTimeUpdate, videoRef]);
+  }, [onTimeUpdate, videoRef, segments]);
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    v.addEventListener("ended", () => onPlayingChange(false));
-    return () => v.removeEventListener("ended", () => onPlayingChange(false));
+    const onEnded = () => onPlayingChange(false);
+    v.addEventListener("ended", onEnded);
+    return () => v.removeEventListener("ended", onEnded);
   }, [onPlayingChange, videoRef]);
 
   const activeSubtitles = subtitles.filter(
@@ -142,13 +183,6 @@ export function VideoPlayer({
         <span className="text-xs text-muted-foreground tabular-nums w-20 text-center">
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
-        <Slider
-          value={[currentTime]}
-          max={duration || 1}
-          step={0.1}
-          onValueChange={handleSeek}
-          className="flex-1"
-        />
       </div>
     </div>
   );
