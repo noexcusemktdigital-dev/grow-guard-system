@@ -1,173 +1,64 @@
 
+# Corrigir Formulario de Criacao de Metas
 
-# Metas Comerciais -- Reformulacao Completa com Integracao Real
+## Problemas Identificados
 
-## Resumo
+1. **Valor alvo sem formatacao**: O campo `target_value` e um `<Input type="number">` simples, sem separador de milhar (ponto/virgula no padrao brasileiro). Ex: usuario digita `50000` sem saber se e R$ 50 ou R$ 50.000.
+2. **Escopo "Individual" nao mostra seletor de pessoa**: Quando o usuario seleciona escopo "Individual", nao aparece nenhum dropdown para escolher qual pessoa. O formulario tem logica para `novaMeta.scope === "team"` mas falta a condicao para `"individual"`.
+3. **Escopo "Equipe" so aparece se ha times cadastrados**: Se nao houver times, o seletor nao aparece e nao ha orientacao ao usuario.
+4. **Abas desnecessarias**: O usuario quer remover as abas (Diagnostico, Metas, Historico) e usar somente filtros na area de metas.
 
-Transformar a aba "Minhas Metas" de uma lista simples em um painel visual rico e integrado aos dados reais do CRM. As metas terao escopo (empresa, equipe, individual), progresso calculado automaticamente a partir dos dados do CRM, visual rico com gauges/progress rings, e metas do mes atual separadas das antigas (historico).
+## Mudancas
 
----
+### 1. Formulario de Nova Meta (em `ClientePlanoVendas.tsx`)
 
-## O que muda
+**Campo "Valor alvo"**: Trocar `<Input type="number">` por um input de texto com mascara brasileira (R$ 50.000,00 para metricas monetarias, ou numero simples para leads/reunioes/contratos). Ao salvar, faz o parse para numero.
 
-### 1. Banco de Dados -- Expandir tabela `goals`
+**Seletor de pessoa (individual)**: Adicionar import do hook `useCrmTeam` que ja existe e retorna membros da organizacao. Quando `scope === "individual"`, renderizar um `<Select>` com a lista de membros (full_name + role).
 
-Adicionar colunas na tabela `goals` para suportar escopo, equipe e integracao:
+**Seletor de time (equipe)**: Manter o existente, mas adicionar mensagem "Nenhum time cadastrado" quando `teams` estiver vazio.
 
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| `scope` | text (default 'company') | 'company', 'team', 'individual' |
-| `team_id` | uuid (nullable) | Referencia ao time (crm_teams) quando scope='team' |
-| `metric` | text (default 'revenue') | Metrica rastreada: 'revenue', 'leads', 'conversions', 'contracts', 'meetings', 'avg_ticket', 'retention' |
-| `priority` | text (default 'media') | 'alta', 'media', 'baixa' |
-| `status` | text (default 'active') | 'active', 'completed', 'archived' |
+### 2. Remover sistema de abas
 
-A coluna `type` existente sera reutilizada, mas o campo `metric` sera mais granular para definir exatamente o que e medido. O campo `current_value` ja existe e sera atualizado.
+A pagina continuara com o diagnostico e metas, mas sem abas. O layout sera:
+- Secao de Diagnostico (consultoria) fica no topo
+- Secao de Metas fica logo abaixo, sempre visivel, com os filtros de escopo ja existentes
+- Historico de metas fica como secao colapsavel dentro de Metas (ja esta assim)
+- Historico de diagnosticos fica como secao colapsavel no fim da pagina
 
-### 2. Calculo Automatico de Progresso (via CRM)
+### 3. Formatacao de valores monetarios no input
 
-Uma funcao no frontend calculara `current_value` com base na metrica:
+Para metricas de dinheiro (revenue, avg_ticket): formatar com separador de milhar brasileiro usando `toLocaleString("pt-BR")` no display, e fazer parse ao salvar removendo pontos e trocando virgula por ponto.
 
-| Metrica | Fonte de dados | Calculo |
-|---------|----------------|---------|
-| **revenue** (Faturamento) | `crm_leads` com `won_at` no periodo | SUM(value) dos leads ganhos |
-| **leads** (Leads Gerados) | `crm_leads` com `created_at` no periodo | COUNT de leads criados |
-| **conversions** (Conversao) | `crm_leads` | (leads com won_at / total leads) * 100 |
-| **contracts** (Contratos) | `crm_leads` com `won_at` | COUNT de leads ganhos |
-| **meetings** (Reunioes) | `crm_activities` type='meeting' | COUNT no periodo |
-| **avg_ticket** (Ticket Medio) | `crm_leads` com `won_at` | AVG(value) |
-
-Quando escopo = 'team', filtra por `assigned_to IN (membros do time)`.
-Quando escopo = 'individual', filtra por `assigned_to = user_id`.
-
-### 3. Visual Novo -- Minhas Metas
-
-Layout da aba reformulada:
-
-```text
-+------------------------------------------------------+
-|  MINHAS METAS  (Fev 2026)                            |
-|  [Empresa] [Equipe] [Individual]  <- filtros escopo   |
-+------------------------------------------------------+
-|                                                      |
-|  KPI Cards (resumo do mes):                          |
-|  +----------+ +----------+ +----------+ +----------+ |
-|  | 3 metas  | | 1 batida | | 67% avg  | | 2 alta   | |
-|  | ativas   | | atingida | | progresso| | priorid. | |
-|  +----------+ +----------+ +----------+ +----------+ |
-|                                                      |
-|  Meta Cards (detalhados):                            |
-|  +------------------------------------------------+  |
-|  | [Ring 72%]  Faturamento Mensal                  |  |
-|  |             Empresa · Alta prioridade           |  |
-|  |  R$ 36.000 / R$ 50.000                         |  |
-|  |  [=============================-------] 72%     |  |
-|  |  Responsavel: Toda empresa                     |  |
-|  |  Periodo: 01/02 - 28/02                        |  |
-|  |  Faltam: R$ 14.000  |  Ritmo: R$ 1.800/dia    |  |
-|  |  Status: [Em andamento]  [Editar] [Arquivar]   |  |
-|  +------------------------------------------------+  |
-|                                                      |
-|  +------------------------------------------------+  |
-|  | [Ring 45%]  Leads por Vendedor                  |  |
-|  |             Individual · Joao Silva             |  |
-|  |  9 / 20 leads                                  |  |
-|  |  [=================-----------] 45%             |  |
-|  |  Status: [Abaixo do ritmo]                     |  |
-|  +------------------------------------------------+  |
-|                                                      |
-+------------------------------------------------------+
-|  HISTORICO DE METAS (meses anteriores)               |
-|  [card colapsavel com metas passadas + resultado]    |
-+------------------------------------------------------+
-```
-
-**Componentes visuais de cada meta:**
-- Circular progress ring (SVG) mostrando percentual
-- Barra de progresso colorida (verde >= 80%, amarelo >= 50%, vermelho < 50%)
-- Badge de status: "Batida", "Em andamento", "Abaixo do ritmo", "Critica"
-- Indicador de ritmo: calcula se o progresso esta compativel com os dias restantes do mes
-- Mini sparkline de evolucao (opcional, para metas recorrentes)
-
-### 4. Filtros por Escopo
-
-Tres botoes de filtro no topo:
-- **Empresa**: mostra metas com scope='company'
-- **Equipe**: mostra metas com scope='team', agrupadas por time
-- **Individual**: mostra metas com scope='individual', agrupadas por pessoa
-
-### 5. Historico Automatico
-
-Metas cujo `period_end` e anterior ao mes atual sao automaticamente exibidas na secao "Historico" (abaixo das metas ativas). O historico mostra:
-- Nome da meta + periodo
-- Resultado final (current_value vs target_value)
-- Badge: "Batida" ou "Nao atingida" com percentual
-
-### 6. Formulario de Nova Meta (expandido)
-
-O dialog de criar meta sera mais completo:
-- Nome da meta
-- Metrica (dropdown com as 7 opcoes)
-- Valor alvo (numerico)
-- Escopo: Empresa / Equipe / Individual
-- Se Equipe: selecionar time (lista de crm_teams)
-- Se Individual: selecionar usuario (lista de membros da org)
-- Periodo: mes de referencia (auto-preenche inicio/fim do mes)
-- Prioridade: Alta / Media / Baixa
-
----
-
-## Arquivos
-
-### Modificados
-
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/pages/cliente/ClientePlanoVendas.tsx` | Reescrever secao "metas" (linhas ~966-1098): substituir cards simples por layout visual rico com progress rings, KPI summary, filtros de escopo, historico automatico, integracao com dados CRM |
-| `src/hooks/useGoals.ts` | Expandir para incluir queries filtradas por escopo/mes, funcao de calculo de progresso via CRM data, mutation de arquivamento |
-
-### Novos
-
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/components/metas/GoalProgressRing.tsx` | Componente SVG circular de progresso (ring chart) com animacao |
-| `src/components/metas/GoalCard.tsx` | Card visual completo de uma meta com ring, barra, status, ritmo |
-| `src/hooks/useGoalProgress.ts` | Hook que calcula current_value de cada meta consultando crm_leads, crm_activities |
-
-### Migracao SQL
-
-Adicionar colunas `scope`, `team_id`, `metric`, `priority`, `status` na tabela `goals`.
+Para metricas de contagem (leads, contracts, meetings, conversions): manter input numerico simples.
 
 ---
 
 ## Detalhes Tecnicos
 
-### GoalProgressRing (SVG)
+### Arquivos Modificados
 
-Circulo SVG com `stroke-dasharray` e `stroke-dashoffset` animados via CSS transition. Cores: verde (>=80%), amarelo (>=50%), vermelho (<50%). Tamanho: 56x56px nos cards.
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/pages/cliente/ClientePlanoVendas.tsx` | 1) Adicionar import de `useCrmTeam` 2) Remover `<Tabs>` wrapper, renderizar diagnostico e metas como secoes sequenciais 3) No dialog Nova Meta: adicionar seletor de membro quando scope="individual", melhorar input de valor com mascara BR, mostrar mensagem quando nao ha times 4) Mover historico de diagnosticos para secao colapsavel |
 
-### Calculo de Ritmo
+### Input de Valor com Mascara
+
+Usar estado local `targetDisplay` como string formatada. No `onChange`, extrair apenas digitos/virgula, formatar com `toLocaleString("pt-BR")`. No submit, converter para numero com `parseFloat(valor.replace(/\./g, "").replace(",", "."))`.
+
+### Seletor Individual
 
 ```
-diasPassados = hoje - period_start
-diasTotais = period_end - period_start
-ritmoNecessario = (target_value - current_value) / diasRestantes
-ritmoAtual = current_value / diasPassados
-status = ritmoAtual >= ritmoNecessario ? "No ritmo" : "Abaixo do ritmo"
+{novaMeta.scope === "individual" && (
+  <div>
+    <Label>Responsavel</Label>
+    <Select value={novaMeta.assigned_to} onValueChange={...}>
+      {members.map(m => <SelectItem key={m.user_id} value={m.user_id}>{m.full_name}</SelectItem>)}
+    </Select>
+  </div>
+)}
 ```
 
-### useGoalProgress Hook
+### Validacao no Submit
 
-Para cada meta ativa:
-1. Busca dados do CRM filtrados pelo periodo e escopo
-2. Calcula current_value
-3. Retorna objeto com `{ goalId, currentValue, percent, status, pace }`
-
-Usa React Query com chave `["goal-progress", goalId, metric, period]`.
-
-### Separacao Ativas vs Historico
-
-- Metas ativas: `period_end >= primeiro dia do mes atual` OU `period_end IS NULL`
-- Metas historicas: `period_end < primeiro dia do mes atual`
-- Na UI, metas ativas ficam em destaque; historicas ficam em secao colapsavel abaixo
-
+Adicionar validacao: se scope="team" exigir `team_id` preenchido; se scope="individual" exigir `assigned_to` preenchido. Mostrar toast de erro se faltar.
