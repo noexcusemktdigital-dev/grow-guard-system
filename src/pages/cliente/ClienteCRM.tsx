@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users, Plus, Phone, Search, LayoutGrid, List, Clock,
@@ -156,10 +156,27 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
 export default function ClienteCRM() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: leads, isLoading: leadsLoading } = useCrmLeads();
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();
   const { data: crmSettings } = useCrmSettings();
   const { data: team } = useCrmTeam();
+
+  const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
+
+  // Determine accessible funnels
+  const accessibleFunnels = useMemo(() => {
+    if (!funnelsData) return [];
+    return funnelsData;
+  }, [funnelsData]);
+
+  // Auto-select first funnel
+  useEffect(() => {
+    if (!selectedFunnelId && accessibleFunnels.length > 0) {
+      const def = accessibleFunnels.find(f => f.is_default) || accessibleFunnels[0];
+      setSelectedFunnelId(def.id);
+    }
+  }, [accessibleFunnels, selectedFunnelId]);
+
+  const { data: leads, isLoading: leadsLoading } = useCrmLeads(selectedFunnelId || undefined);
   const { updateLead, deleteLead, markAsLost, bulkUpdateLeads, bulkDeleteLeads } = useCrmLeadMutations();
 
   const [activeTab, setActiveTab] = useState<"pipeline" | "contatos">("pipeline");
@@ -187,10 +204,14 @@ export default function ClienteCRM() {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
+  const selectedFunnel = useMemo(() => {
+    if (!funnelsData || !selectedFunnelId) return null;
+    return funnelsData.find(f => f.id === selectedFunnelId) || null;
+  }, [funnelsData, selectedFunnelId]);
+
   const stages: FunnelStage[] = useMemo(() => {
-    if (funnelsData && funnelsData.length > 0) {
-      const defaultFunnel = funnelsData.find(f => f.is_default) || funnelsData[0];
-      const dbStages = defaultFunnel.stages as any[];
+    if (selectedFunnel) {
+      const dbStages = selectedFunnel.stages as any[];
       if (Array.isArray(dbStages) && dbStages.length > 0) {
         return dbStages.map((s: any) => ({
           key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || "stage",
@@ -201,7 +222,7 @@ export default function ClienteCRM() {
       }
     }
     return DEFAULT_STAGES;
-  }, [funnelsData]);
+  }, [selectedFunnel]);
 
   const allLeads = leads ?? [];
 
@@ -417,8 +438,20 @@ export default function ClienteCRM() {
       {/* ===== PIPELINE TAB ===== */}
       {activeTab === "pipeline" && (
         <>
-          {/* Search + Unified Filter */}
+          {/* Funnel selector + Search + Unified Filter */}
           <div className="flex flex-wrap items-center gap-2">
+            {accessibleFunnels.length > 1 && (
+              <Select value={selectedFunnelId || ""} onValueChange={setSelectedFunnelId}>
+                <SelectTrigger className="h-8 w-40 text-xs">
+                  <SelectValue placeholder="Funil" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accessibleFunnels.map(f => (
+                    <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <div className="relative max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Buscar lead..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-8" />

@@ -184,6 +184,26 @@ export function useUpdateAttendingMode() {
   });
 }
 
+export function useUpdateContactAgent() {
+  const queryClient = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async ({ contactId, agentId }: { contactId: string; agentId: string }) => {
+      if (!orgId) return;
+      const { error } = await supabase
+        .from("whatsapp_contacts" as any)
+        .update({ agent_id: agentId } as any)
+        .eq("id", contactId)
+        .eq("organization_id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    },
+  });
+}
+
 export function useLinkContactToCrmLead() {
   const queryClient = useQueryClient();
   const { data: orgId } = useUserOrgId();
