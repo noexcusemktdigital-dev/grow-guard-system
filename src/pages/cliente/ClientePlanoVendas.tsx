@@ -7,8 +7,14 @@ import {
   Layers, ShieldCheck, Save, Plus, Lock, Calendar, Pencil, X,
   Check, HelpCircle, FolderOpen, ChevronDown, Filter, Trash2,
   UserPlus, FileText, Receipt, BarChartHorizontal, Megaphone, Sparkles,
-  Phone, Mail, Zap,
+  Phone, Mail, Zap, User, Archive,
 } from "lucide-react";
+import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
+import { useGoalProgress } from "@/hooks/useGoalProgress";
+import { useCrmTeams } from "@/hooks/useCrmTeams";
+import { GoalCard } from "@/components/metas/GoalCard";
+import { GoalProgressRing } from "@/components/metas/GoalProgressRing";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageHeader } from "@/components/PageHeader";
@@ -55,27 +61,16 @@ interface StrategySection {
 }
 
 /* ══════════════════════════════════════════════
-   METAS TYPES (kept from original)
+   METRIC OPTIONS
    ══════════════════════════════════════════════ */
-type TipoMeta = "faturamento" | "novos_clientes" | "contratos" | "retencao" | "ticket_medio" | "conversao" | "leads" | "reunioes";
-type EscopoMeta = "empresa" | "equipe" | "individual";
-type PeriodoMeta = "mensal" | "trimestral" | "semestral" | "anual";
-interface MetaMensal {
-  id: string; nome: string; mesRef: string; tipo: TipoMeta; escopo: EscopoMeta;
-  periodo: PeriodoMeta; valorAlvo: number; equipe?: string; responsavel?: string;
-  prioridade: "alta" | "media" | "baixa";
-}
-
-const TIPO_META_CONFIG: Record<TipoMeta, { label: string; icon: typeof Target; color: string; bg: string; gradient: string }> = {
-  faturamento: { label: "Faturamento", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/15", gradient: "bg-gradient-to-r from-emerald-400 to-emerald-600" },
-  novos_clientes: { label: "Novos Clientes", icon: UserPlus, color: "text-blue-500", bg: "bg-blue-500/15", gradient: "bg-gradient-to-r from-blue-400 to-blue-600" },
-  contratos: { label: "Contratos", icon: FileText, color: "text-purple-500", bg: "bg-purple-500/15", gradient: "bg-gradient-to-r from-purple-400 to-purple-600" },
-  retencao: { label: "Retenção", icon: ShieldCheck, color: "text-teal-500", bg: "bg-teal-500/15", gradient: "bg-gradient-to-r from-teal-400 to-teal-600" },
-  ticket_medio: { label: "Ticket Médio", icon: Receipt, color: "text-orange-500", bg: "bg-orange-500/15", gradient: "bg-gradient-to-r from-orange-400 to-orange-600" },
-  conversao: { label: "Conversão", icon: BarChartHorizontal, color: "text-indigo-500", bg: "bg-indigo-500/15", gradient: "bg-gradient-to-r from-indigo-400 to-indigo-600" },
-  leads: { label: "Leads Gerados", icon: Megaphone, color: "text-pink-500", bg: "bg-pink-500/15", gradient: "bg-gradient-to-r from-pink-400 to-pink-600" },
-  reunioes: { label: "Reuniões", icon: Handshake, color: "text-cyan-500", bg: "bg-cyan-500/15", gradient: "bg-gradient-to-r from-cyan-400 to-cyan-600" },
-};
+const METRIC_OPTIONS = [
+  { value: "revenue", label: "Faturamento" },
+  { value: "leads", label: "Leads Gerados" },
+  { value: "conversions", label: "Taxa de Conversão" },
+  { value: "contracts", label: "Contratos Fechados" },
+  { value: "meetings", label: "Reuniões" },
+  { value: "avg_ticket", label: "Ticket Médio" },
+];
 
 /* ══════════════════════════════════════════════
    DIAGNOSTIC SECTIONS & QUESTIONS (~25 questions in 8 sections)
@@ -585,14 +580,17 @@ export default function ClientePlanoVendas() {
     return !!localStorage.getItem("plano_vendas_data") && Object.keys(JSON.parse(localStorage.getItem("plano_vendas_data") || "{}")).length > 5;
   });
 
-  // ── Metas state (kept from original) ──
-  const [metasMensais, setMetasMensais] = useState<MetaMensal[]>([]);
-  const [metasSalvas, setMetasSalvas] = useState(false);
+  // ── Metas state (real data) ──
+  const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [novaMetaOpen, setNovaMetaOpen] = useState(false);
-  const [novaMeta, setNovaMeta] = useState<{ nome: string; mesRef: string; tipo: TipoMeta; escopo: EscopoMeta; periodo: PeriodoMeta; valorAlvo: number; equipe: string; responsavel: string; prioridade: "alta" | "media" | "baixa" }>({ nome: "", mesRef: "", tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
+  const [novaMeta, setNovaMeta] = useState({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
   const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const anoAtual = new Date().getFullYear();
-  const [mesFiltroMetas, setMesFiltroMetas] = useState<string>("todos");
+  const { data: activeGoals, isLoading: goalsLoading } = useActiveGoals(scopeFilter);
+  const { data: historicGoals } = useHistoricGoals();
+  const { data: goalProgress } = useGoalProgress(activeGoals);
+  const { createGoal, archiveGoal } = useGoalMutations();
+  const { data: teams } = useCrmTeams();
 
   // ── History state ──
   const [history] = useState([
@@ -714,20 +712,34 @@ export default function ClientePlanoVendas() {
     </div>
   );
 
-  /* ── METAS: Add Meta ── */
+  /* ── METAS: Add Meta (real) ── */
   const handleAddMeta = () => {
-    if (!novaMeta.nome || !novaMeta.mesRef || novaMeta.valorAlvo <= 0) {
+    if (!novaMeta.title || novaMeta.target_value <= 0 || !novaMeta.mesRef) {
       toast({ title: "Preencha todos os campos", variant: "destructive" });
       return;
     }
-    const meta: MetaMensal = { ...novaMeta, id: crypto.randomUUID() };
-    setMetasMensais(prev => [...prev, meta]);
-    setNovaMeta({ nome: "", mesRef: "", tipo: "faturamento", escopo: "empresa", periodo: "mensal", valorAlvo: 0, equipe: "", responsavel: "", prioridade: "media" });
-    setNovaMetaOpen(false);
-    toast({ title: "Meta adicionada" });
+    const [y, m] = novaMeta.mesRef.split("-").map(Number);
+    const periodStart = new Date(y, m - 1, 1).toISOString();
+    const periodEnd = new Date(y, m, 0, 23, 59, 59).toISOString();
+    createGoal.mutate({
+      title: novaMeta.title,
+      target_value: novaMeta.target_value,
+      metric: novaMeta.metric,
+      scope: novaMeta.scope,
+      priority: novaMeta.priority,
+      team_id: novaMeta.scope === "team" && novaMeta.team_id ? novaMeta.team_id : undefined,
+      assigned_to: novaMeta.scope === "individual" && novaMeta.assigned_to ? novaMeta.assigned_to : undefined,
+      period_start: periodStart,
+      period_end: periodEnd,
+      status: "active",
+    }, {
+      onSuccess: () => {
+        setNovaMeta({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
+        setNovaMetaOpen(false);
+        toast({ title: "Meta criada com sucesso!" });
+      },
+    });
   };
-
-  const filteredMetas = mesFiltroMetas === "todos" ? metasMensais : metasMensais.filter(m => m.mesRef === mesFiltroMetas);
 
   /* ══════════════════════════════════════════════
      RENDER
@@ -964,33 +976,72 @@ export default function ClientePlanoVendas() {
 
         {/* ═══════ METAS ═══════ */}
         <TabsContent value="metas" className="mt-4 space-y-6">
-          <div className="flex items-center justify-between">
+          {/* Header with scope filters */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-1">MINHAS METAS</p>
-              <p className="text-sm text-muted-foreground">Defina e acompanhe suas metas comerciais</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-1">MINHAS METAS · {MESES_COMPLETOS[new Date().getMonth()]} {anoAtual}</p>
+              <p className="text-sm text-muted-foreground">Acompanhe suas metas com dados reais do CRM</p>
             </div>
-            <div className="flex gap-2">
-              <Select value={mesFiltroMetas} onValueChange={setMesFiltroMetas}>
-                <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os meses</SelectItem>
-                  {MESES_COMPLETOS.map((m, i) => (
-                    <SelectItem key={i} value={`${anoAtual}-${String(i + 1).padStart(2, "0")}`}>{m} {anoAtual}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex gap-2 items-center">
+              <div className="flex bg-secondary rounded-lg p-0.5">
+                {[
+                  { value: "all", label: "Todas", icon: Target },
+                  { value: "company", label: "Empresa", icon: Building2 },
+                  { value: "team", label: "Equipe", icon: Users },
+                  { value: "individual", label: "Individual", icon: User },
+                ].map(f => (
+                  <button key={f.value} onClick={() => setScopeFilter(f.value)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-[10px] font-medium transition-all ${scopeFilter === f.value ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                    <f.icon className="w-3 h-3" /> {f.label}
+                  </button>
+                ))}
+              </div>
               <Button size="sm" className="gap-1" onClick={() => setNovaMetaOpen(true)}>
                 <Plus className="w-3 h-3" /> Nova Meta
               </Button>
             </div>
           </div>
 
-          {filteredMetas.length === 0 ? (
+          {/* KPI Summary */}
+          {activeGoals && activeGoals.length > 0 && goalProgress && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {(() => {
+                const progValues = Object.values(goalProgress);
+                const total = activeGoals.length;
+                const achieved = progValues.filter(p => p.percent >= 100).length;
+                const avgPct = progValues.length > 0 ? Math.round(progValues.reduce((s, p) => s + Math.min(p.percent, 100), 0) / progValues.length) : 0;
+                const highPriority = activeGoals.filter(g => g.priority === "alta").length;
+                return [
+                  { label: "Metas Ativas", value: total, icon: Target, color: "text-primary" },
+                  { label: "Batidas", value: achieved, icon: CheckCircle2, color: "text-emerald-500" },
+                  { label: "Progresso Médio", value: `${avgPct}%`, icon: TrendingUp, color: "text-amber-500" },
+                  { label: "Alta Prioridade", value: highPriority, icon: AlertCircle, color: "text-destructive" },
+                ].map((kpi, i) => (
+                  <Card key={i}>
+                    <CardContent className="py-3 px-4 flex items-center gap-3">
+                      <kpi.icon className={`w-5 h-5 ${kpi.color}`} />
+                      <div>
+                        <p className="text-lg font-bold tabular-nums">{kpi.value}</p>
+                        <p className="text-[10px] text-muted-foreground">{kpi.label}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ));
+              })()}
+            </div>
+          )}
+
+          {/* Goals List */}
+          {goalsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2].map(i => <Card key={i}><CardContent className="h-40 animate-pulse bg-muted rounded" /></Card>)}
+            </div>
+          ) : !activeGoals?.length ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Target className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm font-medium">Nenhuma meta cadastrada</p>
-                <p className="text-xs text-muted-foreground mt-1">Crie metas para acompanhar seu desempenho comercial.</p>
+                <p className="text-sm font-medium">Nenhuma meta ativa</p>
+                <p className="text-xs text-muted-foreground mt-1">Crie metas integradas ao CRM para acompanhar seu desempenho.</p>
                 <Button size="sm" variant="outline" className="mt-4 gap-1" onClick={() => setNovaMetaOpen(true)}>
                   <Plus className="w-3 h-3" /> Criar primeira meta
                 </Button>
@@ -998,45 +1049,50 @@ export default function ClientePlanoVendas() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredMetas.map(meta => {
-                const cfg = TIPO_META_CONFIG[meta.tipo];
-                const Icon = cfg.icon;
-                return (
-                  <Card key={meta.id} className="glass-card">
-                    <CardContent className="py-4">
-                      <div className="flex items-start justify-between mb-3">
+              {activeGoals.map(goal => (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  progress={goalProgress?.[goal.id]}
+                  onEdit={() => { /* TODO: edit dialog */ }}
+                  onArchive={() => archiveGoal.mutate(goal.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Historic Goals */}
+          {historicGoals && historicGoals.length > 0 && (
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full">
+                <ChevronDown className="w-4 h-4" />
+                Histórico de Metas ({historicGoals.length})
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-2">
+                {historicGoals.map(goal => {
+                  const pct = goal.target_value > 0 ? Math.round(((goal.current_value || 0) / goal.target_value) * 100) : 0;
+                  const achieved = pct >= 100;
+                  return (
+                    <Card key={goal.id} className="opacity-70">
+                      <CardContent className="py-3 px-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${cfg.bg}`}>
-                            <Icon className={`w-4 h-4 ${cfg.color}`} />
-                          </div>
+                          <GoalProgressRing percent={Math.min(pct, 100)} size={36} strokeWidth={3} />
                           <div>
-                            <p className="text-sm font-bold">{meta.nome}</p>
-                            <p className="text-[10px] text-muted-foreground">{cfg.label} · {meta.mesRef}</p>
+                            <p className="text-xs font-medium">{goal.title}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {goal.period_start && new Date(goal.period_start).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}
+                            </p>
                           </div>
                         </div>
-                        <Badge variant="outline" className={`text-[9px] ${
-                          meta.prioridade === "alta" ? "border-destructive/30 text-destructive" :
-                          meta.prioridade === "media" ? "border-amber-500/30 text-amber-500" :
-                          "border-muted-foreground/30 text-muted-foreground"
-                        }`}>
-                          {meta.prioridade}
+                        <Badge variant="outline" className={`text-[9px] ${achieved ? "border-emerald-500/30 text-emerald-600" : "border-destructive/30 text-destructive"}`}>
+                          {achieved ? "Batida" : `${pct}%`}
                         </Badge>
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <p className="text-xl font-bold tabular-nums">
-                          {meta.tipo === "faturamento" || meta.tipo === "ticket_medio"
-                            ? `R$ ${meta.valorAlvo.toLocaleString("pt-BR")}`
-                            : meta.tipo === "conversao" || meta.tipo === "retencao"
-                            ? `${meta.valorAlvo}%`
-                            : meta.valorAlvo.toLocaleString("pt-BR")}
-                        </p>
-                        <span className="text-xs text-muted-foreground">alvo</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* Dialog: Nova Meta */}
@@ -1046,17 +1102,15 @@ export default function ClientePlanoVendas() {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <Label className="text-xs">Nome da meta</Label>
-                  <Input value={novaMeta.nome} onChange={e => setNovaMeta(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Faturar R$ 50 mil" className="text-sm" />
+                  <Input value={novaMeta.title} onChange={e => setNovaMeta(p => ({ ...p, title: e.target.value }))} placeholder="Ex: Faturar R$ 50 mil em março" className="text-sm" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Tipo</Label>
-                    <Select value={novaMeta.tipo} onValueChange={v => setNovaMeta(p => ({ ...p, tipo: v as TipoMeta }))}>
+                    <Label className="text-xs">Métrica</Label>
+                    <Select value={novaMeta.metric} onValueChange={v => setNovaMeta(p => ({ ...p, metric: v }))}>
                       <SelectTrigger className="text-xs h-9"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {Object.entries(TIPO_META_CONFIG).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                        ))}
+                        {METRIC_OPTIONS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1075,11 +1129,11 @@ export default function ClientePlanoVendas() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Valor alvo</Label>
-                    <Input type="number" value={novaMeta.valorAlvo || ""} onChange={e => setNovaMeta(p => ({ ...p, valorAlvo: Number(e.target.value) }))} className="text-sm" />
+                    <Input type="number" value={novaMeta.target_value || ""} onChange={e => setNovaMeta(p => ({ ...p, target_value: Number(e.target.value) }))} className="text-sm" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Prioridade</Label>
-                    <Select value={novaMeta.prioridade} onValueChange={v => setNovaMeta(p => ({ ...p, prioridade: v as "alta" | "media" | "baixa" }))}>
+                    <Select value={novaMeta.priority} onValueChange={v => setNovaMeta(p => ({ ...p, priority: v }))}>
                       <SelectTrigger className="text-xs h-9"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="alta">Alta</SelectItem>
@@ -1089,8 +1143,30 @@ export default function ClientePlanoVendas() {
                     </Select>
                   </div>
                 </div>
-                <Button className="w-full gap-1" onClick={handleAddMeta}>
-                  <Plus className="w-3 h-3" /> Adicionar Meta
+                <div className="space-y-1">
+                  <Label className="text-xs">Escopo</Label>
+                  <Select value={novaMeta.scope} onValueChange={v => setNovaMeta(p => ({ ...p, scope: v }))}>
+                    <SelectTrigger className="text-xs h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="company">Empresa (toda a organização)</SelectItem>
+                      <SelectItem value="team">Equipe (time específico)</SelectItem>
+                      <SelectItem value="individual">Individual (pessoa específica)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {novaMeta.scope === "team" && teams && teams.length > 0 && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Time</Label>
+                    <Select value={novaMeta.team_id} onValueChange={v => setNovaMeta(p => ({ ...p, team_id: v }))}>
+                      <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione o time" /></SelectTrigger>
+                      <SelectContent>
+                        {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <Button className="w-full gap-1" onClick={handleAddMeta} disabled={createGoal.isPending}>
+                  <Plus className="w-3 h-3" /> {createGoal.isPending ? "Criando..." : "Criar Meta"}
                 </Button>
               </div>
             </DialogContent>

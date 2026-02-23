@@ -2411,10 +2411,15 @@ export type Database = {
           created_at: string
           current_value: number | null
           id: string
+          metric: string
           organization_id: string
           period_end: string | null
           period_start: string | null
+          priority: string
+          scope: string
+          status: string
           target_value: number
+          team_id: string | null
           title: string
           type: string
           unit_org_id: string | null
@@ -2425,10 +2430,15 @@ export type Database = {
           created_at?: string
           current_value?: number | null
           id?: string
+          metric?: string
           organization_id: string
           period_end?: string | null
           period_start?: string | null
+          priority?: string
+          scope?: string
+          status?: string
           target_value?: number
+          team_id?: string | null
           title: string
           type?: string
           unit_org_id?: string | null
@@ -2439,10 +2449,15 @@ export type Database = {
           created_at?: string
           current_value?: number | null
           id?: string
+          metric?: string
           organization_id?: string
           period_end?: string | null
           period_start?: string | null
+          priority?: string
+          scope?: string
+          status?: string
           target_value?: number
+          team_id?: string | null
           title?: string
           type?: string
           unit_org_id?: string | null
