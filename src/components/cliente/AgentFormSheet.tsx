@@ -11,10 +11,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User, Camera, Trash2 } from "lucide-react";
+import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User, Camera, Trash2, Lock, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useWhatsAppInstance } from "@/hooks/useWhatsApp";
+import { useQueryClient } from "@tanstack/react-query";
 import type { AiAgent, AgentRole } from "@/types/cliente";
 import { agentRoleConfig } from "@/types/cliente";
 
@@ -50,8 +51,11 @@ interface KBEntry {
   size?: number;
 }
 
+type TabKey = "identidade" | "persona" | "knowledge" | "prompt" | "simulator";
+
 export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: AgentFormSheetProps) {
   const [form, setForm] = useState<Partial<AiAgent>>(defaultAgent);
+  const [activeTab, setActiveTab] = useState<TabKey>("identidade");
   const [urlInput, setUrlInput] = useState("");
   const [textInput, setTextInput] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -59,11 +63,15 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const [simMessages, setSimMessages] = useState<{ role: string; content: string }[]>([]);
   const [simInput, setSimInput] = useState("");
   const [simLoading, setSimLoading] = useState(false);
+  const [syncingPhone, setSyncingPhone] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { data: orgId } = useUserOrgId();
   const { data: whatsappInstance } = useWhatsAppInstance();
+  const queryClient = useQueryClient();
+
+  const isEditing = !!agent?.id;
 
   useEffect(() => {
     if (agent) {
@@ -78,14 +86,59 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
       });
     } else {
       setForm(defaultAgent);
+      setActiveTab("identidade");
     }
     setSimMessages([]);
   }, [agent, open]);
+
+  // Auto-sync: fetch phone number if connected but missing
+  useEffect(() => {
+    if (!open || !whatsappInstance) return;
+    if (whatsappInstance.status === "connected" && !whatsappInstance.phone_number && !syncingPhone) {
+      setSyncingPhone(true);
+      supabase.functions.invoke("whatsapp-setup", { body: { action: "check-status" } })
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-instance"] });
+        })
+        .finally(() => setSyncingPhone(false));
+    }
+  }, [open, whatsappInstance]);
 
   const persona = (form.persona ?? {}) as Record<string, any>;
   const promptConfig = (form.prompt_config ?? {}) as Record<string, any>;
   const crmActions = (form.crm_actions ?? {}) as Record<string, any>;
   const knowledgeBase = ((form.knowledge_base ?? []) as KBEntry[]);
+
+  // ─── Step completion logic ───
+  const isStep1Complete = !!(form.name?.trim() && form.role && form.gender);
+  const isStep2Complete = !!(persona.greeting && (persona.traits ?? []).length >= 1);
+  const isStep3Complete = knowledgeBase.length > 0;
+  const isStep4Complete = !!(promptConfig.system_prompt?.trim());
+
+  const canAccessTab = (tab: TabKey): boolean => {
+    if (isEditing) return true;
+    switch (tab) {
+      case "identidade": return true;
+      case "persona": return isStep1Complete;
+      case "knowledge": return isStep1Complete && isStep2Complete;
+      case "prompt": return isStep1Complete && isStep2Complete && isStep3Complete;
+      case "simulator": return isStep1Complete && isStep2Complete && isStep3Complete && isStep4Complete;
+      default: return false;
+    }
+  };
+
+  const nextTab: Record<TabKey, TabKey | null> = {
+    identidade: "persona",
+    persona: "knowledge",
+    knowledge: "prompt",
+    prompt: "simulator",
+    simulator: null,
+  };
+
+  const goNext = () => {
+    const next = nextTab[activeTab];
+    if (next && canAccessTab(next)) setActiveTab(next);
+  };
 
   const updatePersona = (key: string, value: any) => setForm((f) => ({ ...f, persona: { ...persona, [key]: value } }));
   const updatePrompt = (key: string, value: any) => setForm((f) => ({ ...f, prompt_config: { ...promptConfig, [key]: value } }));
@@ -196,8 +249,27 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   };
 
   const handleSave = () => onSave(form);
-  const isEditing = !!agent?.id;
   const roleInfo = agentRoleConfig[(form.role as AgentRole) ?? "sdr"];
+
+  const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+    { key: "identidade", label: "Identidade", icon: <Bot className="w-3 h-3" /> },
+    { key: "persona", label: "Persona", icon: <Brain className="w-3 h-3" /> },
+    { key: "knowledge", label: "Base", icon: <BookOpen className="w-3 h-3" /> },
+    { key: "prompt", label: "Prompt", icon: <Cog className="w-3 h-3" /> },
+    { key: "simulator", label: "Simulador", icon: <Play className="w-3 h-3" /> },
+  ];
+
+  const NextButton = ({ disabled }: { disabled?: boolean }) => {
+    const next = nextTab[activeTab];
+    if (!next) return null;
+    return (
+      <div className="pt-4 flex justify-end">
+        <Button type="button" onClick={goNext} disabled={disabled || !canAccessTab(next)} className="gap-1.5">
+          Próximo <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -209,13 +281,22 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
           </SheetTitle>
         </SheetHeader>
 
-        <Tabs defaultValue="identidade" className="mt-4">
+        <Tabs value={activeTab} onValueChange={(v) => canAccessTab(v as TabKey) && setActiveTab(v as TabKey)} className="mt-4">
           <TabsList className="grid grid-cols-5 w-full">
-            <TabsTrigger value="identidade" className="text-xs gap-1"><Bot className="w-3 h-3" /> Identidade</TabsTrigger>
-            <TabsTrigger value="persona" className="text-xs gap-1"><Brain className="w-3 h-3" /> Persona</TabsTrigger>
-            <TabsTrigger value="knowledge" className="text-xs gap-1"><BookOpen className="w-3 h-3" /> Base</TabsTrigger>
-            <TabsTrigger value="prompt" className="text-xs gap-1"><Cog className="w-3 h-3" /> Prompt</TabsTrigger>
-            <TabsTrigger value="simulator" className="text-xs gap-1"><Play className="w-3 h-3" /> Simulador</TabsTrigger>
+            {tabs.map((tab) => {
+              const accessible = canAccessTab(tab.key);
+              return (
+                <TabsTrigger
+                  key={tab.key}
+                  value={tab.key}
+                  disabled={!accessible}
+                  className={`text-xs gap-1 ${!accessible ? "opacity-40 cursor-not-allowed" : ""}`}
+                >
+                  {!accessible ? <Lock className="w-3 h-3" /> : tab.icon}
+                  {tab.label}
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
           {/* ─── Aba 1: Identidade ─── */}
@@ -272,7 +353,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Sexo</Label>
+                <Label>Sexo *</Label>
                 <RadioGroup value={form.gender ?? ""} onValueChange={(v) => setForm((f) => ({ ...f, gender: v }))} className="flex gap-4 pt-2">
                   <div className="flex items-center gap-1.5"><RadioGroupItem value="masculino" id="m" /><Label htmlFor="m" className="text-xs font-normal">Masculino</Label></div>
                   <div className="flex items-center gap-1.5"><RadioGroupItem value="feminino" id="f" /><Label htmlFor="f" className="text-xs font-normal">Feminino</Label></div>
@@ -296,26 +377,30 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                       }}
                     />
                     <span className="text-xs">
-                      {whatsappInstance.phone_number
-                        ? whatsappInstance.phone_number
-                        : whatsappInstance.status === "connected"
-                          ? `Instância ${whatsappInstance.instance_id?.slice(0, 6)}... (número pendente)`
-                          : "Número não configurado"}
+                      {syncingPhone
+                        ? "Buscando número..."
+                        : whatsappInstance.phone_number
+                          ? whatsappInstance.phone_number
+                          : whatsappInstance.status === "connected"
+                            ? "Sincronizando número..."
+                            : "Número não configurado"}
                     </span>
+                    {syncingPhone && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
                   </div>
-                  {whatsappInstance.status === "connected" && !whatsappInstance.phone_number && (
+                  {whatsappInstance.status === "connected" && !whatsappInstance.phone_number && !syncingPhone && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className="h-7 text-xs gap-1"
                       onClick={async () => {
+                        setSyncingPhone(true);
                         try {
-                          await supabase.functions.invoke("whatsapp-setup", {
-                            body: { action: "check-status" },
-                          });
-                          window.location.reload();
-                        } catch {}
+                          await supabase.functions.invoke("whatsapp-setup", { body: { action: "check-status" } });
+                          queryClient.invalidateQueries({ queryKey: ["whatsapp-instance"] });
+                        } finally {
+                          setSyncingPhone(false);
+                        }
                       }}
                     >
                       <Loader2 className="w-3 h-3" /> Atualizar número
@@ -326,6 +411,14 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                 <p className="text-xs text-muted-foreground pt-2">Nenhum WhatsApp configurado</p>
               )}
             </div>
+
+            {!isEditing && (
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-md p-3">
+                Preencha <strong>Nome</strong>, <strong>Função</strong> e <strong>Sexo</strong> para desbloquear a próxima etapa.
+              </div>
+            )}
+
+            <NextButton disabled={!isStep1Complete} />
           </TabsContent>
 
           {/* ─── Aba 2: Persona (Guiada) ─── */}
@@ -390,7 +483,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
             </div>
 
             <div className="space-y-2">
-              <Label>Personalidade (selecione várias)</Label>
+              <Label>Personalidade (selecione pelo menos 1) *</Label>
               <div className="flex flex-wrap gap-2">
                 {["Empático", "Consultivo", "Proativo", "Objetivo", "Paciente", "Persuasivo"].map((trait) => {
                   const selected = (persona.traits ?? []).includes(trait);
@@ -427,6 +520,14 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               {generating === "persona" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               Gerar descrição da persona com IA
             </Button>
+
+            {!isEditing && (
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-md p-3">
+                Selecione uma <strong>saudação</strong> e pelo menos <strong>1 personalidade</strong> para avançar.
+              </div>
+            )}
+
+            <NextButton disabled={!isStep2Complete} />
           </TabsContent>
 
           {/* ─── Aba 3: Base de Conhecimento ─── */}
@@ -480,6 +581,14 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
             ) : (
               <div className="text-center py-6 text-muted-foreground text-sm border rounded-md border-dashed">Nenhuma referência adicionada ainda.</div>
             )}
+
+            {!isEditing && (
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-md p-3">
+                Adicione pelo menos <strong>1 item</strong> à base de conhecimento para avançar.
+              </div>
+            )}
+
+            <NextButton disabled={!isStep3Complete} />
           </TabsContent>
 
           {/* ─── Aba 4: Prompt e Objetivos ─── */}
@@ -494,8 +603,6 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               </div>
               <Textarea value={promptConfig.system_prompt ?? ""} onChange={(e) => updatePrompt("system_prompt", e.target.value)} placeholder="Você é um assistente especializado em..." rows={8} className="font-mono text-xs" />
             </div>
-
-            {/* Temperature and model are fixed internally (google/gemini-3-flash-preview) */}
 
             {/* Objectives by role */}
             <div className="space-y-2 pt-4 border-t">
@@ -532,6 +639,14 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                 ))}
               </div>
             </div>
+
+            {!isEditing && (
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-md p-3">
+                Preencha o <strong>System Prompt</strong> para desbloquear o Simulador.
+              </div>
+            )}
+
+            <NextButton disabled={!isStep4Complete} />
           </TabsContent>
 
           {/* ─── Aba 5: Simulador ─── */}
