@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.whatsapp-bulk-send]
 verify_jwt = false
+
+[functions.generate-content]
+verify_jwt = false
