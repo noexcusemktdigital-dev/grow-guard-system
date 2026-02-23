@@ -13,7 +13,7 @@ export function ClienteLayout() {
     <FeatureGateProvider>
       <div className="flex min-h-screen w-full">
         <ClienteSidebar />
-        <main className="flex-1 h-screen overflow-hidden flex flex-col relative">
+        <main className="flex-1 h-[calc(100vh-3.5rem)] overflow-hidden flex flex-col relative">
           <CreditAlertBanner />
           <div
             key={location.pathname}

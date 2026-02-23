@@ -119,28 +119,32 @@ export default function ClienteChat() {
   }
 
   return (
-    <div className="grid grid-cols-[340px_1fr] h-full overflow-hidden">
-      {loadingContacts ? (
-        <div className="p-4 space-y-3 border-r border-border">
-          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[68px] rounded-lg" />)}
-        </div>
-      ) : (
-        <ChatContactList
-          contacts={contacts}
-          selectedId={selectedContact?.id ?? null}
-          onSelect={handleSelectContact}
+    <div className="flex overflow-hidden h-[calc(100vh-3.5rem)]">
+      <div className="w-[340px] shrink-0 h-full overflow-hidden">
+        {loadingContacts ? (
+          <div className="p-4 space-y-3 border-r border-border">
+            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[68px] rounded-lg" />)}
+          </div>
+        ) : (
+          <ChatContactList
+            contacts={contacts}
+            selectedId={selectedContact?.id ?? null}
+            onSelect={handleSelectContact}
+            agents={agents}
+            leadStages={leadStages}
+            isConnected={isConnected}
+            lastMessages={lastMessages}
+          />
+        )}
+      </div>
+      <div className="flex-1 min-w-0 h-full overflow-hidden">
+        <ChatConversation
+          contact={selectedContact}
+          messages={messages}
+          isLoading={loadingMessages}
           agents={agents}
-          leadStages={leadStages}
-          isConnected={isConnected}
-          lastMessages={lastMessages}
         />
-      )}
-      <ChatConversation
-        contact={selectedContact}
-        messages={messages}
-        isLoading={loadingMessages}
-        agents={agents}
-      />
+      </div>
     </div>
   );
 }

@@ -97,17 +97,17 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
 
   // Smart scroll: track if user is near bottom
   const handleScroll = useCallback(() => {
-    const el = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+    const el = scrollAreaRef.current;
     if (!el) return;
     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
   }, []);
 
-  // Auto-scroll only when near bottom — use viewport directly to avoid scrollIntoView affecting parents
+  // Auto-scroll only when near bottom
   useEffect(() => {
     if (!isNearBottomRef.current) return;
-    const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
-    if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight;
+    const el = scrollAreaRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
     }
   }, [messages.length]);
 
@@ -392,7 +392,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
       </Collapsible>
 
       {/* Messages area with WhatsApp background */}
-      <ScrollArea className="flex-1 min-h-0 whatsapp-bg" ref={scrollAreaRef} onScrollCapture={handleScroll}>
+      <div className="flex-1 min-h-0 overflow-y-auto whatsapp-bg" ref={scrollAreaRef} onScroll={handleScroll}>
         <div className="px-4 py-3">
           {hasMore && (
             <div className="flex justify-center mb-3">
@@ -424,10 +424,10 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
           )}
           <div ref={bottomRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* WhatsApp-style Input */}
-      <div className="px-3 py-2.5 border-t border-border bg-card">
+      <div className="px-3 py-2.5 border-t border-border bg-card shrink-0">
         <input
           ref={fileInputRef}
           type="file"
