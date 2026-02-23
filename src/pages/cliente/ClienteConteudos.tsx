@@ -1,495 +1,698 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  FileText, Edit3, Check, Plus, Sparkles, Copy,
-  BookOpen, Users, Eye, Shield, Target, Download,
-  FolderOpen, Folder, Clock, ArrowLeft, File,
-  ChevronDown, ChevronUp, Lightbulb, CheckCircle2, Circle,
-  Star,
+  FileText, Check, Plus, Sparkles, Copy,
+  BookOpen, FolderOpen, Folder, Clock, ArrowLeft,
+  Lightbulb, CheckCircle2, Circle,
+  Star, ArrowRight, Play, Image, Layers, Video,
+  Monitor, Smartphone, Square, RectangleHorizontal,
+  Camera, Mic, Sun, Download, Filter,
+  ChevronDown, History, GraduationCap, Megaphone,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { motion, AnimatePresence } from "framer-motion";
 
-/* ── Base de Conhecimento sections ── */
-interface KBSection {
+/* ── Types ── */
+interface GeneratedContent {
   id: string;
-  title: string;
-  icon: React.ReactNode;
-  fields: { key: string; label: string; type: "text" | "textarea"; value: string }[];
-}
-
-const initialSections: KBSection[] = [
-  {
-    id: "negocio", title: "Sobre o Negócio", icon: <Target className="w-4 h-4" />,
-    fields: [
-      { key: "nicho", label: "Nicho de Atuação", type: "text", value: "Marketing Digital para Franquias" },
-      { key: "publico", label: "Público-alvo", type: "textarea", value: "Empreendedores e gestores de franquias, 30-55 anos, buscando crescimento acelerado" },
-      { key: "persona", label: "Persona", type: "textarea", value: "Carlos, 42 anos, dono de 3 unidades de franquia, quer escalar vendas com marketing digital" },
-      { key: "tom", label: "Tom de Voz", type: "text", value: "Profissional, direto, inspirador" },
-      { key: "proposta", label: "Proposta de Valor", type: "textarea", value: "Plataforma completa de gestão comercial e marketing para redes de franquias" },
-    ],
-  },
-  {
-    id: "concorrencia", title: "Concorrência", icon: <Users className="w-4 h-4" />,
-    fields: [
-      { key: "conc1", label: "Concorrente 1", type: "text", value: "FranquiaTech — foco em gestão operacional" },
-      { key: "conc2", label: "Concorrente 2", type: "text", value: "RedeGrow — automação de marketing" },
-      { key: "obs", label: "Observações", type: "textarea", value: "Nenhum concorrente integra vendas + marketing + IA em uma plataforma" },
-    ],
-  },
-  {
-    id: "referencias", title: "Referências", icon: <Eye className="w-4 h-4" />,
-    fields: [
-      { key: "perfis", label: "Perfis de Referência", type: "textarea", value: "@rockcontent, @resultadosdigitais, @neilpatel" },
-      { key: "links", label: "Links de Referência", type: "textarea", value: "https://rockcontent.com/blog\nhttps://resultadosdigitais.com.br" },
-    ],
-  },
-  {
-    id: "pilares", title: "Pilares de Conteúdo", icon: <BookOpen className="w-4 h-4" />,
-    fields: [
-      { key: "pilares", label: "Temas e Categorias", type: "textarea", value: "1. Gestão de Franquias\n2. Marketing Digital\n3. Vendas e CRM\n4. Tecnologia e IA\n5. Cases de Sucesso" },
-    ],
-  },
-  {
-    id: "regras", title: "Regras e Restrições", icon: <Shield className="w-4 h-4" />,
-    fields: [
-      { key: "proibido", label: "O que NÃO pode ser dito", type: "textarea", value: "Não fazer promessas de resultado garantido\nNão citar concorrentes pelo nome em conteúdos" },
-      { key: "obrigatorio", label: "Termos Obrigatórios", type: "text", value: "Sempre mencionar 'gestão integrada' e 'resultados mensuráveis'" },
-    ],
-  },
-];
-
-/* ── File system ── */
-interface ContentFile {
-  id: string;
-  name: string;
-  script: string;
-  format: string;
-  network: string;
-  funnel: string;
-  createdAt: string;
+  titulo: string;
+  formato: "Feed" | "Carrossel" | "Reels" | "Story";
+  rede: string;
+  funil: "Topo" | "Meio" | "Fundo";
+  roteiro: string;
+  hashtags: string[];
+  embasamento: string;
   approved: boolean;
 }
 
-interface MonthFolder {
+interface Campaign {
   id: string;
-  month: string;
+  mes: string;
   label: string;
   createdAt: string;
-  files: ContentFile[];
+  briefing: {
+    objetivo: string;
+    tema: string;
+    tom: string;
+  };
+  conteudos: GeneratedContent[];
 }
 
+/* ── Constants ── */
 const CURRENT_MONTH = "2026-02";
 
-const mockFolders: MonthFolder[] = [
-  {
-    id: "feb-2026", month: "2026-02", label: "Fevereiro 2026", createdAt: "05/02/2026",
-    files: [
-      { id: "1", name: "5 Erros que Todo Franqueado Comete no Marketing.txt", script: "ABERTURA: Você sabia que 78% dos franqueados cometem pelo menos um desses erros no marketing?\n\nERRO 1 — Não ter persona definida\nA maioria investe em anúncios sem saber exatamente quem quer atingir. Resultado: dinheiro jogado fora.\n\nERRO 2 — Ignorar o marketing local\nFranquias precisam de estratégia nacional E local. Adaptar campanhas para a região é essencial.\n\nERRO 3 — Não medir resultados\nSe você não sabe seu CAC, CPL e taxa de conversão, está voando às cegas.\n\nERRO 4 — Conteúdo genérico demais\nPostar frases motivacionais não gera leads. Conteúdo educativo e específico sim.\n\nERRO 5 — Não usar automação\nResponder leads manualmente em 2026? Automação é obrigação, não diferencial.\n\nCTA: Quer corrigir esses erros? Acesse o link na bio e agende uma consultoria gratuita.", format: "Carrossel", network: "Instagram", funnel: "Topo", createdAt: "03/02/2026", approved: true },
-      { id: "2", name: "Como Definir Metas de Vendas para Sua Franquia.txt", script: "ROTEIRO DE POST:\n\nTítulo: Como Definir Metas de Vendas que Realmente Funcionam\n\nParágrafo 1: Metas vagas geram resultados vagos. Se sua meta é 'vender mais', você já começou errado.\n\nParágrafo 2: Use o método SMART:\n- Específica: 'Aumentar vendas da unidade Centro em 20%'\n- Mensurável: Acompanhe semanalmente no CRM\n- Atingível: Baseie-se no histórico dos últimos 3 meses\n- Relevante: Alinhada com o objetivo da rede\n- Temporal: Prazo de 90 dias\n\nParágrafo 3: Distribua a meta por vendedor e por canal (online vs presencial).\n\nCTA: Baixe nosso template gratuito de metas no link da bio.", format: "Feed", network: "LinkedIn", funnel: "Meio", createdAt: "03/02/2026", approved: true },
-      { id: "3", name: "Case - Franquia que Triplicou Leads com IA.txt", script: "ROTEIRO REELS (60s):\n\n[0-5s] HOOK: 'Essa franquia triplicou seus leads em 90 dias. Quer saber como?'\n\n[5-15s] CONTEXTO: A Rede FastFood tinha 3 unidades e gerava em média 50 leads/mês por unidade.\n\n[15-30s] PROBLEMA: O time respondia leads manualmente, perdia oportunidades e não tinha visibilidade do funil.\n\n[30-45s] SOLUÇÃO: Implementaram nossa plataforma com IA para qualificação automática, CRM integrado e campanhas segmentadas.\n\n[45-55s] RESULTADO: Em 90 dias — 150 leads/mês por unidade, 40% de taxa de conversão, ROI de 8x.\n\n[55-60s] CTA: 'Quer o mesmo resultado? Link na bio.'", format: "Reels", network: "Instagram", funnel: "Fundo", createdAt: "03/02/2026", approved: false },
-      { id: "4", name: "O Poder do CRM para Redes de Franquias.txt", script: "POST EDUCATIVO:\n\nSe você gerencia uma rede de franquias sem CRM, está perdendo dinheiro todos os dias.\n\nVeja o que um CRM inteligente faz por você:\n\n1. Centraliza todos os leads de todas as unidades\n2. Automatiza follow-ups (ninguém esquece de responder)\n3. Mostra em tempo real qual unidade está performando\n4. Identifica gargalos no funil de vendas\n5. Gera relatórios automáticos para a franqueadora\n\nO resultado? Mais vendas, menos trabalho manual e visibilidade total da operação.\n\nNão é sobre tecnologia. É sobre não deixar dinheiro na mesa.\n\n#crm #franquias #vendas #gestao #marketing", format: "Feed", network: "Instagram", funnel: "Meio", createdAt: "03/02/2026", approved: false },
-      { id: "5", name: "Checklist - Marketing Digital para Franquias.txt", script: "CARROSSEL (7 slides):\n\nSlide 1 — Capa: 'Checklist Completo: Marketing Digital para Franquias'\n\nSlide 2 — Fundamentos:\n[ ] Persona definida por unidade\n[ ] Identidade visual padronizada\n[ ] Presença em Google Meu Negócio\n\nSlide 3 — Conteúdo:\n[ ] Calendário editorial mensal\n[ ] 3 posts/semana mínimo\n[ ] Mix de formatos (feed, reels, stories)\n\nSlide 4 — Tráfego Pago:\n[ ] Pixel instalado\n[ ] Campanhas de captação ativas\n[ ] Remarketing configurado\n\nSlide 5 — CRM & Vendas:\n[ ] Leads centralizados\n[ ] Follow-up automatizado\n[ ] Pipeline visual configurado\n\nSlide 6 — Métricas:\n[ ] CAC calculado\n[ ] Taxa de conversão acompanhada\n[ ] ROI mensal medido\n\nSlide 7 — CTA: 'Salve este checklist e comece a implementar hoje!'", format: "Carrossel", network: "Instagram", funnel: "Topo", createdAt: "03/02/2026", approved: false },
-      { id: "6", name: "Depoimento - Como a Plataforma Mudou Minha Gestão.txt", script: "REELS (45s):\n\n[0-3s] Texto na tela: 'Antes vs Depois da NoExcuse'\n\n[3-15s] Depoimento: 'Eu gerenciava tudo em planilha. Leads perdidos, equipe desalinhada, zero visibilidade.'\n\n[15-30s] Transição: 'Depois de implementar a plataforma...'\n'Agora eu vejo todos os leads em tempo real, meu time recebe alertas automáticos, e eu sei exatamente quanto cada campanha retorna.'\n\n[30-40s] Resultado: 'Em 6 meses: 3x mais leads, 45% de conversão, e finalmente tenho tempo para estratégia.'\n\n[40-45s] CTA: 'Quer a mesma transformação? Link na bio.'", format: "Reels", network: "Instagram", funnel: "Fundo", createdAt: "03/02/2026", approved: false },
-      { id: "7", name: "3 Tendências de Marketing para Franquias 2026.txt", script: "POST LINKEDIN:\n\n3 tendências que vão dominar o marketing de franquias em 2026:\n\n1. IA Generativa para Conteúdo\nNão é mais sobre criar conteúdo manualmente. É sobre ter IA que entende sua marca e gera roteiros, artes e campanhas alinhados com sua identidade.\n\n2. Hiperlocalização\nCada unidade precisa de marketing adaptado à sua região. O mesmo anúncio não funciona em São Paulo e em Manaus.\n\n3. Automação do Funil Completo\nDo lead ao fechamento, sem intervenção manual. Qualificação por IA, nurturing automatizado e alertas inteligentes.\n\nQuem adotar essas tendências primeiro vai dominar o mercado.", format: "Feed", network: "LinkedIn", funnel: "Topo", createdAt: "03/02/2026", approved: false },
-      { id: "8", name: "Agende Sua Demo Gratuita.txt", script: "STORY SEQUENCE (3 stories):\n\nStory 1:\nTexto: 'Cansado de perder leads por falta de organização?'\n\nStory 2:\nTexto: 'Nossa plataforma integra CRM + Marketing + IA em um só lugar'\n\nStory 3:\nTexto: 'Agende sua demo gratuita — link aqui'\nSticker: Countdown para fim da oferta", format: "Story", network: "Instagram", funnel: "Fundo", createdAt: "03/02/2026", approved: false },
-    ],
-  },
-  {
-    id: "jan-2026", month: "2026-01", label: "Janeiro 2026", createdAt: "03/01/2026",
-    files: [
-      { id: "j1", name: "Ano Novo, Franquia Nova - Planejamento 2026.txt", script: "POST COMPLETO:\n\nComeço de ano é o momento ideal para reestruturar o marketing da sua franquia.\n\nO que você precisa definir agora:\n\n1. Meta de leads por trimestre\n2. Orçamento de mídia paga mensal\n3. Calendário editorial Q1\n4. KPIs prioritários\n5. Ferramentas que vai adotar\n\nQuem planeja em janeiro, colhe o ano inteiro.", format: "Feed", network: "Instagram", funnel: "Topo", createdAt: "03/01/2026", approved: true },
-      { id: "j2", name: "Por que Franquias Precisam de Marketing Digital.txt", script: "CARROSSEL (5 slides):\n\nSlide 1 — 'Por que sua franquia PRECISA de marketing digital'\nSlide 2 — '92% dos consumidores pesquisam online antes de comprar'\nSlide 3 — 'Franquias com presença digital forte geram 3x mais leads'\nSlide 4 — 'Marketing local + digital = combinação imbatível'\nSlide 5 — 'Comece hoje. Fale conosco.'", format: "Carrossel", network: "Instagram", funnel: "Topo", createdAt: "03/01/2026", approved: true },
-    ],
-  },
-];
-
-const networkColors: Record<string, string> = {
-  Instagram: "bg-pink-500/10 text-pink-500",
-  LinkedIn: "bg-sky-500/10 text-sky-500",
-  Facebook: "bg-blue-600/10 text-blue-600",
-  TikTok: "bg-purple-500/10 text-purple-500",
+const formatColors: Record<string, string> = {
+  Feed: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  Carrossel: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+  Reels: "bg-pink-500/10 text-pink-600 border-pink-500/20",
+  Story: "bg-amber-500/10 text-amber-600 border-amber-500/20",
 };
 
 const funnelColors: Record<string, string> = {
   Topo: "bg-primary/10 text-primary",
-  Meio: "bg-chart-blue/10 text-chart-blue",
-  Fundo: "bg-chart-green/10 text-chart-green",
+  Meio: "bg-sky-500/10 text-sky-600",
+  Fundo: "bg-emerald-500/10 text-emerald-600",
 };
 
-export default function ClienteConteudos() {
-  const [sections, setSections] = useState(initialSections);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [folders, setFolders] = useState(mockFolders);
-  const [openFolder, setOpenFolder] = useState<string | null>(null);
-  const [openFile, setOpenFile] = useState<ContentFile | null>(null);
-  const [briefOpen, setBriefOpen] = useState(false);
+const networkColors: Record<string, string> = {
+  Instagram: "bg-pink-500/10 text-pink-500",
+  LinkedIn: "bg-sky-500/10 text-sky-500",
+  TikTok: "bg-purple-500/10 text-purple-500",
+};
 
-  // Briefing
+const MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+const OBJETIVOS = [
+  "Gerar leads", "Aumentar engajamento", "Lançar produto", "Vender mais", "Fortalecer marca",
+];
+
+const TONS = ["Educativo", "Inspirador", "Direto", "Storytelling", "Misto"];
+
+const loadingPhrases = [
+  "Analisando seu público-alvo...",
+  "Definindo estratégia de funil...",
+  "Criando roteiros personalizados...",
+  "Selecionando formatos ideais...",
+  "Gerando hashtags relevantes...",
+  "Definindo CTAs estratégicos...",
+  "Embasando cada conteúdo...",
+  "Finalizando sua campanha...",
+];
+
+/* ── Tutorial data ── */
+const tutorialData = [
+  {
+    formato: "Post Feed",
+    icon: <Image className="w-6 h-6" />,
+    dimensao: "1080 × 1080 px",
+    proporcao: "1:1",
+    cor: "bg-blue-500/10 border-blue-500/20 text-blue-600",
+    specs: ["Formato quadrado (1:1)", "JPEG ou PNG, máx 30MB", "Até 2.200 caracteres na legenda"],
+    comoGravar: ["Boa iluminação natural ou ring light", "Fundo limpo e organizado", "Texto legível (fonte mín 24pt)"],
+    estrutura: "Gancho → Conteúdo principal → CTA\n\nEx: Comece com uma pergunta provocativa, desenvolva 3-5 pontos e finalize com chamada para ação.",
+  },
+  {
+    formato: "Carrossel",
+    icon: <Layers className="w-6 h-6" />,
+    dimensao: "1080 × 1080 px (cada slide)",
+    proporcao: "1:1",
+    cor: "bg-purple-500/10 border-purple-500/20 text-purple-600",
+    specs: ["Até 10 slides por carrossel", "Mesma proporção em todos os slides", "3x mais salvamentos que posts normais"],
+    comoGravar: ["Capa atrativa com gancho forte", "Um ponto por slide (evite poluir)", "Último slide sempre com CTA"],
+    estrutura: "Slide 1: Capa com gancho\nSlide 2-8: Conteúdo (1 ideia/slide)\nSlide 9: Resumo visual\nSlide 10: CTA + 'Salve para depois'",
+  },
+  {
+    formato: "Reels / Vídeo Curto",
+    icon: <Video className="w-6 h-6" />,
+    dimensao: "1080 × 1920 px",
+    proporcao: "9:16",
+    cor: "bg-pink-500/10 border-pink-500/20 text-pink-600",
+    specs: ["Duração ideal: 15-60 segundos", "Formato vertical (9:16)", "Gancho nos 3 primeiros segundos"],
+    comoGravar: ["Grave na vertical com celular fixo", "Áudio claro (use microfone lapela)", "Iluminação frontal, evite contraluz", "Olhe para a câmera, fale com energia"],
+    estrutura: "[0-3s] Gancho forte\n[3-15s] Contexto/Problema\n[15-40s] Desenvolvimento\n[40-55s] Solução/Resultado\n[55-60s] CTA",
+  },
+  {
+    formato: "Story",
+    icon: <Smartphone className="w-6 h-6" />,
+    dimensao: "1080 × 1920 px",
+    proporcao: "9:16",
+    cor: "bg-amber-500/10 border-amber-500/20 text-amber-600",
+    specs: ["Duração: até 60s por story", "Use enquetes, perguntas e stickers", "Sequência narrativa de 3-5 stories"],
+    comoGravar: ["Enquetes e caixas de pergunta geram interação", "Use legendas (70% assistem sem som)", "Conte uma história em sequência"],
+    estrutura: "Story 1: Gancho (pergunta ou dado)\nStory 2-3: Desenvolvimento\nStory 4: CTA (link, enquete, DM)",
+  },
+  {
+    formato: "Vídeo Longo (YouTube)",
+    icon: <Monitor className="w-6 h-6" />,
+    dimensao: "1920 × 1080 px",
+    proporcao: "16:9",
+    cor: "bg-red-500/10 border-red-500/20 text-red-600",
+    specs: ["Duração: 8-15 minutos ideal", "Formato horizontal (16:9)", "Thumbnail personalizada é obrigatória"],
+    comoGravar: ["Câmera na altura dos olhos", "Microfone externo (condensador ou lapela)", "Cenário com identidade da marca", "Edição com cortes a cada 5-8 segundos"],
+    estrutura: "[0-30s] Gancho + promessa\n[30s-1min] Intro (apresentação rápida)\n[1-10min] Conteúdo principal\n[10-12min] Resumo + CTA\n[Final] Tela de inscrição",
+  },
+];
+
+/* ── Mock initial campaigns ── */
+const initialCampaigns: Campaign[] = [
+  {
+    id: "feb-2026",
+    mes: "2026-02",
+    label: "Fevereiro 2026",
+    createdAt: "05/02/2026",
+    briefing: { objetivo: "Gerar leads", tema: "Marketing para Franquias", tom: "Educativo" },
+    conteudos: [
+      { id: "1", titulo: "5 Erros que Todo Franqueado Comete no Marketing", formato: "Carrossel", rede: "Instagram", funil: "Topo", roteiro: "ABERTURA: Você sabia que 78% dos franqueados cometem pelo menos um desses erros no marketing?\n\nERRO 1 — Não ter persona definida\nA maioria investe em anúncios sem saber exatamente quem quer atingir.\n\nERRO 2 — Ignorar o marketing local\nFranquias precisam de estratégia nacional E local.\n\nERRO 3 — Não medir resultados\nSe você não sabe seu CAC, CPL e taxa de conversão, está voando às cegas.\n\nERRO 4 — Conteúdo genérico demais\nPostar frases motivacionais não gera leads.\n\nERRO 5 — Não usar automação\nResponder leads manualmente em 2026?\n\nCTA: Quer corrigir esses erros? Acesse o link na bio.", hashtags: ["#marketing", "#franquias", "#erros", "#marketingdigital", "#leads"], embasamento: "Carrosséis educativos no Instagram têm 3x mais salvamentos, ideal para topo de funil com público que está na fase de descoberta.", approved: true },
+      { id: "2", titulo: "Como Definir Metas de Vendas para Sua Franquia", formato: "Feed", rede: "LinkedIn", funil: "Meio", roteiro: "Título: Como Definir Metas de Vendas que Realmente Funcionam\n\nMetas vagas geram resultados vagos. Se sua meta é 'vender mais', você já começou errado.\n\nUse o método SMART:\n- Específica: 'Aumentar vendas da unidade Centro em 20%'\n- Mensurável: Acompanhe semanalmente no CRM\n- Atingível: Baseie-se no histórico dos últimos 3 meses\n- Relevante: Alinhada com o objetivo da rede\n- Temporal: Prazo de 90 dias\n\nCTA: Baixe nosso template gratuito de metas no link da bio.", hashtags: ["#vendas", "#metas", "#crm", "#franquias", "#gestao"], embasamento: "Posts educativos no LinkedIn geram 2x mais engajamento entre decisores B2B, ideal para meio de funil com conteúdo de valor.", approved: true },
+      { id: "3", titulo: "Case - Franquia que Triplicou Leads com IA", formato: "Reels", rede: "Instagram", funil: "Fundo", roteiro: "[0-5s] HOOK: 'Essa franquia triplicou seus leads em 90 dias.'\n\n[5-15s] CONTEXTO: A Rede FastFood tinha 3 unidades e gerava em média 50 leads/mês.\n\n[15-30s] PROBLEMA: Time respondia leads manualmente, perdia oportunidades.\n\n[30-45s] SOLUÇÃO: Implementaram plataforma com IA para qualificação automática.\n\n[45-55s] RESULTADO: 150 leads/mês por unidade, 40% de conversão, ROI de 8x.\n\n[55-60s] CTA: 'Quer o mesmo resultado? Link na bio.'", hashtags: ["#case", "#ia", "#leads", "#franquias", "#resultados"], embasamento: "Reels com cases de sucesso e dados concretos convertem 5x mais no fundo de funil, pois oferecem prova social.", approved: false },
+    ],
+  },
+];
+
+export default function ClienteConteudos() {
+  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
+  const [openCampaign, setOpenCampaign] = useState<string | null>(null);
+  const [openContent, setOpenContent] = useState<GeneratedContent | null>(null);
+  const [formatFilter, setFormatFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Wizard state
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingPhrase, setLoadingPhrase] = useState(0);
+
+  // Briefing fields
   const [bMes, setBMes] = useState("Março 2026");
   const [bObjetivo, setBObjetivo] = useState("");
   const [bTema, setBTema] = useState("");
   const [bPromocoes, setBPromocoes] = useState("");
   const [bDatas, setBDatas] = useState("");
   const [bDestaques, setBDestaques] = useState("");
-  const [bPublico, setBPublico] = useState("");
   const [bTom, setBTom] = useState("");
-  const [bFormatos, setBFormatos] = useState("");
-  const [bQtd, setBQtd] = useState("10");
-  const [bObs, setBObs] = useState("");
 
-  const filledFields = sections.reduce((total, s) => total + s.fields.filter(f => f.value.trim()).length, 0);
-  const totalFields = sections.reduce((total, s) => total + s.fields.length, 0);
-  const kbProgress = Math.round((filledFields / totalFields) * 100);
+  // Format quantities
+  const [qFeed, setQFeed] = useState(8);
+  const [qCarrossel, setQCarrossel] = useState(4);
+  const [qReels, setQReels] = useState(4);
+  const [qStory, setQStory] = useState(4);
 
-  const updateField = (sectionId: string, fieldKey: string, value: string) => {
-    setSections(prev => prev.map(s => s.id === sectionId ? { ...s, fields: s.fields.map(f => f.key === fieldKey ? { ...f, value } : f) } : s));
-  };
+  const totalFormatos = qFeed + qCarrossel + qReels + qStory;
 
-  const handleGenerate = () => {
-    setBriefOpen(false);
-    toast({ title: "Conteúdos gerados!", description: `${bQtd} roteiros criados para ${bMes}.` });
-  };
+  // Rotate loading phrases
+  useEffect(() => {
+    if (!isGenerating) return;
+    const interval = setInterval(() => {
+      setLoadingPhrase((p) => (p + 1) % loadingPhrases.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isGenerating]);
 
-  const toggleApproval = (fileId: string) => {
-    setFolders(prev => prev.map(folder => ({
-      ...folder,
-      files: folder.files.map(f => f.id === fileId ? { ...f, approved: !f.approved } : f),
-    })));
-    // Also update the open file if it's the same
-    if (openFile?.id === fileId) {
-      setOpenFile(prev => prev ? { ...prev, approved: !prev.approved } : null);
+  const handleGenerate = async () => {
+    if (!bObjetivo || !bTema || !bTom) {
+      toast({ title: "Preencha os campos obrigatórios", description: "Objetivo, tema e tom são necessários.", variant: "destructive" });
+      return;
+    }
+
+    setIsGenerating(true);
+    setLoadingPhrase(0);
+
+    try {
+      // Read strategy data from localStorage if available
+      let estrategia = null;
+      try {
+        const stored = localStorage.getItem("estrategia_data");
+        if (stored) estrategia = JSON.parse(stored);
+      } catch {}
+
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: {
+          briefing: {
+            mes: bMes,
+            objetivo: bObjetivo,
+            tema: bTema,
+            promocoes: bPromocoes,
+            datas: bDatas,
+            destaques: bDestaques,
+            tom: bTom,
+          },
+          formatos: {
+            feed: qFeed,
+            carrossel: qCarrossel,
+            reels: qReels,
+            story: qStory,
+          },
+          estrategia,
+        },
+      });
+
+      if (error) throw error;
+
+      const conteudos: GeneratedContent[] = (data?.conteudos || []).map(
+        (c: any, i: number) => ({
+          ...c,
+          id: `gen-${Date.now()}-${i}`,
+          approved: false,
+        })
+      );
+
+      const newCampaign: Campaign = {
+        id: `campaign-${Date.now()}`,
+        mes: bMes,
+        label: bMes,
+        createdAt: new Date().toLocaleDateString("pt-BR"),
+        briefing: { objetivo: bObjetivo, tema: bTema, tom: bTom },
+        conteudos,
+      };
+
+      setCampaigns((prev) => [newCampaign, ...prev]);
+      setWizardOpen(false);
+      setWizardStep(1);
+      setOpenCampaign(newCampaign.id);
+      toast({ title: "Campanha gerada com sucesso!", description: `${conteudos.length} conteúdos criados para ${bMes}.` });
+    } catch (err: any) {
+      console.error("Generation error:", err);
+      toast({ title: "Erro ao gerar conteúdos", description: err?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const approveAll = (folderId: string) => {
-    setFolders(prev => prev.map(folder =>
-      folder.id === folderId
-        ? { ...folder, files: folder.files.map(f => ({ ...f, approved: true })) }
-        : folder
-    ));
-    toast({ title: "Todos os roteiros aprovados!" });
+  const toggleApproval = (contentId: string) => {
+    setCampaigns((prev) =>
+      prev.map((c) => ({
+        ...c,
+        conteudos: c.conteudos.map((ct) =>
+          ct.id === contentId ? { ...ct, approved: !ct.approved } : ct
+        ),
+      }))
+    );
+    if (openContent?.id === contentId) {
+      setOpenContent((prev) => (prev ? { ...prev, approved: !prev.approved } : null));
+    }
   };
 
-  const currentFolder = folders.find(f => f.id === openFolder);
-  const isCurrentMonth = (month: string) => month === CURRENT_MONTH;
+  const approveAll = (campaignId: string) => {
+    setCampaigns((prev) =>
+      prev.map((c) =>
+        c.id === campaignId
+          ? { ...c, conteudos: c.conteudos.map((ct) => ({ ...ct, approved: true })) }
+          : c
+      )
+    );
+    toast({ title: "Todos os conteúdos aprovados!" });
+  };
+
+  const currentCampaign = campaigns.find((c) => c.id === openCampaign);
+
+  const filteredConteudos = currentCampaign?.conteudos.filter((c) => {
+    if (formatFilter !== "all" && c.formato !== formatFilter) return false;
+    if (statusFilter === "approved" && !c.approved) return false;
+    if (statusFilter === "pending" && c.approved) return false;
+    return true;
+  });
+
+  const isCurrentMonth = (mes: string) => mes.includes("Fevereiro") && mes.includes("2026");
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
         title="Conteúdos"
-        subtitle="Base de conhecimento e geração mensal de roteiros"
-        icon={<FileText className="w-5 h-5 text-primary" />}
+        subtitle="Agência de IA — Gere campanhas mensais completas para suas redes sociais"
+        icon={<Megaphone className="w-5 h-5 text-primary" />}
       />
 
-      <Tabs defaultValue="base">
+      <Tabs defaultValue="campanhas">
         <TabsList>
-          <TabsTrigger value="base" className="text-xs gap-1.5"><BookOpen className="w-3.5 h-3.5" /> Base de Conhecimento</TabsTrigger>
-          <TabsTrigger value="arquivos" className="text-xs gap-1.5"><FolderOpen className="w-3.5 h-3.5" /> Arquivos</TabsTrigger>
+          <TabsTrigger value="campanhas" className="text-xs gap-1.5">
+            <FolderOpen className="w-3.5 h-3.5" /> Campanhas
+          </TabsTrigger>
+          <TabsTrigger value="tutorial" className="text-xs gap-1.5">
+            <GraduationCap className="w-3.5 h-3.5" /> Tutorial
+          </TabsTrigger>
+          <TabsTrigger value="historico" className="text-xs gap-1.5">
+            <History className="w-3.5 h-3.5" /> Histórico
+          </TabsTrigger>
         </TabsList>
 
-        {/* ═══ BASE DE CONHECIMENTO ═══ */}
-        <TabsContent value="base" className="space-y-5 mt-4">
-          <Card className="glass-card">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Preenchimento da Base</span>
-                <span className="text-xs text-muted-foreground">{filledFields}/{totalFields} campos preenchidos</span>
-              </div>
-              <Progress value={kbProgress} className="h-2" />
-            </CardContent>
-          </Card>
+        {/* ═══ CAMPANHAS ═══ */}
+        <TabsContent value="campanhas" className="space-y-4 mt-4">
+          {/* New campaign button */}
+          <Button className="w-full gap-2 h-12 text-sm font-semibold" onClick={() => { setWizardOpen(true); setWizardStep(1); }}>
+            <Plus className="w-4 h-4" /> Nova Campanha Mensal
+          </Button>
 
-          {sections.map(section => {
-            const isEditing = editing === section.id;
-            return (
-              <Card key={section.id} className="glass-card">
-                <CardContent className="py-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-primary/10 text-primary">{section.icon}</div>
-                      <p className="text-sm font-bold">{section.title}</p>
-                    </div>
-                    <Button
-                      variant={isEditing ? "default" : "outline"}
-                      size="sm"
-                      className="text-xs gap-1"
-                      onClick={() => {
-                        if (isEditing) toast({ title: "Salvo com sucesso!" });
-                        setEditing(isEditing ? null : section.id);
-                      }}
+          {/* Wizard Dialog */}
+          <Dialog open={wizardOpen} onOpenChange={(open) => { if (!isGenerating) setWizardOpen(open); }}>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+              {isGenerating ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-6">
+                  <motion.div
+                    animate={{ scale: [1, 1.15, 1] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    className="p-4 rounded-full bg-primary/10"
+                  >
+                    <Sparkles className="w-10 h-10 text-primary" />
+                  </motion.div>
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={loadingPhrase}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="text-sm text-muted-foreground text-center"
                     >
-                      {isEditing ? <><Check className="w-3.5 h-3.5" /> Salvar</> : <><Edit3 className="w-3.5 h-3.5" /> Editar</>}
-                    </Button>
-                  </div>
-                  <div className="space-y-3">
-                    {section.fields.map(field => (
-                      <div key={field.key}>
-                        <Label className="text-[11px] text-muted-foreground">{field.label}</Label>
-                        {isEditing ? (
-                          field.type === "textarea" ? (
-                            <Textarea value={field.value} onChange={e => updateField(section.id, field.key, e.target.value)} rows={3} className="mt-1" />
-                          ) : (
-                            <Input value={field.value} onChange={e => updateField(section.id, field.key, e.target.value)} className="mt-1" />
-                          )
-                        ) : (
-                          <p className="text-sm mt-1 whitespace-pre-line">{field.value || <span className="text-muted-foreground italic">Não preenchido</span>}</p>
-                        )}
-                      </div>
+                      {loadingPhrases[loadingPhrase]}
+                    </motion.p>
+                  </AnimatePresence>
+                  <p className="text-xs text-muted-foreground/60">Isso pode levar até 30 segundos...</p>
+                </div>
+              ) : (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      Nova Campanha — Etapa {wizardStep} de 3
+                    </DialogTitle>
+                  </DialogHeader>
+
+                  {/* Step indicators */}
+                  <div className="flex gap-2 mb-2">
+                    {[1, 2, 3].map((s) => (
+                      <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= wizardStep ? "bg-primary" : "bg-muted"}`} />
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </TabsContent>
 
-        {/* ═══ ARQUIVOS ═══ */}
-        <TabsContent value="arquivos" className="space-y-4 mt-4">
-          {/* New creation button */}
-          <Dialog open={briefOpen} onOpenChange={setBriefOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full gap-2 h-12 text-sm font-semibold">
-                <Plus className="w-4 h-4" /> Nova Criação Mensal
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" /> Briefing para Geração de Conteúdos
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-2">
-                <p className="text-xs text-muted-foreground">Preencha o briefing abaixo. Uma nova pasta será criada com todos os roteiros gerados.</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Mês de Referência</Label>
-                    <Input value={bMes} onChange={e => setBMes(e.target.value)} placeholder="Ex: Março 2026" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Quantidade de Conteúdos</Label>
-                    <Input type="number" value={bQtd} onChange={e => setBQtd(e.target.value)} placeholder="10" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Objetivo Principal do Mês</Label>
-                  <Textarea value={bObjetivo} onChange={e => setBObjetivo(e.target.value)} placeholder="Ex: Gerar leads para o lançamento do novo módulo de IA" rows={2} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Tema Central</Label>
-                  <Input value={bTema} onChange={e => setBTema(e.target.value)} placeholder="Ex: Mês da Automação, Crescimento Inteligente..." />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Promoções e Ofertas</Label>
-                    <Textarea value={bPromocoes} onChange={e => setBPromocoes(e.target.value)} placeholder="Ex: 30% off plano anual..." rows={2} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Datas Comemorativas</Label>
-                    <Textarea value={bDatas} onChange={e => setBDatas(e.target.value)} placeholder="Ex: Dia da Mulher (08/03)..." rows={2} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Destaques e Novidades</Label>
-                  <Textarea value={bDestaques} onChange={e => setBDestaques(e.target.value)} placeholder="Ex: Novo recurso, case de sucesso..." rows={2} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Público-alvo Prioritário</Label>
-                    <Input value={bPublico} onChange={e => setBPublico(e.target.value)} placeholder="Ex: Franqueados novos, prospects" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Tom de Comunicação</Label>
-                    <Select value={bTom} onValueChange={setBTom}>
-                      <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="educativo">Educativo</SelectItem>
-                        <SelectItem value="inspirador">Inspirador</SelectItem>
-                        <SelectItem value="direto">Direto e Comercial</SelectItem>
-                        <SelectItem value="storytelling">Storytelling</SelectItem>
-                        <SelectItem value="misto">Misto</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Formatos Desejados</Label>
-                  <Input value={bFormatos} onChange={e => setBFormatos(e.target.value)} placeholder="Ex: Carrossel, Reels, Feed, Story, Artigo" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Observações Adicionais</Label>
-                  <Textarea value={bObs} onChange={e => setBObs(e.target.value)} placeholder="Informações extras..." rows={3} />
-                </div>
-                <Button className="w-full gap-2 h-11" onClick={handleGenerate}>
-                  <Sparkles className="w-4 h-4" /> Gerar Conteúdos do Mês
-                </Button>
-              </div>
+                  {wizardStep === 1 && (
+                    <div className="space-y-4 mt-2">
+                      <p className="text-xs text-muted-foreground">Preencha o briefing da campanha. Quanto mais detalhado, melhor o resultado.</p>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Mês de Referência *</Label>
+                        <Select value={bMes} onValueChange={setBMes}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {MESES.map((m) => (
+                              <SelectItem key={m} value={`${m} 2026`}>{m} 2026</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Objetivo Principal *</Label>
+                        <Select value={bObjetivo} onValueChange={setBObjetivo}>
+                          <SelectTrigger><SelectValue placeholder="Selecione o objetivo" /></SelectTrigger>
+                          <SelectContent>
+                            {OBJETIVOS.map((o) => (
+                              <SelectItem key={o} value={o}>{o}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Tema Central *</Label>
+                        <Input value={bTema} onChange={(e) => setBTema(e.target.value)} placeholder="Ex: Mês da Automação, Crescimento Inteligente..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Tom de Comunicação *</Label>
+                        <Select value={bTom} onValueChange={setBTom}>
+                          <SelectTrigger><SelectValue placeholder="Selecione o tom" /></SelectTrigger>
+                          <SelectContent>
+                            {TONS.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Promoções/Ofertas</Label>
+                          <Textarea value={bPromocoes} onChange={(e) => setBPromocoes(e.target.value)} placeholder="Ex: 30% off plano anual..." rows={2} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Datas Comemorativas</Label>
+                          <Textarea value={bDatas} onChange={(e) => setBDatas(e.target.value)} placeholder="Ex: Dia da Mulher (08/03)..." rows={2} />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Destaques/Novidades</Label>
+                        <Textarea value={bDestaques} onChange={(e) => setBDestaques(e.target.value)} placeholder="Ex: Novo recurso, case de sucesso..." rows={2} />
+                      </div>
+                      <Button className="w-full" onClick={() => setWizardStep(2)} disabled={!bObjetivo || !bTema || !bTom}>
+                        Próximo <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {wizardStep === 2 && (
+                    <div className="space-y-4 mt-2">
+                      <p className="text-xs text-muted-foreground">Escolha quantos conteúdos de cada formato deseja gerar.</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { label: "Posts Feed", icon: <Image className="w-5 h-5" />, value: qFeed, set: setQFeed, color: "bg-blue-500/10 border-blue-500/20", suggestion: 8 },
+                          { label: "Carrosséis", icon: <Layers className="w-5 h-5" />, value: qCarrossel, set: setQCarrossel, color: "bg-purple-500/10 border-purple-500/20", suggestion: 4 },
+                          { label: "Roteiros Reels", icon: <Video className="w-5 h-5" />, value: qReels, set: setQReels, color: "bg-pink-500/10 border-pink-500/20", suggestion: 4 },
+                          { label: "Stories", icon: <Smartphone className="w-5 h-5" />, value: qStory, set: setQStory, color: "bg-amber-500/10 border-amber-500/20", suggestion: 4 },
+                        ].map((f) => (
+                          <Card key={f.label} className={`border ${f.color} cursor-pointer`}>
+                            <CardContent className="py-4 flex flex-col items-center gap-2">
+                              <div className="text-muted-foreground">{f.icon}</div>
+                              <p className="text-xs font-semibold">{f.label}</p>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={20}
+                                value={f.value}
+                                onChange={(e) => f.set(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
+                                className="w-20 text-center h-9"
+                              />
+                              <p className="text-[10px] text-muted-foreground">Sugestão: {f.suggestion}</p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                        <span className="text-sm font-medium">Total de conteúdos</span>
+                        <Badge className="text-sm px-3 py-1">{totalFormatos}</Badge>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" onClick={() => setWizardStep(1)}>
+                          <ArrowLeft className="w-4 h-4" /> Voltar
+                        </Button>
+                        <Button className="flex-1" onClick={() => setWizardStep(3)} disabled={totalFormatos === 0}>
+                          Próximo <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {wizardStep === 3 && (
+                    <div className="space-y-4 mt-2">
+                      <p className="text-xs text-muted-foreground">Revise e confirme a geração da campanha.</p>
+                      <Card className="bg-muted/30">
+                        <CardContent className="py-4 space-y-2">
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <span className="text-muted-foreground">Mês:</span>
+                            <span className="font-medium">{bMes}</span>
+                            <span className="text-muted-foreground">Objetivo:</span>
+                            <span className="font-medium">{bObjetivo}</span>
+                            <span className="text-muted-foreground">Tema:</span>
+                            <span className="font-medium">{bTema}</span>
+                            <span className="text-muted-foreground">Tom:</span>
+                            <span className="font-medium">{bTom}</span>
+                            <span className="text-muted-foreground">Total:</span>
+                            <span className="font-medium">{totalFormatos} conteúdos</span>
+                          </div>
+                          <div className="flex gap-2 mt-2 flex-wrap">
+                            {qFeed > 0 && <Badge variant="outline" className="text-[10px]">{qFeed} Feed</Badge>}
+                            {qCarrossel > 0 && <Badge variant="outline" className="text-[10px]">{qCarrossel} Carrossel</Badge>}
+                            {qReels > 0 && <Badge variant="outline" className="text-[10px]">{qReels} Reels</Badge>}
+                            {qStory > 0 && <Badge variant="outline" className="text-[10px]">{qStory} Story</Badge>}
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" onClick={() => setWizardStep(2)}>
+                          <ArrowLeft className="w-4 h-4" /> Voltar
+                        </Button>
+                        <Button className="flex-1 gap-2" onClick={handleGenerate}>
+                          <Sparkles className="w-4 h-4" /> Gerar Conteúdos com IA
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </DialogContent>
           </Dialog>
 
           {/* Breadcrumb */}
-          {openFolder && !openFile && (
+          {openCampaign && !openContent && (
             <div className="flex items-center gap-2 text-sm">
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => setOpenFolder(null)}>
+              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => { setOpenCampaign(null); setFormatFilter("all"); setStatusFilter("all"); }}>
                 <ArrowLeft className="w-3 h-3" /> Voltar
               </Button>
               <span className="text-muted-foreground">/</span>
-              <span className="font-medium">{currentFolder?.label}</span>
+              <span className="font-medium">{currentCampaign?.label}</span>
             </div>
           )}
 
-          {openFile && (
+          {openContent && (
             <div className="flex items-center gap-2 text-sm">
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => setOpenFile(null)}>
+              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => setOpenContent(null)}>
                 <ArrowLeft className="w-3 h-3" /> Voltar
               </Button>
               <span className="text-muted-foreground">/</span>
-              <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => setOpenFile(null)}>{currentFolder?.label}</button>
+              <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => setOpenContent(null)}>{currentCampaign?.label}</button>
               <span className="text-muted-foreground">/</span>
-              <span className="font-medium text-xs truncate max-w-xs">{openFile.name}</span>
+              <span className="font-medium text-xs truncate max-w-xs">{openContent.titulo}</span>
             </div>
           )}
 
-          {/* File viewer */}
-          {openFile ? (
+          {/* Content detail view */}
+          {openContent ? (
             <Card className="glass-card">
               <CardContent className="py-5 space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-bold">{openFile.name}</p>
+                    <p className="text-sm font-bold">{openContent.titulo}</p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <Badge variant="outline" className="text-[9px]">{openFile.format}</Badge>
-                      <Badge className={`text-[9px] ${networkColors[openFile.network] || ""}`}>{openFile.network}</Badge>
-                      <Badge className={`text-[9px] ${funnelColors[openFile.funnel] || ""}`}>{openFile.funnel}</Badge>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {openFile.createdAt}
-                      </span>
+                      <Badge className={`text-[9px] ${formatColors[openContent.formato] || ""}`}>{openContent.formato}</Badge>
+                      <Badge className={`text-[9px] ${networkColors[openContent.rede] || ""}`}>{openContent.rede}</Badge>
+                      <Badge className={`text-[9px] ${funnelColors[openContent.funil] || ""}`}>{openContent.funil}</Badge>
                     </div>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
                     <Button
-                      variant={openFile.approved ? "outline" : "default"}
+                      variant={openContent.approved ? "outline" : "default"}
                       size="sm"
-                      className={`h-8 text-xs gap-1 ${openFile.approved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
-                      onClick={() => { toggleApproval(openFile.id); toast({ title: openFile.approved ? "Aprovação removida" : "Roteiro aprovado!" }); }}
+                      className={`h-8 text-xs gap-1 ${openContent.approved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
+                      onClick={() => { toggleApproval(openContent.id); toast({ title: openContent.approved ? "Aprovação removida" : "Conteúdo aprovado!" }); }}
                     >
-                      {openFile.approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Aprovado</> : <><Check className="w-3.5 h-3.5" /> Aprovar</>}
+                      {openContent.approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Aprovado</> : <><Check className="w-3.5 h-3.5" /> Aprovar</>}
                     </Button>
-                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(openFile.script); toast({ title: "Roteiro copiado!" }); }}>
+                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(openContent.roteiro); toast({ title: "Roteiro copiado!" }); }}>
                       <Copy className="w-3.5 h-3.5" /> Copiar
                     </Button>
-                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => toast({ title: "Download iniciado!" })}>
-                      <Download className="w-3.5 h-3.5" /> Baixar
-                    </Button>
                   </div>
                 </div>
+
+                {/* Script */}
                 <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
-                  <p className="text-xs text-foreground whitespace-pre-line leading-relaxed">{openFile.script}</p>
+                  <p className="text-xs text-foreground whitespace-pre-line leading-relaxed">{openContent.roteiro}</p>
                 </div>
+
+                {/* Hashtags */}
+                {openContent.hashtags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {openContent.hashtags.map((h, i) => (
+                      <Badge key={i} variant="outline" className="text-[10px] text-muted-foreground">{h.startsWith("#") ? h : `#${h}`}</Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* Embasamento */}
+                {openContent.embasamento && (
+                  <div className="flex gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
+                    <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mb-1">Por que este conteúdo?</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{openContent.embasamento}</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          ) : openFolder && currentFolder ? (
-            /* Files inside folder */
+          ) : openCampaign && currentCampaign ? (
+            /* Content cards inside campaign */
             <div className="space-y-3">
-              {/* Approval summary */}
-              {(() => {
-                const approved = currentFolder.files.filter(f => f.approved).length;
-                const total = currentFolder.files.length;
-                const allApproved = approved === total;
-                return (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={allApproved ? "default" : "secondary"} className={`text-[10px] gap-1 ${allApproved ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" : ""}`}>
-                        <CheckCircle2 className="w-3 h-3" /> {approved}/{total} aprovados
-                      </Badge>
-                    </div>
-                    {!allApproved && (
-                      <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => approveAll(currentFolder.id)}>
-                        <Check className="w-3 h-3" /> Aprovar Todos
-                      </Button>
-                    )}
-                  </div>
-                );
-              })()}
+              {/* Filters + approval summary */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Select value={formatFilter} onValueChange={setFormatFilter}>
+                    <SelectTrigger className="h-7 text-[10px] w-auto gap-1">
+                      <Filter className="w-3 h-3" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos formatos</SelectItem>
+                      <SelectItem value="Feed">Feed</SelectItem>
+                      <SelectItem value="Carrossel">Carrossel</SelectItem>
+                      <SelectItem value="Reels">Reels</SelectItem>
+                      <SelectItem value="Story">Story</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-7 text-[10px] w-auto gap-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos status</SelectItem>
+                      <SelectItem value="approved">Aprovados</SelectItem>
+                      <SelectItem value="pending">Pendentes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Badge variant="secondary" className="text-[10px] gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {currentCampaign.conteudos.filter((c) => c.approved).length}/{currentCampaign.conteudos.length} aprovados
+                  </Badge>
+                </div>
+                {currentCampaign.conteudos.some((c) => !c.approved) && (
+                  <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => approveAll(currentCampaign.id)}>
+                    <Check className="w-3 h-3" /> Aprovar Todos
+                  </Button>
+                )}
+              </div>
 
-              <div className="space-y-1">
-                {currentFolder.files.map(file => (
+              {/* Content grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filteredConteudos?.map((content) => (
                   <Card
-                    key={file.id}
-                    className={`cursor-pointer hover:bg-muted/30 transition-all ${file.approved ? "border-emerald-500/20 bg-emerald-500/[0.02]" : "glass-card"}`}
-                    onClick={() => setOpenFile(file)}
+                    key={content.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${content.approved ? "border-emerald-500/20 bg-emerald-500/[0.02]" : "glass-card hover:bg-muted/30"}`}
+                    onClick={() => setOpenContent(content)}
                   >
-                    <CardContent className="py-3 flex items-center gap-3">
-                      <div className="relative shrink-0">
-                        <File className="w-4 h-4 text-muted-foreground" />
-                        {file.approved && (
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500 absolute -bottom-1 -right-1" />
-                        )}
+                    <CardContent className="py-4 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold leading-tight flex-1">{content.titulo}</p>
+                        {content.approved && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="outline" className="text-[8px] h-4">{file.format}</Badge>
-                          <Badge className={`text-[8px] h-4 ${networkColors[file.network] || ""}`}>{file.network}</Badge>
-                          <span className="text-[10px] text-muted-foreground">{file.createdAt}</span>
-                        </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge className={`text-[9px] ${formatColors[content.formato] || ""}`}>{content.formato}</Badge>
+                        <Badge className={`text-[9px] ${networkColors[content.rede] || ""}`}>{content.rede}</Badge>
+                        <Badge className={`text-[9px] ${funnelColors[content.funil] || ""}`}>{content.funil}</Badge>
                       </div>
-                      <div className="flex gap-1 shrink-0 items-center" onClick={e => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`h-7 px-2 text-[10px] gap-1 ${file.approved ? "text-emerald-600" : "text-muted-foreground"}`}
-                          onClick={() => { toggleApproval(file.id); toast({ title: file.approved ? "Aprovação removida" : "Aprovado!" }); }}
-                        >
-                          {file.approved ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { navigator.clipboard.writeText(file.script); toast({ title: "Copiado!" }); }}>
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Download iniciado!" })}>
-                          <Download className="w-3 h-3" />
-                        </Button>
-                      </div>
+                      <p className="text-[11px] text-muted-foreground line-clamp-2">{content.roteiro.slice(0, 120)}...</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
+
+              {filteredConteudos?.length === 0 && (
+                <div className="text-center py-10">
+                  <p className="text-sm text-muted-foreground">Nenhum conteúdo encontrado com os filtros selecionados.</p>
+                </div>
+              )}
             </div>
           ) : (
-            /* Folder list */
+            /* Campaign folder list */
             <div className="space-y-3">
-              {folders.map(folder => {
-                const isCurrent = isCurrentMonth(folder.month);
-                const approvedCount = folder.files.filter(f => f.approved).length;
-                const totalCount = folder.files.length;
-                const allApproved = approvedCount === totalCount;
+              {campaigns.map((campaign) => {
+                const isCurrent = isCurrentMonth(campaign.label);
+                const approved = campaign.conteudos.filter((c) => c.approved).length;
+                const total = campaign.conteudos.length;
+                const allApproved = approved === total && total > 0;
 
                 return (
                   <Card
-                    key={folder.id}
+                    key={campaign.id}
                     className={`cursor-pointer transition-all hover:shadow-md ${
                       isCurrent
                         ? "ring-2 ring-primary/40 bg-primary/[0.03] shadow-md shadow-primary/10"
                         : "glass-card hover:bg-muted/30"
                     }`}
-                    onClick={() => setOpenFolder(folder.id)}
+                    onClick={() => setOpenCampaign(campaign.id)}
                   >
                     <CardContent className="py-4 flex items-center gap-4">
                       <div className={`p-2.5 rounded-xl ${isCurrent ? "bg-primary/15" : "bg-primary/10"}`}>
-                        <Folder className={`w-5 h-5 ${isCurrent ? "text-primary" : "text-primary"}`} />
+                        <Folder className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold">{folder.label}</p>
+                          <p className="text-sm font-semibold">{campaign.label}</p>
                           {isCurrent && (
                             <Badge className="text-[9px] bg-primary/15 text-primary border-primary/30 gap-1">
                               <Star className="w-2.5 h-2.5" /> Mês Atual
@@ -497,29 +700,159 @@ export default function ClienteConteudos() {
                           )}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {totalCount} roteiros — Criado em {folder.createdAt}
+                          {total} conteúdos • {campaign.briefing.objetivo} • Criado em {campaign.createdAt}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] gap-1 ${allApproved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
-                        >
-                          <CheckCircle2 className="w-3 h-3" /> {approvedCount}/{totalCount}
-                        </Badge>
-                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] gap-1 shrink-0 ${allApproved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
+                      >
+                        <CheckCircle2 className="w-3 h-3" /> {approved}/{total}
+                      </Badge>
                     </CardContent>
                   </Card>
                 );
               })}
 
-              {folders.length === 0 && (
+              {campaigns.length === 0 && (
                 <div className="text-center py-16">
                   <FolderOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">Nenhuma criação mensal ainda</p>
-                  <p className="text-xs text-muted-foreground mt-1">Clique em "Nova Criação Mensal" para gerar seus primeiros conteúdos</p>
+                  <p className="text-sm text-muted-foreground">Nenhuma campanha criada ainda</p>
+                  <p className="text-xs text-muted-foreground mt-1">Clique em "Nova Campanha Mensal" para gerar seus primeiros conteúdos com IA</p>
                 </div>
               )}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ═══ TUTORIAL ═══ */}
+        <TabsContent value="tutorial" className="space-y-4 mt-4">
+          <div className="text-center mb-6">
+            <h2 className="text-lg font-bold">Guia de Formatos</h2>
+            <p className="text-sm text-muted-foreground mt-1">Tudo que você precisa saber para produzir conteúdo profissional</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {tutorialData.map((item) => (
+              <Card key={item.formato} className={`border ${item.cor.split(" ").filter(c => c.startsWith("border-")).join(" ")} overflow-hidden`}>
+                <CardContent className="py-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-xl ${item.cor.split(" ").filter(c => c.startsWith("bg-")).join(" ")}`}>
+                        {item.icon}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">{item.formato}</p>
+                        <p className="text-[11px] text-muted-foreground">{item.dimensao}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-mono">{item.proporcao}</Badge>
+                  </div>
+
+                  {/* Specs */}
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Especificações</p>
+                    {item.specs.map((s, i) => (
+                      <p key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                        <span className="text-primary mt-0.5">•</span> {s}
+                      </p>
+                    ))}
+                  </div>
+
+                  {/* How to record */}
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                      <Camera className="w-3 h-3" /> Como Gravar
+                    </p>
+                    {item.comoGravar.map((tip, i) => (
+                      <p key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                        <span className="text-amber-500 mt-0.5">💡</span> {tip}
+                      </p>
+                    ))}
+                  </div>
+
+                  {/* Structure */}
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Estrutura Ideal</p>
+                    <div className="bg-muted/40 rounded-lg p-3">
+                      <p className="text-[11px] text-foreground whitespace-pre-line leading-relaxed font-mono">{item.estrutura}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* ═══ HISTÓRICO ═══ */}
+        <TabsContent value="historico" className="space-y-4 mt-4">
+          <div className="text-center mb-6">
+            <h2 className="text-lg font-bold">Histórico de Campanhas</h2>
+            <p className="text-sm text-muted-foreground mt-1">Todas as campanhas geradas em ordem cronológica</p>
+          </div>
+
+          {campaigns.length === 0 ? (
+            <div className="text-center py-16">
+              <History className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">Nenhuma campanha no histórico</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {campaigns.map((campaign) => {
+                const approved = campaign.conteudos.filter((c) => c.approved).length;
+                const total = campaign.conteudos.length;
+                const formatCounts: Record<string, number> = {};
+                campaign.conteudos.forEach((c) => {
+                  formatCounts[c.formato] = (formatCounts[c.formato] || 0) + 1;
+                });
+
+                return (
+                  <Collapsible key={campaign.id}>
+                    <CollapsibleTrigger asChild>
+                      <Card className="glass-card cursor-pointer hover:bg-muted/30 transition-all">
+                        <CardContent className="py-4 flex items-center gap-4">
+                          <div className="p-2 rounded-xl bg-primary/10">
+                            <Clock className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold">{campaign.label}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {campaign.briefing.objetivo} • {campaign.briefing.tema}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="outline" className="text-[10px] gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> {approved}/{total}
+                            </Badge>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-6 mt-2 space-y-2 border-l-2 border-border pl-4 pb-2">
+                        <div className="flex gap-2 flex-wrap">
+                          {Object.entries(formatCounts).map(([formato, count]) => (
+                            <Badge key={formato} variant="outline" className={`text-[10px] ${formatColors[formato] || ""}`}>
+                              {count}× {formato}
+                            </Badge>
+                          ))}
+                        </div>
+                        {campaign.conteudos.slice(0, 5).map((c) => (
+                          <div key={c.id} className="flex items-center gap-2 text-xs">
+                            {c.approved ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Circle className="w-3 h-3 text-muted-foreground" />}
+                            <span className={c.approved ? "" : "text-muted-foreground"}>{c.titulo}</span>
+                            <Badge className={`text-[8px] ml-auto ${formatColors[c.formato] || ""}`}>{c.formato}</Badge>
+                          </div>
+                        ))}
+                        {campaign.conteudos.length > 5 && (
+                          <p className="text-[10px] text-muted-foreground">+ {campaign.conteudos.length - 5} mais conteúdos</p>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
             </div>
           )}
         </TabsContent>
