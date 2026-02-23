@@ -94,8 +94,12 @@ Deno.serve(async (req) => {
               { headers: { "Client-Token": instance.client_token } }
             );
             const deviceData = await deviceRes.json();
+            console.log("[check-status] /device response:", JSON.stringify(deviceData));
             if (deviceData.phone) {
               phoneNumber = deviceData.phone;
+              console.log("[check-status] Phone number found:", phoneNumber);
+            } else {
+              console.warn("[check-status] No phone field in /device response");
             }
           } catch (err) {
             console.error("Failed to fetch device info:", err);
