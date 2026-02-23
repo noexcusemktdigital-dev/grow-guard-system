@@ -102,10 +102,12 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
   }, []);
 
-  // Auto-scroll only when near bottom
+  // Auto-scroll only when near bottom — use viewport directly to avoid scrollIntoView affecting parents
   useEffect(() => {
-    if (isNearBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!isNearBottomRef.current) return;
+    const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
     }
   }, [messages.length]);
 
@@ -272,7 +274,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Premium Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card shrink-0">
         <Avatar className="h-10 w-10">
           <AvatarImage src={contact.photo_url || undefined} />
           <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
