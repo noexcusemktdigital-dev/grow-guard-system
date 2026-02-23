@@ -119,15 +119,15 @@ export default function ClienteChat() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col h-full gap-3">
       <PageHeader
         title="Conversas"
         subtitle="Central de atendimento WhatsApp"
         icon={<MessageCircle className="w-5 h-5 text-primary" />}
       />
 
-      <Card className="overflow-hidden border-border/50">
-        <div className="grid grid-cols-[340px_1fr] h-[calc(100vh-160px)] min-h-[500px] overflow-hidden">
+      <Card className="flex-1 min-h-0 overflow-hidden border-border/50">
+        <div className="grid grid-cols-[340px_1fr] h-full overflow-hidden">
           {loadingContacts ? (
             <div className="p-4 space-y-3 border-r border-border">
               {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[68px] rounded-lg" />)}
