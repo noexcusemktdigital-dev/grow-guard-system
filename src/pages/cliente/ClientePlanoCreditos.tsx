@@ -1,6 +1,6 @@
-import { CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown } from "lucide-react";
+import { CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -8,12 +8,110 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { useCreditAlert } from "@/hooks/useCreditAlert";
+import { PLANS, getPlanBySlug } from "@/constants/plans";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
 
-const PLANS = [
-  { id: "starter", name: "Starter", price: 197, credits: 500, maxUsers: 2, popular: false, features: ["CRM completo", "500 créditos/mês", "2 usuários", "Suporte por chat"] },
-  { id: "growth", name: "Growth", price: 497, credits: 2000, maxUsers: 5, popular: true, features: ["Tudo do Starter", "2.000 créditos/mês", "5 usuários", "Agentes de IA", "Disparos WhatsApp"] },
-  { id: "scale", name: "Scale", price: 997, credits: 5000, maxUsers: 15, popular: false, features: ["Tudo do Growth", "5.000 créditos/mês", "15 usuários", "API avançada", "Gerente dedicado"] },
-];
+function TokenUsageCard() {
+  const { data: orgId } = useUserOrgId();
+  const { level, percent, balance, total } = useCreditAlert();
+
+  const { data: agentUsage, isLoading } = useQuery({
+    queryKey: ["token-usage-by-agent", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_conversation_logs")
+        .select("agent_id, tokens_used, client_ai_agents(name)")
+        .eq("organization_id", orgId!);
+      if (error) throw error;
+
+      const grouped: Record<string, { name: string; tokens: number }> = {};
+      for (const row of data ?? []) {
+        const id = row.agent_id;
+        if (!grouped[id]) {
+          const agentData = row.client_ai_agents as unknown as { name: string } | null;
+          grouped[id] = { name: agentData?.name ?? "Agente", tokens: 0 };
+        }
+        grouped[id].tokens += row.tokens_used ?? 0;
+      }
+      return Object.values(grouped).sort((a, b) => b.tokens - a.tokens);
+    },
+    enabled: !!orgId,
+  });
+
+  const totalUsed = agentUsage?.reduce((s, a) => s + a.tokens, 0) ?? 0;
+  const maxTokens = agentUsage?.[0]?.tokens ?? 1;
+
+  const barColor =
+    level === "zero" || level === "critical"
+      ? "bg-destructive"
+      : level === "warning"
+        ? "bg-amber-500"
+        : "bg-primary";
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Consumo por Módulo</CardTitle>
+          <BarChart3 className="w-5 h-5 text-muted-foreground" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Summary bar */}
+        <div>
+          <div className="flex items-center justify-between text-sm mb-1.5">
+            <span className="text-muted-foreground">Créditos usados</span>
+            <span className="font-semibold text-foreground">
+              {balance.toLocaleString("pt-BR")} / {total.toLocaleString("pt-BR")}
+            </span>
+          </div>
+          <div className="w-full h-2.5 rounded-full bg-secondary overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">{percent.toFixed(0)}% disponível</p>
+        </div>
+
+        {/* Per-agent breakdown */}
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        ) : agentUsage && agentUsage.length > 0 ? (
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tokens por Agente</p>
+            {agentUsage.map((agent, i) => (
+              <div key={i} className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-foreground truncate">{agent.name}</span>
+                  <span className="text-muted-foreground tabular-nums">{agent.tokens.toLocaleString("pt-BR")}</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary/70 transition-all"
+                    style={{ width: `${(agent.tokens / maxTokens) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between text-sm pt-2 border-t">
+              <span className="font-medium text-foreground">Total</span>
+              <span className="font-semibold text-foreground">{totalUsed.toLocaleString("pt-BR")} tokens</span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Nenhum consumo registrado ainda.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function ClientePlanoCreditos() {
   const { data: wallet, isLoading: walletLoading } = useClienteWallet();
@@ -22,7 +120,7 @@ export default function ClientePlanoCreditos() {
 
   const balance = wallet?.balance ?? 0;
   const currentPlanSlug = subscription?.plan;
-  const planDetails = PLANS.find(p => p.id === currentPlanSlug);
+  const planDetails = getPlanBySlug(currentPlanSlug);
   const totalIncluded = planDetails?.credits ?? 2000;
   const creditPercent = totalIncluded > 0 ? Math.min((balance / totalIncluded) * 100, 100) : 0;
   const planName = planDetails?.name ?? "Sem plano";
@@ -95,6 +193,9 @@ export default function ClientePlanoCreditos() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Token Usage Card */}
+      <TokenUsageCard />
 
       {/* Plans */}
       <div>
