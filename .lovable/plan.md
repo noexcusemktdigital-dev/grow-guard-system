@@ -1,117 +1,118 @@
 
-# Modulo de Disparos WhatsApp — Evolucao Completa
+# Estrategia de Marketing — Reformulacao Completa
 
-Reformulacao total da pagina de Disparos com regras de seguranca anti-bloqueio, criacao de mensagens com imagem, e tres formas de adicionar destinatarios.
-
----
-
-## 1. Nova Edge Function: `whatsapp-bulk-send`
-
-Substitui o envio direto no frontend por uma funcao server-side que controla o fluxo.
-
-### Logica principal
-
-1. Recebe: `dispatch_id` (referencia ao disparo salvo)
-2. Busca o disparo no banco (`client_dispatches`) para pegar mensagem, imagem e lista de destinatarios
-3. Valida regras:
-   - Maximo **100 destinatarios** por disparo
-   - Verifica se instancia Z-API esta conectada
-4. Envia as mensagens em loop com **intervalo de 5-10 segundos** (aleatorio) entre cada envio
-5. Se tiver imagem, usa endpoint Z-API `send-image` em vez de `send-text`
-6. Atualiza o disparo com `stats` (enviados, falhas) e `status = "sent"` ao final
-7. Registra cada mensagem na tabela `whatsapp_messages`
-
-### Endpoints Z-API utilizados
-
-| Tipo | Endpoint |
-|------|----------|
-| Texto | `POST /send-text` |
-| Imagem + legenda | `POST /send-image` |
-
-### Arquivo
-
-`supabase/functions/whatsapp-bulk-send/index.ts`
+Transformar a pagina "Plano de Marketing" em "Estrategia de Marketing", uma experiencia de consultoria interativa que diagnostica, orienta e conecta o cliente aos produtos da plataforma.
 
 ---
 
-## 2. Alteracoes na tabela `client_dispatches`
+## Conceito
 
-Adicionar colunas via migracao SQL:
+A pagina atual tem um dashboard com dados mock e um diagnostico basico com perguntas de radio. A nova versao sera uma jornada consultiva em 3 etapas:
 
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| `image_url` | text | URL da imagem anexada (opcional) |
-| `max_per_day` | integer (default 100) | Limite diario configurado |
-| `delay_seconds` | integer (default 7) | Intervalo entre envios |
-| `source_type` | text (default 'manual') | 'manual', 'crm_contacts', 'list' |
-
-A coluna `recipients` (jsonb) ja existe e sera usada para armazenar a lista final de telefones.
+1. **Conversa Estrategica** (wizard de perguntas interativas)
+2. **Resultado e Diagnostico** (relatorio visual com termometro, radar, insights e recomendacoes)
+3. **Mapa de Produtos** (conexao direta com Conteudos, Redes Sociais, Sites e Trafego Pago)
 
 ---
 
-## 3. Reformulacao da UI — `ClienteDisparos.tsx`
+## Estrutura da Pagina
 
-### Painel de alertas (topo)
+### Aba 1 — Estrategia (principal)
 
-- Banner permanente (vermelho/laranja) com aviso claro:
-  - "Disparos em massa tem risco de bloqueio pelo Meta/WhatsApp"
-  - "Use com moderacao. Maximo de 100 destinatarios por disparo"
-  - "Intervalo automatico entre envios para simular comportamento humano"
-  - "Nao envie conteudo spam, promocional excessivo ou sem consentimento"
-  - "Numeros novos (sem historico de conversa) tem maior risco de denuncia"
-  - Link para boas praticas
+**Se o cliente ainda nao completou a estrategia:**
 
-### Wizard de criacao (Sheet reformulado)
+Wizard conversacional, uma pergunta por vez (estilo typeform), com barra de progresso no topo. Categorias de perguntas:
 
-**Etapa 1 — Mensagem**
-- Campo: Nome do disparo
-- Campo: Mensagem (textarea com suporte a variaveis `{{nome}}`)
-- Campo: Imagem (upload opcional via input file, salva no Storage bucket)
-- Preview da mensagem ao lado (simula bolha WhatsApp)
+| Categoria | Perguntas (resumo) |
+|-----------|-------------------|
+| Negocio | Segmento, tempo de mercado, faturamento mensal, ticket medio |
+| Publico | Quem e o cliente ideal, faixa etaria, onde esta, como decide |
+| Marketing Atual | Redes ativas, frequencia de publicacao, investe em trafego, tem site |
+| Objetivos | Meta principal (leads, vendas, autoridade, reconhecimento), prazo |
+| Orcamento | Quanto investe em marketing, quanto pode investir |
+| Dores | Maiores dificuldades, o que ja tentou que nao funcionou |
 
-**Etapa 2 — Destinatarios**
-- Tres abas/opcoes:
-  1. **Manual**: Textarea para colar numeros (um por linha ou separados por virgula)
-  2. **Contatos CRM**: Seletor com busca e multi-select dos contatos que tem telefone. Permite filtrar por tags
-  3. **Lista de numeros**: Upload de arquivo CSV/TXT com uma coluna de telefones
-- Contador de destinatarios selecionados (maximo 100)
-- Validacao: exibe erro se > 100
+Formato misto: perguntas de multipla escolha (cards clicaveis), sliders para valores numericos e campos de texto curto para respostas abertas. Cada pergunta aparece isolada com animacao de transicao (framer-motion fade).
 
-**Etapa 3 — Configuracoes e confirmacao**
-- Slider: intervalo entre envios (5s a 15s, default 7s)
-- Checkbox de confirmacao: "Entendo os riscos de bloqueio e assumo a responsabilidade"
-- Resumo: X destinatarios, mensagem preview, imagem sim/nao
-- Botao "Criar e Enviar" (chama a edge function)
+**Apos completar:**
 
-### Cards de disparos existentes
+Relatorio visual "Sua Estrategia de Marketing" com:
 
-- Mostrar contador de enviados/total
-- Badge de status com cores
-- Ao clicar, abre detalhe com lista de destinatarios e status individual
+- **Termometro de Maturidade** (reutiliza DiagnosticoTermometro com niveis adaptados: Iniciante / Basico / Intermediario / Avancado)
+- **Radar Chart** por area (Presenca Digital, Estrategia, Conteudo, Trafego, Branding)
+- **Cards de Insights** com icones e cores por tipo (sucesso/alerta/oportunidade)
+- **Projecao de Resultados** — grafico de area mostrando cenario atual vs cenario com a estrategia implementada (leads projetados, engajamento, conversoes)
+- **Plano de Acao em 3 Fases**: Fase 1 Fundacao (mes 1-2), Fase 2 Crescimento (mes 3-4), Fase 3 Escala (mes 5-6)
+
+### Aba 2 — Produtos Recomendados
+
+Cards premium dos 4 modulos de marketing da plataforma, cada um com:
+
+- Icone e nome do modulo
+- Descricao de como ele resolve uma dor identificada na estrategia
+- Indicador visual (ex: "Recomendado para voce" com badge verde se a area esta fraca)
+- Botao "Acessar" que navega para a pagina do modulo
+- Mini KPI do modulo (ex: "0 conteudos gerados" ou "Site nao criado")
+
+Modulos apresentados:
+1. **Conteudos** — Geracao de roteiros com IA baseados na sua estrategia
+2. **Redes Sociais** — Artes prontas para Feed e Story todo mes
+3. **Sites** — Landing page otimizada para captura de leads
+4. **Trafego Pago** — Campanhas estruturadas para Meta, Google, TikTok
+
+### Aba 3 — Historico
+
+Timeline das estrategias geradas anteriormente, permitindo comparar evolucao.
 
 ---
 
-## 4. Storage para imagens
+## Alteracoes na Sidebar
 
-Criar bucket `dispatch-media` (publico) para armazenar as imagens enviadas junto com os disparos.
+- Renomear "Plano de Marketing" para "Estrategia" na sidebar (`ClienteSidebar.tsx`, linha 45)
+- Manter o icone Megaphone
 
 ---
 
-## 5. Resumo de arquivos
+## Arquivos
 
-| Arquivo | Tipo |
+| Arquivo | Acao |
 |---------|------|
-| `supabase/functions/whatsapp-bulk-send/index.ts` | Novo |
-| `src/pages/cliente/ClienteDisparos.tsx` | Reescrita completa |
-| `src/hooks/useClienteDispatches.ts` | Adicionar funcao de disparo bulk |
-| Migracao SQL (colunas + bucket) | Novo |
-| `supabase/config.toml` | Adicionar nova function |
+| `src/pages/cliente/ClientePlanoMarketing.tsx` | Reescrita completa |
+| `src/components/ClienteSidebar.tsx` | Renomear label de "Plano de Marketing" para "Estrategia" |
+
+Nao ha necessidade de tabelas novas neste momento — os dados da estrategia serao gerenciados em estado local (mock), com persistencia em banco planejada para uma fase posterior.
 
 ---
 
-## Detalhes tecnicos da protecao anti-bloqueio
+## Detalhes Tecnicos
 
-- O intervalo entre envios e randomizado (delay_seconds +/- 2s) para parecer humano
-- Se a Z-API retornar erro 429 ou similar, a funcao para e marca o disparo como "parcial"
-- O frontend bloqueia disparos se nao houver instancia conectada
-- O limite de 100 e enforced tanto no frontend (validacao) quanto na edge function (server-side)
+### Wizard Conversacional
+
+- Estado controlado por `currentStep` (numero da pergunta)
+- Array de objetos `StrategyQuestion` com: id, category, question, type (choice/slider/text), options
+- Animacao com `framer-motion` (AnimatePresence + motion.div com fade/slide)
+- Barra de progresso no topo mostrando X/total
+- Botoes "Voltar" e "Proximo" com validacao (resposta obrigatoria)
+
+### Resultado Visual
+
+- Calculo de score por categoria baseado nas respostas
+- Score geral de maturidade (0-100%) com 4 niveis
+- Radar chart (recharts) com 5 eixos
+- Cards de insight gerados automaticamente baseados nos scores baixos
+- Secao "Produtos Recomendados" destaca modulos onde o score e mais fraco
+- Botao "Refazer Estrategia" para reiniciar o wizard
+
+### Cards de Produtos
+
+- Cada card verifica o score da area correspondente
+- Se score < 50%, exibe badge "Prioridade Alta" em vermelho
+- Se score 50-75%, exibe "Recomendado" em amarelo
+- Se score > 75%, exibe "Otimizar" em verde
+- Links diretos para `/cliente/conteudos`, `/cliente/redes-sociais`, `/cliente/sites`, `/cliente/trafego-pago`
+
+### Estilo Visual
+
+- Mantém o padrao premium existente (glass-card, section-label, font-black tracking-tighter)
+- Wizard com fundo suave gradient e cards de opcao com borda hover
+- Resultado com layout de relatorio consultivo (secoes bem separadas, tipografia forte)
