@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Brain, BookOpen, Cog, Play, Activity, Plus, X, Sparkles } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import type { AiAgent } from "@/types/cliente";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useWhatsAppInstance } from "@/hooks/useWhatsApp";
+import type { AiAgent, AgentRole } from "@/types/cliente";
+import { agentRoleConfig } from "@/types/cliente";
 
 interface AgentFormSheetProps {
   open: boolean;
@@ -25,37 +32,64 @@ const defaultAgent: Partial<AiAgent> = {
   status: "draft",
   channel: "whatsapp",
   tags: [],
-  persona: { tom: "", estilo: "", personalidade: "" },
+  role: "sdr",
+  gender: null,
+  objectives: [],
+  crm_actions: { can_move_stage: false, can_update_value: false, can_add_tags: false, can_handoff: true, can_create_tasks: false },
+  whatsapp_instance_ids: [],
+  persona: { greeting: "informal", formality: "profissional", emojis: "pouco", message_length: "medias", traits: [], restrictions: "" },
   knowledge_base: [],
   prompt_config: { system_prompt: "", temperatura: 0.7, modelo: "gemini-2.5-flash" },
 };
 
+interface KBEntry {
+  type: "url" | "file" | "text";
+  content: string;
+  name?: string;
+  url?: string;
+  size?: number;
+}
+
 export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: AgentFormSheetProps) {
   const [form, setForm] = useState<Partial<AiAgent>>(defaultAgent);
   const [tagInput, setTagInput] = useState("");
-  const [kbInput, setKbInput] = useState("");
+  const [urlInput, setUrlInput] = useState("");
+  const [textInput, setTextInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [generating, setGenerating] = useState<string | null>(null);
+  const [simMessages, setSimMessages] = useState<{ role: string; content: string }[]>([]);
+  const [simInput, setSimInput] = useState("");
+  const [simLoading, setSimLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: orgId } = useUserOrgId();
+  const { data: whatsappInstance } = useWhatsAppInstance();
 
   useEffect(() => {
     if (agent) {
       setForm({
         ...defaultAgent,
         ...agent,
-        persona: { ...defaultAgent.persona as any, ...(agent.persona as any ?? {}) },
-        prompt_config: { ...defaultAgent.prompt_config as any, ...(agent.prompt_config as any ?? {}) },
+        persona: { ...(defaultAgent.persona as any), ...(agent.persona as any ?? {}) },
+        prompt_config: { ...(defaultAgent.prompt_config as any), ...(agent.prompt_config as any ?? {}) },
+        crm_actions: { ...(defaultAgent.crm_actions as any), ...(agent.crm_actions as any ?? {}) },
+        objectives: agent.objectives ?? [],
+        whatsapp_instance_ids: agent.whatsapp_instance_ids ?? [],
       });
     } else {
       setForm(defaultAgent);
     }
+    setSimMessages([]);
   }, [agent, open]);
 
-  const persona = (form.persona ?? {}) as Record<string, string>;
+  const persona = (form.persona ?? {}) as Record<string, any>;
   const promptConfig = (form.prompt_config ?? {}) as Record<string, any>;
-  const knowledgeBase = (form.knowledge_base ?? []) as string[];
+  const crmActions = (form.crm_actions ?? {}) as Record<string, any>;
+  const knowledgeBase = ((form.knowledge_base ?? []) as KBEntry[]);
 
-  const updatePersona = (key: string, value: string) =>
-    setForm((f) => ({ ...f, persona: { ...persona, [key]: value } }));
-  const updatePrompt = (key: string, value: any) =>
-    setForm((f) => ({ ...f, prompt_config: { ...promptConfig, [key]: value } }));
+  const updatePersona = (key: string, value: any) => setForm((f) => ({ ...f, persona: { ...persona, [key]: value } }));
+  const updatePrompt = (key: string, value: any) => setForm((f) => ({ ...f, prompt_config: { ...promptConfig, [key]: value } }));
+  const updateCrmAction = (key: string, value: boolean) => setForm((f) => ({ ...f, crm_actions: { ...crmActions, [key]: value } }));
 
   const addTag = () => {
     if (tagInput.trim() && !(form.tags ?? []).includes(tagInput.trim())) {
@@ -63,23 +97,89 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
       setTagInput("");
     }
   };
+  const removeTag = (tag: string) => setForm((f) => ({ ...f, tags: (f.tags ?? []).filter((t) => t !== tag) }));
 
-  const removeTag = (tag: string) =>
-    setForm((f) => ({ ...f, tags: (f.tags ?? []).filter((t) => t !== tag) }));
-
-  const addKbEntry = () => {
-    if (kbInput.trim()) {
-      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, kbInput.trim()] }));
-      setKbInput("");
+  const addKbUrl = () => {
+    if (urlInput.trim()) {
+      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "url" as const, content: urlInput.trim() }] }));
+      setUrlInput("");
     }
   };
 
-  const removeKbEntry = (idx: number) =>
-    setForm((f) => ({ ...f, knowledge_base: knowledgeBase.filter((_, i) => i !== idx) }));
+  const addKbText = () => {
+    if (textInput.trim()) {
+      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "text" as const, content: textInput.trim() }] }));
+      setTextInput("");
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !orgId) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const agentId = agent?.id || "new";
+        const path = `${orgId}/${agentId}/${Date.now()}_${file.name}`;
+        const { data, error } = await supabase.storage.from("agent-knowledge").upload(path, file);
+        if (error) { console.error("Upload error:", error); continue; }
+        const { data: urlData } = supabase.storage.from("agent-knowledge").getPublicUrl(path);
+        const entry: KBEntry = { type: "file", content: urlData.publicUrl, name: file.name, url: urlData.publicUrl, size: file.size };
+        setForm((f) => ({ ...f, knowledge_base: [...(f.knowledge_base as KBEntry[] ?? []), entry] }));
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeKbEntry = (idx: number) => setForm((f) => ({ ...f, knowledge_base: knowledgeBase.filter((_, i) => i !== idx) }));
+
+  const toggleObjective = (obj: string) => {
+    const current = form.objectives ?? [];
+    const exists = current.includes(obj);
+    setForm((f) => ({ ...f, objectives: exists ? current.filter((o: string) => o !== obj) : [...current, obj] }));
+  };
+
+  const handleGeneratePersona = async () => {
+    setGenerating("persona");
+    try {
+      const { data } = await supabase.functions.invoke("ai-generate-agent-config", {
+        body: { type: "persona", role: form.role, persona, name: form.name },
+      });
+      if (data?.result) updatePersona("generated_description", data.result);
+    } finally { setGenerating(null); }
+  };
+
+  const handleGeneratePrompt = async () => {
+    setGenerating("prompt");
+    try {
+      const { data } = await supabase.functions.invoke("ai-generate-agent-config", {
+        body: { type: "prompt", role: form.role, persona, knowledge_base: knowledgeBase, objectives: form.objectives, name: form.name },
+      });
+      if (data?.result) updatePrompt("system_prompt", data.result);
+    } finally { setGenerating(null); }
+  };
+
+  const handleSimulate = async () => {
+    if (!simInput.trim()) return;
+    const userMsg = { role: "user", content: simInput };
+    setSimMessages((m) => [...m, userMsg]);
+    setSimInput("");
+    setSimLoading(true);
+    try {
+      const { data } = await supabase.functions.invoke("ai-agent-simulate", {
+        body: { agent_config: form, message: simInput, history: simMessages },
+      });
+      if (data?.reply) {
+        setSimMessages((m) => [...m, { role: "assistant", content: data.reply }]);
+      }
+    } finally { setSimLoading(false); }
+  };
 
   const handleSave = () => onSave(form);
-
   const isEditing = !!agent?.id;
+  const roleInfo = agentRoleConfig[(form.role as AgentRole) ?? "sdr"];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -92,25 +192,63 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
         </SheetHeader>
 
         <Tabs defaultValue="identidade" className="mt-4">
-          <TabsList className="grid grid-cols-6 w-full">
+          <TabsList className="grid grid-cols-5 w-full">
             <TabsTrigger value="identidade" className="text-xs gap-1"><Bot className="w-3 h-3" /> Identidade</TabsTrigger>
             <TabsTrigger value="persona" className="text-xs gap-1"><Brain className="w-3 h-3" /> Persona</TabsTrigger>
             <TabsTrigger value="knowledge" className="text-xs gap-1"><BookOpen className="w-3 h-3" /> Base</TabsTrigger>
             <TabsTrigger value="prompt" className="text-xs gap-1"><Cog className="w-3 h-3" /> Prompt</TabsTrigger>
             <TabsTrigger value="simulator" className="text-xs gap-1"><Play className="w-3 h-3" /> Simulador</TabsTrigger>
-            <TabsTrigger value="diagnostico" className="text-xs gap-1"><Activity className="w-3 h-3" /> Diagnóstico</TabsTrigger>
           </TabsList>
 
-          {/* Identidade */}
+          {/* ─── Aba 1: Identidade ─── */}
           <TabsContent value="identidade" className="space-y-4 mt-4">
+            {/* Avatar Upload */}
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border-2 border-dashed border-muted-foreground/30">
+                {form.avatar_url ? (
+                  <img src={form.avatar_url} alt="Avatar" className="w-16 h-16 rounded-full object-cover" />
+                ) : (
+                  <User className="w-7 h-7 text-muted-foreground/40" />
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Foto do agente</Label>
+                <Input type="url" placeholder="URL da imagem do avatar..." value={form.avatar_url ?? ""} onChange={(e) => setForm((f) => ({ ...f, avatar_url: e.target.value || null }))} className="h-8 text-xs" />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Nome do Agente *</Label>
-              <Input value={form.name ?? ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex: Assistente de Vendas" />
+              <Input value={form.name ?? ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex: Ana — SDR de Vendas" />
             </div>
+
             <div className="space-y-2">
               <Label>Descrição</Label>
-              <Textarea value={form.description ?? ""} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Descreva o propósito deste agente..." rows={3} />
+              <Textarea value={form.description ?? ""} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Descreva brevemente o propósito deste agente..." rows={2} />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Função *</Label>
+                <Select value={form.role ?? "sdr"} onValueChange={(v) => setForm((f) => ({ ...f, role: v as AgentRole }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(agentRoleConfig).map(([key, cfg]) => (
+                      <SelectItem key={key} value={key}>{cfg.label} — {cfg.description}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Sexo</Label>
+                <RadioGroup value={form.gender ?? ""} onValueChange={(v) => setForm((f) => ({ ...f, gender: v }))} className="flex gap-4 pt-2">
+                  <div className="flex items-center gap-1.5"><RadioGroupItem value="masculino" id="m" /><Label htmlFor="m" className="text-xs font-normal">Masculino</Label></div>
+                  <div className="flex items-center gap-1.5"><RadioGroupItem value="feminino" id="f" /><Label htmlFor="f" className="text-xs font-normal">Feminino</Label></div>
+                  <div className="flex items-center gap-1.5"><RadioGroupItem value="neutro" id="n" /><Label htmlFor="n" className="text-xs font-normal">Neutro</Label></div>
+                </RadioGroup>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Canal</Label>
@@ -125,17 +263,27 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={form.status ?? "draft"} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Rascunho</SelectItem>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="paused">Pausado</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Instâncias WhatsApp</Label>
+                {whatsappInstance ? (
+                  <div className="flex items-center gap-2 pt-1">
+                    <Checkbox
+                      checked={(form.whatsapp_instance_ids ?? []).includes(whatsappInstance.id)}
+                      onCheckedChange={(checked) => {
+                        const ids = form.whatsapp_instance_ids ?? [];
+                        setForm((f) => ({
+                          ...f,
+                          whatsapp_instance_ids: checked ? [...ids, whatsappInstance.id] : ids.filter((i: string) => i !== whatsappInstance.id),
+                        }));
+                      }}
+                    />
+                    <span className="text-xs">{whatsappInstance.phone_number || whatsappInstance.instance_id}</span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground pt-2">Nenhuma instância configurada</p>
+                )}
               </div>
             </div>
+
             <div className="space-y-2">
               <Label>Tags</Label>
               <div className="flex gap-2">
@@ -145,44 +293,150 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               {(form.tags ?? []).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {form.tags!.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="gap-1">
-                      {tag}
-                      <X className="w-3 h-3 cursor-pointer" onClick={() => removeTag(tag)} />
-                    </Badge>
+                    <Badge key={tag} variant="secondary" className="gap-1">{tag}<X className="w-3 h-3 cursor-pointer" onClick={() => removeTag(tag)} /></Badge>
                   ))}
                 </div>
               )}
             </div>
           </TabsContent>
 
-          {/* Persona */}
+          {/* ─── Aba 2: Persona (Guiada) ─── */}
           <TabsContent value="persona" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label>Tom de Voz</Label>
-              <Textarea value={persona.tom ?? ""} onChange={(e) => updatePersona("tom", e.target.value)} placeholder="Ex: Profissional mas amigável, objetivo e empático..." rows={3} />
+              <Label>Como o agente deve cumprimentar?</Label>
+              <Select value={persona.greeting ?? "informal"} onValueChange={(v) => updatePersona("greeting", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="formal">Formal — "Prezado(a), bom dia..."</SelectItem>
+                  <SelectItem value="informal">Informal — "Oi! Tudo bem?"</SelectItem>
+                  <SelectItem value="personalizado">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+              {persona.greeting === "personalizado" && (
+                <Input placeholder="Digite a saudação personalizada..." value={persona.custom_greeting ?? ""} onChange={(e) => updatePersona("custom_greeting", e.target.value)} />
+              )}
             </div>
+
             <div className="space-y-2">
-              <Label>Estilo de Comunicação</Label>
-              <Textarea value={persona.estilo ?? ""} onChange={(e) => updatePersona("estilo", e.target.value)} placeholder="Ex: Mensagens curtas, uso de emojis moderado, linguagem acessível..." rows={3} />
+              <Label>Nível de formalidade</Label>
+              <Select value={persona.formality ?? "profissional"} onValueChange={(v) => updatePersona("formality", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="muito_formal">Muito formal</SelectItem>
+                  <SelectItem value="profissional">Profissional</SelectItem>
+                  <SelectItem value="casual">Casual</SelectItem>
+                  <SelectItem value="descontraido">Descontraído</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
             <div className="space-y-2">
-              <Label>Personalidade</Label>
-              <Textarea value={persona.personalidade ?? ""} onChange={(e) => updatePersona("personalidade", e.target.value)} placeholder="Ex: Consultivo, proativo na identificação de necessidades..." rows={3} />
+              <Label>Uso de emojis</Label>
+              <Select value={persona.emojis ?? "pouco"} onValueChange={(v) => updatePersona("emojis", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nunca">Nunca</SelectItem>
+                  <SelectItem value="pouco">Pouco</SelectItem>
+                  <SelectItem value="moderado">Moderado</SelectItem>
+                  <SelectItem value="bastante">Bastante</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Comprimento das mensagens</Label>
+              <Select value={persona.message_length ?? "medias"} onValueChange={(v) => updatePersona("message_length", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="curtas">Curtas e diretas</SelectItem>
+                  <SelectItem value="medias">Médias</SelectItem>
+                  <SelectItem value="detalhadas">Detalhadas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Personalidade (selecione várias)</Label>
+              <div className="flex flex-wrap gap-2">
+                {["Empático", "Consultivo", "Proativo", "Objetivo", "Paciente", "Persuasivo"].map((trait) => {
+                  const selected = (persona.traits ?? []).includes(trait);
+                  return (
+                    <Badge
+                      key={trait}
+                      variant={selected ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        const traits = persona.traits ?? [];
+                        updatePersona("traits", selected ? traits.filter((t: string) => t !== trait) : [...traits, trait]);
+                      }}
+                    >
+                      {trait}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Restrições — O que o agente NÃO deve fazer</Label>
+              <Textarea value={persona.restrictions ?? ""} onChange={(e) => updatePersona("restrictions", e.target.value)} placeholder="Ex: Não falar de preços, não prometer prazos, não mencionar concorrentes..." rows={3} />
+            </div>
+
+            {persona.generated_description && (
+              <div className="space-y-2">
+                <Label>Persona gerada pela IA (editável)</Label>
+                <Textarea value={persona.generated_description} onChange={(e) => updatePersona("generated_description", e.target.value)} rows={4} />
+              </div>
+            )}
+
+            <Button variant="outline" className="gap-2 w-full" onClick={handleGeneratePersona} disabled={generating === "persona"}>
+              {generating === "persona" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              Gerar descrição da persona com IA
+            </Button>
           </TabsContent>
 
-          {/* Base de Conhecimento */}
+          {/* ─── Aba 3: Base de Conhecimento ─── */}
           <TabsContent value="knowledge" className="space-y-4 mt-4">
-            <p className="text-sm text-muted-foreground">Adicione URLs ou textos de referência que o agente deve usar como base de conhecimento.</p>
-            <div className="flex gap-2">
-              <Input value={kbInput} onChange={(e) => setKbInput(e.target.value)} placeholder="URL ou texto de referência..." onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKbEntry())} />
-              <Button type="button" size="icon" variant="outline" onClick={addKbEntry}><Plus className="w-4 h-4" /></Button>
+            <p className="text-sm text-muted-foreground">Adicione links, arquivos ou textos para treinar a base de conhecimento do agente.</p>
+
+            {/* URLs */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><Link className="w-3.5 h-3.5" /> Links / URLs</Label>
+              <div className="flex gap-2">
+                <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://exemplo.com/pagina" onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKbUrl())} />
+                <Button type="button" size="icon" variant="outline" onClick={addKbUrl}><Plus className="w-4 h-4" /></Button>
+              </div>
             </div>
+
+            {/* Files */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Arquivos</Label>
+              <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.txt,.png,.jpg,.jpeg" className="hidden" onChange={handleFileUpload} />
+              <Button variant="outline" className="w-full gap-2" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {uploading ? "Enviando..." : "Fazer upload de arquivos"}
+              </Button>
+            </div>
+
+            {/* Text */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> Texto manual</Label>
+              <Textarea value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="Cole aqui informações, FAQ, regras do negócio..." rows={3} />
+              <Button variant="outline" size="sm" onClick={addKbText} disabled={!textInput.trim()}>Adicionar texto</Button>
+            </div>
+
+            {/* List */}
             {knowledgeBase.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="text-xs text-muted-foreground">{knowledgeBase.length} item(ns) adicionado(s)</Label>
                 {knowledgeBase.map((entry, idx) => (
                   <div key={idx} className="flex items-center gap-2 p-2.5 rounded-md border bg-muted/30 text-sm">
-                    <span className="flex-1 truncate">{entry}</span>
+                    <Badge variant="outline" className="text-[10px] shrink-0">
+                      {typeof entry === "string" ? "texto" : entry.type}
+                    </Badge>
+                    <span className="flex-1 truncate text-xs">
+                      {typeof entry === "string" ? entry : entry.name || entry.content}
+                    </span>
                     <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeKbEntry(idx)}>
                       <X className="w-3 h-3" />
                     </Button>
@@ -190,63 +444,113 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground text-sm">Nenhuma referência adicionada ainda.</div>
+              <div className="text-center py-6 text-muted-foreground text-sm border rounded-md border-dashed">Nenhuma referência adicionada ainda.</div>
             )}
           </TabsContent>
 
-          {/* Engenharia de Prompt */}
+          {/* ─── Aba 4: Prompt e Objetivos ─── */}
           <TabsContent value="prompt" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label>System Prompt</Label>
+              <div className="flex items-center justify-between">
+                <Label>System Prompt</Label>
+                <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs" onClick={handleGeneratePrompt} disabled={generating === "prompt"}>
+                  {generating === "prompt" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                  Gerar com IA
+                </Button>
+              </div>
               <Textarea value={promptConfig.system_prompt ?? ""} onChange={(e) => updatePrompt("system_prompt", e.target.value)} placeholder="Você é um assistente especializado em..." rows={8} className="font-mono text-xs" />
             </div>
-            <div className="space-y-2">
-              <Label>Temperatura: {promptConfig.temperatura ?? 0.7}</Label>
-              <Slider value={[promptConfig.temperatura ?? 0.7]} onValueChange={([v]) => updatePrompt("temperatura", v)} min={0} max={1} step={0.1} />
-              <p className="text-xs text-muted-foreground">Menor = mais determinístico, maior = mais criativo</p>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Temperatura: {promptConfig.temperatura ?? 0.7}</Label>
+                <Slider value={[promptConfig.temperatura ?? 0.7]} onValueChange={([v]) => updatePrompt("temperatura", v)} min={0} max={1} step={0.1} />
+              </div>
+              <div className="space-y-2">
+                <Label>Modelo</Label>
+                <Select value={promptConfig.modelo ?? "gemini-2.5-flash"} onValueChange={(v) => updatePrompt("modelo", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+                    <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
+                    <SelectItem value="gpt-5-mini">GPT-5 Mini</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Modelo</Label>
-              <Select value={promptConfig.modelo ?? "gemini-2.5-flash"} onValueChange={(v) => updatePrompt("modelo", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                  <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
-                  <SelectItem value="gpt-5-mini">GPT-5 Mini</SelectItem>
-                </SelectContent>
-              </Select>
+
+            {/* Objectives by role */}
+            <div className="space-y-2 pt-4 border-t">
+              <Label>Objetivos do Agente ({roleInfo.label})</Label>
+              <p className="text-xs text-muted-foreground">Selecione os objetivos que este agente deve perseguir:</p>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {roleInfo.objectives.map((obj) => {
+                  const selected = (form.objectives ?? []).includes(obj);
+                  return (
+                    <div key={obj} className="flex items-center gap-2">
+                      <Checkbox checked={selected} onCheckedChange={() => toggleObjective(obj)} />
+                      <span className="text-sm">{obj}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* CRM Actions */}
+            <div className="space-y-2 pt-4 border-t">
+              <Label>Ações permitidas no CRM</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: "can_move_stage", label: "Mover lead de etapa" },
+                  { key: "can_update_value", label: "Atualizar valor" },
+                  { key: "can_add_tags", label: "Adicionar tags" },
+                  { key: "can_handoff", label: "Solicitar transbordo" },
+                  { key: "can_create_tasks", label: "Criar tarefas" },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <Checkbox checked={crmActions[key] ?? false} onCheckedChange={(v) => updateCrmAction(key, !!v)} />
+                    <span className="text-sm">{label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </TabsContent>
 
-          {/* Simulador */}
+          {/* ─── Aba 5: Simulador ─── */}
           <TabsContent value="simulator" className="mt-4">
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-14 h-14 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-                <Play className="w-6 h-6 text-muted-foreground/40" />
+            <div className="flex flex-col h-[420px] border rounded-lg overflow-hidden">
+              <div className="bg-muted/30 px-4 py-2 border-b flex items-center gap-2">
+                <Bot className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">Simulador — {form.name || "Agente"}</span>
+                <Badge className={`text-[10px] ml-auto ${roleInfo.color}`}>{roleInfo.label}</Badge>
               </div>
-              <Badge variant="outline" className="gap-1.5 mb-3 text-purple-400 border-purple-500/30">
-                <Sparkles className="w-3 h-3" /> Em breve
-              </Badge>
-              <p className="text-sm font-medium">Simulador de conversas</p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                Em breve você poderá testar seu agente em tempo real antes de ativá-lo.
-              </p>
-            </div>
-          </TabsContent>
 
-          {/* Diagnóstico */}
-          <TabsContent value="diagnostico" className="mt-4">
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-14 h-14 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-                <Activity className="w-6 h-6 text-muted-foreground/40" />
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-3">
+                  {simMessages.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-8">Envie uma mensagem para testar seu agente.</p>
+                  )}
+                  {simMessages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                  {simLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-muted rounded-lg px-3 py-2"><Loader2 className="w-4 h-4 animate-spin" /></div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              <div className="flex gap-2 p-3 border-t">
+                <Input value={simInput} onChange={(e) => setSimInput(e.target.value)} placeholder="Digite uma mensagem de teste..." onKeyDown={(e) => e.key === "Enter" && handleSimulate()} disabled={simLoading} />
+                <Button size="icon" onClick={handleSimulate} disabled={simLoading || !simInput.trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
               </div>
-              <Badge variant="outline" className="gap-1.5 mb-3 text-purple-400 border-purple-500/30">
-                <Sparkles className="w-3 h-3" /> Em breve
-              </Badge>
-              <p className="text-sm font-medium">Diagnóstico do agente</p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                Métricas de desempenho, taxa de resolução e logs de conversas estarão disponíveis aqui.
-              </p>
             </div>
           </TabsContent>
         </Tabs>

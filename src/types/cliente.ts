@@ -1,4 +1,6 @@
-// Cliente types (extracted from clienteData.ts)
+// Cliente types
+
+export type AgentRole = "sdr" | "closer" | "pos_venda" | "suporte";
 
 export interface AiAgent {
   id: string;
@@ -13,9 +15,43 @@ export interface AiAgent {
   prompt_config: Record<string, any>;
   channel: string;
   tags: string[];
+  role: AgentRole;
+  gender: string | null;
+  objectives: any[];
+  crm_actions: Record<string, any>;
+  whatsapp_instance_ids: string[];
   created_at: string;
   updated_at: string;
 }
+
+export const agentRoleConfig: Record<AgentRole, { label: string; description: string; color: string; objectives: string[] }> = {
+  sdr: {
+    label: "SDR",
+    description: "Prospecção e qualificação",
+    color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    objectives: ["Qualificar lead", "Coletar informações", "Agendar reunião", "Identificar decisor"],
+  },
+  closer: {
+    label: "Closer",
+    description: "Fechamento de vendas",
+    color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    objectives: ["Apresentar proposta", "Negociar", "Fechar venda", "Superar objeções"],
+  },
+  pos_venda: {
+    label: "Pós-venda",
+    description: "Acompanhamento e fidelização",
+    color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    objectives: ["Verificar satisfação", "Coletar feedback", "Oferecer upsell", "Resolver dúvidas"],
+  },
+  suporte: {
+    label: "Suporte",
+    description: "Resolução de problemas",
+    color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    objectives: ["Resolver problema", "Escalar ticket", "Coletar informações do erro", "Encaminhar para setor"],
+  },
+};
+
+// Cliente types (extracted from clienteData.ts)
 
 export interface Organization {
   id: string;
@@ -221,10 +257,10 @@ export interface FollowUpRule {
   segment: string[];
 }
 
-// Constants
 export const roleDescriptions: Record<UserRole, { label: string; description: string; color: string }> = {
   admin: { label: "Admin", description: "Acesso total, gerencia plano, compra créditos, conecta WhatsApp", color: "bg-primary text-primary-foreground" },
   gestor_comercial: { label: "Gestor Comercial", description: "CRM, Chat, Scripts, Relatórios", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
   marketing: { label: "Marketing", description: "Conteúdos, Sites, Tráfego, Campanhas", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
   operador: { label: "Operador", description: "Apenas CRM e Chat", color: "bg-muted text-muted-foreground" },
 };
+

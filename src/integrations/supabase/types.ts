@@ -543,48 +543,63 @@ export type Database = {
           channel: string
           created_at: string
           created_by: string | null
+          crm_actions: Json
           description: string | null
+          gender: string | null
           id: string
           knowledge_base: Json
           name: string
+          objectives: Json
           organization_id: string
           persona: Json
           prompt_config: Json
+          role: string
           status: string
           tags: string[]
           updated_at: string
+          whatsapp_instance_ids: Json
         }
         Insert: {
           avatar_url?: string | null
           channel?: string
           created_at?: string
           created_by?: string | null
+          crm_actions?: Json
           description?: string | null
+          gender?: string | null
           id?: string
           knowledge_base?: Json
           name: string
+          objectives?: Json
           organization_id: string
           persona?: Json
           prompt_config?: Json
+          role?: string
           status?: string
           tags?: string[]
           updated_at?: string
+          whatsapp_instance_ids?: Json
         }
         Update: {
           avatar_url?: string | null
           channel?: string
           created_at?: string
           created_by?: string | null
+          crm_actions?: Json
           description?: string | null
+          gender?: string | null
           id?: string
           knowledge_base?: Json
           name?: string
+          objectives?: Json
           organization_id?: string
           persona?: Json
           prompt_config?: Json
+          role?: string
           status?: string
           tags?: string[]
           updated_at?: string
+          whatsapp_instance_ids?: Json
         }
         Relationships: [
           {

@@ -15,7 +15,7 @@ export function useClienteAgents() {
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as AiAgent[];
+      return data as unknown as AiAgent[];
     },
     enabled: !!orgId,
   });
@@ -33,7 +33,7 @@ export function useClienteAgentById(id: string | null) {
         .eq("organization_id", orgId!)
         .single();
       if (error) throw error;
-      return data as AiAgent;
+      return data as unknown as AiAgent;
     },
     enabled: !!id && !!orgId,
   });
@@ -58,9 +58,14 @@ export function useClienteAgentMutations() {
           prompt_config: agent.prompt_config ?? {},
           channel: agent.channel ?? "whatsapp",
           tags: agent.tags ?? [],
+          role: agent.role ?? "sdr",
+          gender: agent.gender ?? null,
+          objectives: agent.objectives ?? [],
+          crm_actions: agent.crm_actions ?? {},
+          whatsapp_instance_ids: agent.whatsapp_instance_ids ?? [],
           organization_id: orgId!,
           created_by: user?.id,
-        })
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -73,7 +78,7 @@ export function useClienteAgentMutations() {
     mutationFn: async ({ id, ...updates }: Partial<AiAgent> & { id: string }) => {
       const { data, error } = await supabase
         .from("client_ai_agents")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id)
         .select()
         .single();
@@ -85,10 +90,7 @@ export function useClienteAgentMutations() {
 
   const deleteAgent = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("client_ai_agents")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("client_ai_agents").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ai-agents"] }),
@@ -108,9 +110,14 @@ export function useClienteAgentMutations() {
           prompt_config: agent.prompt_config,
           channel: agent.channel,
           tags: agent.tags,
+          role: agent.role ?? "sdr",
+          gender: agent.gender ?? null,
+          objectives: agent.objectives ?? [],
+          crm_actions: agent.crm_actions ?? {},
+          whatsapp_instance_ids: agent.whatsapp_instance_ids ?? [],
           organization_id: orgId!,
           created_by: user?.id,
-        })
+        } as any)
         .select()
         .single();
       if (error) throw error;
