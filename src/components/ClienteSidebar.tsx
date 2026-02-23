@@ -4,7 +4,7 @@ import {
   LayoutDashboard, CheckSquare, ChevronLeft, ChevronRight,
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
-  ChevronDown, Link, CreditCard, Settings, Zap, Lock, Film,
+  ChevronDown, Link, CreditCard, Settings, Zap, Lock,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
@@ -45,7 +45,7 @@ const marketingSection: SidebarItem[] = [
   { label: "Estratégia", icon: Megaphone, path: "/cliente/plano-marketing" },
   { label: "Conteúdos", icon: FileText, path: "/cliente/conteudos" },
   { label: "Redes Sociais", icon: Share2, path: "/cliente/redes-sociais" },
-  { label: "Editor de Vídeo", icon: Film, path: "/cliente/editor-video" },
+  
   { label: "Sites", icon: Globe, path: "/cliente/sites" },
   { label: "Tráfego Pago", icon: DollarSign, path: "/cliente/trafego-pago" },
 ];
