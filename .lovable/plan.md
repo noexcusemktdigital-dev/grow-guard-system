@@ -1,100 +1,147 @@
 
-# Atualizar Limites dos Planos: Conteudos e Artes
+
+# Editor de Video -- Novo Modulo no Menu Marketing
 
 ## Resumo
 
-Alterar os limites de geracao por plano para refletir os novos valores e adicionar logica para que o cliente escolha as quantidades por formato (conteudo) e selecione quais artes produzir a partir dos conteudos gerados.
+Adicionar "Editor de Video" como um item proprio na secao **Marketing** da sidebar do cliente, com rota dedicada `/cliente/editor-video`. O editor permite upload de video gravado e oferece ferramentas de corte, legendas, inserts de imagem e musica de fundo, tudo processado no navegador via FFmpeg.wasm.
 
 ---
 
-## Novos Limites por Plano
+## Posicionamento na Sidebar
 
-| Modulo | Starter | Growth | Scale |
-|--------|---------|--------|-------|
-| Conteudos gerados/mes | 8 | 12 | 20 |
-| Artes sociais/mes | 4 | 8 | 12 |
-| Sites ativos | 1 (LP) | 2 (LP, 3p, 5p) | 5 (todos) |
+A secao Marketing ficara assim:
 
-**Importante:** Os limites de conteudo agora representam **quantidade total de conteudos** (nao campanhas). O cliente pode escolher como distribuir entre formatos (Feed, Carrossel, Reels, Story) ou deixar a plataforma recomendar automaticamente.
+```text
+MARKETING
+  Estrategia
+  Conteudos
+  Redes Sociais
+  Editor de Video   <-- NOVO (icone: Film ou Clapperboard)
+  Sites
+  Trafego Pago
+```
 
 ---
 
-## Mudancas por Arquivo
+## Nova Rota e Pagina
 
-### 1. `src/constants/plans.ts`
+| Item | Valor |
+|------|-------|
+| Rota | `/cliente/editor-video` |
+| Pagina | `src/pages/cliente/ClienteEditorVideo.tsx` |
+| Icone sidebar | `Film` (Lucide) |
 
-Renomear `maxContentCampaigns` para `maxContents` e atualizar `maxSocialArts`:
+### Pagina Principal (`ClienteEditorVideo.tsx`)
 
-| Campo | Starter | Growth | Scale |
-|-------|---------|--------|-------|
-| maxContents | 8 | 12 | 20 |
-| maxSocialArts | 4 | 8 | 12 |
+Tela com dois estados:
 
-Atualizar os textos de features para refletir os novos valores.
+**Estado 1 -- Sem video carregado:**
+- Area de drag-and-drop grande e centralizada para upload de video
+- Aceita MP4, MOV, WebM (max 500MB)
+- Texto: "Arraste seu video aqui ou clique para selecionar"
+- Card lateral com dica: "Grave seguindo o roteiro gerado em Conteudos e edite aqui"
 
-### 2. `src/pages/cliente/ClienteConteudos.tsx`
+**Estado 2 -- Video carregado (Editor ativo):**
+- Layout fullscreen dividido em 3 areas (preview, timeline, painel de edicao)
 
-**Mudancas no wizard (Step 2 - Formatos):**
-- Mudar a logica de cota: em vez de contar campanhas, contar o **total de conteudos gerados no mes** (soma de todos os conteudos de todas as campanhas do mes)
-- Mostrar no banner: "X de Y conteudos usados este mes"
-- Adicionar opcao "Deixar a plataforma recomendar" que distribui automaticamente entre formatos com base no total disponivel restante (ex: se restam 8, sugere 3 Feed + 2 Carrossel + 2 Reels + 1 Story)
-- Validar que o total de formatos escolhidos nao ultrapassa o saldo restante do plano
-- Atualizar label do banner de "campanhas de conteudo" para "conteudos"
+---
 
-**Mudancas na validacao:**
-- Bloquear geracao se `totalFormatosEscolhidos + totalJaGeradosNoMes > maxContents`
-- Mostrar saldo restante: "Voce ainda pode gerar X conteudos este mes"
+## Componentes do Editor
 
-### 3. `src/pages/cliente/ClienteRedesSociais.tsx`
+### Layout do Editor
 
-**Mudancas no wizard:**
-- Mudar a cota para contar **total de artes geradas no mes** (nao por campanha)
-- Banner: "X de Y artes usadas este mes"
-- Na selecao de quantidade (campo `bQtd`), limitar o max ao saldo restante
-- Quando o fluxo e "Puxar do conteudo", o cliente seleciona quais conteudos quer transformar em arte, mas o total selecionado nao pode ultrapassar o limite de artes restantes
+```text
++--------------------------------------------------+
+|  [Player de Video]          |  [Painel Lateral]   |
+|  Preview com controles      |  Tabs:              |
+|  play/pause/seek            |  Cortes | Legendas  |
+|                             |  Inserts | Musica   |
++--------------------------------------------------+
+|  [Timeline Visual]                                |
+|  Barra com handles de corte e segmentos           |
++--------------------------------------------------+
+|  [Cancelar]                    [Exportar Video]   |
++--------------------------------------------------+
+```
 
-**Mudancas na validacao:**
-- Bloquear se `qtdEscolhida + totalArtesNoMes > maxSocialArts`
-- Mostrar aviso: "Voce pode gerar mais X artes este mes"
+### 1. Player de Video (`VideoPlayer.tsx`)
+- Player HTML5 nativo com controles de play/pause/seek
+- Overlay de legendas e inserts em tempo real (CSS, sem FFmpeg ate exportar)
+- Indicador de tempo atual sincronizado com timeline
 
-### 4. `src/components/quota/UsageQuotaBanner.tsx`
+### 2. Timeline de Cortes (`VideoTimeline.tsx`)
+- Barra visual da duracao total
+- Handles arrastáveis para definir inicio/fim de cada segmento
+- Botao "Adicionar Corte" no ponto atual
+- Lista de segmentos reordenaveis
+- Botao para remover segmento
 
-- Nenhuma mudanca estrutural, apenas os valores passados mudarao (de campanhas para conteudos individuais)
+### 3. Painel de Legendas (`SubtitlePanel.tsx`)
+- Lista de legendas com: texto, tempo inicio, tempo fim, posicao (topo/centro/baixo)
+- 3 estilos pre-definidos: Classico (branco+sombra), Destaque (fundo colorido), Minimalista
+- Botao "Adicionar Legenda" no tempo atual do player
 
-### 5. `src/pages/cliente/ClientePlanoCreditos.tsx`
+### 4. Painel de Inserts (`InsertPanel.tsx`)
+- Upload de imagem (logo, selo, watermark)
+- Posicao: canto superior, inferior, centro, tela cheia
+- Tempo de inicio e fim
+- Slider de opacidade
 
-- Atualizar os textos de features dos planos para refletir "8 conteudos/mes" em vez de "1 campanha/mes" etc.
+### 5. Painel de Musica (`MusicPanel.tsx`)
+- Upload de audio (MP3, WAV, max 20MB)
+- Slider de volume (0-100%)
+- Opcao: manter audio original + musica, ou substituir audio
+- Trim automatico do audio para caber no video
+
+### 6. Exportacao (`VideoExporter.tsx`)
+- Barra de progresso durante processamento
+- Cadeia de filtros FFmpeg: cortes (concat), legendas (drawtext), inserts (overlay), audio (amix)
+- Saida: MP4 H.264 1080p
+- Download automatico + opcao de salvar no storage
 
 ---
 
 ## Detalhes Tecnicos
 
-### Calculo de uso mensal (Conteudos)
+### Nova Dependencia
 
-```text
-// Contar todos os conteudos de campanhas do mes atual
-const contentosNoMes = campaigns
-  .filter(c => c.mes includes mesAtual)
-  .reduce((sum, c) => sum + c.conteudos.length, 0);
+- `@ffmpeg/ffmpeg` e `@ffmpeg/util` para processamento client-side via WebAssembly
 
-const saldoRestante = maxContents - contentosNoMes;
-```
+### Arquivos Novos
 
-### Distribuicao automatica recomendada
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/pages/cliente/ClienteEditorVideo.tsx` | Pagina principal com upload e estado do editor |
+| `src/components/video/VideoEditor.tsx` | Container principal do editor (layout 3 areas) |
+| `src/components/video/VideoPlayer.tsx` | Player HTML5 com overlays CSS |
+| `src/components/video/VideoTimeline.tsx` | Timeline visual com handles de corte |
+| `src/components/video/SubtitlePanel.tsx` | CRUD de legendas com estilos |
+| `src/components/video/InsertPanel.tsx` | CRUD de inserts de imagem |
+| `src/components/video/MusicPanel.tsx` | Upload e mix de audio |
+| `src/components/video/VideoExporter.tsx` | Logica de exportacao FFmpeg |
+| `src/hooks/useVideoEditor.ts` | Hook central de estado (cuts, subtitles, inserts, music, videoFile) |
 
-Quando o usuario clica "Deixar a plataforma recomendar":
-- Para 8: 3 Feed + 2 Carrossel + 2 Reels + 1 Story
-- Para 12: 4 Feed + 3 Carrossel + 3 Reels + 2 Story
-- Para 20: 7 Feed + 5 Carrossel + 5 Reels + 3 Story
-- Para qualquer saldo customizado: distribui proporcionalmente (40% Feed, 25% Carrossel, 25% Reels, 10% Story)
+### Arquivos Modificados
 
-### Validacao no Step 2 do wizard de conteudos
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/ClienteSidebar.tsx` | Adicionar item "Editor de Video" com icone `Film` na secao `marketingSection` |
+| `src/App.tsx` | Adicionar rota `/cliente/editor-video` com lazy import da pagina |
 
-- Mostrar card com saldo: "Saldo disponivel: X conteudos"
-- Se totalFormatos > saldoRestante: botao desabilitado + mensagem "Reduza a quantidade. Voce pode gerar ate X conteudos."
-- Botao "Recomendar para mim" que preenche automaticamente baseado no saldo
+### Cota por Plano
 
-### Validacao no wizard de artes
+O editor de video em si nao tem limite de uso (o cliente edita quantas vezes quiser). O limite ja existe nos conteudos gerados e artes. O editor e uma ferramenta, nao um gerador.
 
-- Campo quantidade max = min(10, saldoRestanteArtes)
-- Se saldo = 0: wizard nao abre, toast com sugestao de upgrade
+### Storage (bucket para videos editados)
+
+Criar bucket `edited-videos` para salvar opcionalmente os videos finalizados, com RLS para que apenas o dono possa fazer upload/leitura.
+
+### Limitacoes e Avisos
+
+- Banner de compatibilidade: funciona melhor em Chrome/Edge (SharedArrayBuffer)
+- Safari tem suporte limitado
+- Videos > 500MB podem causar problemas de memoria
+- Primeira carga do FFmpeg.wasm: ~30MB (cached depois)
+- Processamento pode levar 1-5 minutos dependendo do tamanho
+
