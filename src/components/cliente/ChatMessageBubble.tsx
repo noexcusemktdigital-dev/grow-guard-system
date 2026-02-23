@@ -59,7 +59,7 @@ export function ChatMessageBubble({ message, isGrouped = false }: Props) {
 
   return (
     <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} ${isGrouped ? "mb-[2px]" : "mb-2"}`}>
-      <div className={`relative max-w-[75%] ${isGrouped ? "" : isOutbound ? "chat-bubble-out" : "chat-bubble-in"}`}>
+      <div className={`relative max-w-[75%] lg:max-w-[520px] ${isGrouped ? "" : isOutbound ? "chat-bubble-out" : "chat-bubble-in"}`}>
         <div
           className={`rounded-lg px-3 py-1.5 text-[13px] leading-relaxed shadow-sm ${
             isOutbound

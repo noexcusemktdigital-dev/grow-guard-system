@@ -71,7 +71,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
   const isNearBottomRef = useRef(true);
 
   const contactAny = contact as any;
-  const attendingMode = contactAny?.attending_mode || "ai";
+  const attendingMode = contactAny?.attending_mode || null;
   const crmLeadId = contactAny?.crm_lead_id || null;
   const agentId = contactAny?.agent_id || null;
 
@@ -290,21 +290,25 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <Badge variant="outline" className={`text-[10px] gap-1 rounded-full ${
-            attendingMode === "ai" ? "text-purple-500 border-purple-500/30" : "text-emerald-500 border-emerald-500/30"
-          }`}>
-            {attendingMode === "ai" ? <><Bot className="w-3 h-3" /> IA</> : <><User className="w-3 h-3" /> Humano</>}
-          </Badge>
+          {attendingMode && (
+            <Badge variant="outline" className={`text-[10px] gap-1 rounded-full ${
+              attendingMode === "ai" ? "text-purple-500 border-purple-500/30" : "text-emerald-500 border-emerald-500/30"
+            }`}>
+              {attendingMode === "ai" ? <><Bot className="w-3 h-3" /> IA</> : <><User className="w-3 h-3" /> Humano</>}
+            </Badge>
+          )}
 
-          <Button
-            variant={attendingMode === "ai" ? "default" : "outline"}
-            size="sm"
-            className={`h-7 text-[11px] gap-1 rounded-full ${attendingMode !== "ai" ? "border-emerald-500/30 text-emerald-600 hover:bg-emerald-50" : ""}`}
-            onClick={handleToggleMode}
-            disabled={updateMode.isPending}
-          >
-            {attendingMode === "ai" ? <><User className="w-3 h-3" /> Assumir</> : <><RefreshCw className="w-3 h-3" /> IA</>}
-          </Button>
+          {attendingMode && (
+            <Button
+              variant={attendingMode === "ai" ? "default" : "outline"}
+              size="sm"
+              className={`h-7 text-[11px] gap-1 rounded-full ${attendingMode !== "ai" ? "border-emerald-500/30 text-emerald-600 hover:bg-emerald-50" : ""}`}
+              onClick={handleToggleMode}
+              disabled={updateMode.isPending}
+            >
+              {attendingMode === "ai" ? <><User className="w-3 h-3" /> Assumir</> : <><RefreshCw className="w-3 h-3" /> IA</>}
+            </Button>
+          )}
 
           <Collapsible open={actionsOpen} onOpenChange={setActionsOpen}>
             <CollapsibleTrigger asChild>
