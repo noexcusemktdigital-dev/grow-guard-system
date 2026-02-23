@@ -8,6 +8,7 @@ import { useClienteAgents, useClienteAgentMutations } from "@/hooks/useClienteAg
 import { AgentCard } from "@/components/cliente/AgentCard";
 import { AgentFormSheet } from "@/components/cliente/AgentFormSheet";
 import { toast } from "@/hooks/use-toast";
+import { playSound } from "@/lib/sounds";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -33,15 +34,15 @@ export default function ClienteAgentesIA() {
       });
     } else {
       createAgent.mutate(agent, {
-        onSuccess: () => { toast({ title: "Agente criado com sucesso!" }); setSheetOpen(false); },
-        onError: () => toast({ title: "Erro ao criar agente", variant: "destructive" }),
+        onSuccess: () => { playSound("success"); toast({ title: "Agente criado com sucesso!" }); setSheetOpen(false); },
+        onError: () => { playSound("warning"); toast({ title: "Erro ao criar agente", variant: "destructive" }); },
       });
     }
   };
 
   const handleDuplicate = (agent: AiAgent) => {
     duplicateAgent.mutate(agent, {
-      onSuccess: () => toast({ title: "Agente duplicado!" }),
+      onSuccess: () => { playSound("success"); toast({ title: "Agente duplicado!" }); },
       onError: () => toast({ title: "Erro ao duplicar", variant: "destructive" }),
     });
   };
@@ -57,7 +58,7 @@ export default function ClienteAgentesIA() {
   const confirmDelete = () => {
     if (!deleting) return;
     deleteAgent.mutate(deleting.id, {
-      onSuccess: () => { toast({ title: "Agente excluído" }); setDeleting(null); },
+      onSuccess: () => { playSound("success"); toast({ title: "Agente excluído" }); setDeleting(null); },
       onError: () => toast({ title: "Erro ao excluir agente", variant: "destructive" }),
     });
   };

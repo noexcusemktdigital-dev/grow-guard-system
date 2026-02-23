@@ -1,19 +1,15 @@
-import { Trophy, Medal, Star, Target, Coins, Timer, Smartphone, BarChart3, Award } from "lucide-react";
+import { Trophy, Medal, Star, Target, Coins, Timer, Smartphone, BarChart3, Award, TrendingUp, Users, Zap } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClienteGamification } from "@/hooks/useClienteContent";
+import { useCrmLeads } from "@/hooks/useClienteCrm";
+import { useAuth } from "@/contexts/AuthContext";
 
 const medalIcons: Record<string, React.ElementType> = {
   lead: Target, sales: Coins, streak: Timer, social: Smartphone, crm: BarChart3, closer: Trophy,
-};
-
-// Default data when DB has no record yet
-const defaultData = {
-  points: 0, level: 1, streak_days: 0,
-  badges: [] as Array<{ id: string; name: string; emoji: string; description: string; unlocked: boolean }>,
 };
 
 const defaultMedals = [
@@ -26,15 +22,39 @@ const defaultMedals = [
 ];
 
 export default function ClienteGamificacao() {
+  const { user } = useAuth();
   const { data: gamification, isLoading } = useClienteGamification();
+  const { data: leads } = useCrmLeads();
 
-  const points = gamification?.points ?? defaultData.points;
-  const level = gamification?.level ?? defaultData.level;
-  const streakDays = gamification?.streak_days ?? defaultData.streak_days;
+  // Compute stats from real CRM data
+  const myLeads = leads?.filter(l => l.assigned_to === user?.id) ?? [];
+  const totalLeads = myLeads.length;
+  const wonLeads = myLeads.filter(l => !!l.won_at).length;
+  const lostLeads = myLeads.filter(l => !!l.lost_at).length;
+  const pipelineValue = myLeads.filter(l => !l.won_at && !l.lost_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
+  const wonValue = myLeads.filter(l => !!l.won_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
+
+  // Compute points from real data
+  const crmPoints = (totalLeads * 10) + (wonLeads * 50);
+  const dbPoints = gamification?.points ?? 0;
+  const points = Math.max(crmPoints, dbPoints);
+  const level = gamification?.level ?? Math.max(1, Math.floor(points / 500) + 1);
+  const streakDays = gamification?.streak_days ?? 0;
   const badges = (gamification?.badges as typeof defaultMedals) ?? defaultMedals;
-  const medals = badges.length > 0 ? badges : defaultMedals;
+
+  // Auto-unlock badges based on real data
+  const medals = (badges.length > 0 ? badges : defaultMedals).map(m => {
+    if (m.emoji === "lead" && totalLeads >= 1) return { ...m, unlocked: true };
+    if (m.emoji === "sales" && wonLeads >= 10) return { ...m, unlocked: true };
+    if (m.emoji === "streak" && streakDays >= 30) return { ...m, unlocked: true };
+    if (m.emoji === "crm" && totalLeads >= 100) return { ...m, unlocked: true };
+    if (m.emoji === "closer" && wonValue >= 100000) return { ...m, unlocked: true };
+    return m;
+  });
+
   const nextLevel = (level + 1) * 500;
-  const progressToNext = Math.round((points / nextLevel) * 100);
+  const progressToNext = Math.min(Math.round((points / nextLevel) * 100), 100);
+  const unlockedCount = medals.filter(m => m.unlocked).length;
 
   if (isLoading) {
     return (
@@ -80,12 +100,51 @@ export default function ClienteGamificacao() {
         </Card>
       </div>
 
-      {/* Medals */}
+      {/* Avaliações - CRM Stats */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
-            <Medal className="w-4 h-4 text-primary" />
-            <CardTitle className="text-sm font-semibold">Medalhas</CardTitle>
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm font-semibold">Avaliações</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="p-3 rounded-xl bg-muted/30 text-center">
+              <Target className="w-5 h-5 text-primary mx-auto mb-1" />
+              <p className="text-2xl font-bold">{totalLeads}</p>
+              <p className="text-[10px] text-muted-foreground">Leads Criados</p>
+              <p className="text-[9px] text-primary mt-0.5">+{totalLeads * 10} pts</p>
+            </div>
+            <div className="p-3 rounded-xl bg-muted/30 text-center">
+              <Coins className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
+              <p className="text-2xl font-bold">{wonLeads}</p>
+              <p className="text-[10px] text-muted-foreground">Leads Ganhos</p>
+              <p className="text-[9px] text-emerald-500 mt-0.5">+{wonLeads * 50} pts</p>
+            </div>
+            <div className="p-3 rounded-xl bg-muted/30 text-center">
+              <Zap className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+              <p className="text-2xl font-bold">R$ {(wonValue / 1000).toFixed(0)}k</p>
+              <p className="text-[10px] text-muted-foreground">Vendas Fechadas</p>
+            </div>
+            <div className="p-3 rounded-xl bg-muted/30 text-center">
+              <Users className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+              <p className="text-2xl font-bold">R$ {(pipelineValue / 1000).toFixed(0)}k</p>
+              <p className="text-[10px] text-muted-foreground">Pipeline Ativo</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Medals */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Medal className="w-4 h-4 text-primary" />
+              <CardTitle className="text-sm font-semibold">Medalhas</CardTitle>
+            </div>
+            <Badge variant="outline" className="text-[10px]">{unlockedCount}/{medals.length} conquistadas</Badge>
           </div>
         </CardHeader>
         <CardContent>

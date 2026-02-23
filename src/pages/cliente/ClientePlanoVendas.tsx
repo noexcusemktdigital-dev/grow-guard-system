@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DiagnosticoTermometro } from "@/components/diagnostico/DiagnosticoTermometro";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
+import { playSound } from "@/lib/sounds";
 import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
@@ -598,7 +599,8 @@ export default function ClientePlanoVendas() {
   const { data: activeGoals, isLoading: goalsLoading } = useActiveGoals(scopeFilter);
   const { data: historicGoals } = useHistoricGoals();
   const { data: goalProgress } = useGoalProgress(activeGoals);
-  const { createGoal, archiveGoal } = useGoalMutations();
+  const { createGoal, updateGoal, archiveGoal } = useGoalMutations();
+  const [editingGoal, setEditingGoal] = useState<any>(null);
   const { data: teams } = useCrmTeams();
   const { data: members } = useCrmTeam();
 
@@ -752,10 +754,42 @@ export default function ClientePlanoVendas() {
       status: "active",
     }, {
       onSuccess: () => {
+        playSound("success");
         setNovaMeta({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
         setTargetDisplay("");
         setNovaMetaOpen(false);
         toast({ title: "Meta criada com sucesso!" });
+      },
+    });
+  };
+
+  const handleEditMeta = () => {
+    if (!editingGoal || !novaMeta.title || novaMeta.target_value <= 0 || !novaMeta.mesRef) {
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
+      return;
+    }
+    const [y, m] = novaMeta.mesRef.split("-").map(Number);
+    const periodStart = new Date(y, m - 1, 1).toISOString();
+    const periodEnd = new Date(y, m, 0, 23, 59, 59).toISOString();
+    updateGoal.mutate({
+      id: editingGoal.id,
+      title: novaMeta.title,
+      target_value: novaMeta.target_value,
+      metric: novaMeta.metric,
+      scope: novaMeta.scope,
+      priority: novaMeta.priority,
+      team_id: novaMeta.scope === "team" && novaMeta.team_id ? novaMeta.team_id : null,
+      assigned_to: novaMeta.scope === "individual" && novaMeta.assigned_to ? novaMeta.assigned_to : null,
+      period_start: periodStart,
+      period_end: periodEnd,
+    }, {
+      onSuccess: () => {
+        playSound("success");
+        setNovaMeta({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
+        setTargetDisplay("");
+        setNovaMetaOpen(false);
+        setEditingGoal(null);
+        toast({ title: "Meta atualizada com sucesso!" });
       },
     });
   };
@@ -1306,7 +1340,23 @@ export default function ClientePlanoVendas() {
                   key={goal.id}
                   goal={goal}
                   progress={goalProgress?.[goal.id]}
-                  onEdit={() => { /* TODO */ }}
+                  onEdit={() => {
+                    const g = goal as any;
+                    const mesRef = g.period_start ? g.period_start.slice(0, 7) : "";
+                    setNovaMeta({
+                      title: g.title || "",
+                      metric: g.metric || "revenue",
+                      target_value: g.target_value || 0,
+                      scope: g.scope || "company",
+                      team_id: g.team_id || "",
+                      assigned_to: g.assigned_to || "",
+                      priority: g.priority || "media",
+                      mesRef,
+                    });
+                    setTargetDisplay(isMonetaryMetric(g.metric || "revenue") ? (g.target_value || 0).toLocaleString("pt-BR") : "");
+                    setEditingGoal(g);
+                    setNovaMetaOpen(true);
+                  }}
                   onArchive={() => archiveGoal.mutate(goal.id)}
                 />
               ))}
@@ -1349,10 +1399,10 @@ export default function ClientePlanoVendas() {
         </TabsContent>
       </Tabs>
 
-      {/* Dialog: Nova Meta */}
-      <Dialog open={novaMetaOpen} onOpenChange={setNovaMetaOpen}>
+      {/* Dialog: Nova / Editar Meta */}
+      <Dialog open={novaMetaOpen} onOpenChange={(o) => { setNovaMetaOpen(o); if (!o) setEditingGoal(null); }}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle className="text-base">Nova Meta</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base">{editingGoal ? "Editar Meta" : "Nova Meta"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
               <Label className="text-xs">Nome da meta</Label>
@@ -1465,8 +1515,12 @@ export default function ClientePlanoVendas() {
                 )}
               </div>
             )}
-            <Button className="w-full gap-1" onClick={handleAddMeta} disabled={createGoal.isPending}>
-              <Plus className="w-3 h-3" /> {createGoal.isPending ? "Criando..." : "Criar Meta"}
+            <Button className="w-full gap-1" onClick={editingGoal ? handleEditMeta : handleAddMeta} disabled={createGoal.isPending || updateGoal.isPending}>
+              {editingGoal ? (
+                <>{updateGoal.isPending ? "Salvando..." : <><Save className="w-3 h-3" /> Salvar Alterações</>}</>
+              ) : (
+                <><Plus className="w-3 h-3" /> {createGoal.isPending ? "Criando..." : "Criar Meta"}</>
+              )}
             </Button>
           </div>
         </DialogContent>
