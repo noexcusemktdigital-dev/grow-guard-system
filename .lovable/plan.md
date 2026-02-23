@@ -1,178 +1,154 @@
 
-# Editor de Video -- Timeline estilo CapCut + Legendas Automaticas
+
+# Plano de Vendas -- Reformulacao Estilo Consultoria + Dashboard vira Relatorios
 
 ## Resumo
 
-Reformular o editor de video para ter uma **timeline visual** no estilo CapCut (simplificada), com sistema de **corte e juncao** intuitivo e **legendas geradas automaticamente** via IA (transcricao do audio do video).
+Reformular o **Plano de Vendas** para seguir o mesmo padrao da **Estrategia de Marketing**: uma consultoria interativa com perguntas agrupadas em secoes, gerando um diagnostico comercial com termometro de maturidade, radar por area, plano de acao dinamico e projecoes. O resultado gera dicas e recomendacoes que direcionam o usuario para CRM, Agentes IA e Scripts.
+
+Renomear **Dashboard** para **Relatorios** na sidebar e na pagina.
+
+Remover as abas **Visao Geral** e **Estrutura Comercial** do Plano de Vendas.
 
 ---
 
-## O que muda
-
-### 1. Timeline Visual estilo CapCut (embaixo do player)
-
-Substituir a timeline atual (barra simples) por uma timeline horizontal rica:
+## Mudancas na Sidebar
 
 ```text
-+---------------------------------------------------------------+
-|  [Player de Video com overlays]                               |
-+---------------------------------------------------------------+
-|  Toolbar: [Cortar] [Desfazer] [Deletar segmento]             |
-+---------------------------------------------------------------+
-|  Timeline (scroll horizontal):                                |
-|  +--------+  +--------+  +--------+                          |
-|  | Seg 1  |  | Seg 2  |  | Seg 3  |   <-- thumbnails         |
-|  | 0:00   |  | 0:15   |  | 0:28   |                          |
-|  +--------+  +--------+  +--------+                          |
-|                                                               |
-|  [Legendas] ====[Texto 1]=====  ==[Texto 2]==                |
-|  [Musica]   ====================================              |
-|  [Inserts]       =====[Logo]====                              |
-|                                                               |
-|  Playhead (linha vermelha vertical que acompanha o tempo)     |
-+---------------------------------------------------------------+
+VENDAS (antes)                    VENDAS (depois)
+  Plano de Vendas                   Plano de Vendas
+  CRM                              CRM
+  Chat                             Chat
+  Agentes IA                       Agentes IA
+  Scripts                          Scripts
+  Disparos                         Disparos
+  Dashboard                        Relatorios    <-- renomeado
 ```
-
-**Tracks da timeline:**
-- **Track de Video** (principal): mostra segmentos como blocos com thumbnails geradas via canvas. Clicando no bloco, seleciona o segmento. Playhead vermelho se move conforme o video toca.
-- **Track de Legendas**: blocos coloridos representando cada legenda com texto visivel.
-- **Track de Musica**: barra unica representando o audio de fundo (se houver).
-- **Track de Inserts**: blocos para cada insert de imagem.
-
-**Interacoes:**
-- Clicar na timeline para posicionar o playhead
-- Scroll horizontal para navegar pela duracao
-- Zoom in/out da timeline (slider ou +/-)
-
-### 2. Cortes: ferramenta de dividir e remover
-
-O sistema de cortes funciona assim:
-1. Posicione o playhead onde quer cortar
-2. Clique em "Cortar" (icone tesoura) -- divide o segmento em dois
-3. Selecione o segmento indesejado e clique "Deletar" (ou tecla Delete)
-4. O video resultante sera a juncao dos segmentos restantes
-
-**Mudancas no hook `useVideoEditor`:**
-- Adicionar `selectedSegmentId` para rastrear segmento selecionado
-- `splitAtCurrentTime()` divide o segmento onde esta o playhead
-- `deleteSegment(id)` remove o segmento selecionado
-- O player pula segmentos deletados durante a reproducao (ao chegar no fim de um segmento, vai para o inicio do proximo)
-
-### 3. Legendas Automaticas via IA
-
-Em vez de adicionar legendas manualmente, o usuario clica **"Gerar Legendas"** e o sistema:
-
-1. Extrai o audio do video (via FFmpeg.wasm no browser -- converte para WAV/MP3)
-2. Envia o audio para uma edge function que usa o modelo Gemini para transcrever
-3. Recebe o texto com timestamps (formato SRT/segmentado)
-4. Popula automaticamente a lista de legendas com timing correto
-
-**Edge function `transcribe-video-audio`:**
-- Recebe o audio em base64 ou como upload
-- Usa Gemini 2.5 Flash (suporta audio) via LOVABLE_API_KEY
-- Retorna array de `{ text, startTime, endTime }`
-
-**Painel de legendas apos geracao:**
-- Lista editavel (o usuario pode corrigir texto, ajustar timing, mudar estilo)
-- Botao "Gerar Legendas" com loading state
-- Opcao de limpar todas e regerar
 
 ---
 
-## Arquivos
+## Plano de Vendas -- Nova Estrutura
 
-### Novos
+### Abas
 
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/components/video/EditorTimeline.tsx` | Timeline visual multi-track com playhead, zoom, scroll horizontal |
-| `src/components/video/TimelineTrack.tsx` | Componente generico de track (video, legendas, musica, inserts) |
-| `src/components/video/TimelineToolbar.tsx` | Barra de ferramentas (Cortar, Deletar, Desfazer, Zoom) |
-| `supabase/functions/transcribe-video-audio/index.ts` | Edge function para transcricao via Gemini |
+O Plano de Vendas tera 3 abas:
 
-### Modificados
+| Aba | Descricao |
+|-----|-----------|
+| **Diagnostico** | Consultoria interativa com ~25 perguntas em ~8 secoes, seguindo o mesmo padrao do Estrategia de Marketing (secoes com progress bar, navegacao anterior/proximo, animacao de transicao). Ao finalizar, mostra resultados. |
+| **Minhas Metas** | Manter a aba atual de metas (sem mudancas) |
+| **Historico** | Historico de diagnosticos realizados (mesmo padrao do historico da Estrategia de Marketing) |
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/hooks/useVideoEditor.ts` | Adicionar `selectedSegmentId`, `splitAtCurrentTime`, `deleteSelectedSegment`, logica de playback que pula segmentos removidos, funcao `generateSubtitles` |
-| `src/components/video/VideoEditor.tsx` | Substituir layout: player em cima, timeline embaixo (full width), painel lateral com tabs (Legendas, Inserts, Musica). Remover tab "Cortes" (agora e via toolbar da timeline) |
-| `src/components/video/VideoTimeline.tsx` | Sera substituido pelo novo `EditorTimeline.tsx` |
-| `src/components/video/SubtitlePanel.tsx` | Adicionar botao "Gerar Legendas Automaticas" com estado de loading, manter edicao manual como fallback |
-| `src/components/video/VideoPlayer.tsx` | Adicionar logica para pular segmentos deletados durante reproducao |
+### Secoes do Diagnostico (~25 perguntas em 8 secoes)
 
-### Removidos
+1. **Sobre o Negocio** (contexto basico)
+   - Segmento da empresa
+   - Modelo de negocio (B2B/B2C/Ambos)
+   - Tempo de mercado
+   - Numero de funcionarios
 
-| Arquivo | Motivo |
-|---------|--------|
-| `src/components/video/VideoTimeline.tsx` | Substituido por `EditorTimeline.tsx` |
+2. **Financeiro Comercial** (dimensionar operacao)
+   - Faturamento mensal
+   - Ticket medio
+   - Meta de faturamento mensal
+   - Percentual da receita vinda de novos clientes vs recorrencia
+
+3. **Equipe e Estrutura** (quem vende)
+   - Tamanho da equipe comercial
+   - Tem SDR? Closer? CS?
+   - Processo comercial documentado?
+   - Tempo medio de fechamento
+
+4. **Gestao de Leads** (como gerencia leads)
+   - Usa CRM? Qual?
+   - Follow-up estruturado?
+   - Cadencia de follow-up
+   - Quantidade de leads mensais
+
+5. **Canais e Prospeccao** (de onde vem os leads)
+   - Canais de aquisicao ativos (multi-choice)
+   - Canal principal
+   - Mede ROI por canal?
+
+6. **Processo de Vendas** (como vende)
+   - Usa scripts/roteiros?
+   - Etapas do funil de vendas (multi-choice)
+   - Reuniao comercial recorrente?
+   - Frequencia da reuniao
+
+7. **Ferramentas e Automacao** (tecnologia)
+   - Ferramentas utilizadas (multi-choice)
+   - Tem automacoes ativas?
+   - Usa agente de IA para atendimento?
+
+8. **Metas e Performance** (controle)
+   - Metas baseadas em dados historicos?
+   - Acompanha taxa de conversao por etapa?
+   - Relatorios comerciais periodicos?
+   - Frequencia de analise de resultados
+
+### Resultado do Diagnostico
+
+Apos finalizar as perguntas, o usuario ve:
+
+1. **Termometro de Maturidade Comercial** -- mesmo componente `DiagnosticoTermometro` usado na Estrategia de Marketing, com 4 niveis: Inicial (0-25%), Estruturando (26-50%), Escalavel (51-75%), Alta Performance (76-100%)
+
+2. **Radar por Area (5 eixos)** -- Processo, Gestao de Leads, Ferramentas, Canais, Performance
+
+3. **Insights Inteligentes** -- Cards com recomendacoes baseadas nas respostas, cada um com botao "Iniciar agora" que navega para o modulo relevante:
+   - "Implante um CRM para controlar seus leads" -> navega para `/cliente/crm`
+   - "Crie scripts padronizados para sua equipe" -> navega para `/cliente/scripts`
+   - "Configure um agente de IA para qualificar leads" -> navega para `/cliente/agentes-ia`
+   - "Estruture follow-ups automaticos" -> navega para `/cliente/disparos`
+
+4. **Plano de Acao em 3 Fases** -- Estruturacao, Otimizacao, Escala (mesmo padrao da Estrategia de Marketing)
+
+5. **Projecoes Comparativas** -- "Com Estrategia" vs "Sem Estrategia" para Leads e Receita (graficos lado a lado como na Estrategia de Marketing)
+
+---
+
+## Dashboard -> Relatorios
+
+### Mudancas
+
+- Renomear label na sidebar de "Dashboard" para "Relatorios"
+- Renomear o titulo na pagina `ClienteDashboard.tsx` de "Dashboard" para "Relatorios"
+- Subtitulo: "Analise e exporte relatorios das suas frentes comerciais"
+- Manter todo o conteudo existente (abas CRM, Chat, Agentes IA com exportacao CSV) -- isso ja e essencialmente um modulo de relatorios
 
 ---
 
 ## Detalhes Tecnicos
 
-### EditorTimeline -- Layout
+### Arquivos Modificados
 
-- Container com `overflow-x: auto` para scroll horizontal
-- Largura total calculada: `duration * pixelsPerSecond` (ex: 60s * 20px = 1200px)
-- Zoom controlado por slider que altera `pixelsPerSecond` (10-80px)
-- Playhead: div absoluto posicionado em `currentTime * pixelsPerSecond`, linha vermelha vertical full-height
-- Clique na timeline: calcula tempo a partir da posicao X do click
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/pages/cliente/ClientePlanoVendas.tsx` | Reescrever completamente: remover Visao Geral e Estrutura Comercial, implementar consultoria interativa com secoes/perguntas, resultados com termometro + radar + insights + plano de acao + projecoes. Manter aba Metas intacta. |
+| `src/pages/cliente/ClienteDashboard.tsx` | Renomear titulo de "Dashboard" para "Relatorios", ajustar subtitulo |
+| `src/components/ClienteSidebar.tsx` | Renomear "Dashboard" para "Relatorios" na sidebar |
 
-### Thumbnails dos segmentos
+### Nenhum arquivo novo necessario
 
-- Geradas via `<canvas>` + `video.currentTime` seek
-- 1 thumbnail por segmento (no centro temporal do segmento)
-- Armazenadas em state como data URLs
-- Geradas de forma lazy apos o video carregar
+- Reutiliza `DiagnosticoTermometro` ja existente
+- Reutiliza `RadarChart` do recharts ja instalado
+- Segue o mesmo padrao de codigo do `ClientePlanoMarketing.tsx`
 
-### Playback inteligente (pular segmentos removidos)
+### Logica de Score
 
-No `onTimeUpdate` do player:
-- Verificar se o currentTime esta dentro de algum segmento ativo
-- Se nao esta (caiu em um "buraco" entre segmentos), pular para o inicio do proximo segmento
-- Se chegou ao fim do ultimo segmento, pausar
+Cada pergunta contribui para um dos 5 eixos do radar. Respostas mais maduras recebem maior pontuacao (ex: "Sim, completo" = 3 pts, "Parcial" = 2, "Nao" = 0). O score final e a media ponderada de todos os eixos, convertida em percentual para o termometro.
 
-### Transcricao de audio (Edge Function)
+### Insights com direcionamento para modulos
 
-```text
-POST /transcribe-video-audio
-Body: { audioBase64: string, mimeType: "audio/wav" }
-Response: { subtitles: [{ text, startTime, endTime }] }
-```
+Os insights serao gerados dinamicamente com base nos scores por eixo:
+- Score baixo em "Gestao de Leads" -> recomenda CRM e follow-up
+- Score baixo em "Ferramentas" -> recomenda Agente de IA
+- Score baixo em "Processo" -> recomenda Scripts
+- Score baixo em "Canais" -> recomenda Disparos
 
-- Usa Gemini 2.5 Flash que aceita input de audio
-- Prompt solicita transcricao com timestamps em formato estruturado
-- Limite de audio: ~10 min (para caber no contexto do modelo)
+Cada insight tera um botao "Iniciar agora" com `useNavigate()` para o modulo correspondente, identico ao padrao da Estrategia de Marketing.
 
-### Extracao de audio no browser
+### Persistencia
 
-Usando FFmpeg.wasm ja instalado:
-1. Carregar video no filesystem virtual
-2. Comando: `ffmpeg -i input.mp4 -vn -acodec pcm_s16le -ar 16000 -ac 1 output.wav`
-3. Ler o WAV resultante como base64
-4. Enviar para a edge function
+Os dados do diagnostico serao salvos em `localStorage` (chave `plano_vendas_data`), mesma abordagem da Estrategia de Marketing, ate que a persistencia em banco seja implementada.
 
----
-
-## Layout final do editor
-
-```text
-+--------------------------------------------------+
-|  [<- Voltar]  Editor de Video        [Exportar]   |
-+--------------------------------------------------+
-|                                  |                |
-|  [Player de Video]               |  [Painel]      |
-|  Preview com overlays            |  Tabs:         |
-|  de legendas e inserts           |  Legendas      |
-|                                  |  Inserts       |
-|                                  |  Musica        |
-+----------------------------------+                |
-|  [Toolbar: Cortar | Del | Zoom]  |                |
-+----------------------------------+----------------+
-|  [Timeline multi-track full width]                |
-|  Video:    [===Seg1===][===Seg2===][===Seg3===]   |
-|  Legendas: [==Txt1==]    [==Txt2==]               |
-|  Musica:   [================================]     |
-|  Inserts:       [==Logo==]                        |
-+--------------------------------------------------+
-```
