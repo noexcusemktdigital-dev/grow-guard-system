@@ -29,3 +29,12 @@ verify_jwt = false
 
 [functions.generate-script]
 verify_jwt = false
+
+[functions.agent-followup-cron]
+verify_jwt = false
+
+[functions.recharge-credits]
+verify_jwt = false
+
+[functions.asaas-webhook]
+verify_jwt = false

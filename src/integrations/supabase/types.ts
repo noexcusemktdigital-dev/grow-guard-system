@@ -1097,6 +1097,50 @@ export type Database = {
           },
         ]
       }
+      credit_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          type?: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_wallets: {
         Row: {
           balance: number
@@ -2779,6 +2823,7 @@ export type Database = {
       organizations: {
         Row: {
           address: string | null
+          asaas_customer_id: string | null
           city: string | null
           cnpj: string | null
           created_at: string
@@ -2794,6 +2839,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          asaas_customer_id?: string | null
           city?: string | null
           cnpj?: string | null
           created_at?: string
@@ -2809,6 +2855,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          asaas_customer_id?: string | null
           city?: string | null
           cnpj?: string | null
           created_at?: string
