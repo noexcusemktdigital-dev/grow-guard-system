@@ -53,7 +53,6 @@ import ClienteChecklist from "./pages/cliente/ClienteChecklist";
 import ClienteNotificacoes from "./pages/cliente/ClienteNotificacoes";
 import ClienteGamificacao from "./pages/cliente/ClienteGamificacao";
 import ClientePlanoVendas from "./pages/cliente/ClientePlanoVendas";
-import ClienteMetas from "./pages/cliente/ClienteMetas";
 import ClienteChat from "./pages/cliente/ClienteChat";
 import ClienteCRM from "./pages/cliente/ClienteCRM";
 import CrmConfigPage from "./components/crm/CrmConfigPage";
@@ -142,7 +141,6 @@ const App = () => (
                 <Route path="notificacoes" element={<ClienteNotificacoes />} />
                 <Route path="gamificacao" element={<ClienteGamificacao />} />
                 <Route path="plano-vendas" element={<ClientePlanoVendas />} />
-                <Route path="metas" element={<ClienteMetas />} />
                 <Route path="chat" element={<ClienteChat />} />
                 <Route path="crm" element={<ClienteCRM />} />
                 <Route path="crm/config" element={<CrmConfigPage />} />
