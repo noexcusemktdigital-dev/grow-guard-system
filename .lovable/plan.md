@@ -1,28 +1,22 @@
 
 
-# Criar Usuario Franqueado de Teste
+# Atualizar Chave API do Asaas
 
-## Problema
+## O que sera feito
 
-O login `davi.ttesch@gmail.com` ja tem role `super_admin`. O sistema sempre escolhe o role de maior prioridade, entao mesmo adicionando `franqueado` a esse usuario, ele continuaria sendo redirecionado para `/franqueadora/dashboard`.
+1. **Atualizar o secret `ASAAS_API_KEY`** com a nova chave de producao fornecida
+2. **Re-deploy das 3 edge functions** de pagamento para que usem a nova chave:
+   - `asaas-create-subscription`
+   - `asaas-create-charge`
+   - `asaas-list-payments`
 
-## Solucao
+## Detalhes Tecnicos
 
-Adicionar um terceiro usuario no seed e executar:
+- O secret `ASAAS_API_KEY` ja existe no sistema e sera atualizado com o novo valor
+- As edge functions serao re-deployadas automaticamente apos a atualizacao
+- Nenhuma alteracao de codigo e necessaria, apenas a troca da chave
 
-| Campo | Valor |
-|-------|-------|
-| Email | franqueado.teste@noexcuse.com |
-| Senha | 19961996 |
-| Nome | Franqueado Teste |
-| Role | franqueado |
-| Organizacao | "Unidade Teste" (tipo franqueado) |
+## Resultado Esperado
 
-## Implementacao
-
-1. Atualizar `supabase/functions/seed-users/index.ts` adicionando bloco para criar o usuario franqueado (mesmo padrao dos outros dois)
-2. Fazer deploy e executar o seed
-3. Fazer logout e entrar com `franqueado.teste@noexcuse.com` / `19961996`
-
-O redirecionamento automatico levara para `/franqueado/dashboard`.
+Apos a atualizacao, o fluxo de upgrade de plano e compra de creditos deve funcionar sem o erro de IP nao autorizado, ja que a nova chave pode nao ter a restricao associada.
 
