@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageHeader } from "@/components/PageHeader";
+import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -181,6 +182,13 @@ export default function ClienteSites() {
           title="Sites & Landing Pages"
           subtitle="Gere sites profissionais com IA e publique no seu domínio"
           icon={<Globe className="w-5 h-5 text-primary" />}
+        />
+
+        <UsageQuotaBanner
+          used={sites.length}
+          limit={maxSites}
+          label="sites ativos"
+          planName={plan?.name ?? "Starter"}
         />
 
         <Button className="w-full gap-2" size="lg" onClick={() => setCreating(true)} disabled={sites.length >= maxSites}>

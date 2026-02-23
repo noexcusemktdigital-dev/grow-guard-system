@@ -23,6 +23,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ApprovalPanel, ApprovalStatusBadge, type ApprovalStatus } from "@/components/approval/ApprovalPanel";
+import { ApprovalSummary } from "@/components/approval/ApprovalSummary";
+import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
+import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { getPlanBySlug } from "@/constants/plans";
 
 /* ── Types ── */
 interface SocialConcept {
@@ -42,7 +47,9 @@ interface GeneratedArt {
   hashtags: string[];
   feedUrl: string | null;
   storyUrl: string | null;
-  approved: boolean;
+  status: ApprovalStatus;
+  changeNote?: string;
+  approved?: boolean; // backward compat
 }
 
 interface ArtCampaign {
@@ -326,6 +333,11 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 
 /* ── Main Page ── */
 export default function ClienteRedesSociais() {
+  const { data: subscription } = useClienteSubscription();
+  const plan = getPlanBySlug(subscription?.plan);
+  const maxArts = plan?.maxSocialArts ?? 8;
+  const planName = plan?.name ?? "Starter";
+
   // Knowledge base
   const [sections, setSections] = useState(initialSections);
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -538,7 +550,7 @@ export default function ClienteRedesSociais() {
           hashtags: concept.hashtags,
           feedUrl,
           storyUrl,
-          approved: false,
+          status: "pending" as ApprovalStatus,
         });
       }
 
@@ -565,19 +577,24 @@ export default function ClienteRedesSociais() {
     }
   };
 
-  const toggleApproval = (artId: string) => {
+  const updateArtStatus = (artId: string, newStatus: ApprovalStatus, changeNote?: string) => {
     setCampaigns((prev) => prev.map((c) => ({
       ...c,
-      arts: c.arts.map((a) => a.id === artId ? { ...a, approved: !a.approved } : a),
+      arts: c.arts.map((a) => a.id === artId ? { ...a, status: newStatus, changeNote: changeNote || a.changeNote } : a),
     })));
     if (selectedArt?.id === artId) {
-      setSelectedArt((prev) => prev ? { ...prev, approved: !prev.approved } : null);
+      setSelectedArt((prev) => prev ? { ...prev, status: newStatus, changeNote: changeNote || prev.changeNote } : null);
     }
   };
 
   const approveAll = (campaignId: string) => {
-    setCampaigns((prev) => prev.map((c) => c.id === campaignId ? { ...c, arts: c.arts.map((a) => ({ ...a, approved: true })) } : c));
+    setCampaigns((prev) => prev.map((c) => c.id === campaignId ? { ...c, arts: c.arts.map((a) => ({ ...a, status: "approved" as ApprovalStatus })) } : c));
     toast({ title: "Todas as artes aprovadas!" });
+  };
+
+  const approvePending = (campaignId: string) => {
+    setCampaigns((prev) => prev.map((c) => c.id === campaignId ? { ...c, arts: c.arts.map((a) => a.status === "pending" ? { ...a, status: "approved" as ApprovalStatus } : a) } : c));
+    toast({ title: "Artes pendentes aprovadas!" });
   };
 
   const openEditor = (art: GeneratedArt, fmt: "feed" | "story") => {
@@ -611,7 +628,19 @@ export default function ClienteRedesSociais() {
 
         {/* ═══ CAMPANHAS ═══ */}
         <TabsContent value="campanhas" className="space-y-4 mt-4">
-          <Button className="w-full gap-2 h-12 text-sm font-semibold" onClick={() => { setWizardOpen(true); setWizardFlow("choose"); setWizardStep(1); loadContentCampaigns(); setSelectedContents([]); }}>
+          {/* Quota banner */}
+          <UsageQuotaBanner
+            used={campaigns.reduce((acc, c) => acc + c.arts.length, 0)}
+            limit={maxArts}
+            label="artes sociais"
+            planName={planName}
+          />
+
+          <Button
+            className="w-full gap-2 h-12 text-sm font-semibold"
+            onClick={() => { setWizardOpen(true); setWizardFlow("choose"); setWizardStep(1); loadContentCampaigns(); setSelectedContents([]); }}
+            disabled={maxArts !== -1 && campaigns.reduce((acc, c) => acc + c.arts.length, 0) >= maxArts}
+          >
             <Plus className="w-4 h-4" /> Nova Criação Mensal
           </Button>
 
@@ -1012,13 +1041,13 @@ export default function ClienteRedesSociais() {
                         </Button>
                       </div>
 
-                      <Button
-                        className="w-full gap-2"
-                        variant={selectedArt.approved ? "outline" : "default"}
-                        onClick={() => toggleApproval(selectedArt.id)}
-                      >
-                        {selectedArt.approved ? <><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Aprovada</> : <><Circle className="w-4 h-4" /> Aprovar Arte</>}
-                      </Button>
+                      <ApprovalPanel
+                        status={selectedArt.status}
+                        changeNote={selectedArt.changeNote}
+                        onApprove={() => { updateArtStatus(selectedArt.id, "approved"); toast({ title: "Arte aprovada!" }); }}
+                        onRequestChanges={(note) => { updateArtStatus(selectedArt.id, "changes_requested", note); toast({ title: "Alteração solicitada!" }); }}
+                        onReject={() => { updateArtStatus(selectedArt.id, "rejected"); toast({ title: "Arte rejeitada." }); }}
+                      />
                     </div>
                   </div>
                 </>
@@ -1033,16 +1062,16 @@ export default function ClienteRedesSociais() {
                 <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setOpenCampaign(null)}>
                   <ArrowLeft className="w-3.5 h-3.5" /> Voltar
                 </Button>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-xs">{currentCampaign.arts.length} posts • {currentCampaign.arts.length * 2} artes</Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {currentCampaign.arts.filter((a) => a.approved).length}/{currentCampaign.arts.length} aprovados
-                  </Badge>
-                  <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => approveAll(currentCampaign.id)}>
-                    <Check className="w-3 h-3" /> Aprovar Tudo
-                  </Button>
-                </div>
               </div>
+
+              <ApprovalSummary
+                total={currentCampaign.arts.length}
+                approved={currentCampaign.arts.filter(a => a.status === "approved").length}
+                changesRequested={currentCampaign.arts.filter(a => a.status === "changes_requested").length}
+                rejected={currentCampaign.arts.filter(a => a.status === "rejected").length}
+                onApproveAll={() => approveAll(currentCampaign.id)}
+                onApprovePending={() => approvePending(currentCampaign.id)}
+              />
 
               <h3 className="text-lg font-bold">{currentCampaign.label}</h3>
 
@@ -1057,9 +1086,9 @@ export default function ClienteRedesSociais() {
                           <Image className="w-8 h-8 text-muted-foreground/40" />
                         </div>
                       )}
-                      {art.approved && (
+                      {art.status !== "pending" && (
                         <div className="absolute top-2 right-2">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-500 drop-shadow" />
+                          <ApprovalStatusBadge status={art.status} />
                         </div>
                       )}
                       <div className="absolute bottom-2 left-2 flex gap-1">
@@ -1087,7 +1116,7 @@ export default function ClienteRedesSociais() {
                 </Card>
               ) : (
                 campaigns.map((campaign) => {
-                  const approvedCount = campaign.arts.filter((a) => a.approved).length;
+                  const approvedCount = campaign.arts.filter((a) => a.status === "approved").length;
                   return (
                     <Card key={campaign.id} className="glass-card cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all" onClick={() => setOpenCampaign(campaign.id)}>
                       <CardContent className="py-4 flex items-center justify-between">

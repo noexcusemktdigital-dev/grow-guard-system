@@ -1,4 +1,5 @@
 // Cliente types
+export type ApprovalStatus = "pending" | "approved" | "changes_requested" | "rejected";
 
 export type AgentRole = "sdr" | "closer" | "pos_venda" | "suporte";
 

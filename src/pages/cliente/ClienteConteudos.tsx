@@ -22,6 +22,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { ApprovalPanel, ApprovalStatusBadge, type ApprovalStatus } from "@/components/approval/ApprovalPanel";
+import { ApprovalSummary } from "@/components/approval/ApprovalSummary";
+import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
+import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { getPlanBySlug } from "@/constants/plans";
 
 /* ── Types ── */
 interface GeneratedContent {
@@ -33,7 +38,10 @@ interface GeneratedContent {
   roteiro: string;
   hashtags: string[];
   embasamento: string;
-  approved: boolean;
+  status: ApprovalStatus;
+  changeNote?: string;
+  // backward compat
+  approved?: boolean;
 }
 
 interface Campaign {
@@ -47,6 +55,12 @@ interface Campaign {
     tom: string;
   };
   conteudos: GeneratedContent[];
+}
+
+/* ── Backward compat helper ── */
+function migrateContentStatus(c: any): GeneratedContent {
+  if (c.status && typeof c.status === "string") return c;
+  return { ...c, status: c.approved ? "approved" : "pending" };
 }
 
 /* ── Constants ── */
@@ -156,15 +170,22 @@ const initialCampaigns: Campaign[] = [
     createdAt: "05/02/2026",
     briefing: { objetivo: "Gerar leads", tema: "Marketing para Franquias", tom: "Educativo" },
     conteudos: [
-      { id: "1", titulo: "5 Erros que Todo Franqueado Comete no Marketing", formato: "Carrossel", rede: "Instagram", funil: "Topo", roteiro: "ABERTURA: Você sabia que 78% dos franqueados cometem pelo menos um desses erros no marketing?\n\nERRO 1 — Não ter persona definida\nA maioria investe em anúncios sem saber exatamente quem quer atingir.\n\nERRO 2 — Ignorar o marketing local\nFranquias precisam de estratégia nacional E local.\n\nERRO 3 — Não medir resultados\nSe você não sabe seu CAC, CPL e taxa de conversão, está voando às cegas.\n\nERRO 4 — Conteúdo genérico demais\nPostar frases motivacionais não gera leads.\n\nERRO 5 — Não usar automação\nResponder leads manualmente em 2026?\n\nCTA: Quer corrigir esses erros? Acesse o link na bio.", hashtags: ["#marketing", "#franquias", "#erros", "#marketingdigital", "#leads"], embasamento: "Carrosséis educativos no Instagram têm 3x mais salvamentos, ideal para topo de funil com público que está na fase de descoberta.", approved: true },
-      { id: "2", titulo: "Como Definir Metas de Vendas para Sua Franquia", formato: "Feed", rede: "LinkedIn", funil: "Meio", roteiro: "Título: Como Definir Metas de Vendas que Realmente Funcionam\n\nMetas vagas geram resultados vagos. Se sua meta é 'vender mais', você já começou errado.\n\nUse o método SMART:\n- Específica: 'Aumentar vendas da unidade Centro em 20%'\n- Mensurável: Acompanhe semanalmente no CRM\n- Atingível: Baseie-se no histórico dos últimos 3 meses\n- Relevante: Alinhada com o objetivo da rede\n- Temporal: Prazo de 90 dias\n\nCTA: Baixe nosso template gratuito de metas no link da bio.", hashtags: ["#vendas", "#metas", "#crm", "#franquias", "#gestao"], embasamento: "Posts educativos no LinkedIn geram 2x mais engajamento entre decisores B2B, ideal para meio de funil com conteúdo de valor.", approved: true },
-      { id: "3", titulo: "Case - Franquia que Triplicou Leads com IA", formato: "Reels", rede: "Instagram", funil: "Fundo", roteiro: "[0-5s] HOOK: 'Essa franquia triplicou seus leads em 90 dias.'\n\n[5-15s] CONTEXTO: A Rede FastFood tinha 3 unidades e gerava em média 50 leads/mês.\n\n[15-30s] PROBLEMA: Time respondia leads manualmente, perdia oportunidades.\n\n[30-45s] SOLUÇÃO: Implementaram plataforma com IA para qualificação automática.\n\n[45-55s] RESULTADO: 150 leads/mês por unidade, 40% de conversão, ROI de 8x.\n\n[55-60s] CTA: 'Quer o mesmo resultado? Link na bio.'", hashtags: ["#case", "#ia", "#leads", "#franquias", "#resultados"], embasamento: "Reels com cases de sucesso e dados concretos convertem 5x mais no fundo de funil, pois oferecem prova social.", approved: false },
+      { id: "1", titulo: "5 Erros que Todo Franqueado Comete no Marketing", formato: "Carrossel", rede: "Instagram", funil: "Topo", roteiro: "ABERTURA: Você sabia que 78% dos franqueados cometem pelo menos um desses erros no marketing?\n\nERRO 1 — Não ter persona definida\nA maioria investe em anúncios sem saber exatamente quem quer atingir.\n\nERRO 2 — Ignorar o marketing local\nFranquias precisam de estratégia nacional E local.\n\nERRO 3 — Não medir resultados\nSe você não sabe seu CAC, CPL e taxa de conversão, está voando às cegas.\n\nERRO 4 — Conteúdo genérico demais\nPostar frases motivacionais não gera leads.\n\nERRO 5 — Não usar automação\nResponder leads manualmente em 2026?\n\nCTA: Quer corrigir esses erros? Acesse o link na bio.", hashtags: ["#marketing", "#franquias", "#erros", "#marketingdigital", "#leads"], embasamento: "Carrosséis educativos no Instagram têm 3x mais salvamentos, ideal para topo de funil com público que está na fase de descoberta.", status: "approved" },
+      { id: "2", titulo: "Como Definir Metas de Vendas para Sua Franquia", formato: "Feed", rede: "LinkedIn", funil: "Meio", roteiro: "Título: Como Definir Metas de Vendas que Realmente Funcionam\n\nMetas vagas geram resultados vagos. Se sua meta é 'vender mais', você já começou errado.\n\nUse o método SMART:\n- Específica: 'Aumentar vendas da unidade Centro em 20%'\n- Mensurável: Acompanhe semanalmente no CRM\n- Atingível: Baseie-se no histórico dos últimos 3 meses\n- Relevante: Alinhada com o objetivo da rede\n- Temporal: Prazo de 90 dias\n\nCTA: Baixe nosso template gratuito de metas no link da bio.", hashtags: ["#vendas", "#metas", "#crm", "#franquias", "#gestao"], embasamento: "Posts educativos no LinkedIn geram 2x mais engajamento entre decisores B2B, ideal para meio de funil com conteúdo de valor.", status: "approved" },
+      { id: "3", titulo: "Case - Franquia que Triplicou Leads com IA", formato: "Reels", rede: "Instagram", funil: "Fundo", roteiro: "[0-5s] HOOK: 'Essa franquia triplicou seus leads em 90 dias.'\n\n[5-15s] CONTEXTO: A Rede FastFood tinha 3 unidades e gerava em média 50 leads/mês.\n\n[15-30s] PROBLEMA: Time respondia leads manualmente, perdia oportunidades.\n\n[30-45s] SOLUÇÃO: Implementaram plataforma com IA para qualificação automática.\n\n[45-55s] RESULTADO: 150 leads/mês por unidade, 40% de conversão, ROI de 8x.\n\n[55-60s] CTA: 'Quer o mesmo resultado? Link na bio.'", hashtags: ["#case", "#ia", "#leads", "#franquias", "#resultados"], embasamento: "Reels com cases de sucesso e dados concretos convertem 5x mais no fundo de funil, pois oferecem prova social.", status: "pending" },
     ],
   },
 ];
 
 export default function ClienteConteudos() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
+  const { data: subscription } = useClienteSubscription();
+  const plan = getPlanBySlug(subscription?.plan);
+  const maxCampaigns = plan?.maxContentCampaigns ?? 1;
+  const planName = plan?.name ?? "Starter";
+
+  const [campaigns, setCampaigns] = useState<Campaign[]>(() =>
+    initialCampaigns.map(c => ({ ...c, conteudos: c.conteudos.map(migrateContentStatus) }))
+  );
   const [openCampaign, setOpenCampaign] = useState<string | null>(null);
   const [openContent, setOpenContent] = useState<GeneratedContent | null>(null);
   const [formatFilter, setFormatFilter] = useState<string>("all");
@@ -197,6 +218,9 @@ export default function ClienteConteudos() {
 
   const totalFormatos = qFeed + qCarrossel + qReels + qStory;
 
+  // Count campaigns this month
+  const campaignsThisMonth = campaigns.length; // simplified: count all
+
   // Rotate loading phrases
   useEffect(() => {
     if (!isGenerating) return;
@@ -216,7 +240,6 @@ export default function ClienteConteudos() {
     setLoadingPhrase(0);
 
     try {
-      // Read strategy data from localStorage if available
       let estrategia = null;
       try {
         const stored = localStorage.getItem("estrategia_data");
@@ -229,21 +252,8 @@ export default function ClienteConteudos() {
 
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
-          briefing: {
-            mes: bMes,
-            objetivo: bObjetivo,
-            tema: bTema,
-            promocoes: bPromocoes,
-            datas: bDatas,
-            destaques: bDestaques,
-            tom: bTom,
-          },
-          formatos: {
-            feed: qFeed,
-            carrossel: qCarrossel,
-            reels: qReels,
-            story: qStory,
-          },
+          briefing: { mes: bMes, objetivo: bObjetivo, tema: bTema, promocoes: bPromocoes, datas: bDatas, destaques: bDestaques, tom: bTom },
+          formatos: { feed: qFeed, carrossel: qCarrossel, reels: qReels, story: qStory },
           estrategia,
           persona: personaData,
         },
@@ -255,7 +265,7 @@ export default function ClienteConteudos() {
         (c: any, i: number) => ({
           ...c,
           id: `gen-${Date.now()}-${i}`,
-          approved: false,
+          status: "pending" as ApprovalStatus,
         })
       );
 
@@ -271,7 +281,6 @@ export default function ClienteConteudos() {
       const updatedCampaigns = [newCampaign, ...campaigns];
       setCampaigns(updatedCampaigns);
 
-      // Save to localStorage for Redes Sociais integration
       try {
         localStorage.setItem("content-campaigns", JSON.stringify(updatedCampaigns));
       } catch {}
@@ -288,17 +297,17 @@ export default function ClienteConteudos() {
     }
   };
 
-  const toggleApproval = (contentId: string) => {
+  const updateContentStatus = (contentId: string, newStatus: ApprovalStatus, changeNote?: string) => {
     setCampaigns((prev) =>
       prev.map((c) => ({
         ...c,
         conteudos: c.conteudos.map((ct) =>
-          ct.id === contentId ? { ...ct, approved: !ct.approved } : ct
+          ct.id === contentId ? { ...ct, status: newStatus, changeNote: changeNote || ct.changeNote } : ct
         ),
       }))
     );
     if (openContent?.id === contentId) {
-      setOpenContent((prev) => (prev ? { ...prev, approved: !prev.approved } : null));
+      setOpenContent((prev) => prev ? { ...prev, status: newStatus, changeNote: changeNote || prev.changeNote } : null);
     }
   };
 
@@ -306,23 +315,44 @@ export default function ClienteConteudos() {
     setCampaigns((prev) =>
       prev.map((c) =>
         c.id === campaignId
-          ? { ...c, conteudos: c.conteudos.map((ct) => ({ ...ct, approved: true })) }
+          ? { ...c, conteudos: c.conteudos.map((ct) => ({ ...ct, status: "approved" as ApprovalStatus })) }
           : c
       )
     );
     toast({ title: "Todos os conteúdos aprovados!" });
   };
 
+  const approvePending = (campaignId: string) => {
+    setCampaigns((prev) =>
+      prev.map((c) =>
+        c.id === campaignId
+          ? { ...c, conteudos: c.conteudos.map((ct) => ct.status === "pending" ? { ...ct, status: "approved" as ApprovalStatus } : ct) }
+          : c
+      )
+    );
+    toast({ title: "Conteúdos pendentes aprovados!" });
+  };
+
   const currentCampaign = campaigns.find((c) => c.id === openCampaign);
 
   const filteredConteudos = currentCampaign?.conteudos.filter((c) => {
     if (formatFilter !== "all" && c.formato !== formatFilter) return false;
-    if (statusFilter === "approved" && !c.approved) return false;
-    if (statusFilter === "pending" && c.approved) return false;
+    if (statusFilter === "approved" && c.status !== "approved") return false;
+    if (statusFilter === "pending" && c.status !== "pending") return false;
+    if (statusFilter === "changes_requested" && c.status !== "changes_requested") return false;
+    if (statusFilter === "rejected" && c.status !== "rejected") return false;
     return true;
   });
 
   const isCurrentMonth = (mes: string) => mes.includes("Fevereiro") && mes.includes("2026");
+
+  // Approval stats for current campaign
+  const approvalStats = currentCampaign ? {
+    total: currentCampaign.conteudos.length,
+    approved: currentCampaign.conteudos.filter(c => c.status === "approved").length,
+    changesRequested: currentCampaign.conteudos.filter(c => c.status === "changes_requested").length,
+    rejected: currentCampaign.conteudos.filter(c => c.status === "rejected").length,
+  } : { total: 0, approved: 0, changesRequested: 0, rejected: 0 };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -347,8 +377,20 @@ export default function ClienteConteudos() {
 
         {/* ═══ CAMPANHAS ═══ */}
         <TabsContent value="campanhas" className="space-y-4 mt-4">
+          {/* Quota banner */}
+          <UsageQuotaBanner
+            used={campaignsThisMonth}
+            limit={maxCampaigns}
+            label="campanhas de conteúdo"
+            planName={planName}
+          />
+
           {/* New campaign button */}
-          <Button className="w-full gap-2 h-12 text-sm font-semibold" onClick={() => { setWizardOpen(true); setWizardStep(1); }}>
+          <Button
+            className="w-full gap-2 h-12 text-sm font-semibold"
+            onClick={() => { setWizardOpen(true); setWizardStep(1); }}
+            disabled={maxCampaigns !== -1 && campaignsThisMonth >= maxCampaigns}
+          >
             <Plus className="w-4 h-4" /> Nova Campanha Mensal
           </Button>
 
@@ -587,19 +629,9 @@ export default function ClienteConteudos() {
                       <Badge className={`text-[9px] ${funnelColors[openContent.funil] || ""}`}>{openContent.funil}</Badge>
                     </div>
                   </div>
-                  <div className="flex gap-1.5 shrink-0">
-                    <Button
-                      variant={openContent.approved ? "outline" : "default"}
-                      size="sm"
-                      className={`h-8 text-xs gap-1 ${openContent.approved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
-                      onClick={() => { toggleApproval(openContent.id); toast({ title: openContent.approved ? "Aprovação removida" : "Conteúdo aprovado!" }); }}
-                    >
-                      {openContent.approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Aprovado</> : <><Check className="w-3.5 h-3.5" /> Aprovar</>}
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(openContent.roteiro); toast({ title: "Roteiro copiado!" }); }}>
-                      <Copy className="w-3.5 h-3.5" /> Copiar
-                    </Button>
-                  </div>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(openContent.roteiro); toast({ title: "Roteiro copiado!" }); }}>
+                    <Copy className="w-3.5 h-3.5" /> Copiar
+                  </Button>
                 </div>
 
                 {/* Script */}
@@ -626,71 +658,98 @@ export default function ClienteConteudos() {
                     </div>
                   </div>
                 )}
+
+                {/* Approval Panel */}
+                <ApprovalPanel
+                  status={openContent.status}
+                  changeNote={openContent.changeNote}
+                  onApprove={() => {
+                    updateContentStatus(openContent.id, "approved");
+                    toast({ title: "Conteúdo aprovado!" });
+                  }}
+                  onRequestChanges={(note) => {
+                    updateContentStatus(openContent.id, "changes_requested", note);
+                    toast({ title: "Alteração solicitada!" });
+                  }}
+                  onReject={() => {
+                    updateContentStatus(openContent.id, "rejected");
+                    toast({ title: "Conteúdo rejeitado." });
+                  }}
+                />
               </CardContent>
             </Card>
           ) : openCampaign && currentCampaign ? (
             /* Content cards inside campaign */
             <div className="space-y-3">
-              {/* Filters + approval summary */}
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Select value={formatFilter} onValueChange={setFormatFilter}>
-                    <SelectTrigger className="h-7 text-[10px] w-auto gap-1">
-                      <Filter className="w-3 h-3" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos formatos</SelectItem>
-                      <SelectItem value="Feed">Feed</SelectItem>
-                      <SelectItem value="Carrossel">Carrossel</SelectItem>
-                      <SelectItem value="Reels">Reels</SelectItem>
-                      <SelectItem value="Story">Story</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-7 text-[10px] w-auto gap-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos status</SelectItem>
-                      <SelectItem value="approved">Aprovados</SelectItem>
-                      <SelectItem value="pending">Pendentes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Badge variant="secondary" className="text-[10px] gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    {currentCampaign.conteudos.filter((c) => c.approved).length}/{currentCampaign.conteudos.length} aprovados
-                  </Badge>
-                </div>
-                {currentCampaign.conteudos.some((c) => !c.approved) && (
-                  <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => approveAll(currentCampaign.id)}>
-                    <Check className="w-3 h-3" /> Aprovar Todos
-                  </Button>
-                )}
+              {/* Approval Summary */}
+              <ApprovalSummary
+                total={approvalStats.total}
+                approved={approvalStats.approved}
+                changesRequested={approvalStats.changesRequested}
+                rejected={approvalStats.rejected}
+                onApproveAll={() => approveAll(currentCampaign.id)}
+                onApprovePending={() => approvePending(currentCampaign.id)}
+              />
+
+              {/* Filters */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={formatFilter} onValueChange={setFormatFilter}>
+                  <SelectTrigger className="h-7 text-[10px] w-auto gap-1">
+                    <Filter className="w-3 h-3" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos formatos</SelectItem>
+                    <SelectItem value="Feed">Feed</SelectItem>
+                    <SelectItem value="Carrossel">Carrossel</SelectItem>
+                    <SelectItem value="Reels">Reels</SelectItem>
+                    <SelectItem value="Story">Story</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-7 text-[10px] w-auto gap-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos status</SelectItem>
+                    <SelectItem value="approved">Aprovados</SelectItem>
+                    <SelectItem value="pending">Pendentes</SelectItem>
+                    <SelectItem value="changes_requested">Alteração Solicitada</SelectItem>
+                    <SelectItem value="rejected">Rejeitados</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Content grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {filteredConteudos?.map((content) => (
-                  <Card
-                    key={content.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${content.approved ? "border-emerald-500/20 bg-emerald-500/[0.02]" : "glass-card hover:bg-muted/30"}`}
-                    onClick={() => setOpenContent(content)}
-                  >
-                    <CardContent className="py-4 space-y-2.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold leading-tight flex-1">{content.titulo}</p>
-                        {content.approved && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Badge className={`text-[9px] ${formatColors[content.formato] || ""}`}>{content.formato}</Badge>
-                        <Badge className={`text-[9px] ${networkColors[content.rede] || ""}`}>{content.rede}</Badge>
-                        <Badge className={`text-[9px] ${funnelColors[content.funil] || ""}`}>{content.funil}</Badge>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground line-clamp-2">{content.roteiro.slice(0, 120)}...</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                {filteredConteudos?.map((content) => {
+                  const borderColor =
+                    content.status === "approved" ? "border-emerald-500/20 bg-emerald-500/[0.02]"
+                    : content.status === "changes_requested" ? "border-amber-500/20 bg-amber-500/[0.02]"
+                    : content.status === "rejected" ? "border-red-500/20 bg-red-500/[0.02]"
+                    : "glass-card hover:bg-muted/30";
+
+                  return (
+                    <Card
+                      key={content.id}
+                      className={`cursor-pointer transition-all hover:shadow-md ${borderColor}`}
+                      onClick={() => setOpenContent(content)}
+                    >
+                      <CardContent className="py-4 space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold leading-tight flex-1">{content.titulo}</p>
+                          <ApprovalStatusBadge status={content.status} />
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge className={`text-[9px] ${formatColors[content.formato] || ""}`}>{content.formato}</Badge>
+                          <Badge className={`text-[9px] ${networkColors[content.rede] || ""}`}>{content.rede}</Badge>
+                          <Badge className={`text-[9px] ${funnelColors[content.funil] || ""}`}>{content.funil}</Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-2">{content.roteiro.slice(0, 120)}...</p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
 
               {filteredConteudos?.length === 0 && (
@@ -704,7 +763,7 @@ export default function ClienteConteudos() {
             <div className="space-y-3">
               {campaigns.map((campaign) => {
                 const isCurrent = isCurrentMonth(campaign.label);
-                const approved = campaign.conteudos.filter((c) => c.approved).length;
+                const approved = campaign.conteudos.filter((c) => c.status === "approved").length;
                 const total = campaign.conteudos.length;
                 const allApproved = approved === total && total > 0;
 
@@ -781,7 +840,6 @@ export default function ClienteConteudos() {
                     <Badge variant="outline" className="text-[10px] font-mono">{item.proporcao}</Badge>
                   </div>
 
-                  {/* Specs */}
                   <div className="space-y-1">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Especificações</p>
                     {item.specs.map((s, i) => (
@@ -791,7 +849,6 @@ export default function ClienteConteudos() {
                     ))}
                   </div>
 
-                  {/* How to record */}
                   <div className="space-y-1">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                       <Camera className="w-3 h-3" /> Como Gravar
@@ -803,7 +860,6 @@ export default function ClienteConteudos() {
                     ))}
                   </div>
 
-                  {/* Structure */}
                   <div className="space-y-1">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Estrutura Ideal</p>
                     <div className="bg-muted/40 rounded-lg p-3">
@@ -831,7 +887,7 @@ export default function ClienteConteudos() {
           ) : (
             <div className="space-y-3">
               {campaigns.map((campaign) => {
-                const approved = campaign.conteudos.filter((c) => c.approved).length;
+                const approved = campaign.conteudos.filter((c) => c.status === "approved").length;
                 const total = campaign.conteudos.length;
                 const formatCounts: Record<string, number> = {};
                 campaign.conteudos.forEach((c) => {
@@ -872,8 +928,8 @@ export default function ClienteConteudos() {
                         </div>
                         {campaign.conteudos.slice(0, 5).map((c) => (
                           <div key={c.id} className="flex items-center gap-2 text-xs">
-                            {c.approved ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Circle className="w-3 h-3 text-muted-foreground" />}
-                            <span className={c.approved ? "" : "text-muted-foreground"}>{c.titulo}</span>
+                            <ApprovalStatusBadge status={c.status} />
+                            <span className={c.status === "approved" ? "" : "text-muted-foreground"}>{c.titulo}</span>
                             <Badge className={`text-[8px] ml-auto ${formatColors[c.formato] || ""}`}>{c.formato}</Badge>
                           </div>
                         ))}
