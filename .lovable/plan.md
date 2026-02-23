@@ -1,115 +1,65 @@
 
-# Redesign: Conversas (Chat) + Dashboard Inicio
+# Corrigir Build Error + RLS de Metas para Cliente
 
-Duas melhorias principais: transformar o Chat em uma experiencia visual mais proxima do WhatsApp e reconstruir o Dashboard Inicio com dados reais, insights inteligentes e orientacao de proximos passos.
+## Problema 1 -- Build Error (bloqueia tudo)
 
----
+O arquivo `ChatConversation.tsx` tem um erro de sintaxe: o bloco `if (!contact)` foi inserido **dentro** do callback do `useMemo` (linha 176), entre o `return items;` e o fechamento `}, [messages]);` que sumiu. Isso impede o build inteiro, o que causa falha em todas as funcoes do app.
 
-## PARTE 1 -- Conversas (renomear Chat)
+### Correcao
 
-### Sidebar
-- Renomear "Chat" para "Conversas" em `ClienteSidebar.tsx`
+Fechar o `useMemo` corretamente na linha 175 (`}, [messages]);`) e mover o `if (!contact)` para **depois** do `useMemo`.
 
-### Layout Geral (ClienteChat.tsx)
-- Renomear titulo para "Conversas"
-- Layout fullscreen: remover `max-w-6xl` e usar `h-[calc(100vh-112px)]` para preencher tela
-- Background da area de mensagens com pattern sutil (estilo WhatsApp wallpaper) usando CSS
+Trecho corrigido (linhas 175-191):
+```
+    return items;
+  }, [messages]);
 
-### ChatContactList.tsx -- Redesign
-- **Header da lista**: contador de conversas + badge "Online" da instancia
-- **Preview da ultima mensagem** em cada contato (texto truncado 1 linha abaixo do nome)
-- **Separador de data** entre contatos de hoje vs ontem vs mais antigos
-- **Fixar contatos**: contatos com mensagens nao lidas ficam no topo, separados por divisor visual
-- Melhorar estilos: hover mais suave, avatar maior (44px), tipografia mais clara
+  if (!contact) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center px-6 whatsapp-bg">
+        ...
+      </div>
+    );
+  }
 
-### ChatConversation.tsx -- Redesign
-- **Header redesenhado**: avatar + nome + telefone + status online/offline + badges CRM tudo em uma linha premium
-- **Painel de acoes colapsavel**: as acoes CRM (criar lead, mudar etapa, trocar agente, modo IA/Humano) ficam num painel que pode ser expandido/recolhido com botao
-- **Separadores de data nas mensagens**: agrupar mensagens por dia com pill "Hoje", "Ontem", "12 de fev"
-- **Input melhorado**: placeholder mais descritivo, icone de anexo (visual only), botao de envio com animacao, borda arredondada estilo WhatsApp
-- **Estado vazio melhorado**: ilustracao e texto mais premium quando nenhum contato esta selecionado
+  return (
+```
 
-### ChatMessageBubble.tsx -- Redesign
-- **Tail da bolha**: adicionar CSS para a "cauda" triangular no canto da bolha (estilo WhatsApp)
-- **Cores**: mensagens recebidas em tom neutro mais claro (bg-[#1a1a2e] no dark), enviadas em tom primary mais profundo
-- **Media preview**: se houver `media_url`, mostrar thumbnail clicavel ao inves de link texto
-- **Reacoes visuais**: badges de IA/Humano mais discretos (inline com horario ao inves de bloco separado)
-- **Agrupamento**: mensagens consecutivas da mesma direcao compartilham avatar e reduzem espacamento
+## Problema 2 -- Nao consegue criar Metas
 
----
+A tabela `goals` tem apenas duas policies RLS:
+- `Admins can manage goals` (ALL) -- permite somente `super_admin` e `admin`
+- `Members can view org goals` (SELECT) -- permite membros da org
 
-## PARTE 2 -- Dashboard Inicio
+O usuario com role `cliente_admin` consegue **ver** metas mas **nao pode criar/editar/excluir** porque nao esta incluso na policy ALL.
 
-### Dados Reais (substituir mocks)
-O dashboard atual usa valores hardcoded (`R$ 47.500`, `18,5%`, etc). Mudar para dados reais:
+### Correcao
 
-- **Receita Estimada**: somar `value` de `crm_leads` com `won_at` no mes atual (via `useCrmLeads`)
-- **Leads do Mes**: contar leads criados no mes atual
-- **Taxa de Conversao**: leads ganhos / total leads do mes
-- **Meta vs Realizado**: usar `useActiveGoals` + `useGoalProgress` para pegar a meta principal e calcular %
+Alterar a policy `Admins can manage goals` para incluir `cliente_admin`:
 
-### KPIs Dinamicos
-Trocar os 4 KPIs hardcoded por calculos reais:
-- Comparar com mes anterior para gerar trend (up/down)
-- Sublabel dinamico ("vs mes anterior", "+X leads", etc)
+```sql
+DROP POLICY "Admins can manage goals" ON public.goals;
+CREATE POLICY "Admins can manage goals"
+  ON public.goals FOR ALL
+  USING (
+    has_role(auth.uid(), 'super_admin') OR
+    has_role(auth.uid(), 'admin') OR
+    has_role(auth.uid(), 'cliente_admin')
+  )
+  WITH CHECK (
+    has_role(auth.uid(), 'super_admin') OR
+    has_role(auth.uid(), 'admin') OR
+    has_role(auth.uid(), 'cliente_admin')
+  );
+```
 
-### Frase do Dia
-- Usar hook `useDailyMessages` para buscar a mensagem do dia da organizacao
-- Se nao houver mensagem do dia, gerar uma frase motivacional automatica baseada no dia da semana
-- Card premium com gradiente e icone Sparkles
+## Problema 3 -- Nao consegue excluir Agente IA
 
-### Insights Inteligentes (NOVO)
-Secao "Insights" que analisa os dados do CRM e gera alertas reais:
-- "X leads sem contato ha +48h" (calculado de `crm_leads` sem atividade recente)
-- "Meta mensal em X%" (real do `useGoalProgress`)
-- "X conversas aguardando resposta" (de `whatsapp_contacts` com `unread_count > 0`)
-- Cards clicaveis que levam ao modulo correspondente
+A policy de DELETE na tabela `client_ai_agents` ja permite `cliente_admin`. Com o build error corrigido (Problema 1), a exclusao deve voltar a funcionar normalmente. Se persistir, sera investigado separadamente.
 
-### Proximos Passos / Guia (NOVO)
-Secao "Proximos Passos" que detecta o que o usuario ainda nao usou e sugere acoes:
-- Verificar se tem WhatsApp conectado, se nao: "Conecte seu WhatsApp para atender leads automaticamente"
-- Verificar se tem agentes IA criados, se nao: "Crie seu primeiro Agente IA para automatizar atendimento"
-- Verificar se tem metas configuradas, se nao: "Configure suas metas do mes para acompanhar resultados"
-- Verificar se tem conteudos criados, se nao: "Gere conteudos com IA para suas redes sociais"
-- Cada sugestao e um card com icone, descricao e botao de acao que navega para o modulo
-
-### Grafico de Receita Real
-Substituir `revenueData` mock por dados agrupados semanalmente de `crm_leads` com `won_at` no mes atual
-
-### Metas do Mes Reais
-Substituir `monthlyGoals` mock por dados de `useActiveGoals` + `useGoalProgress`
-
-### Layout Melhorado
-- Frase do dia no topo, abaixo dos alertas
-- KPIs reais
-- Secao "Insights" com cards de alerta
-- ProgressCtaCard com dados reais
-- Grafico + Proximos Passos lado a lado
-- Tarefas do dia + Metas do mes
-
----
-
-## Detalhes Tecnicos
-
-### Arquivos Modificados
+## Resumo de arquivos
 
 | Arquivo | Acao |
 |---------|------|
-| `src/pages/cliente/ClienteChat.tsx` | Renomear titulo, layout fullscreen, background pattern |
-| `src/components/cliente/ChatContactList.tsx` | Preview mensagem, separadores de data, contatos nao lidos no topo, tamanhos |
-| `src/components/cliente/ChatConversation.tsx` | Header premium, painel acoes colapsavel, separadores de data, input melhorado |
-| `src/components/cliente/ChatMessageBubble.tsx` | Cauda da bolha CSS, cores, agrupamento, badges inline |
-| `src/pages/cliente/ClienteInicio.tsx` | Substituir mocks por dados reais, adicionar frase do dia, insights, proximos passos |
-| `src/components/ClienteSidebar.tsx` | Renomear "Chat" para "Conversas" |
-
-### Hooks Utilizados (ja existem)
-- `useCrmLeads` -- leads do CRM para KPIs reais
-- `useActiveGoals` + `useGoalProgress` -- metas e progresso
-- `useDailyMessages` -- frase do dia
-- `useWhatsAppContacts` -- contador de conversas pendentes
-- `useWhatsAppInstance` -- verificar se WA esta conectado
-- `useClienteAgents` -- verificar se tem agentes IA
-- `useClienteChecklist` -- tarefas do dia
-
-### Nenhuma migracao SQL necessaria
-Todos os dados necessarios ja estao disponveis nas tabelas e hooks existentes.
+| `src/components/cliente/ChatConversation.tsx` | Corrigir sintaxe: fechar `useMemo` e mover `if (!contact)` para fora |
+| Migracao SQL | Adicionar `cliente_admin` na policy de `goals` |
