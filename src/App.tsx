@@ -68,6 +68,7 @@ import ClienteTrafegoPago from "./pages/cliente/ClienteTrafegoPago";
 import ClienteIntegracoes from "./pages/cliente/ClienteIntegracoes";
 import ClientePlanoCreditos from "./pages/cliente/ClientePlanoCreditos";
 import ClienteConfiguracoes from "./pages/cliente/ClienteConfiguracoes";
+import ClienteEditorVideo from "./pages/cliente/ClienteEditorVideo";
 
 
 const queryClient = new QueryClient();
@@ -151,6 +152,7 @@ const App = () => (
                 <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
                 <Route path="conteudos" element={<ClienteConteudos />} />
                 <Route path="redes-sociais" element={<ClienteRedesSociais />} />
+                <Route path="editor-video" element={<ClienteEditorVideo />} />
                 <Route path="sites" element={<ClienteSites />} />
                 <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
                 <Route path="integracoes" element={<ClienteIntegracoes />} />
