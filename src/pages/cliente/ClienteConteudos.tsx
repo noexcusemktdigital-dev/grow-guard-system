@@ -26,7 +26,7 @@ import { ApprovalPanel, ApprovalStatusBadge, type ApprovalStatus } from "@/compo
 import { ApprovalSummary } from "@/components/approval/ApprovalSummary";
 import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
-import { getPlanBySlug } from "@/constants/plans";
+import { getPlanBySlug, recommendContentDistribution } from "@/constants/plans";
 
 /* ── Types ── */
 interface GeneratedContent {
@@ -180,7 +180,7 @@ const initialCampaigns: Campaign[] = [
 export default function ClienteConteudos() {
   const { data: subscription } = useClienteSubscription();
   const plan = getPlanBySlug(subscription?.plan);
-  const maxCampaigns = plan?.maxContentCampaigns ?? 1;
+  const maxContents = plan?.maxContents ?? 8;
   const planName = plan?.name ?? "Starter";
 
   const [campaigns, setCampaigns] = useState<Campaign[]>(() =>
@@ -211,15 +211,19 @@ export default function ClienteConteudos() {
   const [personaDescricao, setPersonaDescricao] = useState("");
 
   // Format quantities
-  const [qFeed, setQFeed] = useState(8);
-  const [qCarrossel, setQCarrossel] = useState(4);
-  const [qReels, setQReels] = useState(4);
-  const [qStory, setQStory] = useState(4);
+  const [qFeed, setQFeed] = useState(0);
+  const [qCarrossel, setQCarrossel] = useState(0);
+  const [qReels, setQReels] = useState(0);
+  const [qStory, setQStory] = useState(0);
 
   const totalFormatos = qFeed + qCarrossel + qReels + qStory;
 
-  // Count campaigns this month
-  const campaignsThisMonth = campaigns.length; // simplified: count all
+  // Count total individual contents this month (not campaigns)
+  const contentsThisMonth = campaigns
+    .filter(c => c.mes.includes("2026"))
+    .reduce((sum, c) => sum + c.conteudos.length, 0);
+  const saldoRestante = maxContents === -1 ? Infinity : Math.max(0, maxContents - contentsThisMonth);
+  const quotaExceeded = maxContents !== -1 && totalFormatos > saldoRestante;
 
   // Rotate loading phrases
   useEffect(() => {
@@ -379,9 +383,9 @@ export default function ClienteConteudos() {
         <TabsContent value="campanhas" className="space-y-4 mt-4">
           {/* Quota banner */}
           <UsageQuotaBanner
-            used={campaignsThisMonth}
-            limit={maxCampaigns}
-            label="campanhas de conteúdo"
+            used={contentsThisMonth}
+            limit={maxContents}
+            label="conteúdos"
             planName={planName}
           />
 
@@ -389,7 +393,7 @@ export default function ClienteConteudos() {
           <Button
             className="w-full gap-2 h-12 text-sm font-semibold"
             onClick={() => { setWizardOpen(true); setWizardStep(1); }}
-            disabled={maxCampaigns !== -1 && campaignsThisMonth >= maxCampaigns}
+            disabled={maxContents !== -1 && contentsThisMonth >= maxContents}
           >
             <Plus className="w-4 h-4" /> Nova Campanha Mensal
           </Button>
@@ -514,12 +518,35 @@ export default function ClienteConteudos() {
                   {wizardStep === 2 && (
                     <div className="space-y-4 mt-2">
                       <p className="text-xs text-muted-foreground">Escolha quantos conteúdos de cada formato deseja gerar.</p>
+
+                      {/* Saldo card */}
+                      <div className={`rounded-lg border p-3 flex items-center justify-between ${quotaExceeded ? "border-destructive/30 bg-destructive/5" : "border-primary/20 bg-primary/5"}`}>
+                        <div>
+                          <p className="text-xs font-semibold">Saldo disponível: {maxContents === -1 ? "Ilimitado" : `${saldoRestante} conteúdos`}</p>
+                          <p className="text-[10px] text-muted-foreground">{contentsThisMonth} de {maxContents === -1 ? "∞" : maxContents} usados este mês</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-[10px] h-7 gap-1"
+                          onClick={() => {
+                            const rec = recommendContentDistribution(maxContents === -1 ? 12 : saldoRestante);
+                            setQFeed(rec.feed);
+                            setQCarrossel(rec.carrossel);
+                            setQReels(rec.reels);
+                            setQStory(rec.story);
+                          }}
+                        >
+                          <Lightbulb className="w-3 h-3" /> Recomendar para mim
+                        </Button>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          { label: "Posts Feed", icon: <Image className="w-5 h-5" />, value: qFeed, set: setQFeed, color: "bg-blue-500/10 border-blue-500/20", suggestion: 8 },
-                          { label: "Carrosséis", icon: <Layers className="w-5 h-5" />, value: qCarrossel, set: setQCarrossel, color: "bg-purple-500/10 border-purple-500/20", suggestion: 4 },
-                          { label: "Roteiros Reels", icon: <Video className="w-5 h-5" />, value: qReels, set: setQReels, color: "bg-pink-500/10 border-pink-500/20", suggestion: 4 },
-                          { label: "Stories", icon: <Smartphone className="w-5 h-5" />, value: qStory, set: setQStory, color: "bg-amber-500/10 border-amber-500/20", suggestion: 4 },
+                          { label: "Posts Feed", icon: <Image className="w-5 h-5" />, value: qFeed, set: setQFeed, color: "bg-blue-500/10 border-blue-500/20" },
+                          { label: "Carrosséis", icon: <Layers className="w-5 h-5" />, value: qCarrossel, set: setQCarrossel, color: "bg-purple-500/10 border-purple-500/20" },
+                          { label: "Roteiros Reels", icon: <Video className="w-5 h-5" />, value: qReels, set: setQReels, color: "bg-pink-500/10 border-pink-500/20" },
+                          { label: "Stories", icon: <Smartphone className="w-5 h-5" />, value: qStory, set: setQStory, color: "bg-amber-500/10 border-amber-500/20" },
                         ].map((f) => (
                           <Card key={f.label} className={`border ${f.color} cursor-pointer`}>
                             <CardContent className="py-4 flex flex-col items-center gap-2">
@@ -528,25 +555,27 @@ export default function ClienteConteudos() {
                               <Input
                                 type="number"
                                 min={0}
-                                max={20}
+                                max={maxContents === -1 ? 20 : saldoRestante}
                                 value={f.value}
-                                onChange={(e) => f.set(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
+                                onChange={(e) => f.set(Math.max(0, Math.min(maxContents === -1 ? 20 : saldoRestante, parseInt(e.target.value) || 0)))}
                                 className="w-20 text-center h-9"
                               />
-                              <p className="text-[10px] text-muted-foreground">Sugestão: {f.suggestion}</p>
                             </CardContent>
                           </Card>
                         ))}
                       </div>
-                      <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                      <div className={`flex items-center justify-between rounded-lg p-3 ${quotaExceeded ? "bg-destructive/10" : "bg-muted/50"}`}>
                         <span className="text-sm font-medium">Total de conteúdos</span>
-                        <Badge className="text-sm px-3 py-1">{totalFormatos}</Badge>
+                        <Badge variant={quotaExceeded ? "destructive" : "default"} className="text-sm px-3 py-1">{totalFormatos}</Badge>
                       </div>
+                      {quotaExceeded && (
+                        <p className="text-xs text-destructive font-medium">Reduza a quantidade. Você pode gerar até {saldoRestante} conteúdos.</p>
+                      )}
                       <div className="flex gap-2">
                         <Button variant="outline" className="flex-1" onClick={() => setWizardStep(1)}>
                           <ArrowLeft className="w-4 h-4" /> Voltar
                         </Button>
-                        <Button className="flex-1" onClick={() => setWizardStep(3)} disabled={totalFormatos === 0}>
+                        <Button className="flex-1" onClick={() => setWizardStep(3)} disabled={totalFormatos === 0 || quotaExceeded}>
                           Próximo <ArrowRight className="w-4 h-4" />
                         </Button>
                       </div>
