@@ -1,34 +1,58 @@
 
 
-# Correcoes: Numero WhatsApp, Canal fixo e Transbordo
+# Correções: WhatsApp numero real + Criacao sequencial do agente
 
-## Resumo
+## Problema 1: Numero do WhatsApp ainda mostra instancia
 
-Tres ajustes: (1) buscar o numero real do telefone via endpoint `/device` da Z-API, (2) fixar o canal como WhatsApp removendo o seletor, (3) explicar e renomear "transbordo".
+O banco confirma: a instancia `3EF255AF...` esta com `status: connected` mas `phone_number: NULL`.
+
+A edge function ja tem o codigo para chamar `/device`, mas o numero nunca foi preenchido. Isso indica que o `check-status` nao foi chamado desde o ultimo deploy, ou que o deploy nao aconteceu.
+
+**Solucao em 2 partes:**
+
+### a) Re-deploy + log na edge function
+- Garantir que a edge function `whatsapp-setup` esta deployada com a logica do `/device`
+- Adicionar `console.log` no retorno do `/device` para diagnostico
+
+### b) Auto-sync no frontend
+- Quando o `AgentFormSheet` abrir e detectar `whatsappInstance` com `status === "connected"` mas `phone_number === null`, disparar automaticamente o `check-status` via edge function
+- Apos o retorno, invalidar a query `whatsapp-instance` para atualizar a tela
+- Remover o `window.location.reload()` e usar `queryClient.invalidateQueries`
+
+Assim, o usuario nunca mais vera "Instancia XXX..." — o numero sera buscado automaticamente.
 
 ---
 
-## 1. Buscar numero real do WhatsApp via endpoint `/device`
+## Problema 2: Objetivos ja sao determinados pela funcao
 
-O endpoint `/status` da Z-API **nao retorna o numero do telefone**. O campo `phoneConnected` nao existe na resposta. O numero esta disponivel no endpoint `/device`.
+Os objetivos **ja estao vinculados a funcao (role)** no codigo atual:
+- SDR: Qualificar lead, Coletar informacoes, Agendar reuniao, Identificar decisor
+- Closer: Apresentar proposta, Negociar, Fechar venda, Superar objecoes
+- Pos-venda: Verificar satisfacao, Coletar feedback, Oferecer upsell, Resolver duvidas
+- Suporte: Resolver problema, Escalar ticket, Coletar informacoes do erro, Encaminhar para setor
 
-**Mudanca em `supabase/functions/whatsapp-setup/index.ts`:**
-- Apos verificar que `connected === true` no `/status`, fazer uma segunda chamada a `GET /instances/{id}/token/{token}/device` com o header `Client-Token`
-- A resposta do `/device` contem o campo `phone` com o numero real (ex: `"5511999999999"`)
-- Salvar esse valor no campo `phone_number` da tabela `whatsapp_instances`
+Quando o usuario troca a funcao, os objetivos mudam automaticamente. **Nao precisa de alteracao** nesse ponto.
 
-**Mudanca em `src/components/cliente/AgentFormSheet.tsx`:**
-- Trocar `window.location.reload()` por `queryClient.invalidateQueries` para UX mais fluida ao clicar "Atualizar numero"
+---
 
-## 2. Canal fixo como WhatsApp
+## Problema 3: Criacao sequencial (passo a passo)
 
-Remover o `Select` de canal (WhatsApp, Instagram, E-mail, Website) da aba Identidade. O campo `channel` sera fixado como `"whatsapp"` no estado do formulario. O seletor nao sera exibido, liberando espaco na interface.
+Atualmente todas as 5 abas ficam desbloqueadas ao mesmo tempo. O usuario quer um fluxo guiado onde cada etapa so desbloqueia apos a anterior ser preenchida.
 
-## 3. Transbordo -- o que e e como renomear
+**Regras de desbloqueio:**
 
-**"Solicitar transbordo"** significa que o agente de IA pode pedir para um humano assumir a conversa. Quando o agente percebe que nao consegue resolver (ex: cliente irritado, assunto complexo), ele envia um sinal interno de "transbordo" -- ou seja, transfere o atendimento para uma pessoa real.
+1. **Identidade** — sempre disponivel (primeira etapa)
+2. **Persona** — desbloqueia quando Identidade tiver: `name` preenchido + `role` selecionado + `gender` selecionado
+3. **Base de Conhecimento** — desbloqueia quando Persona tiver pelo menos: `greeting` selecionado + 1 `trait` selecionada
+4. **Prompt e Objetivos** — desbloqueia quando Base de Conhecimento tiver pelo menos 1 item adicionado
+5. **Simulador** — desbloqueia quando Prompt tiver `system_prompt` preenchido
 
-**Acao**: Renomear o label de "Solicitar transbordo" para **"Transferir para atendente humano"**, que e mais claro para o usuario.
+**Implementacao:**
+- Calcular `completedSteps` baseado no estado do formulario
+- Tabs desabilitadas recebem `disabled` e estilo visual de "cadeado"
+- Ao completar uma etapa, avancar automaticamente para a proxima
+- Botao "Proximo" no final de cada aba para facilitar a navegacao
+- Ao editar um agente existente, todas as abas ficam desbloqueadas (o agente ja foi criado)
 
 ---
 
@@ -36,14 +60,13 @@ Remover o `Select` de canal (WhatsApp, Instagram, E-mail, Website) da aba Identi
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `supabase/functions/whatsapp-setup/index.ts` | Adicionar chamada ao `/device` da Z-API para obter o numero real quando conectado |
-| `src/components/cliente/AgentFormSheet.tsx` | Remover Select de canal (fixar "whatsapp"), trocar reload por invalidateQueries, renomear "transbordo" |
+| `src/components/cliente/AgentFormSheet.tsx` | Auto-sync do phone_number, criacao sequencial com tabs bloqueadas, botoes "Proximo", invalidateQueries |
+| `supabase/functions/whatsapp-setup/index.ts` | Adicionar logs de diagnostico no retorno do `/device` |
 
 ## Detalhes Tecnicos
 
-- Endpoint Z-API: `GET https://api.z-api.io/instances/{instanceId}/token/{token}/device` com header `Client-Token: {clientToken}`
-- Resposta esperada: `{ phone: "5511999999999", ... }`
-- O `phone` sera salvo em `whatsapp_instances.phone_number`
-- No formulario, o campo `channel` sera inicializado como `"whatsapp"` e nao tera selector visivel
-- O label "Solicitar transbordo" sera trocado por "Transferir para atendente humano"
-
+- A funcao `whatsapp-setup` sera re-deployada para garantir que o codigo do `/device` esta ativo
+- No `AgentFormSheet`, um `useEffect` detecta `whatsappInstance?.status === "connected" && !whatsappInstance.phone_number` e chama `check-status` automaticamente
+- As tabs usam uma variavel de estado `activeTab` controlada pelo componente, com `pointer-events-none opacity-50` nas tabs bloqueadas
+- Para agentes existentes (`isEditing === true`), todas as tabs ficam desbloqueadas
+- O `useQueryClient` sera importado para fazer `invalidateQueries` no lugar de `window.location.reload()`
