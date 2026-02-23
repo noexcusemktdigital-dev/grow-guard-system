@@ -1,64 +1,106 @@
 
-# Corrigir Formulario de Criacao de Metas
 
-## Problemas Identificados
+# Separar Diagnostico e Metas + Adicionar Graficos de Acompanhamento
 
-1. **Valor alvo sem formatacao**: O campo `target_value` e um `<Input type="number">` simples, sem separador de milhar (ponto/virgula no padrao brasileiro). Ex: usuario digita `50000` sem saber se e R$ 50 ou R$ 50.000.
-2. **Escopo "Individual" nao mostra seletor de pessoa**: Quando o usuario seleciona escopo "Individual", nao aparece nenhum dropdown para escolher qual pessoa. O formulario tem logica para `novaMeta.scope === "team"` mas falta a condicao para `"individual"`.
-3. **Escopo "Equipe" so aparece se ha times cadastrados**: Se nao houver times, o seletor nao aparece e nao ha orientacao ao usuario.
-4. **Abas desnecessarias**: O usuario quer remover as abas (Diagnostico, Metas, Historico) e usar somente filtros na area de metas.
+## Resumo
 
-## Mudancas
+O Diagnostico Comercial e as Metas estao atualmente misturados na mesma pagina (`ClientePlanoVendas`). Precisam ser separados em paginas independentes. A pagina de Metas precisa ter graficos de acompanhamento que puxam dados reais do CRM.
 
-### 1. Formulario de Nova Meta (em `ClientePlanoVendas.tsx`)
+---
 
-**Campo "Valor alvo"**: Trocar `<Input type="number">` por um input de texto com mascara brasileira (R$ 50.000,00 para metricas monetarias, ou numero simples para leads/reunioes/contratos). Ao salvar, faz o parse para numero.
+## Mudancas na Sidebar
 
-**Seletor de pessoa (individual)**: Adicionar import do hook `useCrmTeam` que ja existe e retorna membros da organizacao. Quando `scope === "individual"`, renderizar um `<Select>` com a lista de membros (full_name + role).
+```text
+VENDAS (antes)                    VENDAS (depois)
+  Plano de Vendas                   Plano de Vendas (diagnostico)
+  CRM                              Metas            <-- NOVA entrada
+  Chat                             CRM
+  ...                              Chat
+                                   ...
+```
 
-**Seletor de time (equipe)**: Manter o existente, mas adicionar mensagem "Nenhum time cadastrado" quando `teams` estiver vazio.
+Adicionar um item "Metas" com icone `BarChart3` na sidebar, apontando para `/cliente/metas`.
 
-### 2. Remover sistema de abas
+---
 
-A pagina continuara com o diagnostico e metas, mas sem abas. O layout sera:
-- Secao de Diagnostico (consultoria) fica no topo
-- Secao de Metas fica logo abaixo, sempre visivel, com os filtros de escopo ja existentes
-- Historico de metas fica como secao colapsavel dentro de Metas (ja esta assim)
-- Historico de diagnosticos fica como secao colapsavel no fim da pagina
+## Pagina `ClientePlanoVendas.tsx` -- Somente Diagnostico
 
-### 3. Formatacao de valores monetarios no input
+Remover toda a secao de Metas (linhas ~992-1234) desta pagina. Ela ficara apenas com:
+- Header "Plano de Vendas"
+- Diagnostico interativo (perguntas em secoes)
+- Resultado do diagnostico (termometro, radar, insights, plano de acao, projecoes)
+- Historico de diagnosticos
 
-Para metricas de dinheiro (revenue, avg_ticket): formatar com separador de milhar brasileiro usando `toLocaleString("pt-BR")` no display, e fazer parse ao salvar removendo pontos e trocando virgula por ponto.
+---
 
-Para metricas de contagem (leads, contracts, meetings, conversions): manter input numerico simples.
+## Nova Pagina `ClienteMetas.tsx` -- Metas com Graficos
+
+Pagina dedicada com:
+
+### 1. Header + Filtros (sem abas)
+- Titulo "Metas Comerciais" com subtitulo e mes atual
+- Filtros inline: [Todas] [Empresa] [Equipe] [Individual]
+- Botao "Nova Meta"
+
+### 2. KPI Summary (4 cards)
+- Metas Ativas / Batidas / Progresso Medio / Alta Prioridade
+- Igual ao que ja existe, mantido
+
+### 3. Graficos de Acompanhamento (NOVO)
+
+Secao com 2-3 graficos que puxam dados reais do CRM via `useGoalProgress`:
+
+**Grafico 1 -- Progresso das Metas (BarChart horizontal)**
+- Cada barra representa uma meta ativa
+- Barra mostra valor atual vs valor alvo
+- Cores: verde (>=80%), amarelo (>=50%), vermelho (<50%)
+
+**Grafico 2 -- Evolucao Diaria do Mes (AreaChart)**
+- Eixo X: dias do mes (1-28/30/31)
+- Linhas: progresso acumulado de cada meta (dados vindos de `crm_leads.created_at` e `crm_leads.won_at`)
+- Linha pontilhada mostrando o ritmo ideal (linear do 0 ao target)
+
+**Grafico 3 -- Comparativo por Escopo (BarChart agrupado)**
+- Agrupa metas por escopo (Empresa, Equipe, Individual)
+- Mostra media de progresso por grupo
+
+### 4. Lista de Goal Cards
+- Cards visuais com progress ring, barra, status, ritmo (GoalCard existente)
+- Sem abas, tudo junto, filtrado pelos botoes de escopo
+
+### 5. Historico de Metas (Collapsible)
+- Metas de meses anteriores, igual ao existente
+
+### 6. Dialog Nova Meta
+- Migrado da pagina atual sem alteracoes
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos Modificados
+### Arquivos
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/pages/cliente/ClientePlanoVendas.tsx` | 1) Adicionar import de `useCrmTeam` 2) Remover `<Tabs>` wrapper, renderizar diagnostico e metas como secoes sequenciais 3) No dialog Nova Meta: adicionar seletor de membro quando scope="individual", melhorar input de valor com mascara BR, mostrar mensagem quando nao ha times 4) Mover historico de diagnosticos para secao colapsavel |
+| Arquivo | Acao |
+|---------|------|
+| `src/pages/cliente/ClienteMetas.tsx` | **NOVO** -- Pagina dedicada de metas com graficos |
+| `src/pages/cliente/ClientePlanoVendas.tsx` | **MODIFICAR** -- Remover secao de metas (linhas 992-1234), manter somente diagnostico |
+| `src/components/ClienteSidebar.tsx` | **MODIFICAR** -- Adicionar item "Metas" na secao de vendas |
+| `src/App.tsx` | **MODIFICAR** -- Adicionar rota `/cliente/metas` |
 
-### Input de Valor com Mascara
+### Graficos
 
-Usar estado local `targetDisplay` como string formatada. No `onChange`, extrair apenas digitos/virgula, formatar com `toLocaleString("pt-BR")`. No submit, converter para numero com `parseFloat(valor.replace(/\./g, "").replace(",", "."))`.
+Usarao `recharts` (ja instalado):
+- `BarChart` horizontal para progresso de cada meta
+- `AreaChart` para evolucao diaria
+- `BarChart` agrupado para comparativo por escopo
 
-### Seletor Individual
+Os dados vem do hook `useGoalProgress` que ja calcula `currentValue`, `percent`, `pacePerDay`, `remaining` e `daysLeft` a partir dos dados reais de `crm_leads` e `crm_activities`.
 
-```
-{novaMeta.scope === "individual" && (
-  <div>
-    <Label>Responsavel</Label>
-    <Select value={novaMeta.assigned_to} onValueChange={...}>
-      {members.map(m => <SelectItem key={m.user_id} value={m.user_id}>{m.full_name}</SelectItem>)}
-    </Select>
-  </div>
-)}
-```
+### Hook useGoalProgress
 
-### Validacao no Submit
+Ja existe e retorna dados suficientes para os graficos. Nenhuma alteracao necessaria no hook.
 
-Adicionar validacao: se scope="team" exigir `team_id` preenchido; se scope="individual" exigir `assigned_to` preenchido. Mostrar toast de erro se faltar.
+### Nenhuma migracao SQL necessaria
+
+Todas as colunas necessarias ja existem na tabela `goals`.
+
