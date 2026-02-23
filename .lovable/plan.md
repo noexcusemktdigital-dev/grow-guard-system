@@ -1,118 +1,176 @@
 
-# Estrategia de Marketing — Reformulacao Completa
 
-Transformar a pagina "Plano de Marketing" em "Estrategia de Marketing", uma experiencia de consultoria interativa que diagnostica, orienta e conecta o cliente aos produtos da plataforma.
+# Estrategia de Marketing — Perguntas Agrupadas e Diagnostico Profundo
 
----
-
-## Conceito
-
-A pagina atual tem um dashboard com dados mock e um diagnostico basico com perguntas de radio. A nova versao sera uma jornada consultiva em 3 etapas:
-
-1. **Conversa Estrategica** (wizard de perguntas interativas)
-2. **Resultado e Diagnostico** (relatorio visual com termometro, radar, insights e recomendacoes)
-3. **Mapa de Produtos** (conexao direta com Conteudos, Redes Sociais, Sites e Trafego Pago)
+Expandir o questionario para ~30 perguntas com analise de concorrencia, CAC, LTV, CRM e canais offline, porem **agrupando perguntas por secao** (varias na mesma tela) para manter a experiencia rapida e pratica.
 
 ---
 
-## Estrutura da Pagina
+## Mudanca de Formato: de 1 pergunta/tela para Secoes Agrupadas
 
-### Aba 1 — Estrategia (principal)
+Em vez de mostrar uma pergunta por vez (17 cliques), o wizard agora mostrara **9 secoes** com 2-5 perguntas cada, na mesma tela. O usuario responde um bloco completo e avanca.
 
-**Se o cliente ainda nao completou a estrategia:**
+| Secao | Perguntas | Formato |
+|-------|-----------|---------|
+| 1. Seu Negocio | Segmento, tempo de mercado, modelo (B2B/B2C), num. funcionarios | 4 perguntas choice |
+| 2. Financeiro | Faturamento (choice ate R$10M), ticket medio (choice) | 2 perguntas choice |
+| 3. Seu Publico | Cliente ideal (texto), faixa etaria, onde esta, como decide | 4 perguntas mistas |
+| 4. Concorrencia | Qtd concorrentes, se investem em digital, diferencial competitivo | 3 perguntas mistas |
+| 5. Presenca Digital | Redes ativas, link Instagram (condicional), frequencia, tem site, URL site (condicional) | 3-5 perguntas com condicionais |
+| 6. Trafego e Vendas | Investe em trafego, quanto investe (choice), leads/mes, taxa conversao | 4 perguntas choice |
+| 7. Metricas CAC/LTV | Sabe o CAC, LTV medio, processo de recompra | 3 perguntas choice |
+| 8. Gestao de Dados | Usa CRM, historico de dados, estrategias offline | 3 perguntas mistas |
+| 9. Objetivos e Dores | Meta principal, prazo, dificuldades (expandido), tentativas anteriores | 4 perguntas mistas |
 
-Wizard conversacional, uma pergunta por vez (estilo typeform), com barra de progresso no topo. Categorias de perguntas:
-
-| Categoria | Perguntas (resumo) |
-|-----------|-------------------|
-| Negocio | Segmento, tempo de mercado, faturamento mensal, ticket medio |
-| Publico | Quem e o cliente ideal, faixa etaria, onde esta, como decide |
-| Marketing Atual | Redes ativas, frequencia de publicacao, investe em trafego, tem site |
-| Objetivos | Meta principal (leads, vendas, autoridade, reconhecimento), prazo |
-| Orcamento | Quanto investe em marketing, quanto pode investir |
-| Dores | Maiores dificuldades, o que ja tentou que nao funcionou |
-
-Formato misto: perguntas de multipla escolha (cards clicaveis), sliders para valores numericos e campos de texto curto para respostas abertas. Cada pergunta aparece isolada com animacao de transicao (framer-motion fade).
-
-**Apos completar:**
-
-Relatorio visual "Sua Estrategia de Marketing" com:
-
-- **Termometro de Maturidade** (reutiliza DiagnosticoTermometro com niveis adaptados: Iniciante / Basico / Intermediario / Avancado)
-- **Radar Chart** por area (Presenca Digital, Estrategia, Conteudo, Trafego, Branding)
-- **Cards de Insights** com icones e cores por tipo (sucesso/alerta/oportunidade)
-- **Projecao de Resultados** — grafico de area mostrando cenario atual vs cenario com a estrategia implementada (leads projetados, engajamento, conversoes)
-- **Plano de Acao em 3 Fases**: Fase 1 Fundacao (mes 1-2), Fase 2 Crescimento (mes 3-4), Fase 3 Escala (mes 5-6)
-
-### Aba 2 — Produtos Recomendados
-
-Cards premium dos 4 modulos de marketing da plataforma, cada um com:
-
-- Icone e nome do modulo
-- Descricao de como ele resolve uma dor identificada na estrategia
-- Indicador visual (ex: "Recomendado para voce" com badge verde se a area esta fraca)
-- Botao "Acessar" que navega para a pagina do modulo
-- Mini KPI do modulo (ex: "0 conteudos gerados" ou "Site nao criado")
-
-Modulos apresentados:
-1. **Conteudos** — Geracao de roteiros com IA baseados na sua estrategia
-2. **Redes Sociais** — Artes prontas para Feed e Story todo mes
-3. **Sites** — Landing page otimizada para captura de leads
-4. **Trafego Pago** — Campanhas estruturadas para Meta, Google, TikTok
-
-### Aba 3 — Historico
-
-Timeline das estrategias geradas anteriormente, permitindo comparar evolucao.
+Total: ~30 perguntas em **9 telas** em vez de 30 telas. Cada secao tem titulo e subtitulo contextuais.
 
 ---
 
-## Alteracoes na Sidebar
+## Perguntas Novas Detalhadas
 
-- Renomear "Plano de Marketing" para "Estrategia" na sidebar (`ClienteSidebar.tsx`, linha 45)
-- Manter o icone Megaphone
+### Secao 1 — Seu Negocio
+- Segmento (choice, mesmo atual)
+- Tempo de mercado (choice, mesmo)
+- Modelo de negocio: B2B / B2C / Ambos (choice, novo)
+- Numero de funcionarios: 1-5, 6-20, 21-50, 51-200, 200+ (choice, novo)
+
+### Secao 2 — Financeiro
+- Faturamento mensal (muda de slider para choice): Ate R$10mil, R$10-30mil, R$30-50mil, R$50-100mil, R$100-300mil, R$300mil-1M, R$1-5M, R$5-10M
+- Ticket medio (muda de slider para choice): Ate R$100, R$100-500, R$500-2mil, R$2-5mil, R$5-15mil, R$15mil+
+
+### Secao 3 — Seu Publico
+- Cliente ideal (text, mesmo)
+- Faixa etaria (choice, mesmo)
+- Onde esta (multi-choice, mesmo)
+- Como decide a compra (multi-choice, novo): Indicacao, pesquisa Google, redes sociais, preco, confianca na marca, visita presencial
+
+### Secao 4 — Concorrencia (nova)
+- Quantos concorrentes diretos: 1-3, 4-10, 10+, nao sei (choice)
+- Concorrentes investem em digital: Nao, pouco, sim bastante, sao referencia (choice)
+- Diferencial competitivo (text)
+
+### Secao 5 — Presenca Digital
+- Redes ativas (multi-choice, adiciona Twitter/X)
+- Link do Instagram/principal rede (text, condicional: aparece se redes != nenhuma)
+- Frequencia de publicacao (choice, mesmo)
+- Tem site (choice, mesmo)
+- URL do site (text, condicional: aparece se tem_site != "nao")
+
+### Secao 6 — Trafego e Vendas
+- Investe em trafego pago (choice, mesmo)
+- Quanto investe por mes (choice, novo): Nao invisto, ate R$500, R$500-2mil, R$2-5mil, R$5-15mil, R$15mil+
+- Quantos leads recebe por mes (choice, novo): 0-10, 11-30, 31-100, 100-500, 500+
+- Taxa de conversao estimada (choice, novo): Nao sei, menos de 5%, 5-15%, 15-30%, mais de 30%
+
+### Secao 7 — Metricas CAC/LTV (nova)
+- Sabe quanto custa adquirir um cliente (choice): Nao sei, ate R$50, R$50-200, R$200-500, R$500+
+- Tempo medio do cliente (choice): Compra unica, 1-3 meses, 3-12 meses, mais de 1 ano
+- Processo de recompra/fidelizacao (choice): Nao, informal, sim estruturado
+
+### Secao 8 — Gestao de Dados (nova)
+- Usa CRM (choice): Nao gerencio, planilha, CRM basico, CRM profissional
+- Historico de dados dos clientes (choice): Nenhum, parcial, sim completo
+- Estrategias alem do digital (multi-choice): Eventos, panfletos, networking, parcerias locais, indicacao, nenhuma
+
+### Secao 9 — Objetivos e Dores
+- Meta principal (choice, mesmo)
+- Prazo para resultados (choice, mesmo)
+- Dificuldades (multi-choice, expandido): adiciona "Nao sei meu CAC/LTV", "Nao tenho dados organizados", "Concorrencia forte"
+- O que ja tentou (text, mesmo)
 
 ---
 
-## Arquivos
+## Logica de Perguntas Condicionais
 
-| Arquivo | Acao |
-|---------|------|
-| `src/pages/cliente/ClientePlanoMarketing.tsx` | Reescrita completa |
-| `src/components/ClienteSidebar.tsx` | Renomear label de "Plano de Marketing" para "Estrategia" |
+Perguntas com `condition` so aparecem se a condicao for verdadeira:
+- `url_rede`: aparece se `redes_ativas` nao inclui "nenhuma"
+- `url_site`: aparece se `tem_site` diferente de "nao"
 
-Nao ha necessidade de tabelas novas neste momento — os dados da estrategia serao gerenciados em estado local (mock), com persistencia em banco planejada para uma fase posterior.
+As demais perguntas aparecem sempre.
+
+---
+
+## Scoring Expandido (7 eixos)
+
+O radar passa de 5 para 7 eixos:
+
+| Eixo | Fontes |
+|------|--------|
+| Presenca Digital | redes_ativas, tem_site, freq_publicacao, url_site, url_rede |
+| Estrategia | meta_principal, prazo, cliente_ideal, modelo_negocio |
+| Conteudo | freq_publicacao, redes_ativas diversidade |
+| Trafego | investe_trafego, valor_trafego, leads_mes, taxa_conversao |
+| Branding | tempo_mercado, diferencial_competitivo, segmento |
+| Gestao de Dados | usa_crm, historico_dados, sabe_cac |
+| Vendas e Retencao | taxa_conversao, ltv_medio, processo_recompra |
+
+---
+
+## Novos Insights
+
+- CAC: "Voce nao sabe seu CAC — sem isso, e impossivel medir ROI"
+- CRM: "Seus dados nao estao organizados. O CRM centraliza leads e historico"
+- Concorrencia: "Seus concorrentes investem forte em digital. Acelere para nao perder mercado"
+- Retencao: "Sem processo de fidelizacao, voce perde receita recorrente"
+- Conversao: Se taxa menor que 5%, insight sobre qualificacao de leads
+- Offline: Se usa estrategias offline, insight sobre integracao com digital
+
+---
+
+## Projecao Expandida
+
+Dois graficos de area:
+1. Leads projetados (ja existe)
+2. Faturamento estimado (baseado em ticket medio x taxa conversao x leads)
+
+---
+
+## Plano de Acao Dinamico
+
+Gerado por funcao `generateActionPlan(scoreMap, answers)`:
+- Gestao de Dados baixo: Fase 1 inclui "Implantar CRM"
+- Trafego baixo: Fase 2 inclui "Iniciar campanhas com orcamento controlado"
+- Retencao baixo: Fase 3 inclui "Criar programa de fidelizacao"
+- Concorrencia forte: Fase 2 inclui "Analise competitiva"
+
+---
+
+## Produtos Recomendados: adiciona CRM
+
+| Produto | Score Vinculado | Path |
+|---------|----------------|------|
+| Conteudos | Conteudo | /cliente/conteudos |
+| Redes Sociais | Presenca Digital | /cliente/redes-sociais |
+| Sites | Presenca Digital | /cliente/sites |
+| Trafego Pago | Trafego | /cliente/trafego-pago |
+| CRM (novo) | Gestao de Dados | /cliente/crm |
 
 ---
 
 ## Detalhes Tecnicos
 
-### Wizard Conversacional
+### Estrutura de dados das secoes
 
-- Estado controlado por `currentStep` (numero da pergunta)
-- Array de objetos `StrategyQuestion` com: id, category, question, type (choice/slider/text), options
-- Animacao com `framer-motion` (AnimatePresence + motion.div com fade/slide)
-- Barra de progresso no topo mostrando X/total
-- Botoes "Voltar" e "Proximo" com validacao (resposta obrigatoria)
+A estrutura muda de `StrategyQuestion[]` (flat) para `StrategySection[]` com perguntas agrupadas:
 
-### Resultado Visual
+```text
+StrategySection {
+  id: string
+  title: string          // ex: "Seu Negocio"
+  subtitle: string       // ex: "Conte sobre sua empresa"
+  icon: LucideIcon
+  questions: StrategyQuestion[]  // 2-5 perguntas por secao
+}
+```
 
-- Calculo de score por categoria baseado nas respostas
-- Score geral de maturidade (0-100%) com 4 niveis
-- Radar chart (recharts) com 5 eixos
-- Cards de insight gerados automaticamente baseados nos scores baixos
-- Secao "Produtos Recomendados" destaca modulos onde o score e mais fraco
-- Botao "Refazer Estrategia" para reiniciar o wizard
+O wizard itera por secoes (9 steps) e renderiza todas as perguntas da secao ativa numa unica tela com scroll.
 
-### Cards de Produtos
+### Validacao por secao
 
-- Cada card verifica o score da area correspondente
-- Se score < 50%, exibe badge "Prioridade Alta" em vermelho
-- Se score 50-75%, exibe "Recomendado" em amarelo
-- Se score > 75%, exibe "Otimizar" em verde
-- Links diretos para `/cliente/conteudos`, `/cliente/redes-sociais`, `/cliente/sites`, `/cliente/trafego-pago`
+O botao "Proximo" so habilita quando todas as perguntas obrigatorias da secao estiverem respondidas. Perguntas condicionais que nao aparecem nao bloqueiam o avanço.
 
-### Estilo Visual
+### Arquivo alterado
 
-- Mantém o padrao premium existente (glass-card, section-label, font-black tracking-tighter)
-- Wizard com fundo suave gradient e cards de opcao com borda hover
-- Resultado com layout de relatorio consultivo (secoes bem separadas, tipografia forte)
+`src/pages/cliente/ClientePlanoMarketing.tsx` — reescrita completa das perguntas, secoes, scoring, insights, projecao e plano de acao.
+
+Nenhum arquivo novo. Sem mudancas de banco.
