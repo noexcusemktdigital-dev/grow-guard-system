@@ -1,66 +1,46 @@
 
-# Correcoes no Chat: Imagens, Anexo e Performance
 
-## Problema 1 -- Imagens nao aparecem
+# Correcoes: Avaliacao da Equipe + Scroll do Chat
 
-Em `ChatMessageBubble.tsx`, quando a mensagem tem `media_url`, o componente mostra apenas um placeholder cinza com icone generico (linhas 36-42). Ele nunca tenta renderizar a imagem real com `<img>`.
+## 1. Avaliacao da Equipe na Gamificacao
 
-**Correcao**: Detectar o tipo de midia pelo URL/type e renderizar um `<img>` real quando for imagem, com fallback para o placeholder generico em caso de erro de carregamento.
+Atualmente a pagina de Gamificacao (`ClienteGamificacao.tsx`) mostra apenas as estatisticas individuais do usuario logado. Nao existe uma secao de "Avaliacao da Equipe" que compare membros da organizacao.
 
-## Problema 2 -- Botao de anexo nao funciona
+### Correcao
+Adicionar uma nova secao **"Ranking da Equipe"** abaixo das medalhas que:
+- Busca todos os membros da organizacao via tabela `organization_members` + `profiles`
+- Para cada membro, calcula pontos baseados nos leads do CRM (`assigned_to`)
+- Exibe um ranking ordenado por pontos com avatar, nome, leads criados, leads ganhos e pontuacao total
+- Destaca o usuario atual na lista
+- Se a organizacao tem apenas 1 membro, mostra uma mensagem amigavel
 
-Em `ChatConversation.tsx` linha 342-344, o botao `<Paperclip>` e apenas visual (`type="button"` sem `onClick`). Nao ha logica de upload conectada.
+### Dados necessarios
+- Query a `organization_members` para listar membros da org
+- Query a `profiles` para nomes/avatares
+- Usar os `leads` ja carregados, agrupando por `assigned_to`
+- Nao precisa de nova tabela/migracao -- tudo ja existe
 
-**Correcao**: Adicionar um `<input type="file" accept="image/*">` escondido, com ref. O clique no botao de Paperclip aciona o file input. Ao selecionar um arquivo, fazer upload para o Supabase Storage (bucket `chat-media`) e enviar a URL como mensagem com tipo `image`. Sera necessario criar o bucket via migracao SQL.
+---
 
-## Problema 3 -- Conversa grande fica bugada
+## 2. Bug do Scroll nas Conversas
 
-O `ScrollArea` (linha 314) renderiza **todas** as mensagens de uma vez. Com centenas de mensagens, o DOM fica pesado e o scroll trava. Alem disso, o `useEffect` com `scrollIntoView` (linha 83) dispara a cada mudanca de `messages.length`, o que pode causar loops de re-render.
+O problema e classico de flexbox: o `ScrollArea` com `className="flex-1"` esta dentro de um `<div className="flex flex-col h-full">`, mas sem `min-h-0` no flex child. Em CSS flexbox, um filho com `flex: 1` pode estourar o container pai se nao tiver `min-height: 0` explicito, porque o tamanho minimo padrao e `auto` (o conteudo inteiro).
 
-**Correcao**:
-- Limitar a renderizacao inicial para as ultimas 100 mensagens, com botao "Carregar anteriores" no topo
-- Melhorar o scroll para so rolar automaticamente se o usuario ja estiver proximo do final (evitar scroll forçado quando usuario esta lendo historico)
-- Mover o `playSound` para fora do `useEffect` de scroll, evitando tocar som repetidamente
+Resultado: as mensagens expandem o container ao inves de ficarem dentro dele com scroll.
+
+### Correcao
+- Adicionar `min-h-0` ao `ScrollArea` na linha 389: `className="flex-1 min-h-0 whatsapp-bg"`
+- Isso garante que o ScrollArea respeite o espaco disponivel e ative o scroll interno para o conteudo excedente
 
 ---
 
 ## Detalhes Tecnicos
 
-### Migracao SQL -- Bucket de Storage
-```sql
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('chat-media', 'chat-media', true)
-ON CONFLICT (id) DO NOTHING;
-
-CREATE POLICY "Members can upload chat media"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'chat-media' AND auth.uid() IS NOT NULL);
-
-CREATE POLICY "Anyone can view chat media"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'chat-media');
-```
-
-### ChatMessageBubble.tsx
-- Substituir o placeholder por `<img src={message.media_url}>` com `onError` fallback
-- Detectar tipo (image, audio, video, document) via `message.type` ou extensao do URL
-- Imagens: `<img>` com `object-cover`, clicavel para abrir em nova aba
-- Outros tipos: manter placeholder com icone apropriado
-
-### ChatConversation.tsx
-- **Anexo funcional**: ref para `<input type="file">`, handler `handleFileUpload` que faz upload ao Supabase Storage e chama `sendMutation` com `type: "image"` e a URL publica
-- **Performance**: estado `displayCount` (inicia em 100), slice das mensagens renderizadas, botao "Carregar anteriores" que incrementa `displayCount`
-- **Scroll inteligente**: detectar se usuario esta no final antes de auto-scroll, usando `scrollHeight - scrollTop - clientHeight < 100`
-- **Som de notificacao**: mover para um `useEffect` separado que so toca quando uma mensagem inbound **nova** aparece (comparar IDs, nao length)
-
-### useWhatsApp.ts
-- Adicionar parametro `mediaUrl` ao `useSendWhatsAppMessage` para enviar mensagens com midia
-
-### Arquivos modificados
-
 | Arquivo | Acao |
 |---------|------|
-| Migracao SQL | Criar bucket `chat-media` + policies |
-| `src/components/cliente/ChatMessageBubble.tsx` | Renderizar imagens reais com `<img>`, fallback |
-| `src/components/cliente/ChatConversation.tsx` | Input de arquivo funcional, paginacao de mensagens, scroll inteligente |
-| `src/hooks/useWhatsApp.ts` | Adicionar `mediaUrl` no `useSendWhatsAppMessage` |
+| `src/pages/cliente/ClienteGamificacao.tsx` | Adicionar secao "Ranking da Equipe" com dados reais dos membros |
+| `src/components/cliente/ChatConversation.tsx` | Adicionar `min-h-0` ao ScrollArea (linha 389) |
+
+### Sem migracoes SQL necessarias
+Todos os dados ja existem nas tabelas `organization_members`, `profiles` e `crm_leads`.
+
