@@ -1,188 +1,89 @@
 
+# Ajustes no Controle do Agente + Follow-up Inteligente + Pagamentos Asaas
 
-# Controle de Comportamento do Agente + Recarga de Creditos via Asaas
+## Resumo das Mudancas
 
-## 3 Problemas a Resolver
+Quatro ajustes principais baseados no feedback:
 
-### 1. Controle de Quando o Agente Responde
+### 1. Reduzir limite padrao de mensagens (30 -> 10)
 
-Hoje, toda mensagem recebida dispara o agente automaticamente, sem nenhum filtro. Problemas:
-- Contato que voltou depois de semanas recebe resposta da IA como se fosse conversa nova
-- Agente pode ficar respondendo infinitamente, gastando tokens
-- Nao existe limite de mensagens por conversa
+O padrao de 30 mensagens e excessivo. Alterar para **10 mensagens** como padrao em todos os pontos:
+- `AgentFormSheet.tsx` -- valor padrao no formulario
+- `ai-agent-reply/index.ts` -- fallback na edge function
 
-**Solucao: Regras de Engajamento no Agente**
+### 2. Estrategia de follow-up com encerramento automatico
 
-Adicionar configuracoes na aba "Prompt e Objetivos" do AgentFormSheet:
+Hoje o follow-up funciona, mas apos esgotar as tentativas o contato continua em modo "ai". O correto e:
 
-| Regra | Campo | Padrao |
-|-------|-------|--------|
-| Limite de mensagens por conversa | `max_messages_per_conversation` | 30 |
-| Timeout de inatividade (horas) | `inactivity_timeout_hours` | 48 |
-| Acao apos timeout | `timeout_action` | "handoff" (ou "restart" ou "ignore") |
-| Acao apos limite de mensagens | `limit_action` | "handoff" |
-| Horario de funcionamento | `working_hours` | { start: "08:00", end: "18:00", timezone: "America/Sao_Paulo" } |
+**Fluxo completo:**
+1. Agente responde normalmente ate o limite de mensagens
+2. Se o contato nao responde, inicia follow-ups automaticos (configuravel: 1-5 tentativas)
+3. Apos esgotar os follow-ups sem resposta, o agente **encerra automaticamente** -- muda `attending_mode` para "closed" e notifica a equipe
+4. Se o contato voltar a falar depois, o sistema reativa em modo humano (nao gasta mais tokens)
 
-**Na edge function `ai-agent-reply`:**
-- Antes de responder, contar mensagens da conversa e checar se ultrapassou o limite
-- Verificar tempo desde a ultima mensagem -- se > timeout, tratar conforme acao configurada
-- Verificar horario de funcionamento -- fora do horario, enviar mensagem padrao ou ignorar
-- Verificar saldo de creditos da organizacao -- se zerado, nao responde
+Alterar `agent-followup-cron` para executar handoff automatico apos `max_attempts` atingido.
 
-### 2. Follow-ups e Quebra de Objecao
+### 3. Limite por objetivo (nao por conversa infinita)
 
-**Follow-ups automaticos:**
+Reforcar no system prompt que o agente tem um objetivo claro e um numero limitado de mensagens para cumpri-lo. Adicionar instrucao no prompt:
 
-| Campo | Descricao |
-|-------|-----------|
-| `followup_enabled` | Ativar/desativar follow-up |
-| `followup_delay_hours` | Tempo sem resposta para disparar (ex: 24h) |
-| `followup_max_attempts` | Maximo de follow-ups (ex: 3) |
-| `followup_message_style` | "ai_generated" ou "template" |
+> "Voce tem no maximo {max_messages} mensagens para cumprir seu objetivo. Seja direto e eficiente. Se nao conseguir, transfira para um atendente humano."
 
-A execucao dos follow-ups sera via um **cron job** que roda periodicamente (a cada hora), verifica contatos sem resposta e dispara a IA para gerar a mensagem de follow-up.
+Isso faz a IA ser mais objetiva e nao ficar enrolando.
 
-**Quebra de objecao:**
-- Campo "Objecoes comuns" na aba de Prompt e Objetivos do agente
-- A IA usa essas objecoes como parte do system prompt
-- Integra com os scripts de objecao ja criados no modulo de Scripts
+### 4. Configurar recebimento de pagamentos via Asaas
 
-### 3. Recarga de Creditos via Asaas (Gerenciado pela Franqueadora)
+O webhook do Asaas ja esta implementado (`asaas-webhook`). Para funcionar de ponta a ponta, precisamos:
 
-O gerenciamento de creditos dos clientes SaaS sera feito **pela Franqueadora**, com duas vias:
+- **Chave da API Asaas** -- precisa ser configurada como secret
+- A edge function ja processa `PAYMENT_CONFIRMED` e `PAYMENT_RECEIVED`
+- Ja incrementa creditos automaticamente na wallet da organizacao
+- O admin da Franqueadora ja pode fazer recargas manuais via `recharge-credits`
 
-**Via A -- Recarga manual (imediato):**
-- Nova secao "Gestao de Creditos SaaS" dentro da area de Unidades da Franqueadora
-- O admin da franqueadora visualiza todas as organizacoes-cliente, seus saldos e planos
-- Botao "Recarregar Creditos" que incrementa o saldo diretamente
-- Historico de transacoes (compras, consumos, bonus) visivel para ambos os lados
-
-**Via B -- Integracao Asaas (fase 2):**
-- A integracao Asaas ja esta prevista no modulo de Contratos (campos `asaasCustomerId`, `asaasSubscriptionId` ja existem no sistema)
-- Webhook do Asaas notifica pagamento confirmado
-- Edge function `asaas-webhook` recebe a confirmacao e automaticamente incrementa `credit_wallets.balance`
-- Cada cliente SaaS tera um `asaas_customer_id` vinculado a sua organizacao
-- Cobran;as recorrentes (plano mensal) renovam creditos automaticamente
-- Compras avulsas de creditos extras tambem sao processadas
-
-**Fluxo completo de billing:**
-
-```text
-Cliente paga no Asaas
-       |
-       v
-Webhook Asaas -> Edge Function
-       |
-       v
-Identifica org pelo asaas_customer_id
-       |
-       v
-Incrementa credit_wallets.balance
-       |
-       v
-Registra em credit_transactions
-       |
-       v
-Cliente ve saldo atualizado no app
-```
-
-**Na Franqueadora, a tela de gestao mostrara:**
-- Lista de organizacoes-cliente com saldo atual, plano e status
-- Botao de recarga manual (para casos de pagamento fora do Asaas)
-- Historico de todas as transacoes de creditos
-- Alertas de clientes com saldo zerado ou critico
+Para ativar, basta configurar o webhook no painel do Asaas apontando para a URL da edge function.
 
 ---
 
-## Implementacao Tecnica
+## Arquivos a Editar
 
-### Migracao de Banco
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/cliente/AgentFormSheet.tsx` | Padrao de max_messages de 30 para 10 |
+| `supabase/functions/ai-agent-reply/index.ts` | Padrao de 30 para 10; instrucao de objetivo no prompt |
+| `supabase/functions/agent-followup-cron/index.ts` | Encerrar contato (handoff) apos esgotar follow-ups |
 
-Todas as regras de engajamento e follow-up ficam no campo JSONB `prompt_config` da tabela `client_ai_agents` (sem migracao de schema):
+---
 
-```text
-prompt_config: {
-  system_prompt: "...",
-  engagement_rules: {
-    max_messages: 30,
-    inactivity_timeout_hours: 48,
-    timeout_action: "handoff",
-    limit_action: "handoff",
-    working_hours: { enabled: false, start: "08:00", end: "18:00" }
-  },
-  followup: {
-    enabled: false,
-    delay_hours: 24,
-    max_attempts: 3,
-    style: "ai_generated"
-  },
-  objections: []
-}
+## Detalhes Tecnicos
+
+### AgentFormSheet.tsx
+
+Linha 151 -- alterar default de `max_messages: 30` para `max_messages: 10`
+
+Linha 665 -- alterar fallback `|| 30` para `|| 10`
+
+### ai-agent-reply/index.ts
+
+Linha 181 -- alterar `engagementRules.max_messages ?? 30` para `?? 10`
+
+Adicionar instrucao no system prompt (antes de enviar para a IA):
+```
+Voce tem no maximo {maxMessages} mensagens nesta conversa para cumprir seu objetivo.
+Seja direto, eficiente e conduza a conversa de forma objetiva.
+Se nao conseguir cumprir o objetivo dentro desse limite, use [AI_ACTION:HANDOFF:motivo].
 ```
 
-Nova tabela `credit_transactions`:
+### agent-followup-cron/index.ts
 
-```text
-credit_transactions
-  - id (UUID, PK)
-  - organization_id (UUID, NOT NULL)
-  - type (TEXT: purchase, consumption, bonus, renewal)
-  - amount (INTEGER)
-  - balance_after (INTEGER)
-  - description (TEXT)
-  - created_by (UUID, nullable -- admin que fez recarga manual)
-  - metadata (JSONB -- asaas_payment_id, invoice_id, etc)
-  - created_at (TIMESTAMPTZ)
-```
+Apos a checagem `if (followupCount >= maxAttempts) continue;`, adicionar logica para:
+1. Verificar se o contato ja recebeu `maxAttempts` follow-ups
+2. Se sim, mudar `attending_mode` para "human" (handoff)
+3. Notificar equipe via `client_notifications`
+4. O agente nao fala mais com esse contato (nao gasta tokens)
 
-Adicionar coluna na tabela `organizations` (se existir) ou `subscriptions`:
-- `asaas_customer_id` (TEXT, nullable) -- vinculo com Asaas
+### Configuracao do Asaas
 
-### Arquivos a Criar/Editar
+A URL do webhook que o usuario precisa cadastrar no painel Asaas sera:
+`https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/asaas-webhook`
 
-| Arquivo | Acao |
-|---------|------|
-| `supabase/functions/ai-agent-reply/index.ts` | **Editar** -- adicionar checagens de limite, timeout, horario, saldo |
-| `supabase/functions/agent-followup-cron/index.ts` | **Criar** -- cron job para follow-ups |
-| `supabase/functions/recharge-credits/index.ts` | **Criar** -- edge function para recarga manual (usada pela Franqueadora) |
-| `supabase/functions/asaas-webhook/index.ts` | **Criar** -- webhook para receber confirmacoes de pagamento do Asaas |
-| `src/components/cliente/AgentFormSheet.tsx` | **Editar** -- adicionar secao "Regras de Engajamento" e "Follow-up" na aba Prompt |
-| `src/pages/cliente/ClientePlanoCreditos.tsx` | **Editar** -- mostrar historico de transacoes, funcionalizar botao de compra |
-| `src/pages/Unidades.tsx` | **Editar** -- adicionar aba/secao "Creditos SaaS" na gestao de unidades-cliente |
-
-### Logica na Edge Function ai-agent-reply
-
-Antes de chamar a IA, verificacoes em ordem:
-
-```text
-1. Checar saldo de creditos da org -> se zero, retorna skipped
-2. Checar horario de funcionamento -> se fora, envia msg padrao ou ignora
-3. Contar mensagens na conversa -> se > max_messages, executa limit_action (handoff)
-4. Checar tempo desde ultima msg do contato -> se > timeout, executa timeout_action
-5. Se tudo OK -> chama a IA normalmente
-6. Apos resposta -> debita tokens de credit_wallets e registra em credit_transactions
-```
-
-### Follow-up Cron
-
-O cron job roda a cada hora e:
-1. Busca agentes com `followup.enabled = true`
-2. Para cada agente, busca contatos onde a ultima mensagem foi do agente (outbound) e o tempo sem resposta >= `followup_delay_hours` e follow-ups enviados < `followup_max_attempts`
-3. Gera mensagem de follow-up via IA e envia pelo Z-API
-4. Registra o follow-up nos logs e debita creditos
-
-### Webhook Asaas (fase 2)
-
-- Endpoint publico (verify_jwt = false)
-- Valida assinatura do webhook do Asaas
-- Identifica organizacao pelo `asaas_customer_id`
-- Eventos tratados: `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`
-- Incrementa saldo e registra transacao
-
-### Gestao pela Franqueadora
-
-Na pagina de Unidades, adicionar uma visao de "Creditos dos Clientes":
-- Tabela com: Nome da org, Plano, Saldo atual, Status, Ultima recarga
-- Botao "Recarregar" abre dialog com campo de quantidade e descricao
-- Chama edge function `recharge-credits` que so aceita roles `super_admin` ou `admin`
-
+Opcionalmente, podemos adicionar um secret `ASAAS_WEBHOOK_TOKEN` para validar a autenticidade dos webhooks.
