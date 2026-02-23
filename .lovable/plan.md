@@ -1,39 +1,75 @@
 
 
-# Fix: Chat Layout -- Prevent Parent Scroll Overflow
+# Fix: Full-Width Layout for All Pages
 
-## Root Cause
+## Problem
 
-The `ClienteLayout` content wrapper (line 17) has `overflow-y-auto flex flex-col`. In a scrollable flex container, children with `flex-1` are allowed to grow beyond the container's viewport -- the parent simply scrolls. When messages load in the conversation panel, the total content height exceeds the viewport and the parent scrolls up, hiding:
-- The PageHeader ("CONVERSAS")
-- The contact list header with filters
-- The conversation header (contact name, avatar)
+Every page in the system uses `max-w-3xl` through `max-w-7xl` combined with `mx-auto`, which caps the content at a fixed maximum width and centers it. This leaves large empty margins on both sides, especially on wider screens, making the interface look "disproportionate" and underutilizing the available space.
 
-Previous fixes added `flex-1 min-h-0` but this alone does NOT prevent growth in a scrollable parent. The missing piece is `overflow-hidden` on the chat wrapper, which creates a block formatting context that prevents the element from expanding beyond its flex allocation.
+## Solution
 
-## Fix
+Remove the `max-w-*xl mx-auto` constraint from every page wrapper across all three areas (Cliente, Franqueadora, Franqueado). Replace with `w-full space-y-6` so content fills the full width available inside the layout's padding (`p-6 lg:p-8`).
 
-### File: `src/pages/cliente/ClienteChat.tsx` (line 122)
+The layout components (`ClienteLayout`, `FranqueadoraLayout`, `FranqueadoLayout`) already provide padding, so the content doesn't need self-centering constraints.
 
-Add `overflow-hidden` to the chat page wrapper:
+## Pages to Update
+
+### Cliente Pages (20 files)
+| File | Current constraint |
+|------|-------------------|
+| ClienteInicio.tsx | max-w-7xl |
+| ClienteDashboard.tsx | max-w-7xl |
+| ClienteCRM.tsx | max-w-7xl / max-w-full |
+| ClienteDisparos.tsx | max-w-6xl |
+| ClienteConteudos.tsx | max-w-6xl |
+| ClienteRedesSociais.tsx | max-w-6xl |
+| ClienteTrafegoPago.tsx | max-w-6xl |
+| ClientePlanoMarketing.tsx | max-w-6xl |
+| ClientePlanoVendas.tsx | max-w-6xl |
+| ClientePlanoCreditos.tsx | max-w-6xl |
+| ClienteGamificacao.tsx | max-w-5xl |
+| ClienteAgentesIA.tsx | max-w-5xl |
+| ClienteScripts.tsx | max-w-5xl |
+| ClienteChat.tsx | max-w-5xl (empty state only) |
+| ClienteAvaliacoes.tsx | max-w-4xl |
+| ClienteConfiguracoes.tsx | max-w-4xl |
+| ClienteNotificacoes.tsx | max-w-4xl |
+| ClienteIntegracoes.tsx | max-w-4xl |
+| ClienteChecklist.tsx | max-w-3xl |
+| ClienteSites.tsx | max-w-5xl |
+
+### Franqueadora Pages (12+ files)
+| File | Current constraint |
+|------|-------------------|
+| Home.tsx | max-w-7xl |
+| Marketing.tsx, Matriz.tsx, MetasRanking.tsx, etc. | max-w-7xl |
+| CrmExpansao.tsx, Agenda.tsx, etc. | various |
+
+### Franqueado Pages (12+ files)
+| File | Current constraint |
+|------|-------------------|
+| FranqueadoDashboard.tsx | max-w-7xl |
+| FranqueadoContratos.tsx, FranqueadoComunicados.tsx, etc. | max-w-7xl |
+| FranqueadoDiagnostico.tsx | max-w-3xl |
+
+## Change Pattern
+
+For every file, the change is the same:
 
 ```
-Before: "flex flex-col flex-1 min-h-0 gap-3"
-After:  "flex flex-col flex-1 min-h-0 overflow-hidden gap-3"
+Before: <div className="max-w-6xl mx-auto space-y-6">
+After:  <div className="w-full space-y-6">
 ```
 
-This single change ensures:
-- The chat div NEVER exceeds its flex-allocated space
-- The parent layout div will not scroll
-- The internal flex chain (PageHeader shrink-0 + Card flex-1 min-h-0) properly constrains all children
-- The contact list ScrollArea scrolls independently within its column
-- The messages ScrollArea scrolls independently within its column
+Some pages have multiple return paths (loading state + main render), so each `max-w-*xl mx-auto` occurrence must be updated.
 
-No other files need changes. The `ClienteLayout`, `ChatContactList`, and `ChatConversation` components already have the correct internal structure.
+## What Won't Change
 
-## Technical Summary
+- Layout padding (`p-6 lg:p-8`) stays in the layout components
+- Internal grid structures (`grid-cols-2 lg:grid-cols-4`) remain unchanged and will naturally expand
+- The Chat page's connected state already uses `flex-1` (no max-w constraint)
+- Responsive breakpoints within cards/grids continue to work
 
-| File | Line | Change |
-|------|------|--------|
-| `src/pages/cliente/ClienteChat.tsx` | 122 | Add `overflow-hidden` to wrapper classes |
+## Estimated Scope
 
+Approximately 34 files with ~50+ occurrences of the pattern to replace.
