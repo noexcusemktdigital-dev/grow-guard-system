@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.generate-social-image]
 verify_jwt = false
+
+[functions.generate-site]
+verify_jwt = false

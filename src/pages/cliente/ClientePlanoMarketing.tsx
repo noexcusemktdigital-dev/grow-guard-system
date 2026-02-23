@@ -683,7 +683,10 @@ export default function ClientePlanoMarketing() {
 
   const handleNext = () => {
     if (currentSection < totalSections - 1) setCurrentSection(currentSection + 1);
-    else setCompleted(true);
+    else {
+      setCompleted(true);
+      localStorage.setItem("estrategia_data", JSON.stringify(answers));
+    }
   };
   const handlePrev = () => {
     if (currentSection > 0) setCurrentSection(currentSection - 1);

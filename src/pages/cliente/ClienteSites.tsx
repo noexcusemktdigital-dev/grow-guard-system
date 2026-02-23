@@ -1,262 +1,311 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Globe, Save, Edit3, Check, Sparkles, Download, ExternalLink,
-  Eye, Code, Upload, BookOpen, Target, MessageSquare, Phone,
-  Palette, Link, Award, Clock, CheckCircle2,
+  Globe, Sparkles, ArrowRight, ArrowLeft, Loader2,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { getPlanBySlug } from "@/constants/plans";
+import { SiteWizardStep1 } from "@/components/sites/SiteWizardStep1";
+import { SiteWizardStep2 } from "@/components/sites/SiteWizardStep2";
+import { SiteWizardStep3 } from "@/components/sites/SiteWizardStep3";
+import { SitePreview } from "@/components/sites/SitePreview";
+import { SiteHistory, type SavedSite } from "@/components/sites/SiteHistory";
 
-/* ── Knowledge Base ── */
-interface KBField {
-  key: string;
-  label: string;
-  type: "text" | "textarea" | "select" | "upload" | "checklist";
-  value: string;
-  options?: string[];
+const STORAGE_KEY = "client-sites";
+const STEP_LABELS = ["Tipo de Site", "Objetivo e Estilo", "Briefing", "Gerar Site"];
+
+function loadSites(): SavedSite[] {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  } catch { return []; }
 }
 
-const initialFields: KBField[] = [
-  { key: "objetivo", label: "Qual o objetivo do site?", type: "select", value: "Captura de Leads", options: ["Captura de Leads", "Institucional", "Vendas / E-commerce", "Portfólio"] },
-  { key: "servicos", label: "Quais serviços/produtos oferece?", type: "textarea", value: "Plataforma de gestão comercial para franquias\nCRM integrado\nAutomação de marketing\nIA para vendas" },
-  { key: "diferencial", label: "Qual o diferencial da empresa?", type: "textarea", value: "Única plataforma que integra vendas + marketing + IA para redes de franquias" },
-  { key: "depoimentos", label: "Depoimentos de clientes", type: "textarea", value: "\"A NoExcuse triplicou nossos leads em 3 meses\" — João, Franqueado\n\"Melhor plataforma de gestão que já usamos\" — Maria, CEO" },
-  { key: "contato", label: "Informações de contato", type: "textarea", value: "contato@noexcuse.com.br\n(11) 99999-0000\nAv. Paulista, 1000 — São Paulo/SP" },
-  { key: "imagens", label: "Possui imagens próprias?", type: "upload", value: "" },
-  { key: "cores", label: "Cores e estilo visual preferido", type: "text", value: "Vermelho (#E63946), Azul escuro (#1D3557), Branco" },
-  { key: "referencias", label: "Referência de sites que gosta (links)", type: "textarea", value: "https://www.hubspot.com\nhttps://www.salesforce.com\nhttps://www.pipedrive.com" },
-];
-
-/* ── Generated sites history ── */
-interface GeneratedSite {
-  id: string;
-  name: string;
-  status: "Rascunho" | "Publicado";
-  createdAt: string;
-  url?: string;
+function loadStrategy(): Record<string, any> | null {
+  try {
+    const raw = localStorage.getItem("estrategia_data");
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
-
-const mockSites: GeneratedSite[] = [
-  { id: "1", name: "LP Captura — Promo Março", status: "Publicado", createdAt: "2026-02-15", url: "https://noexcuse.com.br/promo-marco" },
-  { id: "2", name: "Site Institucional v2", status: "Rascunho", createdAt: "2026-02-20" },
-];
 
 export default function ClienteSites() {
-  const [fields, setFields] = useState(initialFields);
-  const [isEditing, setIsEditing] = useState(false);
-  const [sites, setSites] = useState(mockSites);
+  const { data: subscription } = useClienteSubscription();
+  const plan = getPlanBySlug(subscription?.plan);
+  const allowedTypes = plan?.siteTypes || ["lp"];
+  const maxSites = plan?.maxSites || 1;
+
+  const [step, setStep] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const [sites, setSites] = useState<SavedSite[]>(loadSites);
   const [generating, setGenerating] = useState(false);
-  const [generatedPreview, setGeneratedPreview] = useState(false);
+  const [generatedHtml, setGeneratedHtml] = useState("");
+  const [genProgress, setGenProgress] = useState(0);
 
-  const filledCount = fields.filter(f => f.value.trim() && f.type !== "upload").length;
-  const totalCount = fields.filter(f => f.type !== "upload").length;
-  const progress = Math.round((filledCount / totalCount) * 100);
+  // Step 1
+  const [siteType, setSiteType] = useState("");
+  // Step 2
+  const [objetivo, setObjetivo] = useState("");
+  const [estilo, setEstilo] = useState("");
+  const [cta, setCta] = useState("");
+  // Step 3 briefing
+  const [briefing, setBriefing] = useState({
+    servicos: "",
+    diferencial: "",
+    depoimentos: "",
+    contato: "",
+    instrucoes: "",
+    estrategia: null as Record<string, any> | null,
+    persona: null as { nome: string; descricao: string } | null,
+    identidade: null as { paleta: string; fontes: string; estilo: string; tom_visual: string } | null,
+  });
 
-  const updateField = (key: string, value: string) => {
-    setFields(prev => prev.map(f => f.key === key ? { ...f, value } : f));
-  };
+  // Load auto data when entering step 3
+  useEffect(() => {
+    if (step === 2) {
+      const estrategia = loadStrategy();
+      setBriefing((prev) => ({
+        ...prev,
+        estrategia,
+        servicos: prev.servicos || "",
+        diferencial: prev.diferencial || (estrategia?.diferencial as string) || "",
+      }));
+    }
+  }, [step]);
 
-  const handleGenerate = () => {
+  const canProceed = useCallback(() => {
+    if (step === 0) return !!siteType;
+    if (step === 1) return !!objetivo && !!estilo;
+    if (step === 2) return true;
+    return false;
+  }, [step, siteType, objetivo, estilo]);
+
+  const handleGenerate = async () => {
     setGenerating(true);
-    setTimeout(() => {
+    setGenProgress(10);
+
+    const interval = setInterval(() => {
+      setGenProgress((p) => Math.min(p + Math.random() * 15, 90));
+    }, 800);
+
+    try {
+      const body = {
+        tipo: siteType,
+        objetivo,
+        estilo,
+        cta_principal: cta,
+        persona: briefing.persona,
+        identidade_visual: briefing.identidade,
+        servicos: briefing.servicos,
+        diferencial: briefing.diferencial,
+        depoimentos: briefing.depoimentos,
+        contato: briefing.contato,
+        instrucoes_adicionais: briefing.instrucoes,
+        estrategia: briefing.estrategia,
+      };
+
+      const { data, error } = await supabase.functions.invoke("generate-site", { body });
+
+      clearInterval(interval);
+
+      if (error) {
+        console.error("generate-site error:", error);
+        toast({ title: "Erro ao gerar site", description: "Tente novamente em alguns instantes.", variant: "destructive" });
+        setGenerating(false);
+        setGenProgress(0);
+        return;
+      }
+
+      if (data?.error) {
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
+        setGenerating(false);
+        setGenProgress(0);
+        return;
+      }
+
+      setGenProgress(100);
+      setGeneratedHtml(data.html);
+      setStep(3);
+
+      // Save to history
+      const newSite: SavedSite = {
+        id: crypto.randomUUID(),
+        name: `Site ${objetivo} — ${new Date().toLocaleDateString("pt-BR")}`,
+        type: siteType,
+        status: "Rascunho",
+        createdAt: new Date().toISOString().split("T")[0],
+        html: data.html,
+      };
+      const updated = [newSite, ...sites];
+      setSites(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+      toast({ title: "Site gerado com sucesso!", description: "Revise o preview e baixe quando estiver pronto." });
+    } catch (err) {
+      console.error(err);
+      clearInterval(interval);
+      toast({ title: "Erro inesperado", description: "Tente novamente.", variant: "destructive" });
+    } finally {
       setGenerating(false);
-      setGeneratedPreview(true);
-      toast({ title: "Site gerado com sucesso!", description: "Revise o preview e publique quando estiver pronto." });
-    }, 2000);
+      setGenProgress(0);
+    }
   };
 
+  const handlePreviewHistory = (site: SavedSite) => {
+    if (site.html) {
+      setGeneratedHtml(site.html);
+      setStep(3);
+      setCreating(true);
+    }
+  };
+
+  const resetWizard = () => {
+    setStep(0);
+    setSiteType("");
+    setObjetivo("");
+    setEstilo("");
+    setCta("");
+    setGeneratedHtml("");
+    setCreating(false);
+  };
+
+  // ── MAIN VIEW (history + create button)
+  if (!creating && step !== 3) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <PageHeader
+          title="Sites & Landing Pages"
+          subtitle="Gere sites profissionais com IA e publique no seu domínio"
+          icon={<Globe className="w-5 h-5 text-primary" />}
+        />
+
+        <Button className="w-full gap-2" size="lg" onClick={() => setCreating(true)} disabled={sites.length >= maxSites}>
+          <Sparkles className="w-4 h-4" /> Criar Novo Site
+        </Button>
+
+        <div>
+          <p className="section-label mb-3">HISTÓRICO DE SITES</p>
+          <SiteHistory sites={sites} onPreview={handlePreviewHistory} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── PREVIEW VIEW (step 3)
+  if (step === 3 && generatedHtml) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <PageHeader
+          title="Preview do Site"
+          subtitle="Revise, aprove e baixe o código para publicar"
+          icon={<Globe className="w-5 h-5 text-primary" />}
+        />
+        <SitePreview
+          html={generatedHtml}
+          onRegenerate={handleGenerate}
+          onEditBriefing={() => setStep(2)}
+          generating={generating}
+        />
+        <Button variant="ghost" className="text-xs" onClick={resetWizard}>
+          <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Voltar ao início
+        </Button>
+      </div>
+    );
+  }
+
+  // ── WIZARD VIEW (steps 0-2)
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
       <PageHeader
-        title="Sites & Landing Pages"
-        subtitle="Base de conhecimento e criação de sites com IA"
+        title="Criar Novo Site"
+        subtitle={STEP_LABELS[step]}
         icon={<Globe className="w-5 h-5 text-primary" />}
       />
 
-      <Tabs defaultValue="base">
-        <TabsList>
-          <TabsTrigger value="base" className="text-xs gap-1.5"><BookOpen className="w-3.5 h-3.5" /> Base de Conhecimento</TabsTrigger>
-          <TabsTrigger value="gerar" className="text-xs gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Gerar Site</TabsTrigger>
-        </TabsList>
-
-        {/* ═══ BASE ═══ */}
-        <TabsContent value="base" className="space-y-5 mt-4">
-          <Card className="glass-card">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Preenchimento da Base</span>
-                <span className="text-xs text-muted-foreground">{filledCount}/{totalCount} campos</span>
-              </div>
-              <Progress value={progress} className="h-2" />
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end">
-            <Button
-              variant={isEditing ? "default" : "outline"}
-              size="sm"
-              className="text-xs gap-1"
-              onClick={() => {
-                if (isEditing) toast({ title: "Base salva!" });
-                setIsEditing(!isEditing);
-              }}
-            >
-              {isEditing ? <><Check className="w-3.5 h-3.5" /> Salvar</> : <><Edit3 className="w-3.5 h-3.5" /> Editar Base</>}
-            </Button>
+      {/* Step indicator */}
+      <div className="flex items-center gap-2">
+        {STEP_LABELS.slice(0, 3).map((label, i) => (
+          <div key={i} className="flex-1">
+            <div className={`h-1.5 rounded-full transition-all ${i <= step ? "bg-primary" : "bg-muted"}`} />
+            <p className={`text-[9px] mt-1 ${i <= step ? "text-foreground font-medium" : "text-muted-foreground"}`}>{label}</p>
           </div>
+        ))}
+      </div>
 
-          <div className="space-y-4">
-            {fields.map(field => (
-              <Card key={field.key} className="glass-card">
-                <CardContent className="py-4">
-                  <Label className="text-xs font-medium">{field.label}</Label>
-                  {!isEditing ? (
-                    field.type === "upload" ? (
-                      <div className="mt-2 border-2 border-dashed border-border rounded-xl p-6 text-center">
-                        <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-xs text-muted-foreground">Nenhuma imagem enviada</p>
-                      </div>
-                    ) : (
-                      <p className="text-sm mt-1.5 whitespace-pre-line">{field.value || <span className="text-muted-foreground italic">Não preenchido</span>}</p>
-                    )
-                  ) : field.type === "select" ? (
-                    <Select value={field.value} onValueChange={v => updateField(field.key, v)}>
-                      <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {field.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  ) : field.type === "textarea" ? (
-                    <Textarea value={field.value} onChange={e => updateField(field.key, e.target.value)} rows={3} className="mt-1.5" />
-                  ) : field.type === "upload" ? (
-                    <div className="mt-2 border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:bg-muted/30 transition-colors">
-                      <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-xs text-muted-foreground">Arraste ou clique para upload</p>
-                    </div>
-                  ) : (
-                    <Input value={field.value} onChange={e => updateField(field.key, e.target.value)} className="mt-1.5" />
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* ═══ GERAR SITE ═══ */}
-        <TabsContent value="gerar" className="space-y-5 mt-4">
-          {/* Summary of KB */}
-          <Card className="glass-card border-primary/20 bg-primary/5">
-            <CardContent className="py-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Target className="w-4 h-4 text-primary" />
-                <p className="text-sm font-bold">Resumo da Base de Conhecimento</p>
-                <Badge variant="outline" className="text-[9px] ml-auto">{progress}% preenchido</Badge>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {fields.filter(f => f.type !== "upload" && f.value).map(f => (
-                  <div key={f.key} className="p-3 rounded-xl bg-background border">
-                    <p className="text-[10px] text-muted-foreground font-medium">{f.label}</p>
-                    <p className="text-xs mt-1 line-clamp-2">{f.value}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Button className="w-full gap-2" size="lg" onClick={handleGenerate} disabled={generating}>
-            <Sparkles className="w-4 h-4" />
-            {generating ? "Gerando site..." : "Gerar Site com IA"}
-          </Button>
-
-          {/* Generated preview */}
-          {generatedPreview && (
-            <Card className="glass-card overflow-hidden">
-              <CardContent className="p-0">
-                {/* Mock preview */}
-                <div className="bg-gradient-to-b from-primary/10 to-background">
-                  <div className="max-w-2xl mx-auto py-12 px-6 text-center space-y-6">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/20 mx-auto flex items-center justify-center">
-                      <span className="text-xl font-black text-primary">N</span>
-                    </div>
-                    <h2 className="text-2xl font-black tracking-tight">Gestão Completa para Sua Franquia</h2>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      Única plataforma que integra vendas + marketing + IA para redes de franquias. Triplique seus leads em 3 meses.
-                    </p>
-                    <Button className="gap-2"><Sparkles className="w-4 h-4" /> Agende Sua Demo Gratuita</Button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 px-6 pb-8 max-w-2xl mx-auto">
-                    {["CRM Integrado", "Marketing com IA", "Relatórios"].map(b => (
-                      <div key={b} className="p-4 rounded-xl bg-card border text-center">
-                        <Award className="w-5 h-5 text-primary mx-auto mb-2" />
-                        <p className="text-xs font-medium">{b}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="px-6 pb-8 max-w-2xl mx-auto">
-                    <div className="p-4 rounded-xl bg-muted/30 border text-center">
-                      <p className="text-xs italic text-muted-foreground">"A NoExcuse triplicou nossos leads em 3 meses"</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">— João, Franqueado</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="p-5 border-t space-y-3">
-                  <div className="grid grid-cols-3 gap-3">
-                    <Button className="w-full gap-2" onClick={() => toast({ title: "Site publicado!", description: "Seu site está no ar." })}>
-                      <ExternalLink className="w-4 h-4" /> Publicar Site
-                    </Button>
-                    <Button variant="outline" className="w-full gap-2" onClick={() => toast({ title: "Código baixado!" })}>
-                      <Download className="w-4 h-4" /> Baixar Código
-                    </Button>
-                    <Button variant="outline" className="w-full gap-2">
-                      <Edit3 className="w-4 h-4" /> Editar
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Step content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          {step === 0 && (
+            <SiteWizardStep1
+              selected={siteType}
+              onSelect={setSiteType}
+              allowedTypes={allowedTypes}
+              activeSites={sites.length}
+              maxSites={maxSites}
+            />
           )}
+          {step === 1 && (
+            <SiteWizardStep2
+              objetivo={objetivo}
+              estilo={estilo}
+              cta={cta}
+              onObjetivo={setObjetivo}
+              onEstilo={setEstilo}
+              onCta={setCta}
+            />
+          )}
+          {step === 2 && (
+            <SiteWizardStep3
+              data={briefing}
+              onChange={(field, value) => setBriefing((prev) => ({ ...prev, [field]: value }))}
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
 
-          {/* History */}
-          <div>
-            <p className="section-label mb-3">HISTÓRICO DE SITES</p>
-            <div className="space-y-3">
-              {sites.map(s => (
-                <Card key={s.id} className="glass-card">
-                  <CardContent className="py-4 flex items-center gap-4">
-                    <Globe className="w-5 h-5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">{s.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant={s.status === "Publicado" ? "default" : "outline"} className="text-[9px]">{s.status}</Badge>
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {s.createdAt}
-                        </span>
-                      </div>
-                    </div>
-                    {s.url && (
-                      <Button variant="ghost" size="sm" className="text-xs gap-1">
-                        <ExternalLink className="w-3.5 h-3.5" /> Ver
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+      {/* Generating state */}
+      {generating && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-5 text-center space-y-3">
+            <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+            <p className="text-sm font-bold">Gerando seu site com IA...</p>
+            <p className="text-[11px] text-muted-foreground">Isso pode levar até 30 segundos</p>
+            <Progress value={genProgress} className="h-2" />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between pt-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs gap-1"
+          onClick={() => step === 0 ? resetWizard() : setStep(step - 1)}
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> {step === 0 ? "Cancelar" : "Voltar"}
+        </Button>
+
+        {step < 2 ? (
+          <Button size="sm" className="gap-1 text-xs" onClick={() => setStep(step + 1)} disabled={!canProceed()}>
+            Próximo <ArrowRight className="w-3.5 h-3.5" />
+          </Button>
+        ) : (
+          <Button size="sm" className="gap-1 text-xs" onClick={handleGenerate} disabled={generating}>
+            <Sparkles className="w-3.5 h-3.5" /> Gerar Site com IA
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
