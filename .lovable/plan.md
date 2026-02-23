@@ -1,22 +1,29 @@
 
 
-# Atualizar Chave API do Asaas
+## Problema
 
-## O que sera feito
+A classe CSS `sidebar-item-active` e usada nas sidebars do Franqueado e da Franqueadora para destacar a aba selecionada, mas **essa classe nunca foi definida em nenhum arquivo CSS**. Isso faz com que o item ativo nao tenha estilo visual adequado, ficando ilegivel contra o fundo escuro da sidebar.
 
-1. **Atualizar o secret `ASAAS_API_KEY`** com a nova chave de producao fornecida
-2. **Re-deploy das 3 edge functions** de pagamento para que usem a nova chave:
-   - `asaas-create-subscription`
-   - `asaas-create-charge`
-   - `asaas-list-payments`
+## Solucao
+
+Adicionar a definicao da classe `.sidebar-item-active` no arquivo `src/index.css`, dentro da camada `@layer utilities`, com cores que garantam contraste no fundo escuro da sidebar.
 
 ## Detalhes Tecnicos
 
-- O secret `ASAAS_API_KEY` ja existe no sistema e sera atualizado com o novo valor
-- As edge functions serao re-deployadas automaticamente apos a atualizacao
-- Nenhuma alteracao de codigo e necessaria, apenas a troca da chave
+**Arquivo:** `src/index.css`
 
-## Resultado Esperado
+Adicionar na secao `@layer utilities`:
 
-Apos a atualizacao, o fluxo de upgrade de plano e compra de creditos deve funcionar sem o erro de IP nao autorizado, ja que a nova chave pode nao ter a restricao associada.
+```css
+.sidebar-item-active {
+  background: hsl(var(--sidebar-accent) / 0.12);
+  color: hsl(var(--sidebar-primary));
+}
+```
+
+Isso aplica:
+- Fundo sutil com a cor primaria (vermelho) em baixa opacidade
+- Texto na cor primaria da sidebar (vermelho), legivel contra o fundo escuro
+
+Nenhum outro arquivo precisa ser alterado — as sidebars ja aplicam a classe corretamente.
 
