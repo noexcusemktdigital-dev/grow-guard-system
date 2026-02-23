@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.ai-agent-simulate]
 verify_jwt = false
+
+[functions.generate-script]
+verify_jwt = false
