@@ -50,3 +50,9 @@ verify_jwt = false
 
 [functions.generate-content]
 verify_jwt = false
+
+[functions.generate-social-concepts]
+verify_jwt = false
+
+[functions.generate-social-image]
+verify_jwt = false
