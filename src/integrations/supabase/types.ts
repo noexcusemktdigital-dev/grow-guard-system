@@ -2969,6 +2969,7 @@ export type Database = {
       organizations: {
         Row: {
           address: string | null
+          api_key: string | null
           asaas_customer_id: string | null
           city: string | null
           cnpj: string | null
@@ -2985,6 +2986,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          api_key?: string | null
           asaas_customer_id?: string | null
           city?: string | null
           cnpj?: string | null
@@ -3001,6 +3003,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          api_key?: string | null
           asaas_customer_id?: string | null
           city?: string | null
           cnpj?: string | null
@@ -3151,6 +3154,7 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
+          modules: string
           organization_id: string
           plan: string
           started_at: string
@@ -3163,6 +3167,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          modules?: string
           organization_id: string
           plan?: string
           started_at?: string
@@ -3175,6 +3180,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          modules?: string
           organization_id?: string
           plan?: string
           started_at?: string
@@ -3585,6 +3591,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_org_api_key: { Args: { _org_id: string }; Returns: string }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }

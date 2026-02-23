@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Settings, User, Building2, Users, Bell, Plus, Trash2, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, User, Building2, Users, Bell, UserPlus, Copy, Shield } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,152 +10,330 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useOrgProfile } from "@/hooks/useOrgProfile";
+import { useOrgMembers } from "@/hooks/useOrgMembers";
+import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { getPlanBySlug } from "@/constants/plans";
+import { supabase } from "@/integrations/supabase/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-export default function ClienteConfiguracoes() {
+function ProfileTab() {
   const { user } = useAuth();
-  const { data: subscription, isLoading } = useClienteSubscription();
-  const [profile, setProfile] = useState({ name: user?.user_metadata?.full_name || "Admin", phone: "", cargo: "" });
-  const [notifications, setNotifications] = useState({
-    novosLeads: true, creditosBaixos: true, renovacao: true, whatsapp: false, relatorios: true,
+  const { data: profile, isLoading, update } = useUserProfile();
+  const [form, setForm] = useState({ full_name: "", phone: "", job_title: "" });
+
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        full_name: profile.full_name || "",
+        phone: profile.phone || "",
+        job_title: profile.job_title || "",
+      });
+    }
+  }, [profile]);
+
+  if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Seu Perfil</CardTitle>
+        <CardDescription>Informações pessoais da sua conta</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-16 w-16">
+            <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
+              {(form.full_name || "U").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-medium text-foreground">{form.full_name || "Usuário"}</p>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Nome</Label>
+            <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>E-mail</Label>
+            <Input value={user?.email || ""} readOnly className="bg-muted" />
+          </div>
+          <div className="space-y-2">
+            <Label>Telefone</Label>
+            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" />
+          </div>
+          <div className="space-y-2">
+            <Label>Cargo</Label>
+            <Input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} placeholder="CEO" />
+          </div>
+        </div>
+        <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
+          {update.isPending ? "Salvando..." : "Salvar Alterações"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OrgTab() {
+  const { data: org, isLoading, update } = useOrgProfile();
+  const [form, setForm] = useState({ name: "", cnpj: "", email: "", phone: "", address: "", city: "", state: "" });
+
+  useEffect(() => {
+    if (org) {
+      setForm({
+        name: org.name || "",
+        cnpj: org.cnpj || "",
+        email: org.email || "",
+        phone: org.phone || "",
+        address: org.address || "",
+        city: org.city || "",
+        state: org.state || "",
+      });
+    }
+  }, [org]);
+
+  if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Dados da Organização</CardTitle>
+        <CardDescription>Informações da empresa</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Nome da Empresa</Label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>CNPJ</Label>
+            <Input value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0001-00" />
+          </div>
+          <div className="space-y-2">
+            <Label>E-mail</Label>
+            <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="contato@empresa.com" />
+          </div>
+          <div className="space-y-2">
+            <Label>Telefone</Label>
+            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 3333-0000" />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label>Endereço</Label>
+            <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, número, bairro" />
+          </div>
+          <div className="space-y-2">
+            <Label>Cidade</Label>
+            <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Estado</Label>
+            <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="SP" />
+          </div>
+        </div>
+        <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
+          {update.isPending ? "Salvando..." : "Salvar Dados"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function UsersTab() {
+  const { data: members, isLoading, refetch } = useOrgMembers();
+  const { data: subscription } = useClienteSubscription();
+  const { data: orgId } = useUserOrgId();
+  const plan = getPlanBySlug(subscription?.plan);
+  const maxUsers = plan?.maxUsers ?? 2;
+  const currentCount = members?.length ?? 0;
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
+  const qc = useQueryClient();
+
+  const inviteMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("invite-user", {
+        body: {
+          email: inviteForm.email,
+          full_name: inviteForm.full_name,
+          role: inviteForm.role,
+          organization_id: orgId,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Usuário convidado! Senha temporária: ${data.temp_password}`, { duration: 15000 });
+      setInviteOpen(false);
+      setInviteForm({ email: "", full_name: "", role: "cliente_user" });
+      qc.invalidateQueries({ queryKey: ["org-members"] });
+    },
+    onError: (err: any) => toast.error(err.message),
   });
 
-  if (isLoading) {
-    return (
-      <div className="w-full space-y-6">
-        <PageHeader title="Configurações" subtitle="Preferências da conta" icon={<Settings className="w-5 h-5 text-primary" />} />
-        <Skeleton className="h-64 rounded-xl" />
-      </div>
-    );
-  }
+  const roleLabels: Record<string, string> = {
+    cliente_admin: "Admin",
+    cliente_user: "Usuário",
+    super_admin: "Super Admin",
+    admin: "Admin",
+  };
 
+  if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Usuários</CardTitle>
+              <CardDescription>
+                {currentCount}/{maxUsers} usuários · {maxUsers - currentCount > 0 ? `${maxUsers - currentCount} disponíveis` : "Limite atingido"}
+              </CardDescription>
+            </div>
+            <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)} disabled={currentCount >= maxUsers}>
+              <UserPlus className="w-4 h-4" /> Convidar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {members?.map((m) => (
+              <div key={m.user_id} className="flex items-center justify-between p-3 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
+                      {(m.full_name || "U").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{m.full_name || "Sem nome"}</p>
+                    <p className="text-xs text-muted-foreground">{m.job_title || "—"}</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="gap-1">
+                  <Shield className="w-3 h-3" />
+                  {roleLabels[m.role] || m.role}
+                </Badge>
+              </div>
+            ))}
+          </div>
+          {currentCount >= maxUsers && (
+            <p className="text-xs text-muted-foreground mt-4 text-center">
+              Limite de usuários do plano atingido. Faça upgrade ou compre usuários adicionais (R$ 29/mês cada).
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Convidar Usuário</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>E-mail</Label>
+              <Input value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="usuario@empresa.com" />
+            </div>
+            <div className="space-y-2">
+              <Label>Nome</Label>
+              <Input value={inviteForm.full_name} onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })} placeholder="Nome completo" />
+            </div>
+            <div className="space-y-2">
+              <Label>Permissão</Label>
+              <Select value={inviteForm.role} onValueChange={(v) => setInviteForm({ ...inviteForm, role: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cliente_admin">Admin</SelectItem>
+                  <SelectItem value="cliente_user">Usuário</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancelar</Button>
+            <Button onClick={() => inviteMutation.mutate()} disabled={inviteMutation.isPending || !inviteForm.email}>
+              {inviteMutation.isPending ? "Enviando..." : "Convidar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function NotificationsTab() {
+  const [notifications, setNotifications] = useState({
+    novosLeads: true,
+    creditosBaixos: true,
+    renovacao: true,
+    whatsapp: false,
+    relatorios: true,
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Notificações</CardTitle>
+        <CardDescription>Escolha quais alertas deseja receber</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {[
+          { key: "novosLeads", label: "Novos leads", desc: "Receber alerta quando um novo lead for captado" },
+          { key: "creditosBaixos", label: "Créditos baixos", desc: "Avisar quando créditos estiverem abaixo de 20%" },
+          { key: "renovacao", label: "Renovação de plano", desc: "Lembrete antes da renovação automática" },
+          { key: "whatsapp", label: "Mensagens WhatsApp", desc: "Notificar novas mensagens no WhatsApp" },
+          { key: "relatorios", label: "Relatórios semanais", desc: "Receber relatório semanal por e-mail" },
+        ].map((item) => (
+          <div key={item.key} className="flex items-center justify-between py-2">
+            <div>
+              <p className="text-sm font-medium text-foreground">{item.label}</p>
+              <p className="text-xs text-muted-foreground">{item.desc}</p>
+            </div>
+            <Switch
+              checked={notifications[item.key as keyof typeof notifications]}
+              onCheckedChange={(v) => {
+                setNotifications({ ...notifications, [item.key]: v });
+                toast.success(`${item.label} ${v ? "ativado" : "desativado"}`);
+              }}
+            />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function ClienteConfiguracoes() {
   return (
     <div className="w-full space-y-6">
       <PageHeader title="Configurações" subtitle="Preferências da conta e organização" icon={<Settings className="w-5 h-5 text-primary" />} />
 
       <Tabs defaultValue="perfil">
-        <TabsList className="grid grid-cols-3 w-full">
+        <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="perfil" className="gap-1.5 text-xs sm:text-sm"><User className="w-4 h-4" /> Perfil</TabsTrigger>
-          <TabsTrigger value="plano" className="gap-1.5 text-xs sm:text-sm"><Building2 className="w-4 h-4" /> Plano</TabsTrigger>
-          <TabsTrigger value="notificacoes" className="gap-1.5 text-xs sm:text-sm"><Bell className="w-4 h-4" /> Notificações</TabsTrigger>
+          <TabsTrigger value="organizacao" className="gap-1.5 text-xs sm:text-sm"><Building2 className="w-4 h-4" /> Organização</TabsTrigger>
+          <TabsTrigger value="usuarios" className="gap-1.5 text-xs sm:text-sm"><Users className="w-4 h-4" /> Usuários</TabsTrigger>
+          <TabsTrigger value="notificacoes" className="gap-1.5 text-xs sm:text-sm"><Bell className="w-4 h-4" /> Alertas</TabsTrigger>
         </TabsList>
 
-        {/* Perfil */}
-        <TabsContent value="perfil">
-          <Card>
-            <CardHeader>
-              <CardTitle>Seu Perfil</CardTitle>
-              <CardDescription>Informações pessoais da sua conta</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
-                    {profile.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium text-foreground">{profile.name}</p>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome</Label>
-                  <Input value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>E-mail</Label>
-                  <Input value={user?.email || ""} readOnly className="bg-muted" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} placeholder="(11) 99999-0000" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Cargo</Label>
-                  <Input value={profile.cargo} onChange={e => setProfile({ ...profile, cargo: e.target.value })} placeholder="CEO" />
-                </div>
-              </div>
-              <Button onClick={() => toast.success("Perfil salvo com sucesso!")}>Salvar Alterações</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Plano */}
-        <TabsContent value="plano">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Plano Atual</CardTitle>
-                  <CardDescription>Informações da sua assinatura</CardDescription>
-                </div>
-                <Badge variant={subscription?.status === "trial" ? "outline" : "default"}>
-                  {subscription?.status === "trial" ? "🧪 Trial" : subscription?.status || "Inativo"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg border">
-                  <p className="text-[10px] text-muted-foreground uppercase">Plano</p>
-                  <p className="text-lg font-bold capitalize">{subscription?.plan || "Sem plano"}</p>
-                </div>
-                <div className="p-4 rounded-lg border">
-                  <p className="text-[10px] text-muted-foreground uppercase">Status</p>
-                  <p className="text-lg font-bold capitalize">{subscription?.status || "Inativo"}</p>
-                </div>
-                {subscription?.expires_at && (
-                  <div className="p-4 rounded-lg border col-span-2">
-                    <p className="text-[10px] text-muted-foreground uppercase">Expira em</p>
-                    <p className="text-lg font-bold">{new Date(subscription.expires_at).toLocaleDateString("pt-BR")}</p>
-                  </div>
-                )}
-              </div>
-              {!subscription && (
-                <div className="text-center py-4">
-                  <p className="text-sm text-muted-foreground">Nenhuma assinatura ativa encontrada.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notificações */}
-        <TabsContent value="notificacoes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notificações</CardTitle>
-              <CardDescription>Escolha quais alertas deseja receber</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {[
-                { key: "novosLeads", label: "Novos leads", desc: "Receber alerta quando um novo lead for captado" },
-                { key: "creditosBaixos", label: "Créditos baixos", desc: "Avisar quando créditos estiverem abaixo de 20%" },
-                { key: "renovacao", label: "Renovação de plano", desc: "Lembrete antes da renovação automática" },
-                { key: "whatsapp", label: "Mensagens WhatsApp", desc: "Notificar novas mensagens no WhatsApp" },
-                { key: "relatorios", label: "Relatórios semanais", desc: "Receber relatório semanal por e-mail" },
-              ].map(item => (
-                <div key={item.key} className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">{item.desc}</p>
-                  </div>
-                  <Switch
-                    checked={notifications[item.key as keyof typeof notifications]}
-                    onCheckedChange={v => {
-                      setNotifications({ ...notifications, [item.key]: v });
-                      toast.success(`${item.label} ${v ? "ativado" : "desativado"}`);
-                    }}
-                  />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <TabsContent value="perfil"><ProfileTab /></TabsContent>
+        <TabsContent value="organizacao"><OrgTab /></TabsContent>
+        <TabsContent value="usuarios"><UsersTab /></TabsContent>
+        <TabsContent value="notificacoes"><NotificationsTab /></TabsContent>
       </Tabs>
     </div>
   );
