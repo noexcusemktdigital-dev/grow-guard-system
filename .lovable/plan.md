@@ -1,154 +1,173 @@
 
 
-# Plano de Vendas -- Reformulacao Estilo Consultoria + Dashboard vira Relatorios
+# Metas Comerciais -- Reformulacao Completa com Integracao Real
 
 ## Resumo
 
-Reformular o **Plano de Vendas** para seguir o mesmo padrao da **Estrategia de Marketing**: uma consultoria interativa com perguntas agrupadas em secoes, gerando um diagnostico comercial com termometro de maturidade, radar por area, plano de acao dinamico e projecoes. O resultado gera dicas e recomendacoes que direcionam o usuario para CRM, Agentes IA e Scripts.
-
-Renomear **Dashboard** para **Relatorios** na sidebar e na pagina.
-
-Remover as abas **Visao Geral** e **Estrutura Comercial** do Plano de Vendas.
+Transformar a aba "Minhas Metas" de uma lista simples em um painel visual rico e integrado aos dados reais do CRM. As metas terao escopo (empresa, equipe, individual), progresso calculado automaticamente a partir dos dados do CRM, visual rico com gauges/progress rings, e metas do mes atual separadas das antigas (historico).
 
 ---
 
-## Mudancas na Sidebar
+## O que muda
+
+### 1. Banco de Dados -- Expandir tabela `goals`
+
+Adicionar colunas na tabela `goals` para suportar escopo, equipe e integracao:
+
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| `scope` | text (default 'company') | 'company', 'team', 'individual' |
+| `team_id` | uuid (nullable) | Referencia ao time (crm_teams) quando scope='team' |
+| `metric` | text (default 'revenue') | Metrica rastreada: 'revenue', 'leads', 'conversions', 'contracts', 'meetings', 'avg_ticket', 'retention' |
+| `priority` | text (default 'media') | 'alta', 'media', 'baixa' |
+| `status` | text (default 'active') | 'active', 'completed', 'archived' |
+
+A coluna `type` existente sera reutilizada, mas o campo `metric` sera mais granular para definir exatamente o que e medido. O campo `current_value` ja existe e sera atualizado.
+
+### 2. Calculo Automatico de Progresso (via CRM)
+
+Uma funcao no frontend calculara `current_value` com base na metrica:
+
+| Metrica | Fonte de dados | Calculo |
+|---------|----------------|---------|
+| **revenue** (Faturamento) | `crm_leads` com `won_at` no periodo | SUM(value) dos leads ganhos |
+| **leads** (Leads Gerados) | `crm_leads` com `created_at` no periodo | COUNT de leads criados |
+| **conversions** (Conversao) | `crm_leads` | (leads com won_at / total leads) * 100 |
+| **contracts** (Contratos) | `crm_leads` com `won_at` | COUNT de leads ganhos |
+| **meetings** (Reunioes) | `crm_activities` type='meeting' | COUNT no periodo |
+| **avg_ticket** (Ticket Medio) | `crm_leads` com `won_at` | AVG(value) |
+
+Quando escopo = 'team', filtra por `assigned_to IN (membros do time)`.
+Quando escopo = 'individual', filtra por `assigned_to = user_id`.
+
+### 3. Visual Novo -- Minhas Metas
+
+Layout da aba reformulada:
 
 ```text
-VENDAS (antes)                    VENDAS (depois)
-  Plano de Vendas                   Plano de Vendas
-  CRM                              CRM
-  Chat                             Chat
-  Agentes IA                       Agentes IA
-  Scripts                          Scripts
-  Disparos                         Disparos
-  Dashboard                        Relatorios    <-- renomeado
++------------------------------------------------------+
+|  MINHAS METAS  (Fev 2026)                            |
+|  [Empresa] [Equipe] [Individual]  <- filtros escopo   |
++------------------------------------------------------+
+|                                                      |
+|  KPI Cards (resumo do mes):                          |
+|  +----------+ +----------+ +----------+ +----------+ |
+|  | 3 metas  | | 1 batida | | 67% avg  | | 2 alta   | |
+|  | ativas   | | atingida | | progresso| | priorid. | |
+|  +----------+ +----------+ +----------+ +----------+ |
+|                                                      |
+|  Meta Cards (detalhados):                            |
+|  +------------------------------------------------+  |
+|  | [Ring 72%]  Faturamento Mensal                  |  |
+|  |             Empresa · Alta prioridade           |  |
+|  |  R$ 36.000 / R$ 50.000                         |  |
+|  |  [=============================-------] 72%     |  |
+|  |  Responsavel: Toda empresa                     |  |
+|  |  Periodo: 01/02 - 28/02                        |  |
+|  |  Faltam: R$ 14.000  |  Ritmo: R$ 1.800/dia    |  |
+|  |  Status: [Em andamento]  [Editar] [Arquivar]   |  |
+|  +------------------------------------------------+  |
+|                                                      |
+|  +------------------------------------------------+  |
+|  | [Ring 45%]  Leads por Vendedor                  |  |
+|  |             Individual · Joao Silva             |  |
+|  |  9 / 20 leads                                  |  |
+|  |  [=================-----------] 45%             |  |
+|  |  Status: [Abaixo do ritmo]                     |  |
+|  +------------------------------------------------+  |
+|                                                      |
++------------------------------------------------------+
+|  HISTORICO DE METAS (meses anteriores)               |
+|  [card colapsavel com metas passadas + resultado]    |
++------------------------------------------------------+
 ```
 
----
+**Componentes visuais de cada meta:**
+- Circular progress ring (SVG) mostrando percentual
+- Barra de progresso colorida (verde >= 80%, amarelo >= 50%, vermelho < 50%)
+- Badge de status: "Batida", "Em andamento", "Abaixo do ritmo", "Critica"
+- Indicador de ritmo: calcula se o progresso esta compativel com os dias restantes do mes
+- Mini sparkline de evolucao (opcional, para metas recorrentes)
 
-## Plano de Vendas -- Nova Estrutura
+### 4. Filtros por Escopo
 
-### Abas
+Tres botoes de filtro no topo:
+- **Empresa**: mostra metas com scope='company'
+- **Equipe**: mostra metas com scope='team', agrupadas por time
+- **Individual**: mostra metas com scope='individual', agrupadas por pessoa
 
-O Plano de Vendas tera 3 abas:
+### 5. Historico Automatico
 
-| Aba | Descricao |
-|-----|-----------|
-| **Diagnostico** | Consultoria interativa com ~25 perguntas em ~8 secoes, seguindo o mesmo padrao do Estrategia de Marketing (secoes com progress bar, navegacao anterior/proximo, animacao de transicao). Ao finalizar, mostra resultados. |
-| **Minhas Metas** | Manter a aba atual de metas (sem mudancas) |
-| **Historico** | Historico de diagnosticos realizados (mesmo padrao do historico da Estrategia de Marketing) |
+Metas cujo `period_end` e anterior ao mes atual sao automaticamente exibidas na secao "Historico" (abaixo das metas ativas). O historico mostra:
+- Nome da meta + periodo
+- Resultado final (current_value vs target_value)
+- Badge: "Batida" ou "Nao atingida" com percentual
 
-### Secoes do Diagnostico (~25 perguntas em 8 secoes)
+### 6. Formulario de Nova Meta (expandido)
 
-1. **Sobre o Negocio** (contexto basico)
-   - Segmento da empresa
-   - Modelo de negocio (B2B/B2C/Ambos)
-   - Tempo de mercado
-   - Numero de funcionarios
-
-2. **Financeiro Comercial** (dimensionar operacao)
-   - Faturamento mensal
-   - Ticket medio
-   - Meta de faturamento mensal
-   - Percentual da receita vinda de novos clientes vs recorrencia
-
-3. **Equipe e Estrutura** (quem vende)
-   - Tamanho da equipe comercial
-   - Tem SDR? Closer? CS?
-   - Processo comercial documentado?
-   - Tempo medio de fechamento
-
-4. **Gestao de Leads** (como gerencia leads)
-   - Usa CRM? Qual?
-   - Follow-up estruturado?
-   - Cadencia de follow-up
-   - Quantidade de leads mensais
-
-5. **Canais e Prospeccao** (de onde vem os leads)
-   - Canais de aquisicao ativos (multi-choice)
-   - Canal principal
-   - Mede ROI por canal?
-
-6. **Processo de Vendas** (como vende)
-   - Usa scripts/roteiros?
-   - Etapas do funil de vendas (multi-choice)
-   - Reuniao comercial recorrente?
-   - Frequencia da reuniao
-
-7. **Ferramentas e Automacao** (tecnologia)
-   - Ferramentas utilizadas (multi-choice)
-   - Tem automacoes ativas?
-   - Usa agente de IA para atendimento?
-
-8. **Metas e Performance** (controle)
-   - Metas baseadas em dados historicos?
-   - Acompanha taxa de conversao por etapa?
-   - Relatorios comerciais periodicos?
-   - Frequencia de analise de resultados
-
-### Resultado do Diagnostico
-
-Apos finalizar as perguntas, o usuario ve:
-
-1. **Termometro de Maturidade Comercial** -- mesmo componente `DiagnosticoTermometro` usado na Estrategia de Marketing, com 4 niveis: Inicial (0-25%), Estruturando (26-50%), Escalavel (51-75%), Alta Performance (76-100%)
-
-2. **Radar por Area (5 eixos)** -- Processo, Gestao de Leads, Ferramentas, Canais, Performance
-
-3. **Insights Inteligentes** -- Cards com recomendacoes baseadas nas respostas, cada um com botao "Iniciar agora" que navega para o modulo relevante:
-   - "Implante um CRM para controlar seus leads" -> navega para `/cliente/crm`
-   - "Crie scripts padronizados para sua equipe" -> navega para `/cliente/scripts`
-   - "Configure um agente de IA para qualificar leads" -> navega para `/cliente/agentes-ia`
-   - "Estruture follow-ups automaticos" -> navega para `/cliente/disparos`
-
-4. **Plano de Acao em 3 Fases** -- Estruturacao, Otimizacao, Escala (mesmo padrao da Estrategia de Marketing)
-
-5. **Projecoes Comparativas** -- "Com Estrategia" vs "Sem Estrategia" para Leads e Receita (graficos lado a lado como na Estrategia de Marketing)
+O dialog de criar meta sera mais completo:
+- Nome da meta
+- Metrica (dropdown com as 7 opcoes)
+- Valor alvo (numerico)
+- Escopo: Empresa / Equipe / Individual
+- Se Equipe: selecionar time (lista de crm_teams)
+- Se Individual: selecionar usuario (lista de membros da org)
+- Periodo: mes de referencia (auto-preenche inicio/fim do mes)
+- Prioridade: Alta / Media / Baixa
 
 ---
 
-## Dashboard -> Relatorios
+## Arquivos
 
-### Mudancas
+### Modificados
 
-- Renomear label na sidebar de "Dashboard" para "Relatorios"
-- Renomear o titulo na pagina `ClienteDashboard.tsx` de "Dashboard" para "Relatorios"
-- Subtitulo: "Analise e exporte relatorios das suas frentes comerciais"
-- Manter todo o conteudo existente (abas CRM, Chat, Agentes IA com exportacao CSV) -- isso ja e essencialmente um modulo de relatorios
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/pages/cliente/ClientePlanoVendas.tsx` | Reescrever secao "metas" (linhas ~966-1098): substituir cards simples por layout visual rico com progress rings, KPI summary, filtros de escopo, historico automatico, integracao com dados CRM |
+| `src/hooks/useGoals.ts` | Expandir para incluir queries filtradas por escopo/mes, funcao de calculo de progresso via CRM data, mutation de arquivamento |
+
+### Novos
+
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/components/metas/GoalProgressRing.tsx` | Componente SVG circular de progresso (ring chart) com animacao |
+| `src/components/metas/GoalCard.tsx` | Card visual completo de uma meta com ring, barra, status, ritmo |
+| `src/hooks/useGoalProgress.ts` | Hook que calcula current_value de cada meta consultando crm_leads, crm_activities |
+
+### Migracao SQL
+
+Adicionar colunas `scope`, `team_id`, `metric`, `priority`, `status` na tabela `goals`.
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos Modificados
+### GoalProgressRing (SVG)
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/pages/cliente/ClientePlanoVendas.tsx` | Reescrever completamente: remover Visao Geral e Estrutura Comercial, implementar consultoria interativa com secoes/perguntas, resultados com termometro + radar + insights + plano de acao + projecoes. Manter aba Metas intacta. |
-| `src/pages/cliente/ClienteDashboard.tsx` | Renomear titulo de "Dashboard" para "Relatorios", ajustar subtitulo |
-| `src/components/ClienteSidebar.tsx` | Renomear "Dashboard" para "Relatorios" na sidebar |
+Circulo SVG com `stroke-dasharray` e `stroke-dashoffset` animados via CSS transition. Cores: verde (>=80%), amarelo (>=50%), vermelho (<50%). Tamanho: 56x56px nos cards.
 
-### Nenhum arquivo novo necessario
+### Calculo de Ritmo
 
-- Reutiliza `DiagnosticoTermometro` ja existente
-- Reutiliza `RadarChart` do recharts ja instalado
-- Segue o mesmo padrao de codigo do `ClientePlanoMarketing.tsx`
+```
+diasPassados = hoje - period_start
+diasTotais = period_end - period_start
+ritmoNecessario = (target_value - current_value) / diasRestantes
+ritmoAtual = current_value / diasPassados
+status = ritmoAtual >= ritmoNecessario ? "No ritmo" : "Abaixo do ritmo"
+```
 
-### Logica de Score
+### useGoalProgress Hook
 
-Cada pergunta contribui para um dos 5 eixos do radar. Respostas mais maduras recebem maior pontuacao (ex: "Sim, completo" = 3 pts, "Parcial" = 2, "Nao" = 0). O score final e a media ponderada de todos os eixos, convertida em percentual para o termometro.
+Para cada meta ativa:
+1. Busca dados do CRM filtrados pelo periodo e escopo
+2. Calcula current_value
+3. Retorna objeto com `{ goalId, currentValue, percent, status, pace }`
 
-### Insights com direcionamento para modulos
+Usa React Query com chave `["goal-progress", goalId, metric, period]`.
 
-Os insights serao gerados dinamicamente com base nos scores por eixo:
-- Score baixo em "Gestao de Leads" -> recomenda CRM e follow-up
-- Score baixo em "Ferramentas" -> recomenda Agente de IA
-- Score baixo em "Processo" -> recomenda Scripts
-- Score baixo em "Canais" -> recomenda Disparos
+### Separacao Ativas vs Historico
 
-Cada insight tera um botao "Iniciar agora" com `useNavigate()` para o modulo correspondente, identico ao padrao da Estrategia de Marketing.
-
-### Persistencia
-
-Os dados do diagnostico serao salvos em `localStorage` (chave `plano_vendas_data`), mesma abordagem da Estrategia de Marketing, ate que a persistencia em banco seja implementada.
+- Metas ativas: `period_end >= primeiro dia do mes atual` OU `period_end IS NULL`
+- Metas historicas: `period_end < primeiro dia do mes atual`
+- Na UI, metas ativas ficam em destaque; historicas ficam em secao colapsavel abaixo
 
