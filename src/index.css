@@ -282,6 +282,12 @@
     left: 100%;
   }
 
+  /* ── Sidebar active item ── */
+  .sidebar-item-active {
+    background: hsl(var(--sidebar-accent) / 0.12);
+    color: hsl(var(--sidebar-primary));
+  }
+
   /* WhatsApp-style background pattern */
   .whatsapp-bg {
     background-color: hsl(var(--background));
