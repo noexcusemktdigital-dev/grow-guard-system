@@ -1,75 +1,61 @@
 
+# Fix: Lead Created from Chat Not Appearing in CRM
 
-# Fix: Full-Width Layout for All Pages
+## Root Cause
 
-## Problem
+When clicking "Criar Lead" in a chat conversation, the `handleCreateLead` function (line 183-198 of `ChatConversation.tsx`) creates the lead without a `funnel_id`:
 
-Every page in the system uses `max-w-3xl` through `max-w-7xl` combined with `mx-auto`, which caps the content at a fixed maximum width and centers it. This leaves large empty margins on both sides, especially on wider screens, making the interface look "disproportionate" and underutilizing the available space.
-
-## Solution
-
-Remove the `max-w-*xl mx-auto` constraint from every page wrapper across all three areas (Cliente, Franqueadora, Franqueado). Replace with `w-full space-y-6` so content fills the full width available inside the layout's padding (`p-6 lg:p-8`).
-
-The layout components (`ClienteLayout`, `FranqueadoraLayout`, `FranqueadoLayout`) already provide padding, so the content doesn't need self-centering constraints.
-
-## Pages to Update
-
-### Cliente Pages (20 files)
-| File | Current constraint |
-|------|-------------------|
-| ClienteInicio.tsx | max-w-7xl |
-| ClienteDashboard.tsx | max-w-7xl |
-| ClienteCRM.tsx | max-w-7xl / max-w-full |
-| ClienteDisparos.tsx | max-w-6xl |
-| ClienteConteudos.tsx | max-w-6xl |
-| ClienteRedesSociais.tsx | max-w-6xl |
-| ClienteTrafegoPago.tsx | max-w-6xl |
-| ClientePlanoMarketing.tsx | max-w-6xl |
-| ClientePlanoVendas.tsx | max-w-6xl |
-| ClientePlanoCreditos.tsx | max-w-6xl |
-| ClienteGamificacao.tsx | max-w-5xl |
-| ClienteAgentesIA.tsx | max-w-5xl |
-| ClienteScripts.tsx | max-w-5xl |
-| ClienteChat.tsx | max-w-5xl (empty state only) |
-| ClienteAvaliacoes.tsx | max-w-4xl |
-| ClienteConfiguracoes.tsx | max-w-4xl |
-| ClienteNotificacoes.tsx | max-w-4xl |
-| ClienteIntegracoes.tsx | max-w-4xl |
-| ClienteChecklist.tsx | max-w-3xl |
-| ClienteSites.tsx | max-w-5xl |
-
-### Franqueadora Pages (12+ files)
-| File | Current constraint |
-|------|-------------------|
-| Home.tsx | max-w-7xl |
-| Marketing.tsx, Matriz.tsx, MetasRanking.tsx, etc. | max-w-7xl |
-| CrmExpansao.tsx, Agenda.tsx, etc. | various |
-
-### Franqueado Pages (12+ files)
-| File | Current constraint |
-|------|-------------------|
-| FranqueadoDashboard.tsx | max-w-7xl |
-| FranqueadoContratos.tsx, FranqueadoComunicados.tsx, etc. | max-w-7xl |
-| FranqueadoDiagnostico.tsx | max-w-3xl |
-
-## Change Pattern
-
-For every file, the change is the same:
-
-```
-Before: <div className="max-w-6xl mx-auto space-y-6">
-After:  <div className="w-full space-y-6">
+```typescript
+const lead = await createLead.mutateAsync({
+  name: contact.name || contact.phone,
+  phone: contact.phone,
+  source: "whatsapp",
+  tags: ["whatsapp"],
+  // funnel_id is missing!
+});
 ```
 
-Some pages have multiple return paths (loading state + main render), so each `max-w-*xl mx-auto` occurrence must be updated.
+The CRM page displays leads grouped by funnel. A lead without a `funnel_id` doesn't belong to any funnel and is invisible in the Kanban/list views.
 
-## What Won't Change
+## Fix
 
-- Layout padding (`p-6 lg:p-8`) stays in the layout components
-- Internal grid structures (`grid-cols-2 lg:grid-cols-4`) remain unchanged and will naturally expand
-- The Chat page's connected state already uses `flex-1` (no max-w constraint)
-- Responsive breakpoints within cards/grids continue to work
+### File: `src/components/cliente/ChatConversation.tsx`
 
-## Estimated Scope
+Update `handleCreateLead` to assign the lead to the **default funnel** (or the first available funnel) and set the initial stage to the first stage of that funnel:
 
-Approximately 34 files with ~50+ occurrences of the pattern to replace.
+```typescript
+const handleCreateLead = async () => {
+  if (!contact) return;
+  try {
+    const defaultFunnel = funnelsData?.find(f => f.is_default) || funnelsData?.[0];
+    const firstStage = defaultFunnel
+      ? (Array.isArray(defaultFunnel.stages) && (defaultFunnel.stages as any[]).length > 0
+          ? (defaultFunnel.stages as any[])[0].key || "novo"
+          : "novo")
+      : "novo";
+
+    const lead = await createLead.mutateAsync({
+      name: contact.name || contact.phone,
+      phone: contact.phone,
+      source: "whatsapp",
+      tags: ["whatsapp"],
+      funnel_id: defaultFunnel?.id,
+      stage: firstStage,
+    });
+    // ... rest stays the same
+  }
+};
+```
+
+This ensures every lead created from the chat:
+1. Gets assigned to the default CRM funnel
+2. Starts at the first stage of that funnel
+3. Appears immediately in the CRM Kanban/list view
+
+## Scope
+
+| File | Change |
+|------|--------|
+| `src/components/cliente/ChatConversation.tsx` | Add `funnel_id` and `stage` to `handleCreateLead` |
+
+Single file, ~5 lines changed.
