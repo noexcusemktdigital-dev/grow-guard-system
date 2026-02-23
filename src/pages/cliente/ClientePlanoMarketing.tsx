@@ -3,6 +3,8 @@ import {
   Megaphone, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle,
   Lightbulb, FileText, Share2, Globe, DollarSign, TrendingUp,
   Target, Sparkles, RotateCcw, Clock, ChevronRight, Activity,
+  Building2, Users, Wallet, Eye, Swords, BarChart3, Database,
+  Link, ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -12,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { DiagnosticoTermometro } from "@/components/diagnostico/DiagnosticoTermometro";
@@ -22,203 +23,345 @@ import {
 } from "recharts";
 
 /* ══════════════════════════════════════════════
-   STRATEGY QUESTIONS
-   ══════════════════════════════════════════════ */
-
-interface StrategyQuestion {
-  id: string;
-  category: string;
-  question: string;
-  subtitle?: string;
-  type: "choice" | "multi-choice" | "slider" | "text";
-  options?: { label: string; value: string; icon?: React.ElementType }[];
-  sliderMin?: number;
-  sliderMax?: number;
-  sliderStep?: number;
-  sliderPrefix?: string;
-  placeholder?: string;
-}
-
-const strategyQuestions: StrategyQuestion[] = [
-  // Negócio
-  {
-    id: "segmento", category: "Negócio", question: "Qual é o segmento da sua empresa?",
-    subtitle: "Escolha o que melhor descreve o seu negócio",
-    type: "choice",
-    options: [
-      { label: "Serviços", value: "servicos" },
-      { label: "Varejo / Loja", value: "varejo" },
-      { label: "Alimentação", value: "alimentacao" },
-      { label: "Saúde / Estética", value: "saude" },
-      { label: "Educação", value: "educacao" },
-      { label: "Tecnologia", value: "tecnologia" },
-      { label: "Indústria", value: "industria" },
-      { label: "Outro", value: "outro" },
-    ],
-  },
-  {
-    id: "tempo_mercado", category: "Negócio", question: "Há quanto tempo sua empresa está no mercado?",
-    type: "choice",
-    options: [
-      { label: "Menos de 1 ano", value: "0-1" },
-      { label: "1 a 3 anos", value: "1-3" },
-      { label: "3 a 5 anos", value: "3-5" },
-      { label: "Mais de 5 anos", value: "5+" },
-    ],
-  },
-  {
-    id: "faturamento", category: "Negócio", question: "Qual o faturamento mensal aproximado?",
-    type: "slider", sliderMin: 0, sliderMax: 500000, sliderStep: 5000, sliderPrefix: "R$",
-  },
-  {
-    id: "ticket_medio", category: "Negócio", question: "Qual o ticket médio do seu produto/serviço?",
-    type: "slider", sliderMin: 0, sliderMax: 50000, sliderStep: 100, sliderPrefix: "R$",
-  },
-  // Público
-  {
-    id: "cliente_ideal", category: "Público", question: "Quem é o seu cliente ideal?",
-    subtitle: "Descreva brevemente o perfil do seu melhor cliente",
-    type: "text", placeholder: "Ex: Mulheres de 25-40 anos, classe B, que buscam praticidade...",
-  },
-  {
-    id: "faixa_etaria", category: "Público", question: "Qual a faixa etária principal do seu público?",
-    type: "choice",
-    options: [
-      { label: "18-24 anos", value: "18-24" },
-      { label: "25-34 anos", value: "25-34" },
-      { label: "35-44 anos", value: "35-44" },
-      { label: "45+ anos", value: "45+" },
-    ],
-  },
-  {
-    id: "onde_esta", category: "Público", question: "Onde seu público está mais presente?",
-    type: "multi-choice",
-    options: [
-      { label: "Instagram", value: "instagram" },
-      { label: "Facebook", value: "facebook" },
-      { label: "TikTok", value: "tiktok" },
-      { label: "Google", value: "google" },
-      { label: "WhatsApp", value: "whatsapp" },
-      { label: "YouTube", value: "youtube" },
-    ],
-  },
-  // Marketing Atual
-  {
-    id: "redes_ativas", category: "Marketing Atual", question: "Quais redes sociais sua empresa usa ativamente?",
-    type: "multi-choice",
-    options: [
-      { label: "Instagram", value: "instagram" },
-      { label: "Facebook", value: "facebook" },
-      { label: "TikTok", value: "tiktok" },
-      { label: "LinkedIn", value: "linkedin" },
-      { label: "YouTube", value: "youtube" },
-      { label: "Nenhuma", value: "nenhuma" },
-    ],
-  },
-  {
-    id: "freq_publicacao", category: "Marketing Atual", question: "Com que frequência você publica conteúdo?",
-    type: "choice",
-    options: [
-      { label: "Não publico", value: "nunca" },
-      { label: "Esporadicamente", value: "esporadico" },
-      { label: "Semanalmente", value: "semanal" },
-      { label: "Diariamente", value: "diario" },
-    ],
-  },
-  {
-    id: "investe_trafego", category: "Marketing Atual", question: "Você investe em tráfego pago atualmente?",
-    type: "choice",
-    options: [
-      { label: "Nunca investi", value: "nunca" },
-      { label: "Já testei sem resultado", value: "testou" },
-      { label: "Invisto mensalmente", value: "mensal" },
-      { label: "Tenho campanha otimizada", value: "otimizado" },
-    ],
-  },
-  {
-    id: "tem_site", category: "Marketing Atual", question: "Sua empresa possui um site ou landing page?",
-    type: "choice",
-    options: [
-      { label: "Não possui", value: "nao" },
-      { label: "Tem, mas desatualizado", value: "desatualizado" },
-      { label: "Sim, atualizado", value: "atualizado" },
-      { label: "Sim, otimizado para SEO", value: "otimizado" },
-    ],
-  },
-  // Objetivos
-  {
-    id: "meta_principal", category: "Objetivos", question: "Qual seu objetivo principal com o marketing?",
-    subtitle: "Escolha o mais importante para você agora",
-    type: "choice",
-    options: [
-      { label: "Gerar mais leads", value: "leads", icon: Target },
-      { label: "Aumentar vendas", value: "vendas", icon: DollarSign },
-      { label: "Construir autoridade", value: "autoridade", icon: Sparkles },
-      { label: "Reconhecimento de marca", value: "reconhecimento", icon: Megaphone },
-    ],
-  },
-  {
-    id: "prazo", category: "Objetivos", question: "Em quanto tempo espera ver resultados?",
-    type: "choice",
-    options: [
-      { label: "1-2 meses", value: "1-2" },
-      { label: "3-4 meses", value: "3-4" },
-      { label: "5-6 meses", value: "5-6" },
-      { label: "Mais de 6 meses", value: "6+" },
-    ],
-  },
-  // Orçamento
-  {
-    id: "investimento_atual", category: "Orçamento", question: "Quanto você investe em marketing por mês atualmente?",
-    type: "slider", sliderMin: 0, sliderMax: 50000, sliderStep: 500, sliderPrefix: "R$",
-  },
-  {
-    id: "investimento_possivel", category: "Orçamento", question: "Quanto poderia investir em marketing por mês?",
-    type: "slider", sliderMin: 0, sliderMax: 50000, sliderStep: 500, sliderPrefix: "R$",
-  },
-  // Dores
-  {
-    id: "dificuldades", category: "Dores", question: "Quais são suas maiores dificuldades com marketing?",
-    type: "multi-choice",
-    options: [
-      { label: "Falta de tempo", value: "tempo" },
-      { label: "Não sei o que postar", value: "conteudo" },
-      { label: "Não gero leads", value: "leads" },
-      { label: "Não tenho equipe", value: "equipe" },
-      { label: "Baixo engajamento", value: "engajamento" },
-      { label: "Não sei usar tráfego pago", value: "trafego" },
-    ],
-  },
-  {
-    id: "tentativas", category: "Dores", question: "O que você já tentou que não funcionou?",
-    subtitle: "Conte brevemente suas experiências anteriores",
-    type: "text", placeholder: "Ex: Contratei um social media, mas não deu resultado...",
-  },
-];
-
-/* ══════════════════════════════════════════════
-   SCORING LOGIC
+   TYPES
    ══════════════════════════════════════════════ */
 
 type Answers = Record<string, string | string[] | number>;
 
+interface StrategyQuestion {
+  id: string;
+  question: string;
+  subtitle?: string;
+  type: "choice" | "multi-choice" | "text";
+  options?: { label: string; value: string; icon?: React.ElementType }[];
+  placeholder?: string;
+  optional?: boolean;
+  condition?: (answers: Answers) => boolean;
+}
+
+interface StrategySection {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: React.ElementType;
+  questions: StrategyQuestion[];
+}
+
+/* ══════════════════════════════════════════════
+   SECTIONS & QUESTIONS (~30 questions in 9 screens)
+   ══════════════════════════════════════════════ */
+
+const strategySections: StrategySection[] = [
+  {
+    id: "negocio", title: "Seu Negócio", subtitle: "Conte sobre sua empresa para entendermos o cenário",
+    icon: Building2,
+    questions: [
+      {
+        id: "segmento", question: "Qual é o segmento da sua empresa?", type: "choice",
+        options: [
+          { label: "Serviços", value: "servicos" }, { label: "Varejo / Loja", value: "varejo" },
+          { label: "Alimentação", value: "alimentacao" }, { label: "Saúde / Estética", value: "saude" },
+          { label: "Educação", value: "educacao" }, { label: "Tecnologia", value: "tecnologia" },
+          { label: "Indústria", value: "industria" }, { label: "Outro", value: "outro" },
+        ],
+      },
+      {
+        id: "tempo_mercado", question: "Há quanto tempo está no mercado?", type: "choice",
+        options: [
+          { label: "Menos de 1 ano", value: "0-1" }, { label: "1 a 3 anos", value: "1-3" },
+          { label: "3 a 5 anos", value: "3-5" }, { label: "Mais de 5 anos", value: "5+" },
+        ],
+      },
+      {
+        id: "modelo_negocio", question: "Qual o modelo de negócio?", type: "choice",
+        options: [
+          { label: "B2B (empresas)", value: "b2b" }, { label: "B2C (consumidor final)", value: "b2c" },
+          { label: "Ambos", value: "ambos" },
+        ],
+      },
+      {
+        id: "num_funcionarios", question: "Quantos funcionários?", type: "choice",
+        options: [
+          { label: "1 a 5", value: "1-5" }, { label: "6 a 20", value: "6-20" },
+          { label: "21 a 50", value: "21-50" }, { label: "51 a 200", value: "51-200" },
+          { label: "200+", value: "200+" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "financeiro", title: "Financeiro", subtitle: "Entenda seus números para dimensionar a estratégia",
+    icon: Wallet,
+    questions: [
+      {
+        id: "faturamento", question: "Qual o faturamento mensal aproximado?", type: "choice",
+        options: [
+          { label: "Até R$ 10 mil", value: "0-10k" }, { label: "R$ 10-30 mil", value: "10-30k" },
+          { label: "R$ 30-50 mil", value: "30-50k" }, { label: "R$ 50-100 mil", value: "50-100k" },
+          { label: "R$ 100-300 mil", value: "100-300k" }, { label: "R$ 300 mil - 1 M", value: "300k-1m" },
+          { label: "R$ 1-5 milhões", value: "1-5m" }, { label: "R$ 5-10 milhões", value: "5-10m" },
+        ],
+      },
+      {
+        id: "ticket_medio", question: "Qual o ticket médio do seu produto/serviço?", type: "choice",
+        options: [
+          { label: "Até R$ 100", value: "0-100" }, { label: "R$ 100-500", value: "100-500" },
+          { label: "R$ 500-2 mil", value: "500-2k" }, { label: "R$ 2-5 mil", value: "2-5k" },
+          { label: "R$ 5-15 mil", value: "5-15k" }, { label: "R$ 15 mil+", value: "15k+" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "publico", title: "Seu Público", subtitle: "Quem é o seu cliente e como ele se comporta",
+    icon: Users,
+    questions: [
+      {
+        id: "cliente_ideal", question: "Descreva seu cliente ideal", type: "text",
+        placeholder: "Ex: Mulheres de 25-40 anos, classe B, que buscam praticidade...",
+      },
+      {
+        id: "faixa_etaria", question: "Faixa etária principal do público", type: "choice",
+        options: [
+          { label: "18-24 anos", value: "18-24" }, { label: "25-34 anos", value: "25-34" },
+          { label: "35-44 anos", value: "35-44" }, { label: "45+ anos", value: "45+" },
+        ],
+      },
+      {
+        id: "onde_esta", question: "Onde seu público está mais presente?", type: "multi-choice",
+        options: [
+          { label: "Instagram", value: "instagram" }, { label: "Facebook", value: "facebook" },
+          { label: "TikTok", value: "tiktok" }, { label: "Google", value: "google" },
+          { label: "WhatsApp", value: "whatsapp" }, { label: "YouTube", value: "youtube" },
+          { label: "LinkedIn", value: "linkedin" },
+        ],
+      },
+      {
+        id: "como_decide", question: "Como o cliente decide a compra?", type: "multi-choice",
+        options: [
+          { label: "Indicação", value: "indicacao" }, { label: "Pesquisa no Google", value: "google" },
+          { label: "Redes sociais", value: "redes" }, { label: "Preço", value: "preco" },
+          { label: "Confiança na marca", value: "marca" }, { label: "Visita presencial", value: "presencial" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "concorrencia", title: "Concorrência", subtitle: "Entenda o cenário competitivo do seu mercado",
+    icon: Swords,
+    questions: [
+      {
+        id: "qtd_concorrentes", question: "Quantos concorrentes diretos você tem?", type: "choice",
+        options: [
+          { label: "1 a 3", value: "1-3" }, { label: "4 a 10", value: "4-10" },
+          { label: "Mais de 10", value: "10+" }, { label: "Não sei", value: "nao_sei" },
+        ],
+      },
+      {
+        id: "concorrentes_digital", question: "Seus concorrentes investem em marketing digital?", type: "choice",
+        options: [
+          { label: "Não investem", value: "nao" }, { label: "Pouco", value: "pouco" },
+          { label: "Sim, bastante", value: "bastante" }, { label: "São referência", value: "referencia" },
+        ],
+      },
+      {
+        id: "diferencial", question: "Qual seu principal diferencial competitivo?", type: "text",
+        placeholder: "Ex: Atendimento personalizado, preço justo, rapidez na entrega...",
+      },
+    ],
+  },
+  {
+    id: "presenca_digital", title: "Presença Digital", subtitle: "Suas redes, site e canais de comunicação",
+    icon: Share2,
+    questions: [
+      {
+        id: "redes_ativas", question: "Quais redes sociais sua empresa usa ativamente?", type: "multi-choice",
+        options: [
+          { label: "Instagram", value: "instagram" }, { label: "Facebook", value: "facebook" },
+          { label: "TikTok", value: "tiktok" }, { label: "LinkedIn", value: "linkedin" },
+          { label: "YouTube", value: "youtube" }, { label: "Twitter / X", value: "twitter" },
+          { label: "Nenhuma", value: "nenhuma" },
+        ],
+      },
+      {
+        id: "url_rede", question: "Link do Instagram ou principal rede social", type: "text",
+        placeholder: "https://instagram.com/suaempresa", optional: true,
+        condition: (ans) => {
+          const redes = ans.redes_ativas;
+          return Array.isArray(redes) && redes.length > 0 && !redes.includes("nenhuma");
+        },
+      },
+      {
+        id: "freq_publicacao", question: "Com que frequência publica conteúdo?", type: "choice",
+        options: [
+          { label: "Não publico", value: "nunca" }, { label: "Esporadicamente", value: "esporadico" },
+          { label: "Semanalmente", value: "semanal" }, { label: "Diariamente", value: "diario" },
+        ],
+      },
+      {
+        id: "tem_site", question: "Possui site ou landing page?", type: "choice",
+        options: [
+          { label: "Não possui", value: "nao" }, { label: "Sim, desatualizado", value: "desatualizado" },
+          { label: "Sim, atualizado", value: "atualizado" }, { label: "Sim, otimizado p/ SEO", value: "otimizado" },
+        ],
+      },
+      {
+        id: "url_site", question: "URL do site", type: "text",
+        placeholder: "https://suaempresa.com.br", optional: true,
+        condition: (ans) => ans.tem_site !== "nao" && !!ans.tem_site,
+      },
+    ],
+  },
+  {
+    id: "trafego_vendas", title: "Tráfego e Vendas", subtitle: "Investimento em mídia e resultados comerciais",
+    icon: TrendingUp,
+    questions: [
+      {
+        id: "investe_trafego", question: "Investe em tráfego pago atualmente?", type: "choice",
+        options: [
+          { label: "Nunca investi", value: "nunca" }, { label: "Já testei sem resultado", value: "testou" },
+          { label: "Invisto mensalmente", value: "mensal" }, { label: "Tenho campanha otimizada", value: "otimizado" },
+        ],
+      },
+      {
+        id: "valor_trafego", question: "Quanto investe em tráfego por mês?", type: "choice",
+        options: [
+          { label: "Não invisto", value: "0" }, { label: "Até R$ 500", value: "0-500" },
+          { label: "R$ 500-2 mil", value: "500-2k" }, { label: "R$ 2-5 mil", value: "2-5k" },
+          { label: "R$ 5-15 mil", value: "5-15k" }, { label: "R$ 15 mil+", value: "15k+" },
+        ],
+      },
+      {
+        id: "leads_mes", question: "Quantos leads recebe por mês?", type: "choice",
+        options: [
+          { label: "0 a 10", value: "0-10" }, { label: "11 a 30", value: "11-30" },
+          { label: "31 a 100", value: "31-100" }, { label: "100 a 500", value: "100-500" },
+          { label: "500+", value: "500+" },
+        ],
+      },
+      {
+        id: "taxa_conversao", question: "Taxa de conversão estimada (lead → venda)", type: "choice",
+        options: [
+          { label: "Não sei", value: "nao_sei" }, { label: "Menos de 5%", value: "0-5" },
+          { label: "5% a 15%", value: "5-15" }, { label: "15% a 30%", value: "15-30" },
+          { label: "Mais de 30%", value: "30+" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "cac_ltv", title: "Métricas CAC / LTV", subtitle: "Custo de aquisição e valor do ciclo de vida do cliente",
+    icon: BarChart3,
+    questions: [
+      {
+        id: "sabe_cac", question: "Sabe quanto custa adquirir um cliente (CAC)?", type: "choice",
+        options: [
+          { label: "Não sei", value: "nao_sei" }, { label: "Até R$ 50", value: "0-50" },
+          { label: "R$ 50-200", value: "50-200" }, { label: "R$ 200-500", value: "200-500" },
+          { label: "R$ 500+", value: "500+" },
+        ],
+      },
+      {
+        id: "ltv_medio", question: "Quanto tempo em média um cliente fica com você?", type: "choice",
+        options: [
+          { label: "Compra única", value: "unica" }, { label: "1 a 3 meses", value: "1-3" },
+          { label: "3 a 12 meses", value: "3-12" }, { label: "Mais de 1 ano", value: "1ano+" },
+        ],
+      },
+      {
+        id: "processo_recompra", question: "Tem processo de recompra / fidelização?", type: "choice",
+        options: [
+          { label: "Não tenho", value: "nao" }, { label: "Informal", value: "informal" },
+          { label: "Sim, estruturado", value: "estruturado" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "gestao_dados", title: "Gestão de Dados", subtitle: "Como você organiza informações e estratégias além do digital",
+    icon: Database,
+    questions: [
+      {
+        id: "usa_crm", question: "Usa algum CRM ou planilha para gerenciar leads/clientes?", type: "choice",
+        options: [
+          { label: "Não gerencio", value: "nao" }, { label: "Planilha", value: "planilha" },
+          { label: "CRM básico", value: "crm_basico" }, { label: "CRM profissional", value: "crm_pro" },
+        ],
+      },
+      {
+        id: "historico_dados", question: "Tem histórico de dados dos seus clientes?", type: "choice",
+        options: [
+          { label: "Nenhum", value: "nenhum" }, { label: "Parcial", value: "parcial" },
+          { label: "Sim, completo", value: "completo" },
+        ],
+      },
+      {
+        id: "estrategias_offline", question: "Usa estratégias de marketing além do digital?", type: "multi-choice",
+        options: [
+          { label: "Eventos", value: "eventos" }, { label: "Panfletos", value: "panfletos" },
+          { label: "Networking", value: "networking" }, { label: "Parcerias locais", value: "parcerias" },
+          { label: "Indicação", value: "indicacao" }, { label: "Nenhuma", value: "nenhuma" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "objetivos_dores", title: "Objetivos e Dores", subtitle: "Onde quer chegar e o que está no caminho",
+    icon: Target,
+    questions: [
+      {
+        id: "meta_principal", question: "Qual seu objetivo principal com o marketing?", type: "choice",
+        options: [
+          { label: "Gerar mais leads", value: "leads", icon: Target },
+          { label: "Aumentar vendas", value: "vendas", icon: DollarSign },
+          { label: "Construir autoridade", value: "autoridade", icon: Sparkles },
+          { label: "Reconhecimento de marca", value: "reconhecimento", icon: Megaphone },
+        ],
+      },
+      {
+        id: "prazo", question: "Em quanto tempo espera ver resultados?", type: "choice",
+        options: [
+          { label: "1-2 meses", value: "1-2" }, { label: "3-4 meses", value: "3-4" },
+          { label: "5-6 meses", value: "5-6" }, { label: "Mais de 6 meses", value: "6+" },
+        ],
+      },
+      {
+        id: "dificuldades", question: "Quais são suas maiores dificuldades?", type: "multi-choice",
+        options: [
+          { label: "Falta de tempo", value: "tempo" }, { label: "Não sei o que postar", value: "conteudo" },
+          { label: "Não gero leads", value: "leads" }, { label: "Não tenho equipe", value: "equipe" },
+          { label: "Baixo engajamento", value: "engajamento" }, { label: "Não sei usar tráfego pago", value: "trafego" },
+          { label: "Não sei meu CAC/LTV", value: "cac_ltv" }, { label: "Dados desorganizados", value: "dados" },
+          { label: "Concorrência forte", value: "concorrencia" },
+        ],
+      },
+      {
+        id: "tentativas", question: "O que já tentou que não funcionou?", type: "text",
+        placeholder: "Ex: Contratei um social media, mas não deu resultado...", optional: true,
+      },
+    ],
+  },
+];
+
+/* ══════════════════════════════════════════════
+   SCORING LOGIC — 7 AXES
+   ══════════════════════════════════════════════ */
+
 function computeScores(answers: Answers) {
   const scoreMap: Record<string, number> = {
-    "Presença Digital": 0,
-    "Estratégia": 0,
-    "Conteúdo": 0,
-    "Tráfego": 0,
-    "Branding": 0,
+    "Presença Digital": 0, "Estratégia": 0, "Conteúdo": 0,
+    "Tráfego": 0, "Branding": 0, "Gestão de Dados": 0, "Vendas e Retenção": 0,
   };
-  const maxMap: Record<string, number> = { ...scoreMap };
+  const maxMap: Record<string, number> = {
+    "Presença Digital": 12, "Estratégia": 10, "Conteúdo": 6,
+    "Tráfego": 12, "Branding": 9, "Gestão de Dados": 9, "Vendas e Retenção": 9,
+  };
 
-  // Presença Digital (redes_ativas, tem_site, freq_publicacao)
-  maxMap["Presença Digital"] = 9;
+  // ── Presença Digital
   const redes = answers.redes_ativas;
-  if (Array.isArray(redes)) {
-    if (redes.includes("nenhuma")) scoreMap["Presença Digital"] += 0;
-    else scoreMap["Presença Digital"] += Math.min(redes.length, 3);
-  }
+  if (Array.isArray(redes) && !redes.includes("nenhuma"))
+    scoreMap["Presença Digital"] += Math.min(redes.length, 3);
+
   const site = answers.tem_site as string;
   if (site === "otimizado") scoreMap["Presença Digital"] += 3;
   else if (site === "atualizado") scoreMap["Presença Digital"] += 2;
@@ -229,40 +372,80 @@ function computeScores(answers: Answers) {
   else if (freq === "semanal") scoreMap["Presença Digital"] += 2;
   else if (freq === "esporadico") scoreMap["Presença Digital"] += 1;
 
-  // Estratégia (meta_principal, prazo, cliente_ideal)
-  maxMap["Estratégia"] = 7;
+  if (answers.url_site) scoreMap["Presença Digital"] += 1;
+  if (answers.url_rede) scoreMap["Presença Digital"] += 2;
+
+  // ── Estratégia
   if (answers.meta_principal) scoreMap["Estratégia"] += 2;
   if (answers.prazo) scoreMap["Estratégia"] += 2;
   if (answers.cliente_ideal && String(answers.cliente_ideal).length > 10) scoreMap["Estratégia"] += 3;
   else if (answers.cliente_ideal) scoreMap["Estratégia"] += 1;
+  if (answers.modelo_negocio) scoreMap["Estratégia"] += 1;
+  if (answers.como_decide && (answers.como_decide as string[]).length > 0) scoreMap["Estratégia"] += 2;
 
-  // Conteúdo (freq_publicacao, redes_ativas count)
-  maxMap["Conteúdo"] = 6;
+  // ── Conteúdo
   if (freq === "diario") scoreMap["Conteúdo"] += 3;
   else if (freq === "semanal") scoreMap["Conteúdo"] += 2;
   else if (freq === "esporadico") scoreMap["Conteúdo"] += 1;
-  if (Array.isArray(redes) && !redes.includes("nenhuma")) {
+  if (Array.isArray(redes) && !redes.includes("nenhuma"))
     scoreMap["Conteúdo"] += Math.min(redes.length, 3);
-  }
 
-  // Tráfego (investe_trafego, investimento_atual)
-  maxMap["Tráfego"] = 6;
+  // ── Tráfego
   const trafego = answers.investe_trafego as string;
   if (trafego === "otimizado") scoreMap["Tráfego"] += 3;
   else if (trafego === "mensal") scoreMap["Tráfego"] += 2;
   else if (trafego === "testou") scoreMap["Tráfego"] += 1;
-  const investAtual = answers.investimento_atual as number || 0;
-  if (investAtual >= 5000) scoreMap["Tráfego"] += 3;
-  else if (investAtual >= 2000) scoreMap["Tráfego"] += 2;
-  else if (investAtual >= 500) scoreMap["Tráfego"] += 1;
 
-  // Branding (tempo_mercado, segmento)
-  maxMap["Branding"] = 6;
+  const valTrafego = answers.valor_trafego as string;
+  if (valTrafego === "15k+") scoreMap["Tráfego"] += 3;
+  else if (valTrafego === "5-15k") scoreMap["Tráfego"] += 3;
+  else if (valTrafego === "2-5k") scoreMap["Tráfego"] += 2;
+  else if (valTrafego === "500-2k") scoreMap["Tráfego"] += 1;
+
+  const leads = answers.leads_mes as string;
+  if (leads === "500+") scoreMap["Tráfego"] += 3;
+  else if (leads === "100-500") scoreMap["Tráfego"] += 2;
+  else if (leads === "31-100") scoreMap["Tráfego"] += 1;
+
+  const conv = answers.taxa_conversao as string;
+  if (conv === "30+") scoreMap["Tráfego"] += 3;
+  else if (conv === "15-30") scoreMap["Tráfego"] += 2;
+  else if (conv === "5-15") scoreMap["Tráfego"] += 1;
+
+  // ── Branding
   const tempo = answers.tempo_mercado as string;
   if (tempo === "5+") scoreMap["Branding"] += 3;
   else if (tempo === "3-5") scoreMap["Branding"] += 2;
   else if (tempo === "1-3") scoreMap["Branding"] += 1;
   if (answers.segmento) scoreMap["Branding"] += 3;
+  if (answers.diferencial && String(answers.diferencial).length > 5) scoreMap["Branding"] += 3;
+  else if (answers.diferencial) scoreMap["Branding"] += 1;
+
+  // ── Gestão de Dados
+  const crm = answers.usa_crm as string;
+  if (crm === "crm_pro") scoreMap["Gestão de Dados"] += 3;
+  else if (crm === "crm_basico") scoreMap["Gestão de Dados"] += 2;
+  else if (crm === "planilha") scoreMap["Gestão de Dados"] += 1;
+
+  const hist = answers.historico_dados as string;
+  if (hist === "completo") scoreMap["Gestão de Dados"] += 3;
+  else if (hist === "parcial") scoreMap["Gestão de Dados"] += 1;
+
+  if (answers.sabe_cac && answers.sabe_cac !== "nao_sei") scoreMap["Gestão de Dados"] += 3;
+
+  // ── Vendas e Retenção
+  if (conv === "30+") scoreMap["Vendas e Retenção"] += 3;
+  else if (conv === "15-30") scoreMap["Vendas e Retenção"] += 2;
+  else if (conv === "5-15") scoreMap["Vendas e Retenção"] += 1;
+
+  const ltv = answers.ltv_medio as string;
+  if (ltv === "1ano+") scoreMap["Vendas e Retenção"] += 3;
+  else if (ltv === "3-12") scoreMap["Vendas e Retenção"] += 2;
+  else if (ltv === "1-3") scoreMap["Vendas e Retenção"] += 1;
+
+  const recompra = answers.processo_recompra as string;
+  if (recompra === "estruturado") scoreMap["Vendas e Retenção"] += 3;
+  else if (recompra === "informal") scoreMap["Vendas e Retenção"] += 1;
 
   const totalMax = Object.values(maxMap).reduce((a, b) => a + b, 0);
   const totalScore = Object.values(scoreMap).reduce((a, b) => a + b, 0);
@@ -296,28 +479,57 @@ function getNivel(pct: number) {
 
 function generateInsights(answers: Answers, scoreMap: Record<string, number>, maxMap: Record<string, number>) {
   const insights: { text: string; type: "success" | "warning" | "opportunity"; icon: React.ElementType }[] = [];
-
   const pct = (k: string) => maxMap[k] > 0 ? (scoreMap[k] / maxMap[k]) * 100 : 0;
 
+  // Presença Digital
   if (pct("Presença Digital") >= 70)
     insights.push({ text: "Sua presença digital está sólida. Continue investindo em conteúdo consistente.", type: "success", icon: CheckCircle2 });
   else
     insights.push({ text: "Sua presença digital precisa de atenção. Ative mais canais e publique com frequência.", type: "warning", icon: AlertCircle });
 
+  // Tráfego
   if (pct("Tráfego") < 50)
     insights.push({ text: "Você não está aproveitando o potencial do tráfego pago. Campanhas estruturadas podem acelerar seus resultados.", type: "opportunity", icon: Lightbulb });
 
+  // Conteúdo
   if (pct("Conteúdo") < 50)
     insights.push({ text: "A produção de conteúdo está baixa. Com roteiros gerados por IA, você publica mais sem esforço.", type: "opportunity", icon: Lightbulb });
   else
     insights.push({ text: "Você já produz conteúdo regularmente. Diversifique formatos para aumentar o alcance.", type: "success", icon: CheckCircle2 });
 
+  // Estratégia
   if (pct("Estratégia") < 50)
     insights.push({ text: "Falta clareza na estratégia. Defina persona, funil e KPIs para direcionar suas ações.", type: "warning", icon: AlertCircle });
 
+  // Site
   const site = answers.tem_site as string;
   if (site === "nao" || site === "desatualizado")
     insights.push({ text: "Você precisa de um site ou landing page otimizada para capturar leads e converter visitantes.", type: "opportunity", icon: Lightbulb });
+
+  // CAC / LTV
+  if (answers.sabe_cac === "nao_sei")
+    insights.push({ text: "Você não sabe seu CAC — sem isso, é impossível medir o ROI das suas campanhas de marketing.", type: "warning", icon: AlertCircle });
+
+  // CRM / Gestão de Dados
+  if (pct("Gestão de Dados") < 50)
+    insights.push({ text: "Seus dados não estão organizados. O CRM centraliza leads, pipeline e histórico de clientes.", type: "opportunity", icon: Lightbulb });
+
+  // Concorrência
+  if (answers.concorrentes_digital === "bastante" || answers.concorrentes_digital === "referencia")
+    insights.push({ text: "Seus concorrentes investem forte em digital. Você precisa acelerar para não perder mercado.", type: "warning", icon: AlertCircle });
+
+  // Retenção
+  if (pct("Vendas e Retenção") < 50)
+    insights.push({ text: "Sem processo de fidelização, você perde receita recorrente. LTV baixo encarece o CAC.", type: "warning", icon: AlertCircle });
+
+  // Conversão
+  if (answers.taxa_conversao === "0-5")
+    insights.push({ text: "Taxa de conversão abaixo de 5%. Foque na qualificação de leads e melhoria do funil de vendas.", type: "opportunity", icon: Lightbulb });
+
+  // Offline integration
+  const offline = answers.estrategias_offline;
+  if (Array.isArray(offline) && offline.length > 0 && !offline.includes("nenhuma"))
+    insights.push({ text: "Você usa estratégias offline — integre com digital para medir ROI e amplificar resultados.", type: "opportunity", icon: Lightbulb });
 
   return insights;
 }
@@ -326,7 +538,7 @@ function generateInsights(answers: Answers, scoreMap: Record<string, number>, ma
    PROJECTION DATA
    ══════════════════════════════════════════════ */
 
-function getProjectionData(pct: number) {
+function getLeadsProjection(pct: number) {
   const base = Math.round(pct * 0.5);
   return [
     { mes: "Mês 1", atual: base, comEstrategia: base + 10 },
@@ -338,17 +550,84 @@ function getProjectionData(pct: number) {
   ];
 }
 
+function getRevenueProjection(answers: Answers, pct: number) {
+  const ticketMap: Record<string, number> = {
+    "0-100": 75, "100-500": 300, "500-2k": 1250, "2-5k": 3500, "5-15k": 10000, "15k+": 20000,
+  };
+  const convMap: Record<string, number> = {
+    "nao_sei": 0.05, "0-5": 0.03, "5-15": 0.10, "15-30": 0.22, "30+": 0.35,
+  };
+  const ticket = ticketMap[answers.ticket_medio as string] || 500;
+  const conv = convMap[answers.taxa_conversao as string] || 0.05;
+  const baseLeads = Math.round(pct * 0.5);
+
+  return [
+    { mes: "Mês 1", atual: Math.round(baseLeads * conv * ticket), comEstrategia: Math.round((baseLeads + 10) * conv * ticket * 1.1) },
+    { mes: "Mês 2", atual: Math.round((baseLeads + 3) * conv * ticket), comEstrategia: Math.round((baseLeads + 25) * conv * ticket * 1.15) },
+    { mes: "Mês 3", atual: Math.round((baseLeads + 5) * conv * ticket), comEstrategia: Math.round((baseLeads + 45) * conv * ticket * 1.2) },
+    { mes: "Mês 4", atual: Math.round((baseLeads + 6) * conv * ticket), comEstrategia: Math.round((baseLeads + 70) * conv * ticket * 1.25) },
+    { mes: "Mês 5", atual: Math.round((baseLeads + 7) * conv * ticket), comEstrategia: Math.round((baseLeads + 95) * conv * ticket * 1.3) },
+    { mes: "Mês 6", atual: Math.round((baseLeads + 8) * conv * ticket), comEstrategia: Math.round((baseLeads + 125) * conv * ticket * 1.35) },
+  ];
+}
+
 /* ══════════════════════════════════════════════
-   PRODUCT CARDS
+   DYNAMIC ACTION PLAN
+   ══════════════════════════════════════════════ */
+
+function generateActionPlan(scoreMap: Record<string, number>, maxMap: Record<string, number>, answers: Answers) {
+  const pct = (k: string) => maxMap[k] > 0 ? (scoreMap[k] / maxMap[k]) * 100 : 0;
+
+  const fase1: string[] = [];
+  const fase2: string[] = [];
+  const fase3: string[] = [];
+
+  // Foundation always starts with strategy
+  fase1.push("Definir persona e posicionamento de marca");
+
+  if (pct("Gestão de Dados") < 50) fase1.push("Implantar CRM e organizar base de clientes");
+  if (pct("Presença Digital") < 50) fase1.push("Criar perfis profissionais e começar a publicar");
+  if (answers.tem_site === "nao") fase1.push("Criar landing page de captura de leads");
+  else if (answers.tem_site === "desatualizado") fase1.push("Atualizar site e otimizar para conversão");
+  if (answers.sabe_cac === "nao_sei") fase1.push("Implementar rastreamento de CAC e métricas básicas");
+
+  if (fase1.length < 3) fase1.push("Criar identidade visual e guia de comunicação");
+
+  // Growth
+  fase2.push("Implementar calendário editorial semanal");
+  if (pct("Tráfego") < 50) fase2.push("Iniciar campanhas de tráfego pago com orçamento controlado");
+  if (answers.concorrentes_digital === "bastante" || answers.concorrentes_digital === "referencia")
+    fase2.push("Análise competitiva e estratégia de diferenciação");
+  if (pct("Conteúdo") < 50) fase2.push("Diversificar formatos: carrossel, reels, stories");
+  fase2.push("Configurar funil de nutrição por WhatsApp");
+
+  if (fase2.length < 3) fase2.push("Otimizar conversões com A/B testing");
+
+  // Scale
+  fase3.push("Otimizar campanhas com base em dados e ROI");
+  if (pct("Vendas e Retenção") < 50) fase3.push("Criar programa de fidelização e recompra");
+  fase3.push("Automatizar geração de conteúdo com IA");
+  if (pct("Gestão de Dados") >= 50) fase3.push("Integrar dados do CRM com campanhas de marketing");
+  else fase3.push("Escalar investimento nos canais com melhor retorno");
+
+  const offline = answers.estrategias_offline;
+  if (Array.isArray(offline) && offline.length > 0 && !offline.includes("nenhuma"))
+    fase3.push("Integrar estratégias offline com rastreamento digital");
+
+  return [
+    { fase: "Fase 1 — Fundação", periodo: "Mês 1-2", cor: "hsl(var(--chart-blue))", items: fase1.slice(0, 5) },
+    { fase: "Fase 2 — Crescimento", periodo: "Mês 3-4", cor: "hsl(var(--chart-orange))", items: fase2.slice(0, 5) },
+    { fase: "Fase 3 — Escala", periodo: "Mês 5-6", cor: "hsl(var(--chart-green))", items: fase3.slice(0, 5) },
+  ];
+}
+
+/* ══════════════════════════════════════════════
+   PRODUCT CARDS (now includes CRM)
    ══════════════════════════════════════════════ */
 
 interface ProductCard {
-  name: string;
-  description: string;
-  icon: React.ElementType;
-  path: string;
-  scoreKey: string;
-  kpi: string;
+  name: string; description: string; icon: React.ElementType;
+  path: string; scoreKey: string; kpi: string;
 }
 
 const products: ProductCard[] = [
@@ -356,46 +635,7 @@ const products: ProductCard[] = [
   { name: "Redes Sociais", description: "Artes prontas para Feed e Story todo mês, com identidade visual da sua marca.", icon: Share2, path: "/cliente/redes-sociais", scoreKey: "Presença Digital", kpi: "0 artes criadas" },
   { name: "Sites", description: "Landing page otimizada para captura de leads e conversão de visitantes.", icon: Globe, path: "/cliente/sites", scoreKey: "Presença Digital", kpi: "Nenhum site criado" },
   { name: "Tráfego Pago", description: "Campanhas estruturadas para Meta, Google e TikTok Ads.", icon: DollarSign, path: "/cliente/trafego-pago", scoreKey: "Tráfego", kpi: "R$ 0 investidos" },
-];
-
-/* ══════════════════════════════════════════════
-   ACTION PLAN
-   ══════════════════════════════════════════════ */
-
-const actionPlan = [
-  {
-    fase: "Fase 1 — Fundação",
-    periodo: "Mês 1-2",
-    cor: "hsl(var(--chart-blue))",
-    items: [
-      "Definir persona e posicionamento de marca",
-      "Criar identidade visual e guia de comunicação",
-      "Configurar perfis profissionais nas redes",
-      "Criar landing page de captura de leads",
-    ],
-  },
-  {
-    fase: "Fase 2 — Crescimento",
-    periodo: "Mês 3-4",
-    cor: "hsl(var(--chart-orange))",
-    items: [
-      "Implementar calendário editorial semanal",
-      "Iniciar campanhas de tráfego pago",
-      "Diversificar formatos (carrossel, reels, stories)",
-      "Configurar funil de nutrição por WhatsApp",
-    ],
-  },
-  {
-    fase: "Fase 3 — Escala",
-    periodo: "Mês 5-6",
-    cor: "hsl(var(--chart-green))",
-    items: [
-      "Otimizar campanhas com A/B testing",
-      "Aumentar investimento em canais com melhor ROI",
-      "Automatizar geração de conteúdo com IA",
-      "Integrar CRM para acompanhar leads até venda",
-    ],
-  },
+  { name: "CRM", description: "Centralize leads, pipeline e histórico. Gerencie dados para medir CAC, LTV e ROI.", icon: Database, path: "/cliente/crm", scoreKey: "Gestão de Dados", kpi: "0 leads no CRM" },
 ];
 
 /* ══════════════════════════════════════════════
@@ -404,69 +644,67 @@ const actionPlan = [
 
 export default function ClientePlanoMarketing() {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentSection, setCurrentSection] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [completed, setCompleted] = useState(false);
   const [activeTab, setActiveTab] = useState("estrategia");
 
-  // Mock history
   const [history] = useState([
     { date: "2026-01-15", score: 32, nivel: "Iniciante" },
     { date: "2026-02-01", score: 48, nivel: "Básico" },
   ]);
 
-  const question = strategyQuestions[currentStep];
-  const totalQuestions = strategyQuestions.length;
-  const progressPct = ((currentStep + 1) / totalQuestions) * 100;
+  const section = strategySections[currentSection];
+  const totalSections = strategySections.length;
+  const progressPct = ((currentSection + 1) / totalSections) * 100;
+
+  // Get visible questions for current section (handle conditionals)
+  const visibleQuestions = useMemo(() => {
+    if (!section) return [];
+    return section.questions.filter(q => !q.condition || q.condition(answers));
+  }, [section, answers]);
 
   const { scoreMap, maxMap, radarData, percentage } = useMemo(() => computeScores(answers), [answers]);
   const nivel = getNivel(percentage);
   const insights = useMemo(() => generateInsights(answers, scoreMap, maxMap), [answers, scoreMap, maxMap]);
-  const projectionData = useMemo(() => getProjectionData(percentage), [percentage]);
+  const leadsProjection = useMemo(() => getLeadsProjection(percentage), [percentage]);
+  const revenueProjection = useMemo(() => getRevenueProjection(answers, percentage), [answers, percentage]);
+  const actionPlan = useMemo(() => generateActionPlan(scoreMap, maxMap, answers), [scoreMap, maxMap, answers]);
 
   const canGoNext = () => {
-    if (!question) return false;
-    const val = answers[question.id];
-    if (question.type === "text") return !!val && String(val).length > 0;
-    if (question.type === "multi-choice") return Array.isArray(val) && val.length > 0;
-    if (question.type === "slider") return val !== undefined;
-    return !!val;
-  };
-
-  const handleNext = () => {
-    if (currentStep < totalQuestions - 1) setCurrentStep(currentStep + 1);
-    else setCompleted(true);
-  };
-
-  const handlePrev = () => {
-    if (currentStep > 0) setCurrentStep(currentStep - 1);
-  };
-
-  const handleChoiceSelect = (value: string) => {
-    setAnswers(prev => ({ ...prev, [question.id]: value }));
-  };
-
-  const handleMultiChoiceToggle = (value: string) => {
-    setAnswers(prev => {
-      const current = (prev[question.id] as string[]) || [];
-      if (current.includes(value)) return { ...prev, [question.id]: current.filter(v => v !== value) };
-      return { ...prev, [question.id]: [...current, value] };
+    return visibleQuestions.every(q => {
+      if (q.optional) return true;
+      const val = answers[q.id];
+      if (q.type === "text") return !!val && String(val).length > 0;
+      if (q.type === "multi-choice") return Array.isArray(val) && val.length > 0;
+      return !!val;
     });
   };
 
-  const handleSliderChange = (val: number[]) => {
-    setAnswers(prev => ({ ...prev, [question.id]: val[0] }));
+  const handleNext = () => {
+    if (currentSection < totalSections - 1) setCurrentSection(currentSection + 1);
+    else setCompleted(true);
+  };
+  const handlePrev = () => {
+    if (currentSection > 0) setCurrentSection(currentSection - 1);
   };
 
-  const handleTextChange = (val: string) => {
-    setAnswers(prev => ({ ...prev, [question.id]: val }));
+  const handleChoiceSelect = (qId: string, value: string) => {
+    setAnswers(prev => ({ ...prev, [qId]: value }));
+  };
+  const handleMultiChoiceToggle = (qId: string, value: string) => {
+    setAnswers(prev => {
+      const current = (prev[qId] as string[]) || [];
+      if (current.includes(value)) return { ...prev, [qId]: current.filter(v => v !== value) };
+      return { ...prev, [qId]: [...current, value] };
+    });
+  };
+  const handleTextChange = (qId: string, val: string) => {
+    setAnswers(prev => ({ ...prev, [qId]: val }));
   };
 
   const handleRestart = () => {
-    setAnswers({});
-    setCurrentStep(0);
-    setCompleted(false);
-    setActiveTab("estrategia");
+    setAnswers({}); setCurrentSection(0); setCompleted(false); setActiveTab("estrategia");
   };
 
   const getPriorityBadge = (scoreKey: string) => {
@@ -476,7 +714,80 @@ export default function ClientePlanoMarketing() {
     return { label: "Otimizar", className: "bg-success/10 text-success border-success/20" };
   };
 
-  /* ── Render ── */
+  /* ── Render Question ── */
+  const renderQuestion = (q: StrategyQuestion) => (
+    <div key={q.id} className="space-y-3">
+      <div>
+        <p className="text-sm font-semibold">{q.question}</p>
+        {q.subtitle && <p className="text-xs text-muted-foreground">{q.subtitle}</p>}
+        {q.optional && <span className="text-[10px] text-muted-foreground italic ml-1">(opcional)</span>}
+      </div>
+
+      {q.type === "choice" && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {q.options?.map(opt => {
+            const selected = answers[q.id] === opt.value;
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => handleChoiceSelect(q.id, opt.value)}
+                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all duration-200
+                  ${selected ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
+              >
+                {Icon && <Icon className={`w-4 h-4 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />}
+                <span className={`text-xs font-medium ${selected ? "text-foreground" : "text-muted-foreground"}`}>{opt.label}</span>
+                {selected && <CheckCircle2 className="w-3.5 h-3.5 text-primary ml-auto shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {q.type === "multi-choice" && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {q.options?.map(opt => {
+            const arr = (answers[q.id] as string[]) || [];
+            const selected = arr.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                onClick={() => handleMultiChoiceToggle(q.id, opt.value)}
+                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all duration-200
+                  ${selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
+              >
+                <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors
+                  ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
+                  {selected && <CheckCircle2 className="w-2.5 h-2.5 text-primary-foreground" />}
+                </div>
+                <span className={`text-xs ${selected ? "font-medium text-foreground" : "text-muted-foreground"}`}>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {q.type === "text" && (
+        q.placeholder?.startsWith("http") || q.id.startsWith("url_") ? (
+          <Input
+            value={(answers[q.id] as string) || ""}
+            onChange={e => handleTextChange(q.id, e.target.value)}
+            placeholder={q.placeholder}
+            className="text-sm"
+          />
+        ) : (
+          <Textarea
+            value={(answers[q.id] as string) || ""}
+            onChange={e => handleTextChange(q.id, e.target.value)}
+            placeholder={q.placeholder}
+            className="min-h-[80px] resize-none text-sm"
+          />
+        )
+      )}
+    </div>
+  );
+
+  /* ── Main Render ── */
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
@@ -492,28 +803,30 @@ export default function ClientePlanoMarketing() {
           <TabsTrigger value="historico" className="text-xs gap-1.5"><Clock className="w-3.5 h-3.5" /> Histórico</TabsTrigger>
         </TabsList>
 
-        {/* ═══════ ABA ESTRATÉGIA ═══════ */}
+        {/* ═══════ ESTRATÉGIA ═══════ */}
         <TabsContent value="estrategia" className="mt-4">
           {!completed ? (
-            /* ── WIZARD ── */
             <div className="space-y-6">
-              {/* Progress bar */}
+              {/* Progress */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                    {question?.category}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {section && <section.icon className="w-4 h-4 text-primary" />}
+                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                      {section?.title}
+                    </span>
+                  </div>
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {currentStep + 1} de {totalQuestions}
+                    {currentSection + 1} de {totalSections}
                   </span>
                 </div>
                 <Progress value={progressPct} className="h-1.5" />
               </div>
 
-              {/* Question card */}
+              {/* Section Card */}
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={question?.id}
+                  key={section?.id}
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -30 }}
@@ -521,101 +834,12 @@ export default function ClientePlanoMarketing() {
                 >
                   <Card className="glass-card overflow-hidden">
                     <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
-                    <CardContent className="py-8 px-6 md:px-10">
-                      <h2 className="text-xl font-black tracking-tight mb-1">{question?.question}</h2>
-                      {question?.subtitle && (
-                        <p className="text-sm text-muted-foreground mb-6">{question.subtitle}</p>
-                      )}
-                      {!question?.subtitle && <div className="mb-6" />}
-
-                      {/* Choice */}
-                      {question?.type === "choice" && (
-                        <div className="grid grid-cols-2 gap-3">
-                          {question.options?.map(opt => {
-                            const selected = answers[question.id] === opt.value;
-                            const Icon = opt.icon;
-                            return (
-                              <button
-                                key={opt.value}
-                                onClick={() => handleChoiceSelect(opt.value)}
-                                className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all duration-200
-                                  ${selected
-                                    ? "border-primary bg-primary/5 shadow-sm"
-                                    : "border-border hover:border-primary/30 hover:bg-muted/50"
-                                  }`}
-                              >
-                                {Icon && <Icon className={`w-5 h-5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />}
-                                <span className={`text-sm font-medium ${selected ? "text-foreground" : "text-muted-foreground"}`}>
-                                  {opt.label}
-                                </span>
-                                {selected && <CheckCircle2 className="w-4 h-4 text-primary ml-auto shrink-0" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* Multi-choice */}
-                      {question?.type === "multi-choice" && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {question.options?.map(opt => {
-                            const arr = (answers[question.id] as string[]) || [];
-                            const selected = arr.includes(opt.value);
-                            return (
-                              <button
-                                key={opt.value}
-                                onClick={() => handleMultiChoiceToggle(opt.value)}
-                                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all duration-200
-                                  ${selected
-                                    ? "border-primary bg-primary/5"
-                                    : "border-border hover:border-primary/30 hover:bg-muted/50"
-                                  }`}
-                              >
-                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors
-                                  ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}
-                                >
-                                  {selected && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
-                                </div>
-                                <span className={`text-sm ${selected ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-                                  {opt.label}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* Slider */}
-                      {question?.type === "slider" && (
-                        <div className="space-y-6">
-                          <p className="text-3xl font-black tracking-tight text-primary tabular-nums">
-                            {question.sliderPrefix}{" "}
-                            {((answers[question.id] as number) || question.sliderMin || 0).toLocaleString("pt-BR")}
-                          </p>
-                          <Slider
-                            value={[(answers[question.id] as number) || question.sliderMin || 0]}
-                            onValueChange={handleSliderChange}
-                            min={question.sliderMin}
-                            max={question.sliderMax}
-                            step={question.sliderStep}
-                            className="w-full"
-                          />
-                          <div className="flex justify-between text-[10px] text-muted-foreground">
-                            <span>{question.sliderPrefix} {(question.sliderMin || 0).toLocaleString("pt-BR")}</span>
-                            <span>{question.sliderPrefix} {(question.sliderMax || 0).toLocaleString("pt-BR")}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Text */}
-                      {question?.type === "text" && (
-                        <Textarea
-                          value={(answers[question.id] as string) || ""}
-                          onChange={e => handleTextChange(e.target.value)}
-                          placeholder={question.placeholder}
-                          className="min-h-[100px] resize-none"
-                        />
-                      )}
+                    <CardContent className="py-6 px-6 md:px-10 space-y-6">
+                      <div>
+                        <h2 className="text-lg font-black tracking-tight">{section?.title}</h2>
+                        <p className="text-sm text-muted-foreground">{section?.subtitle}</p>
+                      </div>
+                      {visibleQuestions.map(renderQuestion)}
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -623,11 +847,11 @@ export default function ClientePlanoMarketing() {
 
               {/* Navigation */}
               <div className="flex items-center justify-between">
-                <Button variant="ghost" onClick={handlePrev} disabled={currentStep === 0} className="gap-2">
+                <Button variant="ghost" onClick={handlePrev} disabled={currentSection === 0} className="gap-2">
                   <ArrowLeft className="w-4 h-4" /> Voltar
                 </Button>
                 <Button onClick={handleNext} disabled={!canGoNext()} className="gap-2">
-                  {currentStep === totalQuestions - 1 ? "Ver Resultado" : "Próximo"}
+                  {currentSection === totalSections - 1 ? "Ver Resultado" : "Próximo"}
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -648,16 +872,15 @@ export default function ClientePlanoMarketing() {
               {/* Termômetro + Radar */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <DiagnosticoTermometro pontuacao={percentage} nivel={nivel} />
-
                 <Card className="glass-card">
                   <CardContent className="py-6">
-                    <p className="section-label mb-4">RADAR POR ÁREA</p>
+                    <p className="section-label mb-4">RADAR POR ÁREA — 7 EIXOS</p>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart data={radarData} outerRadius="70%">
+                        <RadarChart data={radarData} outerRadius="65%">
                           <PolarGrid stroke="hsl(var(--border))" />
-                          <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9 }} />
+                          <PolarAngleAxis dataKey="category" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 8 }} />
                           <Radar name="Score" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" strokeWidth={2} />
                         </RadarChart>
                       </ResponsiveContainer>
@@ -671,19 +894,14 @@ export default function ClientePlanoMarketing() {
                 <p className="section-label mb-3">INSIGHTS DA SUA ESTRATÉGIA</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {insights.map((ins, i) => (
-                    <Card
-                      key={i}
-                      className={`border-l-4 ${
-                        ins.type === "success" ? "border-l-success" :
-                        ins.type === "warning" ? "border-l-destructive" :
-                        "border-l-chart-blue"
-                      }`}
-                    >
+                    <Card key={i} className={`border-l-4 ${
+                      ins.type === "success" ? "border-l-success" :
+                      ins.type === "warning" ? "border-l-destructive" : "border-l-chart-blue"
+                    }`}>
                       <CardContent className="py-3 flex items-start gap-3">
                         <ins.icon className={`w-4 h-4 mt-0.5 shrink-0 ${
                           ins.type === "success" ? "text-success" :
-                          ins.type === "warning" ? "text-destructive" :
-                          "text-chart-blue"
+                          ins.type === "warning" ? "text-destructive" : "text-chart-blue"
                         }`} />
                         <p className="text-sm">{ins.text}</p>
                       </CardContent>
@@ -692,13 +910,13 @@ export default function ClientePlanoMarketing() {
                 </div>
               </div>
 
-              {/* Projeção */}
+              {/* Projeção Leads */}
               <Card className="glass-card">
                 <CardContent className="py-6">
                   <p className="section-label mb-4">PROJEÇÃO DE RESULTADOS — LEADS</p>
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={projectionData}>
+                      <AreaChart data={leadsProjection}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                         <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
@@ -710,18 +928,43 @@ export default function ClientePlanoMarketing() {
                   </div>
                   <div className="flex items-center gap-6 mt-3 text-xs text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-0.5 bg-muted-foreground" style={{ borderTop: "2px dashed" }} />
-                      Cenário Atual
+                      <div className="w-6 h-0.5 bg-muted-foreground" style={{ borderTop: "2px dashed" }} /> Cenário Atual
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-0.5 bg-primary" />
-                      Com Estratégia
+                      <div className="w-6 h-0.5 bg-primary" /> Com Estratégia
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Plano de Ação */}
+              {/* Projeção Faturamento */}
+              <Card className="glass-card">
+                <CardContent className="py-6">
+                  <p className="section-label mb-4">PROJEÇÃO DE FATURAMENTO ESTIMADO</p>
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={revenueProjection}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, ""]} />
+                        <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted) / 0.3)" strokeWidth={2} name="Cenário Atual" strokeDasharray="5 5" />
+                        <Area type="monotone" dataKey="comEstrategia" stroke="hsl(var(--chart-green))" fill="hsl(var(--chart-green) / 0.1)" strokeWidth={2} name="Com Estratégia" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex items-center gap-6 mt-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-0.5 bg-muted-foreground" style={{ borderTop: "2px dashed" }} /> Cenário Atual
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-0.5 bg-success" /> Com Estratégia
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Plano de Ação Dinâmico */}
               <div>
                 <p className="section-label mb-3">PLANO DE AÇÃO EM 3 FASES</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -747,7 +990,7 @@ export default function ClientePlanoMarketing() {
                 </div>
               </div>
 
-              {/* CTA to products tab */}
+              {/* CTA */}
               <Card className="glass-card border-primary/20 bg-primary/5">
                 <CardContent className="py-5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -766,13 +1009,12 @@ export default function ClientePlanoMarketing() {
           )}
         </TabsContent>
 
-        {/* ═══════ ABA PRODUTOS RECOMENDADOS ═══════ */}
+        {/* ═══════ PRODUTOS ═══════ */}
         <TabsContent value="produtos" className="mt-4 space-y-6">
           <div>
             <p className="section-label mb-1">PRODUTOS RECOMENDADOS</p>
             <p className="text-sm text-muted-foreground">Ferramentas que vão acelerar sua estratégia de marketing</p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {products.map(p => {
               const badge = getPriorityBadge(p.scoreKey);
@@ -789,9 +1031,7 @@ export default function ClientePlanoMarketing() {
                           <p className="text-[10px] text-muted-foreground tabular-nums">{p.kpi}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className={`text-[9px] ${badge.className}`}>
-                        {badge.label}
-                      </Badge>
+                      <Badge variant="outline" className={`text-[9px] ${badge.className}`}>{badge.label}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-4">{p.description}</p>
                     <div className="flex items-center justify-between">
@@ -805,13 +1045,12 @@ export default function ClientePlanoMarketing() {
           </div>
         </TabsContent>
 
-        {/* ═══════ ABA HISTÓRICO ═══════ */}
+        {/* ═══════ HISTÓRICO ═══════ */}
         <TabsContent value="historico" className="mt-4 space-y-6">
           <div>
             <p className="section-label mb-1">HISTÓRICO DE ESTRATÉGIAS</p>
             <p className="text-sm text-muted-foreground">Acompanhe a evolução do seu marketing ao longo do tempo</p>
           </div>
-
           {history.length === 0 ? (
             <Card className="glass-card">
               <CardContent className="py-12 text-center">
@@ -835,9 +1074,7 @@ export default function ClientePlanoMarketing() {
                         <p className="text-xs text-muted-foreground">Score: {h.score}% — {h.nivel}</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px]">
-                      {h.nivel}
-                    </Badge>
+                    <Badge variant="outline" className="text-[9px]">{h.nivel}</Badge>
                   </CardContent>
                 </Card>
               ))}
