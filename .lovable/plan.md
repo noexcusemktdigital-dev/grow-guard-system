@@ -1,71 +1,127 @@
 
-# Alerta de Consumo de Tokens para o Usuario Final
+# Gerador de Scripts por IA com Contexto do Plano de Vendas
 
-## Contexto
+## Conceito
 
-O usuario final (cliente SaaS) nao tem acesso ao Lovable. Os tokens sao registrados na tabela `ai_conversation_logs` (coluna `tokens_used`) e os creditos ficam na tabela `credit_wallets` (coluna `balance`). Atualmente, o saldo de creditos aparece na pagina "Plano e Creditos" mas **nao existe nenhum alerta** quando o consumo esta alto.
+Substituir o dialog simples de "Novo Script" por um fluxo inteligente com duas opcoes:
 
-## Estrategia
+1. **Gerar com IA** -- a IA cria o script com base em um briefing curto + dados automaticos do Plano de Vendas
+2. **Criar manual** -- o usuario escreve o conteudo manualmente (fluxo atual, mantido)
 
-Criar um sistema de alertas em 3 camadas, tudo dentro do proprio app:
+A IA puxa automaticamente do Plano de Vendas:
+- Segmento/nicho do negocio
+- Canais de aquisicao configurados
+- Produtos cadastrados no CRM
+- Score da avaliacao comercial (para ajustar complexidade)
+- Tamanho da equipe
 
-1. **Banner global** no layout do cliente quando os creditos atingem niveis criticos
-2. **Card de consumo** na pagina de Plano e Creditos com grafico de uso por modulo
-3. **Alerta na aba Agentes IA** do Dashboard mostrando tokens consumidos vs limite
+O usuario complementa com 3-4 perguntas rapidas especificas da etapa do funil.
 
-## Regras de Alerta
+---
 
-| Nivel | Condicao | Visual |
-|-------|----------|--------|
-| Normal | Saldo > 30% do plano | Nenhum alerta |
-| Atencao | Saldo entre 10% e 30% | Banner amarelo + badge no menu |
-| Critico | Saldo <= 10% | Banner vermelho persistente |
-| Zerado | Saldo = 0 | Banner vermelho + funcoes IA bloqueadas (ja existe via FeatureGate) |
+## Fluxo do "Gerar com IA"
 
-## Implementacao
+1. Usuario clica "Novo Script" e escolhe a etapa do funil
+2. Sistema mostra um briefing com perguntas contextuais por etapa:
 
-### 1. Hook `useCreditAlert` (novo)
+| Etapa | Perguntas |
+|-------|-----------|
+| Prospeccao | Qual o canal principal? Qual a dor do cliente? Qual o primeiro contato (WhatsApp, ligacao, email)? |
+| Diagnostico | Quais perguntas voce faz para qualificar? Quais criterios de qualificacao (BANT, SPIN)? |
+| Negociacao | Qual o diferencial competitivo? Qual a faixa de preco? Existe desconto? |
+| Fechamento | Qual a urgencia de fechamento? Tem periodo de teste? Como e a formalizacao? |
+| Objecoes | Quais as 3 objecoes mais comuns? Qual o concorrente principal? |
 
-Centraliza a logica de calculo do nivel de alerta:
-- Recebe dados de `useClienteWallet` e `useClienteSubscription`
-- Calcula percentual de creditos restantes com base no plano ativo
-- Retorna `{ level: "normal" | "warning" | "critical" | "zero", percent, balance, total }`
+3. Dados do Plano de Vendas sao injetados automaticamente (o usuario ve um resumo)
+4. IA gera o script completo com formatacao profissional
+5. Usuario pode editar, regenerar ou salvar
 
-### 2. Componente `CreditAlertBanner` (novo)
+---
 
-Banner fino no topo do layout do cliente:
-- **Atencao (amarelo)**: "Voce tem X% dos creditos restantes. Considere fazer upgrade."
-- **Critico (vermelho)**: "Creditos quase esgotados! Apenas X creditos restantes."
-- **Zerado**: "Creditos esgotados. Funcoes de IA estao pausadas."
-- Botao "Ver Plano" que redireciona para `/cliente/plano-creditos`
-- Pode ser dispensado temporariamente (volta apos 24h ou novo login)
+## Implementacao Tecnica
 
-### 3. Card de Consumo na pagina Plano e Creditos
+### 1. Edge Function `generate-script` (nova)
 
-Adicionar um card novo mostrando:
-- Grafico de barras horizontal com consumo por modulo (dados de `ai_conversation_logs` agrupados por `agent_id`)
-- Total de tokens usados no periodo atual
-- Barra de progresso com cores dinamicas (verde > amarelo > vermelho)
+- Recebe: etapa do funil, respostas do briefing, contexto automatico (produtos, canais, segmento)
+- Prompt especializado por etapa com instrucoes de formatacao
+- Retorna o script estruturado (titulo + conteudo + tags sugeridas)
+- Usa Lovable AI (google/gemini-3-flash-preview)
+- Nao usa streaming (resposta unica)
 
-### 4. Badge no menu lateral
+### 2. Componente `ScriptGeneratorDialog` (novo)
 
-No `ClienteSidebar`, exibir um ponto vermelho ou badge numerico ao lado de "Plano e Creditos" quando o nivel for `warning` ou `critical`.
+Dialog com 3 passos:
+- **Passo 1**: Escolher etapa do funil + modo (IA ou manual)
+- **Passo 2** (se IA): Briefing com perguntas contextuais + preview do contexto automatico
+- **Passo 3**: Preview do script gerado com opcoes de editar, regenerar ou salvar
+
+### 3. Busca de contexto automatico
+
+O dialog busca dados ja existentes:
+- `crm_products` -- lista de produtos/servicos
+- Dados do Plano de Vendas (localStorage, pois e o padrao atual da pagina)
+- `crm_funnels` -- etapas do funil configurado
+
+### 4. Edicao de scripts existentes com IA
+
+Alem de gerar novos, adicionar botao "Melhorar com IA" nos scripts existentes que:
+- Envia o script atual + contexto para a IA
+- Pede sugestoes de melhoria
+- Mostra diff entre original e sugerido
+
+---
 
 ## Arquivos a criar/editar
 
 | Arquivo | Acao |
 |---------|------|
-| `src/hooks/useCreditAlert.ts` | **Criar** -- hook com logica de niveis |
-| `src/components/cliente/CreditAlertBanner.tsx` | **Criar** -- banner de alerta |
-| `src/components/ClienteLayout.tsx` | **Editar** -- inserir banner acima do conteudo |
-| `src/components/ClienteSidebar.tsx` | **Editar** -- badge no item "Plano e Creditos" |
-| `src/pages/cliente/ClientePlanoCreditos.tsx` | **Editar** -- card de consumo por modulo |
+| `supabase/functions/generate-script/index.ts` | **Criar** -- edge function com prompts por etapa |
+| `supabase/config.toml` | **Editar** -- registrar nova function |
+| `src/components/cliente/ScriptGeneratorDialog.tsx` | **Criar** -- dialog com briefing + geracao |
+| `src/pages/cliente/ClienteScripts.tsx` | **Editar** -- integrar novo dialog, adicionar botao "Melhorar com IA" |
+
+---
 
 ## Detalhes Tecnicos
 
-- O hook `useCreditAlert` usa os dados ja carregados de `useClienteWallet` e `useClienteSubscription`, sem queries adicionais
-- O percentual e calculado como `(balance / totalCreditsDePlano) * 100`
-- Os planos ja estao definidos no array `PLANS` em `ClientePlanoCreditos.tsx` -- extrair para constante compartilhada
-- O banner usa `localStorage` para guardar timestamp de dismiss, respeitando 24h
-- O card de consumo faz uma query em `ai_conversation_logs` agrupando `SUM(tokens_used)` por agente, reusando o pattern ja existente no Dashboard
-- Nao precisa de migracao no banco -- todos os dados necessarios ja existem
+### Prompt por etapa (exemplo Prospeccao)
+
+```
+Voce e um especialista em vendas B2B. Crie um script de prospeccao profissional.
+
+CONTEXTO DO NEGOCIO:
+- Segmento: {segmento}
+- Produtos: {produtos}
+- Canais: {canais}
+- Tamanho da equipe: {equipe}
+
+BRIEFING DO USUARIO:
+- Canal principal: {canal}
+- Dor do cliente: {dor}
+- Tipo de contato: {tipo_contato}
+
+INSTRUCOES:
+- Formate como um roteiro passo a passo
+- Inclua saudacao, qualificacao, gancho e CTA
+- Use linguagem {formal/informal} baseada no segmento
+- Inclua variacoes para diferentes cenarios
+- Marque com [PAUSA] onde o vendedor deve esperar resposta
+```
+
+### Estrutura da edge function
+
+- Endpoint: POST com body `{ stage, briefing, context }`
+- Usa `supabase.functions.invoke()` no frontend
+- Tratamento de erros 429/402 com toast no frontend
+- Log de tokens via `ai_conversation_logs` para contabilizar no consumo
+
+### Dados automaticos
+
+Os dados do Plano de Vendas estao atualmente em localStorage (state local da pagina). O dialog lera:
+- `crm_products` via Supabase (ja tem hook `useCrmProducts`)
+- `crm_funnels` via Supabase (ja tem hook `useCrmFunnels`)
+- Estrutura comercial do Plano de Vendas: como esta em state local, o dialog recebera via props ou context se disponivel; caso contrario, mostra campos extras no briefing
+
+### Consumo de creditos
+
+Cada geracao consome tokens que sao registrados em `ai_conversation_logs`. O sistema de alertas de credito ja implementado cobrira automaticamente.
