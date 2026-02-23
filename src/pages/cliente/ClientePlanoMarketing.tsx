@@ -898,12 +898,19 @@ export default function ClientePlanoMarketing() {
                       ins.type === "success" ? "border-l-success" :
                       ins.type === "warning" ? "border-l-destructive" : "border-l-chart-blue"
                     }`}>
-                      <CardContent className="py-3 flex items-start gap-3">
-                        <ins.icon className={`w-4 h-4 mt-0.5 shrink-0 ${
-                          ins.type === "success" ? "text-success" :
-                          ins.type === "warning" ? "text-destructive" : "text-chart-blue"
-                        }`} />
-                        <p className="text-sm">{ins.text}</p>
+                      <CardContent className="py-3">
+                        <div className="flex items-start gap-3">
+                          <ins.icon className={`w-4 h-4 mt-0.5 shrink-0 ${
+                            ins.type === "success" ? "text-success" :
+                            ins.type === "warning" ? "text-destructive" : "text-chart-blue"
+                          }`} />
+                          <p className="text-sm flex-1">{ins.text}</p>
+                        </div>
+                        <div className="flex justify-end mt-2">
+                          <Button variant="link" size="sm" className="h-auto p-0 text-xs gap-1" onClick={() => setActiveTab("produtos")}>
+                            Iniciar agora <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -914,24 +921,36 @@ export default function ClientePlanoMarketing() {
               <Card className="glass-card">
                 <CardContent className="py-6">
                   <p className="section-label mb-4">PROJEÇÃO DE RESULTADOS — LEADS</p>
-                  <div className="h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={leadsProjection}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted) / 0.3)" strokeWidth={2} name="Cenário Atual" strokeDasharray="5 5" />
-                        <Area type="monotone" dataKey="comEstrategia" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.1)" strokeWidth={2} name="Com Estratégia" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex items-center gap-6 mt-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-0.5 bg-muted-foreground" style={{ borderTop: "2px dashed" }} /> Cenário Atual
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Sem Estratégia */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Sem Estratégia</p>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={leadsProjection}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" domain={[0, Math.max(...leadsProjection.map(d => d.comEstrategia))]} />
+                            <Tooltip />
+                            <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted) / 0.3)" strokeWidth={2} name="Cenário Atual" strokeDasharray="5 5" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-0.5 bg-primary" /> Com Estratégia
+                    {/* Com Estratégia */}
+                    <div>
+                      <p className="text-xs font-medium text-primary mb-2">Com Estratégia</p>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={leadsProjection}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" domain={[0, Math.max(...leadsProjection.map(d => d.comEstrategia))]} />
+                            <Tooltip />
+                            <Area type="monotone" dataKey="comEstrategia" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.1)" strokeWidth={2} name="Com Estratégia" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -941,24 +960,36 @@ export default function ClientePlanoMarketing() {
               <Card className="glass-card">
                 <CardContent className="py-6">
                   <p className="section-label mb-4">PROJEÇÃO DE FATURAMENTO ESTIMADO</p>
-                  <div className="h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={revenueProjection}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                        <Tooltip formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, ""]} />
-                        <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted) / 0.3)" strokeWidth={2} name="Cenário Atual" strokeDasharray="5 5" />
-                        <Area type="monotone" dataKey="comEstrategia" stroke="hsl(var(--chart-green))" fill="hsl(var(--chart-green) / 0.1)" strokeWidth={2} name="Com Estratégia" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex items-center gap-6 mt-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-0.5 bg-muted-foreground" style={{ borderTop: "2px dashed" }} /> Cenário Atual
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Sem Estratégia */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Sem Estratégia</p>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={revenueProjection}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" domain={[0, Math.max(...revenueProjection.map(d => d.comEstrategia))]} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                            <Tooltip formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, ""]} />
+                            <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted) / 0.3)" strokeWidth={2} name="Cenário Atual" strokeDasharray="5 5" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-0.5 bg-success" /> Com Estratégia
+                    {/* Com Estratégia */}
+                    <div>
+                      <p className="text-xs font-medium text-success mb-2">Com Estratégia</p>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={revenueProjection}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" domain={[0, Math.max(...revenueProjection.map(d => d.comEstrategia))]} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                            <Tooltip formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, ""]} />
+                            <Area type="monotone" dataKey="comEstrategia" stroke="hsl(var(--chart-green))" fill="hsl(var(--chart-green) / 0.1)" strokeWidth={2} name="Com Estratégia" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
