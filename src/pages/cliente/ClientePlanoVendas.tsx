@@ -12,6 +12,7 @@ import {
 import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
+import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { GoalCard } from "@/components/metas/GoalCard";
 import { GoalProgressRing } from "@/components/metas/GoalProgressRing";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -22,7 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Tabs removed - using sequential layout
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -568,7 +569,7 @@ function generateActionPlan(scoreMap: Record<string, number>, maxMap: Record<str
 
 export default function ClientePlanoVendas() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("diagnostico");
+  // Tabs removed - sequential layout
 
   // ── Diagnostic state ──
   const [currentSection, setCurrentSection] = useState(0);
@@ -584,6 +585,7 @@ export default function ClientePlanoVendas() {
   const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [novaMetaOpen, setNovaMetaOpen] = useState(false);
   const [novaMeta, setNovaMeta] = useState({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
+  const [targetDisplay, setTargetDisplay] = useState("");
   const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const anoAtual = new Date().getFullYear();
   const { data: activeGoals, isLoading: goalsLoading } = useActiveGoals(scopeFilter);
@@ -591,6 +593,8 @@ export default function ClientePlanoVendas() {
   const { data: goalProgress } = useGoalProgress(activeGoals);
   const { createGoal, archiveGoal } = useGoalMutations();
   const { data: teams } = useCrmTeams();
+  const { data: members } = useCrmTeam();
+  const isMonetaryMetric = (m: string) => ["revenue", "avg_ticket"].includes(m);
 
   // ── History state ──
   const [history] = useState([
@@ -715,7 +719,15 @@ export default function ClientePlanoVendas() {
   /* ── METAS: Add Meta (real) ── */
   const handleAddMeta = () => {
     if (!novaMeta.title || novaMeta.target_value <= 0 || !novaMeta.mesRef) {
-      toast({ title: "Preencha todos os campos", variant: "destructive" });
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
+      return;
+    }
+    if (novaMeta.scope === "team" && !novaMeta.team_id) {
+      toast({ title: "Selecione o time para a meta de equipe", variant: "destructive" });
+      return;
+    }
+    if (novaMeta.scope === "individual" && !novaMeta.assigned_to) {
+      toast({ title: "Selecione a pessoa responsável pela meta individual", variant: "destructive" });
       return;
     }
     const [y, m] = novaMeta.mesRef.split("-").map(Number);
@@ -735,6 +747,7 @@ export default function ClientePlanoVendas() {
     }, {
       onSuccess: () => {
         setNovaMeta({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
+        setTargetDisplay("");
         setNovaMetaOpen(false);
         toast({ title: "Meta criada com sucesso!" });
       },
@@ -753,15 +766,15 @@ export default function ClientePlanoVendas() {
         icon={<Target className="w-5 h-5 text-primary" />}
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="diagnostico" className="text-xs gap-1.5"><Activity className="w-3.5 h-3.5" /> Diagnóstico</TabsTrigger>
-          <TabsTrigger value="metas" className="text-xs gap-1.5"><Target className="w-3.5 h-3.5" /> Minhas Metas</TabsTrigger>
-          <TabsTrigger value="historico" className="text-xs gap-1.5"><Clock className="w-3.5 h-3.5" /> Histórico</TabsTrigger>
-        </TabsList>
-
-        {/* ═══════ DIAGNÓSTICO ═══════ */}
-        <TabsContent value="diagnostico" className="mt-4">
+      {/* ═══════ DIAGNÓSTICO ═══════ */}
+      <div className="space-y-4">
+        <Collapsible defaultOpen={!completed}>
+          <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold hover:text-primary transition-colors w-full">
+            <Activity className="w-4 h-4 text-primary" />
+            Diagnóstico Comercial
+            <ChevronDown className="w-4 h-4 ml-auto" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4">
           {!completed ? (
             <div className="space-y-6">
               <div className="space-y-2">
@@ -972,10 +985,12 @@ export default function ClientePlanoVendas() {
               </Card>
             </div>
           )}
-        </TabsContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
 
-        {/* ═══════ METAS ═══════ */}
-        <TabsContent value="metas" className="mt-4 space-y-6">
+      {/* ═══════ METAS ═══════ */}
+      <div className="space-y-6">
           {/* Header with scope filters */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
@@ -1128,8 +1143,31 @@ export default function ClientePlanoVendas() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Valor alvo</Label>
-                    <Input type="number" value={novaMeta.target_value || ""} onChange={e => setNovaMeta(p => ({ ...p, target_value: Number(e.target.value) }))} className="text-sm" />
+                    <Label className="text-xs">Valor alvo {isMonetaryMetric(novaMeta.metric) && <span className="text-muted-foreground">(R$)</span>}</Label>
+                    {isMonetaryMetric(novaMeta.metric) ? (
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={targetDisplay}
+                        onChange={e => {
+                          const raw = e.target.value.replace(/\D/g, "");
+                          if (!raw) { setTargetDisplay(""); setNovaMeta(p => ({ ...p, target_value: 0 })); return; }
+                          const num = parseInt(raw, 10);
+                          setTargetDisplay(num.toLocaleString("pt-BR"));
+                          setNovaMeta(p => ({ ...p, target_value: num }));
+                        }}
+                        placeholder="Ex: 50.000"
+                        className="text-sm"
+                      />
+                    ) : (
+                      <Input
+                        type="number"
+                        value={novaMeta.target_value || ""}
+                        onChange={e => setNovaMeta(p => ({ ...p, target_value: Number(e.target.value) }))}
+                        placeholder="Ex: 20"
+                        className="text-sm"
+                      />
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Prioridade</Label>
@@ -1145,7 +1183,7 @@ export default function ClientePlanoVendas() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Escopo</Label>
-                  <Select value={novaMeta.scope} onValueChange={v => setNovaMeta(p => ({ ...p, scope: v }))}>
+                  <Select value={novaMeta.scope} onValueChange={v => setNovaMeta(p => ({ ...p, scope: v, team_id: "", assigned_to: "" }))}>
                     <SelectTrigger className="text-xs h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="company">Empresa (toda a organização)</SelectItem>
@@ -1154,15 +1192,38 @@ export default function ClientePlanoVendas() {
                     </SelectContent>
                   </Select>
                 </div>
-                {novaMeta.scope === "team" && teams && teams.length > 0 && (
+                {novaMeta.scope === "team" && (
                   <div className="space-y-1">
                     <Label className="text-xs">Time</Label>
-                    <Select value={novaMeta.team_id} onValueChange={v => setNovaMeta(p => ({ ...p, team_id: v }))}>
-                      <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione o time" /></SelectTrigger>
-                      <SelectContent>
-                        {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    {teams && teams.length > 0 ? (
+                      <Select value={novaMeta.team_id} onValueChange={v => setNovaMeta(p => ({ ...p, team_id: v }))}>
+                        <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione o time" /></SelectTrigger>
+                        <SelectContent>
+                          {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-xs text-muted-foreground py-2">Nenhum time cadastrado. Crie times em Configurações &gt; CRM.</p>
+                    )}
+                  </div>
+                )}
+                {novaMeta.scope === "individual" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Responsável</Label>
+                    {members && members.length > 0 ? (
+                      <Select value={novaMeta.assigned_to} onValueChange={v => setNovaMeta(p => ({ ...p, assigned_to: v }))}>
+                        <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione a pessoa" /></SelectTrigger>
+                        <SelectContent>
+                          {members.map(m => (
+                            <SelectItem key={m.user_id} value={m.user_id}>
+                              {m.full_name} <span className="text-muted-foreground ml-1">({m.role})</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-xs text-muted-foreground py-2">Nenhum membro encontrado na organização.</p>
+                    )}
                   </div>
                 )}
                 <Button className="w-full gap-1" onClick={handleAddMeta} disabled={createGoal.isPending}>
@@ -1171,43 +1232,41 @@ export default function ClientePlanoVendas() {
               </div>
             </DialogContent>
           </Dialog>
-        </TabsContent>
+      </div>
 
-        {/* ═══════ HISTÓRICO ═══════ */}
-        <TabsContent value="historico" className="mt-4 space-y-6">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-1">HISTÓRICO DE DIAGNÓSTICOS</p>
-            <p className="text-sm text-muted-foreground">Acompanhe sua evolução comercial ao longo do tempo</p>
-          </div>
-
+      {/* ═══════ HISTÓRICO DE DIAGNÓSTICOS ═══════ */}
+      <Collapsible>
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors w-full">
+          <Clock className="w-4 h-4" />
+          Histórico de Diagnósticos ({history.length})
+          <ChevronDown className="w-4 h-4 ml-auto" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-3 space-y-3">
           {history.length === 0 ? (
             <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Clock className="w-10 h-10 text-muted-foreground/30 mb-3" />
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <Clock className="w-8 h-8 text-muted-foreground/30 mb-2" />
                 <p className="text-sm font-medium">Nenhum diagnóstico realizado</p>
                 <p className="text-xs text-muted-foreground mt-1">Complete o diagnóstico para ver seu histórico aqui.</p>
-                <Button size="sm" variant="outline" className="mt-4" onClick={() => setActiveTab("diagnostico")}>
-                  Iniciar Diagnóstico
-                </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {history.map((h, i) => {
                 const nv = getNivel(h.score);
                 return (
                   <Card key={i} className="glass-card">
-                    <CardContent className="py-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: nv.cor }}>
+                    <CardContent className="py-3 px-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground" style={{ backgroundColor: nv.cor }}>
                           {h.score}%
                         </div>
                         <div>
-                          <p className="text-sm font-semibold">{h.nivel}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(h.date).toLocaleDateString("pt-BR")}</p>
+                          <p className="text-xs font-semibold">{h.nivel}</p>
+                          <p className="text-[10px] text-muted-foreground">{new Date(h.date).toLocaleDateString("pt-BR")}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-[10px]" style={{ borderColor: nv.cor, color: nv.cor }}>
+                      <Badge variant="outline" className="text-[9px]" style={{ borderColor: nv.cor, color: nv.cor }}>
                         {h.nivel}
                       </Badge>
                     </CardContent>
@@ -1216,8 +1275,8 @@ export default function ClientePlanoVendas() {
               })}
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
