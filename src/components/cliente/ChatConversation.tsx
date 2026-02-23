@@ -183,11 +183,19 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
   const handleCreateLead = async () => {
     if (!contact) return;
     try {
+      const defaultFunnel = funnelsData?.find(f => f.is_default) || funnelsData?.[0];
+      const dbStages = defaultFunnel?.stages as any[] | undefined;
+      const firstStage = Array.isArray(dbStages) && dbStages.length > 0
+        ? (dbStages[0].key || "novo")
+        : "novo";
+
       const lead = await createLead.mutateAsync({
         name: contact.name || contact.phone,
         phone: contact.phone,
         source: "whatsapp",
         tags: ["whatsapp"],
+        funnel_id: defaultFunnel?.id,
+        stage: firstStage,
       });
       if (lead?.id) {
         await linkMutation.mutateAsync({ contactId: contact.id, leadId: lead.id });
