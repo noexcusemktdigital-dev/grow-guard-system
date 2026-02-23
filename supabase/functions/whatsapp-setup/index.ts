@@ -48,84 +48,117 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { instanceId, instanceToken, clientToken, action } = await req.json();
+    const body = await req.json();
+    const { instanceId, instanceToken, clientToken, action, label } = body;
 
-    // Action: disconnect
+    // Action: disconnect a specific instance
     if (action === "disconnect") {
-      await adminClient
-        .from("whatsapp_instances")
-        .delete()
-        .eq("organization_id", orgId);
+      if (instanceId) {
+        await adminClient
+          .from("whatsapp_instances")
+          .delete()
+          .eq("instance_id", instanceId)
+          .eq("organization_id", orgId);
+      } else {
+        // Legacy fallback: disconnect all
+        await adminClient
+          .from("whatsapp_instances")
+          .delete()
+          .eq("organization_id", orgId);
+      }
 
       return new Response(JSON.stringify({ success: true, status: "disconnected" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Action: check status
+    // Action: check-status for a specific instance or all
     if (action === "check-status") {
-      const { data: instance } = await adminClient
-        .from("whatsapp_instances")
-        .select("*")
-        .eq("organization_id", orgId)
-        .maybeSingle();
+      let instances: any[] = [];
 
-      if (!instance) {
-        return new Response(JSON.stringify({ status: "not_configured" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Check Z-API connection status
-      try {
-        const statusRes = await fetch(
-          `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/status`,
-          { headers: { "Client-Token": instance.client_token } }
-        );
-        const statusData = await statusRes.json();
-        const connected = statusData.connected === true;
-        let phoneNumber = instance.phone_number || null;
-
-        // If connected, fetch the real phone number from /device endpoint
-        if (connected) {
-          try {
-            const deviceRes = await fetch(
-              `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/device`,
-              { headers: { "Client-Token": instance.client_token } }
-            );
-            const deviceData = await deviceRes.json();
-            console.log("[check-status] /device response:", JSON.stringify(deviceData));
-            if (deviceData.phone) {
-              phoneNumber = deviceData.phone;
-              console.log("[check-status] Phone number found:", phoneNumber);
-            } else {
-              console.warn("[check-status] No phone field in /device response");
-            }
-          } catch (err) {
-            console.error("Failed to fetch device info:", err);
-          }
-        }
-
-        await adminClient
+      if (instanceId) {
+        const { data } = await adminClient
           .from("whatsapp_instances")
-          .update({
-            status: connected ? "connected" : "disconnected",
-            phone_number: phoneNumber,
-          })
-          .eq("id", instance.id);
+          .select("*")
+          .eq("organization_id", orgId)
+          .eq("instance_id", instanceId)
+          .maybeSingle();
+        if (data) instances = [data];
+      } else {
+        const { data } = await adminClient
+          .from("whatsapp_instances")
+          .select("*")
+          .eq("organization_id", orgId);
+        instances = data || [];
+      }
 
-        return new Response(JSON.stringify({
-          status: connected ? "connected" : "disconnected",
-          phone: phoneNumber,
-          details: statusData,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch {
-        return new Response(JSON.stringify({ status: instance.status }), {
+      if (instances.length === 0) {
+        return new Response(JSON.stringify({ status: "not_configured", results: [] }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      const results: any[] = [];
+
+      for (const instance of instances) {
+        try {
+          const statusRes = await fetch(
+            `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/status`,
+            { headers: { "Client-Token": instance.client_token } }
+          );
+          const statusData = await statusRes.json();
+          const connected = statusData.connected === true;
+          let phoneNumber = instance.phone_number || null;
+
+          if (connected) {
+            try {
+              const deviceRes = await fetch(
+                `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/device`,
+                { headers: { "Client-Token": instance.client_token } }
+              );
+              const deviceData = await deviceRes.json();
+              console.log("[check-status] /device response for", instance.instance_id, ":", JSON.stringify(deviceData));
+              if (deviceData.phone) {
+                phoneNumber = deviceData.phone;
+              }
+            } catch (err) {
+              console.error("Failed to fetch device info:", err);
+            }
+          }
+
+          await adminClient
+            .from("whatsapp_instances")
+            .update({
+              status: connected ? "connected" : "disconnected",
+              phone_number: phoneNumber,
+            })
+            .eq("id", instance.id);
+
+          results.push({
+            id: instance.id,
+            instance_id: instance.instance_id,
+            status: connected ? "connected" : "disconnected",
+            phone: phoneNumber,
+            label: instance.label,
+          });
+        } catch {
+          results.push({
+            id: instance.id,
+            instance_id: instance.instance_id,
+            status: instance.status,
+            phone: instance.phone_number,
+            label: instance.label,
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({
+        status: results[0]?.status || "unknown",
+        phone: results[0]?.phone,
+        results,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Action: connect (default) — save credentials + configure webhooks
@@ -140,7 +173,6 @@ Deno.serve(async (req) => {
 
     // Configure webhook on Z-API
     try {
-      // Set received message webhook
       await fetch(
         `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/update-webhook-received`,
         {
@@ -150,7 +182,6 @@ Deno.serve(async (req) => {
         }
       );
 
-      // Set status webhook
       await fetch(
         `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/update-webhook-status`,
         {
@@ -174,13 +205,13 @@ Deno.serve(async (req) => {
       const statusData = await statusRes.json();
       if (statusData.connected) {
         connStatus = "connected";
-        // Fetch real phone number from /device endpoint
         try {
           const deviceRes = await fetch(
             `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/device`,
             { headers: { "Client-Token": clientToken } }
           );
           const deviceData = await deviceRes.json();
+          console.log("[connect] /device response:", JSON.stringify(deviceData));
           if (deviceData.phone) {
             phoneNumber = deviceData.phone;
           }
@@ -192,23 +223,24 @@ Deno.serve(async (req) => {
       // keep disconnected
     }
 
-    // Upsert instance
+    // Upsert by instance_id (not organization_id) to support multiple instances
     const { data: existing } = await adminClient
       .from("whatsapp_instances")
       .select("id")
       .eq("organization_id", orgId)
+      .eq("instance_id", instanceId)
       .maybeSingle();
 
     if (existing) {
       await adminClient
         .from("whatsapp_instances")
         .update({
-          instance_id: instanceId,
           token: instanceToken,
           client_token: clientToken,
           status: connStatus,
           phone_number: phoneNumber,
           webhook_url: webhookUrl,
+          label: label || null,
         })
         .eq("id", existing.id);
     } else {
@@ -222,6 +254,7 @@ Deno.serve(async (req) => {
           status: connStatus,
           phone_number: phoneNumber,
           webhook_url: webhookUrl,
+          label: label || null,
         });
     }
 

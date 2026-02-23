@@ -3233,6 +3233,7 @@ export type Database = {
           created_at: string
           id: string
           instance_id: string
+          label: string | null
           organization_id: string
           phone_number: string | null
           status: string
@@ -3245,6 +3246,7 @@ export type Database = {
           created_at?: string
           id?: string
           instance_id: string
+          label?: string | null
           organization_id: string
           phone_number?: string | null
           status?: string
@@ -3257,6 +3259,7 @@ export type Database = {
           created_at?: string
           id?: string
           instance_id?: string
+          label?: string | null
           organization_id?: string
           phone_number?: string | null
           status?: string
@@ -3268,7 +3271,7 @@ export type Database = {
           {
             foreignKeyName: "whatsapp_instances_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },

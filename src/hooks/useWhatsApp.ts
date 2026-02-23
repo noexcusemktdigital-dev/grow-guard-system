@@ -11,6 +11,7 @@ export interface WhatsAppInstance {
   status: string;
   phone_number: string | null;
   webhook_url: string | null;
+  label: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -41,23 +42,33 @@ export interface WhatsAppMessage {
   created_at: string;
 }
 
-export function useWhatsAppInstance() {
+// Returns all instances for the organization
+export function useWhatsAppInstances() {
   const { data: orgId } = useUserOrgId();
 
   return useQuery({
-    queryKey: ["whatsapp-instance", orgId],
+    queryKey: ["whatsapp-instances", orgId],
     queryFn: async () => {
-      if (!orgId) return null;
+      if (!orgId) return [];
       const { data, error } = await supabase
         .from("whatsapp_instances" as any)
         .select("*")
         .eq("organization_id", orgId)
-        .maybeSingle();
+        .order("created_at", { ascending: true });
       if (error) throw error;
-      return data as unknown as WhatsAppInstance | null;
+      return (data || []) as unknown as WhatsAppInstance[];
     },
     enabled: !!orgId,
   });
+}
+
+// Legacy alias — returns the first instance (backward compat)
+export function useWhatsAppInstance() {
+  const { data: instances, ...rest } = useWhatsAppInstances();
+  return {
+    ...rest,
+    data: instances && instances.length > 0 ? instances[0] : null,
+  };
 }
 
 export function useWhatsAppContacts() {
@@ -108,6 +119,7 @@ export function useSetupWhatsApp() {
       instanceToken: string;
       clientToken: string;
       action?: string;
+      label?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("whatsapp-setup", {
         body: params,
@@ -116,7 +128,7 @@ export function useSetupWhatsApp() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["whatsapp-instance"] });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
     },
   });
 }
@@ -137,7 +149,7 @@ export function useSendWhatsAppMessage() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
       queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
     },
@@ -211,7 +223,6 @@ export function useLinkContactToCrmLead() {
   return useMutation({
     mutationFn: async ({ contactId, leadId }: { contactId: string; leadId: string }) => {
       if (!orgId) return;
-      // Update both sides of the link
       await Promise.all([
         supabase
           .from("whatsapp_contacts" as any)

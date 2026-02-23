@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useSetupWhatsApp, useWhatsAppInstance } from "@/hooks/useWhatsApp";
+import { useSetupWhatsApp, useWhatsAppInstances } from "@/hooks/useWhatsApp";
 import { toast } from "@/hooks/use-toast";
 import {
   CheckCircle2, Loader2, Wifi, ExternalLink,
@@ -26,7 +26,7 @@ const SUPPORT_LINK = "https://wa.me/5500000000000?text=Olá! Preciso de ajuda pa
 const TOTAL_STEPS = 5;
 
 export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
-  const { refetch } = useWhatsAppInstance();
+  const { refetch } = useWhatsAppInstances();
   const setupMutation = useSetupWhatsApp();
   const [step, setStep] = useState(1);
   const [creds, setCreds] = useState({ instanceId: "", instanceToken: "", clientToken: "" });
