@@ -1,11 +1,13 @@
-import { Trophy, Medal, Star, Target, Coins, Timer, Smartphone, BarChart3, Award, TrendingUp, Users, Zap } from "lucide-react";
+import { Trophy, Medal, Star, Target, Coins, Timer, Smartphone, BarChart3, Award, TrendingUp, Users, Zap, Crown } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useClienteGamification } from "@/hooks/useClienteContent";
 import { useCrmLeads } from "@/hooks/useClienteCrm";
+import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useAuth } from "@/contexts/AuthContext";
 
 const medalIcons: Record<string, React.ElementType> = {
@@ -25,6 +27,7 @@ export default function ClienteGamificacao() {
   const { user } = useAuth();
   const { data: gamification, isLoading } = useClienteGamification();
   const { data: leads } = useCrmLeads();
+  const { data: team } = useCrmTeam();
 
   // Compute stats from real CRM data
   const myLeads = leads?.filter(l => l.assigned_to === user?.id) ?? [];
@@ -55,6 +58,14 @@ export default function ClienteGamificacao() {
   const nextLevel = (level + 1) * 500;
   const progressToNext = Math.min(Math.round((points / nextLevel) * 100), 100);
   const unlockedCount = medals.filter(m => m.unlocked).length;
+
+  // Team ranking
+  const teamRanking = (team ?? []).map(member => {
+    const memberLeads = leads?.filter(l => l.assigned_to === member.user_id) ?? [];
+    const memberWon = memberLeads.filter(l => !!l.won_at).length;
+    const memberPoints = (memberLeads.length * 10) + (memberWon * 50);
+    return { ...member, totalLeads: memberLeads.length, wonLeads: memberWon, points: memberPoints };
+  }).sort((a, b) => b.points - a.points);
 
   if (isLoading) {
     return (
@@ -163,6 +174,55 @@ export default function ClienteGamificacao() {
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Team Ranking */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <Crown className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm font-semibold">Ranking da Equipe</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {teamRanking.length <= 1 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Adicione membros à sua equipe para ver o ranking!</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {teamRanking.map((member, idx) => {
+                const isMe = member.user_id === user?.id;
+                const initials = member.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+                return (
+                  <div
+                    key={member.user_id}
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all ${isMe ? "bg-primary/10 border border-primary/20" : "bg-muted/20 hover:bg-muted/30"}`}
+                  >
+                    <span className={`text-sm font-bold w-6 text-center ${idx === 0 ? "text-amber-500" : idx === 1 ? "text-muted-foreground" : idx === 2 ? "text-orange-400" : "text-muted-foreground"}`}>
+                      {idx + 1}º
+                    </span>
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{initials}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold truncate">
+                        {member.full_name} {isMe && <span className="text-primary">(você)</span>}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {member.totalLeads} leads · {member.wonLeads} ganhos
+                      </p>
+                    </div>
+                    <Badge variant={idx === 0 ? "default" : "outline"} className="text-[10px]">
+                      {member.points} pts
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
