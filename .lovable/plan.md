@@ -1,114 +1,154 @@
 
-# Chat Avancado + IA com Leads + Permissao por Funil
+# Agentes de IA -- Evolucao Completa
 
 ## Resumo
 
-Tres grandes frentes: (1) reestruturar o Chat WhatsApp com separacao IA/Humano, filtros por etapa/agente, painel de acoes destacado e chat integrado no CRM; (2) IA inteligente que atualiza leads automaticamente (mudanca de etapa, transbordo com alerta); (3) sistema de permissoes por funil no CRM, permitindo intercalar entre funis com acesso controlado por usuario/time.
+Reestruturar completamente o sistema de agentes de IA com funcoes definidas (SDR, Closer, Pos-venda, Suporte), persona detalhada com sexo e foto, base de conhecimento com arquivos e links, prompt guiado com perguntas didaticas e geracao via IA, simulador funcional, suporte a audio (transcrever e enviar), vinculacao a instancias WhatsApp especificas, e acoes/objetivos no CRM.
 
 ---
 
-## Parte 1: Chat Reestruturado
+## 1. Migration -- Novas colunas em `client_ai_agents`
 
-### 1.1 Filtros na lista de contatos (ChatContactList)
+Adicionar colunas para suportar os novos recursos:
 
-Adicionar pilulas de filtro acima da busca:
-- **Todos** | **IA** | **Humano** | **Espera** (contatos com mensagens nao lidas)
-- **Por agente**: dropdown com agentes ativos (busca em `client_ai_agents`)
-- **Por etapa do lead**: dropdown com etapas do funil (busca a etapa via `crm_lead_id` -> `crm_leads.stage`)
+- `role` text NOT NULL default 'sdr' -- funcao do agente (sdr, closer, pos_venda, suporte)
+- `gender` text nullable -- sexo da persona (masculino, feminino, neutro)
+- `objectives` jsonb default '[]' -- objetivos especificos do agente (ex: qualificar leads, agendar reuniao)
+- `crm_actions` jsonb default '{}' -- config de acoes automaticas no CRM (quais etapas pode mover, limites)
+- `whatsapp_instance_ids` jsonb default '[]' -- IDs das instancias WhatsApp vinculadas (permite multiplas)
 
-Cada contato na lista exibira badges visuais:
-- Badge roxa "IA" ou verde "Humano" no avatar
-- Badge com nome da etapa do lead vinculado (se houver)
-- Badge com nome do agente IA atribuido
+Nao remover colunas existentes para manter compatibilidade.
 
-### 1.2 Painel de acoes na conversa (ChatConversation)
+## 2. Storage Bucket para arquivos da base de conhecimento
 
-Destacar as acoes do header em um painel mais robusto:
-- **Transbordo**: botao "Assumir" / "Devolver p/ IA" com destaque visual
-- **Lead vinculado**: card compacto mostrando nome do lead, etapa atual e valor. Clicar abre o lead detail sheet direto
-- **Criar Lead**: se nao houver lead vinculado, botao "Criar Lead" com pre-preenchimento
-- **Transferir agente**: dropdown para mudar o agente IA atribuido ao contato
-- **Alterar etapa**: select rapido para mover a etapa do lead vinculado sem sair do chat
-- **Alerta de transbordo**: quando a IA solicitar transbordo, exibir banner amarelo/laranja no topo da conversa
+Criar um bucket `agent-knowledge` (privado) para upload de PDFs, documentos e imagens que servem de base de conhecimento.
 
-### 1.3 Indicadores visuais nas mensagens (ChatMessageBubble)
+Migration SQL:
+```
+INSERT INTO storage.buckets (id, name, public) VALUES ('agent-knowledge', 'agent-knowledge', false);
+-- RLS: membros da org podem fazer upload e ler
+```
 
-- Badge "IA" em mensagens enviadas pelo agente (detectar via `metadata.ai_generated`)
-- Badge "Humano" em mensagens enviadas manualmente
+## 3. Card do Agente (AgentCard.tsx) -- Redesign
 
----
+### Mudancas visuais:
+- Exibir a **funcao** do agente com badge colorida (SDR = azul, Closer = verde, Pos-venda = roxo, Suporte = laranja)
+- **Botao de toggle Ativar/Pausar** em destaque no card (Switch grande ou botao Play/Pause) -- clicavel sem abrir o menu
+- Foto do agente em avatar maior e mais destacado
+- Remover o status do badge superior (ja visivel pelo toggle)
+- Mostrar quantas instancias WhatsApp estao vinculadas
 
-## Parte 2: Chat Integrado no Lead (CRM)
+## 4. Formulario do Agente (AgentFormSheet.tsx) -- Reestruturacao Completa
 
-### 2.1 Aba WhatsApp expandida no Lead Detail Sheet
+Substituir as 6 abas atuais por **5 abas** (remover Diagnostico, ativar Simulador):
 
-Expandir a aba "WA" do `CrmLeadDetailSheet` para exibir:
-- Historico completo de mensagens do contato vinculado
-- Input de envio de mensagem no rodape
-- Botao "Abrir no Chat" para ir a pagina completa
-- Se nao houver contato vinculado mas o lead tem telefone, exibir botao "Iniciar conversa"
+### Aba 1: Identidade
+- **Nome** do agente (input obrigatorio)
+- **Foto** do agente (upload de imagem com preview circular -- usa bucket `agent-knowledge` ou avatar_url)
+- **Funcao**: Select com opcoes:
+  - SDR (Prospecao e qualificacao)
+  - Closer (Fechamento de vendas)
+  - Pos-venda (Acompanhamento e fidelizacao)
+  - Suporte/Atendimento (Resolucao de problemas)
+- **Sexo**: Radio group (Masculino, Feminino, Neutro)
+- **Canal**: Select (WhatsApp, Instagram, etc.)
+- **Instancias WhatsApp**: Multi-select com as instancias disponiveis da organizacao (busca `whatsapp_instances`)
+- **Tags**: Input de tags (ja existe)
 
----
+### Aba 2: Persona (guiada com perguntas)
+Reformular como um formulario didatico com perguntas de selecao:
 
-## Parte 3: IA Inteligente -- Atualizacao Automatica de Leads
+- **Como o agente deve cumprimentar?** (selecao: Formal, Informal, Personalizado + campo texto)
+- **Nivel de formalidade** (selecao: Muito formal, Profissional, Casual, Descontraido)
+- **Uso de emojis** (selecao: Nunca, Pouco, Moderado, Bastante)
+- **Comprimento das mensagens** (selecao: Curtas e diretas, Medias, Detalhadas)
+- **Personalidade** (multi-select: Empatetico, Consultivo, Proativo, Objetivo, Paciente, Persuasivo)
+- **Restricoes**: Textarea para o que o agente NAO deve fazer
+- **Botao "Gerar com IA"**: ao clicar, usa as selecoes acima para gerar via edge function uma descricao completa da persona, que o usuario pode editar
 
-### 3.1 Contexto CRM no system prompt (ai-agent-reply)
+### Aba 3: Base de Conhecimento
+Reformular para dois tipos de entrada:
 
-Modificar a edge function para incluir no system prompt:
-- Informacoes do lead vinculado (nome, etapa atual, valor, tags)
-- Etapas disponiveis do funil
-- Instrucoes para acoes estruturadas: `[AI_ACTION:MOVE_STAGE:nome]`, `[AI_ACTION:HANDOFF:motivo]`, `[AI_ACTION:UPDATE_LEAD:campo=valor]`
+**Links/URLs:**
+- Input para adicionar URLs de sites, documentos online
+- Cada URL exibe preview (titulo extraido se possivel)
 
-### 3.2 Processamento de acoes na edge function
+**Arquivos:**
+- Area de upload (drag & drop ou botao) para PDFs, DOCx, TXT, imagens
+- Upload vai para o bucket `agent-knowledge` com path `{org_id}/{agent_id}/{filename}`
+- Lista de arquivos com nome, tamanho e botao de remover
+- Os arquivos sao referenciados no campo `knowledge_base` como objetos: `{type: "file", name, url, size}` ou `{type: "url", content: "https://..."}`
 
-Apos receber a resposta da IA:
-1. Parsear acoes `[AI_ACTION:...]` do texto
-2. Remover as acoes do texto antes de enviar ao usuario
-3. Executar no banco:
-   - `MOVE_STAGE`: atualizar `crm_leads.stage` e registrar atividade
-   - `HANDOFF`: mudar `attending_mode` para `human`, criar notificacao em `client_notifications`
-   - `UPDATE_LEAD`: atualizar campos do lead (value, tags)
-4. Inserir alerta em `client_notifications` no transbordo
+**Textos manuais:**
+- Textarea para colar textos longos de referencia
+- Cada texto salvo como `{type: "text", content: "..."}`
 
-### 3.3 Alerta de transbordo
+### Aba 4: Prompt e Objetivos
+Combinar prompt config + objetivos:
 
-Quando a IA executa `HANDOFF`:
-1. Mudar `attending_mode` do contato para `human`
-2. Criar notificacao em `client_notifications` com titulo "IA solicitou transbordo" e link para o chat
-3. No frontend, exibir banner amarelo quando `attending_mode` acabou de mudar para `human`
+**System Prompt:**
+- Textarea grande para o prompt
+- **Botao "Gerar Prompt com IA"**: gera automaticamente com base na funcao, persona e base de conhecimento do agente
+- Temperatura e modelo (ja existem)
 
----
+**Objetivos do Agente:**
+- Lista de objetivos especificos adicionaveis (ex: "Qualificar leads", "Agendar reuniao", "Enviar proposta")
+- Cada objetivo pode ter uma descricao curta
+- Opcoes pre-definidas por funcao:
+  - SDR: Qualificar lead, Coletar informacoes, Agendar reuniao, Identificar decisor
+  - Closer: Apresentar proposta, Negociar, Fechar venda, Superar objecoes
+  - Pos-venda: Verificar satisfacao, Coletar feedback, Oferecer upsell, Resolver duvidas
+  - Suporte: Resolver problema, Escalar ticket, Coletar informacoes do erro, Encaminhar para setor
 
-## Parte 4: Permissoes por Funil no CRM
+**Acoes no CRM:**
+- Checkboxes: "Pode mover lead de etapa", "Pode atualizar valor", "Pode adicionar tags", "Pode solicitar transbordo", "Pode criar tarefas"
+- Select de etapas disponiveis (quais etapas o agente pode movimentar)
 
-### 4.1 Intercalar entre funis
+### Aba 5: Simulador (funcional)
+Implementar um chat simulado dentro do formulario:
 
-Atualmente o CRM usa apenas o funil padrao (ou o primeiro). Adicionar:
-- Um **seletor de funil** no header do CRM (Select/Tabs) que permite intercalar entre funis
-- Os leads sao filtrados por `funnel_id` do funil selecionado
-- O estado `selectedFunnelId` controla qual funil esta ativo
+- Area de chat com bolhas de mensagem
+- Input para o usuario digitar mensagens de teste
+- Chama a mesma edge function `ai-agent-reply` em modo simulacao (sem enviar via WhatsApp)
+- Ou chama direto o gateway de IA com o system prompt montado
+- Exibe as respostas do agente em tempo real
+- Mostra acoes detectadas (ex: "IA moveu lead para Proposta") como badges
 
-### 4.2 Controle de acesso por funil
+## 5. Edge Function -- Suporte a audio
 
-A tabela `crm_teams` ja possui `funnel_ids` (lista de funis a que o time tem acesso) e `members` (lista de user_ids). Usar essa estrutura para controlar visibilidade:
+### Transcrever audio recebido:
+- No `ai-agent-reply`, quando o `message_text` indicar que e audio (ou tipo da mensagem for audio), usar o Lovable AI Gateway para transcrever antes de processar
+- Alternativa: na `whatsapp-webhook`, ao receber mensagem de audio, baixar o audio via Z-API, transcrever com IA e salvar o texto transcrito no campo `content` da mensagem
 
-- Ao carregar os funis, filtrar apenas os que o usuario logado tem acesso:
-  - Se o usuario e `cliente_admin` -> ve todos os funis
-  - Senao -> buscar em `crm_teams` onde o `user_id` esta em `members` e retornar os `funnel_ids` desses times
-- Criar um hook `useUserFunnelAccess()` que retorna os IDs de funis acessiveis
-- Os funis que o usuario nao tem acesso nao aparecem no seletor
+### Enviar audio como resposta:
+- Usar o endpoint de TTS do gateway se disponivel, ou enviar texto normal
+- Marcar no prompt_config se o agente deve responder com audio
 
-### 4.3 Configuracao no CRM Config
+## 6. Edge Function -- Prompt enriquecido por funcao
 
-Na aba "Times" do CRM Config (ja existe `CrmTeamManager`), garantir que a vinculacao de funis aos times esteja clara:
-- Cada time ja tem campo `funnel_ids` para definir quais funis aquele time pode acessar
-- A interface ja permite selecionar funis por time
+Atualizar `ai-agent-reply` para montar o system prompt com base na funcao:
 
-### 4.4 Impacto nos leads
+- SDR: foco em qualificacao, perguntas abertas, identificar necessidades
+- Closer: foco em proposta de valor, superacao de objecoes, senso de urgencia
+- Pos-venda: foco em satisfacao, follow-up, oportunidades de upsell
+- Suporte: foco em resolucao, empatia, coleta de informacoes
 
-- Quando o usuario cria um lead, ele e criado no funil selecionado (campo `funnel_id`)
-- Quando o usuario muda de funil, os leads mostrados mudam
-- A barra de acoes em massa respeita o funil ativo
+Incluir os objetivos configurados e as restricoes de acoes no CRM.
+
+## 7. Edge Function -- Gerar persona/prompt com IA
+
+Criar edge function `ai-generate-agent-config` que:
+- Recebe: funcao, selecoes da persona, base de conhecimento resumida
+- Retorna: texto de persona completa e/ou system prompt sugerido
+- Usa o Lovable AI Gateway
+
+## 8. Edge Function -- Simulador
+
+Criar edge function `ai-agent-simulate` que:
+- Recebe: agent config (persona, prompt, kb), mensagem do usuario
+- Monta o system prompt igual ao `ai-agent-reply` mas NAO envia WhatsApp
+- Retorna: resposta da IA + acoes detectadas
+- Util para testar antes de ativar
 
 ---
 
@@ -116,32 +156,31 @@ Na aba "Times" do CRM Config (ja existe `CrmTeamManager`), garantir que a vincul
 
 | Acao | Arquivo |
 |------|---------|
-| Criar | `src/hooks/useUserFunnelAccess.ts` -- hook que retorna funis acessiveis pelo usuario logado |
-| Reescrever | `src/pages/cliente/ClienteChat.tsx` -- filtros por modo/agente/etapa |
-| Reescrever | `src/components/cliente/ChatContactList.tsx` -- pilulas de filtro, badges visuais |
-| Reescrever | `src/components/cliente/ChatConversation.tsx` -- painel de acoes expandido, alerta transbordo, select de etapa/agente |
-| Editar | `src/components/cliente/ChatMessageBubble.tsx` -- badge IA/Humano |
-| Editar | `src/components/crm/CrmLeadDetailSheet.tsx` -- aba WA com historico completo e input de envio |
-| Editar | `src/pages/cliente/ClienteCRM.tsx` -- seletor de funil, filtro por funnel_id, acesso por permissao |
-| Editar | `src/hooks/useWhatsApp.ts` -- adicionar `useUpdateContactAgent` mutation |
-| Reescrever | `supabase/functions/ai-agent-reply/index.ts` -- contexto CRM, acoes automaticas, transbordo |
+| Migration | Adicionar `role`, `gender`, `objectives`, `crm_actions`, `whatsapp_instance_ids` em `client_ai_agents`; criar bucket `agent-knowledge` |
+| Reescrever | `src/components/cliente/AgentFormSheet.tsx` -- 5 abas reestruturadas com persona guiada, upload de arquivos, objetivos, simulador funcional |
+| Reescrever | `src/components/cliente/AgentCard.tsx` -- badge de funcao, toggle ativar/pausar em destaque, avatar maior |
+| Editar | `src/pages/cliente/ClienteAgentesIA.tsx` -- handler para toggle de status direto do card |
+| Editar | `src/hooks/useClienteAgents.ts` -- mutation de toggle de status |
+| Editar | `src/types/cliente.ts` -- atualizar interface AiAgent |
+| Criar | `supabase/functions/ai-generate-agent-config/index.ts` -- gerar persona/prompt com IA |
+| Criar | `supabase/functions/ai-agent-simulate/index.ts` -- simulador de conversa |
+| Editar | `supabase/functions/ai-agent-reply/index.ts` -- prompt por funcao, restricoes de acoes CRM, suporte a audio |
 
-## Sem migration necessaria
+## Pontos adicionais de melhoria sugeridos (ja incluidos)
 
-Todos os campos ja existem:
-- `whatsapp_contacts.attending_mode`, `agent_id`, `crm_lead_id`
-- `crm_leads.stage`, `value`, `tags`, `funnel_id`
-- `crm_teams.funnel_ids`, `members`
-- `client_notifications` para alertas
-- `whatsapp_messages.metadata` para flag `ai_generated`
+- **Historico de conversas do agente**: na aba de simulador, poder ver o log de conversas reais do agente (dados de `ai_conversation_logs`)
+- **Metricas no card**: exibir no card do agente um mini-indicador de mensagens processadas nas ultimas 24h
+- **Templates de agente**: oferecer templates pre-configurados ao criar novo agente (ex: "SDR para imobiliaria", "Suporte para e-commerce") -- pode ser implementado futuramente
+- **Horario de funcionamento**: config de horarios em que o agente deve responder (fora do horario, nao responde ou envia mensagem padrao) -- implementado como campo `schedule` no `prompt_config`
 
 ## Detalhes Tecnicos
 
-- O hook `useUserFunnelAccess` busca o usuario logado com `auth.uid()`, consulta `crm_teams` onde `members` contem o user_id (via filtro local no array JSONB), e retorna a uniao de `funnel_ids`. Se o usuario tiver role `cliente_admin`, retorna todos os funis sem filtro.
-- Os filtros do chat usam os dados ja carregados em memoria (contacts array), sem queries extras, exceto para cruzar `crm_lead_id` com leads (uma query batch)
-- As acoes da IA usam regex para parsear `[AI_ACTION:...]` do texto retornado pelo modelo
-- O transbordo cria uma notificacao via `adminClient.from("client_notifications").insert(...)` na edge function
-- A aba WhatsApp no CRM reutiliza `useWhatsAppMessages` e `useSendWhatsAppMessage` existentes
-- O seletor de funil no CRM fica no header ao lado da busca, como um Select compacto que lista apenas funis acessiveis
-- Ao mudar de funil, `useCrmLeads(funnelId)` busca leads filtrados por aquele funil
-- Leads criados via "Novo Lead" sao automaticamente associados ao funil selecionado
+- O bucket `agent-knowledge` usa RLS: membros da org podem INSERT e SELECT nos paths `{org_id}/*`
+- O upload de arquivos usa `supabase.storage.from("agent-knowledge").upload(path, file)`
+- A base de conhecimento passa a ser um array de objetos tipados: `{type: "url"|"file"|"text", content: string, name?: string, url?: string, size?: number}`
+- O simulador chama o Lovable AI Gateway direto com o prompt montado, sem passar pela Z-API
+- A geracao de persona/prompt via IA usa `google/gemini-3-flash-preview` para rapidez
+- O toggle de status no card chama `updateAgent.mutate({id, status: newStatus})` direto
+- A vinculacao a instancias WhatsApp permite que um agente responda em multiplos numeros
+- No `ai-agent-reply`, o `whatsapp_instance_ids` do agente e verificado para garantir que ele so responde nas instancias configuradas
+- Para audio: a Z-API fornece URL do audio recebido; baixar via fetch, converter para base64 e enviar ao gateway de STT ou usar o modelo multimodal Gemini que aceita audio
