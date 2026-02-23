@@ -1,14 +1,14 @@
 import { useState } from "react";
 import {
   Monitor, Tablet, Smartphone, Maximize2, Minimize2,
-  Download, RotateCcw, Edit3, BookOpen, Link, CheckCircle2,
+  Download, RotateCcw, Edit3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { ApprovalPanel, type ApprovalStatus } from "@/components/approval/ApprovalPanel";
+import { SiteDeployGuide } from "@/components/sites/SiteDeployGuide";
 
 interface Props {
   html: string;
@@ -28,8 +28,6 @@ const viewportWidths: Record<Viewport, string> = {
 export function SitePreview({ html, onRegenerate, onEditBriefing, generating }: Props) {
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [fullscreen, setFullscreen] = useState(false);
-  const [publishedUrl, setPublishedUrl] = useState("");
-  const [showGuide, setShowGuide] = useState(false);
   const [siteStatus, setSiteStatus] = useState<ApprovalStatus>("pending");
   const [changeNote, setChangeNote] = useState<string | undefined>();
 
@@ -165,39 +163,8 @@ export function SitePreview({ html, onRegenerate, onEditBriefing, generating }: 
         </Button>
       </div>
 
-      {/* Publication guide */}
-      <Card className="border-primary/20">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setShowGuide(!showGuide)}>
-            <BookOpen className="w-4 h-4 text-primary" />
-            <p className="text-xs font-bold">Guia de Publicação</p>
-            <Badge variant="outline" className="text-[8px] ml-auto">{showGuide ? "Ocultar" : "Ver"}</Badge>
-          </div>
-          {showGuide && (
-            <div className="space-y-2 text-[11px] text-muted-foreground">
-              <div className="flex items-start gap-2"><Badge className="text-[8px] shrink-0">1</Badge> Aprove o site clicando em "Aprovar"</div>
-              <div className="flex items-start gap-2"><Badge className="text-[8px] shrink-0">2</Badge> Clique em "Baixar Código" para salvar o arquivo HTML</div>
-              <div className="flex items-start gap-2"><Badge className="text-[8px] shrink-0">3</Badge> Acesse o painel da sua hospedagem (Hostinger, Locaweb, Vercel, etc.)</div>
-              <div className="flex items-start gap-2"><Badge className="text-[8px] shrink-0">4</Badge> Faça upload do arquivo na pasta raiz do seu domínio</div>
-              <div className="flex items-start gap-2"><Badge className="text-[8px] shrink-0">5</Badge> Aguarde a propagação (até 24h)</div>
-            </div>
-          )}
-          <div className="mt-3 flex items-center gap-2">
-            <Link className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            <Input
-              value={publishedUrl}
-              onChange={(e) => setPublishedUrl(e.target.value)}
-              placeholder="Informe a URL após publicar..."
-              className="text-xs h-8"
-            />
-            {publishedUrl && (
-              <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => toast({ title: "URL salva!" })}>
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Deploy Guide - shown after approval */}
+      {siteStatus === "approved" && <SiteDeployGuide />}
     </div>
   );
 }

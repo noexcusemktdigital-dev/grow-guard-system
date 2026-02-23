@@ -55,10 +55,28 @@ export default function ClienteSites() {
   const [cta, setCta] = useState("");
   // Step 3 briefing
   const [briefing, setBriefing] = useState({
+    nomeEmpresa: "",
+    slogan: "",
+    descricaoNegocio: "",
+    segmento: "",
     servicos: "",
     diferencial: "",
+    faixaPreco: "",
+    publicoAlvo: "",
+    faixaEtaria: "",
+    dores: "",
     depoimentos: "",
-    contato: "",
+    numerosImpacto: "",
+    logosClientes: "",
+    coresPrincipais: "",
+    fontesPreferidas: "",
+    tomComunicacao: "",
+    referenciaVisual: "",
+    telefone: "",
+    email: "",
+    endereco: "",
+    redesSociais: "",
+    linkWhatsapp: "",
     instrucoes: "",
     estrategia: null as Record<string, any> | null,
     persona: null as { nome: string; descricao: string } | null,
@@ -69,11 +87,12 @@ export default function ClienteSites() {
   useEffect(() => {
     if (step === 2) {
       const estrategia = loadStrategy();
-      setBriefing((prev) => ({
+    setBriefing((prev) => ({
         ...prev,
         estrategia,
-        servicos: prev.servicos || "",
+        segmento: prev.segmento || (estrategia?.segmento as string) || "",
         diferencial: prev.diferencial || (estrategia?.diferencial as string) || "",
+        publicoAlvo: prev.publicoAlvo || (estrategia?.cliente_ideal as string) || "",
       }));
     }
   }, [step]);
@@ -99,13 +118,31 @@ export default function ClienteSites() {
         objetivo,
         estilo,
         cta_principal: cta,
-        persona: briefing.persona,
-        identidade_visual: briefing.identidade,
+        nome_empresa: briefing.nomeEmpresa,
+        slogan: briefing.slogan,
+        descricao_negocio: briefing.descricaoNegocio,
+        segmento: briefing.segmento,
         servicos: briefing.servicos,
         diferencial: briefing.diferencial,
+        faixa_preco: briefing.faixaPreco,
+        publico_alvo: briefing.publicoAlvo,
+        faixa_etaria: briefing.faixaEtaria,
+        dores: briefing.dores,
         depoimentos: briefing.depoimentos,
-        contato: briefing.contato,
+        numeros_impacto: briefing.numerosImpacto,
+        logos_clientes: briefing.logosClientes,
+        cores_principais: briefing.coresPrincipais,
+        fontes_preferidas: briefing.fontesPreferidas,
+        tom_comunicacao: briefing.tomComunicacao,
+        referencia_visual: briefing.referenciaVisual,
+        telefone: briefing.telefone,
+        email_contato: briefing.email,
+        endereco: briefing.endereco,
+        redes_sociais: briefing.redesSociais,
+        link_whatsapp: briefing.linkWhatsapp,
         instrucoes_adicionais: briefing.instrucoes,
+        persona: briefing.persona,
+        identidade_visual: briefing.identidade,
         estrategia: briefing.estrategia,
       };
 
