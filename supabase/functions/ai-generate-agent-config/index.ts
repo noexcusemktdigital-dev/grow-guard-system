@@ -29,7 +29,16 @@ Deno.serve(async (req) => {
 
     let prompt = "";
 
-    if (type === "persona") {
+    if (type === "greeting") {
+      prompt = `Gere uma saudação personalizada para um agente de IA WhatsApp com estas características:
+- Nome: ${name || "Agente"}
+- Função: ${roleDescriptions[role] || role}
+- Formalidade: ${persona?.formality || "profissional"}
+- Uso de emojis: ${persona?.emojis || "pouco"}
+- Traços: ${(persona?.traits || []).join(", ") || "não definidos"}
+
+Escreva APENAS a saudação (1-3 frases curtas), sem explicações. A saudação deve ser natural para WhatsApp e refletir a personalidade configurada.`;
+    } else if (type === "persona") {
       prompt = `Gere uma descrição completa de persona para um agente de IA com as seguintes características:
 - Nome: ${name || "Agente"}
 - Função: ${roleDescriptions[role] || role}
