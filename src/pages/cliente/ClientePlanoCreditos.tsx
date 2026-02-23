@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3, History } from "lucide-react";
+import {
+  CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3,
+  History, Package, FileText, ExternalLink, Receipt,
+} from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -9,16 +12,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useCreditAlert } from "@/hooks/useCreditAlert";
 import { useCreditTransactions } from "@/hooks/useCreditTransactions";
-import { PLANS, getPlanBySlug, PlanConfig } from "@/constants/plans";
+import { PLANS, CREDIT_PACKS, getPlanBySlug, getPlanPrice, PlanConfig, ModuleChoice, CreditPack } from "@/constants/plans";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 
+/* ── Token Usage Card ── */
 function TokenUsageCard() {
   const { data: orgId } = useUserOrgId();
   const { level, percent, balance, total } = useCreditAlert();
@@ -31,7 +36,6 @@ function TokenUsageCard() {
         .select("agent_id, tokens_used, client_ai_agents(name)")
         .eq("organization_id", orgId!);
       if (error) throw error;
-
       const grouped: Record<string, { name: string; tokens: number }> = {};
       for (const row of data ?? []) {
         const id = row.agent_id;
@@ -48,13 +52,7 @@ function TokenUsageCard() {
 
   const totalUsed = agentUsage?.reduce((s, a) => s + a.tokens, 0) ?? 0;
   const maxTokens = agentUsage?.[0]?.tokens ?? 1;
-
-  const barColor =
-    level === "zero" || level === "critical"
-      ? "bg-destructive"
-      : level === "warning"
-        ? "bg-amber-500"
-        : "bg-primary";
+  const barColor = level === "zero" || level === "critical" ? "bg-destructive" : level === "warning" ? "bg-amber-500" : "bg-primary";
 
   return (
     <Card>
@@ -67,26 +65,14 @@ function TokenUsageCard() {
       <CardContent className="space-y-4">
         <div>
           <div className="flex items-center justify-between text-sm mb-1.5">
-            <span className="text-muted-foreground">Créditos usados</span>
-            <span className="font-semibold text-foreground">
-              {balance.toLocaleString("pt-BR")} / {total.toLocaleString("pt-BR")}
-            </span>
+            <span className="text-muted-foreground">Créditos disponíveis</span>
+            <span className="font-semibold text-foreground">{balance.toLocaleString("pt-BR")} / {total.toLocaleString("pt-BR")}</span>
           </div>
           <div className="w-full h-2.5 rounded-full bg-secondary overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-              style={{ width: `${percent}%` }}
-            />
+            <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${percent}%` }} />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">{percent.toFixed(0)}% disponível</p>
         </div>
-
-        {isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-          </div>
-        ) : agentUsage && agentUsage.length > 0 ? (
+        {isLoading ? <Skeleton className="h-16 w-full" /> : agentUsage && agentUsage.length > 0 ? (
           <div className="space-y-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tokens por Agente</p>
             {agentUsage.map((agent, i) => (
@@ -96,10 +82,7 @@ function TokenUsageCard() {
                   <span className="text-muted-foreground tabular-nums">{agent.tokens.toLocaleString("pt-BR")}</span>
                 </div>
                 <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary/70 transition-all"
-                    style={{ width: `${(agent.tokens / maxTokens) * 100}%` }}
-                  />
+                  <div className="h-full rounded-full bg-primary/70 transition-all" style={{ width: `${(agent.tokens / maxTokens) * 100}%` }} />
                 </div>
               </div>
             ))}
@@ -116,9 +99,9 @@ function TokenUsageCard() {
   );
 }
 
+/* ── Transaction History ── */
 function TransactionHistoryCard() {
   const { data: transactions, isLoading } = useCreditTransactions();
-
   const typeLabels: Record<string, { label: string; color: string }> = {
     purchase: { label: "Compra", color: "text-green-600" },
     consumption: { label: "Consumo", color: "text-destructive" },
@@ -130,17 +113,12 @@ function TransactionHistoryCard() {
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Histórico de Transações</CardTitle>
+          <CardTitle className="text-lg">Histórico de Créditos</CardTitle>
           <History className="w-5 h-5 text-muted-foreground" />
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-          </div>
-        ) : transactions && transactions.length > 0 ? (
+        {isLoading ? <Skeleton className="h-16 w-full" /> : transactions && transactions.length > 0 ? (
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {transactions.map((tx: any) => {
               const info = typeLabels[tx.type] || { label: tx.type, color: "text-foreground" };
@@ -170,35 +148,102 @@ function TransactionHistoryCard() {
   );
 }
 
-function PlanSubscriptionDialog({ plan, open, onOpenChange }: { plan: PlanConfig | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+/* ── Invoices ── */
+function InvoicesCard() {
+  const { data: orgId } = useUserOrgId();
+  const { data, isLoading } = useQuery({
+    queryKey: ["asaas-payments", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("asaas-list-payments", {
+        body: { organization_id: orgId },
+      });
+      if (error) throw error;
+      return data?.payments ?? [];
+    },
+    enabled: !!orgId,
+  });
+
+  const statusMap: Record<string, { label: string; variant: "default" | "outline" | "secondary" | "destructive" }> = {
+    RECEIVED: { label: "Pago", variant: "default" },
+    CONFIRMED: { label: "Confirmado", variant: "default" },
+    PENDING: { label: "Pendente", variant: "outline" },
+    OVERDUE: { label: "Vencido", variant: "destructive" },
+    REFUNDED: { label: "Estornado", variant: "secondary" },
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Faturas</CardTitle>
+          <Receipt className="w-5 h-5 text-muted-foreground" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? <Skeleton className="h-16 w-full" /> : data && data.length > 0 ? (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {data.map((p: any) => {
+              const st = statusMap[p.status] || { label: p.status, variant: "outline" as const };
+              return (
+                <div key={p.id} className="flex items-center justify-between text-sm py-2.5 border-b last:border-0">
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{p.description || "Cobrança"}</p>
+                    <p className="text-xs text-muted-foreground">Venc: {new Date(p.dueDate).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-foreground tabular-nums">R$ {p.value?.toFixed(2)}</span>
+                    <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
+                    {p.invoiceUrl && (
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => window.open(p.invoiceUrl, "_blank")}>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">Nenhuma fatura encontrada.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Subscription Dialog ── */
+function PlanSubscriptionDialog({
+  plan, modules, open, onOpenChange,
+}: {
+  plan: PlanConfig | null; modules: ModuleChoice; open: boolean; onOpenChange: (o: boolean) => void;
+}) {
   const [billingType, setBillingType] = useState("CREDIT_CARD");
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
+  const price = plan ? getPlanPrice(plan, modules) : 0;
 
   const subscribe = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("asaas-create-subscription", {
-        body: { organization_id: orgId, plan_id: plan!.id, billing_type: billingType },
+        body: { organization_id: orgId, plan_id: plan!.id, billing_type: billingType, modules },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`Plano ${plan!.name} ativado com sucesso!`);
-      if (data?.payment_link) {
-        toast.info("Link de pagamento enviado para seu e-mail.");
-      }
-      qc.invalidateQueries({ queryKey: ["cliente-subscription"] });
-      qc.invalidateQueries({ queryKey: ["cliente-wallet"] });
+      toast.success(`Plano ${plan!.name} ativado!`);
+      if (data?.payment_link) toast.info("Link de pagamento enviado.");
+      qc.invalidateQueries({ queryKey: ["subscription"] });
+      qc.invalidateQueries({ queryKey: ["credit-wallet"] });
       onOpenChange(false);
     },
-    onError: (err: any) => {
-      toast.error(`Erro ao ativar plano: ${err.message}`);
-    },
+    onError: (err: any) => toast.error(`Erro: ${err.message}`),
   });
 
   if (!plan) return null;
+
+  const moduleLabel = modules === "combo" ? "Comercial + Marketing" : modules === "marketing" ? "Marketing" : "Comercial";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -207,36 +252,29 @@ function PlanSubscriptionDialog({ plan, open, onOpenChange }: { plan: PlanConfig
           <DialogTitle>Assinar Plano {plan.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-foreground">R$ {plan.price}</span>
-            <span className="text-muted-foreground">/mês</span>
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-foreground">R$ {price}</span>
+              <span className="text-muted-foreground">/mês</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">{moduleLabel} · {plan.credits.toLocaleString("pt-BR")} créditos · {plan.maxUsers} usuários</p>
           </div>
-          <p className="text-sm text-muted-foreground">{plan.credits.toLocaleString("pt-BR")} créditos · {plan.maxUsers} usuários</p>
-          
           <div className="space-y-3">
             <Label className="text-sm font-medium">Forma de pagamento</Label>
             <RadioGroup value={billingType} onValueChange={setBillingType} className="space-y-2">
-              <div className="flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50">
-                <RadioGroupItem value="CREDIT_CARD" id="cc" />
-                <Label htmlFor="cc" className="cursor-pointer flex-1">
-                  <span className="font-medium">Cartão de Crédito</span>
-                  <p className="text-xs text-muted-foreground">Cobrança automática mensal</p>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50">
-                <RadioGroupItem value="BOLETO" id="boleto" />
-                <Label htmlFor="boleto" className="cursor-pointer flex-1">
-                  <span className="font-medium">Boleto</span>
-                  <p className="text-xs text-muted-foreground">Vencimento todo dia 10</p>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50">
-                <RadioGroupItem value="PIX" id="pix" />
-                <Label htmlFor="pix" className="cursor-pointer flex-1">
-                  <span className="font-medium">PIX</span>
-                  <p className="text-xs text-muted-foreground">QR Code gerado automaticamente</p>
-                </Label>
-              </div>
+              {[
+                { value: "CREDIT_CARD", label: "Cartão de Crédito", desc: "Cobrança automática mensal" },
+                { value: "BOLETO", label: "Boleto", desc: "Vencimento todo dia 10" },
+                { value: "PIX", label: "PIX", desc: "QR Code gerado automaticamente" },
+              ].map((opt) => (
+                <div key={opt.value} className="flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50">
+                  <RadioGroupItem value={opt.value} id={opt.value} />
+                  <Label htmlFor={opt.value} className="cursor-pointer flex-1">
+                    <span className="font-medium">{opt.label}</span>
+                    <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                  </Label>
+                </div>
+              ))}
             </RadioGroup>
           </div>
         </div>
@@ -251,6 +289,68 @@ function PlanSubscriptionDialog({ plan, open, onOpenChange }: { plan: PlanConfig
   );
 }
 
+/* ── Credit Pack Purchase Dialog ── */
+function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [billingType, setBillingType] = useState("PIX");
+  const { data: orgId } = useUserOrgId();
+  const qc = useQueryClient();
+
+  const purchase = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("asaas-create-charge", {
+        body: { organization_id: orgId, charge_type: "credits", billing_type: billingType, pack_id: pack!.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Cobrança de R$ ${data.value} criada!`);
+      if (data.invoice_url) window.open(data.invoice_url, "_blank");
+      qc.invalidateQueries({ queryKey: ["asaas-payments"] });
+      onOpenChange(false);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  if (!pack) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Comprar {pack.credits.toLocaleString()} Créditos</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-foreground">R$ {pack.price}</span>
+            <span className="text-muted-foreground">pagamento único</span>
+          </div>
+          <RadioGroup value={billingType} onValueChange={setBillingType} className="space-y-2">
+            {[
+              { value: "PIX", label: "PIX" },
+              { value: "CREDIT_CARD", label: "Cartão de Crédito" },
+              { value: "BOLETO", label: "Boleto" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50">
+                <RadioGroupItem value={opt.value} id={`cp-${opt.value}`} />
+                <Label htmlFor={`cp-${opt.value}`} className="cursor-pointer flex-1 font-medium">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => purchase.mutate()} disabled={purchase.isPending}>
+            {purchase.isPending ? "Processando..." : "Comprar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── Main Page ── */
 export default function ClientePlanoCreditos() {
   const { data: wallet, isLoading: walletLoading } = useClienteWallet();
   const { data: subscription, isLoading: subLoading } = useClienteSubscription();
@@ -258,19 +358,20 @@ export default function ClientePlanoCreditos() {
 
   const [selectedPlan, setSelectedPlan] = useState<PlanConfig | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [moduleToggle, setModuleToggle] = useState<ModuleChoice>("comercial");
+  const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
+  const [packDialogOpen, setPackDialogOpen] = useState(false);
 
   const balance = wallet?.balance ?? 0;
   const currentPlanSlug = subscription?.plan;
+  const currentModules = (subscription as any)?.modules as ModuleChoice || "comercial";
   const planDetails = getPlanBySlug(currentPlanSlug);
   const totalIncluded = planDetails?.credits ?? 2000;
   const creditPercent = totalIncluded > 0 ? Math.min((balance / totalIncluded) * 100, 100) : 0;
   const planName = planDetails?.name ?? "Sem plano";
-  const planPrice = planDetails?.price ?? 0;
+  const planPrice = planDetails ? getPlanPrice(planDetails, currentModules) : 0;
 
-  const handleSelectPlan = (plan: PlanConfig) => {
-    setSelectedPlan(plan);
-    setDialogOpen(true);
-  };
+  const moduleLabel = currentModules === "combo" ? "Comercial + Marketing" : currentModules === "marketing" ? "Marketing" : "Comercial";
 
   if (isLoading) {
     return (
@@ -286,10 +387,10 @@ export default function ClientePlanoCreditos() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Plano & Créditos" subtitle="Gerencie sua assinatura e créditos" icon={<CreditCard className="w-5 h-5 text-primary" />} />
+      <PageHeader title="Plano & Créditos" subtitle="Gerencie sua assinatura, créditos e faturas" icon={<CreditCard className="w-5 h-5 text-primary" />} />
 
+      {/* Status + Wallet row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Plan Status */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -299,10 +400,14 @@ export default function ClientePlanoCreditos() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Plano ativo</span>
+              <span className="text-muted-foreground">Plano</span>
               <span className="font-semibold text-foreground">{planName} — R$ {planPrice}/mês</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Módulos</span>
+              <Badge variant="secondary" className="text-xs">{moduleLabel}</Badge>
             </div>
             {subscription?.expires_at && (
               <div className="flex items-center justify-between text-sm">
@@ -311,8 +416,8 @@ export default function ClientePlanoCreditos() {
               </div>
             )}
             <Button className="w-full gap-2" onClick={() => {
-              const upgradePlan = PLANS.find(p => p.id !== currentPlanSlug && p.price > (planDetails?.price ?? 0));
-              if (upgradePlan) handleSelectPlan(upgradePlan);
+              const upgradePlan = PLANS.find((p) => p.id !== currentPlanSlug && p.basePrice > (planDetails?.basePrice ?? 0));
+              if (upgradePlan) { setSelectedPlan(upgradePlan); setDialogOpen(true); }
               else toast.info("Você já está no plano mais avançado!");
             }}>
               <ArrowUpRight className="w-4 h-4" /> Fazer Upgrade
@@ -320,7 +425,6 @@ export default function ClientePlanoCreditos() {
           </CardContent>
         </Card>
 
-        {/* Wallet */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -337,22 +441,29 @@ export default function ClientePlanoCreditos() {
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{creditPercent.toFixed(0)}% disponível</span>
             </div>
-            <Button variant="outline" className="w-full gap-2" onClick={() => toast.success("Em breve — compra de créditos extras")}>
+            <Button variant="outline" className="w-full gap-2" onClick={() => { setSelectedPack(CREDIT_PACKS[1]); setPackDialogOpen(true); }}>
               <Plus className="w-4 h-4" /> Comprar Créditos Extra
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      <TokenUsageCard />
-      <TransactionHistoryCard />
-
       {/* Plans */}
       <div>
-        <h2 className="text-xl font-semibold text-foreground mb-4">Planos Disponíveis</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-foreground">Planos Disponíveis</h2>
+          <Tabs value={moduleToggle} onValueChange={(v) => setModuleToggle(v as ModuleChoice)} className="w-auto">
+            <TabsList className="h-8">
+              <TabsTrigger value="comercial" className="text-xs px-3 h-7">Comercial</TabsTrigger>
+              <TabsTrigger value="marketing" className="text-xs px-3 h-7">Marketing</TabsTrigger>
+              <TabsTrigger value="combo" className="text-xs px-3 h-7">Combo</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((plan) => {
             const isCurrent = plan.id === currentPlanSlug;
+            const displayPrice = getPlanPrice(plan, moduleToggle);
             return (
               <Card key={plan.id} className={`relative ${plan.popular ? "border-primary ring-2 ring-primary/20" : ""} ${isCurrent ? "bg-primary/5" : ""}`}>
                 {plan.popular && (
@@ -371,10 +482,15 @@ export default function ClientePlanoCreditos() {
                     {plan.name}
                   </CardTitle>
                   <div className="flex items-baseline gap-1 mt-2">
-                    <span className="text-3xl font-bold text-foreground">R$ {plan.price}</span>
+                    <span className="text-3xl font-bold text-foreground">R$ {displayPrice}</span>
                     <span className="text-sm text-muted-foreground">/mês</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{plan.credits.toLocaleString("pt-BR")} créditos · {plan.maxUsers} usuários</p>
+                  <p className="text-sm text-muted-foreground">
+                    {plan.credits.toLocaleString("pt-BR")} créditos · {plan.maxUsers} usuários
+                  </p>
+                  {moduleToggle === "combo" && (
+                    <p className="text-xs text-primary font-medium">Comercial + Marketing inclusos</p>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <ul className="space-y-2">
@@ -389,7 +505,7 @@ export default function ClientePlanoCreditos() {
                     className="w-full"
                     variant={isCurrent ? "outline" : "default"}
                     disabled={isCurrent}
-                    onClick={() => handleSelectPlan(plan)}
+                    onClick={() => { setSelectedPlan(plan); setModuleToggle(moduleToggle); setDialogOpen(true); }}
                   >
                     {isCurrent ? "Plano Atual" : "Escolher Plano"}
                   </Button>
@@ -400,7 +516,37 @@ export default function ClientePlanoCreditos() {
         </div>
       </div>
 
-      <PlanSubscriptionDialog plan={selectedPlan} open={dialogOpen} onOpenChange={setDialogOpen} />
+      {/* Credit Packs */}
+      <div>
+        <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Package className="w-5 h-5 text-primary" /> Pacotes de Créditos Avulsos
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {CREDIT_PACKS.map((pack) => (
+            <Card key={pack.id} className={pack.popular ? "border-primary ring-1 ring-primary/20" : ""}>
+              <CardContent className="p-5 text-center space-y-3">
+                <p className="text-2xl font-bold text-foreground">{pack.credits.toLocaleString("pt-BR")}</p>
+                <p className="text-sm text-muted-foreground">créditos</p>
+                <p className="text-xl font-bold text-foreground">R$ {pack.price}</p>
+                <Button className="w-full" variant={pack.popular ? "default" : "outline"} onClick={() => { setSelectedPack(pack); setPackDialogOpen(true); }}>
+                  Comprar
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Usage + Invoices + History */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TokenUsageCard />
+        <InvoicesCard />
+      </div>
+
+      <TransactionHistoryCard />
+
+      <PlanSubscriptionDialog plan={selectedPlan} modules={moduleToggle} open={dialogOpen} onOpenChange={setDialogOpen} />
+      <CreditPackDialog pack={selectedPack} open={packDialogOpen} onOpenChange={setPackDialogOpen} />
     </div>
   );
 }

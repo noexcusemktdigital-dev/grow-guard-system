@@ -1,0 +1,146 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const ASAAS_BASE = "https://api.asaas.com/v3";
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Auth
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { organization_id, charge_type, billing_type, pack_id } = await req.json();
+
+    if (!organization_id || !charge_type || !billing_type) {
+      return new Response(JSON.stringify({ error: "organization_id, charge_type and billing_type required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Determine amount and description
+    let amount = 0;
+    let description = "";
+    let creditAmount = 0;
+
+    if (charge_type === "credits") {
+      const packs: Record<string, { credits: number; price: number }> = {
+        "pack-500": { credits: 500, price: 49 },
+        "pack-2000": { credits: 2000, price: 149 },
+        "pack-5000": { credits: 5000, price: 299 },
+      };
+      const pack = packs[pack_id];
+      if (!pack) {
+        return new Response(JSON.stringify({ error: "Invalid pack_id" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      amount = pack.price;
+      creditAmount = pack.credits;
+      description = `Pacote ${pack.credits.toLocaleString()} créditos — NOE`;
+    } else if (charge_type === "extra_user") {
+      amount = 29;
+      description = "Usuário adicional — NOE";
+    } else {
+      return new Response(JSON.stringify({ error: "Invalid charge_type" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get org
+    const { data: org } = await adminClient
+      .from("organizations")
+      .select("id, asaas_customer_id")
+      .eq("id", organization_id)
+      .single();
+
+    if (!org?.asaas_customer_id) {
+      return new Response(JSON.stringify({ error: "No billing customer configured" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+
+    // Create payment in Asaas
+    const paymentRes = await fetch(`${ASAAS_BASE}/payments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        access_token: asaasApiKey,
+      },
+      body: JSON.stringify({
+        customer: org.asaas_customer_id,
+        billingType: billing_type,
+        value: amount,
+        dueDate: today,
+        description,
+        externalReference: `${org.id}|${charge_type}|${pack_id || ""}`,
+      }),
+    });
+
+    const paymentData = await paymentRes.json();
+    if (!paymentRes.ok) {
+      console.error("Asaas charge creation failed:", paymentData);
+      return new Response(JSON.stringify({ error: "Failed to create charge", details: paymentData }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`Charge created for org ${org.id}: type=${charge_type}, amount=${amount}`);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        payment_id: paymentData.id,
+        invoice_url: paymentData.invoiceUrl,
+        bank_slip_url: paymentData.bankSlipUrl,
+        pix_qr_code: paymentData.pixQrCodeUrl,
+        value: amount,
+        credit_amount: creditAmount,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err: any) {
+    console.error("asaas-create-charge error:", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

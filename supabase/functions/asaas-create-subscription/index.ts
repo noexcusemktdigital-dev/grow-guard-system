@@ -8,10 +8,10 @@ const corsHeaders = {
 
 const ASAAS_BASE = "https://api.asaas.com/v3";
 
-const PLAN_PRICES: Record<string, number> = {
-  starter: 197,
-  growth: 497,
-  scale: 997,
+const PLAN_PRICES: Record<string, { base: number; combo: number }> = {
+  starter: { base: 197, combo: 297 },
+  growth: { base: 497, combo: 697 },
+  scale: { base: 997, combo: 1397 },
 };
 
 Deno.serve(async (req) => {
@@ -23,9 +23,9 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Validate auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -33,7 +33,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -46,7 +45,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { organization_id, plan_id, billing_type } = await req.json();
+    const { organization_id, plan_id, billing_type, modules } = await req.json();
 
     if (!organization_id || !plan_id || !billing_type) {
       return new Response(JSON.stringify({ error: "organization_id, plan_id and billing_type are required" }), {
@@ -55,13 +54,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const planPrice = PLAN_PRICES[plan_id];
-    if (!planPrice) {
+    const planPricing = PLAN_PRICES[plan_id];
+    if (!planPricing) {
       return new Response(JSON.stringify({ error: "Invalid plan_id" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const moduleChoice = modules === "combo" ? "combo" : (modules || "comercial");
+    const planPrice = moduleChoice === "combo" ? planPricing.combo : planPricing.base;
 
     const validBillingTypes = ["CREDIT_CARD", "BOLETO", "PIX"];
     if (!validBillingTypes.includes(billing_type)) {
@@ -71,7 +73,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get organization
     const { data: org, error: orgError } = await adminClient
       .from("organizations")
       .select("id, name, cnpj, email, phone, asaas_customer_id")
@@ -87,14 +88,10 @@ Deno.serve(async (req) => {
 
     let asaasCustomerId = org.asaas_customer_id;
 
-    // Create Asaas customer if needed
     if (!asaasCustomerId) {
       const customerRes = await fetch(`${ASAAS_BASE}/customers`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          access_token: asaasApiKey,
-        },
+        headers: { "Content-Type": "application/json", access_token: asaasApiKey },
         body: JSON.stringify({
           name: org.name,
           email: org.email || undefined,
@@ -114,33 +111,27 @@ Deno.serve(async (req) => {
       }
 
       asaasCustomerId = customerData.id;
-
-      // Save customer ID to organization
       await adminClient
         .from("organizations")
         .update({ asaas_customer_id: asaasCustomerId })
         .eq("id", org.id);
     }
 
-    // Calculate next due date (today or next business day)
     const today = new Date();
     const nextDueDate = today.toISOString().split("T")[0];
+    const moduleLabel = moduleChoice === "combo" ? "Combo" : moduleChoice === "marketing" ? "Marketing" : "Comercial";
 
-    // Create subscription in Asaas
     const subscriptionRes = await fetch(`${ASAAS_BASE}/subscriptions`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: asaasApiKey,
-      },
+      headers: { "Content-Type": "application/json", access_token: asaasApiKey },
       body: JSON.stringify({
         customer: asaasCustomerId,
         billingType: billing_type,
         value: planPrice,
         cycle: "MONTHLY",
         nextDueDate,
-        description: `Plano ${plan_id.charAt(0).toUpperCase() + plan_id.slice(1)} — NOE`,
-        externalReference: `${org.id}|${plan_id}`,
+        description: `Plano ${plan_id.charAt(0).toUpperCase() + plan_id.slice(1)} ${moduleLabel} — NOE`,
+        externalReference: `${org.id}|${plan_id}|${moduleChoice}`,
       }),
     });
 
@@ -153,7 +144,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update subscription in database
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
@@ -162,13 +152,13 @@ Deno.serve(async (req) => {
       .update({
         plan: plan_id,
         status: "active",
+        modules: moduleChoice,
         asaas_subscription_id: subscriptionData.id,
         asaas_billing_type: billing_type,
         expires_at: expiresAt.toISOString(),
       })
       .eq("organization_id", org.id);
 
-    // Credit wallet with plan credits
     const planCredits: Record<string, number> = { starter: 500, growth: 2000, scale: 5000 };
     const credits = planCredits[plan_id] || 500;
 
@@ -186,11 +176,11 @@ Deno.serve(async (req) => {
         type: "purchase",
         amount: credits,
         balance_after: newBalance,
-        description: `Ativação plano ${plan_id} — ${credits} créditos`,
+        description: `Ativação plano ${plan_id} ${moduleLabel} — ${credits} créditos`,
       });
     }
 
-    console.log(`Subscription created for org ${org.id}: plan=${plan_id}, asaas_sub=${subscriptionData.id}`);
+    console.log(`Subscription created for org ${org.id}: plan=${plan_id}, modules=${moduleChoice}, asaas_sub=${subscriptionData.id}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -200,7 +190,7 @@ Deno.serve(async (req) => {
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("asaas-create-subscription error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
