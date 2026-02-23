@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User } from "lucide-react";
+import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User, Camera, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useWhatsAppInstance } from "@/hooks/useWhatsApp";
@@ -52,7 +52,6 @@ interface KBEntry {
 
 export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: AgentFormSheetProps) {
   const [form, setForm] = useState<Partial<AiAgent>>(defaultAgent);
-  const [tagInput, setTagInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [textInput, setTextInput] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -61,6 +60,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const [simInput, setSimInput] = useState("");
   const [simLoading, setSimLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { data: orgId } = useUserOrgId();
   const { data: whatsappInstance } = useWhatsAppInstance();
@@ -91,13 +91,21 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const updatePrompt = (key: string, value: any) => setForm((f) => ({ ...f, prompt_config: { ...promptConfig, [key]: value } }));
   const updateCrmAction = (key: string, value: boolean) => setForm((f) => ({ ...f, crm_actions: { ...crmActions, [key]: value } }));
 
-  const addTag = () => {
-    if (tagInput.trim() && !(form.tags ?? []).includes(tagInput.trim())) {
-      setForm((f) => ({ ...f, tags: [...(f.tags ?? []), tagInput.trim()] }));
-      setTagInput("");
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !orgId) return;
+    setUploading(true);
+    try {
+      const path = `${orgId}/avatars/${Date.now()}_${file.name}`;
+      const { error } = await supabase.storage.from("agent-knowledge").upload(path, file);
+      if (error) { console.error("Avatar upload error:", error); return; }
+      const { data: urlData } = supabase.storage.from("agent-knowledge").getPublicUrl(path);
+      setForm((f) => ({ ...f, avatar_url: urlData.publicUrl }));
+    } finally {
+      setUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
     }
   };
-  const removeTag = (tag: string) => setForm((f) => ({ ...f, tags: (f.tags ?? []).filter((t) => t !== tag) }));
 
   const addKbUrl = () => {
     if (urlInput.trim()) {
@@ -148,6 +156,16 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
         body: { type: "persona", role: form.role, persona, name: form.name },
       });
       if (data?.result) updatePersona("generated_description", data.result);
+    } finally { setGenerating(null); }
+  };
+
+  const handleGenerateGreeting = async () => {
+    setGenerating("greeting");
+    try {
+      const { data } = await supabase.functions.invoke("ai-generate-agent-config", {
+        body: { type: "greeting", role: form.role, persona, name: form.name },
+      });
+      if (data?.result) updatePersona("custom_greeting", data.result);
     } finally { setGenerating(null); }
   };
 
@@ -204,16 +222,30 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
           <TabsContent value="identidade" className="space-y-4 mt-4">
             {/* Avatar Upload */}
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border-2 border-dashed border-muted-foreground/30">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border-2 border-dashed border-muted-foreground/30 relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
                 {form.avatar_url ? (
                   <img src={form.avatar_url} alt="Avatar" className="w-16 h-16 rounded-full object-cover" />
                 ) : (
-                  <User className="w-7 h-7 text-muted-foreground/40" />
+                  <Camera className="w-6 h-6 text-muted-foreground/40" />
                 )}
+                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
               </div>
-              <div className="space-y-1">
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+              <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Foto do agente</Label>
-                <Input type="url" placeholder="URL da imagem do avatar..." value={form.avatar_url ?? ""} onChange={(e) => setForm((f) => ({ ...f, avatar_url: e.target.value || null }))} className="h-8 text-xs" />
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => avatarInputRef.current?.click()} disabled={uploading}>
+                    {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                    {form.avatar_url ? "Alterar foto" : "Enviar foto"}
+                  </Button>
+                  {form.avatar_url && (
+                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive" onClick={() => setForm((f) => ({ ...f, avatar_url: null }))}>
+                      <Trash2 className="w-3 h-3" /> Remover
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -244,7 +276,6 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                 <RadioGroup value={form.gender ?? ""} onValueChange={(v) => setForm((f) => ({ ...f, gender: v }))} className="flex gap-4 pt-2">
                   <div className="flex items-center gap-1.5"><RadioGroupItem value="masculino" id="m" /><Label htmlFor="m" className="text-xs font-normal">Masculino</Label></div>
                   <div className="flex items-center gap-1.5"><RadioGroupItem value="feminino" id="f" /><Label htmlFor="f" className="text-xs font-normal">Feminino</Label></div>
-                  <div className="flex items-center gap-1.5"><RadioGroupItem value="neutro" id="n" /><Label htmlFor="n" className="text-xs font-normal">Neutro</Label></div>
                 </RadioGroup>
               </div>
             </div>
@@ -263,7 +294,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Instâncias WhatsApp</Label>
+                <Label>Números de WhatsApp</Label>
                 {whatsappInstance ? (
                   <div className="flex items-center gap-2 pt-1">
                     <Checkbox
@@ -276,28 +307,15 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                         }));
                       }}
                     />
-                    <span className="text-xs">{whatsappInstance.phone_number || whatsappInstance.instance_id}</span>
+                    <span className="text-xs">{whatsappInstance.phone_number || "Número não configurado"}</span>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground pt-2">Nenhuma instância configurada</p>
+                  <p className="text-xs text-muted-foreground pt-2">Nenhum WhatsApp configurado</p>
                 )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="flex gap-2">
-                <Input value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="Adicionar tag..." onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())} />
-                <Button type="button" size="icon" variant="outline" onClick={addTag}><Plus className="w-4 h-4" /></Button>
-              </div>
-              {(form.tags ?? []).length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {form.tags!.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="gap-1">{tag}<X className="w-3 h-3 cursor-pointer" onClick={() => removeTag(tag)} /></Badge>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Tags removed from UI */}
           </TabsContent>
 
           {/* ─── Aba 2: Persona (Guiada) ─── */}
@@ -313,7 +331,13 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                 </SelectContent>
               </Select>
               {persona.greeting === "personalizado" && (
-                <Input placeholder="Digite a saudação personalizada..." value={persona.custom_greeting ?? ""} onChange={(e) => updatePersona("custom_greeting", e.target.value)} />
+                <div className="space-y-2">
+                  <Textarea placeholder="Digite a saudação personalizada..." value={persona.custom_greeting ?? ""} onChange={(e) => updatePersona("custom_greeting", e.target.value)} rows={2} />
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5 h-7 text-xs" onClick={handleGenerateGreeting} disabled={generating === "greeting"}>
+                    {generating === "greeting" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    Gerar saudação com IA
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -461,23 +485,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               <Textarea value={promptConfig.system_prompt ?? ""} onChange={(e) => updatePrompt("system_prompt", e.target.value)} placeholder="Você é um assistente especializado em..." rows={8} className="font-mono text-xs" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Temperatura: {promptConfig.temperatura ?? 0.7}</Label>
-                <Slider value={[promptConfig.temperatura ?? 0.7]} onValueChange={([v]) => updatePrompt("temperatura", v)} min={0} max={1} step={0.1} />
-              </div>
-              <div className="space-y-2">
-                <Label>Modelo</Label>
-                <Select value={promptConfig.modelo ?? "gemini-2.5-flash"} onValueChange={(v) => updatePrompt("modelo", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                    <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
-                    <SelectItem value="gpt-5-mini">GPT-5 Mini</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {/* Temperature and model are fixed internally (google/gemini-3-flash-preview) */}
 
             {/* Objectives by role */}
             <div className="space-y-2 pt-4 border-t">
