@@ -1,89 +1,64 @@
 
-# Ajustes no Controle do Agente + Follow-up Inteligente + Pagamentos Asaas
 
-## Resumo das Mudancas
+# Finalizar Integração Asaas
 
-Quatro ajustes principais baseados no feedback:
+## O que ja esta pronto
 
-### 1. Reduzir limite padrao de mensagens (30 -> 10)
+- Webhook configurado no painel Asaas apontando para a edge function
+- Edge function `asaas-webhook` processando `PAYMENT_CONFIRMED` e `PAYMENT_RECEIVED`
+- Creditos sendo adicionados automaticamente na wallet da organizacao
 
-O padrao de 30 mensagens e excessivo. Alterar para **10 mensagens** como padrao em todos os pontos:
-- `AgentFormSheet.tsx` -- valor padrao no formulario
-- `ai-agent-reply/index.ts` -- fallback na edge function
+## Proximos passos
 
-### 2. Estrategia de follow-up com encerramento automatico
+### 1. Salvar o Token da API como Secret
 
-Hoje o follow-up funciona, mas apos esgotar as tentativas o contato continua em modo "ai". O correto e:
+Armazenar o token `$aact_prod_...` como `ASAAS_API_KEY` de forma segura. Isso permite uso futuro para criar cobranças programaticamente.
 
-**Fluxo completo:**
-1. Agente responde normalmente ate o limite de mensagens
-2. Se o contato nao responde, inicia follow-ups automaticos (configuravel: 1-5 tentativas)
-3. Apos esgotar os follow-ups sem resposta, o agente **encerra automaticamente** -- muda `attending_mode` para "closed" e notifica a equipe
-4. Se o contato voltar a falar depois, o sistema reativa em modo humano (nao gasta mais tokens)
+### 2. Atualizar a edge function para tratar eventos extras
 
-Alterar `agent-followup-cron` para executar handoff automatico apos `max_attempts` atingido.
+Adicionar tratamento para os 3 eventos recomendados:
 
-### 3. Limite por objetivo (nao por conversa infinita)
+| Evento | Acao |
+|--------|------|
+| `PAYMENT_OVERDUE` | Registrar transacao de alerta + notificar admin |
+| `PAYMENT_REFUNDED` | Debitar creditos da wallet + registrar transacao de estorno |
+| `PAYMENT_DELETED` | Registrar log da cobranca cancelada |
 
-Reforcar no system prompt que o agente tem um objetivo claro e um numero limitado de mensagens para cumpri-lo. Adicionar instrucao no prompt:
+### 3. Vincular clientes
 
-> "Voce tem no maximo {max_messages} mensagens para cumprir seu objetivo. Seja direto e eficiente. Se nao conseguir, transfira para um atendente humano."
-
-Isso faz a IA ser mais objetiva e nao ficar enrolando.
-
-### 4. Configurar recebimento de pagamentos via Asaas
-
-O webhook do Asaas ja esta implementado (`asaas-webhook`). Para funcionar de ponta a ponta, precisamos:
-
-- **Chave da API Asaas** -- precisa ser configurada como secret
-- A edge function ja processa `PAYMENT_CONFIRMED` e `PAYMENT_RECEIVED`
-- Ja incrementa creditos automaticamente na wallet da organizacao
-- O admin da Franqueadora ja pode fazer recargas manuais via `recharge-credits`
-
-Para ativar, basta configurar o webhook no painel do Asaas apontando para a URL da edge function.
-
----
-
-## Arquivos a Editar
-
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/components/cliente/AgentFormSheet.tsx` | Padrao de max_messages de 30 para 10 |
-| `supabase/functions/ai-agent-reply/index.ts` | Padrao de 30 para 10; instrucao de objetivo no prompt |
-| `supabase/functions/agent-followup-cron/index.ts` | Encerrar contato (handoff) apos esgotar follow-ups |
+Adicionar campo editavel de `asaas_customer_id` na aba "Creditos SaaS" da pagina Unidades, para que o admin possa facilmente vincular cada organizacao-cliente ao seu ID no Asaas (formato `cus_...`).
 
 ---
 
 ## Detalhes Tecnicos
 
-### AgentFormSheet.tsx
+### Secret
 
-Linha 151 -- alterar default de `max_messages: 30` para `max_messages: 10`
+| Nome | Valor |
+|------|-------|
+| `ASAAS_API_KEY` | Token fornecido pelo usuario |
 
-Linha 665 -- alterar fallback `|| 30` para `|| 10`
+### Alteracoes de codigo
 
-### ai-agent-reply/index.ts
+| Arquivo | Mudanca |
+|---------|---------|
+| `supabase/functions/asaas-webhook/index.ts` | Adicionar tratamento para `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED`, `PAYMENT_DELETED` |
+| `src/pages/Unidades.tsx` | Adicionar campo para editar `asaas_customer_id` por organizacao na aba Creditos SaaS |
 
-Linha 181 -- alterar `engagementRules.max_messages ?? 30` para `?? 10`
+### Logica do estorno (PAYMENT_REFUNDED)
 
-Adicionar instrucao no system prompt (antes de enviar para a IA):
-```
-Voce tem no maximo {maxMessages} mensagens nesta conversa para cumprir seu objetivo.
-Seja direto, eficiente e conduza a conversa de forma objetiva.
-Se nao conseguir cumprir o objetivo dentro desse limite, use [AI_ACTION:HANDOFF:motivo].
-```
+1. Buscar organizacao pelo `asaas_customer_id`
+2. Calcular creditos a debitar (mesmo calculo: valor x 100)
+3. Subtrair do saldo da wallet
+4. Registrar transacao tipo `refund` com saldo negativo
 
-### agent-followup-cron/index.ts
+### Logica de inadimplencia (PAYMENT_OVERDUE)
 
-Apos a checagem `if (followupCount >= maxAttempts) continue;`, adicionar logica para:
-1. Verificar se o contato ja recebeu `maxAttempts` follow-ups
-2. Se sim, mudar `attending_mode` para "human" (handoff)
-3. Notificar equipe via `client_notifications`
-4. O agente nao fala mais com esse contato (nao gasta tokens)
+1. Buscar organizacao pelo `asaas_customer_id`
+2. Inserir notificacao para todos os membros da organizacao
+3. Registrar transacao informativa (sem alterar saldo)
 
-### Configuracao do Asaas
+### Campo asaas_customer_id na UI
 
-A URL do webhook que o usuario precisa cadastrar no painel Asaas sera:
-`https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/asaas-webhook`
+Adicionar um botao "Vincular Asaas" em cada linha da tabela de Creditos SaaS, abrindo um dialog para inserir o ID `cus_...` e salvar na coluna `asaas_customer_id` da tabela `organizations`.
 
-Opcionalmente, podemos adicionar um secret `ASAAS_WEBHOOK_TOKEN` para validar a autenticidade dos webhooks.
