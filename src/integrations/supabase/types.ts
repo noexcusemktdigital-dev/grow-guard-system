@@ -763,12 +763,16 @@ export type Database = {
           channel: string
           created_at: string
           created_by: string | null
+          delay_seconds: number
           id: string
+          image_url: string | null
+          max_per_day: number
           message: string | null
           organization_id: string
           recipients: Json | null
           scheduled_at: string | null
           sent_at: string | null
+          source_type: string
           stats: Json | null
           status: string
           title: string
@@ -777,12 +781,16 @@ export type Database = {
           channel?: string
           created_at?: string
           created_by?: string | null
+          delay_seconds?: number
           id?: string
+          image_url?: string | null
+          max_per_day?: number
           message?: string | null
           organization_id: string
           recipients?: Json | null
           scheduled_at?: string | null
           sent_at?: string | null
+          source_type?: string
           stats?: Json | null
           status?: string
           title: string
@@ -791,12 +799,16 @@ export type Database = {
           channel?: string
           created_at?: string
           created_by?: string | null
+          delay_seconds?: number
           id?: string
+          image_url?: string | null
+          max_per_day?: number
           message?: string | null
           organization_id?: string
           recipients?: Json | null
           scheduled_at?: string | null
           sent_at?: string | null
+          source_type?: string
           stats?: Json | null
           status?: string
           title?: string

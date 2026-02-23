@@ -25,10 +25,23 @@ export function useClienteDispatchMutations() {
   const { data: orgId } = useUserOrgId();
 
   const createDispatch = useMutation({
-    mutationFn: async (dispatch: { title: string; channel?: string; message?: string; scheduled_at?: string }) => {
+    mutationFn: async (dispatch: {
+      title: string;
+      channel?: string;
+      message?: string;
+      scheduled_at?: string;
+      recipients?: string[];
+      image_url?: string;
+      delay_seconds?: number;
+      source_type?: string;
+    }) => {
       const { data, error } = await supabase
         .from("client_dispatches")
-        .insert({ ...dispatch, organization_id: orgId! })
+        .insert({
+          ...dispatch,
+          organization_id: orgId!,
+          recipients: dispatch.recipients || [],
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -54,5 +67,16 @@ export function useClienteDispatchMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-dispatches"] }),
   });
 
-  return { createDispatch, updateDispatch, deleteDispatch };
+  const triggerBulkSend = useMutation({
+    mutationFn: async (dispatchId: string) => {
+      const { data, error } = await supabase.functions.invoke("whatsapp-bulk-send", {
+        body: { dispatch_id: dispatchId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["client-dispatches"] }),
+  });
+
+  return { createDispatch, updateDispatch, deleteDispatch, triggerBulkSend };
 }
