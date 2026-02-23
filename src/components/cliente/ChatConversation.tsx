@@ -386,7 +386,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
       </Collapsible>
 
       {/* Messages area with WhatsApp background */}
-      <ScrollArea className="flex-1 whatsapp-bg" ref={scrollAreaRef} onScrollCapture={handleScroll}>
+      <ScrollArea className="flex-1 min-h-0 whatsapp-bg" ref={scrollAreaRef} onScrollCapture={handleScroll}>
         <div className="px-4 py-3">
           {hasMore && (
             <div className="flex justify-center mb-3">
