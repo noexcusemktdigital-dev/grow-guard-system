@@ -248,20 +248,6 @@ export function ClienteSidebar() {
         </Tooltip>
       )}
 
-      {/* Demo Toggles */}
-      {!collapsed && (
-        <div className="mx-2.5 mb-2 p-2.5 rounded-lg border border-dashed border-sidebar-border bg-white/[0.02] space-y-2">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-sidebar-muted/70">Demo</span>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-sidebar-foreground">Trial expirado</span>
-            <Switch checked={simulateTrialExpired} onCheckedChange={setSimulateTrialExpired} className="scale-75" />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-sidebar-foreground">Sem créditos</span>
-            <Switch checked={simulateNoCredits} onCheckedChange={setSimulateNoCredits} className="scale-75" />
-          </div>
-        </div>
-      )}
 
       {/* Footer — Credits */}
       {!collapsed ? (
