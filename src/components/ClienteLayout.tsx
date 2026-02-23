@@ -14,7 +14,7 @@ export function ClienteLayout() {
         <ClienteSidebar />
         <main className="flex-1 h-screen overflow-hidden flex flex-col relative">
           <CreditAlertBanner />
-          <div key={location.pathname} className="flex-1 min-h-0 overflow-y-auto page-enter p-6 lg:p-8">
+          <div key={location.pathname} className="flex-1 min-h-0 overflow-y-auto flex flex-col page-enter p-6 lg:p-8">
             <ActionAlertsBanner />
             <Outlet />
           </div>
