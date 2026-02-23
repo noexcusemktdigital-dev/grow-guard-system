@@ -185,6 +185,10 @@ export default function ClienteConteudos() {
   const [bDestaques, setBDestaques] = useState("");
   const [bTom, setBTom] = useState("");
 
+  // Persona fields
+  const [personaNome, setPersonaNome] = useState("");
+  const [personaDescricao, setPersonaDescricao] = useState("");
+
   // Format quantities
   const [qFeed, setQFeed] = useState(8);
   const [qCarrossel, setQCarrossel] = useState(4);
@@ -219,6 +223,10 @@ export default function ClienteConteudos() {
         if (stored) estrategia = JSON.parse(stored);
       } catch {}
 
+      const personaData = (personaNome || personaDescricao)
+        ? { nome: personaNome, descricao: personaDescricao }
+        : undefined;
+
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
           briefing: {
@@ -237,6 +245,7 @@ export default function ClienteConteudos() {
             story: qStory,
           },
           estrategia,
+          persona: personaData,
         },
       });
 
@@ -259,7 +268,14 @@ export default function ClienteConteudos() {
         conteudos,
       };
 
-      setCampaigns((prev) => [newCampaign, ...prev]);
+      const updatedCampaigns = [newCampaign, ...campaigns];
+      setCampaigns(updatedCampaigns);
+
+      // Save to localStorage for Redes Sociais integration
+      try {
+        localStorage.setItem("content-campaigns", JSON.stringify(updatedCampaigns));
+      } catch {}
+
       setWizardOpen(false);
       setWizardStep(1);
       setOpenCampaign(newCampaign.id);
@@ -431,6 +447,22 @@ export default function ClienteConteudos() {
                         <Label className="text-xs font-medium">Destaques/Novidades</Label>
                         <Textarea value={bDestaques} onChange={(e) => setBDestaques(e.target.value)} placeholder="Ex: Novo recurso, case de sucesso..." rows={2} />
                       </div>
+
+                      {/* Persona */}
+                      <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                        <p className="text-xs font-semibold flex items-center gap-1.5">
+                          <GraduationCap className="w-3.5 h-3.5 text-primary" /> Persona / Público-Alvo
+                        </p>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Nome da Persona</Label>
+                          <Input value={personaNome} onChange={(e) => setPersonaNome(e.target.value)} placeholder='Ex: "Maria, dona de franquia, 38 anos"' />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Descrição da Persona</Label>
+                          <Textarea value={personaDescricao} onChange={(e) => setPersonaDescricao(e.target.value)} rows={3} placeholder="Idade, profissão, dores, desejos, comportamento de compra, redes que usa, tom que prefere..." />
+                        </div>
+                      </div>
+
                       <Button className="w-full" onClick={() => setWizardStep(2)} disabled={!bObjetivo || !bTema || !bTom}>
                         Próximo <ArrowRight className="w-4 h-4" />
                       </Button>

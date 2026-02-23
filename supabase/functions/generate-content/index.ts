@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { briefing, formatos, estrategia } = await req.json();
+    const { briefing, formatos, estrategia, persona } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -26,7 +26,18 @@ serve(async (req) => {
       ? `\n\nDados da estratégia do cliente:\n${JSON.stringify(estrategia, null, 2)}`
       : "";
 
+    const personaContext = persona?.nome || persona?.descricao
+      ? `\n\nPERSONA DO PÚBLICO-ALVO:
+${persona.nome ? `Nome: ${persona.nome}` : ""}
+${persona.descricao ? `Descrição: ${persona.descricao}` : ""}
+
+Adapte TODOS os roteiros, CTAs e embasamentos para este público específico.
+Use linguagem, referências e exemplos que ressoem com esta persona.
+O tom, vocabulário e nível de complexidade devem ser calibrados para esta persona.`
+      : "";
+
     const systemPrompt = `Você é um estrategista de marketing digital especializado em redes sociais. Sua tarefa é gerar conteúdos mensais completos para uma marca/empresa.
+${personaContext}
 
 REGRAS OBRIGATÓRIAS:
 - Gere EXATAMENTE ${totalConteudos} conteúdos no total
