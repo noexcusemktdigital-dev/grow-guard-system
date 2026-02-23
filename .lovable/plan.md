@@ -1,58 +1,68 @@
 
+# Suporte a Multiplas Instancias WhatsApp por Organizacao
 
-# Correções: WhatsApp numero real + Criacao sequencial do agente
+## Resumo
 
-## Problema 1: Numero do WhatsApp ainda mostra instancia
-
-O banco confirma: a instancia `3EF255AF...` esta com `status: connected` mas `phone_number: NULL`.
-
-A edge function ja tem o codigo para chamar `/device`, mas o numero nunca foi preenchido. Isso indica que o `check-status` nao foi chamado desde o ultimo deploy, ou que o deploy nao aconteceu.
-
-**Solucao em 2 partes:**
-
-### a) Re-deploy + log na edge function
-- Garantir que a edge function `whatsapp-setup` esta deployada com a logica do `/device`
-- Adicionar `console.log` no retorno do `/device` para diagnostico
-
-### b) Auto-sync no frontend
-- Quando o `AgentFormSheet` abrir e detectar `whatsappInstance` com `status === "connected"` mas `phone_number === null`, disparar automaticamente o `check-status` via edge function
-- Apos o retorno, invalidar a query `whatsapp-instance` para atualizar a tela
-- Remover o `window.location.reload()` e usar `queryClient.invalidateQueries`
-
-Assim, o usuario nunca mais vera "Instancia XXX..." — o numero sera buscado automaticamente.
+Permitir que cada organizacao tenha mais de um numero de WhatsApp conectado. O usuario podera configurar varios numeros na pagina de Integracoes e escolher qual(is) vincular a cada agente de IA.
 
 ---
 
-## Problema 2: Objetivos ja sao determinados pela funcao
+## 1. Banco de Dados -- Remover constraint de unicidade
 
-Os objetivos **ja estao vinculados a funcao (role)** no codigo atual:
-- SDR: Qualificar lead, Coletar informacoes, Agendar reuniao, Identificar decisor
-- Closer: Apresentar proposta, Negociar, Fechar venda, Superar objecoes
-- Pos-venda: Verificar satisfacao, Coletar feedback, Oferecer upsell, Resolver duvidas
-- Suporte: Resolver problema, Escalar ticket, Coletar informacoes do erro, Encaminhar para setor
+A tabela `whatsapp_instances` possui atualmente uma constraint `UNIQUE` na coluna `organization_id` (indicada por `isOneToOne: true`). Isso impede mais de uma instancia por organizacao.
 
-Quando o usuario troca a funcao, os objetivos mudam automaticamente. **Nao precisa de alteracao** nesse ponto.
+**Migracao SQL:**
+- Remover a constraint unique de `organization_id` na tabela `whatsapp_instances`
+- Adicionar um campo opcional `label` (text) para o usuario nomear cada instancia (ex: "Comercial", "Suporte")
 
 ---
 
-## Problema 3: Criacao sequencial (passo a passo)
+## 2. Edge Function `whatsapp-setup` -- Suporte a multiplas instancias
 
-Atualmente todas as 5 abas ficam desbloqueadas ao mesmo tempo. O usuario quer um fluxo guiado onde cada etapa so desbloqueia apos a anterior ser preenchida.
+Atualmente o connect faz upsert buscando por `organization_id` (sobrescreve a unica instancia). E o `check-status` busca `.maybeSingle()`.
 
-**Regras de desbloqueio:**
+**Mudancas:**
+- **Connect**: Sempre inserir uma nova instancia ao inves de fazer upsert. Verificar se ja existe uma instancia com o mesmo `instance_id` para evitar duplicatas (upsert por `instance_id` ao inves de `organization_id`)
+- **Check-status**: Receber um parametro opcional `instanceId` para checar uma instancia especifica. Se nao receber, checar todas da organizacao
+- **Disconnect**: Receber o `instanceId` para desconectar uma instancia especifica (ao inves de deletar todas)
 
-1. **Identidade** — sempre disponivel (primeira etapa)
-2. **Persona** — desbloqueia quando Identidade tiver: `name` preenchido + `role` selecionado + `gender` selecionado
-3. **Base de Conhecimento** — desbloqueia quando Persona tiver pelo menos: `greeting` selecionado + 1 `trait` selecionada
-4. **Prompt e Objetivos** — desbloqueia quando Base de Conhecimento tiver pelo menos 1 item adicionado
-5. **Simulador** — desbloqueia quando Prompt tiver `system_prompt` preenchido
+---
 
-**Implementacao:**
-- Calcular `completedSteps` baseado no estado do formulario
-- Tabs desabilitadas recebem `disabled` e estilo visual de "cadeado"
-- Ao completar uma etapa, avancar automaticamente para a proxima
-- Botao "Proximo" no final de cada aba para facilitar a navegacao
-- Ao editar um agente existente, todas as abas ficam desbloqueadas (o agente ja foi criado)
+## 3. Hook `useWhatsApp.ts` -- Retornar lista de instancias
+
+**Mudancas:**
+- Renomear `useWhatsAppInstance` para `useWhatsAppInstances` (plural)
+- Alterar a query para buscar todas as instancias da organizacao (remover `.maybeSingle()`, usar array)
+- Manter export do nome antigo como alias para nao quebrar outros usos
+- Adicionar hook `useWhatsAppInstanceById(id)` para casos onde se precisa de uma especifica
+
+---
+
+## 4. Frontend `AgentFormSheet.tsx` -- Selecionar multiplos numeros
+
+Atualmente exibe um unico checkbox com uma instancia. Com multiplas instancias, exibir uma lista de checkboxes onde cada instancia mostra o numero (ou label + numero).
+
+**Mudancas:**
+- Usar `useWhatsAppInstances()` (plural)
+- Renderizar um checkbox para cada instancia disponivel
+- O campo `whatsapp_instance_ids` do agente ja suporta array, entao nada muda no modelo do agente
+- Auto-sync de phone_number para todas as instancias que estejam `connected` mas sem `phone_number`
+
+---
+
+## 5. Frontend `WhatsAppSetupWizard.tsx` -- Adicionar nova instancia
+
+Atualmente o wizard sobrescreve a instancia existente.
+
+**Mudancas:**
+- O wizard sempre cria uma nova instancia (nao sobrescreve)
+- Apos conectar, invalidar `whatsapp-instances` (plural)
+
+---
+
+## 6. Pagina de Integracoes -- Listar instancias
+
+Permitir ao usuario ver todas as instancias conectadas com opcao de desconectar cada uma individualmente.
 
 ---
 
@@ -60,13 +70,16 @@ Atualmente todas as 5 abas ficam desbloqueadas ao mesmo tempo. O usuario quer um
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/cliente/AgentFormSheet.tsx` | Auto-sync do phone_number, criacao sequencial com tabs bloqueadas, botoes "Proximo", invalidateQueries |
-| `supabase/functions/whatsapp-setup/index.ts` | Adicionar logs de diagnostico no retorno do `/device` |
+| Migracao SQL | Remover unique constraint de `organization_id`, adicionar campo `label` |
+| `supabase/functions/whatsapp-setup/index.ts` | Upsert por `instance_id`, check-status individual, disconnect individual |
+| `src/hooks/useWhatsApp.ts` | `useWhatsAppInstances` retorna array, auto-sync de todas |
+| `src/components/cliente/AgentFormSheet.tsx` | Lista de checkboxes com todas as instancias |
+| `src/components/cliente/WhatsAppSetupWizard.tsx` | Sempre criar nova instancia |
 
 ## Detalhes Tecnicos
 
-- A funcao `whatsapp-setup` sera re-deployada para garantir que o codigo do `/device` esta ativo
-- No `AgentFormSheet`, um `useEffect` detecta `whatsappInstance?.status === "connected" && !whatsappInstance.phone_number` e chama `check-status` automaticamente
-- As tabs usam uma variavel de estado `activeTab` controlada pelo componente, com `pointer-events-none opacity-50` nas tabs bloqueadas
-- Para agentes existentes (`isEditing === true`), todas as tabs ficam desbloqueadas
-- O `useQueryClient` sera importado para fazer `invalidateQueries` no lugar de `window.location.reload()`
+- A constraint a remover e provavelmente um `UNIQUE INDEX` em `organization_id` na tabela `whatsapp_instances`
+- O upsert no edge function passara a usar `.eq("instance_id", instanceId).eq("organization_id", orgId)` como criterio
+- O campo `label` sera `text NULL DEFAULT NULL` -- opcional para o usuario
+- O `whatsapp_instance_ids` no agente ja e `jsonb DEFAULT '[]'` -- nao precisa de migracao
+- O webhook URL continuara usando `orgId` no path, sem mudancas no webhook receiver
