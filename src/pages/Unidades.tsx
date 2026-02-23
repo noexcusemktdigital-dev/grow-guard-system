@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, CreditCard, RefreshCw } from "lucide-react";
+import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, CreditCard, RefreshCw, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +19,8 @@ function CreditosSaasTab() {
   const [rechargeOrg, setRechargeOrg] = useState<{ id: string; name: string } | null>(null);
   const [rechargeAmount, setRechargeAmount] = useState("");
   const [rechargeDesc, setRechargeDesc] = useState("");
+  const [linkOrg, setLinkOrg] = useState<{ id: string; name: string; currentId?: string } | null>(null);
+  const [asaasId, setAsaasId] = useState("");
 
   // Fetch all client organizations with wallets
   const { data: orgCredits, isLoading } = useQuery({
@@ -73,6 +75,25 @@ function CreditosSaasTab() {
     },
   });
 
+  const linkAsaasMutation = useMutation({
+    mutationFn: async ({ orgId, customerId }: { orgId: string; customerId: string }) => {
+      const { error } = await supabase
+        .from("organizations")
+        .update({ asaas_customer_id: customerId || null })
+        .eq("id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("ID Asaas vinculado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["admin-org-credits"] });
+      setLinkOrg(null);
+      setAsaasId("");
+    },
+    onError: (err: any) => {
+      toast.error(`Erro ao vincular: ${err.message}`);
+    },
+  });
+
   if (isLoading) {
     return <div className="space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>;
   }
@@ -109,7 +130,10 @@ function CreditosSaasTab() {
                 <span className={`text-right font-semibold tabular-nums ${org.balance <= 0 ? "text-destructive" : org.balance < 500 ? "text-amber-500" : "text-foreground"}`}>
                   {org.balance.toLocaleString("pt-BR")}
                 </span>
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-1">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => { setLinkOrg({ id: org.id, name: org.name, currentId: org.asaas_customer_id }); setAsaasId(org.asaas_customer_id || ""); }}>
+                    <Link2 className="w-3 h-3" /> {org.asaas_customer_id ? "Editar ID" : "Vincular"}
+                  </Button>
                   <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setRechargeOrg({ id: org.id, name: org.name })}>
                     <RefreshCw className="w-3 h-3" /> Recarregar
                   </Button>
@@ -143,6 +167,31 @@ function CreditosSaasTab() {
               disabled={!rechargeAmount || parseInt(rechargeAmount) <= 0 || rechargeMutation.isPending}
             >
               {rechargeMutation.isPending ? "Recarregando..." : "Confirmar Recarga"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!linkOrg} onOpenChange={() => setLinkOrg(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vincular ID Asaas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Organização: <strong>{linkOrg?.name}</strong></p>
+            <div className="space-y-2">
+              <Label>ID do cliente Asaas</Label>
+              <Input value={asaasId} onChange={(e) => setAsaasId(e.target.value)} placeholder="cus_000000000000" />
+              <p className="text-[10px] text-muted-foreground">Encontre o ID do cliente no painel Asaas (formato: cus_...)</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkOrg(null)}>Cancelar</Button>
+            <Button
+              onClick={() => linkOrg && linkAsaasMutation.mutate({ orgId: linkOrg.id, customerId: asaasId.trim() })}
+              disabled={linkAsaasMutation.isPending}
+            >
+              {linkAsaasMutation.isPending ? "Salvando..." : "Salvar Vínculo"}
             </Button>
           </DialogFooter>
         </DialogContent>
