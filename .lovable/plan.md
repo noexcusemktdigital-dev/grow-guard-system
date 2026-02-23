@@ -1,165 +1,130 @@
 
 
-# Conteudos — Reformulacao Completa com IA Generativa
+# Redes Sociais — Artes com IA + Editor de Texto + Limites por Plano
 
-Transformar a pagina de Conteudos em uma experiencia de "Agencia de IA" que gera campanhas mensais completas (roteiros, carrosseis, posts, reels) com base em um briefing rapido + dados da Estrategia, usando Lovable AI (sem custo extra de API).
-
----
-
-## Conceito Geral
-
-A pagina atual tem uma "Base de Conhecimento" estatica e pastas de arquivos mock. A nova versao sera organizada em 3 abas:
-
-1. **Campanhas** (principal) — Criar e gerenciar campanhas mensais de conteudo
-2. **Tutorial** — Guia visual e didatico sobre formatos, como gravar, dimensoes
-3. **Historico** — Timeline de campanhas anteriores
+Implementacao completa da pagina de Redes Sociais com geracao de artes via IA, editor de texto integrado (Canvas), e limites mensais por plano. Inclui tambem a atualizacao dos limites de conteudo na pagina de Conteudos.
 
 ---
 
-## Aba 1 — Campanhas
+## 1. Limites Mensais por Plano
 
-### Fluxo de criacao
+Adicionar campos `maxContentCampaigns` e `maxSocialArts` ao `PlanConfig` em `src/constants/plans.ts`:
 
-**Botao "Nova Campanha Mensal"** abre um wizard em 3 etapas:
+| Plano | Campanhas de Conteudo/mes | Artes de Redes Sociais/mes |
+|-------|--------------------------|---------------------------|
+| Starter | 1 campanha | 8 artes (4 posts x Feed+Story) |
+| Growth | 3 campanhas | 20 artes (10 posts) |
+| Scale | Ilimitado | Ilimitado |
 
-**Etapa 1 — Briefing Rapido (1 tela)**
-Formulario agrupado com campos essenciais:
-- Mes de referencia (select com meses)
-- Objetivo principal do mes (choice: Gerar leads, Aumentar engajamento, Lancar produto, Vender mais, Fortalecer marca)
-- Tema central (texto curto)
-- Promocoes/ofertas do mes (texto, opcional)
-- Datas comemorativas relevantes (texto, opcional)
-- Destaques/novidades (texto, opcional)
-- Tom de comunicacao (choice: Educativo, Inspirador, Direto, Storytelling, Misto)
-
-**Etapa 2 — Quantidade e Formatos (1 tela)**
-Cards clicaveis para selecionar formatos com quantidades:
-- Posts Feed (input numerico, sugestao: 8)
-- Carrosseis (input numerico, sugestao: 4)
-- Roteiros de Reels/Video (input numerico, sugestao: 4)
-- Stories (input numerico, sugestao: 4)
-Total automatico calculado no rodape.
-
-**Etapa 3 — Geracao com IA**
-Botao "Gerar Conteudos" chama a edge function que envia o briefing + dados da estrategia (se disponivel no localStorage) para o Lovable AI Gateway. Exibe um loading animado com frases rotativas ("Analisando seu publico...", "Criando roteiros...", "Definindo CTAs...").
-
-### Resultado da Geracao
-
-Pasta do mes criada automaticamente com os conteudos gerados. Cada conteudo inclui:
-- Titulo
-- Formato (Feed, Carrossel, Reels, Story)
-- Rede social sugerida
-- Etapa do funil (Topo, Meio, Fundo)
-- Roteiro/texto completo
-- Hashtags sugeridas
-- **Embasamento**: Um bloco explicativo de 2-3 linhas dizendo POR QUE aquele formato e conteudo foram escolhidos (ex: "Carrosseis educativos no Instagram tem 3x mais salvamentos, ideal para topo de funil com publico que esta na fase de descoberta")
-- Status de aprovacao (aprovado/pendente)
-
-### Organizacao Visual
-
-- Pastas mensais como cards grandes com destaque no mes atual (borda primaria, badge "Mes Atual")
-- Dentro da pasta: grid de cards por conteudo (nao lista de arquivos)
-- Cada card mostra: titulo, formato (badge colorida), rede, funil, status de aprovacao
-- Ao clicar: abre o roteiro completo + embasamento + botoes (Aprovar, Copiar, Editar)
-- Filtros rapidos por formato e status dentro da pasta
+O frontend consulta o plano atual via `useClienteSubscription` e bloqueia a criacao quando o limite for atingido, exibindo um card de upgrade.
 
 ---
 
-## Aba 2 — Tutorial
+## 2. Redes Sociais — Reescrita Completa
 
-Secao visual e didatica com cards informativos sobre cada formato:
+### Estrutura de Abas
 
-| Formato | Conteudo do Tutorial |
-|---------|---------------------|
-| Feed | Dimensao 1080x1080, dicas de legenda, exemplos de estrutura |
-| Carrossel | Ate 10 slides, narrativa sequencial, dicas de capa |
-| Reels | Duracao ideal (15-60s), gancho nos 3 primeiros segundos, como gravar com celular |
-| Story | 1080x1920, enquetes/stickers, sequencia narrativa |
-| Video longo | Formato YouTube, estrutura intro-conteudo-CTA |
+| Aba | Conteudo |
+|-----|----------|
+| Campanhas | Wizard de criacao + galeria com editor de texto |
+| Identidade Visual | Base de conhecimento visual (manter existente) |
+| Calendario | Calendario de publicacoes (manter existente) |
 
-Cada card tera:
-- Icone e nome do formato
-- Dimensoes e especificacoes tecnicas
-- "Como gravar" com dicas praticas (iluminacao, cenario, audio)
-- "Estrutura ideal" com template
-- Badge visual com a proporcao (1:1, 9:16, 16:9)
+### Wizard de Criacao (3 etapas)
 
----
+**Etapa 1 — Briefing Visual**
+- Mes, objetivo, estilo visual, cores, temas, promocoes, observacoes
+- Quantidade de posts (cada post = 1 Feed + 1 Story)
+- Validacao contra limite do plano antes de prosseguir
 
-## Aba 3 — Historico
+**Etapa 2 — Geracao com IA (sequencial com progresso)**
+1. Chama `generate-social-concepts` (gemini-3-flash-preview) para gerar conceitos: titulo, legenda, CTA, hashtags, prompt visual
+2. Para cada conceito, chama `generate-social-image` (gemini-3-pro-image-preview) 2x: Feed (1:1) e Story (9:16)
+3. Imagens salvas no bucket `social-arts`
+4. Progress bar: "Gerando arte 3 de 10..."
 
-Lista cronologica das campanhas geradas, com:
-- Mes, quantidade de conteudos, status geral (X aprovados de Y)
-- Expansivel para ver resumo dos conteudos
+**Etapa 3 — Galeria + Editor de Texto**
+Grid de cards com imagem real. Ao clicar:
+- Modal com imagem ampliada
+- Campos de texto pre-preenchidos pela IA (titulo, legenda, CTA)
+- Opcoes: posicao (topo/centro/rodape), cor (branco/preto/primaria), tamanho (P/M/G)
+- Canvas API renderiza texto sobre a imagem em tempo real
+- Botoes: "Baixar com Texto", "Baixar sem Texto", "Copiar Legenda", "Aprovar"
 
----
+### Verificacao de Limite
 
-## Backend — Edge Function com Lovable AI
-
-Nova edge function `generate-content` que:
-
-1. Recebe o briefing + dados da estrategia
-2. Monta um prompt de sistema detalhado que gera conteudos estruturados
-3. Usa tool calling para retornar JSON estruturado com os conteudos
-4. Retorna array de conteudos com titulo, roteiro, formato, rede, funil, hashtags e embasamento
-
-O modelo usado sera `google/gemini-3-flash-preview` (rapido, sem custo de API key — ja incluido no Lovable AI).
-
-A funcao sera chamada via `supabase.functions.invoke('generate-content', { body: {...} })` sem streaming (resposta unica).
+Antes de abrir o wizard, o sistema conta quantas artes ja foram geradas no mes atual e compara com o limite do plano. Se excedido, exibe card com botao de upgrade.
 
 ---
 
-## Arquivos
+## 3. Conteudos — Adicionar Verificacao de Limite
+
+Na pagina `ClienteConteudos.tsx`, antes de abrir o wizard de nova campanha, verificar quantas campanhas ja existem no mes atual e comparar com `maxContentCampaigns` do plano. Bloquear se necessario.
+
+---
+
+## 4. Backend — 2 Edge Functions Novas
+
+### `generate-social-concepts`
+Usa `google/gemini-3-flash-preview` com tool calling para retornar JSON estruturado:
+```text
+Input: { briefing, quantidade, estilo }
+Output: { concepts: [{ titulo, legenda, cta, hashtags[], visual_prompt_feed, visual_prompt_story }] }
+```
+
+### `generate-social-image`
+Usa `google/gemini-3-pro-image-preview` para gerar uma imagem por chamada:
+```text
+Input: { prompt, format: "feed"|"story" }
+Output: { image_base64 }
+```
+A imagem e convertida para Blob e salva no bucket `social-arts`. URL publica retornada.
+
+Prompt inclui instrucao: "Do NOT include any text or letters in the image."
+
+---
+
+## 5. Storage
+
+Criar bucket `social-arts` (publico) via migracao SQL.
+
+---
+
+## 6. Arquivos Modificados/Criados
 
 | Arquivo | Acao |
 |---------|------|
-| `src/pages/cliente/ClienteConteudos.tsx` | Reescrita completa |
-| `supabase/functions/generate-content/index.ts` | Nova edge function |
-| `supabase/config.toml` | Adicionar entrada da funcao (verify_jwt = false) |
+| `src/constants/plans.ts` | Adicionar `maxContentCampaigns` e `maxSocialArts` |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Reescrita completa |
+| `src/pages/cliente/ClienteConteudos.tsx` | Adicionar verificacao de limite |
+| `supabase/functions/generate-social-concepts/index.ts` | Nova edge function |
+| `supabase/functions/generate-social-image/index.ts` | Nova edge function |
+| `supabase/config.toml` | Registrar 2 novas funcoes |
+
+Migracao SQL para criar bucket `social-arts`.
 
 ---
 
 ## Detalhes Tecnicos
 
-### Edge Function — generate-content
+### Editor Canvas
+
+Usa `<canvas>` nativo para composicao:
+1. Carrega imagem como background
+2. Renderiza texto configuravel em posicoes pre-definidas
+3. Re-renderiza a cada mudanca de texto/posicao/cor
+4. Export via `canvas.toDataURL('image/png')`
+5. Sem dependencias externas
+
+### Controle de Limites
 
 ```text
-POST /generate-content
-Body: {
-  briefing: { mes, objetivo, tema, promocoes, datas, destaques, tom },
-  formatos: { feed: 8, carrossel: 4, reels: 4, story: 4 },
-  estrategia: { segmento, publico, concorrencia, presenca_digital, ... } // opcional
-}
-
-Response: {
-  conteudos: [
-    {
-      titulo: string,
-      formato: "Feed" | "Carrossel" | "Reels" | "Story",
-      rede: "Instagram" | "LinkedIn" | "TikTok",
-      funil: "Topo" | "Meio" | "Fundo",
-      roteiro: string,
-      hashtags: string[],
-      embasamento: string
-    }
-  ]
-}
+const planLimits = {
+  starter: { contentCampaigns: 1, socialArts: 8 },
+  growth:  { contentCampaigns: 3, socialArts: 20 },
+  scale:   { contentCampaigns: -1, socialArts: -1 }  // -1 = ilimitado
+};
 ```
 
-Usa tool calling do Lovable AI para garantir resposta JSON estruturada.
-
-### Estado Local
-
-Os conteudos gerados serao armazenados em `useState` (mock/local) nesta fase — persistencia em banco sera adicionada depois. Os dados da estrategia serao lidos do `localStorage` se disponiveis.
-
-### Tutorial
-
-Componente estatico com dados hardcoded sobre cada formato. Sem integracao com IA — e conteudo educacional fixo.
-
-### Estilo Visual
-
-- Cards de conteudo com badge de formato colorida (Feed=azul, Carrossel=roxo, Reels=rosa, Story=amber)
-- Embasamento em bloco destacado com icone Lightbulb e fundo suave
-- Loading de geracao com animacao framer-motion (pulse + texto rotativo)
-- Tutorial com cards visuais grandes, icones e proporcoes ilustradas
+O estado local (useState) armazena campanhas e artes. Persistencia em banco sera adicionada junto com a definicao final de repasse de custos.
 
