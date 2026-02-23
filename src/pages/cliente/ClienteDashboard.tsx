@@ -155,8 +155,8 @@ export default function ClienteDashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <PageHeader
-        title="Dashboard"
-        subtitle="Métricas de CRM, Chat e Agentes IA"
+        title="Relatórios"
+        subtitle="Analise e exporte relatórios das suas frentes comerciais"
         icon={<BarChart3 className="w-5 h-5 text-primary" />}
         actions={
           <div className="flex gap-1 p-1 rounded-lg bg-muted/50 border">
