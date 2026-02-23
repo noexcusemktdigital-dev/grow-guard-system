@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.asaas-webhook]
 verify_jwt = false
+
+[functions.asaas-create-subscription]
+verify_jwt = false
+
+[functions.asaas-charge-franchisee]
+verify_jwt = false

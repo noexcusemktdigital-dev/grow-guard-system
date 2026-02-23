@@ -76,6 +76,41 @@ Deno.serve(async (req) => {
 
     // ── PAYMENT_CONFIRMED / PAYMENT_RECEIVED ──
     if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
+      // Check if this is a franchisee charge
+      const asaasPaymentId = payment.id;
+      if (asaasPaymentId) {
+        const { data: franchiseeCharge } = await adminClient
+          .from("franchisee_charges")
+          .select("id, organization_id, franchisee_org_id, month, total_amount")
+          .eq("asaas_payment_id", asaasPaymentId)
+          .maybeSingle();
+
+        if (franchiseeCharge) {
+          // Update charge status to paid
+          await adminClient
+            .from("franchisee_charges")
+            .update({ status: "paid", paid_at: new Date().toISOString() })
+            .eq("id", franchiseeCharge.id);
+
+          // Register as revenue for the franchisor
+          await adminClient.from("finance_revenues").insert({
+            organization_id: franchiseeCharge.organization_id,
+            description: `Repasse franqueado — Ref. ${franchiseeCharge.month}`,
+            amount: franchiseeCharge.total_amount,
+            date: new Date().toISOString().split("T")[0],
+            category: "repasse",
+            status: "received",
+            payment_method: "asaas",
+          });
+
+          console.log(`Franchisee charge ${franchiseeCharge.id} marked as paid. Revenue registered.`);
+          return new Response(JSON.stringify({ success: true, event, type: "franchisee_charge", charge_id: franchiseeCharge.id }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      // Standard credit wallet flow
       if (creditsAmount <= 0) {
         return new Response(JSON.stringify({ ok: true, credits: 0 }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

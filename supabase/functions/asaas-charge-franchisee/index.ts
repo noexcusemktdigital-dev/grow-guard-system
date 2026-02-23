@@ -1,0 +1,192 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const ASAAS_BASE = "https://api.asaas.com/v3";
+const SYSTEM_FEE = 250;
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Validate auth
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { organization_id, month, billing_type } = await req.json();
+
+    if (!organization_id || !month) {
+      return new Response(JSON.stringify({ error: "organization_id and month are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const billingType = billing_type || "BOLETO";
+
+    // Get all franchisees for this organization
+    const { data: franchisees, error: franchError } = await adminClient
+      .from("finance_franchisees")
+      .select("id, name, franchisee_org_id, royalty_percentage, marketing_fee")
+      .eq("organization_id", organization_id);
+
+    if (franchError) throw franchError;
+    if (!franchisees || franchisees.length === 0) {
+      return new Response(JSON.stringify({ error: "No franchisees found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const results: any[] = [];
+    const [yearStr, monthStr] = month.split("-");
+    const year = parseInt(yearStr);
+    const monthNum = parseInt(monthStr);
+
+    // Due date: 10th of the next month
+    const dueMonth = monthNum === 12 ? 1 : monthNum + 1;
+    const dueYear = monthNum === 12 ? year + 1 : year;
+    const dueDate = `${dueYear}-${String(dueMonth).padStart(2, "0")}-10`;
+
+    for (const franchisee of franchisees) {
+      const franchiseeOrgId = franchisee.franchisee_org_id;
+      if (!franchiseeOrgId) {
+        results.push({ franchisee: franchisee.name, status: "skipped", reason: "No linked organization" });
+        continue;
+      }
+
+      // Check if charge already exists for this month
+      const { data: existingCharge } = await adminClient
+        .from("franchisee_charges")
+        .select("id")
+        .eq("organization_id", organization_id)
+        .eq("franchisee_org_id", franchiseeOrgId)
+        .eq("month", month)
+        .maybeSingle();
+
+      if (existingCharge) {
+        results.push({ franchisee: franchisee.name, status: "skipped", reason: "Already charged this month" });
+        continue;
+      }
+
+      // Get franchisee org to check asaas_customer_id
+      const { data: franchiseeOrg } = await adminClient
+        .from("organizations")
+        .select("id, name, asaas_customer_id")
+        .eq("id", franchiseeOrgId)
+        .single();
+
+      if (!franchiseeOrg?.asaas_customer_id) {
+        results.push({ franchisee: franchisee.name, status: "skipped", reason: "No Asaas customer linked" });
+        continue;
+      }
+
+      // Calculate revenue for the month from finance_revenues
+      const startDate = `${year}-${String(monthNum).padStart(2, "0")}-01`;
+      const endDate = `${dueYear}-${String(dueMonth).padStart(2, "0")}-01`;
+
+      const { data: revenues } = await adminClient
+        .from("finance_revenues")
+        .select("amount")
+        .eq("organization_id", franchiseeOrgId)
+        .gte("date", startDate)
+        .lt("date", endDate);
+
+      const totalRevenue = (revenues || []).reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
+      const royaltyPct = Number(franchisee.royalty_percentage) || 1;
+      const royaltyAmount = Math.round(totalRevenue * (royaltyPct / 100) * 100) / 100;
+      const totalAmount = royaltyAmount + SYSTEM_FEE;
+
+      if (totalAmount <= 0) {
+        results.push({ franchisee: franchisee.name, status: "skipped", reason: "Zero amount" });
+        continue;
+      }
+
+      // Create charge in Asaas
+      const monthLabel = `${String(monthNum).padStart(2, "0")}/${year}`;
+      const chargeRes = await fetch(`${ASAAS_BASE}/payments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          access_token: asaasApiKey,
+        },
+        body: JSON.stringify({
+          customer: franchiseeOrg.asaas_customer_id,
+          billingType,
+          value: totalAmount,
+          dueDate,
+          description: `Royalties + Sistema — Ref. ${monthLabel} — ${franchiseeOrg.name}`,
+          externalReference: `franchisee_charge|${organization_id}|${franchiseeOrgId}|${month}`,
+        }),
+      });
+
+      const chargeData = await chargeRes.json();
+      if (!chargeRes.ok) {
+        console.error(`Asaas charge failed for ${franchisee.name}:`, chargeData);
+        results.push({ franchisee: franchisee.name, status: "error", reason: chargeData });
+        continue;
+      }
+
+      // Insert charge record
+      await adminClient.from("franchisee_charges").insert({
+        organization_id,
+        franchisee_org_id: franchiseeOrgId,
+        month,
+        royalty_amount: royaltyAmount,
+        system_fee: SYSTEM_FEE,
+        total_amount: totalAmount,
+        asaas_payment_id: chargeData.id,
+        status: "pending",
+      });
+
+      results.push({
+        franchisee: franchisee.name,
+        status: "created",
+        asaas_payment_id: chargeData.id,
+        royalty: royaltyAmount,
+        system_fee: SYSTEM_FEE,
+        total: totalAmount,
+      });
+
+      console.log(`Charge created for ${franchisee.name}: R$${totalAmount} (Asaas: ${chargeData.id})`);
+    }
+
+    return new Response(JSON.stringify({ success: true, results }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("asaas-charge-franchisee error:", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
