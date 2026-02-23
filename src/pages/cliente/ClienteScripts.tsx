@@ -1,26 +1,19 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   BookOpen, Plus, Copy, Search, ChevronDown, ChevronUp, Sparkles,
-  FileText, Phone, Target, Lightbulb, ShieldQuestion, Pencil, Trash2,
-  X, Save, MessageSquare, Crosshair, Handshake, Ban
+  Pencil, Trash2, Crosshair, ShieldQuestion, Handshake, Target, Ban, Loader2
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClienteScripts, useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
 
 const funnelStages = [
   { key: "prospeccao", label: "Prospecção", icon: Crosshair, gradient: "from-blue-500/15 to-blue-600/5", accent: "text-blue-400 border-blue-500/30" },
@@ -32,13 +25,11 @@ const funnelStages = [
 
 export default function ClienteScripts() {
   const { data: scripts, isLoading } = useClienteScripts();
-  const { createScript, deleteScript: deleteScriptMutation } = useClienteScriptMutations();
+  const { createScript, updateScript, deleteScript: deleteScriptMutation } = useClienteScriptMutations();
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newCategory, setNewCategory] = useState("prospeccao");
-  const [newContent, setNewContent] = useState("");
+  const [improvingId, setImprovingId] = useState<string | null>(null);
 
   const allScripts = scripts ?? [];
 
@@ -47,15 +38,45 @@ export default function ClienteScripts() {
       .filter(s => s.category === stageKey)
       .filter(s => !search || s.title.toLowerCase().includes(search.toLowerCase()) || s.content?.toLowerCase().includes(search.toLowerCase()));
 
-  const handleCreate = () => {
-    if (!newTitle.trim()) return;
-    createScript.mutate({ title: newTitle, category: newCategory, content: newContent }, {
-      onSuccess: () => {
-        setShowCreate(false);
-        setNewTitle(""); setNewContent("");
-        toast({ title: "Script criado!" });
-      },
-    });
+  const handleSaveFromDialog = (script: { title: string; content: string; category: string; tags: string[] }) => {
+    createScript.mutate(
+      { title: script.title, content: script.content, category: script.category, tags: script.tags },
+      { onSuccess: () => toast({ title: "Script criado!" }) }
+    );
+  };
+
+  const handleImproveWithAI = async (scriptId: string, currentContent: string, category: string) => {
+    setImprovingId(scriptId);
+    try {
+      const products = JSON.parse(localStorage.getItem("salesPlan_products") || "[]");
+      const { data, error } = await supabase.functions.invoke("generate-script", {
+        body: {
+          stage: category || "prospeccao",
+          briefing: {},
+          context: {
+            products,
+            segment: localStorage.getItem("salesPlan_segment") || "",
+            channels: JSON.parse(localStorage.getItem("salesPlan_channels") || "[]"),
+            teamSize: localStorage.getItem("salesPlan_teamSize") || "",
+          },
+          mode: "improve",
+          existingScript: currentContent,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
+        return;
+      }
+      updateScript.mutate(
+        { id: scriptId, content: data.content },
+        { onSuccess: () => toast({ title: "Script melhorado com IA!" }) }
+      );
+    } catch (e: any) {
+      toast({ title: "Erro ao melhorar script", description: e.message, variant: "destructive" });
+    } finally {
+      setImprovingId(null);
+    }
   };
 
   if (isLoading) {
@@ -107,9 +128,9 @@ export default function ClienteScripts() {
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mb-4" />
             <p className="text-sm font-medium">Nenhum script cadastrado</p>
-            <p className="text-xs text-muted-foreground mt-1 mb-4">Crie scripts para padronizar suas abordagens comerciais.</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-4">Crie scripts com IA ou manualmente para padronizar suas abordagens comerciais.</p>
             <Button size="sm" onClick={() => setShowCreate(true)}>
-              <Plus className="w-4 h-4 mr-1" /> Criar Script
+              <Sparkles className="w-4 h-4 mr-1" /> Criar com IA
             </Button>
           </CardContent>
         </Card>
@@ -160,13 +181,28 @@ export default function ClienteScripts() {
                         </div>
                         <div className="flex items-center justify-between">
                           <p className="text-[10px] text-muted-foreground">Atualizado em {new Date(s.updated_at).toLocaleDateString("pt-BR")}</p>
-                          <Button
-                            size="sm" variant="outline"
-                            className="text-[10px] h-6 px-2 text-destructive hover:text-destructive"
-                            onClick={(e) => { e.stopPropagation(); deleteScriptMutation.mutate(s.id); toast({ title: "Script excluído!" }); }}
-                          >
-                            <Trash2 className="w-2.5 h-2.5 mr-1" /> Excluir
-                          </Button>
+                          <div className="flex gap-1.5">
+                            <Button
+                              size="sm" variant="outline"
+                              className="text-[10px] h-6 px-2 gap-1"
+                              disabled={improvingId === s.id}
+                              onClick={(e) => { e.stopPropagation(); handleImproveWithAI(s.id, s.content || "", s.category || "prospeccao"); }}
+                            >
+                              {improvingId === s.id ? (
+                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-2.5 h-2.5" />
+                              )}
+                              Melhorar com IA
+                            </Button>
+                            <Button
+                              size="sm" variant="outline"
+                              className="text-[10px] h-6 px-2 text-destructive hover:text-destructive"
+                              onClick={(e) => { e.stopPropagation(); deleteScriptMutation.mutate(s.id); toast({ title: "Script excluído!" }); }}
+                            >
+                              <Trash2 className="w-2.5 h-2.5 mr-1" /> Excluir
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -190,39 +226,11 @@ export default function ClienteScripts() {
         </Tabs>
       )}
 
-      {/* Create Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Plus className="w-5 h-5 text-primary" /> Novo Script</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label className="text-xs">Título *</Label>
-              <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Ex: Script de prospecção WhatsApp" className="mt-1" />
-            </div>
-            <div>
-              <Label className="text-xs">Etapa do Funil</Label>
-              <Select value={newCategory} onValueChange={setNewCategory}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {funnelStages.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Conteúdo</Label>
-              <Textarea value={newContent} onChange={e => setNewContent(e.target.value)} rows={6} className="mt-1 font-mono text-sm" placeholder="Digite o script..." />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={!newTitle.trim() || createScript.isPending}>
-              {createScript.isPending ? "Salvando..." : "Criar Script"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ScriptGeneratorDialog
+        open={showCreate}
+        onOpenChange={setShowCreate}
+        onSave={handleSaveFromDialog}
+      />
     </div>
   );
 }
