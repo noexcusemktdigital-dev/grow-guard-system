@@ -1,130 +1,53 @@
 
 
-# Redes Sociais — Artes com IA + Editor de Texto + Limites por Plano
+# Melhoria das Artes de Redes Sociais + Integracao com Conteudos
 
-Implementacao completa da pagina de Redes Sociais com geracao de artes via IA, editor de texto integrado (Canvas), e limites mensais por plano. Inclui tambem a atualizacao dos limites de conteudo na pagina de Conteudos.
-
----
-
-## 1. Limites Mensais por Plano
-
-Adicionar campos `maxContentCampaigns` e `maxSocialArts` ao `PlanConfig` em `src/constants/plans.ts`:
-
-| Plano | Campanhas de Conteudo/mes | Artes de Redes Sociais/mes |
-|-------|--------------------------|---------------------------|
-| Starter | 1 campanha | 8 artes (4 posts x Feed+Story) |
-| Growth | 3 campanhas | 20 artes (10 posts) |
-| Scale | Ilimitado | Ilimitado |
-
-O frontend consulta o plano atual via `useClienteSubscription` e bloqueia a criacao quando o limite for atingido, exibindo um card de upgrade.
+Atualizar as edge functions e o frontend para melhorar drasticamente a qualidade das artes geradas e permitir importar conteudos ja criados como base para as artes.
 
 ---
 
-## 2. Redes Sociais — Reescrita Completa
+## 1. Melhorar `generate-social-concepts` (Edge Function)
 
-### Estrutura de Abas
+Atualizar o system prompt para receber novos campos (`tipo_post`, `nivel`, `descricao_produto`) e gerar prompts visuais muito mais detalhados por categoria:
 
-| Aba | Conteudo |
-|-----|----------|
-| Campanhas | Wizard de criacao + galeria com editor de texto |
-| Identidade Visual | Base de conhecimento visual (manter existente) |
-| Calendario | Calendario de publicacoes (manter existente) |
+- **Produto**: foto de estudio profissional, iluminacao, superficie, fundo
+- **Promocao**: design grafico com formas geometricas, urgencia, gradientes
+- **Institucional**: branding corporativo, composicao limpa, sofisticada
+- **Depoimento**: pessoas reais, emocao, autenticidade
+- **Educativo**: elementos didaticos, clareza visual
 
-### Wizard de Criacao (3 etapas)
-
-**Etapa 1 — Briefing Visual**
-- Mes, objetivo, estilo visual, cores, temas, promocoes, observacoes
-- Quantidade de posts (cada post = 1 Feed + 1 Story)
-- Validacao contra limite do plano antes de prosseguir
-
-**Etapa 2 — Geracao com IA (sequencial com progresso)**
-1. Chama `generate-social-concepts` (gemini-3-flash-preview) para gerar conceitos: titulo, legenda, CTA, hashtags, prompt visual
-2. Para cada conceito, chama `generate-social-image` (gemini-3-pro-image-preview) 2x: Feed (1:1) e Story (9:16)
-3. Imagens salvas no bucket `social-arts`
-4. Progress bar: "Gerando arte 3 de 10..."
-
-**Etapa 3 — Galeria + Editor de Texto**
-Grid de cards com imagem real. Ao clicar:
-- Modal com imagem ampliada
-- Campos de texto pre-preenchidos pela IA (titulo, legenda, CTA)
-- Opcoes: posicao (topo/centro/rodape), cor (branco/preto/primaria), tamanho (P/M/G)
-- Canvas API renderiza texto sobre a imagem em tempo real
-- Botoes: "Baixar com Texto", "Baixar sem Texto", "Copiar Legenda", "Aprovar"
-
-### Verificacao de Limite
-
-Antes de abrir o wizard, o sistema conta quantas artes ja foram geradas no mes atual e compara com o limite do plano. Se excedido, exibe card com botao de upgrade.
+Quando receber roteiro importado de Conteudos, usar titulo/legenda/etapa do funil como contexto para prompts visuais mais relevantes.
 
 ---
 
-## 3. Conteudos — Adicionar Verificacao de Limite
+## 2. Melhorar `generate-social-image` (Edge Function)
 
-Na pagina `ClienteConteudos.tsx`, antes de abrir o wizard de nova campanha, verificar quantas campanhas ja existem no mes atual e comparar com `maxContentCampaigns` do plano. Bloquear se necessario.
+Adicionar system-level quality instructions e instrucoes por nivel de sofisticacao:
 
----
+- **Simples**: Clean, professional, effective
+- **Elaborado**: Strong composition, vibrant, polished
+- **Alto Padrao**: Ultra-premium, luxury, magazine-quality, dramatic lighting
 
-## 4. Backend — 2 Edge Functions Novas
-
-### `generate-social-concepts`
-Usa `google/gemini-3-flash-preview` com tool calling para retornar JSON estruturado:
-```text
-Input: { briefing, quantidade, estilo }
-Output: { concepts: [{ titulo, legenda, cta, hashtags[], visual_prompt_feed, visual_prompt_story }] }
-```
-
-### `generate-social-image`
-Usa `google/gemini-3-pro-image-preview` para gerar uma imagem por chamada:
-```text
-Input: { prompt, format: "feed"|"story" }
-Output: { image_base64 }
-```
-A imagem e convertida para Blob e salva no bucket `social-arts`. URL publica retornada.
-
-Prompt inclui instrucao: "Do NOT include any text or letters in the image."
+Adicionar instrucao para deixar espaco para overlay de texto na composicao.
 
 ---
 
-## 5. Storage
+## 3. Atualizar Frontend (`ClienteRedesSociais.tsx`)
 
-Criar bucket `social-arts` (publico) via migracao SQL.
+Adicionar ao wizard:
 
----
-
-## 6. Arquivos Modificados/Criados
-
-| Arquivo | Acao |
-|---------|------|
-| `src/constants/plans.ts` | Adicionar `maxContentCampaigns` e `maxSocialArts` |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Reescrita completa |
-| `src/pages/cliente/ClienteConteudos.tsx` | Adicionar verificacao de limite |
-| `supabase/functions/generate-social-concepts/index.ts` | Nova edge function |
-| `supabase/functions/generate-social-image/index.ts` | Nova edge function |
-| `supabase/config.toml` | Registrar 2 novas funcoes |
-
-Migracao SQL para criar bucket `social-arts`.
+- Campo `tipoPost` (Produto, Servico, Promocao, Institucional, Educativo, Depoimento)
+- Campo `nivel` (Simples, Elaborado, Alto Padrao)
+- Campo `descricaoProduto` (textarea opcional, visivel quando tipo = Produto ou Servico)
+- Botao "Importar de Conteudos" que busca campanhas do localStorage e permite selecionar conteudos para preencher automaticamente titulos/legendas e enriquecer o prompt visual
 
 ---
 
-## Detalhes Tecnicos
+## Arquivos Modificados
 
-### Editor Canvas
-
-Usa `<canvas>` nativo para composicao:
-1. Carrega imagem como background
-2. Renderiza texto configuravel em posicoes pre-definidas
-3. Re-renderiza a cada mudanca de texto/posicao/cor
-4. Export via `canvas.toDataURL('image/png')`
-5. Sem dependencias externas
-
-### Controle de Limites
-
-```text
-const planLimits = {
-  starter: { contentCampaigns: 1, socialArts: 8 },
-  growth:  { contentCampaigns: 3, socialArts: 20 },
-  scale:   { contentCampaigns: -1, socialArts: -1 }  // -1 = ilimitado
-};
-```
-
-O estado local (useState) armazena campanhas e artes. Persistencia em banco sera adicionada junto com a definicao final de repasse de custos.
+| Arquivo | Mudanca |
+|---------|---------|
+| `supabase/functions/generate-social-concepts/index.ts` | Prompts enriquecidos por tipo e nivel, suporte a roteiro importado |
+| `supabase/functions/generate-social-image/index.ts` | System prompt de qualidade, instrucoes por nivel |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Novos campos no wizard, botao importar conteudos |
 
