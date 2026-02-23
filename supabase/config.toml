@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.crm-lead-webhook]
 verify_jwt = false
+
+[functions.ai-generate-agent-config]
+verify_jwt = false
+
+[functions.ai-agent-simulate]
+verify_jwt = false
