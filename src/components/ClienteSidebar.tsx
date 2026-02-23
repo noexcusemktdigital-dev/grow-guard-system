@@ -4,7 +4,7 @@ import {
   LayoutDashboard, CheckSquare, ChevronLeft, ChevronRight,
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
-  ChevronDown, Link, CreditCard, Settings, Zap, Lock,
+  ChevronDown, Link, CreditCard, Settings, Zap, Lock, Trophy, ClipboardCheck,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
@@ -29,6 +29,7 @@ interface SidebarItem {
 const globalSection: SidebarItem[] = [
   { label: "Início", icon: LayoutDashboard, path: "/cliente/inicio" },
   { label: "Checklist", icon: CheckSquare, path: "/cliente/checklist" },
+  { label: "Gamificação", icon: Trophy, path: "/cliente/gamificacao" },
 ];
 
 const vendasSection: SidebarItem[] = [
@@ -51,6 +52,7 @@ const marketingSection: SidebarItem[] = [
 ];
 
 const sistemaSection: SidebarItem[] = [
+  { label: "Avaliações", icon: ClipboardCheck, path: "/cliente/avaliacoes" },
   { label: "Integrações", icon: Link, path: "/cliente/integracoes" },
   { label: "Plano & Créditos", icon: CreditCard, path: "/cliente/plano-creditos", badgeKey: "plano-creditos" },
   { label: "Configurações", icon: Settings, path: "/cliente/configuracoes" },
