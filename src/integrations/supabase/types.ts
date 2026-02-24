@@ -2690,6 +2690,8 @@ export type Database = {
       google_calendar_tokens: {
         Row: {
           access_token: string
+          client_id: string | null
+          client_secret: string | null
           created_at: string
           expires_at: string
           google_calendar_id: string | null
@@ -2701,6 +2703,8 @@ export type Database = {
         }
         Insert: {
           access_token: string
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           expires_at: string
           google_calendar_id?: string | null
@@ -2712,6 +2716,8 @@ export type Database = {
         }
         Update: {
           access_token?: string
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           expires_at?: string
           google_calendar_id?: string | null

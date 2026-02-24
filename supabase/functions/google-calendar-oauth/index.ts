@@ -7,69 +7,134 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function jsonRes(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function getAuthUser(req: Request, supabaseUrl: string) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) return null;
+
+  const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const token = authHeader.replace("Bearer ", "");
+  const { data, error } = await supabase.auth.getClaims(token);
+  if (error || !data?.claims) return null;
+  return data.claims.sub as string;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
-    const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const { action, code, redirect_uri, client_id, client_secret } = await req.json();
 
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      return new Response(
-        JSON.stringify({ error: "Google Calendar não configurado. Adicione GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // ── Save credentials (step before OAuth) ──
+    if (action === "save_credentials") {
+      if (!client_id || !client_secret) {
+        return jsonRes({ error: "Client ID e Client Secret são obrigatórios" }, 400);
+      }
+
+      const userId = await getAuthUser(req, SUPABASE_URL);
+      if (!userId) return jsonRes({ error: "Unauthorized" }, 401);
+
+      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
+      if (!orgId) return jsonRes({ error: "Organização não encontrada" }, 400);
+
+      // Upsert row with credentials only (no tokens yet)
+      const { error: upsertErr } = await serviceClient
+        .from("google_calendar_tokens")
+        .upsert(
+          {
+            organization_id: orgId,
+            user_id: userId,
+            client_id,
+            client_secret,
+            access_token: "",
+            refresh_token: "",
+            expires_at: new Date().toISOString(),
+            google_calendar_id: "primary",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (upsertErr) {
+        // Fallback: try delete + insert
+        await serviceClient.from("google_calendar_tokens").delete().eq("user_id", userId);
+        await serviceClient.from("google_calendar_tokens").insert({
+          organization_id: orgId,
+          user_id: userId,
+          client_id,
+          client_secret,
+          access_token: "",
+          refresh_token: "",
+          expires_at: new Date().toISOString(),
+          google_calendar_id: "primary",
+        });
+      }
+
+      return jsonRes({ success: true });
     }
 
-    const { action, code, redirect_uri } = await req.json();
-
-    // Step 1: Generate OAuth URL
+    // ── Generate OAuth URL (reads client_id from DB) ──
     if (action === "get_auth_url") {
+      const userId = await getAuthUser(req, SUPABASE_URL);
+      if (!userId) return jsonRes({ error: "Unauthorized" }, 401);
+
+      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: tokenRow } = await serviceClient
+        .from("google_calendar_tokens")
+        .select("client_id")
+        .eq("user_id", userId)
+        .single();
+
+      if (!tokenRow?.client_id) {
+        return jsonRes({ error: "Credenciais do Google não configuradas. Salve seu Client ID primeiro." }, 400);
+      }
+
       const callbackUri = redirect_uri || `${SUPABASE_URL}/functions/v1/google-calendar-oauth`;
       const params = new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: tokenRow.client_id,
         redirect_uri: callbackUri,
         response_type: "code",
         scope: "https://www.googleapis.com/auth/calendar",
         access_type: "offline",
         prompt: "consent",
       });
-      return new Response(
-        JSON.stringify({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+
+      return jsonRes({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
     }
 
-    // Step 2: Exchange code for tokens
+    // ── Exchange code for tokens (reads creds from DB) ──
     if (action === "exchange_code") {
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      const userId = await getAuthUser(req, SUPABASE_URL);
+      if (!userId) return jsonRes({ error: "Unauthorized" }, 401);
 
-      const supabase = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        global: { headers: { Authorization: authHeader } },
-      });
+      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: tokenRow } = await serviceClient
+        .from("google_calendar_tokens")
+        .select("id, client_id, client_secret, organization_id")
+        .eq("user_id", userId)
+        .single();
 
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-      if (claimsError || !claimsData?.claims) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (!tokenRow?.client_id || !tokenRow?.client_secret) {
+        return jsonRes({ error: "Credenciais do Google não encontradas" }, 400);
       }
-      const userId = claimsData.claims.sub;
 
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           code,
-          client_id: GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
+          client_id: tokenRow.client_id,
+          client_secret: tokenRow.client_secret,
           redirect_uri: redirect_uri || `${SUPABASE_URL}/functions/v1/google-calendar-oauth`,
           grant_type: "authorization_code",
         }),
@@ -78,90 +143,36 @@ serve(async (req) => {
       if (!tokenRes.ok) {
         const errText = await tokenRes.text();
         console.error("Google token exchange error:", errText);
-        return new Response(
-          JSON.stringify({ error: "Falha ao trocar código por token" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonRes({ error: "Falha ao trocar código por token" }, 400);
       }
 
       const tokenData = await tokenRes.json();
       const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
 
-      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
+      await serviceClient.from("google_calendar_tokens").update({
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token || "",
+        expires_at: expiresAt,
+        updated_at: new Date().toISOString(),
+      }).eq("id", tokenRow.id);
 
-      if (!orgId) {
-        return new Response(JSON.stringify({ error: "Organização não encontrada" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Upsert token
-      const { error: upsertError } = await serviceClient
-        .from("google_calendar_tokens")
-        .upsert({
-          organization_id: orgId,
-          user_id: userId,
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token || "",
-          expires_at: expiresAt,
-          google_calendar_id: "primary",
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id" });
-
-      if (upsertError) {
-        // If no unique constraint on user_id, try insert
-        await serviceClient.from("google_calendar_tokens").insert({
-          organization_id: orgId,
-          user_id: userId,
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token || "",
-          expires_at: expiresAt,
-          google_calendar_id: "primary",
-        });
-      }
-
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonRes({ success: true });
     }
 
-    // Step 3: Disconnect
+    // ── Disconnect ──
     if (action === "disconnect") {
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const supabase = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        global: { headers: { Authorization: authHeader } },
-      });
-
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claimsData } = await supabase.auth.getClaims(token);
-      const userId = claimsData?.claims?.sub;
+      const userId = await getAuthUser(req, SUPABASE_URL);
+      if (!userId) return jsonRes({ error: "Unauthorized" }, 401);
 
       const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       await serviceClient.from("google_calendar_tokens").delete().eq("user_id", userId);
 
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonRes({ success: true });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Ação inválida" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonRes({ error: "Ação inválida" }, 400);
   } catch (e) {
     console.error("google-calendar-oauth error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonRes({ error: e instanceof Error ? e.message : "Erro desconhecido" }, 500);
   }
 });
