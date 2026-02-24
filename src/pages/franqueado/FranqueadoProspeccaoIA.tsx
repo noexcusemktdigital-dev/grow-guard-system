@@ -36,8 +36,15 @@ import {
   Search,
   Pencil,
   Unlink,
+  BookOpen,
+  CalendarClock,
+  CalendarPlus,
+  ClipboardList,
+  Handshake,
+  UserPlus,
 } from "lucide-react";
 import { useState } from "react";
+import { playbooks, PLAYBOOK_CATEGORIAS, type Playbook } from "@/constants/prospectionPlaybooks";
 import { toast } from "sonner";
 import {
   useProspections,
@@ -502,6 +509,160 @@ function ScriptsTab() {
   );
 }
 
+// ── Playbooks Icon Map ──────────────────────────────────────────
+
+const playbookIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Phone,
+  CalendarClock,
+  Target,
+  ShieldQuestion,
+  CalendarPlus,
+  ClipboardList,
+  Handshake,
+  UserPlus,
+};
+
+const categoriaCores: Record<string, string> = {
+  Abordagem: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  Análise: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  Objeções: "bg-red-500/10 text-red-600 dark:text-red-400",
+  Fechamento: "bg-green-500/10 text-green-600 dark:text-green-400",
+};
+
+// ── Playbooks Tab ───────────────────────────────────────────────
+
+function PlaybooksTab() {
+  const [filtro, setFiltro] = useState<string>("Todos");
+  const [selected, setSelected] = useState<Playbook | null>(null);
+
+  const filtered = filtro === "Todos"
+    ? playbooks
+    : playbooks.filter((p) => p.categoria === filtro);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copiado!");
+  };
+
+  return (
+    <>
+      <div className="space-y-4">
+        {/* Filtros */}
+        <div className="flex gap-1.5 flex-wrap">
+          {["Todos", ...PLAYBOOK_CATEGORIAS].map((cat) => (
+            <Button
+              key={cat}
+              variant={filtro === cat ? "default" : "outline"}
+              size="sm"
+              className="text-xs"
+              onClick={() => setFiltro(cat)}
+            >
+              {cat}
+            </Button>
+          ))}
+        </div>
+
+        {/* Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {filtered.map((pb) => {
+            const Icon = playbookIconMap[pb.icone] || BookOpen;
+            return (
+              <Card
+                key={pb.id}
+                className="glass-card cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all"
+                onClick={() => setSelected(pb)}
+              >
+                <CardContent className="p-4 flex items-start gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-semibold truncate">{pb.titulo}</p>
+                      <Badge className={`text-[10px] ${categoriaCores[pb.categoria] || ""}`} variant="secondary">
+                        {pb.categoria}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{pb.descricao}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{pb.secoes.length} seções</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Detail Sheet */}
+      <Sheet open={!!selected} onOpenChange={() => setSelected(null)}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              {selected && (() => {
+                const Icon = playbookIconMap[selected.icone] || BookOpen;
+                return <Icon className="h-5 w-5 text-primary" />;
+              })()}
+              {selected?.titulo}
+            </SheetTitle>
+          </SheetHeader>
+          {selected && (
+            <div className="mt-4 space-y-6">
+              <p className="text-sm text-muted-foreground">{selected.descricao}</p>
+
+              {selected.secoes.map((secao, i) => (
+                <div key={i} className="space-y-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">{secao.titulo}</h3>
+                  <p className="text-xs text-muted-foreground">{secao.descricao}</p>
+
+                  {secao.passos && (
+                    <div className="space-y-1.5">
+                      {secao.passos.map((p, j) => (
+                        <div key={j} className="flex items-start gap-2 text-sm">
+                          <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">{j + 1}</span>
+                          <span>{p}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {secao.script && (
+                    <div className="bg-muted/50 rounded-md p-3 relative">
+                      <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => copyToClipboard(secao.script!)}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                      <p className="text-sm whitespace-pre-line pr-10">{secao.script}</p>
+                    </div>
+                  )}
+
+                  {secao.checklist && (
+                    <div className="space-y-1">
+                      {secao.checklist.map((item, j) => (
+                        <div key={j} className="flex items-start gap-2 text-sm">
+                          <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {secao.dicas && (
+                    <div className="bg-muted/50 rounded-md p-3 space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">Dicas</p>
+                      {secao.dicas.map((d, j) => (
+                        <p key={j} className="text-sm">{d}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────
 
 export default function FranqueadoProspeccaoIA() {
@@ -510,14 +671,19 @@ export default function FranqueadoProspeccaoIA() {
       <PageHeader title="Prospecção IA" subtitle="Planeje prospecções, gere scripts comerciais e arquive estratégias com IA" />
 
       <Tabs defaultValue="nova">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="nova"><Sparkles className="w-4 h-4 mr-1" /> Nova</TabsTrigger>
+          <TabsTrigger value="playbooks"><BookOpen className="w-4 h-4 mr-1" /> Playbooks</TabsTrigger>
           <TabsTrigger value="historico"><History className="w-4 h-4 mr-1" /> Histórico</TabsTrigger>
           <TabsTrigger value="scripts"><MessageSquare className="w-4 h-4 mr-1" /> Scripts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="nova" className="space-y-6">
           <NovaProspeccaoTab />
+        </TabsContent>
+
+        <TabsContent value="playbooks" className="space-y-6">
+          <PlaybooksTab />
         </TabsContent>
 
         <TabsContent value="historico" className="space-y-6">

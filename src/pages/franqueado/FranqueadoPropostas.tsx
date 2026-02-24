@@ -1,10 +1,24 @@
-import { useState, useMemo } from "react";
+import { useState, useRef } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { KpiCard } from "@/components/KpiCard";
+import {
+  FileText,
+  DollarSign,
+  Inbox,
+  Calculator,
+  Copy,
+  Trash2,
+  Send,
+  Eye,
+} from "lucide-react";
+import { useCrmProposals, useCrmProposalMutations } from "@/hooks/useCrmProposals";
+import { useCrmLeads } from "@/hooks/useCrmLeads";
 import {
   Select,
   SelectContent,
@@ -12,400 +26,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
-import { KpiCard } from "@/components/KpiCard";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  FileText,
-  DollarSign,
-  Inbox,
-  Calculator,
-  ChevronRight,
-  ChevronLeft,
-  Copy,
-  Trash2,
-  Send,
-  CheckCircle2,
-  Package,
-} from "lucide-react";
-import { useCrmProposals, useCrmProposalMutations, type CrmProposal } from "@/hooks/useCrmProposals";
-import { useCrmLeads } from "@/hooks/useCrmLeads";
-import { NOE_SERVICE_CATALOG, NOE_MODULES, type NoeService } from "@/constants/noeServices";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 
-// ── Types ────────────────────────────────────────────────────────
+// Calculator imports
+import { useCalculator } from "@/hooks/useCalculator";
+import { modules } from "@/data/services";
+import { ModuleAccordion } from "@/components/calculator/ModuleAccordion";
+import { DurationSelector } from "@/components/calculator/DurationSelector";
+import { PaymentSimulation } from "@/components/calculator/PaymentSimulation";
+import { ProposalSummary } from "@/components/calculator/ProposalSummary";
+import { ProposalGenerator } from "@/components/calculator/ProposalGenerator";
+import { SummaryDrawer } from "@/components/calculator/SummaryDrawer";
 
-interface SelectedService extends NoeService {
-  quantity: number;
-}
-
-// ── Step 1: Service Selection ───────────────────────────────────
-
-function StepServiceSelector({
-  selected,
-  onToggle,
-  onQuantityChange,
-}: {
-  selected: SelectedService[];
-  onToggle: (service: NoeService) => void;
-  onQuantityChange: (id: string, qty: number) => void;
-}) {
-  const [activeModule, setActiveModule] = useState<string>(NOE_MODULES[0]);
-  const selectedIds = new Set(selected.map((s) => s.id));
-
-  const moduleServices = NOE_SERVICE_CATALOG.filter((s) => s.module === activeModule);
-  const setupTotal = selected.filter((s) => s.type === "unitario").reduce((sum, s) => sum + s.basePrice * s.quantity, 0);
-  const mensalTotal = selected.filter((s) => s.type === "mensal").reduce((sum, s) => sum + s.basePrice * s.quantity, 0);
-
-  return (
-    <div className="space-y-4">
-      {/* Module tabs */}
-      <div className="flex gap-1.5 flex-wrap">
-        {NOE_MODULES.map((m) => {
-          const count = selected.filter((s) => s.module === m).length;
-          return (
-            <Button
-              key={m}
-              variant={activeModule === m ? "default" : "outline"}
-              size="sm"
-              className="text-xs"
-              onClick={() => setActiveModule(m)}
-            >
-              {m}
-              {count > 0 && (
-                <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
-                  {count}
-                </Badge>
-              )}
-            </Button>
-          );
-        })}
-      </div>
-
-      {/* Services list */}
-      <Card className="glass-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-8"></TableHead>
-              <TableHead>Serviço</TableHead>
-              <TableHead className="w-20">Tipo</TableHead>
-              <TableHead className="w-24">Valor</TableHead>
-              <TableHead className="w-20">Qtd</TableHead>
-              <TableHead className="w-24 text-right">Subtotal</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {moduleServices.map((service) => {
-              const isSelected = selectedIds.has(service.id);
-              const sel = selected.find((s) => s.id === service.id);
-              const qty = sel?.quantity ?? 1;
-              return (
-                <TableRow key={service.id} className={isSelected ? "bg-primary/5" : ""}>
-                  <TableCell>
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => onToggle(service)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium text-sm">{service.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={service.type === "unitario" ? "outline" : "secondary"} className="text-[10px]">
-                      {service.type === "unitario" ? "Setup" : "Mensal"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">R$ {service.basePrice.toLocaleString()}</TableCell>
-                  <TableCell>
-                    {isSelected && (
-                      <Input
-                        type="number"
-                        min={1}
-                        value={qty}
-                        onChange={(e) => onQuantityChange(service.id, Math.max(1, parseInt(e.target.value) || 1))}
-                        className="h-7 w-16 text-xs"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right text-sm font-medium">
-                    {isSelected ? `R$ ${(service.basePrice * qty).toLocaleString()}` : "—"}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </Card>
-
-      {/* Summary */}
-      <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
-        <div className="flex gap-6">
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase font-semibold">Setup (unitário)</p>
-            <p className="text-sm font-bold">R$ {setupTotal.toLocaleString()}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase font-semibold">Mensal (recorrente)</p>
-            <p className="text-sm font-bold">R$ {mensalTotal.toLocaleString()}</p>
-          </div>
-        </div>
-        <Badge variant="default" className="text-xs">
-          {selected.length} serviço{selected.length !== 1 ? "s" : ""}
-        </Badge>
-      </div>
-    </div>
-  );
-}
-
-// ── Step 2: Payment Config ──────────────────────────────────────
-
-function StepPaymentConfig({
-  selected,
-  duration,
-  setDuration,
-  setupInstallments,
-  setSetupInstallments,
-}: {
-  selected: SelectedService[];
-  duration: number;
-  setDuration: (d: number) => void;
-  setupInstallments: number;
-  setSetupInstallments: (n: number) => void;
-}) {
-  const setupTotal = selected.filter((s) => s.type === "unitario").reduce((sum, s) => sum + s.basePrice * s.quantity, 0);
-  const mensalTotal = selected.filter((s) => s.type === "mensal").reduce((sum, s) => sum + s.basePrice * s.quantity, 0);
-  const setupPerMonth = setupInstallments > 0 ? setupTotal / setupInstallments : 0;
-
-  const months = Array.from({ length: duration }, (_, i) => {
-    const mes = i + 1;
-    const hasSetup = mes <= setupInstallments;
-    const mensal = mensalTotal;
-    const setup = hasSetup ? setupPerMonth : 0;
-    return { mes, mensal, setup, total: mensal + setup };
-  });
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Duração do Projeto</label>
-          <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 Mês (entrega única)</SelectItem>
-              <SelectItem value="6">6 Meses</SelectItem>
-              <SelectItem value="12">12 Meses</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {setupTotal > 0 && duration > 1 && (
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Parcelamento do Setup</label>
-            <Select value={String(setupInstallments)} onValueChange={(v) => setSetupInstallments(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">À vista (1x)</SelectItem>
-                <SelectItem value="3">3x</SelectItem>
-                <SelectItem value="6">6x</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-
-      {/* Payment flow */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-bold">Fluxo de Pagamento</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mês</TableHead>
-                <TableHead className="text-right">Mensal</TableHead>
-                {setupTotal > 0 && <TableHead className="text-right">Setup</TableHead>}
-                <TableHead className="text-right font-bold">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {months.map((m) => (
-                <TableRow key={m.mes}>
-                  <TableCell className="text-sm">Mês {m.mes}</TableCell>
-                  <TableCell className="text-right text-sm">R$ {m.mensal.toLocaleString()}</TableCell>
-                  {setupTotal > 0 && (
-                    <TableCell className="text-right text-sm">
-                      {m.setup > 0 ? `R$ ${Math.round(m.setup).toLocaleString()}` : "—"}
-                    </TableCell>
-                  )}
-                  <TableCell className="text-right text-sm font-bold">R$ {Math.round(m.total).toLocaleString()}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-muted/50 rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase font-semibold">Setup Total</p>
-          <p className="text-lg font-bold">R$ {setupTotal.toLocaleString()}</p>
-        </div>
-        <div className="bg-muted/50 rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase font-semibold">Mensal</p>
-          <p className="text-lg font-bold">R$ {mensalTotal.toLocaleString()}</p>
-        </div>
-        <div className="bg-primary/10 rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase font-semibold">1º Mês</p>
-          <p className="text-lg font-bold text-primary">R$ {Math.round(months[0]?.total || 0).toLocaleString()}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Step 3: Preview ─────────────────────────────────────────────
-
-function StepPreview({
-  selected,
-  duration,
-  setupInstallments,
-  clientName,
-  setClientName,
-  clientCompany,
-  setClientCompany,
-  clientCnpj,
-  setClientCnpj,
-  onSave,
-  saving,
-}: {
-  selected: SelectedService[];
-  duration: number;
-  setupInstallments: number;
-  clientName: string;
-  setClientName: (v: string) => void;
-  clientCompany: string;
-  setClientCompany: (v: string) => void;
-  clientCnpj: string;
-  setClientCnpj: (v: string) => void;
-  onSave: () => void;
-  saving: boolean;
-}) {
-  const setupTotal = selected.filter((s) => s.type === "unitario").reduce((sum, s) => sum + s.basePrice * s.quantity, 0);
-  const mensalTotal = selected.filter((s) => s.type === "mensal").reduce((sum, s) => sum + s.basePrice * s.quantity, 0);
-  const setupPerMonth = setupInstallments > 0 ? setupTotal / setupInstallments : 0;
-
-  return (
-    <div className="space-y-4">
-      {/* Client info */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-bold">Dados do Cliente</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome</label>
-              <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nome do cliente" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Empresa</label>
-              <Input value={clientCompany} onChange={(e) => setClientCompany(e.target.value)} placeholder="Empresa" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ</label>
-              <Input value={clientCnpj} onChange={(e) => setClientCnpj(e.target.value)} placeholder="00.000.000/0000-00" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Proposal preview */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <FileText className="w-4 h-4 text-primary" /> Resumo da Proposta
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Duração</span>
-            <span className="font-medium">{duration} {duration === 1 ? "mês" : "meses"}</span>
-          </div>
-          <Separator />
-
-          {/* Services grouped by module */}
-          {NOE_MODULES.map((mod) => {
-            const modServices = selected.filter((s) => s.module === mod);
-            if (modServices.length === 0) return null;
-            return (
-              <div key={mod}>
-                <p className="text-xs font-bold uppercase text-muted-foreground mb-2">{mod}</p>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Serviço</TableHead>
-                      <TableHead className="w-16">Tipo</TableHead>
-                      <TableHead className="w-12 text-center">Qtd</TableHead>
-                      <TableHead className="w-24 text-right">Valor</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {modServices.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell className="text-sm">{s.name}</TableCell>
-                        <TableCell><Badge variant="outline" className="text-[10px]">{s.type === "unitario" ? "Setup" : "Mensal"}</Badge></TableCell>
-                        <TableCell className="text-center text-sm">{s.quantity}</TableCell>
-                        <TableCell className="text-right text-sm font-medium">R$ {(s.basePrice * s.quantity).toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            );
-          })}
-
-          <Separator />
-
-          {/* Investment summary */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Setup (unitário)</span>
-              <span className="font-medium">R$ {setupTotal.toLocaleString()}</span>
-            </div>
-            {setupTotal > 0 && setupInstallments > 1 && (
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Parcelado em {setupInstallments}x</span>
-                <span>R$ {Math.round(setupPerMonth).toLocaleString()}/mês</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm">
-              <span>Mensal (recorrente)</span>
-              <span className="font-medium">R$ {mensalTotal.toLocaleString()}/mês</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between text-sm font-bold">
-              <span>1º Mês</span>
-              <span className="text-primary">R$ {Math.round(mensalTotal + (setupInstallments > 0 ? setupPerMonth : 0)).toLocaleString()}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        <Button className="flex-1" onClick={onSave} disabled={saving}>
-          {saving ? "Salvando..." : "Salvar Proposta"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ── Calculator Wizard ───────────────────────────────────────────
+// ── Calculator Tab ──────────────────────────────────────────────
 
 function CalculadoraTab() {
   const [searchParams] = useSearchParams();
@@ -413,166 +47,214 @@ function CalculadoraTab() {
   const { data: leads } = useCrmLeads();
   const { createProposal } = useCrmProposalMutations();
 
-  const [step, setStep] = useState(0);
-  const [selected, setSelected] = useState<SelectedService[]>([]);
-  const [duration, setDuration] = useState(6);
-  const [setupInstallments, setSetupInstallments] = useState(3);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showProposal, setShowProposal] = useState(false);
   const [leadId, setLeadId] = useState(leadIdFromUrl || "");
-  const [clientName, setClientName] = useState("");
-  const [clientCompany, setClientCompany] = useState("");
-  const [clientCnpj, setClientCnpj] = useState("");
-  const [saved, setSaved] = useState(false);
+  const proposalRef = useRef<HTMLDivElement>(null);
 
-  const toggleService = (service: NoeService) => {
-    setSelected((prev) => {
-      const exists = prev.find((s) => s.id === service.id);
-      if (exists) return prev.filter((s) => s.id !== service.id);
-      return [...prev, { ...service, quantity: 1 }];
-    });
+  const {
+    duration,
+    selectedServices,
+    clientName,
+    paymentOption,
+    setDuration,
+    setClientName,
+    setPaymentOption,
+    toggleService,
+    updateServiceQuantity,
+    updateServicePackage,
+    updateYoutubeMinutes,
+    clearSelection,
+    isServiceSelected,
+    getServiceSelection,
+    totals,
+    getSelectedServicesByModule,
+  } = useCalculator();
+
+  const scrollToProposal = () => {
+    setShowProposal(true);
+    setTimeout(() => {
+      proposalRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
-  const changeQuantity = (id: string, qty: number) => {
-    setSelected((prev) => prev.map((s) => (s.id === id ? { ...s, quantity: qty } : s)));
+  const handleClear = () => {
+    clearSelection();
+    setShowProposal(false);
   };
-
-  const setupTotal = selected.filter((s) => s.type === "unitario").reduce((sum, s) => sum + s.basePrice * s.quantity, 0);
-  const mensalTotal = selected.filter((s) => s.type === "mensal").reduce((sum, s) => sum + s.basePrice * s.quantity, 0);
-  const totalValue = setupTotal + mensalTotal * duration;
 
   const handleSave = () => {
-    const title = clientCompany
-      ? `Proposta - ${clientCompany}`
+    const title = clientName
+      ? `Proposta - ${clientName}`
       : `Proposta - ${new Date().toLocaleDateString("pt-BR")}`;
 
-    const items = selected.map((s) => ({
-      product_id: null,
-      name: s.name,
-      quantity: s.quantity,
-      unit_price: s.basePrice,
-      discount: 0,
-      total: s.basePrice * s.quantity,
-    }));
+    const selectedByModule = getSelectedServicesByModule();
+    const items = Object.values(selectedByModule).flatMap(({ selections }) =>
+      selections.map((s) => ({
+        product_id: null,
+        name: s.service.name,
+        quantity: s.quantity,
+        unit_price: s.price,
+        discount: 0,
+        total: s.price,
+      }))
+    );
 
     createProposal.mutate(
       {
         title,
-        value: totalValue,
+        value: totals.totalPeriod,
         status: "draft",
         lead_id: leadId || null,
         items,
+        payment_terms: paymentOption,
         content: {
           client_name: clientName,
-          client_company: clientCompany,
-          client_cnpj: clientCnpj,
           duration,
-          setup_installments: setupInstallments,
-          services: selected.map((s) => ({
-            id: s.id,
-            module: s.module,
-            name: s.name,
-            type: s.type,
-            basePrice: s.basePrice,
-            quantity: s.quantity,
-          })),
+          payment_option: paymentOption,
+          services: selectedServices,
         } as any,
       },
       {
-        onSuccess: () => {
-          toast.success("Proposta salva com sucesso!");
-          setSaved(true);
-        },
+        onSuccess: () => toast.success("Proposta salva com sucesso!"),
         onError: (e: any) => toast.error(e.message || "Erro ao salvar proposta"),
       }
     );
   };
 
-  if (saved) {
-    return (
-      <div className="text-center py-16 space-y-4">
-        <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
-        <p className="text-sm font-medium">Proposta salva com sucesso!</p>
-        <Button variant="outline" onClick={() => { setSaved(false); setStep(0); setSelected([]); }}>
-          Criar Nova Proposta
-        </Button>
-      </div>
-    );
-  }
-
-  const stepLabels = ["Serviços", "Pagamento", "Preview"];
+  const hasSelections = selectedServices.length > 0;
 
   return (
-    <div className="space-y-4">
-      {/* Step indicator */}
-      <div className="flex items-center gap-2 justify-center">
-        {stepLabels.map((label, i) => (
-          <div key={i} className="flex items-center gap-1.5">
-            <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                i <= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {i + 1}
-            </div>
-            <span className={`text-xs ${i <= step ? "font-medium" : "text-muted-foreground"}`}>{label}</span>
-            {i < stepLabels.length - 1 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-          </div>
-        ))}
-      </div>
-
+    <div className="space-y-8">
       {/* Lead selector */}
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Vincular ao Lead (opcional)</label>
         <Select value={leadId} onValueChange={setLeadId}>
-          <SelectTrigger className="h-9"><SelectValue placeholder="Sem vínculo" /></SelectTrigger>
+          <SelectTrigger className="h-9 max-w-sm">
+            <SelectValue placeholder="Sem vínculo" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Sem vínculo</SelectItem>
             {(leads ?? []).map((l: any) => (
-              <SelectItem key={l.id} value={l.id}>{l.name} {l.company ? `- ${l.company}` : ""}</SelectItem>
+              <SelectItem key={l.id} value={l.id}>
+                {l.name} {l.company ? `- ${l.company}` : ""}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Steps */}
-      {step === 0 && (
-        <StepServiceSelector selected={selected} onToggle={toggleService} onQuantityChange={changeQuantity} />
-      )}
-      {step === 1 && (
-        <StepPaymentConfig
-          selected={selected}
-          duration={duration}
-          setDuration={setDuration}
-          setupInstallments={setupInstallments}
-          setSetupInstallments={setSetupInstallments}
+      {/* Section 1: Modules and Services */}
+      <section>
+        <div className="mb-4 text-center">
+          <h2 className="text-lg md:text-xl font-bold text-foreground">Selecione os Serviços</h2>
+          <p className="mt-1 text-xs md:text-sm text-muted-foreground">Escolha os serviços por módulo para montar sua proposta</p>
+        </div>
+        <ModuleAccordion
+          modules={modules}
+          isServiceSelected={isServiceSelected}
+          getServiceSelection={getServiceSelection}
+          onToggleService={toggleService}
+          onUpdateQuantity={updateServiceQuantity}
+          onUpdatePackage={updateServicePackage}
+          onUpdateYoutubeMinutes={updateYoutubeMinutes}
         />
-      )}
-      {step === 2 && (
-        <StepPreview
-          selected={selected}
-          duration={duration}
-          setupInstallments={setupInstallments}
-          clientName={clientName}
-          setClientName={setClientName}
-          clientCompany={clientCompany}
-          setClientCompany={setClientCompany}
-          clientCnpj={clientCnpj}
-          setClientCnpj={setClientCnpj}
-          onSave={handleSave}
-          saving={createProposal.isPending}
-        />
+      </section>
+
+      {/* Section 2: Proposal Summary */}
+      {hasSelections && (
+        <section>
+          <ProposalSummary
+            duration={duration}
+            selectedByModule={getSelectedServicesByModule()}
+            totals={totals}
+            paymentOption={paymentOption}
+          />
+        </section>
       )}
 
-      {/* Navigation */}
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
-          <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
-        </Button>
-        {step < 2 && (
-          <Button onClick={() => setStep((s) => s + 1)} disabled={step === 0 && selected.length === 0}>
-            Próximo <ChevronRight className="w-4 h-4 ml-1" />
+      {/* Section 3: Duration Selection */}
+      {hasSelections && (
+        <section>
+          <DurationSelector selected={duration} onSelect={setDuration} />
+        </section>
+      )}
+
+      {/* Section 4: Payment Options */}
+      {hasSelections && duration && duration > 1 && (
+        <section>
+          <PaymentSimulation
+            totals={totals}
+            duration={duration}
+            selectedOption={paymentOption}
+            onSelectOption={setPaymentOption}
+          />
+        </section>
+      )}
+
+      {/* Section 5: Action Buttons */}
+      {hasSelections && duration && (
+        <section className="flex flex-col sm:flex-row justify-center gap-3">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setDrawerOpen(true)}
+            className="gap-2"
+          >
+            <Eye className="h-5 w-5" />
+            Ver Detalhe
           </Button>
-        )}
-      </div>
+          <Button
+            size="lg"
+            className="gap-2"
+            onClick={scrollToProposal}
+          >
+            <FileText className="h-5 w-5" />
+            Gerar Proposta
+          </Button>
+        </section>
+      )}
+
+      {/* Section 6: Proposal Generator */}
+      {showProposal && hasSelections && duration && (
+        <section ref={proposalRef}>
+          <ProposalGenerator
+            duration={duration}
+            clientName={clientName}
+            onClientNameChange={setClientName}
+            selectedByModule={getSelectedServicesByModule()}
+            totals={totals}
+            paymentOption={paymentOption}
+            onClear={handleClear}
+            onSave={handleSave}
+            saving={createProposal.isPending}
+          />
+        </section>
+      )}
+
+      {/* Empty State */}
+      {!hasSelections && (
+        <div className="text-center py-12">
+          <div className="mx-auto max-w-md">
+            <div className="mb-4 flex justify-center">
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <FileText className="h-10 w-10 text-primary" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-foreground">Nenhum serviço selecionado</h3>
+            <p className="mt-2 text-muted-foreground">Selecione os serviços nos módulos acima para começar a montar sua proposta.</p>
+          </div>
+        </div>
+      )}
+
+      <SummaryDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        duration={duration}
+        selectedByModule={getSelectedServicesByModule()}
+        totals={totals}
+        onGoToPayment={scrollToProposal}
+      />
     </div>
   );
 }
