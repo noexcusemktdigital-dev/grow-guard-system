@@ -112,6 +112,28 @@ export default function FranqueadoMateriais() {
     return list;
   }, [assets, currentFolderId, activeCategory, categoryRootFolders, search, typeFilter]);
 
+  const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  ];
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  const isRedesSociaisRoot = activeCategory === "redes-sociais" && !currentFolderId;
+
+  const monthFolderMap = useMemo(() => {
+    if (!isRedesSociaisRoot || !folders) return {};
+    const map: Record<string, DbFolder> = {};
+    for (const f of categoryRootFolders) {
+      const lower = f.name.toLowerCase().trim();
+      monthNames.forEach((m, i) => {
+        if (lower.includes(m.toLowerCase()) || lower === String(i + 1).padStart(2, "0")) {
+          map[m] = f;
+        }
+      });
+    }
+    return map;
+  }, [isRedesSociaisRoot, folders, categoryRootFolders]);
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -216,6 +238,39 @@ export default function FranqueadoMateriais() {
           </span>
         ))}
       </div>
+
+      {/* Month grid for Redes Sociais */}
+      {isRedesSociaisRoot && (
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">{currentYear}</h3>
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            {monthNames.map((month, idx) => {
+              const folder = monthFolderMap[month];
+              const isPast = idx < currentMonth;
+              const isCurrent = idx === currentMonth;
+              return (
+                <Card
+                  key={month}
+                  className={`cursor-pointer group transition-all hover:shadow-md ${
+                    isCurrent ? "ring-2 ring-pink-500/50 bg-pink-500/5" : ""
+                  } ${!folder && isPast ? "opacity-50" : ""}`}
+                  onClick={() => folder && handleNavigateFolder(folder.id)}
+                >
+                  <CardContent className="p-4 text-center space-y-1">
+                    <CalendarDays className={`w-6 h-6 mx-auto ${isCurrent ? "text-pink-500" : "text-muted-foreground/50 group-hover:text-primary"} transition-colors`} />
+                    <p className={`text-xs font-bold ${isCurrent ? "text-pink-600 dark:text-pink-400" : ""}`}>{month}</p>
+                    {folder ? (
+                      <p className="text-[10px] text-muted-foreground">Disponível</p>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground/40">—</p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Filters bar */}
       <div className="flex flex-wrap items-center gap-3">
