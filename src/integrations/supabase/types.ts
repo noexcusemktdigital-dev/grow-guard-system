@@ -1164,48 +1164,85 @@ export type Database = {
       }
       contracts: {
         Row: {
+          client_address: string | null
+          client_document: string | null
+          client_phone: string | null
           content: string | null
           created_at: string
           created_by: string | null
+          duration_months: number | null
+          end_date: string | null
           id: string
+          lead_id: string | null
+          monthly_value: number | null
           organization_id: string
+          service_description: string | null
           signed_at: string | null
           signer_email: string | null
           signer_name: string | null
+          start_date: string | null
           status: string
           template_id: string | null
           title: string
+          total_value: number | null
           updated_at: string
         }
         Insert: {
+          client_address?: string | null
+          client_document?: string | null
+          client_phone?: string | null
           content?: string | null
           created_at?: string
           created_by?: string | null
+          duration_months?: number | null
+          end_date?: string | null
           id?: string
+          lead_id?: string | null
+          monthly_value?: number | null
           organization_id: string
+          service_description?: string | null
           signed_at?: string | null
           signer_email?: string | null
           signer_name?: string | null
+          start_date?: string | null
           status?: string
           template_id?: string | null
           title: string
+          total_value?: number | null
           updated_at?: string
         }
         Update: {
+          client_address?: string | null
+          client_document?: string | null
+          client_phone?: string | null
           content?: string | null
           created_at?: string
           created_by?: string | null
+          duration_months?: number | null
+          end_date?: string | null
           id?: string
+          lead_id?: string | null
+          monthly_value?: number | null
           organization_id?: string
+          service_description?: string | null
           signed_at?: string | null
           signer_email?: string | null
           signer_name?: string | null
+          start_date?: string | null
           status?: string
           template_id?: string | null
           title?: string
+          total_value?: number | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contracts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contracts_organization_id_fkey"
             columns: ["organization_id"]
@@ -2144,6 +2181,63 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_closings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_url: string | null
+          id: string
+          month: number
+          notes: string | null
+          organization_id: string
+          status: string
+          title: string
+          unit_id: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_url?: string | null
+          id?: string
+          month: number
+          notes?: string | null
+          organization_id: string
+          status?: string
+          title: string
+          unit_id?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_url?: string | null
+          id?: string
+          month?: number
+          notes?: string | null
+          organization_id?: string
+          status?: string
+          title?: string
+          unit_id?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_closings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_closings_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
