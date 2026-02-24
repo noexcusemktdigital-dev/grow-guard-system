@@ -7,7 +7,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function refreshAccessToken(refreshToken: string, clientId: string, clientSecret: string): Promise<{ access_token: string; expires_in: number } | null> {
+function jsonRes(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function refreshAccessToken(refreshToken: string, clientId: string, clientSecret: string) {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -19,7 +26,7 @@ async function refreshAccessToken(refreshToken: string, clientId: string, client
     }),
   });
   if (!res.ok) return null;
-  return res.json();
+  return res.json() as Promise<{ access_token: string; expires_in: number }>;
 }
 
 serve(async (req) => {
@@ -27,21 +34,9 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!authHeader) return jsonRes({ error: "Unauthorized" }, 401);
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
-    const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
-
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      return new Response(JSON.stringify({ error: "Google Calendar não configurado" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const supabase = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
@@ -49,37 +44,30 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (claimsError || !claimsData?.claims) return jsonRes({ error: "Unauthorized" }, 401);
     const userId = claimsData.claims.sub;
 
     const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
 
-    // Get stored tokens
+    // Get stored tokens + credentials from DB
     const { data: tokenRow } = await serviceClient
       .from("google_calendar_tokens")
       .select("*")
       .eq("user_id", userId)
       .single();
 
-    if (!tokenRow) {
-      return new Response(JSON.stringify({ error: "Google Calendar não conectado" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!tokenRow) return jsonRes({ error: "Google Calendar não conectado" }, 400);
+    if (!tokenRow.client_id || !tokenRow.client_secret) {
+      return jsonRes({ error: "Credenciais do Google não configuradas" }, 400);
     }
 
     // Refresh token if expired
     let accessToken = tokenRow.access_token;
-    if (new Date(tokenRow.expires_at) <= new Date()) {
-      const refreshed = await refreshAccessToken(tokenRow.refresh_token, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
+    if (!accessToken || new Date(tokenRow.expires_at) <= new Date()) {
+      const refreshed = await refreshAccessToken(tokenRow.refresh_token, tokenRow.client_id, tokenRow.client_secret);
       if (!refreshed) {
-        return new Response(JSON.stringify({ error: "Falha ao renovar token do Google. Reconecte sua conta." }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonRes({ error: "Falha ao renovar token do Google. Reconecte sua conta." }, 401);
       }
       accessToken = refreshed.access_token;
       const newExpiry = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
@@ -91,7 +79,7 @@ serve(async (req) => {
     const { action, event } = await req.json();
     const calendarId = tokenRow.google_calendar_id || "primary";
 
-    // PULL: Fetch events from Google and insert/update locally
+    // PULL
     if (action === "pull") {
       const now = new Date();
       const timeMin = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
@@ -105,9 +93,7 @@ serve(async (req) => {
       if (!res.ok) {
         const errText = await res.text();
         console.error("Google Calendar API error:", errText);
-        return new Response(JSON.stringify({ error: "Falha ao buscar eventos do Google" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonRes({ error: "Falha ao buscar eventos do Google" }, 500);
       }
 
       const data = await res.json();
@@ -121,7 +107,6 @@ serve(async (req) => {
         const endAt = ge.end?.dateTime || ge.end?.date ? (ge.end.dateTime || `${ge.end.date}T23:59:59`) : startAt;
         const allDay = !ge.start.dateTime;
 
-        // Check if already exists
         const { data: existing } = await serviceClient
           .from("calendar_events")
           .select("id")
@@ -156,13 +141,10 @@ serve(async (req) => {
         }
       }
 
-      return new Response(
-        JSON.stringify({ success: true, imported, total: googleEvents.length }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonRes({ success: true, imported, total: googleEvents.length });
     }
 
-    // PUSH: Create/update event in Google
+    // PUSH
     if (action === "push" && event) {
       const googleEvent = {
         summary: event.title,
@@ -180,7 +162,6 @@ serve(async (req) => {
       let res;
 
       if (googleEventId) {
-        // Update existing
         res = await fetch(
           `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${googleEventId}`,
           {
@@ -190,7 +171,6 @@ serve(async (req) => {
           }
         );
       } else {
-        // Create new
         res = await fetch(
           `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`,
           {
@@ -204,48 +184,33 @@ serve(async (req) => {
       if (!res.ok) {
         const errText = await res.text();
         console.error("Google push error:", errText);
-        return new Response(JSON.stringify({ error: "Falha ao sincronizar com Google" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonRes({ error: "Falha ao sincronizar com Google" }, 500);
       }
 
       const created = await res.json();
 
-      // Update local event with google_event_id
       if (event.id && !googleEventId) {
         await serviceClient.from("calendar_events")
           .update({ google_event_id: created.id })
           .eq("id", event.id);
       }
 
-      return new Response(
-        JSON.stringify({ success: true, google_event_id: created.id }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonRes({ success: true, google_event_id: created.id });
     }
 
-    // DELETE: Remove from Google
+    // DELETE
     if (action === "delete" && event?.google_event_id) {
       await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${event.google_event_id}`,
         { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonRes({ success: true });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Ação inválida. Use: pull, push, delete" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonRes({ error: "Ação inválida. Use: pull, push, delete" }, 400);
   } catch (e) {
     console.error("google-calendar-sync error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonRes({ error: e instanceof Error ? e.message : "Erro desconhecido" }, 500);
   }
 });

@@ -7,12 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, Trash2, Edit2, ExternalLink,
-  RefreshCw, Unlink, CheckCircle2,
+  RefreshCw, Unlink, CheckCircle2, KeyRound, ArrowRight, Globe, Shield,
 } from "lucide-react";
 import { useCalendarEvents, useCalendars, useCalendarEventMutations } from "@/hooks/useCalendar";
 import {
@@ -21,6 +21,7 @@ import {
   useGoogleCalendarExchangeCode,
   useGoogleCalendarDisconnect,
   useGoogleCalendarSync,
+  useGoogleCalendarSaveCredentials,
 } from "@/hooks/useGoogleCalendar";
 import {
   addMonths, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -33,6 +34,155 @@ import { useSearchParams } from "react-router-dom";
 const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899"];
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
+/* ───────── Google Setup Wizard ───────── */
+function GoogleSetupWizard({
+  open,
+  onOpenChange,
+  onComplete,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onComplete: () => void;
+}) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const saveCredentials = useGoogleCalendarSaveCredentials();
+  const connectGoogle = useGoogleCalendarConnect();
+
+  const redirectUri = `${window.location.origin}/franqueado/agenda`;
+
+  async function handleSaveAndConnect() {
+    if (!clientId.trim() || !clientSecret.trim()) {
+      toast.error("Preencha o Client ID e Client Secret");
+      return;
+    }
+    try {
+      await saveCredentials.mutateAsync({ clientId: clientId.trim(), clientSecret: clientSecret.trim() });
+      const url = await connectGoogle.mutateAsync(redirectUri);
+      window.location.href = url;
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao salvar credenciais");
+    }
+  }
+
+  // Reset when opened
+  useEffect(() => {
+    if (open) { setStep(1); setClientId(""); setClientSecret(""); }
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Globe className="w-5 h-5 text-primary" />
+            Conectar Google Agenda
+          </DialogTitle>
+          <DialogDescription>
+            Configure suas credenciais do Google para sincronizar eventos.
+          </DialogDescription>
+        </DialogHeader>
+
+        {step === 1 && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Siga os passos abaixo para criar suas credenciais OAuth no Google:
+            </p>
+
+            <div className="space-y-3">
+              {[
+                { n: 1, text: "Acesse o Google Cloud Console", link: "https://console.cloud.google.com", linkText: "Abrir Console" },
+                { n: 2, text: "Crie um novo projeto (ou use um existente)" },
+                { n: 3, text: 'No menu lateral, vá em "APIs e Serviços" → "Biblioteca" e ative a Google Calendar API' },
+                { n: 4, text: 'Vá em "APIs e Serviços" → "Credenciais" → "Criar credenciais" → "ID do cliente OAuth 2.0"' },
+                { n: 5, text: 'Tipo de aplicação: "Aplicativo da Web"' },
+                { n: 6, text: 'Em "URIs de redirecionamento autorizados", adicione:', code: redirectUri },
+                { n: 7, text: "Copie o Client ID e Client Secret gerados" },
+              ].map((item) => (
+                <Card key={item.n} className="p-3 flex items-start gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                    {item.n}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">{item.text}</p>
+                    {item.code && (
+                      <code className="mt-1 block text-xs bg-muted px-2 py-1 rounded break-all select-all">
+                        {item.code}
+                      </code>
+                    )}
+                    {item.link && (
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                      >
+                        {item.linkText} <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button onClick={() => setStep(2)} className="gap-1">
+                Já tenho as credenciais <ArrowRight className="w-4 h-4" />
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-muted/50 border border-border flex items-start gap-2">
+              <Shield className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                Suas credenciais são armazenadas de forma segura e usadas apenas para conectar sua agenda pessoal.
+              </p>
+            </div>
+
+            <div>
+              <Label>Client ID *</Label>
+              <Input
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                placeholder="123456789-xxxxx.apps.googleusercontent.com"
+                className="font-mono text-xs"
+              />
+            </div>
+            <div>
+              <Label>Client Secret *</Label>
+              <Input
+                type="password"
+                value={clientSecret}
+                onChange={(e) => setClientSecret(e.target.value)}
+                placeholder="GOCSPX-xxxxxxxxxxxxxxxx"
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep(1)}>Voltar</Button>
+              <Button
+                onClick={handleSaveAndConnect}
+                disabled={saveCredentials.isPending || connectGoogle.isPending}
+                className="gap-1"
+              >
+                <KeyRound className="w-4 h-4" />
+                {saveCredentials.isPending || connectGoogle.isPending ? "Conectando..." : "Salvar e Conectar"}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────── Main Component ───────── */
 export default function FranqueadoAgenda() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -52,6 +202,9 @@ export default function FranqueadoAgenda() {
   const disconnectGoogle = useGoogleCalendarDisconnect();
   const syncGoogle = useGoogleCalendarSync();
   const [syncing, setSyncing] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+
+  const isGoogleConnected = googleConnection && !!(googleConnection as any).access_token && !(googleConnection as any).pending_oauth;
 
   // Handle OAuth callback
   useEffect(() => {
@@ -67,16 +220,6 @@ export default function FranqueadoAgenda() {
       });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function handleGoogleConnect() {
-    try {
-      const redirectUri = `${window.location.origin}/franqueado/agenda`;
-      const url = await connectGoogle.mutateAsync(redirectUri);
-      window.location.href = url;
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao iniciar conexão");
-    }
-  }
 
   async function handleGooglePull() {
     setSyncing(true);
@@ -121,12 +264,7 @@ export default function FranqueadoAgenda() {
 
   function openNewEvent(day?: Date) {
     setEditingEvent(null);
-    setTitle("");
-    setDescription("");
-    setLocation("");
-    setAllDay(false);
-    setColor(COLORS[4]);
-    setCalendarId("");
+    setTitle(""); setDescription(""); setLocation(""); setAllDay(false); setColor(COLORS[4]); setCalendarId("");
     if (day) {
       setStartAt(format(day, "yyyy-MM-dd'T'09:00"));
       setEndAt(format(day, "yyyy-MM-dd'T'10:00"));
@@ -140,29 +278,21 @@ export default function FranqueadoAgenda() {
 
   function openEditEvent(ev: any) {
     setEditingEvent(ev);
-    setTitle(ev.title);
-    setDescription(ev.description || "");
+    setTitle(ev.title); setDescription(ev.description || "");
     setStartAt(format(parseISO(ev.start_at), "yyyy-MM-dd'T'HH:mm"));
     setEndAt(format(parseISO(ev.end_at), "yyyy-MM-dd'T'HH:mm"));
-    setLocation(ev.location || "");
-    setAllDay(ev.all_day || false);
-    setColor(ev.color || COLORS[4]);
-    setCalendarId(ev.calendar_id || "");
-    setDetailEvent(null);
-    setFormOpen(true);
+    setLocation(ev.location || ""); setAllDay(ev.all_day || false);
+    setColor(ev.color || COLORS[4]); setCalendarId(ev.calendar_id || "");
+    setDetailEvent(null); setFormOpen(true);
   }
 
   function handleSave() {
     if (!title.trim()) { toast.error("Informe o título"); return; }
     if (!startAt || !endAt) { toast.error("Informe data/hora"); return; }
     const payload = {
-      title,
-      description: description || undefined,
-      start_at: new Date(startAt).toISOString(),
-      end_at: new Date(endAt).toISOString(),
-      location: location || undefined,
-      all_day: allDay,
-      color,
+      title, description: description || undefined,
+      start_at: new Date(startAt).toISOString(), end_at: new Date(endAt).toISOString(),
+      location: location || undefined, all_day: allDay, color,
       calendar_id: calendarId || undefined,
     };
     if (editingEvent) {
@@ -201,7 +331,7 @@ export default function FranqueadoAgenda() {
           <Badge variant="outline" className="text-[10px]">Unidade</Badge>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {googleConnection ? (
+          {isGoogleConnected ? (
             <>
               <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
                 <CheckCircle2 className="w-3 h-3 mr-1" /> Google conectado
@@ -214,7 +344,7 @@ export default function FranqueadoAgenda() {
               </Button>
             </>
           ) : (
-            <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={handleGoogleConnect} disabled={connectGoogle.isPending || loadingConnection}>
+            <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setWizardOpen(true)} disabled={loadingConnection}>
               <ExternalLink className="w-3.5 h-3.5" /> Conectar Google Agenda
             </Button>
           )}
@@ -305,6 +435,9 @@ export default function FranqueadoAgenda() {
           </div>
         </div>
       </div>
+
+      {/* Google Setup Wizard */}
+      <GoogleSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} onComplete={() => {}} />
 
       {/* Event Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
