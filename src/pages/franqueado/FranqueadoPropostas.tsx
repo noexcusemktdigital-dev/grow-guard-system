@@ -16,6 +16,7 @@ import {
   Trash2,
   Send,
   Eye,
+  Pencil,
 } from "lucide-react";
 import { useCrmProposals, useCrmProposalMutations } from "@/hooks/useCrmProposals";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
@@ -41,11 +42,11 @@ import { SummaryDrawer } from "@/components/calculator/SummaryDrawer";
 
 // ── Calculator Tab ──────────────────────────────────────────────
 
-function CalculadoraTab() {
+function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?: any; onEditComplete?: () => void }) {
   const [searchParams] = useSearchParams();
   const leadIdFromUrl = searchParams.get("lead_id");
   const { data: leads } = useCrmLeads();
-  const { createProposal } = useCrmProposalMutations();
+  const { createProposal, updateProposal } = useCrmProposalMutations();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showProposal, setShowProposal] = useState(false);
@@ -71,12 +72,18 @@ function CalculadoraTab() {
     getSelectedServicesByModule,
   } = useCalculator();
 
-  // Clear saved selections when no lead_id in URL
+  // Load editing proposal data
   useEffect(() => {
-    if (!leadIdFromUrl) {
+    if (editingProposal?.content) {
+      const c = editingProposal.content;
+      if (c.client_name) setClientName(c.client_name);
+      if (c.duration) setDuration(c.duration);
+      if (c.payment_option) setPaymentOption(c.payment_option);
+      if (editingProposal.lead_id) setLeadId(editingProposal.lead_id);
+    } else if (!leadIdFromUrl) {
       clearSelection();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editingProposal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const scrollToProposal = () => {
     setShowProposal(true);
@@ -107,26 +114,35 @@ function CalculadoraTab() {
       }))
     );
 
-    createProposal.mutate(
-      {
-        title,
-        value: totals.totalPeriod,
-        status: "draft",
-        lead_id: leadId || null,
-        items,
-        payment_terms: paymentOption,
-        content: {
-          client_name: clientName,
-          duration,
-          payment_option: paymentOption,
-          services: selectedServices,
-        } as any,
-      },
-      {
+    const payload = {
+      title,
+      value: totals.totalPeriod,
+      status: "draft" as const,
+      lead_id: leadId || null,
+      items,
+      payment_terms: paymentOption,
+      content: {
+        client_name: clientName,
+        duration,
+        payment_option: paymentOption,
+        services: selectedServices,
+      } as any,
+    };
+
+    if (editingProposal) {
+      updateProposal.mutate(
+        { id: editingProposal.id, ...payload },
+        {
+          onSuccess: () => { toast.success("Proposta atualizada!"); onEditComplete?.(); },
+          onError: (e: any) => toast.error(e.message || "Erro ao atualizar proposta"),
+        }
+      );
+    } else {
+      createProposal.mutate(payload, {
         onSuccess: () => toast.success("Proposta salva com sucesso!"),
         onError: (e: any) => toast.error(e.message || "Erro ao salvar proposta"),
-      }
-    );
+      });
+    }
   };
 
   const hasSelections = selectedServices.length > 0;
@@ -234,7 +250,7 @@ function CalculadoraTab() {
             paymentOption={paymentOption}
             onClear={handleClear}
             onSave={handleSave}
-            saving={createProposal.isPending}
+            saving={createProposal.isPending || updateProposal.isPending}
           />
         </section>
       )}
@@ -268,7 +284,7 @@ function CalculadoraTab() {
 
 // ── Proposals List Tab ──────────────────────────────────────────
 
-function PropostasListTab() {
+function PropostasListTab({ onEdit }: { onEdit: (proposal: any) => void }) {
   const { data: proposals, isLoading } = useCrmProposals();
   const { deleteProposal, duplicateProposal, updateProposal } = useCrmProposalMutations();
 
@@ -312,7 +328,7 @@ function PropostasListTab() {
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Criado em</TableHead>
-                <TableHead className="w-24"></TableHead>
+                <TableHead className="w-28"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -326,6 +342,11 @@ function PropostasListTab() {
                   <TableCell className="text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-BR")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      {p.status === "draft" && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(p)} title="Editar">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateProposal.mutate(p)} title="Duplicar">
                         <Copy className="w-3.5 h-3.5" />
                       </Button>
@@ -358,23 +379,30 @@ function PropostasListTab() {
 export default function FranqueadoPropostas() {
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("lead_id") ? "calculadora" : "propostas";
+  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [editingProposal, setEditingProposal] = useState<any>(null);
+
+  const handleEditProposal = (proposal: any) => {
+    setEditingProposal(proposal);
+    setActiveTab("calculadora");
+  };
 
   return (
     <div className="w-full space-y-6">
       <PageHeader title="Propostas" subtitle="Calculadora NOE e gerador de propostas comerciais" />
 
-      <Tabs defaultValue={defaultTab}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === "propostas") setEditingProposal(null); }}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="propostas"><FileText className="w-4 h-4 mr-1" /> Propostas</TabsTrigger>
           <TabsTrigger value="calculadora"><Calculator className="w-4 h-4 mr-1" /> Calculadora</TabsTrigger>
         </TabsList>
 
         <TabsContent value="propostas" className="space-y-6">
-          <PropostasListTab />
+          <PropostasListTab onEdit={handleEditProposal} />
         </TabsContent>
 
         <TabsContent value="calculadora" className="space-y-6">
-          <CalculadoraTab />
+          <CalculadoraTab editingProposal={editingProposal} onEditComplete={() => { setEditingProposal(null); setActiveTab("propostas"); }} />
         </TabsContent>
       </Tabs>
     </div>
