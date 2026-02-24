@@ -40,7 +40,7 @@ import FranqueadoAgenda from "./pages/franqueado/FranqueadoAgenda";
 import FranqueadoComunicados from "./pages/franqueado/FranqueadoComunicados";
 import FranqueadoSuporte from "./pages/franqueado/FranqueadoSuporte";
 import FranqueadoProspeccaoIA from "./pages/franqueado/FranqueadoProspeccaoIA";
-import FranqueadoDiagnostico from "./pages/franqueado/FranqueadoDiagnostico";
+import FranqueadoEstrategia from "./pages/franqueado/FranqueadoEstrategia";
 import FranqueadoPropostas from "./pages/franqueado/FranqueadoPropostas";
 import FranqueadoCRM from "./pages/franqueado/FranqueadoCRM";
 import FranqueadoMateriais from "./pages/franqueado/FranqueadoMateriais";
@@ -124,7 +124,7 @@ const App = () => (
                 <Route path="comunicados" element={<FranqueadoComunicados />} />
                 <Route path="suporte" element={<FranqueadoSuporte />} />
                 <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
-                <Route path="diagnostico" element={<FranqueadoDiagnostico />} />
+                <Route path="estrategia" element={<FranqueadoEstrategia />} />
                 <Route path="propostas" element={<FranqueadoPropostas />} />
                 <Route path="crm" element={<FranqueadoCRM />} />
                 <Route path="materiais" element={<FranqueadoMateriais />} />
