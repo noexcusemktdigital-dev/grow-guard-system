@@ -1176,6 +1176,7 @@ export type Database = {
           lead_id: string | null
           monthly_value: number | null
           organization_id: string
+          payment_day: number | null
           service_description: string | null
           signed_at: string | null
           signer_email: string | null
@@ -1200,6 +1201,7 @@ export type Database = {
           lead_id?: string | null
           monthly_value?: number | null
           organization_id: string
+          payment_day?: number | null
           service_description?: string | null
           signed_at?: string | null
           signer_email?: string | null
@@ -1224,6 +1226,7 @@ export type Database = {
           lead_id?: string | null
           monthly_value?: number | null
           organization_id?: string
+          payment_day?: number | null
           service_description?: string | null
           signed_at?: string | null
           signer_email?: string | null

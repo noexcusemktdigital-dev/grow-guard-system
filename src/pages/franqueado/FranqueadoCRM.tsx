@@ -13,7 +13,7 @@ import { CrmKanbanCard } from "@/components/franqueado/CrmKanbanCard";
 import { CrmLeadDetailSheet } from "@/components/franqueado/CrmLeadDetailSheet";
 import {
   Users, DollarSign, Target, TrendingUp, Plus, LayoutGrid, List,
-  Search, Inbox,
+  Search, Inbox, Upload,
 } from "lucide-react";
 import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
@@ -22,6 +22,7 @@ import { useStrategies } from "@/hooks/useFranqueadoStrategies";
 import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { toast } from "sonner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { CrmCsvImportDialog } from "@/components/crm/CrmCsvImportDialog";
 
 const STAGES = [
   "Novo Lead", "Primeiro Contato", "Follow-up", "Diagnóstico",
@@ -58,6 +59,7 @@ export default function FranqueadoCRM() {
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [newLead, setNewLead] = useState({ name: "", email: "", phone: "", company: "", source: "", value: "" });
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
 
   const { data: activities } = useCrmActivities(selectedLead?.id);
 
@@ -148,6 +150,9 @@ export default function FranqueadoCRM() {
               <List className="w-3.5 h-3.5 mr-1" /> Lista
             </Button>
           </div>
+          <Button size="sm" variant="outline" onClick={() => setCsvImportOpen(true)}>
+            <Upload className="w-4 h-4 mr-1" /> Importar Contatos
+          </Button>
           <Button size="sm" onClick={() => setNewLeadDialog(true)}>
             <Plus className="w-4 h-4 mr-1" /> Novo Lead
           </Button>
@@ -302,6 +307,9 @@ export default function FranqueadoCRM() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* CSV Import Dialog */}
+      <CrmCsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
     </div>
   );
 }

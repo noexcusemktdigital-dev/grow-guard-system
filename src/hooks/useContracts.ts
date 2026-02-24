@@ -61,6 +61,7 @@ export function useContractMutations() {
       duration_months?: number;
       start_date?: string;
       end_date?: string;
+      payment_day?: number;
     }) => {
       const { data, error } = await supabase.from("contracts").insert({ ...c, organization_id: orgId!, created_by: user?.id }).select().single();
       if (error) throw error;

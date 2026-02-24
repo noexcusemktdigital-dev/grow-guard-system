@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,11 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { FileSignature, DollarSign, Inbox, Download, Link2, Plus, Users } from "lucide-react";
+import { FileSignature, DollarSign, Inbox, Download, Link2, Plus, Users, CalendarDays } from "lucide-react";
 import { useContracts, useContractTemplates, useContractMutations } from "@/hooks/useContracts";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
+import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { toast } from "sonner";
+import { addMonths, format } from "date-fns";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
@@ -24,11 +25,22 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
   cancelled: { label: "Cancelado", variant: "destructive" },
 };
 
+const DURATION_OPTIONS = [
+  { value: "1", label: "1 mês" },
+  { value: "6", label: "6 meses" },
+  { value: "12", label: "12 meses" },
+];
+
 function ContractForm({ onSuccess }: { onSuccess: () => void }) {
   const { createContract } = useContractMutations();
   const { data: leads } = useCrmLeads();
+  const { data: proposals } = useCrmProposals();
   const { data: templates } = useContractTemplates();
-  const contractRef = useRef<HTMLDivElement>(null);
+
+  const acceptedProposals = useMemo(
+    () => (proposals ?? []).filter(p => p.status === "accepted"),
+    [proposals]
+  );
 
   const [form, setForm] = useState({
     title: "",
@@ -41,9 +53,10 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
     monthly_value: "",
     duration_months: "",
     start_date: "",
-    end_date: "",
+    payment_day: "",
     lead_id: "",
     template_id: "",
+    proposal_id: "",
     status: "draft",
   });
 
@@ -53,7 +66,44 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
     return mv * dm;
   }, [form.monthly_value, form.duration_months]);
 
+  const endDate = useMemo(() => {
+    if (!form.start_date || !form.duration_months) return "";
+    const start = new Date(form.start_date);
+    const end = addMonths(start, Number(form.duration_months));
+    return format(end, "yyyy-MM-dd");
+  }, [form.start_date, form.duration_months]);
+
   const set = (key: string, val: string) => setForm(prev => ({ ...prev, [key]: val }));
+
+  const handleProposalSelect = (proposalId: string) => {
+    const proposal = acceptedProposals.find(p => p.id === proposalId);
+    if (!proposal) return;
+
+    const serviceDesc = (proposal.items ?? []).map((item: any) => `• ${item.name} (${item.quantity}x)`).join("\n");
+    const monthlyVal = proposal.content?.monthly_value || proposal.value || 0;
+
+    setForm(prev => ({
+      ...prev,
+      proposal_id: proposalId,
+      title: `Contrato - ${proposal.title}`,
+      service_description: serviceDesc,
+      monthly_value: String(monthlyVal),
+      lead_id: proposal.lead_id || prev.lead_id,
+    }));
+
+    // Auto-fill lead data if available
+    if (proposal.lead_id) {
+      const lead = (leads ?? []).find(l => l.id === proposal.lead_id);
+      if (lead) {
+        setForm(prev => ({
+          ...prev,
+          signer_name: lead.name || prev.signer_name,
+          signer_email: lead.email || prev.signer_email,
+          client_phone: lead.phone || prev.client_phone,
+        }));
+      }
+    }
+  };
 
   const handleLeadSelect = (leadId: string) => {
     set("lead_id", leadId);
@@ -71,6 +121,7 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
 
   const handleSave = (status: string) => {
     if (!form.title || !form.signer_name) return toast.error("Preencha título e nome do cliente");
+    if (!form.duration_months) return toast.error("Selecione a duração do contrato");
     createContract.mutate(
       {
         title: form.title,
@@ -84,15 +135,16 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
         total_value: totalValue,
         duration_months: Number(form.duration_months) || undefined,
         start_date: form.start_date || undefined,
-        end_date: form.end_date || undefined,
+        end_date: endDate || undefined,
         lead_id: form.lead_id || undefined,
         template_id: form.template_id || undefined,
+        payment_day: Number(form.payment_day) || undefined,
         status,
       },
       {
         onSuccess: () => {
           toast.success(status === "draft" ? "Rascunho salvo!" : "Contrato gerado com sucesso!");
-          setForm({ title: "", signer_name: "", signer_email: "", client_document: "", client_phone: "", client_address: "", service_description: "", monthly_value: "", duration_months: "", start_date: "", end_date: "", lead_id: "", template_id: "", status: "draft" });
+          setForm({ title: "", signer_name: "", signer_email: "", client_document: "", client_phone: "", client_address: "", service_description: "", monthly_value: "", duration_months: "", start_date: "", payment_day: "", lead_id: "", template_id: "", proposal_id: "", status: "draft" });
           onSuccess();
         },
       }
@@ -101,6 +153,26 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="space-y-6">
+      {/* Vincular Proposta */}
+      {acceptedProposals.length > 0 && (
+        <Card className="glass-card border-primary/20">
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold flex items-center gap-2"><FileSignature className="w-4 h-4" />Vincular a uma Proposta Aceita</CardTitle></CardHeader>
+          <CardContent>
+            <Select value={form.proposal_id} onValueChange={handleProposalSelect}>
+              <SelectTrigger><SelectValue placeholder="Selecionar proposta aceita..." /></SelectTrigger>
+              <SelectContent>
+                {acceptedProposals.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.title} — R$ {Number(p.value || 0).toLocaleString("pt-BR")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.proposal_id && <p className="text-xs text-emerald-600 mt-2">✓ Dados da proposta preenchidos automaticamente.</p>}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Vinculação CRM */}
       <Card className="glass-card">
         <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Link2 className="w-4 h-4" />Vincular ao CRM (opcional)</CardTitle></CardHeader>
@@ -113,7 +185,6 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
               ))}
             </SelectContent>
           </Select>
-          {form.lead_id && <p className="text-xs text-muted-foreground mt-2">Dados do lead serão importados automaticamente.</p>}
         </CardContent>
       </Card>
 
@@ -151,13 +222,35 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
         </CardContent>
       </Card>
 
-      {/* Valores */}
+      {/* Valores e Vigência */}
       <Card className="glass-card">
         <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4" />Valores e Vigência</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div><Label>Valor Mensal (R$)</Label><Input type="number" value={form.monthly_value} onChange={e => set("monthly_value", e.target.value)} placeholder="0,00" /></div>
-            <div><Label>Duração (meses)</Label><Input type="number" value={form.duration_months} onChange={e => set("duration_months", e.target.value)} placeholder="12" /></div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <Label>Valor Mensal (R$)</Label>
+              <Input type="number" value={form.monthly_value} onChange={e => set("monthly_value", e.target.value)} placeholder="0,00" />
+            </div>
+            <div>
+              <Label>Duração *</Label>
+              <Select value={form.duration_months} onValueChange={v => set("duration_months", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {DURATION_OPTIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Dia de Pagamento</Label>
+              <Select value={form.payment_day} onValueChange={v => set("payment_day", v)}>
+                <SelectTrigger><SelectValue placeholder="Dia" /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                    <SelectItem key={d} value={String(d)}>Dia {d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label>Valor Total</Label>
               <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm font-semibold">
@@ -167,7 +260,12 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Data Início</Label><Input type="date" value={form.start_date} onChange={e => set("start_date", e.target.value)} /></div>
-            <div><Label>Data Fim</Label><Input type="date" value={form.end_date} onChange={e => set("end_date", e.target.value)} /></div>
+            <div>
+              <Label>Data Fim (automática)</Label>
+              <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm text-muted-foreground">
+                {endDate ? new Date(endDate).toLocaleDateString("pt-BR") : "Selecione início e duração"}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -203,6 +301,7 @@ function downloadContractPdf(contract: any) {
         <table style="width:100%;font-size:13px;margin-top:8px;">
           <tr><td style="padding:4px 0;color:#666;">Valor Mensal:</td><td>R$ ${Number(contract.monthly_value || 0).toLocaleString("pt-BR")}</td></tr>
           <tr><td style="padding:4px 0;color:#666;">Duração:</td><td>${contract.duration_months || "—"} meses</td></tr>
+          <tr><td style="padding:4px 0;color:#666;">Dia de Pagamento:</td><td>Dia ${contract.payment_day || "—"}</td></tr>
           <tr><td style="padding:4px 0;color:#666;">Valor Total:</td><td><strong>R$ ${Number(contract.total_value || 0).toLocaleString("pt-BR")}</strong></td></tr>
           <tr><td style="padding:4px 0;color:#666;">Vigência:</td><td>${contract.start_date ? new Date(contract.start_date).toLocaleDateString("pt-BR") : "—"} a ${contract.end_date ? new Date(contract.end_date).toLocaleDateString("pt-BR") : "—"}</td></tr>
         </table>
@@ -225,7 +324,6 @@ function downloadContractPdf(contract: any) {
 export default function FranqueadoContratos() {
   const { data: contracts, isLoading } = useContracts();
   const { data: leads } = useCrmLeads();
-  const { updateContract } = useContractMutations();
   const [tab, setTab] = useState("lista");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -287,9 +385,10 @@ export default function FranqueadoContratos() {
                     <TableHead>Título</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Valor Mensal</TableHead>
+                    <TableHead>Duração</TableHead>
+                    <TableHead>Dia Pgto</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>CRM</TableHead>
-                    <TableHead>Criado em</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -302,6 +401,8 @@ export default function FranqueadoContratos() {
                         <TableCell className="font-medium">{c.title}</TableCell>
                         <TableCell>{c.signer_name || "—"}</TableCell>
                         <TableCell className="font-semibold">R$ {Number((c as any).monthly_value || 0).toLocaleString("pt-BR")}</TableCell>
+                        <TableCell>{(c as any).duration_months ? `${(c as any).duration_months}m` : "—"}</TableCell>
+                        <TableCell>{(c as any).payment_day ? `Dia ${(c as any).payment_day}` : "—"}</TableCell>
                         <TableCell><Badge variant={st.variant}>{st.label}</Badge></TableCell>
                         <TableCell>
                           {linkedLead ? (
@@ -310,7 +411,6 @@ export default function FranqueadoContratos() {
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{new Date(c.created_at).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="ghost" onClick={() => downloadContractPdf(c)} title="Baixar PDF">
                             <Download className="w-4 h-4" />
