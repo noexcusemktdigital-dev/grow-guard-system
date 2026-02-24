@@ -1,0 +1,284 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS")
+    return new Response(null, { headers: corsHeaders });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } =
+      await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub;
+
+    const { regiao, nicho, porte, desafio, objetivo } = await req.json();
+
+    if (!regiao || !nicho) {
+      return new Response(
+        JSON.stringify({ error: "Região e nicho são obrigatórios" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "AI not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userPrompt = `Crie um plano completo de prospecção B2B para o seguinte cenário:
+
+DADOS DO PROSPECT:
+- Região: ${regiao}
+- Nicho/Segmento: ${nicho}
+- Porte: ${porte || "Não informado"}
+- Principal Desafio: ${desafio || "Não informado"}
+- Objetivo da Abordagem: ${objetivo || "Agendar reunião de diagnóstico"}
+
+Use a ferramenta generate_prospection_plan para retornar o plano estruturado.`;
+
+    const aiResponse = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            {
+              role: "system",
+              content: `Você é um consultor de vendas B2B brasileiro sênior, especialista em franquias e agências de marketing digital. Seu papel é criar planos de prospecção detalhados e actionáveis para franqueados que vendem serviços de marketing, branding, performance e CRM.
+
+Sempre responda em português brasileiro. Seja prático, direto e use linguagem profissional de vendas consultivas. O objetivo final de toda prospecção é agendar uma reunião de diagnóstico com o prospect.`,
+            },
+            { role: "user", content: userPrompt },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "generate_prospection_plan",
+                description:
+                  "Retorna um plano de prospecção completo e estruturado com 5 seções.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    estrategia_abordagem: {
+                      type: "object",
+                      properties: {
+                        titulo: { type: "string" },
+                        descricao: { type: "string" },
+                        passos: {
+                          type: "array",
+                          items: { type: "string" },
+                        },
+                        dicas: {
+                          type: "array",
+                          items: { type: "string" },
+                        },
+                      },
+                      required: ["titulo", "descricao", "passos", "dicas"],
+                      additionalProperties: false,
+                    },
+                    avaliacao_inicial: {
+                      type: "object",
+                      properties: {
+                        titulo: { type: "string" },
+                        descricao: { type: "string" },
+                        perguntas: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              pergunta: { type: "string" },
+                              objetivo: { type: "string" },
+                            },
+                            required: ["pergunta", "objetivo"],
+                            additionalProperties: false,
+                          },
+                        },
+                      },
+                      required: ["titulo", "descricao", "perguntas"],
+                      additionalProperties: false,
+                    },
+                    roteiro_contato: {
+                      type: "object",
+                      properties: {
+                        titulo: { type: "string" },
+                        descricao: { type: "string" },
+                        script_telefone: { type: "string" },
+                        script_whatsapp: { type: "string" },
+                      },
+                      required: [
+                        "titulo",
+                        "descricao",
+                        "script_telefone",
+                        "script_whatsapp",
+                      ],
+                      additionalProperties: false,
+                    },
+                    quebra_objecoes: {
+                      type: "object",
+                      properties: {
+                        titulo: { type: "string" },
+                        descricao: { type: "string" },
+                        objecoes: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              objecao: { type: "string" },
+                              resposta: { type: "string" },
+                            },
+                            required: ["objecao", "resposta"],
+                            additionalProperties: false,
+                          },
+                        },
+                      },
+                      required: ["titulo", "descricao", "objecoes"],
+                      additionalProperties: false,
+                    },
+                    passo_a_passo_reuniao: {
+                      type: "object",
+                      properties: {
+                        titulo: { type: "string" },
+                        descricao: { type: "string" },
+                        checklist: {
+                          type: "array",
+                          items: { type: "string" },
+                        },
+                      },
+                      required: ["titulo", "descricao", "checklist"],
+                      additionalProperties: false,
+                    },
+                  },
+                  required: [
+                    "estrategia_abordagem",
+                    "avaliacao_inicial",
+                    "roteiro_contato",
+                    "quebra_objecoes",
+                    "passo_a_passo_reuniao",
+                  ],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: {
+            type: "function",
+            function: { name: "generate_prospection_plan" },
+          },
+        }),
+      }
+    );
+
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes. Faça upgrade do seu plano." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const errText = await aiResponse.text();
+      console.error("AI gateway error:", aiResponse.status, errText);
+      return new Response(
+        JSON.stringify({ error: "Erro ao gerar plano de prospecção" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const aiData = await aiResponse.json();
+    const tokensUsed = aiData.usage?.total_tokens || 0;
+
+    // Extract tool call result
+    let result: any = null;
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      try {
+        result =
+          typeof toolCall.function.arguments === "string"
+            ? JSON.parse(toolCall.function.arguments)
+            : toolCall.function.arguments;
+      } catch {
+        console.error("Failed to parse tool call arguments");
+      }
+    }
+
+    if (!result) {
+      return new Response(
+        JSON.stringify({ error: "Falha ao estruturar resposta da IA" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Log usage
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: orgData } = await serviceClient.rpc("get_user_org_id", {
+      _user_id: userId,
+    });
+
+    if (orgData) {
+      await serviceClient.from("ai_conversation_logs").insert({
+        organization_id: orgData,
+        agent_id: "00000000-0000-0000-0000-000000000000",
+        contact_id: "00000000-0000-0000-0000-000000000000",
+        input_message: `[Prospecção] ${nicho} - ${regiao}`,
+        output_message: JSON.stringify(result).substring(0, 500),
+        tokens_used: tokensUsed,
+        model: "google/gemini-3-flash-preview",
+      });
+    }
+
+    return new Response(
+      JSON.stringify({ result, tokens_used: tokensUsed }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (e) {
+    console.error("generate-prospection error:", e);
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
