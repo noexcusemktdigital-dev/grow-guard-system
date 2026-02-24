@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,19 +12,29 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Card } from "@/components/ui/card";
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, Trash2, Edit2, ExternalLink,
+  RefreshCw, Unlink, CheckCircle2,
 } from "lucide-react";
 import { useCalendarEvents, useCalendars, useCalendarEventMutations } from "@/hooks/useCalendar";
+import {
+  useGoogleCalendarConnection,
+  useGoogleCalendarConnect,
+  useGoogleCalendarExchangeCode,
+  useGoogleCalendarDisconnect,
+  useGoogleCalendarSync,
+} from "@/hooks/useGoogleCalendar";
 import {
   addMonths, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, isSameMonth, isSameDay, isToday, parseISO,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 
 const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899"];
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 export default function FranqueadoAgenda() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -34,6 +44,50 @@ export default function FranqueadoAgenda() {
   const { data: events, isLoading } = useCalendarEvents(startDate, endDate);
   const { data: calendars } = useCalendars();
   const { createEvent, updateEvent, deleteEvent } = useCalendarEventMutations();
+
+  // Google Calendar
+  const { data: googleConnection, isLoading: loadingConnection } = useGoogleCalendarConnection();
+  const connectGoogle = useGoogleCalendarConnect();
+  const exchangeCode = useGoogleCalendarExchangeCode();
+  const disconnectGoogle = useGoogleCalendarDisconnect();
+  const syncGoogle = useGoogleCalendarSync();
+  const [syncing, setSyncing] = useState(false);
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const code = searchParams.get("code");
+    if (code) {
+      const redirectUri = `${window.location.origin}/franqueado/agenda`;
+      exchangeCode.mutate({ code, redirectUri }, {
+        onSuccess: () => {
+          setSearchParams({});
+          handleGooglePull();
+        },
+        onError: (e: any) => toast.error(e.message || "Erro ao conectar Google"),
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleGoogleConnect() {
+    try {
+      const redirectUri = `${window.location.origin}/franqueado/agenda`;
+      const url = await connectGoogle.mutateAsync(redirectUri);
+      window.location.href = url;
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao iniciar conexão");
+    }
+  }
+
+  async function handleGooglePull() {
+    setSyncing(true);
+    try {
+      const result = await syncGoogle.mutateAsync("pull" as any);
+      toast.success(`Sincronizado! ${(result as any)?.imported || 0} novos eventos importados.`);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao sincronizar");
+    }
+    setSyncing(false);
+  }
 
   const [formOpen, setFormOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<any>(null);
@@ -146,10 +200,24 @@ export default function FranqueadoAgenda() {
           <h1 className="text-xl font-bold">Agenda</h1>
           <Badge variant="outline" className="text-[10px]">Unidade</Badge>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="gap-1 text-xs opacity-60" disabled>
-            <ExternalLink className="w-3.5 h-3.5" /> Conectar Google Agenda
-          </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {googleConnection ? (
+            <>
+              <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Google conectado
+              </Badge>
+              <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={handleGooglePull} disabled={syncing}>
+                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} /> Sincronizar
+              </Button>
+              <Button size="sm" variant="ghost" className="gap-1 text-xs text-destructive" onClick={() => disconnectGoogle.mutate()}>
+                <Unlink className="w-3.5 h-3.5" /> Desconectar
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={handleGoogleConnect} disabled={connectGoogle.isPending || loadingConnection}>
+              <ExternalLink className="w-3.5 h-3.5" /> Conectar Google Agenda
+            </Button>
+          )}
           <Button size="sm" onClick={() => openNewEvent()}>
             <Plus className="w-4 h-4 mr-1" /> Novo Evento
           </Button>

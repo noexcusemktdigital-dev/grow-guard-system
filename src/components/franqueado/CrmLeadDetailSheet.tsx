@@ -15,6 +15,8 @@ import {
   Clock, ArrowRight, User,
 } from "lucide-react";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
+import { useProspections } from "@/hooks/useFranqueadoProspections";
+import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -34,9 +36,16 @@ interface CrmLeadDetailSheetProps {
 export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities = [], notes = [] }: CrmLeadDetailSheetProps) {
   const navigate = useNavigate();
   const { updateLead, markAsWon, markAsLost } = useCrmLeadMutations();
+  const { data: prospections } = useProspections();
+  const { data: proposals } = useCrmProposals();
   const [lostReason, setLostReason] = useState("");
   const [showLostDialog, setShowLostDialog] = useState(false);
   const [newNote, setNewNote] = useState("");
+
+  const leadProspections = (prospections ?? []).filter(p => p.lead_id === lead?.id);
+  const leadProposals = (proposals ?? []).filter((p: any) => p.lead_id === lead?.id);
+  const hasProspection = leadProspections.length > 0;
+  const hasProposal = leadProposals.length > 0;
 
   if (!lead) return null;
 
@@ -115,28 +124,52 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities = [], 
           </Select>
         </div>
 
+        {/* Ferramentas Integradas */}
+        <div className="space-y-2 mb-4">
+          <Label className="text-xs font-medium">Ferramentas</Label>
+          <div className="grid grid-cols-1 gap-2">
+            <Button
+              variant="outline" size="sm" className="text-xs justify-between"
+              onClick={() => navigate(`/franqueado/prospeccao?lead_id=${lead.id}`)}
+            >
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-blue-500" /> Prospecção IA
+              </span>
+              {hasProspection ? (
+                <span className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">{leadProspections.length} feita(s)</span>
+              ) : (
+                <span className="text-[10px] text-muted-foreground">Pendente</span>
+              )}
+            </Button>
+            <Button
+              variant="outline" size="sm" className="text-xs justify-between"
+              onClick={() => navigate(`/franqueado/estrategia?lead_id=${lead.id}`)}
+            >
+              <span className="flex items-center gap-1.5">
+                <ClipboardCheck className="w-3.5 h-3.5 text-purple-500" /> Estratégia
+              </span>
+              <span className="text-[10px] text-muted-foreground">Abrir</span>
+            </Button>
+            <Button
+              variant="outline" size="sm" className="text-xs justify-between"
+              onClick={() => navigate(`/franqueado/propostas?lead_id=${lead.id}`)}
+            >
+              <span className="flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-orange-500" /> Proposta
+              </span>
+              {hasProposal ? (
+                <span className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">{leadProposals.length} proposta(s)</span>
+              ) : (
+                <span className="text-[10px] text-muted-foreground">Pendente</span>
+              )}
+            </Button>
+          </div>
+        </div>
+
         {/* Ações rápidas */}
         <div className="space-y-2 mb-4">
           <Label className="text-xs font-medium">Ações Rápidas</Label>
           <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline" size="sm" className="text-xs justify-start"
-              onClick={() => navigate(`/franqueado/prospeccao?lead_id=${lead.id}`)}
-            >
-              <Sparkles className="w-3.5 h-3.5 mr-1.5 text-blue-500" /> Prospecção IA
-            </Button>
-            <Button
-              variant="outline" size="sm" className="text-xs justify-start"
-              onClick={() => navigate(`/franqueado/estrategia?lead_id=${lead.id}`)}
-            >
-              <ClipboardCheck className="w-3.5 h-3.5 mr-1.5 text-purple-500" /> Criar Estratégia
-            </Button>
-            <Button
-              variant="outline" size="sm" className="text-xs justify-start"
-              onClick={() => navigate(`/franqueado/propostas?lead_id=${lead.id}`)}
-            >
-              <FileText className="w-3.5 h-3.5 mr-1.5 text-orange-500" /> Gerar Proposta
-            </Button>
             <Button
               variant="outline" size="sm" className="text-xs justify-start"
               onClick={handleWon}

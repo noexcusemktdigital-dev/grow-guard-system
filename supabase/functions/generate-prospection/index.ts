@@ -37,7 +37,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { regiao, nicho, porte, desafio, objetivo } = await req.json();
+    const { regiao, nicho, porte, desafio, objetivo, nome_empresa, site, redes_sociais, conhecimento_previo, nivel_contato, contato_decisor, cargo_decisor } = await req.json();
 
     if (!regiao || !nicho) {
       return new Response(
@@ -54,14 +54,24 @@ serve(async (req) => {
       );
     }
 
+    const nivelContatoLabel = nivel_contato === "quente" ? "Quente (já demonstrou interesse)" : nivel_contato === "morno" ? "Morno (já houve contato)" : "Frio (nunca falou)";
+
     const userPrompt = `Crie um plano completo de prospecção B2B para o seguinte cenário:
 
 DADOS DO PROSPECT:
+- Nome da Empresa: ${nome_empresa || "Não informado"}
 - Região: ${regiao}
 - Nicho/Segmento: ${nicho}
 - Porte: ${porte || "Não informado"}
+- Site: ${site || "Não informado"}
+- Redes Sociais: ${redes_sociais || "Não informado"}
+- Nível de Contato: ${nivelContatoLabel}
+- Decisor: ${contato_decisor ? `${contato_decisor}${cargo_decisor ? ` (${cargo_decisor})` : ""}` : "Não informado"}
+- O que já se sabe sobre a empresa: ${conhecimento_previo || "Nada informado"}
 - Principal Desafio: ${desafio || "Não informado"}
 - Objetivo da Abordagem: ${objetivo || "Agendar reunião de diagnóstico"}
+
+IMPORTANTE: Leve em conta todas as informações acima para personalizar ao máximo a estratégia. Se o nível de contato é frio, foque em abordagem inicial e pesquisa. Se é morno ou quente, foque em retomada e fechamento. Use o nome da empresa e do decisor nos scripts quando disponíveis.
 
 Use a ferramenta generate_prospection_plan para retornar o plano estruturado.`;
 

@@ -480,6 +480,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           end_at: string
+          google_event_id: string | null
           id: string
           location: string | null
           organization_id: string
@@ -499,6 +500,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_at: string
+          google_event_id?: string | null
           id?: string
           location?: string | null
           organization_id: string
@@ -518,6 +520,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_at?: string
+          google_event_id?: string | null
           id?: string
           location?: string | null
           organization_id?: string
@@ -2678,6 +2681,50 @@ export type Database = {
           {
             foreignKeyName: "goals_unit_org_id_fkey"
             columns: ["unit_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_calendar_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string
+          google_calendar_id: string | null
+          id: string
+          organization_id: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at: string
+          google_calendar_id?: string | null
+          id?: string
+          organization_id: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string
+          google_calendar_id?: string | null
+          id?: string
+          organization_id?: string
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_tokens_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
