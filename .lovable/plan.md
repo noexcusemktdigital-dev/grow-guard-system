@@ -1,58 +1,83 @@
 
 
-# Marketing por Objetivo + Academy Funcional
+# Financeiro Completo + Meus Contratos com Criacao e Vinculacao CRM
 
-## 1. Marketing - Navegacao por Objetivo do Material
+## 1. Financeiro Unidade - Reformulacao Completa
 
-A estrutura atual e puramente por pastas (nome + parent_id). O usuario quer categorias fixas como navegacao principal, com filtro por tipo de arquivo dentro de cada uma.
+O financeiro atual mostra apenas uma lista flat de receitas e despesas sem vinculacao com contratos. Vamos reformular em 3 abas:
 
-### Mudanca no banco
-Adicionar coluna `category` na tabela `marketing_folders` para classificar pastas por objetivo:
+### Aba "Resumo"
+- KPIs: Receita Recorrente (contratos ativos), Total Receitas, Total Despesas, Resultado Liquido
+- Lista de contratos ativos com valor mensal de cada um (puxando da tabela `contracts`)
+- Grafico simples de receitas vs despesas dos ultimos 6 meses (recharts BarChart)
 
-| Categoria | Descricao |
-|-----------|-----------|
-| logo | Logos e identidade visual |
-| dia-a-dia | Materiais do dia a dia (fundos, assinaturas, templates) |
-| setup | Setup inicial da unidade |
-| redes-sociais | Conteudo para redes sociais (organizado mes a mes) |
-| campanhas | Materiais de campanhas especificas |
-| apresentacoes | Apresentacoes institucionais e comerciais |
+### Aba "Receitas e Despesas"
+- Manter a tabela atual de receitas e despesas
+- Adicionar botao para registrar nova receita e nova despesa (Dialog com formulario)
+- Filtro por mes/periodo
+- Coluna indicando se a receita esta vinculada a um contrato
 
-### Novo layout da pagina `FranqueadoMateriais.tsx`
-- Substituir a navegacao atual por um grid de categorias fixas no topo (6 cards com icones)
-- Ao clicar numa categoria, filtra pastas e assets daquela categoria
-- Dentro da categoria, manter a navegacao por subpastas (ex: Redes Sociais > 2026 > Fevereiro)
-- Barra de filtros por tipo de arquivo permanece (Imagem, Video, PDF, etc.)
-- Breadcrumb atualizado: "Marketing > Redes Sociais > 2026 > Fevereiro"
+### Aba "Fechamentos"
+- Drive de arquivos de fechamento enviados pela franqueadora
+- Organizado por mes/ano
+- Franqueado pode visualizar e baixar os PDFs/documentos
+- Utilizar um storage bucket `closing-files` para armazenar os arquivos
+- Tabela `finance_closings` para registrar os metadados (mes, ano, arquivo_url, status)
 
-### Arquivos editados
-- Migracao SQL: adicionar coluna `category` em `marketing_folders`
-- `src/pages/franqueado/FranqueadoMateriais.tsx`: reescrever com navegacao por categoria + subpastas
+### Mudancas no banco
+- Criar tabela `finance_closings` com colunas: id, organization_id, unit_id, title, month, year, file_url, status, notes, created_at
+- Criar bucket `closing-files` para armazenamento
+- RLS: membros da org podem visualizar, admins podem inserir/gerenciar
 
 ---
 
-## 2. Academy - Conectar a Gestao da Franqueadora
+## 2. Meus Contratos - Criacao Completa pelo Franqueado
 
-O motivo dos modulos nao aparecerem: a pagina `Academy.tsx` (franqueadora) tem a aba "Gestao" mas **nao renderiza o componente `AcademyAdmin`** - mostra apenas um empty state estatico para todas as abas. O componente `AcademyAdmin` ja existe em `src/components/academy/AcademyAdmin.tsx` com funcionalidade completa de criar modulos, aulas e provas, mas nunca e importado.
+A pagina atual e apenas uma tabela de visualizacao. Vamos transformar em um modulo completo de criacao e gestao.
 
-### Correcao
-- Na pagina `Academy.tsx` (franqueadora), importar e renderizar `AcademyAdmin` quando a aba ativa for "admin"
-- Renderizar `AcademyModules` (lista de modulos publicados) quando a aba for "modulos"
-- Manter os empty states apenas para abas que realmente nao tem conteudo ainda
-- Assim, o admin cria modulos, publica, e eles aparecem no `FranqueadoAcademy.tsx`
+### Mudancas no banco (tabela `contracts`)
+Adicionar colunas para suportar dados completos do contrato:
+- `lead_id` (uuid, nullable) - vinculo com CRM
+- `client_document` (text) - CPF/CNPJ
+- `client_phone` (text) - telefone
+- `client_address` (text) - endereco
+- `service_description` (text) - descricao dos servicos
+- `monthly_value` (numeric) - valor mensal
+- `total_value` (numeric) - valor total
+- `duration_months` (integer) - duracao em meses
+- `start_date` (date) - data inicio
+- `end_date` (date) - data fim
 
-### Fluxo corrigido
-```text
-1. Admin vai em Academy > Gestao
-2. Cria um modulo (titulo, categoria, descricao)
-3. Adiciona aulas (titulo, video YouTube, duracao)
-4. Publica o modulo (botao olho)
-5. Franqueado abre NOE Academy > Trilhas
-6. Ve o modulo publicado com as aulas
-```
+### Novo layout com abas
 
-### Arquivos editados
-- `src/pages/Academy.tsx`: importar `AcademyAdmin` e renderizar nas abas corretas
+**Aba "Contratos" (lista)**
+- Tabela com todos os contratos: titulo, cliente, valor mensal, status, data inicio, vinculacao CRM
+- Filtros por status (Rascunho, Ativo, Assinado, Cancelado)
+- Badge indicando se esta vinculado a um lead do CRM
+- Acoes: Editar, Baixar PDF, Vincular ao CRM
+
+**Aba "Novo Contrato" (formulario completo)**
+Formulario em secoes com todos os dados necessarios:
+
+| Secao | Campos |
+|-------|--------|
+| Dados do Cliente | Nome, Email, CPF/CNPJ, Telefone, Endereco |
+| Contratacao | Titulo do contrato, Descricao dos servicos, Template (se houver) |
+| Valores | Valor mensal, Duracao (meses), Valor total (calculado), Data inicio, Data fim |
+| Vinculacao | Selecionar lead do CRM (opcional), importar dados do lead automaticamente |
+
+- Ao selecionar um lead do CRM, os campos de nome, email e telefone sao preenchidos automaticamente
+- Botao "Salvar como Rascunho" e "Gerar Contrato"
+- Contrato gerado pode ser baixado como PDF (usando html2pdf.js ja instalado)
+
+### Download PDF
+- Gerar PDF do contrato preenchido usando `html2pdf.js` (ja disponivel no projeto)
+- Layout do PDF: cabecalho com dados da empresa, dados do cliente, servicos, valores, assinatura
+
+### Vinculacao CRM
+- Dropdown de leads do CRM para vincular contrato
+- Ao vincular, o lead recebe indicador visual no Kanban
+- Campo `lead_id` na tabela contracts faz o link
 
 ---
 
@@ -60,7 +85,9 @@ O motivo dos modulos nao aparecerem: a pagina `Academy.tsx` (franqueadora) tem a
 
 | Arquivo | Acao |
 |---------|------|
-| Migracao SQL | Adicionar coluna `category` em `marketing_folders` |
-| `src/pages/franqueado/FranqueadoMateriais.tsx` | Reescrever com navegacao por categoria (Logo, Dia a dia, Setup, Redes Sociais, Campanhas, Apresentacoes) |
-| `src/pages/Academy.tsx` | Conectar `AcademyAdmin` na aba Gestao + renderizar conteudo real nas outras abas |
+| Migracao SQL | Criar `finance_closings`, adicionar colunas em `contracts`, criar bucket `closing-files` |
+| `src/pages/franqueado/FranqueadoFinanceiro.tsx` | Reescrever com 3 abas (Resumo, Receitas/Despesas, Fechamentos) |
+| `src/pages/franqueado/FranqueadoContratos.tsx` | Reescrever com lista + formulario de criacao + download PDF + vinculacao CRM |
+| `src/hooks/useContracts.ts` | Expandir mutations para suportar novos campos e lead_id |
+| `src/hooks/useFinance.ts` | Adicionar hook `useFinanceClosings` |
 
