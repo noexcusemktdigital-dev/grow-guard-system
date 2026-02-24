@@ -10,6 +10,13 @@ export interface ProspectionInputs {
   porte: string;
   desafio: string;
   objetivo: string;
+  nome_empresa?: string;
+  site?: string;
+  redes_sociais?: string;
+  conhecimento_previo?: string;
+  nivel_contato?: 'frio' | 'morno' | 'quente';
+  contato_decisor?: string;
+  cargo_decisor?: string;
 }
 
 export interface ProspectionResult {

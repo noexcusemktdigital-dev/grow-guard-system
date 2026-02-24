@@ -69,6 +69,13 @@ function NovaProspeccaoTab() {
     porte: "",
     desafio: "",
     objetivo: "Agendar reunião de diagnóstico",
+    nome_empresa: "",
+    site: "",
+    redes_sociais: "",
+    conhecimento_previo: "",
+    nivel_contato: "frio",
+    contato_decisor: "",
+    cargo_decisor: "",
   });
   const [result, setResult] = useState<ProspectionResult | null>(null);
   const [prospectionId, setProspectionId] = useState<string | null>(null);
@@ -102,7 +109,7 @@ function NovaProspeccaoTab() {
   const handleReset = () => {
     setResult(null);
     setProspectionId(null);
-    setInputs({ regiao: "", nicho: "", porte: "", desafio: "", objetivo: "Agendar reunião de diagnóstico" });
+    setInputs({ regiao: "", nicho: "", porte: "", desafio: "", objetivo: "Agendar reunião de diagnóstico", nome_empresa: "", site: "", redes_sociais: "", conhecimento_previo: "", nivel_contato: "frio", contato_decisor: "", cargo_decisor: "" });
   };
 
   return (
@@ -116,6 +123,10 @@ function NovaProspeccaoTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome da Empresa *</label>
+              <Input value={inputs.nome_empresa} onChange={(e) => setInputs((p) => ({ ...p, nome_empresa: e.target.value }))} placeholder="Ex: Clínica Beleza Natural" />
+            </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Região *</label>
               <Input value={inputs.regiao} onChange={(e) => setInputs((p) => ({ ...p, regiao: e.target.value }))} placeholder="Ex: Curitiba e região" />
@@ -138,6 +149,17 @@ function NovaProspeccaoTab() {
               </Select>
             </div>
             <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nível de Contato</label>
+              <Select value={inputs.nivel_contato || "frio"} onValueChange={(v) => setInputs((p) => ({ ...p, nivel_contato: v as any }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="frio">🧊 Frio - Nunca falou</SelectItem>
+                  <SelectItem value="morno">🌡️ Morno - Já houve contato</SelectItem>
+                  <SelectItem value="quente">🔥 Quente - Já demonstrou interesse</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Objetivo da Abordagem</label>
               <Select value={inputs.objetivo} onValueChange={(v) => setInputs((p) => ({ ...p, objetivo: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -148,6 +170,26 @@ function NovaProspeccaoTab() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Site da Empresa</label>
+              <Input value={inputs.site} onChange={(e) => setInputs((p) => ({ ...p, site: e.target.value }))} placeholder="https://..." />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Redes Sociais</label>
+              <Input value={inputs.redes_sociais} onChange={(e) => setInputs((p) => ({ ...p, redes_sociais: e.target.value }))} placeholder="@instagram, LinkedIn, etc" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome do Decisor</label>
+              <Input value={inputs.contato_decisor} onChange={(e) => setInputs((p) => ({ ...p, contato_decisor: e.target.value }))} placeholder="Ex: João Silva" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Cargo do Decisor</label>
+              <Input value={inputs.cargo_decisor} onChange={(e) => setInputs((p) => ({ ...p, cargo_decisor: e.target.value }))} placeholder="Ex: CEO, Sócio, Gerente" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">O que já sabe sobre a empresa?</label>
+            <Textarea value={inputs.conhecimento_previo} onChange={(e) => setInputs((p) => ({ ...p, conhecimento_previo: e.target.value }))} placeholder="Ex: Vi no Instagram que fazem promoções com frequência, mas não investem em tráfego pago..." rows={3} />
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Desafio Principal do Prospect</label>
@@ -668,11 +710,11 @@ function PlaybooksTab() {
 export default function FranqueadoProspeccaoIA() {
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Prospecção IA" subtitle="Planeje prospecções, gere scripts comerciais e arquive estratégias com IA" />
+      <PageHeader title="Prospecção" subtitle="Planeje prospecções, gere scripts comerciais e arquive estratégias com IA" />
 
       <Tabs defaultValue="nova">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="nova"><Sparkles className="w-4 h-4 mr-1" /> Nova</TabsTrigger>
+          <TabsTrigger value="nova"><Sparkles className="w-4 h-4 mr-1" /> Prospecção IA</TabsTrigger>
           <TabsTrigger value="playbooks"><BookOpen className="w-4 h-4 mr-1" /> Playbooks</TabsTrigger>
           <TabsTrigger value="historico"><History className="w-4 h-4 mr-1" /> Histórico</TabsTrigger>
           <TabsTrigger value="scripts"><MessageSquare className="w-4 h-4 mr-1" /> Scripts</TabsTrigger>

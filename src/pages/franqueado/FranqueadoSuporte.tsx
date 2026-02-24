@@ -565,6 +565,14 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
 
   if (isLoading) return <div className="flex-1 flex items-center justify-center p-8"><Skeleton className="h-8 w-32" /></div>;
 
+  // Group messages by date
+  const groupedByDate: Record<string, any[]> = {};
+  (messages ?? []).forEach((m: any) => {
+    const dateKey = format(new Date(m.created_at), "yyyy-MM-dd");
+    if (!groupedByDate[dateKey]) groupedByDate[dateKey] = [];
+    groupedByDate[dateKey].push(m);
+  });
+
   return (
     <ScrollArea className="flex-1 p-4 max-h-[400px]" ref={scrollRef}>
       {(!messages || messages.length === 0) ? (
@@ -572,49 +580,81 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
           Nenhuma mensagem ainda. Inicie a conversa!
         </div>
       ) : (
-        <div className="space-y-3">
-          {messages.map((m: any) => {
-            const isMine = m.user_id === userId;
-            const msgAttachments = m.attachments as string[] | null;
-            return (
-              <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[75%] rounded-xl px-3.5 py-2.5 text-sm ${
-                  isMine
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-muted rounded-bl-sm"
-                }`}>
-                  {!isMine && (
-                    <div className="flex items-center gap-1 mb-1">
-                      <User className="w-3 h-3" />
-                      <span className="text-[10px] font-medium">Matriz</span>
-                    </div>
-                  )}
-                  {m.content && m.content !== "📎 Anexo" && (
-                    <p className="whitespace-pre-wrap">{m.content}</p>
-                  )}
-                  {msgAttachments && msgAttachments.length > 0 && (
-                    <div className="flex gap-2 flex-wrap mt-1.5">
-                      {msgAttachments.map((url: string, i: number) => {
-                        const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                        return isImg ? (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                            <img src={url} alt="Anexo" className="max-w-[200px] rounded-lg" />
-                          </a>
-                        ) : (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 bg-background/20 rounded px-2 py-1 text-[11px]">
-                            <Download className="w-3 h-3" /> {url.split("/").pop()?.substring(0, 20)}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <p className={`text-[10px] mt-1 ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                    {format(new Date(m.created_at), "HH:mm")}
-                  </p>
-                </div>
+        <div className="space-y-4">
+          {Object.entries(groupedByDate).map(([dateKey, msgs]) => (
+            <div key={dateKey}>
+              {/* Date separator */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                  {format(new Date(dateKey), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </span>
+                <div className="flex-1 h-px bg-border" />
               </div>
-            );
-          })}
+
+              {/* Messages as documented cards */}
+              <div className="space-y-3">
+                {msgs.map((m: any) => {
+                  const isMine = m.user_id === userId;
+                  const msgAttachments = m.attachments as string[] | null;
+                  return (
+                    <div
+                      key={m.id}
+                      className={`rounded-lg border bg-card overflow-hidden ${
+                        isMine ? "border-l-4 border-l-primary" : "border-l-4 border-l-muted-foreground/30"
+                      }`}
+                    >
+                      {/* Message header */}
+                      <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                            isMine ? "bg-primary/15 text-primary" : "bg-muted-foreground/15 text-muted-foreground"
+                          }`}>
+                            <User className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold">{isMine ? "Você" : "Matriz"}</span>
+                            <span className="text-[10px] text-muted-foreground ml-2">
+                              {isMine ? "Franqueado" : "Equipe de Suporte"}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(m.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                        </span>
+                      </div>
+
+                      {/* Message content */}
+                      <div className="px-4 py-3">
+                        {m.content && m.content !== "📎 Anexo" && (
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                        )}
+
+                        {/* Attachments grid */}
+                        {msgAttachments && msgAttachments.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
+                            {msgAttachments.map((url: string, i: number) => {
+                              const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                              return isImg ? (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block group">
+                                  <img src={url} alt="Anexo" className="w-full h-24 object-cover rounded-md border border-border group-hover:opacity-80 transition-opacity" />
+                                </a>
+                              ) : (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-muted rounded-md px-3 py-2 text-[11px] hover:bg-muted/80 transition-colors">
+                                  <Download className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span className="truncate">{url.split("/").pop()?.substring(0, 25)}</span>
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </ScrollArea>

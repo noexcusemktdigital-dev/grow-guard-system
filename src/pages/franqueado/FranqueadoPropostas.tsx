@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,13 @@ function CalculadoraTab() {
     totals,
     getSelectedServicesByModule,
   } = useCalculator();
+
+  // Clear saved selections when no lead_id in URL
+  useEffect(() => {
+    if (!leadIdFromUrl) {
+      clearSelection();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const scrollToProposal = () => {
     setShowProposal(true);
