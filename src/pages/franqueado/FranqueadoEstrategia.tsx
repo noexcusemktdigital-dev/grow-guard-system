@@ -45,6 +45,7 @@ import {
   useCreateStrategy,
   useUpdateStrategy,
   useDeleteStrategy,
+  useRegenerateStrategy,
   type StrategyResult,
   type Strategy,
 } from "@/hooks/useFranqueadoStrategies";
@@ -131,10 +132,10 @@ const diagnosticSections = [
 
 // ── Diagnostic Form ─────────────────────────────────────────────
 
-function DiagnosticForm({ onSubmit, loading }: { onSubmit: (answers: Record<string, string>, title: string) => void; loading: boolean }) {
+function DiagnosticForm({ onSubmit, loading, initialAnswers, initialTitle }: { onSubmit: (answers: Record<string, string>, title: string) => void; loading: boolean; initialAnswers?: Record<string, string>; initialTitle?: string }) {
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [title, setTitle] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers || {});
+  const [title, setTitle] = useState(initialTitle || "");
 
   const section = diagnosticSections[step];
   const totalSteps = diagnosticSections.length;
@@ -420,11 +421,13 @@ function HistoricoTab() {
   const { data: strategies, isLoading } = useStrategies();
   const deleteMut = useDeleteStrategy();
   const updateMut = useUpdateStrategy();
+  const regenerateMut = useRegenerateStrategy();
   const { data: leads } = useCrmLeads();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Strategy | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingStrategy, setEditingStrategy] = useState<Strategy | null>(null);
 
   const filtered = (strategies ?? []).filter((s) =>
     s.title.toLowerCase().includes(search.toLowerCase())
@@ -502,14 +505,44 @@ function HistoricoTab() {
         )}
       </div>
 
+      {/* Edit Strategy Dialog */}
+      {editingStrategy && (
+        <Sheet open={!!editingStrategy} onOpenChange={() => setEditingStrategy(null)}>
+          <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Editar e Regenerar Estratégia</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4">
+              <DiagnosticForm
+                onSubmit={async (answers, title) => {
+                  try {
+                    const updated = await regenerateMut.mutateAsync({ id: editingStrategy.id, title, answers });
+                    setEditingStrategy(null);
+                    if (updated.result) setSelected(updated);
+                  } catch (e: any) {
+                    toast.error(e.message || "Erro ao regenerar");
+                  }
+                }}
+                loading={regenerateMut.isPending}
+                initialAnswers={editingStrategy.diagnostic_answers}
+                initialTitle={editingStrategy.title}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
       <Sheet open={!!selected} onOpenChange={() => setSelected(null)}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{selected?.title}</SheetTitle>
           </SheetHeader>
-          {selected?.result && (
-            <div className="mt-4">
-              <StrategyResultView result={selected.result} />
+          {selected && (
+            <div className="mt-4 space-y-4">
+              <Button variant="outline" size="sm" onClick={() => { setSelected(null); setEditingStrategy(selected); }}>
+                <Pencil className="w-4 h-4 mr-1" /> Editar e Regenerar
+              </Button>
+              {selected.result && <StrategyResultView result={selected.result} />}
             </div>
           )}
         </SheetContent>

@@ -148,6 +148,69 @@ export function useUpdateStrategy() {
   });
 }
 
+export function useRegenerateStrategy() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      title,
+      answers,
+    }: {
+      id: string;
+      title: string;
+      answers: Record<string, string>;
+    }) => {
+      if (!user) throw new Error("Não autenticado");
+
+      await supabase
+        .from("franqueado_strategies")
+        .update({
+          title,
+          diagnostic_answers: answers as any,
+          status: "draft",
+        })
+        .eq("id", id);
+
+      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+        "generate-strategy",
+        { body: { answers } }
+      );
+
+      if (fnError) {
+        await supabase
+          .from("franqueado_strategies")
+          .update({ status: "error" })
+          .eq("id", id);
+        throw new Error(fnError.message || "Erro ao regenerar estratégia");
+      }
+
+      if (fnData?.error) {
+        await supabase
+          .from("franqueado_strategies")
+          .update({ status: "error" })
+          .eq("id", id);
+        throw new Error(fnData.error);
+      }
+
+      const { data: updated, error: updateErr } = await supabase
+        .from("franqueado_strategies")
+        .update({ result: fnData.result as any, status: "completed" })
+        .eq("id", id)
+        .select()
+        .single();
+      if (updateErr) throw updateErr;
+
+      return updated as unknown as Strategy;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["strategies"] });
+      toast.success("Estratégia regenerada com sucesso!");
+    },
+  });
+}
+
 export function useDeleteStrategy() {
   const qc = useQueryClient();
   return useMutation({

@@ -473,84 +473,6 @@ function HistoricoTab() {
   );
 }
 
-// ── Scripts Comerciais ──────────────────────────────────────────
-
-function ScriptsTab() {
-  const [stage, setStage] = useState("prospeccao");
-  const [briefing, setBriefing] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [scriptResult, setScriptResult] = useState<string | null>(null);
-
-  const stageLabels: Record<string, string> = {
-    prospeccao: "Prospecção",
-    diagnostico: "Diagnóstico",
-    negociacao: "Negociação",
-    fechamento: "Fechamento",
-    objecoes: "Quebra de Objeções",
-  };
-
-  const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-script", {
-        body: { stage, briefing: { contexto: briefing }, context: {} },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setScriptResult(data.content);
-      toast.success("Script gerado!");
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao gerar script");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <Card className="glass-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-primary" /> Gerar Script Comercial
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Etapa do Funil</label>
-            <Select value={stage} onValueChange={setStage}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(stageLabels).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Contexto / Briefing</label>
-            <Textarea value={briefing} onChange={(e) => setBriefing(e.target.value)} placeholder="Descreva o cenário, segmento do cliente, produto/serviço..." rows={4} />
-          </div>
-          <Button onClick={handleGenerate} className="w-full" disabled={loading}>
-            {loading ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
-            {loading ? "Gerando..." : "Gerar Script"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {scriptResult && (
-        <Card className="glass-card">
-          <CardContent className="p-4 relative">
-            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={() => { navigator.clipboard.writeText(scriptResult); toast.success("Copiado!"); }}>
-              <Copy className="w-4 h-4" />
-            </Button>
-            <p className="text-sm whitespace-pre-line pr-10">{scriptResult}</p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
 // ── Playbooks Icon Map ──────────────────────────────────────────
 
 const playbookIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -710,14 +632,13 @@ function PlaybooksTab() {
 export default function FranqueadoProspeccaoIA() {
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Prospecção" subtitle="Planeje prospecções, gere scripts comerciais e arquive estratégias com IA" />
+      <PageHeader title="Prospecção" subtitle="Planeje prospecções e arquive estratégias com IA" />
 
       <Tabs defaultValue="nova">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="nova"><Sparkles className="w-4 h-4 mr-1" /> Prospecção IA</TabsTrigger>
           <TabsTrigger value="playbooks"><BookOpen className="w-4 h-4 mr-1" /> Playbooks</TabsTrigger>
           <TabsTrigger value="historico"><History className="w-4 h-4 mr-1" /> Histórico</TabsTrigger>
-          <TabsTrigger value="scripts"><MessageSquare className="w-4 h-4 mr-1" /> Scripts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="nova" className="space-y-6">
@@ -730,10 +651,6 @@ export default function FranqueadoProspeccaoIA() {
 
         <TabsContent value="historico" className="space-y-6">
           <HistoricoTab />
-        </TabsContent>
-
-        <TabsContent value="scripts" className="space-y-6">
-          <ScriptsTab />
         </TabsContent>
       </Tabs>
     </div>
