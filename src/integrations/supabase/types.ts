@@ -2796,6 +2796,7 @@ export type Database = {
       }
       marketing_folders: {
         Row: {
+          category: string | null
           created_at: string
           id: string
           name: string
@@ -2803,6 +2804,7 @@ export type Database = {
           parent_id: string | null
         }
         Insert: {
+          category?: string | null
           created_at?: string
           id?: string
           name: string
@@ -2810,6 +2812,7 @@ export type Database = {
           parent_id?: string | null
         }
         Update: {
+          category?: string | null
           created_at?: string
           id?: string
           name?: string

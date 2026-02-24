@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { GraduationCap, BookOpen, Route, ClipboardCheck, Award, Settings, BarChart3, Inbox } from "lucide-react";
+import { GraduationCap, BookOpen, Route, ClipboardCheck, Award, Settings, BarChart3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAcademyModules, useAcademyProgress, useAcademyCertificates } from "@/hooks/useAcademy";
+import { AcademyAdmin } from "@/components/academy/AcademyAdmin";
+import { AcademyModules } from "@/components/academy/AcademyModules";
+import { AcademyJourney } from "@/components/academy/AcademyJourney";
+import { AcademyCertificates } from "@/components/academy/AcademyCertificates";
+import { AcademyReports } from "@/components/academy/AcademyReports";
+import { AcademyModulePlayer } from "@/components/academy/AcademyModulePlayer";
 
 type Tab = "modulos" | "jornada" | "provas" | "certificados" | "admin" | "relatorios";
 
@@ -27,6 +33,7 @@ const tabColorMap: Record<string, { ring: string; bg: string; text: string; icon
 
 export default function Academy() {
   const [activeTab, setActiveTab] = useState<Tab>("modulos");
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const { data: modules, isLoading: loadingModules } = useAcademyModules();
   const { data: progress } = useAcademyProgress();
   const { data: certs } = useAcademyCertificates();
@@ -36,7 +43,33 @@ export default function Academy() {
   }
 
   const publishedModules = (modules ?? []).filter(m => m.is_published);
-  const totalProgress = 0; // will be computed from progress data when available
+
+  // If viewing a module player
+  if (selectedModuleId) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => setSelectedModuleId(null)} className="text-sm text-primary hover:underline">← Voltar</button>
+        <AcademyModulePlayer moduleId={selectedModuleId} />
+      </div>
+    );
+  }
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "modulos":
+        return <AcademyModules onSelectModule={(id) => setSelectedModuleId(id)} />;
+      case "jornada":
+        return <AcademyJourney onSelectModule={(id) => setSelectedModuleId(id)} onSelectLesson={(_, moduleId) => setSelectedModuleId(moduleId)} />;
+      case "certificados":
+        return <AcademyCertificates />;
+      case "admin":
+        return <AcademyAdmin />;
+      case "relatorios":
+        return <AcademyReports />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -115,24 +148,9 @@ export default function Academy() {
         })}
       </div>
 
-      {/* Content - empty states */}
+      {/* Content */}
       <div className="animate-fade-in">
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-1">
-            {activeTab === "modulos" && "Nenhum módulo disponível"}
-            {activeTab === "jornada" && "Sua jornada está vazia"}
-            {activeTab === "provas" && "Nenhuma prova disponível"}
-            {activeTab === "certificados" && "Nenhum certificado obtido"}
-            {activeTab === "admin" && "Cadastre módulos e aulas"}
-            {activeTab === "relatorios" && "Nenhum dado para relatórios"}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {activeTab === "modulos" ? "Crie o primeiro módulo de treinamento na aba Gestão." :
-             activeTab === "admin" ? "Crie módulos, adicione aulas e configure provas." :
-             "Os dados aparecerão conforme módulos e aulas forem criados."}
-          </p>
-        </div>
+        {renderTabContent()}
       </div>
     </div>
   );
