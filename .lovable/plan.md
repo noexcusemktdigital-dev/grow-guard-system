@@ -1,101 +1,78 @@
 
 
-# Agenda Google - Self-Service por Franqueado
+# Correções: Scripts, Pipeline e Edição de Estratégia/Proposta
 
-Mudar a arquitetura para que cada franqueado configure suas proprias credenciais do Google Calendar diretamente na interface, com um passo a passo guiado.
+## 1. Remover aba Scripts da Prospecção
 
----
+Remover a aba "Scripts" e o componente `ScriptsTab` da pagina `FranqueadoProspeccaoIA.tsx`. O grid de tabs passa de 4 colunas para 3.
 
-## Mudanca de arquitetura
-
-Atualmente as Edge Functions buscam `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` de variaveis de ambiente (secrets do sistema). Isso sera alterado para:
-
-- Cada franqueado insere seu proprio Client ID e Client Secret na tela da Agenda
-- Credenciais salvas na tabela `google_calendar_tokens` (colunas novas: `client_id`, `client_secret`)
-- Edge Functions leem as credenciais do banco, por usuario, em vez de env vars
+### Arquivo editado
+- `src/pages/franqueado/FranqueadoProspeccaoIA.tsx`
+  - Remover linhas do TabsTrigger "scripts" e TabsContent "scripts"
+  - Remover o componente `ScriptsTab` inteiro (linhas 476-552)
+  - Mudar `grid-cols-4` para `grid-cols-3`
 
 ---
 
-## 1. Banco de dados
+## 2. Lead sumindo da pipeline (stage incorreto)
 
-Adicionar colunas na tabela `google_calendar_tokens`:
+O problema esta no hook `useCrmLeads.ts`:
+- `markAsWon` define `stage: "fechado"` mas o Kanban espera `"Venda"`
+- `markAsLost` define `stage: "perdido"` mas o Kanban espera `"Oportunidade Perdida"`
 
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| client_id | text | Google OAuth Client ID do franqueado |
-| client_secret | text | Google OAuth Client Secret do franqueado |
+Como as stages do Kanban sao: `"Novo Lead", "Primeiro Contato", "Follow-up", "Diagnóstico", "Apresentação de Estratégia", "Proposta", "Venda", "Oportunidade Perdida"`, os leads com stages `"fechado"` ou `"perdido"` nao aparecem em nenhuma coluna.
 
----
+### Correcao
+- `markAsWon`: mudar `stage: "fechado"` para `stage: "Venda"`
+- `markAsLost`: mudar `stage: "perdido"` para `stage: "Oportunidade Perdida"`
 
-## 2. UI - Wizard de configuracao
-
-Na pagina `FranqueadoAgenda.tsx`, ao clicar em "Conectar Google Agenda", abrir um Dialog com 3 etapas:
-
-### Etapa 1 - Passo a passo
-Instrucoes visuais (cards numerados) explicando como o franqueado cria as credenciais:
-
-1. Acesse o [Google Cloud Console](https://console.cloud.google.com)
-2. Crie um novo projeto (ou use um existente)
-3. Ative a API "Google Calendar API"
-4. Va em "Credenciais" e crie um "ID do cliente OAuth 2.0"
-5. Tipo de aplicacao: "Aplicativo da Web"
-6. Em "URIs de redirecionamento autorizados", adicione: `https://[dominio-do-app]/franqueado/agenda`
-7. Copie o Client ID e Client Secret gerados
-
-### Etapa 2 - Inserir credenciais
-Formulario com dois campos:
-- Client ID (texto)
-- Client Secret (texto/password)
-
-Botao "Salvar e Conectar" que:
-1. Salva client_id e client_secret na tabela `google_calendar_tokens`
-2. Gera a URL de autorizacao usando essas credenciais
-3. Redireciona para o Google OAuth
-
-### Etapa 3 - Callback OAuth
-Mesma logica atual de trocar o `code` por tokens, mas agora lendo client_id/client_secret do banco do usuario.
+### Arquivo editado
+- `src/hooks/useCrmLeads.ts` (2 linhas)
 
 ---
 
-## 3. Edge Functions
+## 3. Editar Estratégia após finalizada
 
-### `google-calendar-oauth`
-- Acao `save_credentials`: salva client_id e client_secret no banco
-- Acao `get_auth_url`: le client_id do banco do usuario (nao de env var) e gera URL
-- Acao `exchange_code`: le client_id e client_secret do banco do usuario para trocar code por tokens
-- Acao `disconnect`: mantem igual
+Ao visualizar uma estrategia concluida no historico, adicionar um botao "Editar e Regenerar" que:
+1. Abre o formulario de diagnostico preenchido com as respostas salvas (`diagnostic_answers`)
+2. Permite alterar qualquer campo
+3. Ao submeter, chama a IA novamente e atualiza o registro existente (em vez de criar um novo)
 
-### `google-calendar-sync`
-- Le client_id e client_secret do banco do usuario (via `google_calendar_tokens`) para refresh de tokens
-- Resto da logica mantem igual
+### Implementacao
+- Adicionar estado `editingStrategy` na `HistoricoTab`
+- Quando clicado "Editar", renderizar o `DiagnosticForm` com valores pre-preenchidos
+- Criar uma mutation `useRegenerateStrategy` no hook que faz update no registro existente ao inves de insert
 
----
-
-## 4. Arquivos editados
-
-| Arquivo | Acao |
-|---------|------|
-| Migracao SQL | Adicionar colunas `client_id` e `client_secret` em `google_calendar_tokens` |
-| `supabase/functions/google-calendar-oauth/index.ts` | Ler credenciais do banco, nova acao `save_credentials` |
-| `supabase/functions/google-calendar-sync/index.ts` | Ler credenciais do banco em vez de env vars |
-| `src/hooks/useGoogleCalendar.ts` | Adicionar mutation `saveCredentials`, atualizar fluxo |
-| `src/pages/franqueado/FranqueadoAgenda.tsx` | Wizard de configuracao com passo a passo + formulario de credenciais |
+### Arquivos editados
+- `src/hooks/useFranqueadoStrategies.ts` - adicionar mutation `useRegenerateStrategy`
+- `src/pages/franqueado/FranqueadoEstrategia.tsx` - botao "Editar" no Sheet do historico + form pre-preenchido
 
 ---
 
-## Fluxo completo do franqueado
+## 4. Editar Proposta
 
-```text
-1. Clica "Conectar Google Agenda"
-2. Ve passo a passo ilustrado de como criar credenciais no Google
-3. Insere Client ID e Client Secret
-4. Clica "Salvar e Conectar"
-5. Redirecionado para Google OAuth (tela de permissao)
-6. Autoriza o acesso
-7. Redirecionado de volta -> tokens salvos automaticamente
-8. Badge "Google conectado" aparece
-9. Botao "Sincronizar" disponivel
-```
+Na lista de propostas em `FranqueadoPropostas.tsx`, adicionar funcionalidade de edicao:
+- Botao "Editar" na tabela de propostas (ao lado de duplicar/enviar/excluir)
+- Ao clicar, abre a aba Calculadora carregando os dados salvos da proposta (services, duration, client_name, lead_id, payment_terms)
+- O botao "Salvar" atualiza a proposta existente em vez de criar uma nova
 
-Nenhum secret de sistema e necessario. Cada franqueado e autonomo.
+### Implementacao
+- Adicionar estado `editingProposal` na pagina
+- Quando ativo, a aba Calculadora recebe a proposta como prop e carrega os dados
+- O `handleSave` usa `updateProposal` ao inves de `createProposal`
+
+### Arquivos editados
+- `src/pages/franqueado/FranqueadoPropostas.tsx` - botao editar na lista + logica de edicao na calculadora
+
+---
+
+## Resumo de arquivos
+
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/pages/franqueado/FranqueadoProspeccaoIA.tsx` | Remover aba Scripts, ajustar grid |
+| `src/hooks/useCrmLeads.ts` | Corrigir stages de won/lost |
+| `src/hooks/useFranqueadoStrategies.ts` | Adicionar `useRegenerateStrategy` |
+| `src/pages/franqueado/FranqueadoEstrategia.tsx` | Botao editar + form pre-preenchido no historico |
+| `src/pages/franqueado/FranqueadoPropostas.tsx` | Botao editar proposta + logica de edicao |
 
