@@ -1,11 +1,13 @@
 import { useState } from "react";
 import logoWhite from "@/assets/logo-noexcuse-white.png";
-import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Calendar, Megaphone, MessageSquare, ChevronLeft, ChevronRight,
   Sparkles, ClipboardCheck, FileText, Users, FolderOpen, GraduationCap,
-  DollarSign, FileSignature, User, Target, ChevronDown, Settings,
+  DollarSign, FileSignature, User, Target, ChevronDown, Settings, ChevronsUpDown,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAuth } from "@/contexts/AuthContext";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -142,6 +144,11 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
 
 export function FranqueadoSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+
+  const userName = profile?.full_name || "Usuário";
+  const userInitials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <aside
@@ -163,28 +170,43 @@ export function FranqueadoSidebar() {
         <CollapsibleSection title="Gestão" items={gestaoSection} collapsed={collapsed} />
       </div>
 
-      {/* Configurações link */}
+      {/* Footer — User Menu */}
       <div className="border-t border-sidebar-border">
-        <NavItem
-          item={{ label: "Configurações", icon: Settings, path: "/franqueado/configuracoes" }}
-          collapsed={collapsed}
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={`w-full flex items-center gap-2.5 hover:bg-white/[0.06] transition-colors ${collapsed ? "justify-center px-2 py-3" : "px-3 py-3"}`}>
+              <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0">
+                <span className="text-[11px] font-bold text-sidebar-primary">{userInitials}</span>
+              </div>
+              {!collapsed && (
+                <>
+                  <div className="min-w-0 text-left flex-1">
+                    <p className="text-[12px] font-semibold text-white truncate">{userName}</p>
+                    <p className="text-[10px] text-sidebar-muted truncate">{profile?.job_title || "Franqueado"}</p>
+                  </div>
+                  <ChevronsUpDown className="w-3.5 h-3.5 text-sidebar-muted flex-shrink-0" />
+                </>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side={collapsed ? "right" : "top"} align="start" className="w-48 p-1 bg-popover border border-border shadow-lg z-50">
+            <button
+              onClick={() => navigate("/franqueado/perfil")}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[13px] rounded-md hover:bg-muted transition-colors text-foreground"
+            >
+              <User className="w-4 h-4" />
+              Meu Perfil
+            </button>
+            <button
+              onClick={() => navigate("/franqueado/configuracoes")}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[13px] rounded-md hover:bg-muted transition-colors text-foreground"
+            >
+              <Settings className="w-4 h-4" />
+              Configurações
+            </button>
+          </PopoverContent>
+        </Popover>
       </div>
-
-      {/* Footer — User */}
-      {!collapsed && (
-        <div className="px-3 py-3 border-t border-sidebar-border">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-sidebar-primary" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[12px] font-semibold text-white truncate">Davi Sócio</p>
-              <p className="text-[10px] text-sidebar-muted truncate">Unidade Curitiba</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       <button
         onClick={() => setCollapsed(!collapsed)}
