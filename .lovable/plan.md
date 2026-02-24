@@ -1,89 +1,93 @@
 
 
-# Etapa 3 -- Prospeccao IA (com IA real e persistencia)
+# Playbooks Comerciais + Calculadora NOE Original
 
-Reescrita completa da pagina de Prospeccao IA com edge function real, persistencia no banco e historico.
-
----
-
-## O que sera feito
-
-### 1. Nova Edge Function: `generate-prospection`
-
-Arquivo: `supabase/functions/generate-prospection/index.ts`
-
-- Recebe inputs do formulario (regiao, nicho, porte, desafio, objetivo da abordagem)
-- Usa Lovable AI (Gemini 3 Flash) com tool calling para retornar JSON estruturado com 5 secoes:
-  - **estrategia_abordagem**: como abordar o prospect nesse nicho/regiao
-  - **avaliacao_inicial**: perguntas de qualificacao rapida
-  - **roteiro_contato**: script do primeiro contato (telefone/WhatsApp)
-  - **quebra_objecoes**: 5 objecoes comuns + respostas
-  - **passo_a_passo_reuniao**: checklist para agendar a reuniao de diagnostico
-- Valida autenticacao, registra uso de tokens em `ai_conversation_logs`
-- Trata erros 429/402 e repassa ao client
-
-### 2. Hook: `useFranqueadoProspections`
-
-Arquivo: `src/hooks/useFranqueadoProspections.ts`
-
-- `useProspections()` -- lista prospeccoes da org, ordenadas por data
-- `useCreateProspection()` -- insere registro com status 'draft', depois chama a edge function, atualiza com resultado e status 'completed'
-- `useUpdateProspection()` -- editar titulo, vincular lead
-- `useDeleteProspection()` -- excluir
-- Usa `useUserOrgId` para multi-tenancy
-
-### 3. Reescrita da pagina `FranqueadoProspeccaoIA.tsx`
-
-3 abas:
-
-**Aba "Nova Prospeccao"**
-- Formulario com 5 campos: Regiao, Nicho/Segmento, Porte do Prospect (select: MEI/ME/EPP/Medio/Grande), Desafio Principal (textarea), Objetivo da Abordagem (select: Agendar Reuniao/Apresentar Servico/Reativar Contato)
-- Botao "Gerar Plano com IA" (com loading spinner)
-- Resultado renderizado em cards por secao (com icones por tipo)
-- Botoes pos-geracao: "Salvar", "Vincular ao Lead" (select de leads do CRM), "Gerar Novo"
-
-**Aba "Historico"**
-- Lista de prospeccoes salvas com titulo, data, status, lead vinculado
-- Busca por texto
-- Clicar abre o resultado completo em Sheet lateral
-- Botoes: editar titulo, vincular/desvincular lead, excluir
-
-**Aba "Scripts Comerciais"**
-- Reutiliza a logica existente do `generate-script` (ja funciona)
-- Selecao de etapa do funil (Prospeccao, Diagnostico, Negociacao, Fechamento, Objecoes)
-- Campos de briefing contextuais
-- Resultado renderizado em card com botao copiar
+Duas mudancas combinadas: (1) adicionar aba "Playbooks" na Prospeccao IA com conteudo estatico, e (2) substituir a calculadora atual de Propostas pela calculadora original do projeto [Remix of Strategic Proposal Builder](/projects/87db4516-48da-46f8-be29-a49dd25e2551).
 
 ---
 
-## Detalhes Tecnicos
+## 1. Substituir a Calculadora de Propostas
 
-### Edge Function -- generate-prospection
+A calculadora atual em `FranqueadoPropostas.tsx` e simplificada e nao suporta os tipos de quantidade corretos (package, youtube_time, toggle, quantity). Sera substituida pela calculadora original que tem:
 
-Segue o mesmo padrao do `generate-script` existente:
-- CORS headers padrao
-- Autenticacao via Bearer token + getClaims
-- Usa tool calling para forcar resposta em JSON estruturado com as 5 secoes
-- Modelo: `google/gemini-3-flash-preview`
-- Prompt de sistema: consultor de vendas B2B brasileiro especialista em franquias
-- Log de tokens em `ai_conversation_logs`
+- **Catalogo completo** com ~35 servicos reais NOEXCUSE (Branding, Social Media, Performance, Web, Dados/CRM)
+- **Tipos de precificacao variados**: single (preco fixo), quantity (preco x quantidade), package (pacotes de 2-12 unidades), youtube_time (tabela por minuto)
+- **Selecao por Switch** com cards detalhados mostrando descricao do servico
+- **Modulos em Accordion** (expansiveis/retraiveis)
+- **Duracao do projeto**: 1 mes (entrega unica), 6 meses, 12 meses
+- **Simulacao de pagamento**: A vista, 3x ou 6x -- com diluicao do unitario no mensal
+- **Resumo visual** com totais unitario vs mensal
+- **Gerador de PDF** com identidade NOEXCUSE (logo, tabelas, fluxo de pagamento)
+- **Drawer de detalhe** para revisar selecao lateral
 
-### Config TOML
-
-Adicionar entrada para a nova function (ja existe padrao no projeto):
-```toml
-[functions.generate-prospection]
-verify_jwt = false
-```
-
-### Arquivos criados/modificados
+### Arquivos envolvidos
 
 | Arquivo | Acao |
 |---------|------|
-| `supabase/functions/generate-prospection/index.ts` | Novo |
-| `src/hooks/useFranqueadoProspections.ts` | Novo |
-| `src/pages/franqueado/FranqueadoProspeccaoIA.tsx` | Reescrita completa |
-| `supabase/config.toml` | Adicionar entry |
+| `src/data/services.ts` | **Novo** -- catalogo completo de servicos (copiado do projeto original) |
+| `src/hooks/useCalculator.ts` | **Novo** -- hook com logica de selecao, totais, schedule e localStorage |
+| `src/components/calculator/ServiceCard.tsx` | **Novo** -- card de servico com switch e controles de quantidade/pacote/youtube |
+| `src/components/calculator/ModuleAccordion.tsx` | **Novo** -- accordion de modulos |
+| `src/components/calculator/PaymentSimulation.tsx` | **Novo** -- selecao de forma de pagamento (a vista, 3x, 6x) |
+| `src/components/calculator/DurationSelector.tsx` | **Novo** -- selecao de duracao (1, 6, 12 meses) |
+| `src/components/calculator/ProposalSummary.tsx` | **Novo** -- resumo com servicos agrupados e totais |
+| `src/components/calculator/ProposalGenerator.tsx` | **Novo** -- preview da proposta + gerador de PDF |
+| `src/components/calculator/SummaryDrawer.tsx` | **Novo** -- drawer lateral com resumo |
+| `src/constants/noeServices.ts` | **Remover** -- substituido por `src/data/services.ts` |
+| `src/pages/franqueado/FranqueadoPropostas.tsx` | **Reescrita** -- integrar a calculadora original na aba "Calculadora" mantendo a aba "Propostas" |
 
-Nenhuma migracao SQL necessaria -- a tabela `franqueado_prospections` ja foi criada na Etapa 1.
+A adaptacao principal sera:
+- Remover estilos `noexcuse-*` (cores do projeto original) e usar o tema atual do sistema (classes CSS do Tailwind/shadcn)
+- Integrar com `useCrmProposals` para salvar propostas no banco
+- Manter vinculo com lead_id do CRM
+- Copiar o logo `logo-noexcuse.png` para o projeto para uso no PDF
+
+---
+
+## 2. Adicionar Aba "Playbooks" na Prospeccao IA
+
+### Tabs atualizadas
+```
+Nova Prospeccao | Playbooks | Historico | Scripts
+```
+
+### Conteudo: 8 Playbooks estaticos
+
+| Playbook | Categoria | Conteudo principal |
+|----------|-----------|-------------------|
+| Primeiro Contato | Abordagem | Checklist pre-contato, scripts telefone + WhatsApp, erros comuns |
+| Follow-up Estrategico | Abordagem | Cadencia dia 1/3/7/14, templates por canal, quando parar |
+| Qualificacao de Lead | Analise | BANT adaptado, sinais de compra, perguntas-chave |
+| Quebra de Objecoes | Objecoes | 15+ objecoes com respostas, tecnicas (feel-felt-found, reversa) |
+| Agendamento de Reuniao | Abordagem | Frases de fechamento, contorno de "me manda por email" |
+| Diagnostico Comercial | Analise | Roteiro de reuniao, perguntas-chave, como apresentar valor |
+| Negociacao e Fechamento | Fechamento | Ancoragem, urgencia, lidar com "ta caro", tecnicas de fechamento |
+| Reativacao de Contatos | Abordagem | Scripts para leads frios, abordagem por tempo sem contato |
+
+### Arquivos envolvidos
+
+| Arquivo | Acao |
+|---------|------|
+| `src/constants/prospectionPlaybooks.ts` | **Novo** -- dados estaticos dos 8 playbooks |
+| `src/pages/franqueado/FranqueadoProspeccaoIA.tsx` | **Editar** -- adicionar aba "Playbooks" com listagem + Sheet de detalhe |
+
+### Funcionalidades da aba
+- Cards com icone, titulo, categoria e descricao
+- Filtro por categoria (Abordagem, Analise, Objecoes, Fechamento)
+- Clicar abre Sheet lateral com conteudo completo
+- Scripts com botao "Copiar"
+- Checklists e dicas em destaque
+- 100% estatico, sem banco de dados, sem IA
+
+---
+
+## Ordem de implementacao
+
+1. Copiar asset `logo-noexcuse.png` do projeto original
+2. Criar `src/data/services.ts` (catalogo de servicos completo)
+3. Criar `src/hooks/useCalculator.ts` (hook de logica)
+4. Criar todos os componentes em `src/components/calculator/`
+5. Reescrever `FranqueadoPropostas.tsx` com a calculadora real
+6. Criar `src/constants/prospectionPlaybooks.ts`
+7. Editar `FranqueadoProspeccaoIA.tsx` para incluir aba Playbooks
 
