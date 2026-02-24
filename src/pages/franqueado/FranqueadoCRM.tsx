@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
+import { useProspections } from "@/hooks/useFranqueadoProspections";
+import { useStrategies } from "@/hooks/useFranqueadoStrategies";
+import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { toast } from "sonner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
@@ -43,6 +46,9 @@ type ViewType = "kanban" | "list";
 export default function FranqueadoCRM() {
   const { data: leads, isLoading } = useCrmLeads();
   const { createLead, updateLead } = useCrmLeadMutations();
+  const { data: prospections } = useProspections();
+  const { data: strategies } = useStrategies();
+  const { data: proposals } = useCrmProposals();
 
   const [view, setView] = useState<ViewType>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,8 +59,26 @@ export default function FranqueadoCRM() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [newLead, setNewLead] = useState({ name: "", email: "", phone: "", company: "", source: "", value: "" });
 
-  // Fetch activities for selected lead
   const { data: activities } = useCrmActivities(selectedLead?.id);
+
+  // Build lookup sets for indicators
+  const leadProspections = useMemo(() => {
+    const set = new Set<string>();
+    (prospections ?? []).forEach((p) => { if (p.lead_id && p.status === "completed") set.add(p.lead_id); });
+    return set;
+  }, [prospections]);
+
+  const leadStrategies = useMemo(() => {
+    const set = new Set<string>();
+    (strategies ?? []).forEach((s) => { if (s.lead_id && s.status === "completed") set.add(s.lead_id); });
+    return set;
+  }, [strategies]);
+
+  const leadProposals = useMemo(() => {
+    const map = new Map<string, string>();
+    (proposals ?? []).forEach((p) => { if (p.lead_id) map.set(p.lead_id, p.status); });
+    return map;
+  }, [proposals]);
 
   const filtered = useMemo(() => {
     return (leads ?? []).filter(l => {
@@ -189,6 +213,10 @@ export default function FranqueadoCRM() {
                       <CrmKanbanCard
                         key={lead.id}
                         lead={lead}
+                        hasProspection={leadProspections.has(lead.id)}
+                        hasStrategy={leadStrategies.has(lead.id)}
+                        hasProposal={leadProposals.has(lead.id)}
+                        proposalAccepted={leadProposals.get(lead.id) === "accepted"}
                         onClick={() => openLeadDetail(lead)}
                       />
                     ))}
