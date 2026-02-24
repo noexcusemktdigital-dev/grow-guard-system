@@ -1,72 +1,134 @@
 
+# Melhorias: Prospeccao, Agenda Google, Suporte e Integracao CRM
 
-# Plano de Evolução - Módulos do Franqueado
+## 1. Prospeccao - Renomear + Mais Campos para IA
 
-## ✅ Concluído
+### Renomear
+- Sidebar: "Prospeccao IA" -> "Prospeccao"
+- PageHeader: titulo "Prospeccao" com subtitulo atualizado
+- Aba "Nova" -> "Prospeccao IA"
 
-### Calculadora NOE Original + Playbooks Comerciais
-- Calculadora completa com ~35 serviços, tipos de precificação variados, simulação de pagamento e gerador de PDF
-- 8 Playbooks estáticos na aba de Prospecção IA
+### Novos campos no formulario de Prospeccao IA
+Adicionar ao formulario (e ao tipo `ProspectionInputs`):
 
-### Suporte Robusto
-- Visão Kanban por status (Aberto, Em análise, Aguardando, Resolvido)
-- Visão lista alternativa
-- Formulário robusto com categoria, subcategoria, prioridade, anexos múltiplos
-- Chat com suporte a imagens e arquivos (upload para storage)
-- Mensagens em tempo real (Supabase Realtime)
-- KPIs de resumo (abertos, em análise, aguardando, resolvidos)
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| nome_empresa | text | Nome da empresa alvo |
+| site | text | URL do site (se conhecer) |
+| redes_sociais | text | Instagram, LinkedIn, etc |
+| conhecimento_previo | textarea | O que ja sabe sobre a empresa |
+| nivel_contato | select | Frio / Morno / Quente |
+| contato_decisor | text | Nome do decisor (se souber) |
+| cargo_decisor | text | Cargo do decisor |
 
-### Comunicados com Alertas
-- Banner de alerta para comunicados críticos não confirmados (com animação)
-- Filtros por prioridade, tipo e busca textual
-- Badge de contagem de novos
-- Exibição de data de expiração
-- Confirmação obrigatória para comunicados críticos
+### Arquivos editados
+- `src/hooks/useFranqueadoProspections.ts` - atualizar interface ProspectionInputs
+- `src/pages/franqueado/FranqueadoProspeccaoIA.tsx` - renomear abas, adicionar campos ao formulario
+- `src/components/FranqueadoSidebar.tsx` - renomear label "Prospeccao IA" -> "Prospeccao"
+- `supabase/functions/generate-prospection/index.ts` - incluir novos campos no prompt para IA
 
 ---
 
-## 🔜 Próximos
+## 2. Agenda - Integracao Google Calendar
 
-### 3. Base de Prospecção (Prospecção IA)
-Transformar a Prospecção em uma base de dados de empresas-alvo que o franqueado está prospectando.
+Implementar sync bidirecional real com Google Calendar usando Edge Functions.
 
-**Tabela nova**: `franqueado_prospect_companies`
-- id, organization_id, name, segment, region, size, contact_name, contact_phone, contact_email
-- status (pesquisando, contato_feito, reuniao_marcada, proposta_enviada, convertido, descartado)
-- notes, tags, last_contact_at, next_followup_at
-- prospection_id (FK para franqueado_prospections - vincular ao plano IA)
-- lead_id (FK para crm_leads - quando converter)
-- created_by, created_at, updated_at
-
-**UI**:
-- Lista/tabela de prospects com filtros por status, segmento, região
-- Card de detalhe com histórico de interações
-- Botão "Converter para Lead" (cria no CRM principal)
-- Integração com playbooks e prospecções IA existentes
-- KPIs: total de prospects, por status, taxa de conversão
-
-### 4. Agenda com Google Calendar
-Sincronização bidirecional com Google Calendar.
-
-**Infraestrutura necessária**:
-- Edge Function `google-calendar-sync` para OAuth callback e sync
-- Tabela `google_calendar_connections` para armazenar tokens
-- Colunas em `calendar_events`: google_event_id, google_calendar_id, sync_status
-
-**Fluxo**:
+### Fluxo
 1. Franqueado clica "Conectar Google Agenda"
-2. OAuth flow via Google Cloud Console
-3. Sync inicial puxa eventos do Google
-4. Eventos criados no sistema são enviados ao Google
-5. Webhook ou polling para manter sincronizado
+2. Abre popup OAuth do Google (redirect para Edge Function)
+3. Edge Function troca code por access_token + refresh_token
+4. Tokens salvos na tabela `google_calendar_tokens`
+5. Sync inicial: puxa eventos do Google -> insere no sistema
+6. Ao criar/editar/excluir evento local -> replica no Google
+7. Webhook ou polling periodico para puxar mudancas do Google
 
-**Requisitos do usuário**:
-- Configurar Google Cloud Console com OAuth credentials
-- Ou usar um conector Google Calendar (se disponível)
+### Banco de dados (nova tabela)
+```
+google_calendar_tokens:
+  - id uuid PK
+  - organization_id uuid FK
+  - user_id uuid FK
+  - access_token text (encrypted)
+  - refresh_token text (encrypted)
+  - expires_at timestamptz
+  - google_calendar_id text
+  - created_at timestamptz
+  - updated_at timestamptz
+```
+
+Adicionar coluna `google_event_id text` na tabela `calendar_events` para rastrear eventos sincronizados.
+
+### Edge Functions
+- `google-calendar-oauth` - Inicia fluxo OAuth e troca code por tokens
+- `google-calendar-sync` - Sync bidirecional (push/pull eventos)
+
+### Secrets necessarios
+- `GOOGLE_CLIENT_ID` - Client ID do Google Cloud Console
+- `GOOGLE_CLIENT_SECRET` - Client Secret do Google Cloud Console
+
+### Arquivos
+- Nova tabela + coluna via migracao SQL
+- `supabase/functions/google-calendar-oauth/index.ts` (novo)
+- `supabase/functions/google-calendar-sync/index.ts` (novo)
+- `src/hooks/useGoogleCalendar.ts` (novo) - hook para conectar/desconectar/sync
+- `src/pages/franqueado/FranqueadoAgenda.tsx` - ativar botao "Conectar Google Agenda", mostrar status de conexao, badge de sync
 
 ---
 
-## Ordem de implementação restante
+## 3. Suporte - Mensagens mais documentadas
 
-1. Base de Prospecção (criar tabela + UI)
-2. Agenda Google Calendar (configurar OAuth + edge functions + UI)
+Atualmente as mensagens parecem chat de WhatsApp. Mudar para formato de "historico documentado":
+
+### Mudancas no layout de mensagens
+- Cada mensagem vira um "card" com:
+  - Avatar + nome do autor
+  - Data/hora completa (nao so HH:mm)
+  - Conteudo com formatacao rica
+  - Anexos em grid de preview
+  - Borda lateral colorida (azul = franqueado, cinza = matriz)
+- Layout vertical (timeline), nao bolhas de chat
+- Separadores de data entre mensagens de dias diferentes
+
+### Arquivos editados
+- `src/pages/franqueado/FranqueadoSuporte.tsx` - redesign do componente `TicketMessages` e do painel de detalhe do chamado
+
+---
+
+## 4. Calculadora - Fix R$15.000
+
+O valor de R$15k provavelmente vem de selecoes salvas no localStorage de sessoes anteriores. O hook `useCalculator` persiste o estado com a chave `noexcuse-calculator-state`.
+
+### Correcao
+- Ao abrir a aba "Calculadora", se nao houver `lead_id` na URL, iniciar com estado limpo (nao carregar do localStorage)
+- Adicionar botao visivel "Limpar Selecao" no topo
+- Mostrar alerta se houver selecoes salvas de uma sessao anterior
+
+### Arquivo editado
+- `src/pages/franqueado/FranqueadoPropostas.tsx` - logica de inicializacao
+
+---
+
+## 5. Integracao CRM - Indicadores no Lead
+
+O CRM ja tem indicadores visuais (checkmarks coloridos no `CrmKanbanCard`). Ja usa lookups de prospections, strategies e proposals vinculados por `lead_id`. Essa integracao ja existe e funciona.
+
+### Melhorias adicionais
+- No detalhe do lead (`CrmLeadDetailSheet`), adicionar secao "Ferramentas" com links rapidos:
+  - "Gerar Prospeccao" -> `/franqueado/prospeccao?lead_id=X`
+  - "Criar Estrategia" -> `/franqueado/estrategia?lead_id=X`
+  - "Gerar Proposta" -> `/franqueado/propostas?lead_id=X`
+  - Mostrar status de cada ferramenta (feito/pendente)
+- No Kanban, manter os checkmarks ja existentes
+
+### Arquivos editados
+- `src/components/franqueado/CrmLeadDetailSheet.tsx` - adicionar secao de ferramentas integradas
+
+---
+
+## Ordem de implementacao
+
+1. Prospeccao: renomear + novos campos + atualizar edge function
+2. Suporte: redesign das mensagens para formato documentado
+3. Calculadora: fix do localStorage / R$15k
+4. CRM: links rapidos no detalhe do lead
+5. Agenda Google: tabela + edge functions + UI (requer secrets do Google)
