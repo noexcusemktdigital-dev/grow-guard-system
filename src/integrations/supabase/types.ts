@@ -2515,6 +2515,100 @@ export type Database = {
           },
         ]
       }
+      franqueado_prospections: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          inputs: Json
+          lead_id: string | null
+          organization_id: string
+          result: Json | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inputs?: Json
+          lead_id?: string | null
+          organization_id: string
+          result?: Json | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inputs?: Json
+          lead_id?: string | null
+          organization_id?: string
+          result?: Json | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franqueado_prospections_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      franqueado_strategies: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          diagnostic_answers: Json
+          id: string
+          lead_id: string | null
+          organization_id: string
+          result: Json | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          diagnostic_answers?: Json
+          id?: string
+          lead_id?: string | null
+          organization_id: string
+          result?: Json | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          diagnostic_answers?: Json
+          id?: string
+          lead_id?: string | null
+          organization_id?: string
+          result?: Json | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franqueado_strategies_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           assigned_to: string | null
@@ -2723,6 +2817,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      noe_service_catalog: {
+        Row: {
+          base_price: number
+          created_at: string
+          id: string
+          is_active: boolean
+          module: string
+          name: string
+          organization_id: string
+          sort_order: number
+          type: string
+          unit: string
+        }
+        Insert: {
+          base_price?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          module: string
+          name: string
+          organization_id: string
+          sort_order?: number
+          type?: string
+          unit?: string
+        }
+        Update: {
+          base_price?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          module?: string
+          name?: string
+          organization_id?: string
+          sort_order?: number
+          type?: string
+          unit?: string
+        }
+        Relationships: []
       }
       onboarding_checklist: {
         Row: {
