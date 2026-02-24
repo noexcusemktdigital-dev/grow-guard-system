@@ -3383,6 +3383,7 @@ export type Database = {
       }
       support_messages: {
         Row: {
+          attachments: string[] | null
           content: string
           created_at: string
           id: string
@@ -3391,6 +3392,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachments?: string[] | null
           content: string
           created_at?: string
           id?: string
@@ -3399,6 +3401,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachments?: string[] | null
           content?: string
           created_at?: string
           id?: string
@@ -3419,6 +3422,7 @@ export type Database = {
       support_tickets: {
         Row: {
           assigned_to: string | null
+          attachments: string[] | null
           category: string | null
           closed_at: string | null
           created_at: string
@@ -3428,11 +3432,13 @@ export type Database = {
           organization_id: string
           priority: string
           status: string
+          subcategory: string | null
           title: string
           updated_at: string
         }
         Insert: {
           assigned_to?: string | null
+          attachments?: string[] | null
           category?: string | null
           closed_at?: string | null
           created_at?: string
@@ -3442,11 +3448,13 @@ export type Database = {
           organization_id: string
           priority?: string
           status?: string
+          subcategory?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           assigned_to?: string | null
+          attachments?: string[] | null
           category?: string | null
           closed_at?: string | null
           created_at?: string
@@ -3456,6 +3464,7 @@ export type Database = {
           organization_id?: string
           priority?: string
           status?: string
+          subcategory?: string | null
           title?: string
           updated_at?: string
         }
