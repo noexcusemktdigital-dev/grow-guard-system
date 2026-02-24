@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoWhite from "@/assets/logo-noexcuse-white.png";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, DollarSign, FileText, FolderOpen, Building2, TrendingUp,
@@ -261,17 +262,7 @@ export function FranqueadoraSidebar() {
       {/* Logo */}
       <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 flex-shrink-0 shadow-lg shadow-primary/20">
-            <span className="text-sm font-black text-primary-foreground">N</span>
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col leading-tight">
-              <span className="text-[13px] font-bold text-white tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                NOEXCUSE
-              </span>
-              <span className="text-[9px] text-sidebar-muted -mt-0.5 tracking-wide">Franchise System</span>
-            </div>
-          )}
+          <img src={logoWhite} alt="NOEXCUSE" className={`object-contain flex-shrink-0 ${collapsed ? "h-7 w-7" : "h-8"}`} />
         </div>
       </div>
 
