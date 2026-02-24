@@ -67,7 +67,7 @@ function SidebarSection({ title, items, collapsed }: { title: string; items: Sid
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 text-sm transition-all duration-200 rounded-r-xl mx-1
                 ${collapsed ? "justify-center" : ""}
-                ${isActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-foreground hover:bg-primary/5"}
+                ${isActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-sidebar-hover"}
               `}
               title={collapsed ? item.label : undefined}
             >
@@ -121,7 +121,7 @@ export function FranqueadoSidebar() {
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-12 border-t border-sidebar-border text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center justify-center h-12 border-t border-sidebar-border text-sidebar-muted hover:text-sidebar-primary-foreground transition-colors"
       >
         {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>

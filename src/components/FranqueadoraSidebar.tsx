@@ -90,7 +90,7 @@ function SidebarItemWithChildren({ item, collapsed }: { item: SidebarItem; colla
       <button
         onClick={() => setOpen(!open)}
         className={`flex items-center gap-3 px-4 py-3 text-sm w-full transition-all duration-200 rounded-r-xl mx-1
-          ${isParentActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-foreground hover:bg-primary/5"}
+          ${isParentActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-sidebar-hover"}
         `}
       >
         <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isParentActive ? "text-primary" : "text-primary/60"}`} />
@@ -107,7 +107,7 @@ function SidebarItemWithChildren({ item, collapsed }: { item: SidebarItem; colla
                 key={child.path}
                 to={child.path}
                 className={`flex items-center gap-2.5 pl-4 pr-4 py-2 text-sm transition-colors duration-150 ${
-                  isChildActive ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                  isChildActive ? "text-primary font-medium" : "text-sidebar-muted hover:text-sidebar-primary-foreground"
                 }`}
               >
                 <ChildIcon className={`w-3.5 h-3.5 ${isChildActive ? "text-primary" : ""}`} />
@@ -155,7 +155,7 @@ function SidebarSection({ title, items, collapsed }: { title: string; items: Sid
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 text-sm transition-all duration-200 rounded-r-xl mx-1
                 ${collapsed ? "justify-center" : ""}
-                ${isActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-foreground hover:bg-primary/5"}
+                ${isActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-sidebar-hover"}
               `}
               title={collapsed ? item.label : undefined}
             >
@@ -210,7 +210,7 @@ export function FranqueadoraSidebar() {
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-12 border-t border-sidebar-border text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center justify-center h-12 border-t border-sidebar-border text-sidebar-muted hover:text-sidebar-primary-foreground transition-colors"
       >
         {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>
