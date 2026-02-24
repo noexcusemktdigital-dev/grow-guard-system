@@ -3,7 +3,7 @@ import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Calendar, Megaphone, MessageSquare, ChevronLeft, ChevronRight,
   Sparkles, ClipboardCheck, FileText, Users, FolderOpen, GraduationCap,
-  DollarSign, FileSignature, User, Target, ChevronDown,
+  DollarSign, FileSignature, User, Target, ChevronDown, Settings,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -170,6 +170,14 @@ export function FranqueadoSidebar() {
         <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} defaultOpen />
         <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
         <CollapsibleSection title="Gestão" items={gestaoSection} collapsed={collapsed} />
+      </div>
+
+      {/* Configurações link */}
+      <div className="border-t border-sidebar-border">
+        <NavItem
+          item={{ label: "Configurações", icon: Settings, path: "/franqueado/configuracoes" }}
+          collapsed={collapsed}
+        />
       </div>
 
       {/* Footer — User */}

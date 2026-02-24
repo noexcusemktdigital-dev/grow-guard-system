@@ -60,11 +60,19 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => toast.info("Perfil em desenvolvimento")}>
+        <DropdownMenuItem onClick={() => {
+          if (role === "franqueado") navigate("/franqueado/perfil");
+          else if (role === "cliente_admin" || role === "cliente_user") navigate("/cliente/configuracoes");
+          else toast.info("Perfil em desenvolvimento");
+        }}>
           <User className="mr-2 h-4 w-4" />
           Meu Perfil
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => toast.info("Configurações em desenvolvimento")}>
+        <DropdownMenuItem onClick={() => {
+          if (role === "franqueado") navigate("/franqueado/configuracoes");
+          else if (role === "cliente_admin" || role === "cliente_user") navigate("/cliente/configuracoes");
+          else toast.info("Configurações em desenvolvimento");
+        }}>
           <Settings className="mr-2 h-4 w-4" />
           Configurações
         </DropdownMenuItem>
