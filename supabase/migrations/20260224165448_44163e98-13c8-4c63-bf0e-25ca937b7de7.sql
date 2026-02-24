@@ -1,0 +1,1 @@
+ALTER TABLE public.marketing_folders ADD COLUMN IF NOT EXISTS category text DEFAULT NULL;

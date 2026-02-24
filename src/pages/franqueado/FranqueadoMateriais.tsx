@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Download, Search, Folder, FolderOpen, Inbox, ChevronRight,
+  Download, Search, FolderOpen, Inbox, ChevronRight,
   Image, Video, FileText, FileSpreadsheet, Presentation, File,
-  X, Eye, Calendar, Tag, Filter,
+  Eye, Calendar, Tag, Filter, ArrowLeft,
+  Palette, CalendarDays, Settings2, Share2, Megaphone, MonitorPlay,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useMarketingFolders, useMarketingAssets } from "@/hooks/useMarketing";
@@ -37,12 +38,24 @@ const fileTypeConfig: Record<FileType, { icon: React.ElementType; color: string;
   other: { icon: File, color: "text-muted-foreground", label: "Arquivo" },
 };
 
+type MarketingCategory = "logo" | "dia-a-dia" | "setup" | "redes-sociais" | "campanhas" | "apresentacoes";
+
+const categoryConfig: { id: MarketingCategory; label: string; description: string; icon: React.ElementType; gradient: string; iconBg: string; textColor: string }[] = [
+  { id: "logo", label: "Logos", description: "Identidade visual e marca", icon: Palette, gradient: "from-blue-500/15 to-blue-500/5", iconBg: "bg-blue-500/20", textColor: "text-blue-600 dark:text-blue-400" },
+  { id: "dia-a-dia", label: "Dia a Dia", description: "Materiais de uso cotidiano", icon: CalendarDays, gradient: "from-emerald-500/15 to-emerald-500/5", iconBg: "bg-emerald-500/20", textColor: "text-emerald-600 dark:text-emerald-400" },
+  { id: "setup", label: "Setup Inicial", description: "Implantação da unidade", icon: Settings2, gradient: "from-purple-500/15 to-purple-500/5", iconBg: "bg-purple-500/20", textColor: "text-purple-600 dark:text-purple-400" },
+  { id: "redes-sociais", label: "Redes Sociais", description: "Conteúdo mês a mês", icon: Share2, gradient: "from-pink-500/15 to-pink-500/5", iconBg: "bg-pink-500/20", textColor: "text-pink-600 dark:text-pink-400" },
+  { id: "campanhas", label: "Campanhas", description: "Materiais de campanhas", icon: Megaphone, gradient: "from-orange-500/15 to-orange-500/5", iconBg: "bg-orange-500/20", textColor: "text-orange-600 dark:text-orange-400" },
+  { id: "apresentacoes", label: "Apresentações", description: "Institucionais e comerciais", icon: MonitorPlay, gradient: "from-indigo-500/15 to-indigo-500/5", iconBg: "bg-indigo-500/20", textColor: "text-indigo-600 dark:text-indigo-400" },
+];
+
 type DbFolder = NonNullable<ReturnType<typeof useMarketingFolders>["data"]>[number];
 type DbAsset = NonNullable<ReturnType<typeof useMarketingAssets>["data"]>[number];
 
 export default function FranqueadoMateriais() {
   const { data: folders, isLoading: foldersLoading } = useMarketingFolders();
   const { data: assets, isLoading: assetsLoading } = useMarketingAssets();
+  const [activeCategory, setActiveCategory] = useState<MarketingCategory | null>(null);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<FileType | null>(null);
@@ -51,7 +64,7 @@ export default function FranqueadoMateriais() {
 
   const isLoading = foldersLoading || assetsLoading;
 
-  // Build breadcrumb path
+  // Breadcrumb path within a category
   const breadcrumb = useMemo(() => {
     if (!folders) return [];
     const path: DbFolder[] = [];
@@ -65,20 +78,39 @@ export default function FranqueadoMateriais() {
     return path;
   }, [folders, currentFolderId]);
 
-  // Get child folders of current
+  // Root folders of selected category
+  const categoryRootFolders = useMemo(() => {
+    if (!folders || !activeCategory) return [];
+    return folders.filter((f) => (f as any).category === activeCategory && !f.parent_id);
+  }, [folders, activeCategory]);
+
+  // Child folders of current folder
   const childFolders = useMemo(() => {
     if (!folders) return [];
-    return folders.filter((f) => f.parent_id === currentFolderId);
-  }, [folders, currentFolderId]);
+    if (currentFolderId) return folders.filter((f) => f.parent_id === currentFolderId);
+    return categoryRootFolders;
+  }, [folders, currentFolderId, categoryRootFolders]);
 
-  // Get assets in current folder
+  // Assets in current folder (or root category assets)
   const currentAssets = useMemo(() => {
     if (!assets) return [];
-    let list = assets.filter((a) => (a.folder_id || null) === currentFolderId);
+    let list: DbAsset[];
+    if (currentFolderId) {
+      list = assets.filter((a) => a.folder_id === currentFolderId);
+    } else if (activeCategory) {
+      // Show assets in root-level folders of this category
+      const rootIds = categoryRootFolders.map((f) => f.id);
+      list = assets.filter((a) => a.folder_id && rootIds.includes(a.folder_id));
+      // Also show assets with no folder but matching category folders
+      const noFolderAssets = assets.filter((a) => !a.folder_id);
+      list = [...list, ...noFolderAssets]; // include unassigned at root
+    } else {
+      list = [];
+    }
     if (search) list = list.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()));
     if (typeFilter) list = list.filter((a) => detectFileType(a.name, a.type) === typeFilter);
     return list;
-  }, [assets, currentFolderId, search, typeFilter]);
+  }, [assets, currentFolderId, activeCategory, categoryRootFolders, search, typeFilter]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -86,6 +118,19 @@ export default function FranqueadoMateriais() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  };
+
+  const handleBackToCategories = () => {
+    setActiveCategory(null);
+    setCurrentFolderId(null);
+    setSearch("");
+    setTypeFilter(null);
+    setSelectedIds(new Set());
+  };
+
+  const handleNavigateFolder = (folderId: string) => {
+    setCurrentFolderId(folderId);
+    setSelectedIds(new Set());
   };
 
   if (isLoading) {
@@ -101,23 +146,69 @@ export default function FranqueadoMateriais() {
     );
   }
 
+  // Category selection view
+  if (!activeCategory) {
+    return (
+      <div className="w-full space-y-6">
+        <PageHeader title="Marketing" subtitle="Drive de materiais da franqueadora" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {categoryConfig.map((cat) => {
+            const Icon = cat.icon;
+            const folderCount = (folders ?? []).filter((f) => (f as any).category === cat.id).length;
+            const assetCount = (assets ?? []).filter((a) => {
+              const folder = (folders ?? []).find((f) => f.id === a.folder_id);
+              return folder && (folder as any).category === cat.id;
+            }).length;
+            return (
+              <Card
+                key={cat.id}
+                className={`cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] bg-gradient-to-br ${cat.gradient} border-0 group`}
+                onClick={() => setActiveCategory(cat.id)}
+              >
+                <CardContent className="p-6 space-y-3">
+                  <div className={`w-12 h-12 rounded-2xl ${cat.iconBg} flex items-center justify-center`}>
+                    <Icon className={`w-6 h-6 ${cat.textColor}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base">{cat.label}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">{cat.description}</p>
+                  </div>
+                  <div className="flex gap-3 text-xs text-muted-foreground">
+                    <span><strong className="text-foreground">{folderCount}</strong> pastas</span>
+                    <span><strong className="text-foreground">{assetCount}</strong> arquivos</span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const activeCatConfig = categoryConfig.find((c) => c.id === activeCategory)!;
+
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Marketing" subtitle="Drive de materiais da franqueadora" />
+      <PageHeader title="Marketing" subtitle={activeCatConfig.label} />
 
       {/* Breadcrumb */}
-      <div className="flex items-center gap-1 text-sm">
+      <div className="flex items-center gap-1 text-sm flex-wrap">
+        <button onClick={handleBackToCategories} className="text-primary hover:underline font-medium flex items-center gap-1">
+          <ArrowLeft className="w-3.5 h-3.5" /> Marketing
+        </button>
+        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
         <button
           onClick={() => setCurrentFolderId(null)}
-          className="text-primary hover:underline font-medium"
+          className={`font-medium ${currentFolderId ? "text-primary hover:underline" : "text-foreground"}`}
         >
-          Raiz
+          {activeCatConfig.label}
         </button>
         {breadcrumb.map((f) => (
           <span key={f.id} className="flex items-center gap-1">
             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
             <button
-              onClick={() => setCurrentFolderId(f.id)}
+              onClick={() => handleNavigateFolder(f.id)}
               className="text-primary hover:underline font-medium"
             >
               {f.name}
@@ -130,14 +221,9 @@ export default function FranqueadoMateriais() {
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative max-w-xs flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar arquivos..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Buscar arquivos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 flex-wrap">
           {(Object.entries(fileTypeConfig) as [FileType, typeof fileTypeConfig[FileType]][]).map(([key, cfg]) => (
             <Button
               key={key}
@@ -163,11 +249,7 @@ export default function FranqueadoMateriais() {
       {childFolders.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           {childFolders.map((folder) => (
-            <Card
-              key={folder.id}
-              className="glass-card hover-lift cursor-pointer group"
-              onClick={() => setCurrentFolderId(folder.id)}
-            >
+            <Card key={folder.id} className="hover:shadow-md cursor-pointer group transition-all" onClick={() => handleNavigateFolder(folder.id)}>
               <CardContent className="p-4 flex items-center gap-3">
                 <FolderOpen className="w-8 h-8 text-primary/70 group-hover:text-primary transition-colors flex-shrink-0" />
                 <div className="min-w-0">
@@ -184,36 +266,27 @@ export default function FranqueadoMateriais() {
         <div className="text-center py-16">
           <Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground font-medium">Nenhum material nesta pasta</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Quando a franqueadora publicar materiais, eles aparecerão aqui.
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">Quando a franqueadora publicar materiais, eles aparecerão aqui.</p>
         </div>
-      ) : (
+      ) : currentAssets.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {currentAssets.map((asset) => {
             const ft = detectFileType(asset.name, asset.type);
             const cfg = fileTypeConfig[ft];
             const Icon = cfg.icon;
             const isSelected = selectedIds.has(asset.id);
-
             return (
-              <Card key={asset.id} className={`glass-card hover-lift group ${isSelected ? "ring-2 ring-primary" : ""}`}>
+              <Card key={asset.id} className={`hover:shadow-md group transition-all ${isSelected ? "ring-2 ring-primary" : ""}`}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleSelect(asset.id)}
-                      className="mt-0.5"
-                    />
-                    <div className={`w-10 h-10 rounded-lg bg-muted/20 flex items-center justify-center flex-shrink-0`}>
+                    <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(asset.id)} className="mt-0.5" />
+                    <div className="w-10 h-10 rounded-lg bg-muted/20 flex items-center justify-center flex-shrink-0">
                       <Icon className={`w-5 h-5 ${cfg.color}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-bold truncate">{asset.name}</h4>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-[9px]">
-                          {cfg.label}
-                        </Badge>
+                        <Badge variant="outline" className="text-[9px]">{cfg.label}</Badge>
                         {asset.tags && (asset.tags as string[]).length > 0 && (
                           <Badge variant="secondary" className="text-[9px]">
                             <Tag className="w-2.5 h-2.5 mr-0.5" />
@@ -223,34 +296,16 @@ export default function FranqueadoMateriais() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Thumbnail preview for images */}
                   {ft === "image" && asset.url && (
                     <div className="mt-3 rounded-lg overflow-hidden bg-muted/10 aspect-video">
-                      <img
-                        src={asset.url}
-                        alt={asset.name}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
+                      <img src={asset.url} alt={asset.name} className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   )}
-
                   <div className="flex gap-2 mt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs flex-1"
-                      onClick={() => setPreviewAsset(asset)}
-                    >
+                    <Button variant="outline" size="sm" className="text-xs flex-1" onClick={() => setPreviewAsset(asset)}>
                       <Eye className="w-3.5 h-3.5 mr-1" /> Ver
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs flex-1"
-                      onClick={() => asset.url && window.open(asset.url, "_blank")}
-                    >
+                    <Button variant="outline" size="sm" className="text-xs flex-1" onClick={() => asset.url && window.open(asset.url, "_blank")}>
                       <Download className="w-3.5 h-3.5 mr-1" /> Baixar
                     </Button>
                   </div>
