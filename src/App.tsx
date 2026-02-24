@@ -82,8 +82,8 @@ const App = () => (
         <AuthProvider>
           <Routes>
             {/* Auth routes */}
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/app/auth" element={<SaasAuth />} />
+            <Route path="/acessofranquia" element={<Auth />} />
+            <Route path="/app" element={<SaasAuth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected app shell */}
