@@ -1,83 +1,76 @@
 
 
-# Financeiro Completo + Meus Contratos com Criacao e Vinculacao CRM
+# CRM Contatos + Financeiro Comercial + Contratos Vinculados a Propostas
 
-## 1. Financeiro Unidade - Reformulacao Completa
+## 1. CRM - Importacao de Lista de Contatos para o Franqueado
 
-O financeiro atual mostra apenas uma lista flat de receitas e despesas sem vinculacao com contratos. Vamos reformular em 3 abas:
+O componente `CrmCsvImportDialog` ja existe e funciona perfeitamente (upload CSV, preview, importacao para `crm_contacts`). O problema e que ele so e usado no CRM do cliente SaaS, nao aparece no CRM do franqueado (`FranqueadoCRM.tsx`).
 
-### Aba "Resumo"
-- KPIs: Receita Recorrente (contratos ativos), Total Receitas, Total Despesas, Resultado Liquido
-- Lista de contratos ativos com valor mensal de cada um (puxando da tabela `contracts`)
-- Grafico simples de receitas vs despesas dos ultimos 6 meses (recharts BarChart)
+### Mudancas
+- Adicionar botao "Importar Contatos" no header do `FranqueadoCRM.tsx` ao lado do "Novo Lead"
+- Importar e renderizar o `CrmCsvImportDialog` existente
+- O dialog ja inclui download do modelo padrao CSV e preview dos dados antes de importar
 
-### Aba "Receitas e Despesas"
-- Manter a tabela atual de receitas e despesas
-- Adicionar botao para registrar nova receita e nova despesa (Dialog com formulario)
-- Filtro por mes/periodo
-- Coluna indicando se a receita esta vinculada a um contrato
-
-### Aba "Fechamentos"
-- Drive de arquivos de fechamento enviados pela franqueadora
-- Organizado por mes/ano
-- Franqueado pode visualizar e baixar os PDFs/documentos
-- Utilizar um storage bucket `closing-files` para armazenar os arquivos
-- Tabela `finance_closings` para registrar os metadados (mes, ano, arquivo_url, status)
-
-### Mudancas no banco
-- Criar tabela `finance_closings` com colunas: id, organization_id, unit_id, title, month, year, file_url, status, notes, created_at
-- Criar bucket `closing-files` para armazenamento
-- RLS: membros da org podem visualizar, admins podem inserir/gerenciar
+### Arquivo editado
+- `src/pages/franqueado/FranqueadoCRM.tsx`
 
 ---
 
-## 2. Meus Contratos - Criacao Completa pelo Franqueado
+## 2. Financeiro - Foco em Vendas e Receita dos Contratos
 
-A pagina atual e apenas uma tabela de visualizacao. Vamos transformar em um modulo completo de criacao e gestao.
+O financeiro atual esta generico (receitas/despesas manuais). O franqueado precisa de uma visao focada em **vendas**: contratos ativos geram receita mensal, e ele recebe sua parte mensalmente.
 
-### Mudancas no banco (tabela `contracts`)
-Adicionar colunas para suportar dados completos do contrato:
-- `lead_id` (uuid, nullable) - vinculo com CRM
-- `client_document` (text) - CPF/CNPJ
-- `client_phone` (text) - telefone
-- `client_address` (text) - endereco
-- `service_description` (text) - descricao dos servicos
-- `monthly_value` (numeric) - valor mensal
-- `total_value` (numeric) - valor total
-- `duration_months` (integer) - duracao em meses
-- `start_date` (date) - data inicio
-- `end_date` (date) - data fim
+### Novo layout com 3 abas
 
-### Novo layout com abas
+**Aba "Visao Geral"**
+- KPIs: Receita Recorrente (MRR dos contratos ativos), Contratos Ativos, Ticket Medio, Previsao Proximos 3 Meses
+- Tabela de contratos ativos com: cliente, valor mensal, dia de pagamento, proxima cobranca, status do pagamento
+- Grafico de receita acumulada por mes (ultimos 6 meses, baseado nos contratos)
 
-**Aba "Contratos" (lista)**
-- Tabela com todos os contratos: titulo, cliente, valor mensal, status, data inicio, vinculacao CRM
-- Filtros por status (Rascunho, Ativo, Assinado, Cancelado)
-- Badge indicando se esta vinculado a um lead do CRM
-- Acoes: Editar, Baixar PDF, Vincular ao CRM
+**Aba "Controle de Pagamentos"**
+- Lista mensal de pagamentos esperados baseados nos contratos ativos
+- Cada contrato gera uma linha por mes com: cliente, valor, dia de pagamento, status (Pago/Pendente/Atrasado)
+- Botao para marcar como recebido
+- Filtro por mes/status
 
-**Aba "Novo Contrato" (formulario completo)**
-Formulario em secoes com todos os dados necessarios:
+**Aba "Fechamentos"**
+- Manter o drive de arquivos de fechamento como esta (ja funciona)
 
-| Secao | Campos |
-|-------|--------|
-| Dados do Cliente | Nome, Email, CPF/CNPJ, Telefone, Endereco |
-| Contratacao | Titulo do contrato, Descricao dos servicos, Template (se houver) |
-| Valores | Valor mensal, Duracao (meses), Valor total (calculado), Data inicio, Data fim |
-| Vinculacao | Selecionar lead do CRM (opcional), importar dados do lead automaticamente |
+### Arquivo editado
+- `src/pages/franqueado/FranqueadoFinanceiro.tsx` - reescrever com foco em vendas/contratos
 
-- Ao selecionar um lead do CRM, os campos de nome, email e telefone sao preenchidos automaticamente
-- Botao "Salvar como Rascunho" e "Gerar Contrato"
-- Contrato gerado pode ser baixado como PDF (usando html2pdf.js ja instalado)
+---
 
-### Download PDF
-- Gerar PDF do contrato preenchido usando `html2pdf.js` (ja disponivel no projeto)
-- Layout do PDF: cabecalho com dados da empresa, dados do cliente, servicos, valores, assinatura
+## 3. Contratos - Vinculacao com Propostas + Duracao Fixa + Data de Pagamento
 
-### Vinculacao CRM
-- Dropdown de leads do CRM para vincular contrato
-- Ao vincular, o lead recebe indicador visual no Kanban
-- Campo `lead_id` na tabela contracts faz o link
+### Mudanca no banco
+Adicionar coluna `payment_day` (integer, 1-31) na tabela `contracts` para indicar o dia de pagamento mensal.
+
+### Mudancas no formulario de contrato
+- **Duracao**: substituir input livre por Select com 3 opcoes fixas: 1 mes, 6 meses, 12 meses
+- **Data de pagamento**: novo campo Select (dia 1 a 31) para indicar o dia do mes que o cliente paga
+- **Vinculacao com proposta**: adicionar campo para selecionar uma proposta aceita do gerador de propostas. Ao selecionar, preenche automaticamente:
+  - Titulo do contrato
+  - Descricao dos servicos (lista dos itens da proposta)
+  - Valor mensal (calculado da proposta)
+  - Valor total
+  - Dados do lead vinculado (se a proposta tiver lead_id)
+- **Data fim**: calculada automaticamente a partir da data inicio + duracao
+
+### Fluxo integrado
+```text
+1. Franqueado cria proposta no Gerador de Propostas
+2. Proposta e aceita pelo cliente
+3. No modulo Contratos > Novo Contrato, seleciona a proposta
+4. Dados sao preenchidos automaticamente
+5. Franqueado ajusta/confirma e gera o contrato
+6. Contrato ativo aparece no Financeiro com dia de pagamento
+```
+
+### Arquivos editados
+- Migracao SQL: adicionar `payment_day` em `contracts`
+- `src/pages/franqueado/FranqueadoContratos.tsx` - reformular formulario com duracao fixa, dia de pagamento, vinculacao com proposta
+- `src/hooks/useContracts.ts` - adicionar `payment_day` nas mutations
 
 ---
 
@@ -85,9 +78,9 @@ Formulario em secoes com todos os dados necessarios:
 
 | Arquivo | Acao |
 |---------|------|
-| Migracao SQL | Criar `finance_closings`, adicionar colunas em `contracts`, criar bucket `closing-files` |
-| `src/pages/franqueado/FranqueadoFinanceiro.tsx` | Reescrever com 3 abas (Resumo, Receitas/Despesas, Fechamentos) |
-| `src/pages/franqueado/FranqueadoContratos.tsx` | Reescrever com lista + formulario de criacao + download PDF + vinculacao CRM |
-| `src/hooks/useContracts.ts` | Expandir mutations para suportar novos campos e lead_id |
-| `src/hooks/useFinance.ts` | Adicionar hook `useFinanceClosings` |
+| Migracao SQL | Adicionar `payment_day` integer em `contracts` |
+| `src/pages/franqueado/FranqueadoCRM.tsx` | Adicionar botao + dialog de importacao CSV |
+| `src/pages/franqueado/FranqueadoFinanceiro.tsx` | Reescrever com foco em vendas/contratos |
+| `src/pages/franqueado/FranqueadoContratos.tsx` | Reformular com duracao fixa, dia pagamento, vinculacao proposta |
+| `src/hooks/useContracts.ts` | Adicionar payment_day |
 
