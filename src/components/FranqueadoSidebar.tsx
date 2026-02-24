@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Calendar, Megaphone, MessageSquare, ChevronLeft, ChevronRight,
   Sparkles, ClipboardCheck, FileText, Users, FolderOpen, GraduationCap,
-  DollarSign, FileSignature, User, Target,
+  DollarSign, FileSignature, User, Target, ChevronDown,
 } from "lucide-react";
-import { useState } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SidebarItem {
   label: string;
@@ -37,47 +39,103 @@ const gestaoSection: SidebarItem[] = [
   { label: "Meus Contratos", icon: FileSignature, path: "/franqueado/contratos" },
 ];
 
-function SidebarSection({ title, items, collapsed }: { title: string; items: SidebarItem[]; collapsed: boolean }) {
+function NavItem({ item, collapsed }: { item: SidebarItem; collapsed: boolean }) {
   const location = useLocation();
+  const Icon = item.icon;
+  const isActive = location.pathname.startsWith(item.path);
+
+  if (item.disabled) {
+    const content = (
+      <div
+        className={`flex items-center gap-2.5 px-3 py-[7px] text-[13px] text-sidebar-muted/30 cursor-not-allowed mx-1.5 ${collapsed ? "justify-center px-2 mx-1" : ""}`}
+      >
+        <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </div>
+    );
+    if (collapsed) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{content}</TooltipTrigger>
+          <TooltipContent side="right" className="text-xs font-medium">{item.label}</TooltipContent>
+        </Tooltip>
+      );
+    }
+    return content;
+  }
+
+  const link = (
+    <RouterNavLink
+      to={item.path}
+      className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
+        ${collapsed ? "justify-center px-2 mx-1" : ""}
+        ${isActive
+          ? "bg-sidebar-primary/15 text-white font-medium"
+          : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
+        }
+      `}
+    >
+      <div className="relative">
+        <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
+          isActive ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
+        }`} />
+        {isActive && (
+          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-sidebar-primary" />
+        )}
+      </div>
+      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+    </RouterNavLink>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" className="text-xs font-medium">{item.label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return link;
+}
+
+function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed: boolean }) {
+  return (
+    <nav className="flex flex-col gap-[2px]">
+      {items.map((item) => (
+        <NavItem key={item.path} item={item} collapsed={collapsed} />
+      ))}
+    </nav>
+  );
+}
+
+function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { title: string; items: SidebarItem[]; collapsed: boolean; defaultOpen?: boolean }) {
+  const location = useLocation();
+  const isActive = items.some(item => location.pathname.startsWith(item.path));
+  const [isOpen, setIsOpen] = useState(defaultOpen || isActive);
+
+  if (collapsed) {
+    return (
+      <div className="py-1">
+        <SidebarNavItems items={items} collapsed={collapsed} />
+      </div>
+    );
+  }
 
   return (
-    <div className="mb-6">
-      {!collapsed && <div className="section-label px-4 mb-3">{title}</div>}
-      <nav className="flex flex-col gap-0.5">
-        {items.map((item) => {
-          if (item.disabled) {
-            const Icon = item.icon;
-            return (
-              <div
-                key={item.path}
-                className={`flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground/30 cursor-not-allowed ${collapsed ? "justify-center" : ""}`}
-                title={collapsed ? item.label : undefined}
-              >
-                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </div>
-            );
-          }
-
-          const Icon = item.icon;
-          const isActive = location.pathname.startsWith(item.path);
-          return (
-            <RouterNavLink
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 text-sm transition-all duration-200 rounded-r-xl mx-1
-                ${collapsed ? "justify-center" : ""}
-                ${isActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-sidebar-hover"}
-              `}
-              title={collapsed ? item.label : undefined}
-            >
-              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? "text-primary" : "text-primary/60"}`} />
-              {!collapsed && <span>{item.label}</span>}
-            </RouterNavLink>
-          );
-        })}
-      </nav>
-    </div>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger className="w-full">
+        <div className="flex items-center justify-between cursor-pointer hover:bg-white/[0.03] rounded-md px-3 py-1.5 transition-colors mx-1.5 group">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-muted group-hover:text-sidebar-foreground transition-colors">
+            {title}
+          </span>
+          <ChevronDown className={`h-3 w-3 text-sidebar-muted transition-transform duration-300 ${isOpen ? "rotate-0" : "-rotate-90"}`} />
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-0.5 animate-accordion-down">
+        <SidebarNavItems items={items} collapsed={collapsed} />
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -86,34 +144,44 @@ export function FranqueadoSidebar() {
 
   return (
     <aside
-      className={`h-[calc(100vh-49px)] bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 sticky top-[49px] ${collapsed ? "w-16" : "w-60"}`}
+      className={`h-[calc(100vh-56px)] bg-sidebar flex flex-col transition-all duration-300 ease-out sticky top-14 ${collapsed ? "w-[60px]" : "w-[240px]"}`}
     >
+      {/* Logo */}
       <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-6 bg-primary rounded-full" />
-            <span className="text-[10px] font-bold tracking-[0.25em] text-muted-foreground uppercase">Unidade</span>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 flex-shrink-0 shadow-lg shadow-primary/20">
+            <span className="text-sm font-black text-primary-foreground">N</span>
           </div>
-        )}
-        {collapsed && <div className="w-2 h-6 bg-primary rounded-full" />}
+          {!collapsed && (
+            <div className="flex flex-col leading-tight">
+              <span className="text-[13px] font-bold text-white tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                NOEXCUSE
+              </span>
+              <span className="text-[9px] text-sidebar-muted -mt-0.5 tracking-wide">Unidade</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-6">
-        <SidebarSection title="Principal" items={principalSection} collapsed={collapsed} />
-        <SidebarSection title="Comercial" items={comercialSection} collapsed={collapsed} />
-        <SidebarSection title="Marketing" items={marketingSection} collapsed={collapsed} />
-        <SidebarSection title="Gestão" items={gestaoSection} collapsed={collapsed} />
+      {/* Menu */}
+      <div className="flex-1 overflow-y-auto py-3 space-y-4">
+        <SidebarNavItems items={principalSection} collapsed={collapsed} />
+        <div className="mx-3 border-t border-sidebar-border/60" />
+        <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} defaultOpen />
+        <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
+        <CollapsibleSection title="Gestão" items={gestaoSection} collapsed={collapsed} />
       </div>
 
+      {/* Footer — User */}
       {!collapsed && (
-        <div className="px-4 py-3 border-t border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-primary" />
+        <div className="px-3 py-3 border-t border-sidebar-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-sidebar-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">Davi Sócio</p>
-              <p className="text-[10px] text-muted-foreground truncate">Unidade Curitiba</p>
+              <p className="text-[12px] font-semibold text-white truncate">Davi Sócio</p>
+              <p className="text-[10px] text-sidebar-muted truncate">Unidade Curitiba</p>
             </div>
           </div>
         </div>
@@ -121,9 +189,9 @@ export function FranqueadoSidebar() {
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-12 border-t border-sidebar-border text-sidebar-muted hover:text-sidebar-primary-foreground transition-colors"
+        className="flex items-center justify-center h-10 border-t border-sidebar-border text-sidebar-muted hover:text-white hover:bg-white/[0.03] transition-all duration-200"
       >
-        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>
     </aside>
   );

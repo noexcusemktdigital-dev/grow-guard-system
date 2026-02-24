@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, DollarSign, FileText, FolderOpen, Building2, TrendingUp,
@@ -5,7 +6,8 @@ import {
   Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt,
   ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User,
 } from "lucide-react";
-import { useState } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SidebarChild {
   label: string;
@@ -65,23 +67,98 @@ const adminSection: SidebarItem[] = [
   { label: "Drive Corporativo", icon: FolderOpen, path: "/franqueadora/drive", disabled: true },
 ];
 
-function SidebarItemWithChildren({ item, collapsed }: { item: SidebarItem; collapsed: boolean }) {
+function NavItem({ item, collapsed }: { item: SidebarItem; collapsed: boolean }) {
+  const location = useLocation();
+  const Icon = item.icon;
+  const isActive = location.pathname.startsWith(item.path);
+
+  if (item.disabled) {
+    const content = (
+      <div
+        className={`flex items-center gap-2.5 px-3 py-[7px] text-[13px] text-sidebar-muted/30 cursor-not-allowed mx-1.5 ${collapsed ? "justify-center px-2 mx-1" : ""}`}
+      >
+        <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </div>
+    );
+    if (collapsed) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{content}</TooltipTrigger>
+          <TooltipContent side="right" className="text-xs font-medium">{item.label}</TooltipContent>
+        </Tooltip>
+      );
+    }
+    return content;
+  }
+
+  const link = (
+    <RouterNavLink
+      to={item.path}
+      className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
+        ${collapsed ? "justify-center px-2 mx-1" : ""}
+        ${isActive
+          ? "bg-sidebar-primary/15 text-white font-medium"
+          : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
+        }
+      `}
+    >
+      <div className="relative">
+        <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
+          isActive ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
+        }`} />
+        {isActive && (
+          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-sidebar-primary" />
+        )}
+      </div>
+      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+    </RouterNavLink>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" className="text-xs font-medium">{item.label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return link;
+}
+
+function NavItemWithChildren({ item, collapsed }: { item: SidebarItem; collapsed: boolean }) {
   const location = useLocation();
   const isParentActive = location.pathname.startsWith(item.path);
   const [open, setOpen] = useState(isParentActive);
   const Icon = item.icon;
 
   if (collapsed) {
-    return (
+    const link = (
       <RouterNavLink
         to={item.path}
-        className={`flex items-center justify-center px-4 py-3 text-sm transition-all duration-200 rounded-r-xl mx-1
-          ${isParentActive ? "sidebar-item-active font-medium" : "text-primary/50 hover:text-primary hover:bg-primary/5"}
+        className={`group flex items-center justify-center px-2 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1
+          ${isParentActive
+            ? "bg-sidebar-primary/15 text-white font-medium"
+            : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
+          }
         `}
-        title={item.label}
       >
-        <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isParentActive ? "text-primary" : ""}`} />
+        <div className="relative">
+          <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
+            isParentActive ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
+          }`} />
+          {isParentActive && (
+            <div className="absolute -left-[10px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-sidebar-primary" />
+          )}
+        </div>
       </RouterNavLink>
+    );
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" className="text-xs font-medium">{item.label}</TooltipContent>
+      </Tooltip>
     );
   }
 
@@ -89,16 +166,26 @@ function SidebarItemWithChildren({ item, collapsed }: { item: SidebarItem; colla
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className={`flex items-center gap-3 px-4 py-3 text-sm w-full transition-all duration-200 rounded-r-xl mx-1
-          ${isParentActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-sidebar-hover"}
+        className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] w-full transition-all duration-200 rounded-lg mx-1.5
+          ${isParentActive
+            ? "bg-sidebar-primary/15 text-white font-medium"
+            : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
+          }
         `}
       >
-        <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isParentActive ? "text-primary" : "text-primary/60"}`} />
-        <span className="flex-1 text-left">{item.label}</span>
-        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`} />
+        <div className="relative">
+          <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
+            isParentActive ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
+          }`} />
+          {isParentActive && (
+            <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-sidebar-primary" />
+          )}
+        </div>
+        <span className="flex-1 text-left truncate">{item.label}</span>
+        <ChevronDown className={`w-3 h-3 text-sidebar-muted transition-transform duration-300 ${open ? "rotate-0" : "-rotate-90"}`} />
       </button>
-      <div className={`overflow-hidden transition-all duration-200 ${open ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
-        <div className="ml-7 border-l border-border/50 mt-0.5">
+      <div className={`overflow-hidden transition-all duration-300 ${open ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+        <div className="ml-[30px] border-l border-sidebar-border/40 mt-0.5 space-y-[1px]">
           {item.children!.map(child => {
             const isChildActive = location.pathname === child.path;
             const ChildIcon = child.icon;
@@ -106,12 +193,12 @@ function SidebarItemWithChildren({ item, collapsed }: { item: SidebarItem; colla
               <RouterNavLink
                 key={child.path}
                 to={child.path}
-                className={`flex items-center gap-2.5 pl-4 pr-4 py-2 text-sm transition-colors duration-150 ${
-                  isChildActive ? "text-primary font-medium" : "text-sidebar-muted hover:text-sidebar-primary-foreground"
+                className={`flex items-center gap-2 pl-3.5 pr-3 py-[6px] text-[12px] transition-colors duration-200 rounded-r-md ${
+                  isChildActive ? "text-sidebar-primary font-medium" : "text-sidebar-muted hover:text-white"
                 }`}
               >
-                <ChildIcon className={`w-3.5 h-3.5 ${isChildActive ? "text-primary" : ""}`} />
-                <span>{child.label}</span>
+                <ChildIcon className={`w-3.5 h-3.5 ${isChildActive ? "text-sidebar-primary" : ""}`} />
+                <span className="truncate">{child.label}</span>
               </RouterNavLink>
             );
           })}
@@ -121,51 +208,46 @@ function SidebarItemWithChildren({ item, collapsed }: { item: SidebarItem; colla
   );
 }
 
-function SidebarSection({ title, items, collapsed }: { title: string; items: SidebarItem[]; collapsed: boolean }) {
+function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed: boolean }) {
+  return (
+    <nav className="flex flex-col gap-[2px]">
+      {items.map((item) => {
+        if (item.children) {
+          return <NavItemWithChildren key={item.path} item={item} collapsed={collapsed} />;
+        }
+        return <NavItem key={item.path} item={item} collapsed={collapsed} />;
+      })}
+    </nav>
+  );
+}
+
+function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { title: string; items: SidebarItem[]; collapsed: boolean; defaultOpen?: boolean }) {
   const location = useLocation();
+  const isActive = items.some(item => location.pathname.startsWith(item.path));
+  const [isOpen, setIsOpen] = useState(defaultOpen || isActive);
+
+  if (collapsed) {
+    return (
+      <div className="py-1">
+        <SidebarNavItems items={items} collapsed={collapsed} />
+      </div>
+    );
+  }
 
   return (
-    <div className="mb-6">
-      {!collapsed && <div className="section-label px-4 mb-3">{title}</div>}
-      <nav className="flex flex-col gap-0.5">
-        {items.map((item) => {
-          if (item.disabled) {
-            const Icon = item.icon;
-            return (
-              <div
-                key={item.path}
-                className={`flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground/30 cursor-not-allowed ${collapsed ? "justify-center" : ""}`}
-                title={collapsed ? item.label : undefined}
-              >
-                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </div>
-            );
-          }
-
-          if (item.children) {
-            return <SidebarItemWithChildren key={item.path} item={item} collapsed={collapsed} />;
-          }
-
-          const Icon = item.icon;
-          const isActive = location.pathname.startsWith(item.path);
-          return (
-            <RouterNavLink
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 text-sm transition-all duration-200 rounded-r-xl mx-1
-                ${collapsed ? "justify-center" : ""}
-                ${isActive ? "sidebar-item-active font-medium" : "text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-sidebar-hover"}
-              `}
-              title={collapsed ? item.label : undefined}
-            >
-              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? "text-primary" : "text-primary/60"}`} />
-              {!collapsed && <span>{item.label}</span>}
-            </RouterNavLink>
-          );
-        })}
-      </nav>
-    </div>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger className="w-full">
+        <div className="flex items-center justify-between cursor-pointer hover:bg-white/[0.03] rounded-md px-3 py-1.5 transition-colors mx-1.5 group">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-muted group-hover:text-sidebar-foreground transition-colors">
+            {title}
+          </span>
+          <ChevronDown className={`h-3 w-3 text-sidebar-muted transition-transform duration-300 ${isOpen ? "rotate-0" : "-rotate-90"}`} />
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-0.5 animate-accordion-down">
+        <SidebarNavItems items={items} collapsed={collapsed} />
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -174,35 +256,44 @@ export function FranqueadoraSidebar() {
 
   return (
     <aside
-      className={`h-[calc(100vh-49px)] bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 sticky top-[49px] ${collapsed ? "w-16" : "w-60"}`}
+      className={`h-[calc(100vh-56px)] bg-sidebar flex flex-col transition-all duration-300 ease-out sticky top-14 ${collapsed ? "w-[60px]" : "w-[240px]"}`}
     >
+      {/* Logo */}
       <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-6 bg-primary rounded-full" />
-            <span className="text-[10px] font-bold tracking-[0.25em] text-muted-foreground uppercase">Franchise System</span>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 flex-shrink-0 shadow-lg shadow-primary/20">
+            <span className="text-sm font-black text-primary-foreground">N</span>
           </div>
-        )}
-        {collapsed && <div className="w-2 h-6 bg-primary rounded-full" />}
+          {!collapsed && (
+            <div className="flex flex-col leading-tight">
+              <span className="text-[13px] font-bold text-white tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                NOEXCUSE
+              </span>
+              <span className="text-[9px] text-sidebar-muted -mt-0.5 tracking-wide">Franchise System</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-6">
-        <SidebarSection title="Principal" items={principalSection} collapsed={collapsed} />
-        <SidebarSection title="Rede" items={redeSection} collapsed={collapsed} />
-        <SidebarSection title="Comercial" items={comercialSection} collapsed={collapsed} />
-        <SidebarSection title="Administrativo" items={adminSection} collapsed={collapsed} />
+      {/* Menu */}
+      <div className="flex-1 overflow-y-auto py-3 space-y-4">
+        <SidebarNavItems items={principalSection} collapsed={collapsed} />
+        <div className="mx-3 border-t border-sidebar-border/60" />
+        <CollapsibleSection title="Rede" items={redeSection} collapsed={collapsed} defaultOpen />
+        <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} />
+        <CollapsibleSection title="Administrativo" items={adminSection} collapsed={collapsed} />
       </div>
 
-      {/* User area */}
+      {/* Footer — User */}
       {!collapsed && (
-        <div className="px-4 py-3 border-t border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-primary" />
+        <div className="px-3 py-3 border-t border-sidebar-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-sidebar-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">Davi Sócio</p>
-              <p className="text-[10px] text-muted-foreground truncate">Unidade Curitiba</p>
+              <p className="text-[12px] font-semibold text-white truncate">Admin</p>
+              <p className="text-[10px] text-sidebar-muted truncate">Franqueadora</p>
             </div>
           </div>
         </div>
@@ -210,9 +301,9 @@ export function FranqueadoraSidebar() {
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-12 border-t border-sidebar-border text-sidebar-muted hover:text-sidebar-primary-foreground transition-colors"
+        className="flex items-center justify-center h-10 border-t border-sidebar-border text-sidebar-muted hover:text-white hover:bg-white/[0.03] transition-all duration-200"
       >
-        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>
     </aside>
   );
