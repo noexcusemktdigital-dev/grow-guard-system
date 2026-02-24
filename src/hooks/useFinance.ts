@@ -97,6 +97,24 @@ export function useFinanceInstallments() {
   });
 }
 
+export function useFinanceClosings() {
+  const { data: orgId } = useUserOrgId();
+  return useQuery({
+    queryKey: ["finance-closings", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("finance_closings")
+        .select("*")
+        .eq("organization_id", orgId!)
+        .order("year", { ascending: false })
+        .order("month", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orgId,
+  });
+}
+
 export function useFinanceMutations() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();

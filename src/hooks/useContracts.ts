@@ -44,7 +44,24 @@ export function useContractMutations() {
   });
 
   const createContract = useMutation({
-    mutationFn: async (c: { title: string; content?: string; template_id?: string; signer_name?: string; signer_email?: string }) => {
+    mutationFn: async (c: {
+      title: string;
+      content?: string;
+      template_id?: string;
+      signer_name?: string;
+      signer_email?: string;
+      status?: string;
+      lead_id?: string;
+      client_document?: string;
+      client_phone?: string;
+      client_address?: string;
+      service_description?: string;
+      monthly_value?: number;
+      total_value?: number;
+      duration_months?: number;
+      start_date?: string;
+      end_date?: string;
+    }) => {
       const { data, error } = await supabase.from("contracts").insert({ ...c, organization_id: orgId!, created_by: user?.id }).select().single();
       if (error) throw error;
       return data;
