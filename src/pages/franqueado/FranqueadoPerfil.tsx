@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -69,6 +69,7 @@ export default function FranqueadoPerfil() {
         <div className="h-48 bg-gradient-to-br from-sidebar via-sidebar/90 to-primary/30 rounded-2xl overflow-hidden" />
         <div className="absolute -bottom-12 left-8 flex items-end gap-5 z-10">
           <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
+            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
             <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
               {initials}
             </AvatarFallback>
