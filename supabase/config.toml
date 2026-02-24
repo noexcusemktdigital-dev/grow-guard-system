@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.generate-prospection]
 verify_jwt = false
+
+[functions.generate-strategy]
+verify_jwt = false
