@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 function getRoleRedirect(role: AppRole | null): string {
-  if (!role) return "/auth";
+  if (!role) return "/acessofranquia";
   if (role === "super_admin" || role === "admin") return "/franqueadora/dashboard";
   if (role === "franqueado") return "/franqueado/dashboard";
   return "/cliente/inicio";
@@ -28,7 +28,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/acessofranquia" replace />;
   }
 
   // If roles are specified, check access
