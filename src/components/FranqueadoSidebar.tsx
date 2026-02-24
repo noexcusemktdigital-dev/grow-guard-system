@@ -175,8 +175,12 @@ export function FranqueadoSidebar() {
         <Popover>
           <PopoverTrigger asChild>
             <button className={`w-full flex items-center gap-2.5 hover:bg-white/[0.06] transition-colors ${collapsed ? "justify-center px-2 py-3" : "px-3 py-3"}`}>
-              <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0">
-                <span className="text-[11px] font-bold text-sidebar-primary">{userInitials}</span>
+              <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt={userName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[11px] font-bold text-sidebar-primary">{userInitials}</span>
+                )}
               </div>
               {!collapsed && (
                 <>
