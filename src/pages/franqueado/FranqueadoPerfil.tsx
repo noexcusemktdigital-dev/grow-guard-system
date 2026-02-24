@@ -65,8 +65,8 @@ export default function FranqueadoPerfil() {
   return (
     <div className="w-full space-y-6">
       {/* Banner + Avatar */}
-      <div className="relative rounded-2xl overflow-hidden">
-        <div className="h-48 bg-gradient-to-br from-sidebar via-sidebar/90 to-primary/30" />
+      <div className="relative">
+        <div className="h-48 bg-gradient-to-br from-sidebar via-sidebar/90 to-primary/30 rounded-2xl overflow-hidden" />
         <div className="absolute -bottom-12 left-8 flex items-end gap-5 z-10">
           <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
             <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
