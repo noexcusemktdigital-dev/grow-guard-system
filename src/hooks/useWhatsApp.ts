@@ -86,7 +86,10 @@ export function useWhatsAppContacts() {
       if (error) throw error;
       const filtered = (data || []).filter((c: any) => {
         const phone = c.phone || "";
-        return !phone.endsWith("-group") && !phone.includes("@broadcast");
+        return !phone.endsWith("-group")
+          && !phone.includes("@broadcast")
+          && !phone.includes("@g.us")
+          && !/^\d+-\d{10,}$/.test(phone);
       });
       return filtered as unknown as WhatsAppContact[];
     },
