@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, User, Bot, Clock, MessageCircle, Wifi } from "lucide-react";
+import { Search, User, Bot, Clock, MessageCircle, Wifi, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,7 +20,7 @@ interface Props {
   lastMessages?: Map<string, string>;
 }
 
-type ModeFilter = "all" | "ai" | "human" | "waiting";
+type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
 
 function formatContactTime(dateStr: string | null) {
   if (!dateStr) return "";
@@ -49,10 +49,12 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
     const matchSearch = !q || (c.name?.toLowerCase().includes(q) || c.phone.includes(q));
     const contactAny = c as any;
     const mode = contactAny.attending_mode || null;
+    const contactType = (c as any).contact_type || "individual";
     let matchMode = true;
     if (modeFilter === "ai") matchMode = mode === "ai";
     else if (modeFilter === "human") matchMode = mode === "human";
     else if (modeFilter === "waiting") matchMode = c.unread_count > 0;
+    else if (modeFilter === "groups") matchMode = contactType === "group";
     const matchAgent = !agentFilter || contactAny.agent_id === agentFilter;
     const contactStage = leadStages?.get(c.id) || "";
     const matchStage = !stageFilter || contactStage === stageFilter;
@@ -77,6 +79,7 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
     { key: "ai", label: "IA", icon: <Bot className="w-3 h-3" /> },
     { key: "human", label: "Humano", icon: <User className="w-3 h-3" /> },
     { key: "waiting", label: "Espera", icon: <Clock className="w-3 h-3" /> },
+    { key: "groups", label: "Grupos", icon: <Users className="w-3 h-3" /> },
   ];
 
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
@@ -174,6 +177,7 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
           sorted.map((contact) => {
             const contactAny = contact as any;
             const mode = contactAny.attending_mode || null;
+            const contactType = contactAny.contact_type || "individual";
             const stageLabel = leadStages?.get(contact.id);
             const preview = lastMessages?.get(contact.id);
             const group = getDateGroup(contact.last_message_at);
@@ -182,6 +186,8 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
               showSeparator = true;
               lastGroup = group;
             }
+            const isGroup = contactType === "group";
+            const isLid = contactType === "lid";
 
             return (
               <div key={contact.id}>
@@ -201,13 +207,19 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
                   } ${contact.unread_count > 0 ? "bg-primary/[0.03]" : ""}`}
                 >
                   <div className="relative shrink-0">
-                    <Avatar className="h-11 w-11">
-                      <AvatarImage src={contact.photo_url || undefined} />
-                      <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
-                        {(contact.name || contact.phone).substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    {mode && (
+                    {isGroup ? (
+                      <div className="h-11 w-11 rounded-full bg-purple-500/15 border-2 border-purple-500/30 flex items-center justify-center">
+                        <Users className="w-5 h-5 text-purple-400" />
+                      </div>
+                    ) : (
+                      <Avatar className="h-11 w-11">
+                        <AvatarImage src={contact.photo_url || undefined} />
+                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
+                          {(contact.name || contact.phone).substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    {mode && !isGroup && (
                       <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card flex items-center justify-center ${
                         mode === "ai" ? "bg-purple-500" : "bg-emerald-500"
                       }`}>
@@ -217,9 +229,17 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className={`text-sm truncate ${contact.unread_count > 0 ? "font-bold" : "font-medium"}`}>
-                        {contact.name || contact.phone}
-                      </p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className={`text-sm truncate ${contact.unread_count > 0 ? "font-bold" : "font-medium"}`}>
+                          {contact.name || contact.phone}
+                        </p>
+                        {isGroup && (
+                          <Badge variant="secondary" className="text-[8px] px-1 py-0 shrink-0 bg-purple-500/15 text-purple-400 border-0">Grupo</Badge>
+                        )}
+                        {isLid && (
+                          <Badge variant="secondary" className="text-[8px] px-1 py-0 shrink-0 bg-blue-500/15 text-blue-400 border-0">Anúncio</Badge>
+                        )}
+                      </div>
                       <span className={`text-[10px] shrink-0 ml-2 ${contact.unread_count > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>
                         {formatContactTime(contact.last_message_at)}
                       </span>

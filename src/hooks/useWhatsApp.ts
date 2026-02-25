@@ -26,6 +26,7 @@ export interface WhatsAppContact {
   unread_count: number;
   created_at: string;
   updated_at: string;
+  contact_type?: "individual" | "group" | "lid";
 }
 
 export interface WhatsAppMessage {
@@ -84,12 +85,20 @@ export function useWhatsAppContacts() {
         .eq("organization_id", orgId)
         .order("last_message_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
-      const filtered = (data || []).filter((c: any) => {
+      const enriched = (data || []).map((c: any) => {
         const phone = c.phone || "";
-        return !phone.endsWith("-group")
-          && !phone.includes("@broadcast")
-          && !phone.includes("@g.us")
-          && !/^\d+-\d{10,}$/.test(phone);
+        let contact_type: "individual" | "group" | "lid" = "individual";
+        if (phone.includes("@g.us") || /^\d+-\d{10,}$/.test(phone)) {
+          contact_type = "group";
+        } else if (phone.includes("@lid")) {
+          contact_type = "lid";
+        }
+        return { ...c, contact_type };
+      });
+      // Filter out broadcasts only
+      const filtered = enriched.filter((c: any) => {
+        const phone = c.phone || "";
+        return !phone.endsWith("-group") && !phone.includes("@broadcast");
       });
       return filtered as unknown as WhatsAppContact[];
     },
