@@ -25,12 +25,11 @@ import {
   ShieldCheck,
   CalendarClock,
   CalendarX,
+  Building2,
 } from "lucide-react";
+import { useUnits } from "@/hooks/useUnits";
 
-const mockUnidades = [
-  "Unidade Centro", "Unidade Norte", "Unidade Sul", "Unidade Leste", "Unidade Oeste",
-  "Unidade Campinas", "Unidade Ribeirão", "Unidade Santos",
-];
+const mockUnidades: string[] = []; // replaced by real units from DB
 
 const tipoOptions: ComunicadoTipo[] = [
   "Informativo", "Atualização de sistema", "Alerta operacional", "Campanha", "Institucional", "Urgente",
@@ -48,6 +47,7 @@ interface ComunicadoFormProps {
 }
 
 export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onCancel }: ComunicadoFormProps) {
+  const { data: dbUnits } = useUnits();
   const [titulo, setTitulo] = useState(comunicado?.titulo || "");
   const [conteudo, setConteudo] = useState(comunicado?.conteudo || "");
   const [imagemUrl, setImagemUrl] = useState(comunicado?.imagemUrl || "");
@@ -152,13 +152,17 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
             <div>
               <Separator className="my-3" />
               <Label className="text-xs text-muted-foreground mb-2 block">Unidades específicas (deixe vazio para todas)</Label>
-              <div className="flex flex-wrap gap-3">
-                {mockUnidades.map((u) => (
-                  <label key={u} className="flex items-center gap-1.5 cursor-pointer">
-                    <Checkbox checked={unidadesEspecificas.includes(u)} onCheckedChange={() => handleUnidadeToggle(u)} />
-                    <span className="text-xs">{u}</span>
+              <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                {(dbUnits ?? []).map((u) => (
+                  <label key={u.id} className="flex items-center gap-1.5 cursor-pointer">
+                    <Checkbox checked={unidadesEspecificas.includes(u.id)} onCheckedChange={() => handleUnidadeToggle(u.id)} />
+                    <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs">{u.name}</span>
                   </label>
                 ))}
+                {(dbUnits ?? []).length === 0 && (
+                  <p className="text-xs text-muted-foreground">Nenhuma unidade cadastrada</p>
+                )}
               </div>
             </div>
           )}

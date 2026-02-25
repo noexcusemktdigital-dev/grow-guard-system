@@ -1,112 +1,496 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, ChevronLeft, ChevronRight, Plus, Inbox } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card } from "@/components/ui/card";
-import { useCalendarEvents, useCalendarEventMutations } from "@/hooks/useCalendar";
-import { addMonths, subMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, getDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Card } from "@/components/ui/card";
+import {
+  Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, Trash2, Edit2,
+  ExternalLink, RefreshCw, Unlink, CheckCircle2, KeyRound, ArrowRight, Globe, Shield, Building2,
+} from "lucide-react";
+import { useCalendarEvents, useCalendars, useCalendarEventMutations } from "@/hooks/useCalendar";
+import {
+  useGoogleCalendarConnection,
+  useGoogleCalendarConnect,
+  useGoogleCalendarExchangeCode,
+  useGoogleCalendarDisconnect,
+  useGoogleCalendarSync,
+  useGoogleCalendarSaveCredentials,
+} from "@/hooks/useGoogleCalendar";
+import { useUnits } from "@/hooks/useUnits";
+import {
+  addMonths, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
+  eachDayOfInterval, isSameMonth, isToday, parseISO,
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 
-export default function Agenda() {
-  const { toast } = useToast();
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [showForm, setShowForm] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDate, setNewDate] = useState("");
-  const [newTime, setNewTime] = useState("09:00");
+const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899"];
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-  const startStr = startOfMonth(currentDate).toISOString();
-  const endStr = endOfMonth(currentDate).toISOString();
-  const { data: events, isLoading } = useCalendarEvents(startStr, endStr);
-  const { createEvent } = useCalendarEventMutations();
+/* ───────── Google Setup Wizard ───────── */
+function GoogleSetupWizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const saveCredentials = useGoogleCalendarSaveCredentials();
+  const connectGoogle = useGoogleCalendarConnect();
+  const redirectUri = `${window.location.origin}/agenda`;
 
-  const days = eachDayOfInterval({ start: startOfMonth(currentDate), end: endOfMonth(currentDate) });
-  const startDay = getDay(startOfMonth(currentDate));
+  async function handleSaveAndConnect() {
+    if (!clientId.trim() || !clientSecret.trim()) { toast.error("Preencha o Client ID e Client Secret"); return; }
+    try {
+      await saveCredentials.mutateAsync({ clientId: clientId.trim(), clientSecret: clientSecret.trim() });
+      const url = await connectGoogle.mutateAsync(redirectUri);
+      window.location.href = url;
+    } catch (e: any) { toast.error(e.message || "Erro ao salvar credenciais"); }
+  }
 
-  const handleCreate = () => {
-    if (!newTitle.trim() || !newDate) { toast({ title: "Preencha título e data", variant: "destructive" }); return; }
-    const startAt = `${newDate}T${newTime}:00`;
-    const endAt = `${newDate}T${String(Number(newTime.split(":")[0]) + 1).padStart(2, "0")}:${newTime.split(":")[1]}:00`;
-    createEvent.mutate({ title: newTitle, start_at: startAt, end_at: endAt });
-    setShowForm(false);
-    setNewTitle(""); setNewDate("");
-    toast({ title: "Evento criado" });
-  };
-
-  if (isLoading) return <div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-96 w-full" /></div>;
+  useEffect(() => { if (open) { setStep(1); setClientId(""); setClientSecret(""); } }, [open]);
 
   return (
-    <div className="space-y-6">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Globe className="w-5 h-5 text-primary" /> Conectar Google Agenda</DialogTitle>
+        </DialogHeader>
+        {step === 1 && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Siga os passos abaixo para criar suas credenciais OAuth no Google:</p>
+            <div className="space-y-3">
+              {[
+                { n: 1, text: "Acesse o Google Cloud Console", link: "https://console.cloud.google.com", linkText: "Abrir Console" },
+                { n: 2, text: "Crie um novo projeto (ou use um existente)" },
+                { n: 3, text: 'No menu lateral, vá em "APIs e Serviços" → "Biblioteca" e ative a Google Calendar API' },
+                { n: 4, text: 'Vá em "APIs e Serviços" → "Credenciais" → "Criar credenciais" → "ID do cliente OAuth 2.0"' },
+                { n: 5, text: 'Tipo de aplicação: "Aplicativo da Web"' },
+                { n: 6, text: 'Em "URIs de redirecionamento autorizados", adicione:', code: redirectUri },
+                { n: 7, text: "Copie o Client ID e Client Secret gerados" },
+              ].map((item) => (
+                <Card key={item.n} className="p-3 flex items-start gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{item.n}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">{item.text}</p>
+                    {item.code && <code className="mt-1 block text-xs bg-muted px-2 py-1 rounded break-all select-all">{item.code}</code>}
+                    {item.link && (
+                      <a href={item.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1">
+                        {item.linkText} <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button onClick={() => setStep(2)} className="gap-1">Já tenho as credenciais <ArrowRight className="w-4 h-4" /></Button>
+            </DialogFooter>
+          </div>
+        )}
+        {step === 2 && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-muted/50 border border-border flex items-start gap-2">
+              <Shield className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-muted-foreground">Suas credenciais são armazenadas de forma segura.</p>
+            </div>
+            <div><Label>Client ID *</Label><Input value={clientId} onChange={e => setClientId(e.target.value)} placeholder="123456789-xxxxx.apps.googleusercontent.com" className="font-mono text-xs" /></div>
+            <div><Label>Client Secret *</Label><Input type="password" value={clientSecret} onChange={e => setClientSecret(e.target.value)} placeholder="GOCSPX-xxxxxxxxxxxxxxxx" className="font-mono text-xs" /></div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep(1)}>Voltar</Button>
+              <Button onClick={handleSaveAndConnect} disabled={saveCredentials.isPending || connectGoogle.isPending} className="gap-1">
+                <KeyRound className="w-4 h-4" /> {saveCredentials.isPending || connectGoogle.isPending ? "Conectando..." : "Salvar e Conectar"}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────── Main Component ───────── */
+export default function Agenda() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const startDate = format(startOfWeek(monthStart, { locale: ptBR }), "yyyy-MM-dd'T'00:00:00");
+  const endDate = format(endOfWeek(monthEnd, { locale: ptBR }), "yyyy-MM-dd'T'23:59:59");
+
+  const { data: events, isLoading } = useCalendarEvents(startDate, endDate);
+  const { data: calendars } = useCalendars();
+  const { createEvent, updateEvent, deleteEvent } = useCalendarEventMutations();
+  const { data: units } = useUnits();
+
+  // Google Calendar
+  const { data: googleConnection, isLoading: loadingConnection } = useGoogleCalendarConnection();
+  const connectGoogle = useGoogleCalendarConnect();
+  const exchangeCode = useGoogleCalendarExchangeCode();
+  const disconnectGoogle = useGoogleCalendarDisconnect();
+  const syncGoogle = useGoogleCalendarSync();
+  const [syncing, setSyncing] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+
+  const isGoogleConnected = googleConnection && !!(googleConnection as any).access_token && !(googleConnection as any).pending_oauth;
+
+  useEffect(() => {
+    const code = searchParams.get("code");
+    if (code) {
+      const redirectUri = `${window.location.origin}/agenda`;
+      exchangeCode.mutate({ code, redirectUri }, {
+        onSuccess: () => { setSearchParams({}); handleGooglePull(); },
+        onError: (e: any) => toast.error(e.message || "Erro ao conectar Google"),
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleGooglePull() {
+    setSyncing(true);
+    try {
+      const result = await syncGoogle.mutateAsync("pull" as any);
+      toast.success(`Sincronizado! ${(result as any)?.imported || 0} novos eventos importados.`);
+    } catch (e: any) { toast.error(e.message || "Erro ao sincronizar"); }
+    setSyncing(false);
+  }
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [detailEvent, setDetailEvent] = useState<any>(null);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+
+  // Form state
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [startAt, setStartAt] = useState("");
+  const [endAt, setEndAt] = useState("");
+  const [location, setLocation] = useState("");
+  const [allDay, setAllDay] = useState(false);
+  const [color, setColor] = useState(COLORS[4]);
+  const [calendarId, setCalendarId] = useState("");
+  const [visibility, setVisibility] = useState("rede");
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
+
+  const days = useMemo(() => {
+    const s = startOfWeek(monthStart, { locale: ptBR });
+    const e = endOfWeek(monthEnd, { locale: ptBR });
+    return eachDayOfInterval({ start: s, end: e });
+  }, [currentDate]);
+
+  const eventsByDay = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (events ?? []).forEach(ev => {
+      const key = format(parseISO(ev.start_at), "yyyy-MM-dd");
+      if (!map[key]) map[key] = [];
+      map[key].push(ev);
+    });
+    return map;
+  }, [events]);
+
+  function openNewEvent(day?: Date) {
+    setEditingEvent(null);
+    setTitle(""); setDescription(""); setLocation(""); setAllDay(false); setColor(COLORS[4]); setCalendarId("");
+    setVisibility("rede"); setSelectedUnitIds([]);
+    if (day) {
+      setStartAt(format(day, "yyyy-MM-dd'T'09:00"));
+      setEndAt(format(day, "yyyy-MM-dd'T'10:00"));
+    } else {
+      const now = new Date();
+      setStartAt(format(now, "yyyy-MM-dd'T'HH:mm"));
+      setEndAt(format(new Date(now.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"));
+    }
+    setFormOpen(true);
+  }
+
+  function openEditEvent(ev: any) {
+    setEditingEvent(ev);
+    setTitle(ev.title); setDescription(ev.description || "");
+    setStartAt(format(parseISO(ev.start_at), "yyyy-MM-dd'T'HH:mm"));
+    setEndAt(format(parseISO(ev.end_at), "yyyy-MM-dd'T'HH:mm"));
+    setLocation(ev.location || ""); setAllDay(ev.all_day || false);
+    setColor(ev.color || COLORS[4]); setCalendarId(ev.calendar_id || "");
+    setVisibility(ev.visibility || "rede"); setSelectedUnitIds([]);
+    setDetailEvent(null); setFormOpen(true);
+  }
+
+  function handleSave() {
+    if (!title.trim()) { toast.error("Informe o título"); return; }
+    if (!startAt || !endAt) { toast.error("Informe data/hora"); return; }
+    const payload: any = {
+      title, description: description || undefined,
+      start_at: new Date(startAt).toISOString(), end_at: new Date(endAt).toISOString(),
+      location: location || undefined, all_day: allDay, color,
+      calendar_id: calendarId || undefined,
+      visibility,
+    };
+    if (editingEvent) {
+      updateEvent.mutate({ id: editingEvent.id, ...payload }, {
+        onSuccess: () => { setFormOpen(false); toast.success("Evento atualizado!"); },
+      });
+    } else {
+      createEvent.mutate(payload, {
+        onSuccess: () => { setFormOpen(false); toast.success("Evento criado!"); },
+      });
+    }
+  }
+
+  function handleDelete(id: string) {
+    deleteEvent.mutate(id, {
+      onSuccess: () => { setDetailEvent(null); toast.success("Evento excluído!"); },
+    });
+  }
+
+  function toggleUnit(unitId: string) {
+    setSelectedUnitIds(prev => prev.includes(unitId) ? prev.filter(u => u !== unitId) : [...prev, unitId]);
+  }
+
+  if (isLoading) {
+    return <div className="w-full space-y-6"><Skeleton className="h-10 w-64" /><Skeleton className="h-[600px]" /></div>;
+  }
+
+  return (
+    <div className="w-full space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Calendar className="w-5 h-5 text-primary" />
-          <h1 className="page-header-title">Agenda</h1>
+          <h1 className="text-xl font-bold">Agenda</h1>
           <Badge variant="outline" className="text-[10px]">Franqueadora</Badge>
         </div>
-        <Button size="sm" onClick={() => setShowForm(true)}><Plus className="w-4 h-4 mr-1" /> Novo Evento</Button>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex items-center gap-2">
-        <Button size="sm" variant="outline" onClick={() => setCurrentDate(d => subMonths(d, 1))}><ChevronLeft className="w-4 h-4" /></Button>
-        <Button size="sm" variant="outline" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
-        <Button size="sm" variant="outline" onClick={() => setCurrentDate(d => addMonths(d, 1))}><ChevronRight className="w-4 h-4" /></Button>
-        <span className="text-sm font-medium ml-2 capitalize">{format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}</span>
-      </div>
-
-      {/* Calendar grid */}
-      <div className="border rounded-lg overflow-hidden">
-        <div className="grid grid-cols-7 bg-muted/50">
-          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
-            <div key={d} className="py-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          {isGoogleConnected ? (
+            <>
+              <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Google conectado
+              </Badge>
+              <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={handleGooglePull} disabled={syncing}>
+                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} /> Sincronizar
+              </Button>
+              <Button size="sm" variant="ghost" className="gap-1 text-xs text-destructive" onClick={() => disconnectGoogle.mutate()}>
+                <Unlink className="w-3.5 h-3.5" /> Desconectar
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setWizardOpen(true)} disabled={loadingConnection}>
+              <ExternalLink className="w-3.5 h-3.5" /> Conectar Google Agenda
+            </Button>
+          )}
+          <Button size="sm" onClick={() => openNewEvent()}>
+            <Plus className="w-4 h-4 mr-1" /> Novo Evento
+          </Button>
         </div>
-        <div className="grid grid-cols-7">
-          {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="min-h-[80px] border-t border-r border-border/30" />)}
-          {days.map(day => {
-            const dayEvents = (events ?? []).filter(e => isSameDay(new Date(e.start_at), day));
-            const isToday = isSameDay(day, new Date());
-            return (
-              <div key={day.toISOString()} className={`min-h-[80px] border-t border-r border-border/30 p-1 ${isToday ? "bg-primary/5" : ""}`}>
-                <span className={`text-xs font-medium ${isToday ? "text-primary" : "text-muted-foreground"}`}>{format(day, "d")}</span>
-                {dayEvents.slice(0, 2).map(e => (
-                  <div key={e.id} className="mt-0.5 px-1 py-0.5 rounded text-[10px] bg-primary/15 text-primary truncate">{e.title}</div>
-                ))}
-                {dayEvents.length > 2 && <div className="text-[10px] text-muted-foreground px-1">+{dayEvents.length - 2}</div>}
+      </div>
+
+      <div className="flex gap-6">
+        {/* Sidebar */}
+        <div className="w-48 flex-shrink-0 space-y-4 hidden lg:block">
+          <Card className="p-4 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Calendários</p>
+            {(calendars ?? []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nenhum calendário</p>
+            ) : (
+              (calendars ?? []).map(c => (
+                <div key={c.id} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ background: c.color || "#3b82f6" }} />
+                  <span className="text-xs">{c.name}</span>
+                </div>
+              ))
+            )}
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Legenda</p>
+            <div className="space-y-1.5 text-[11px] text-muted-foreground">
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-primary/60" /> Eventos da rede</div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Apenas matriz</div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-4">
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setCurrentDate(d => subMonths(d, 1))}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setCurrentDate(d => addMonths(d, 1))}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <span className="text-sm font-semibold capitalize ml-1">
+              {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-7 border border-border rounded-xl overflow-hidden">
+            {WEEKDAYS.map(d => (
+              <div key={d} className="text-center text-[11px] font-semibold text-muted-foreground py-2 bg-muted/30 border-b border-border">{d}</div>
+            ))}
+            {days.map(day => {
+              const key = format(day, "yyyy-MM-dd");
+              const dayEvents = eventsByDay[key] || [];
+              const inMonth = isSameMonth(day, currentDate);
+              return (
+                <div
+                  key={key}
+                  className={`min-h-[90px] border-b border-r border-border p-1 cursor-pointer transition-colors hover:bg-muted/20 ${!inMonth ? "bg-muted/10 opacity-40" : ""} ${isToday(day) ? "bg-primary/5" : ""}`}
+                  onClick={() => openNewEvent(day)}
+                >
+                  <span className={`text-[11px] font-medium block mb-0.5 ${isToday(day) ? "text-primary font-bold" : "text-foreground"}`}>
+                    {format(day, "d")}
+                  </span>
+                  {dayEvents.slice(0, 3).map(ev => (
+                    <div
+                      key={ev.id}
+                      className="text-[10px] truncate rounded px-1 py-0.5 mb-0.5 cursor-pointer"
+                      style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6" }}
+                      onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
+                    >
+                      {ev.title}
+                    </div>
+                  ))}
+                  {dayEvents.length > 3 && <span className="text-[10px] text-muted-foreground">+{dayEvents.length - 3}</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Google Setup Wizard */}
+      <GoogleSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+
+      {/* Event Form Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingEvent ? "Editar Evento" : "Novo Evento"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Título *</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Nome do evento" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Início</Label><Input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} /></div>
+              <div><Label>Fim</Label><Input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} /></div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={allDay} onCheckedChange={setAllDay} id="allday" />
+              <Label htmlFor="allday">Dia todo</Label>
+            </div>
+            <div><Label>Local</Label><Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Endereço ou link" /></div>
+            <div><Label>Descrição</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} /></div>
+
+            {/* Visibility */}
+            <div>
+              <Label>Visibilidade</Label>
+              <Select value={visibility} onValueChange={setVisibility}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rede">Toda a rede</SelectItem>
+                  <SelectItem value="unidades">Unidades selecionadas</SelectItem>
+                  <SelectItem value="private">Apenas matriz</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Unit selector */}
+            {visibility === "unidades" && (units ?? []).length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Selecione as unidades</Label>
+                <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-3">
+                  {(units ?? []).map(u => (
+                    <label key={u.id} className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox checked={selectedUnitIds.includes(u.id)} onCheckedChange={() => toggleUnit(u.id)} />
+                      <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-sm">{u.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
+            )}
 
-      {(events ?? []).length === 0 && (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Inbox className="w-10 h-10 text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">Sua agenda está vazia. Crie seu primeiro evento.</p>
-        </div>
-      )}
-
-      {/* New Event Dialog */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Novo Evento</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Título *</Label><Input value={newTitle} onChange={e => setNewTitle(e.target.value)} /></div>
-            <div><Label>Data *</Label><Input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} /></div>
-            <div><Label>Horário</Label><Input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} /></div>
+            {(calendars ?? []).length > 0 && (
+              <div>
+                <Label>Calendário</Label>
+                <Select value={calendarId} onValueChange={setCalendarId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {(calendars ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div>
+              <Label>Cor</Label>
+              <div className="flex gap-2 mt-1">
+                {COLORS.map(c => (
+                  <button
+                    key={c}
+                    className={`w-6 h-6 rounded-full border-2 transition-transform ${color === c ? "border-foreground scale-110" : "border-transparent"}`}
+                    style={{ background: c }}
+                    onClick={() => setColor(c)}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
-            <Button onClick={handleCreate}>Criar Evento</Button>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={createEvent.isPending || updateEvent.isPending}>
+              {editingEvent ? "Salvar" : "Criar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Event Detail Sheet */}
+      <Sheet open={!!detailEvent} onOpenChange={open => !open && setDetailEvent(null)}>
+        <SheetContent>
+          {detailEvent && (
+            <div className="space-y-5 pt-2">
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ background: detailEvent.color || "#3b82f6" }} />
+                  {detailEvent.title}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  {detailEvent.all_day
+                    ? format(parseISO(detailEvent.start_at), "dd/MM/yyyy")
+                    : `${format(parseISO(detailEvent.start_at), "dd/MM/yyyy HH:mm")} — ${format(parseISO(detailEvent.end_at), "HH:mm")}`}
+                </div>
+                {detailEvent.location && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="w-4 h-4" /> {detailEvent.location}
+                  </div>
+                )}
+                {detailEvent.visibility && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {detailEvent.visibility === "rede" ? "Toda a rede" : detailEvent.visibility === "private" ? "Apenas matriz" : "Unidades selecionadas"}
+                  </Badge>
+                )}
+                {detailEvent.description && (
+                  <p className="text-foreground/80 whitespace-pre-wrap">{detailEvent.description}</p>
+                )}
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button size="sm" variant="outline" onClick={() => openEditEvent(detailEvent)}>
+                  <Edit2 className="w-3.5 h-3.5 mr-1" /> Editar
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleDelete(detailEvent.id)}>
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Excluir
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

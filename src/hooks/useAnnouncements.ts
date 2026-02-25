@@ -22,7 +22,7 @@ export function useAnnouncementMutations() {
   const { user } = useAuth();
 
   const createAnnouncement = useMutation({
-    mutationFn: async (ann: { title: string; content?: string; type?: string; priority?: string; target_roles?: string[] }) => {
+    mutationFn: async (ann: { title: string; content?: string; type?: string; priority?: string; target_roles?: string[]; target_unit_ids?: string[]; published_at?: string; expires_at?: string }) => {
       const { data, error } = await supabase.from("announcements").insert({ ...ann, organization_id: orgId!, created_by: user?.id }).select().single();
       if (error) throw error;
       return data;
