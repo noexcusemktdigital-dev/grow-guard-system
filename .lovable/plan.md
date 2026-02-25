@@ -1,54 +1,55 @@
 
 
-# Corrigir Filtragem de Grupos no WhatsApp Webhook
+# Melhorar Visualizacao de Grupos vs Pessoas no Chat
 
-## Problema
+## Problema Atual
 
-O webhook recebe mensagens de grupo com `chatId` no formato `XXXXX@g.us`. O codigo atual (linha 76) remove `@g.us` antes de verificar se e grupo (linha 84), resultando num telefone como `5511999-1609459200` que nao bate com nenhum filtro. Assim, mensagens de grupo sao salvas como contatos individuais.
+O filtro que adicionamos esta removendo completamente os contatos de grupo da lista. Na verdade, o usuario quer **ver todos os contatos**, mas com uma diferenciacao visual clara entre:
+- Conversas individuais (telefone simples como `554491416561`)
+- Grupos (telefone no formato `554497402747-1515347495`)
+- Contatos via LID (formato `148485642956928@lid`)
 
 ## Solucao
 
-Verificar se o `chatId` contem `@g.us` ou `@broadcast` **antes** de limpar o telefone. Tambem adicionar uma segunda camada de protecao no frontend.
+Em vez de filtrar/esconder os grupos, vamos **classificar** cada contato e exibir todos com indicadores visuais distintos.
 
-## Alteracoes
+### 1. Hook `useWhatsApp.ts` - Remover filtro, adicionar classificacao
 
-### 1. `supabase/functions/whatsapp-webhook/index.ts`
+- Remover o filtro que esconde grupos
+- Adicionar um campo computado `contact_type` a cada contato: `"individual"`, `"group"` ou `"lid"`
+- A deteccao usa o formato do telefone:
+  - `@g.us` ou regex `^\d+-\d{10,}$` -> grupo
+  - `@lid` -> contato via LID (link de anuncio)
+  - Resto -> individual
 
-Mover a verificacao de grupo para **antes** da limpeza do phone:
+### 2. `ChatContactList.tsx` - Indicadores visuais
 
-```typescript
-// Linha 76 - Detectar grupo/broadcast pelo chatId ORIGINAL
-const rawChatId = body.chatId || "";
-const isGroup = rawChatId.includes("@g.us");
-const isBroadcast = rawChatId.includes("@broadcast");
+- Icone de grupo (Users) no avatar para contatos tipo "group"
+- Badge colorido "Grupo" ao lado do nome
+- Adicionar filtro de modo "Grupos" nos pills existentes (junto com Todos/IA/Humano/Espera)
 
-const phone = body.phone || rawChatId.replace("@c.us", "").replace("@g.us", "");
-if (!phone) { ... }
+### 3. `ChatContactList.tsx` - Filtro por tipo
 
-// Linha 84 - Expandir filtro
-if (isGroup || isBroadcast || phone.includes("-")) {
-  return new Response(JSON.stringify({ ok: true, skipped: "group_or_broadcast" }), { ... });
-}
-```
+- Novo pill "Grupos" que filtra apenas conversas de grupo
+- O filtro "Todos" continua mostrando tudo (individuais + grupos)
 
-### 2. `src/hooks/useWhatsApp.ts` (frontend - defesa extra)
+### 4. Webhook - Manter protecao no backend
 
-Melhorar o filtro de contatos no frontend para tambem excluir telefones com formato de grupo (numeros com hifen seguido de numeros longos):
+- O webhook continua bloqueando mensagens de grupo para **nao processar** com o agente IA
+- Porem, se o usuario quiser ver as mensagens de grupo no futuro, podemos adicionar uma flag para permitir
 
-```typescript
-const filtered = (data || []).filter((c: any) => {
-  const phone = c.phone || "";
-  return !phone.endsWith("-group") 
-    && !phone.includes("@broadcast")
-    && !phone.includes("@g.us")
-    && !/^\d+-\d{10,}$/.test(phone);  // formato grupo Z-API
-});
-```
-
-## Arquivos modificados
+## Arquivos a modificar
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `supabase/functions/whatsapp-webhook/index.ts` | Detectar `@g.us` antes de limpar chatId |
-| `src/hooks/useWhatsApp.ts` | Filtro extra no frontend |
+| `src/hooks/useWhatsApp.ts` | Remover filtro, adicionar `contact_type` computado |
+| `src/components/cliente/ChatContactList.tsx` | Icone de grupo, badge, novo filtro pill |
+| `src/pages/cliente/ClienteChat.tsx` | Passar `contact_type` se necessario |
+
+## Detalhes Visuais
+
+- Contato individual: avatar normal com iniciais
+- Contato grupo: avatar com icone `Users` e borda roxa, badge "Grupo" pequeno
+- Contato LID: avatar normal com badge "Anuncio"
+- Na lista, grupos aparecem com fundo levemente diferente
 
