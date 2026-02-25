@@ -1,32 +1,28 @@
 
+## Corrigir compra de Pacotes de Creditos Avulsos
 
-# Corrigir erro "Cliente invalido" na criacao de assinatura Asaas
+### Problema identificado
 
-## Problema
+A funcao `asaas-create-charge` nao consegue criar cobranças porque ela exige que a organizacao ja tenha um `asaas_customer_id` cadastrado. Se o cliente nunca fez uma assinatura antes (ou se o ID foi limpo), a funcao retorna erro "No billing customer configured".
 
-A organizacao "Empresa Teste" possui um `asaas_customer_id` (`cus_000109824322`) que foi criado quando o `ASAAS_BASE_URL` estava incorreto. Esse ID nao existe no Sandbox real do Asaas, causando o erro "Cliente invalido ou nao informado" ao tentar criar a assinatura.
+A funcao `asaas-create-subscription` ja resolve isso automaticamente criando o cliente no Asaas quando necessario, mas a `asaas-create-charge` nao tem essa logica.
 
-## Solucao
+### Solucao
 
-Limpar o `asaas_customer_id` da organizacao para que a Edge Function crie um novo cliente valido no Sandbox correto.
+Adicionar auto-criacao do cliente Asaas na funcao `asaas-create-charge`, replicando a mesma logica que ja existe em `asaas-create-subscription`:
 
-## Passo a passo
+1. Quando `asaas_customer_id` for `null`, buscar os dados da organizacao (name, email, cnpj)
+2. Criar o cliente na API do Asaas
+3. Salvar o `asaas_customer_id` de volta na tabela `organizations`
+4. Prosseguir com a criacao da cobranca normalmente
 
-1. **Executar migration SQL** para limpar o campo `asaas_customer_id` da organizacao teste:
+### Detalhes tecnicos
 
-```sql
-UPDATE organizations
-SET asaas_customer_id = NULL
-WHERE id = 'adb09618-e9f3-4dbd-a89c-29e3eb1bec9f';
-```
+**Arquivo**: `supabase/functions/asaas-create-charge/index.ts`
 
-2. **Testar o fluxo** chamando `asaas-create-subscription` novamente -- a funcao vai:
-   - Detectar que `asaas_customer_id` e NULL
-   - Criar um novo cliente no Sandbox correto (`https://api-sandbox.asaas.com/v3`)
-   - Salvar o novo ID
-   - Criar a assinatura com sucesso
+- Alterar a query do org para incluir `name, cnpj, email, phone` alem de `id, asaas_customer_id`
+- Substituir o bloco que retorna erro quando `asaas_customer_id` e null por logica de auto-criacao via `POST /customers` na API Asaas
+- Salvar o novo `asaas_customer_id` na org com `UPDATE`
+- Usar o ID recem-criado para prosseguir com a cobranca
 
-## Observacao
-
-A funcao `asaas-create-subscription` ja possui a logica de criar o cliente quando `asaas_customer_id` e null (linhas 82-103 do codigo), entao nenhuma alteracao de codigo e necessaria.
-
+Nenhuma alteracao de banco de dados, frontend ou outras funcoes e necessaria. O frontend ja chama corretamente a funcao com todos os parametros necessarios.
