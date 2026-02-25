@@ -56,9 +56,9 @@ Deno.serve(async (req) => {
 
     if (charge_type === "credits") {
       const packs: Record<string, { credits: number; price: number }> = {
-        "pack-500": { credits: 500, price: 49 },
-        "pack-2000": { credits: 2000, price: 149 },
-        "pack-5000": { credits: 5000, price: 299 },
+        "pack-5000": { credits: 5000, price: 49 },
+        "pack-20000": { credits: 20000, price: 149 },
+        "pack-50000": { credits: 50000, price: 299 },
       };
       const pack = packs[pack_id];
       if (!pack) {

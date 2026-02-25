@@ -125,11 +125,15 @@ Deno.serve(async (req) => {
       }
 
       // Check if this is a subscription payment — update subscription status
+      // Format: "orgId|sub|planId|modules"
       const externalRef = payment.externalReference;
-      if (externalRef && typeof externalRef === "string" && externalRef.startsWith("sub_")) {
-        // Extract plan from external reference (e.g. "sub_growth" or "sub_scale")
-        const planSlug = externalRef.replace("sub_", "");
-        if (planSlug) {
+      if (externalRef && typeof externalRef === "string") {
+        const parts = externalRef.split("|");
+        if (parts.length >= 3 && parts[1] === "sub") {
+          const planSlug = parts[2]; // starter, growth, scale
+          const modules = parts[3] || "comercial";
+          const planCreditsMap: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
+
           const newExpires = new Date();
           newExpires.setDate(newExpires.getDate() + 30);
 
@@ -137,12 +141,33 @@ Deno.serve(async (req) => {
             .from("subscriptions")
             .update({
               plan: planSlug,
+              modules,
               status: "active",
               expires_at: newExpires.toISOString(),
             })
             .eq("organization_id", org.id);
 
-          console.log(`Subscription updated for org ${org.id}: plan=${planSlug}`);
+          // Override credit amount with plan-specific value
+          const planCredits = planCreditsMap[planSlug];
+          if (planCredits) {
+            const wallet = await getOrCreateWallet(adminClient, org.id);
+            if (wallet) {
+              const newBalance = wallet.balance + planCredits;
+              await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
+              await adminClient.from("credit_transactions").insert({
+                organization_id: org.id,
+                type: "purchase",
+                amount: planCredits,
+                balance_after: newBalance,
+                description: `Renovação plano ${planSlug} — ${planCredits.toLocaleString()} créditos`,
+                metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, plan: planSlug, modules, event },
+              });
+              console.log(`Subscription renewed for org ${org.id}: plan=${planSlug}, credits=${planCredits}, balance=${newBalance}`);
+            }
+            return new Response(JSON.stringify({ success: true, event, type: "subscription_renewal", plan: planSlug, credits: planCredits }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         }
       }
 

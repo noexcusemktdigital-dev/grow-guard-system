@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
         cycle: "MONTHLY",
         nextDueDate,
         description: `Plano ${plan_id.charAt(0).toUpperCase() + plan_id.slice(1)} ${moduleLabel} — NOE`,
-        externalReference: `${org.id}|${plan_id}|${moduleChoice}`,
+        externalReference: `${org.id}|sub|${plan_id}|${moduleChoice}`,
       }),
     });
 
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
       })
       .eq("organization_id", org.id);
 
-    const planCredits: Record<string, number> = { starter: 500, growth: 2000, scale: 5000 };
+    const planCredits: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
     const credits = planCredits[plan_id] || 500;
 
     const { data: wallet } = await adminClient
