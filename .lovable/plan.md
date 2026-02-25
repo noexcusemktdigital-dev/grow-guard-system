@@ -1,101 +1,64 @@
 
+# Ativar Sandbox Asaas e Testar Pagamentos (Cliente Final + Franqueado)
 
-# Custos dos Planos e Correcoes da Integracao Asaas
+## O que sera feito
 
-## 1. Tabela de Custos Final (o que o seu cliente paga vs o que voce gasta)
+### 1. Adicionar secret ASAAS_WEBHOOK_TOKEN
+O token `whsec_Ntk8jfwX4OhA8-6BcpRu-Euugv49ar1kdCi1dARU6Q8` precisa ser salvo como secret do backend. Ele nao existe ainda nos secrets configurados.
 
-```text
-PLANOS MENSAIS
-+----------+-------------+-------------+----------+----------------+----------------+
-| Plano    | Base (1mod) | Combo (2mod)| Creditos | Seu custo IA   | Sua margem     |
-+----------+-------------+-------------+----------+----------------+----------------+
-| Starter  | R$ 197      | R$ 297      | 5.000    | ~R$ 10         | ~95% / ~97%    |
-| Growth   | R$ 497      | R$ 697      | 20.000   | ~R$ 40         | ~92% / ~94%    |
-| Scale    | R$ 997      | R$ 1.397    | 50.000   | ~R$ 100        | ~90% / ~93%    |
-+----------+-------------+-------------+----------+----------------+----------------+
+### 2. Trocar URL base para Sandbox em 4 funcoes
+Todas as funcoes Asaas estao apontando para producao (`https://api.asaas.com/v3`). Mudar para leitura dinamica de env var com fallback para sandbox:
 
-RECARGAS AVULSAS
-+----------------+---------+----------+----------------+----------------+
-| Pacote         | Preco   | Creditos | Seu custo IA   | Sua margem     |
-+----------------+---------+----------+----------------+----------------+
-| Pack 5.000     | R$ 49   | 5.000    | ~R$ 10         | ~80%           |
-| Pack 20.000    | R$ 149  | 20.000   | ~R$ 40         | ~73%           |
-| Pack 50.000    | R$ 299  | 50.000   | ~R$ 100        | ~67%           |
-+----------------+---------+----------+----------------+----------------+
-
-CUSTO POR ACAO (debito automatico da wallet)
-+----------------------------+----------+-------------------+
-| Acao                       | Creditos | Custo real ~      |
-+----------------------------+----------+-------------------+
-| Gerar site                 | 500      | R$ 1,00           |
-| Gerar estrategia comercial | 300      | R$ 0,60           |
-| Gerar prospeccao IA        | 250      | R$ 0,50           |
-| Gerar conteudos (lote)     | 200      | R$ 0,40           |
-| Gerar conceitos visuais    | 200      | R$ 0,40           |
-| Gerar script de vendas     | 150      | R$ 0,30           |
-| Gerar imagem social        | 100      | R$ 0,20           |
-| Simular agente IA          | 100      | R$ 0,20           |
-| Config. automatica agente  | 100      | R$ 0,20           |
-| Checklist diario IA        | 50       | R$ 0,10           |
-| Resposta agente WhatsApp   | variavel | proporcional      |
-| Follow-up automatico       | variavel | proporcional      |
-+----------------------------+----------+-------------------+
-
-Usuario extra: R$ 29/mes (cobrado via Asaas avulso)
+```
+const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api-sandbox.asaas.com/v3";
 ```
 
-## 2. Bugs Criticos Encontrados (impedem o uso em producao)
+Funcoes afetadas:
+- `asaas-create-subscription/index.ts` (linha 9)
+- `asaas-create-charge/index.ts` (linha 9)
+- `asaas-list-payments/index.ts` (linha 9)
+- `asaas-charge-franchisee/index.ts` (linha 9)
 
-Existem 3 inconsistencias graves entre os arquivos que precisam ser corrigidas antes de testar:
+### 3. Adicionar secret ASAAS_BASE_URL
+Valor: `https://api-sandbox.asaas.com/v3`
 
-### Bug A — `asaas-create-subscription` usa creditos antigos
-Linha 162: `{ starter: 500, growth: 2000, scale: 5000 }` mas deveria ser `{ starter: 5000, growth: 20000, scale: 50000 }`.
+Quando for para producao, basta trocar para `https://api.asaas.com/v3`.
 
-### Bug B — `asaas-create-charge` usa IDs de pack antigos
-Linhas 58-62: Os packs sao `pack-500`, `pack-2000`, `pack-5000` mas o frontend envia `pack-5000`, `pack-20000`, `pack-50000`. Resultado: "Invalid pack_id" sempre.
+## Fluxo de teste
 
-### Bug C — `asaas-webhook` nao reconhece o externalReference da subscription
-Linha 129: O webhook espera `externalReference` no formato `sub_growth`, mas a funcao `asaas-create-subscription` envia no formato `${org.id}|${plan_id}|${moduleChoice}`. Resultado: renovacao de plano nunca funciona.
+### Cliente Final (SaaS)
+1. Acessar Plano e Creditos no app
+2. Assinar um plano (ex: Starter via PIX)
+3. Verificar se a cobranca aparece no painel Asaas Sandbox
+4. Simular pagamento no sandbox
+5. Confirmar que o webhook creditou 5.000 creditos na wallet
+6. Testar compra de pack avulso (5.000 creditos / R$49)
 
-## 3. Plano de Correcoes
+### Franqueado (Repasse)
+1. No painel da franqueadora, acessar Financeiro > Repasse
+2. Gerar cobranca de repasse para um franqueado (precisa ter `asaas_customer_id` vinculado)
+3. Verificar se a cobranca aparece no Asaas Sandbox
+4. Simular pagamento
+5. Confirmar que o webhook marcou o repasse como "pago" e registrou receita
 
-### 3.1 Corrigir `asaas-create-subscription/index.ts`
-- Linha 162: Atualizar mapa de creditos para `{ starter: 5000, growth: 20000, scale: 50000 }`
-- Linha 134: Mudar `externalReference` para formato que o webhook reconheca: usar o formato pipe `${org.id}|sub|${plan_id}|${moduleChoice}`
+## Arquivos a modificar
 
-### 3.2 Corrigir `asaas-create-charge/index.ts`
-- Linhas 58-62: Atualizar IDs e valores dos packs para:
-  - `pack-5000`: 5.000 creditos, R$ 49
-  - `pack-20000`: 20.000 creditos, R$ 149
-  - `pack-50000`: 50.000 creditos, R$ 299
+| Arquivo | Mudanca |
+|---------|---------|
+| `supabase/functions/asaas-create-subscription/index.ts` | URL base dinamica |
+| `supabase/functions/asaas-create-charge/index.ts` | URL base dinamica |
+| `supabase/functions/asaas-list-payments/index.ts` | URL base dinamica |
+| `supabase/functions/asaas-charge-franchisee/index.ts` | URL base dinamica |
 
-### 3.3 Corrigir `asaas-webhook/index.ts`
-- Linhas 128-147: Reescrever a logica de deteccao de subscription para usar o formato pipe `orgId|sub|planId|modules`
-- Extrair `plan_id` e `modules` do `externalReference` corretamente
-- Usar esse `plan_id` para renovar a subscription e creditar o volume correto (5000/20000/50000)
+## Secrets a adicionar
 
-### 3.4 Configuracao do Webhook no Asaas
-- A URL do webhook que voce precisa cadastrar no painel Asaas e:
-  `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/asaas-webhook`
-- Eventos a ativar: `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED`, `PAYMENT_DELETED`
-- Se quiser token de validacao, configurar o secret `ASAAS_WEBHOOK_TOKEN` no backend
+| Secret | Valor |
+|--------|-------|
+| `ASAAS_WEBHOOK_TOKEN` | `whsec_Ntk8jfwX4OhA8-6BcpRu-Euugv49ar1kdCi1dARU6Q8` |
+| `ASAAS_BASE_URL` | `https://api-sandbox.asaas.com/v3` |
 
-## 4. Arquivos a Modificar
+## Resultado
 
-| Arquivo | Correcao |
-|---------|----------|
-| `supabase/functions/asaas-create-subscription/index.ts` | Creditos 5k/20k/50k + externalReference formato pipe |
-| `supabase/functions/asaas-create-charge/index.ts` | Pack IDs e valores atualizados |
-| `supabase/functions/asaas-webhook/index.ts` | Parse do externalReference formato pipe |
-
-## 5. Como Testar (pos-correcao)
-
-1. Cadastrar webhook no painel Asaas apontando para a URL acima
-2. No app, acessar Plano e Creditos como cliente
-3. Tentar assinar um plano (PIX e mais rapido para testar)
-4. Verificar se a cobranca foi criada no Asaas
-5. Simular pagamento no sandbox do Asaas
-6. Confirmar que o webhook creditou os creditos na wallet
-7. Testar compra de pack avulso
-8. Testar uma acao de IA e verificar se debita creditos corretamente
-
+- Todas as chamadas ao Asaas irao para o ambiente Sandbox
+- O webhook validara o token de autenticacao
+- Para ir para producao: trocar `ASAAS_API_KEY` (chave real), `ASAAS_BASE_URL` (URL producao) e `ASAAS_WEBHOOK_TOKEN` (token do webhook de producao)
