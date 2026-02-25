@@ -1,25 +1,34 @@
 
 
-# Atualizar ASAAS_API_KEY para Sandbox
+# Testar Conexao Asaas Sandbox
 
-## Resumo
+## Status Atual
 
-Substituir o valor atual do secret `ASAAS_API_KEY` pela chave do ambiente Sandbox do Asaas, permitindo que todas as 4 Edge Functions (create-subscription, create-charge, list-payments, charge-franchisee) e o webhook se comuniquem corretamente com o ambiente de testes.
+O webhook `asaas-webhook` esta funcional -- os logs confirmam que recebeu e processou os eventos de teste com sucesso. Porem, ainda nao validamos se a **chave API do Sandbox** consegue autenticar chamadas na API do Asaas (listar clientes, criar cobranças, etc).
 
 ## O que sera feito
 
-1. Atualizar o secret `ASAAS_API_KEY` com o valor da chave sandbox fornecida
-2. Nenhuma alteracao de codigo necessaria -- as funcoes ja leem esse secret via `Deno.env.get("ASAAS_API_KEY")`
+### 1. Criar funcao de teste de conexao
 
-## Estado final dos secrets Asaas
+Criar uma Edge Function temporaria `asaas-test-connection` que faz uma chamada GET simples a API do Asaas Sandbox (`/customers?limit=1`) usando a `ASAAS_API_KEY` configurada. Retorna:
+- Se a conexao foi bem sucedida
+- URL base sendo usada
+- Quantidade de clientes existentes no sandbox
 
-| Secret | Valor |
-|--------|-------|
-| `ASAAS_API_KEY` | Chave sandbox (`$aact_hmlg_...`) |
-| `ASAAS_BASE_URL` | `https://api-sandbox.asaas.com/v3` |
-| `ASAAS_WEBHOOK_TOKEN` | `whsec_Ntk8jfwX4OhA8-6BcpRu-Euugv49ar1kdCi1dARU6Q8` |
+### 2. Executar o teste
 
-## Proximo passo apos atualizacao
+Chamar a funcao para validar que a chave sandbox esta autenticando corretamente.
 
-Testar o fluxo completo: criar uma cobranca pelo app, verificar no painel Asaas Sandbox, simular pagamento e confirmar que o webhook injeta creditos.
+### 3. Limpeza
 
+Apos confirmar que funciona, remover a funcao de teste (opcional -- pode ser util para diagnosticos futuros).
+
+## Resultado Esperado
+
+Resposta com `"connected": true` confirmando que todas as Edge Functions de pagamento estao prontas para uso no ambiente Sandbox.
+
+## Detalhes Tecnicos
+
+- A funcao faz apenas um `GET /customers?limit=1` com o header `access_token`
+- Nenhuma alteracao em tabelas ou dados
+- Nenhuma dependencia de autenticacao de usuario (chamada direta)
