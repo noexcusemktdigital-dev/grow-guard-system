@@ -8,6 +8,9 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import SaasAuth from "./pages/SaasAuth";
+import SaasLanding from "./pages/SaasLanding";
+import TermosDeUso from "./pages/TermosDeUso";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { FranqueadoraLayout } from "./components/FranqueadoraLayout";
@@ -86,6 +89,9 @@ const App = () => (
             {/* Auth routes */}
             <Route path="/acessofranquia" element={<Auth />} />
             <Route path="/app" element={<SaasAuth />} />
+            <Route path="/landing" element={<SaasLanding />} />
+            <Route path="/termos" element={<TermosDeUso />} />
+            <Route path="/privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected app shell */}

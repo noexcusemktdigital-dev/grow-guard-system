@@ -109,6 +109,28 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Check if this is a subscription payment — update subscription status
+      const externalRef = payment.externalReference;
+      if (externalRef && typeof externalRef === "string" && externalRef.startsWith("sub_")) {
+        // Extract plan from external reference (e.g. "sub_growth" or "sub_scale")
+        const planSlug = externalRef.replace("sub_", "");
+        if (planSlug) {
+          const newExpires = new Date();
+          newExpires.setDate(newExpires.getDate() + 30);
+
+          await adminClient
+            .from("subscriptions")
+            .update({
+              plan: planSlug,
+              status: "active",
+              expires_at: newExpires.toISOString(),
+            })
+            .eq("organization_id", org.id);
+
+          console.log(`Subscription updated for org ${org.id}: plan=${planSlug}`);
+        }
+      }
+
       // Standard credit wallet flow
       if (creditsAmount <= 0) {
         return new Response(JSON.stringify({ ok: true, credits: 0 }), {

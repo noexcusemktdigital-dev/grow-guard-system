@@ -3405,6 +3405,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          accepted_terms_at: string | null
           avatar_url: string | null
           created_at: string
           full_name: string | null
@@ -3414,6 +3415,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_terms_at?: string | null
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
@@ -3423,6 +3425,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_terms_at?: string | null
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
