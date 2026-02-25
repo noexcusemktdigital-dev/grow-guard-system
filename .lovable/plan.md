@@ -1,30 +1,32 @@
 
 
-# Corrigir erro "Invalid token" na integração Asaas
+# Corrigir erro "Cliente invalido" na criacao de assinatura Asaas
 
 ## Problema
 
-A funcao `asaas-create-subscription` esta retornando `{ error: "Invalid token" }` ao tentar criar um cliente/assinatura no Asaas. Isso indica que a chamada API esta sendo rejeitada.
+A organizacao "Empresa Teste" possui um `asaas_customer_id` (`cus_000109824322`) que foi criado quando o `ASAAS_BASE_URL` estava incorreto. Esse ID nao existe no Sandbox real do Asaas, causando o erro "Cliente invalido ou nao informado" ao tentar criar a assinatura.
 
-## Causa provavel
+## Solucao
 
-O secret `ASAAS_BASE_URL` foi previamente identificado como incorreto -- estava apontando para a URL do webhook (`https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/asaas-webhook`) em vez da API do Asaas Sandbox.
+Limpar o `asaas_customer_id` da organizacao para que a Edge Function crie um novo cliente valido no Sandbox correto.
 
-## O que sera feito
+## Passo a passo
 
-1. **Atualizar `ASAAS_BASE_URL`** para o valor correto: `https://api-sandbox.asaas.com/v3`
-2. **Revalidar `ASAAS_API_KEY`** -- confirmar que a chave sandbox esta corretamente salva (re-salvar se necessario)
-3. **Testar novamente** o fluxo de compra pelo usuario teste
+1. **Executar migration SQL** para limpar o campo `asaas_customer_id` da organizacao teste:
 
-## Estado correto dos secrets
+```sql
+UPDATE organizations
+SET asaas_customer_id = NULL
+WHERE id = 'adb09618-e9f3-4dbd-a89c-29e3eb1bec9f';
+```
 
-| Secret | Valor esperado |
-|--------|---------------|
-| `ASAAS_BASE_URL` | `https://api-sandbox.asaas.com/v3` |
-| `ASAAS_API_KEY` | Chave sandbox `$aact_hmlg_...` |
-| `ASAAS_WEBHOOK_TOKEN` | Token do webhook configurado |
+2. **Testar o fluxo** chamando `asaas-create-subscription` novamente -- a funcao vai:
+   - Detectar que `asaas_customer_id` e NULL
+   - Criar um novo cliente no Sandbox correto (`https://api-sandbox.asaas.com/v3`)
+   - Salvar o novo ID
+   - Criar a assinatura com sucesso
 
-## Nenhuma alteracao de codigo
+## Observacao
 
-As funcoes ja usam `Deno.env.get("ASAAS_BASE_URL")` e `Deno.env.get("ASAAS_API_KEY")` -- o problema e apenas nos valores dos secrets.
+A funcao `asaas-create-subscription` ja possui a logica de criar o cliente quando `asaas_customer_id` e null (linhas 82-103 do codigo), entao nenhuma alteracao de codigo e necessaria.
 
