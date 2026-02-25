@@ -72,17 +72,21 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Detect group/broadcast from raw chatId BEFORE cleaning
+    const rawChatId = body.chatId || "";
+    const isGroup = rawChatId.includes("@g.us");
+    const isBroadcast = rawChatId.includes("@broadcast");
+
     // Incoming message
-    const phone = body.phone || body.chatId?.replace("@c.us", "").replace("@g.us", "");
+    const phone = body.phone || rawChatId.replace("@c.us", "").replace("@g.us", "");
     if (!phone) {
       return new Response(JSON.stringify({ ok: true, skipped: "no phone" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Skip groups and broadcast lists
-    const isGroupOrBroadcast = phone.endsWith("-group") || phone.includes("@broadcast");
-    if (isGroupOrBroadcast) {
+    // Skip groups, broadcast lists, and group-like phone formats
+    if (isGroup || isBroadcast || /^\d+-\d{10,}$/.test(phone)) {
       return new Response(JSON.stringify({ ok: true, skipped: "group_or_broadcast" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
