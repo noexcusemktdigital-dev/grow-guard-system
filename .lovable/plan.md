@@ -1,192 +1,101 @@
 
 
-# Recalcular Sistema de Creditos para Revenda da Lovable AI
+# Custos dos Planos e Correcoes da Integracao Asaas
 
-## Diagnostico do Problema
-
-O sistema atual tem falhas criticas que impedem a comercializacao:
-
-### 1. Creditos nao refletem custos reais
-- Atualmente: 1 credito = 1 token de IA (arbitrario)
-- Lovable AI cobra por uso real em USD (mesmos precos do provedor LLM)
-- Os planos oferecem 500/2000/5000 "creditos" sem nenhuma relacao com custo real
-
-### 2. Apenas 2 de 11 funcoes de IA debitam creditos
-Functions que **debitam** creditos:
-- `ai-agent-reply` (agentes WhatsApp)
-- `agent-followup-cron` (follow-up automatico)
-
-Functions que **NAO debitam** (vazamento total):
-- `generate-content` (conteudos marketing)
-- `generate-site` (gerador de sites)
-- `generate-script` (scripts de vendas)
-- `generate-strategy` (estrategia comercial)
-- `generate-prospection` (prospeccao IA)
-- `generate-social-concepts` (conceitos visuais)
-- `generate-social-image` (geracao de imagem)
-- `ai-agent-simulate` (simulador de agente)
-- `ai-generate-agent-config` (config automatica)
-- `generate-daily-checklist` (checklist diario)
-
-### 3. Nao existe margem de lucro calculada
-Voce paga Lovable AI pelo uso real e revende ao cliente, mas sem calculo de margem.
-
----
-
-## Solucao Proposta: Sistema de Creditos Baseado em Custo Real
-
-### Modelo de Precificacao
-
-Converter tudo para uma unidade padrao: **1 credito = R$ 0,01 de custo IA** (com margem de 5x embutida).
-
-Ou seja, quando o cliente consome 100 creditos, voce gastou ~R$ 0,20 na Lovable e cobrou R$ 1,00 — margem de ~80%.
+## 1. Tabela de Custos Final (o que o seu cliente paga vs o que voce gasta)
 
 ```text
-+-----------------------+------------------+------------------+
-| Plano                 | Creditos/mes     | Custo IA real    |
-+-----------------------+------------------+------------------+
-| Starter (R$197-297)   | 5.000 creditos   | ~R$ 10 de IA     |
-| Growth  (R$497-697)   | 20.000 creditos  | ~R$ 40 de IA     |
-| Scale   (R$997-1397)  | 50.000 creditos  | ~R$ 100 de IA    |
-+-----------------------+------------------+------------------+
+PLANOS MENSAIS
++----------+-------------+-------------+----------+----------------+----------------+
+| Plano    | Base (1mod) | Combo (2mod)| Creditos | Seu custo IA   | Sua margem     |
++----------+-------------+-------------+----------+----------------+----------------+
+| Starter  | R$ 197      | R$ 297      | 5.000    | ~R$ 10         | ~95% / ~97%    |
+| Growth   | R$ 497      | R$ 697      | 20.000   | ~R$ 40         | ~92% / ~94%    |
+| Scale    | R$ 997      | R$ 1.397    | 50.000   | ~R$ 100        | ~90% / ~93%    |
++----------+-------------+-------------+----------+----------------+----------------+
 
-Pacotes extras:
-| Pack 5.000   | R$ 49   |
-| Pack 20.000  | R$ 149  |
-| Pack 50.000  | R$ 299  |
-+--------------+---------+
+RECARGAS AVULSAS
++----------------+---------+----------+----------------+----------------+
+| Pacote         | Preco   | Creditos | Seu custo IA   | Sua margem     |
++----------------+---------+----------+----------------+----------------+
+| Pack 5.000     | R$ 49   | 5.000    | ~R$ 10         | ~80%           |
+| Pack 20.000    | R$ 149  | 20.000   | ~R$ 40         | ~73%           |
+| Pack 50.000    | R$ 299  | 50.000   | ~R$ 100        | ~67%           |
++----------------+---------+----------+----------------+----------------+
+
+CUSTO POR ACAO (debito automatico da wallet)
++----------------------------+----------+-------------------+
+| Acao                       | Creditos | Custo real ~      |
++----------------------------+----------+-------------------+
+| Gerar site                 | 500      | R$ 1,00           |
+| Gerar estrategia comercial | 300      | R$ 0,60           |
+| Gerar prospeccao IA        | 250      | R$ 0,50           |
+| Gerar conteudos (lote)     | 200      | R$ 0,40           |
+| Gerar conceitos visuais    | 200      | R$ 0,40           |
+| Gerar script de vendas     | 150      | R$ 0,30           |
+| Gerar imagem social        | 100      | R$ 0,20           |
+| Simular agente IA          | 100      | R$ 0,20           |
+| Config. automatica agente  | 100      | R$ 0,20           |
+| Checklist diario IA        | 50       | R$ 0,10           |
+| Resposta agente WhatsApp   | variavel | proporcional      |
+| Follow-up automatico       | variavel | proporcional      |
++----------------------------+----------+-------------------+
+
+Usuario extra: R$ 29/mes (cobrado via Asaas avulso)
 ```
 
-### Tabela de custos por acao (em creditos)
+## 2. Bugs Criticos Encontrados (impedem o uso em producao)
 
-Cada funcao de IA tera um custo fixo estimado baseado no consumo medio de tokens:
+Existem 3 inconsistencias graves entre os arquivos que precisam ser corrigidas antes de testar:
 
-```text
-+-----------------------------+------------------+------------------+
-| Acao                        | Creditos cobrados| Custo real aprox |
-+-----------------------------+------------------+------------------+
-| Resposta de agente IA       | tokens_used      | Variavel         |
-| Follow-up automatico        | tokens_used      | Variavel         |
-| Gerar conteudo (lote)       | 200              | ~R$ 0,40         |
-| Gerar site (LP/multi-page)  | 500              | ~R$ 1,00         |
-| Gerar script de vendas      | 150              | ~R$ 0,30         |
-| Gerar estrategia comercial  | 300              | ~R$ 0,60         |
-| Gerar prospeccao IA         | 250              | ~R$ 0,50         |
-| Gerar conceitos visuais     | 200              | ~R$ 0,40         |
-| Gerar imagem social         | 100              | ~R$ 0,20         |
-| Simular agente              | 100              | ~R$ 0,20         |
-| Config automatica agente    | 100              | ~R$ 0,20         |
-| Checklist diario            | 50               | ~R$ 0,10         |
-+-----------------------------+------------------+------------------+
-```
+### Bug A — `asaas-create-subscription` usa creditos antigos
+Linha 162: `{ starter: 500, growth: 2000, scale: 5000 }` mas deveria ser `{ starter: 5000, growth: 20000, scale: 50000 }`.
 
-Para agentes (uso variavel), o custo sera proporcional aos tokens reais: cada token consumido na API = 1 credito debitado (mantendo sistema atual).
+### Bug B — `asaas-create-charge` usa IDs de pack antigos
+Linhas 58-62: Os packs sao `pack-500`, `pack-2000`, `pack-5000` mas o frontend envia `pack-5000`, `pack-20000`, `pack-50000`. Resultado: "Invalid pack_id" sempre.
 
----
+### Bug C — `asaas-webhook` nao reconhece o externalReference da subscription
+Linha 129: O webhook espera `externalReference` no formato `sub_growth`, mas a funcao `asaas-create-subscription` envia no formato `${org.id}|${plan_id}|${moduleChoice}`. Resultado: renovacao de plano nunca funciona.
 
-## Plano Tecnico de Implementacao
+## 3. Plano de Correcoes
 
-### Fase 1: Atualizar constantes e planos
+### 3.1 Corrigir `asaas-create-subscription/index.ts`
+- Linha 162: Atualizar mapa de creditos para `{ starter: 5000, growth: 20000, scale: 50000 }`
+- Linha 134: Mudar `externalReference` para formato que o webhook reconheca: usar o formato pipe `${org.id}|sub|${plan_id}|${moduleChoice}`
 
-**Arquivo:** `src/constants/plans.ts`
-- Atualizar creditos: Starter 5.000, Growth 20.000, Scale 50.000
-- Atualizar pacotes extras para os novos valores
-- Adicionar constante `CREDIT_COSTS` com custo por funcao
+### 3.2 Corrigir `asaas-create-charge/index.ts`
+- Linhas 58-62: Atualizar IDs e valores dos packs para:
+  - `pack-5000`: 5.000 creditos, R$ 49
+  - `pack-20000`: 20.000 creditos, R$ 149
+  - `pack-50000`: 50.000 creditos, R$ 299
 
-### Fase 2: Criar funcao utilitaria de debito centralizada
+### 3.3 Corrigir `asaas-webhook/index.ts`
+- Linhas 128-147: Reescrever a logica de deteccao de subscription para usar o formato pipe `orgId|sub|planId|modules`
+- Extrair `plan_id` e `modules` do `externalReference` corretamente
+- Usar esse `plan_id` para renovar a subscription e creditar o volume correto (5000/20000/50000)
 
-**Arquivo:** `supabase/functions/_shared/debit-credits.ts` (modulo compartilhado)
+### 3.4 Configuracao do Webhook no Asaas
+- A URL do webhook que voce precisa cadastrar no painel Asaas e:
+  `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/asaas-webhook`
+- Eventos a ativar: `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED`, `PAYMENT_DELETED`
+- Se quiser token de validacao, configurar o secret `ASAAS_WEBHOOK_TOKEN` no backend
 
-Como edge functions nao suportam imports compartilhados facilmente, a abordagem sera:
+## 4. Arquivos a Modificar
 
-**Criar funcao de banco `debit_credits`** via migracao SQL:
-```sql
-CREATE FUNCTION debit_credits(
-  _org_id UUID, 
-  _amount INT, 
-  _description TEXT, 
-  _source TEXT
-) RETURNS INT ...
-```
+| Arquivo | Correcao |
+|---------|----------|
+| `supabase/functions/asaas-create-subscription/index.ts` | Creditos 5k/20k/50k + externalReference formato pipe |
+| `supabase/functions/asaas-create-charge/index.ts` | Pack IDs e valores atualizados |
+| `supabase/functions/asaas-webhook/index.ts` | Parse do externalReference formato pipe |
 
-Essa funcao:
-1. Busca wallet da org
-2. Verifica se tem saldo suficiente (se nao, retorna erro)
-3. Debita o valor
-4. Insere transacao no historico
-5. Retorna novo saldo
+## 5. Como Testar (pos-correcao)
 
-### Fase 3: Adicionar debito em TODAS as edge functions de IA
+1. Cadastrar webhook no painel Asaas apontando para a URL acima
+2. No app, acessar Plano e Creditos como cliente
+3. Tentar assinar um plano (PIX e mais rapido para testar)
+4. Verificar se a cobranca foi criada no Asaas
+5. Simular pagamento no sandbox do Asaas
+6. Confirmar que o webhook creditou os creditos na wallet
+7. Testar compra de pack avulso
+8. Testar uma acao de IA e verificar se debita creditos corretamente
 
-Cada function que chama a Lovable AI gateway deve:
-1. Receber `organization_id` no body da requisicao
-2. Apos resposta bem-sucedida da IA, chamar `debit_credits`
-3. Se saldo insuficiente, retornar erro 402 antes de chamar a IA
-
-**Functions a modificar (9 funcoes):**
-- `generate-content/index.ts` — debitar 200 creditos
-- `generate-site/index.ts` — debitar 500 creditos
-- `generate-script/index.ts` — debitar 150 creditos
-- `generate-strategy/index.ts` — debitar 300 creditos
-- `generate-prospection/index.ts` — debitar 250 creditos
-- `generate-social-concepts/index.ts` — debitar 200 creditos
-- `generate-social-image/index.ts` — debitar 100 creditos
-- `ai-agent-simulate/index.ts` — debitar 100 creditos
-- `ai-generate-agent-config/index.ts` — debitar 100 creditos
-- `generate-daily-checklist/index.ts` — debitar 50 creditos
-
-### Fase 4: Verificacao pre-debito (guard)
-
-Antes de chamar a IA, verificar se a org tem saldo suficiente:
-- Se `balance < custo_estimado` -> retornar JSON `{ error: "insufficient_credits" }` com status 402
-- No frontend, interceptar esse erro e mostrar toast "Creditos insuficientes" com link para comprar mais
-
-### Fase 5: Atualizar frontend
-
-**Arquivos a atualizar:**
-- `src/constants/plans.ts` — novos valores de creditos e custos
-- `src/pages/cliente/ClientePlanoCreditos.tsx` — exibir tabela de custos por acao
-- `src/pages/SaasLanding.tsx` — atualizar pricing cards
-- `src/components/cliente/CreditAlertBanner.tsx` — ajustar thresholds para novos volumes
-- `src/hooks/useCreditAlert.ts` — recalcular percentuais
-
-### Fase 6: Migracao do banco
-
-- Atualizar `credit_wallets.balance` das orgs existentes em trial (de 100 para 1.000 creditos de trial)
-- Criar funcao SQL `debit_credits` para uso pelas edge functions
-- Atualizar a logica de renovacao no webhook Asaas para os novos volumes
-
----
-
-## Resumo de Arquivos
-
-```text
-+---------------------------------------------------+--------------------------+
-| Arquivo                                           | Acao                     |
-+---------------------------------------------------+--------------------------+
-| src/constants/plans.ts                            | Novos valores creditos   |
-| src/pages/cliente/ClientePlanoCreditos.tsx         | Tabela custos por acao   |
-| src/pages/SaasLanding.tsx                         | Atualizar pricing        |
-| src/hooks/useCreditAlert.ts                       | Ajustar thresholds       |
-| supabase/functions/generate-content/index.ts      | Adicionar debito         |
-| supabase/functions/generate-site/index.ts         | Adicionar debito         |
-| supabase/functions/generate-script/index.ts       | Adicionar debito         |
-| supabase/functions/generate-strategy/index.ts     | Adicionar debito         |
-| supabase/functions/generate-prospection/index.ts  | Adicionar debito         |
-| supabase/functions/generate-social-concepts/index.ts | Adicionar debito      |
-| supabase/functions/generate-social-image/index.ts | Adicionar debito         |
-| supabase/functions/ai-agent-simulate/index.ts     | Adicionar debito         |
-| supabase/functions/ai-generate-agent-config/index.ts | Adicionar debito      |
-| supabase/functions/generate-daily-checklist/index.ts | Adicionar debito      |
-| supabase/functions/signup-saas/index.ts           | Trial com 1.000 creditos |
-| supabase/functions/asaas-webhook/index.ts         | Renovacao novos volumes  |
-| Migracao SQL                                      | Funcao debit_credits     |
-+---------------------------------------------------+--------------------------+
-```
-
-## Resultado Final
-
-- Cada centavo gasto na Lovable AI sera rastreado e cobrado do seu cliente com margem de ~80%
-- Nenhuma funcao de IA funcionara "de graca" — todas debitam creditos
-- Clientes sem saldo recebem erro 402 e sao redirecionados para comprar mais
-- Transparencia total: o cliente ve quanto cada acao custa na pagina de Plano e Creditos
