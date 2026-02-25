@@ -28,7 +28,7 @@ export default function Comunicados() {
     tipo: (a.type || "Informativo") as any,
     prioridade: (a.priority || "Normal") as any,
     publico: (a.target_roles || []) as PublicoAlvo[],
-    unidadesEspecificas: [] as string[],
+    unidadesEspecificas: (a.target_unit_ids || []) as string[],
     mostrarDashboard: true,
     mostrarPopup: false,
     exigirConfirmacao: false,
@@ -55,6 +55,7 @@ export default function Comunicados() {
       type: orig.tipo,
       priority: orig.prioridade,
       target_roles: orig.publico,
+      target_unit_ids: orig.unidadesEspecificas,
     });
     toast({ title: "Comunicado duplicado", description: "Salvo como rascunho." });
   };
@@ -74,25 +75,21 @@ export default function Comunicados() {
   };
 
   const handlePublish = (data: Partial<Comunicado>) => {
+    const payload: any = {
+      title: data.titulo,
+      content: data.conteudo,
+      type: data.tipo,
+      priority: data.prioridade,
+      target_roles: data.publico,
+      target_unit_ids: data.unidadesEspecificas?.length ? data.unidadesEspecificas : [],
+      published_at: new Date().toISOString(),
+      expires_at: data.dataExpiracao || null,
+    };
     if (view === "edit" && selectedId) {
-      updateAnnouncement.mutate({
-        id: selectedId,
-        title: data.titulo,
-        content: data.conteudo,
-        type: data.tipo,
-        priority: data.prioridade,
-        target_roles: data.publico,
-        published_at: new Date().toISOString(),
-      });
+      updateAnnouncement.mutate({ id: selectedId, ...payload });
       toast({ title: "Comunicado atualizado e publicado" });
     } else {
-      createAnnouncement.mutate({
-        title: data.titulo || "",
-        content: data.conteudo || "",
-        type: data.tipo || "Informativo",
-        priority: data.prioridade || "Normal",
-        target_roles: data.publico,
-      });
+      createAnnouncement.mutate(payload);
       toast({ title: "Comunicado publicado com sucesso" });
     }
     setView("list");
@@ -100,21 +97,18 @@ export default function Comunicados() {
   };
 
   const handleSaveDraft = (data: Partial<Comunicado>) => {
+    const payload: any = {
+      title: data.titulo || "Sem título",
+      content: data.conteudo || "",
+      type: data.tipo || "Informativo",
+      priority: data.prioridade || "Normal",
+      target_roles: data.publico,
+      target_unit_ids: data.unidadesEspecificas?.length ? data.unidadesEspecificas : [],
+    };
     if (view === "edit" && selectedId) {
-      updateAnnouncement.mutate({
-        id: selectedId,
-        title: data.titulo,
-        content: data.conteudo,
-        type: data.tipo,
-        priority: data.prioridade,
-      });
+      updateAnnouncement.mutate({ id: selectedId, ...payload });
     } else {
-      createAnnouncement.mutate({
-        title: data.titulo || "Sem título",
-        content: data.conteudo || "",
-        type: data.tipo || "Informativo",
-        priority: data.prioridade || "Normal",
-      });
+      createAnnouncement.mutate(payload);
     }
     toast({ title: "Rascunho salvo" });
     setView("list");

@@ -178,6 +178,9 @@ export default function ComunicadosList({ comunicados, onView, onEdit, onDuplica
                       {c.publico.map((p) => (
                         <Badge key={p} variant="outline" className="text-[10px] px-1.5 py-0">{p}</Badge>
                       ))}
+                      {c.unidadesEspecificas && c.unidadesEspecificas.length > 0 && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{c.unidadesEspecificas.length} unid.</Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
