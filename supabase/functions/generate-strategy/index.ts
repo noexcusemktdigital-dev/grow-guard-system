@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const CREDIT_COST = 300;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -37,7 +39,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { answers } = await req.json();
+    const { answers, organization_id } = await req.json();
     if (!answers) {
       return new Response(
         JSON.stringify({ error: "Respostas do diagnóstico são obrigatórias" }),
@@ -51,6 +53,15 @@ serve(async (req) => {
         JSON.stringify({ error: "AI not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Pre-check credits
+    if (organization_id) {
+      const adminCheck = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: wallet } = await adminCheck.from("credit_wallets").select("balance").eq("organization_id", organization_id).maybeSingle();
+      if (!wallet || wallet.balance < CREDIT_COST) {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     const answersText = Object.entries(answers)
@@ -279,6 +290,18 @@ Sempre responda em português brasileiro.`,
         tokens_used: tokensUsed,
         model: "google/gemini-3-flash-preview",
       });
+
+      // Debit credits
+      try {
+        await serviceClient.rpc("debit_credits", {
+          _org_id: orgData,
+          _amount: CREDIT_COST,
+          _description: "Geração de estratégia comercial",
+          _source: "generate-strategy",
+        });
+      } catch (debitErr) {
+        console.error("Debit error (non-blocking):", debitErr);
+      }
     }
 
     return new Response(

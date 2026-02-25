@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const CREDIT_COST = 150;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -84,7 +86,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { stage, briefing, context, mode, existingScript } = await req.json();
+    const { stage, briefing, context, mode, existingScript, organization_id } = await req.json();
 
     if (!stage || !stagePrompts[stage]) {
       return new Response(
@@ -94,6 +96,15 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    // Pre-check credits
+    if (organization_id) {
+      const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: wallet } = await adminClient.from("credit_wallets").select("balance").eq("organization_id", organization_id).maybeSingle();
+      if (!wallet || wallet.balance < CREDIT_COST) {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     // Build the prompt
@@ -223,7 +234,6 @@ IMPORTANTE:
     });
 
     if (orgData) {
-      // Log token usage - use a placeholder agent_id and contact_id since this is script generation
       await serviceClient.from("ai_conversation_logs").insert({
         organization_id: orgData,
         agent_id: "00000000-0000-0000-0000-000000000000",
@@ -233,6 +243,18 @@ IMPORTANTE:
         tokens_used: tokensUsed,
         model: "google/gemini-3-flash-preview",
       });
+
+      // Debit credits
+      try {
+        await serviceClient.rpc("debit_credits", {
+          _org_id: orgData,
+          _amount: CREDIT_COST,
+          _description: `Geração de script (${stage})`,
+          _source: "generate-script",
+        });
+      } catch (debitErr) {
+        console.error("Debit error (non-blocking):", debitErr);
+      }
     }
 
     // Generate a suggested title

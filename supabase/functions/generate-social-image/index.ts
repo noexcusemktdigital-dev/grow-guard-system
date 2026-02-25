@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const CREDIT_COST = 100;
+
 function getQualityInstructions(nivel: string): string {
   switch (nivel) {
     case "alto_padrao":
@@ -29,9 +31,29 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, format, file_path, nivel, persona, identidade_visual } = await req.json();
+    const { prompt, format, file_path, nivel, persona, identidade_visual, organization_id } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Pre-check credits
+    if (organization_id) {
+      const { data: wallet } = await supabase
+        .from("credit_wallets")
+        .select("balance")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+
+      if (!wallet || wallet.balance < CREDIT_COST) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     const qualityInstructions = getQualityInstructions(nivel || "simples");
 
@@ -123,10 +145,6 @@ Generate this image now with the highest possible quality and attention to detai
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
     const binaryData = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { error: uploadError } = await supabase.storage
       .from("social-arts")
       .upload(file_path, binaryData, {
@@ -142,6 +160,20 @@ Generate this image now with the highest possible quality and attention to detai
     const { data: urlData } = supabase.storage
       .from("social-arts")
       .getPublicUrl(file_path);
+
+    // Debit credits after successful generation
+    if (organization_id) {
+      try {
+        await supabase.rpc("debit_credits", {
+          _org_id: organization_id,
+          _amount: CREDIT_COST,
+          _description: `Geração de arte social (${format})`,
+          _source: "generate-social-image",
+        });
+      } catch (debitErr) {
+        console.error("Debit error (non-blocking):", debitErr);
+      }
+    }
 
     console.log(`Image uploaded: ${urlData.publicUrl}`);
 

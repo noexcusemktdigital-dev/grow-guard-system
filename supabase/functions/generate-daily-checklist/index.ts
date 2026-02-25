@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const CREDIT_COST = 50;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -141,6 +143,18 @@ Deno.serve(async (req) => {
       .insert(inserts);
 
     if (insertError) throw insertError;
+
+    // Debit credits for checklist generation
+    try {
+      await supabase.rpc("debit_credits", {
+        _org_id: orgId,
+        _amount: CREDIT_COST,
+        _description: "Checklist diário gerado",
+        _source: "generate-daily-checklist",
+      });
+    } catch (debitErr) {
+      console.error("Debit error (non-blocking):", debitErr);
+    }
 
     // Update streak
     const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];

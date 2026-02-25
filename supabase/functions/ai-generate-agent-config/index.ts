@@ -1,8 +1,12 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const CREDIT_COST = 100;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -18,7 +22,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { type, role, persona, knowledge_base, objectives, name } = await req.json();
+    const { type, role, persona, knowledge_base, objectives, name, organization_id } = await req.json();
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Pre-check credits
+    if (organization_id) {
+      const { data: wallet } = await supabaseAdmin
+        .from("credit_wallets")
+        .select("balance")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+
+      if (!wallet || wallet.balance < CREDIT_COST) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     const roleDescriptions: Record<string, string> = {
       sdr: "SDR (Sales Development Representative) — foco em prospecção, qualificação de leads, perguntas abertas para identificar necessidades e agendar reuniões",
@@ -37,7 +62,7 @@ Deno.serve(async (req) => {
 - Uso de emojis: ${persona?.emojis || "pouco"}
 - Traços: ${(persona?.traits || []).join(", ") || "não definidos"}
 
-Escreva APENAS a saudação (1-3 frases curtas), sem explicações. A saudação deve ser natural para WhatsApp e refletir a personalidade configurada.`;
+Escreva APENAS a saudação (1-3 frases curtas), sem explicações.`;
     } else if (type === "persona") {
       prompt = `Gere uma descrição completa de persona para um agente de IA com as seguintes características:
 - Nome: ${name || "Agente"}
@@ -49,7 +74,7 @@ Escreva APENAS a saudação (1-3 frases curtas), sem explicações. A saudação
 - Traços de personalidade: ${(persona?.traits || []).join(", ") || "não definidos"}
 - Restrições: ${persona?.restrictions || "nenhuma especificada"}
 
-Escreva em português brasileiro, com 3-4 parágrafos descrevendo como esse agente deve se comportar, seu tom, estilo e abordagem. Seja específico e prático.`;
+Escreva em português brasileiro, com 3-4 parágrafos descrevendo como esse agente deve se comportar.`;
     } else if (type === "prompt") {
       const kbSummary = (knowledge_base || [])
         .slice(0, 5)
@@ -69,12 +94,7 @@ Escreva em português brasileiro, com 3-4 parágrafos descrevendo como esse agen
 - Objetivos: ${(objectives || []).join(", ") || "não definidos"}
 ${kbSummary ? `- Base de conhecimento inclui: ${kbSummary}` : ""}
 
-Gere um system prompt detalhado e prático em português brasileiro. O prompt deve:
-1. Definir claramente quem é o agente
-2. Estabelecer regras de comportamento
-3. Incluir instruções específicas para a função (${role})
-4. Definir quando deve escalar para humano
-5. Ser otimizado para conversas de WhatsApp (mensagens curtas, parágrafos separados)`;
+Gere um system prompt detalhado e prático em português brasileiro.`;
     }
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -103,6 +123,20 @@ Gere um system prompt detalhado e prático em português brasileiro. O prompt de
 
     const data = await aiResponse.json();
     const result = data.choices?.[0]?.message?.content || "";
+
+    // Debit credits after successful generation
+    if (organization_id) {
+      try {
+        await supabaseAdmin.rpc("debit_credits", {
+          _org_id: organization_id,
+          _amount: CREDIT_COST,
+          _description: `Config. automática agente (${type})`,
+          _source: "ai-generate-agent-config",
+        });
+      } catch (debitErr) {
+        console.error("Debit error (non-blocking):", debitErr);
+      }
+    }
 
     return new Response(JSON.stringify({ result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -3940,6 +3940,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      debit_credits: {
+        Args: {
+          _amount: number
+          _description: string
+          _org_id: string
+          _source?: string
+        }
+        Returns: number
+      }
       generate_org_api_key: { Args: { _org_id: string }; Returns: string }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
