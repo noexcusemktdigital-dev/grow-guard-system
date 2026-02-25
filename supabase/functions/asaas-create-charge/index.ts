@@ -81,17 +81,48 @@ Deno.serve(async (req) => {
     }
 
     // Get org
-    const { data: org } = await adminClient
+    const { data: org, error: orgError } = await adminClient
       .from("organizations")
-      .select("id, asaas_customer_id")
+      .select("id, name, cnpj, email, phone, asaas_customer_id")
       .eq("id", organization_id)
       .single();
 
-    if (!org?.asaas_customer_id) {
-      return new Response(JSON.stringify({ error: "No billing customer configured" }), {
-        status: 400,
+    if (orgError || !org) {
+      return new Response(JSON.stringify({ error: "Organization not found" }), {
+        status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    let asaasCustomerId = org.asaas_customer_id;
+
+    if (!asaasCustomerId) {
+      const customerRes = await fetch(`${ASAAS_BASE}/customers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", access_token: asaasApiKey },
+        body: JSON.stringify({
+          name: org.name,
+          email: org.email || undefined,
+          phone: org.phone || undefined,
+          cpfCnpj: org.cnpj || undefined,
+          externalReference: org.id,
+        }),
+      });
+
+      const customerData = await customerRes.json();
+      if (!customerRes.ok) {
+        console.error("Asaas customer creation failed:", customerData);
+        return new Response(JSON.stringify({ error: "Failed to create Asaas customer", details: customerData }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      asaasCustomerId = customerData.id;
+      await adminClient
+        .from("organizations")
+        .update({ asaas_customer_id: asaasCustomerId })
+        .eq("id", org.id);
     }
 
     const today = new Date().toISOString().split("T")[0];
@@ -104,7 +135,7 @@ Deno.serve(async (req) => {
         access_token: asaasApiKey,
       },
       body: JSON.stringify({
-        customer: org.asaas_customer_id,
+        customer: asaasCustomerId,
         billingType: billing_type,
         value: amount,
         dueDate: today,
