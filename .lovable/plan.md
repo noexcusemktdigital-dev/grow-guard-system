@@ -1,34 +1,30 @@
 
 
-# Testar Conexao Asaas Sandbox
+# Corrigir erro "Invalid token" na integração Asaas
 
-## Status Atual
+## Problema
 
-O webhook `asaas-webhook` esta funcional -- os logs confirmam que recebeu e processou os eventos de teste com sucesso. Porem, ainda nao validamos se a **chave API do Sandbox** consegue autenticar chamadas na API do Asaas (listar clientes, criar cobranças, etc).
+A funcao `asaas-create-subscription` esta retornando `{ error: "Invalid token" }` ao tentar criar um cliente/assinatura no Asaas. Isso indica que a chamada API esta sendo rejeitada.
+
+## Causa provavel
+
+O secret `ASAAS_BASE_URL` foi previamente identificado como incorreto -- estava apontando para a URL do webhook (`https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/asaas-webhook`) em vez da API do Asaas Sandbox.
 
 ## O que sera feito
 
-### 1. Criar funcao de teste de conexao
+1. **Atualizar `ASAAS_BASE_URL`** para o valor correto: `https://api-sandbox.asaas.com/v3`
+2. **Revalidar `ASAAS_API_KEY`** -- confirmar que a chave sandbox esta corretamente salva (re-salvar se necessario)
+3. **Testar novamente** o fluxo de compra pelo usuario teste
 
-Criar uma Edge Function temporaria `asaas-test-connection` que faz uma chamada GET simples a API do Asaas Sandbox (`/customers?limit=1`) usando a `ASAAS_API_KEY` configurada. Retorna:
-- Se a conexao foi bem sucedida
-- URL base sendo usada
-- Quantidade de clientes existentes no sandbox
+## Estado correto dos secrets
 
-### 2. Executar o teste
+| Secret | Valor esperado |
+|--------|---------------|
+| `ASAAS_BASE_URL` | `https://api-sandbox.asaas.com/v3` |
+| `ASAAS_API_KEY` | Chave sandbox `$aact_hmlg_...` |
+| `ASAAS_WEBHOOK_TOKEN` | Token do webhook configurado |
 
-Chamar a funcao para validar que a chave sandbox esta autenticando corretamente.
+## Nenhuma alteracao de codigo
 
-### 3. Limpeza
+As funcoes ja usam `Deno.env.get("ASAAS_BASE_URL")` e `Deno.env.get("ASAAS_API_KEY")` -- o problema e apenas nos valores dos secrets.
 
-Apos confirmar que funciona, remover a funcao de teste (opcional -- pode ser util para diagnosticos futuros).
-
-## Resultado Esperado
-
-Resposta com `"connected": true` confirmando que todas as Edge Functions de pagamento estao prontas para uso no ambiente Sandbox.
-
-## Detalhes Tecnicos
-
-- A funcao faz apenas um `GET /customers?limit=1` com o header `access_token`
-- Nenhuma alteracao em tabelas ou dados
-- Nenhuma dependencia de autenticacao de usuario (chamada direta)
