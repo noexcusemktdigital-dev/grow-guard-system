@@ -69,9 +69,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    const creditsPerReal = 100;
+    // Convert payment value to credits using plan-based mapping
+    // Plans: Starter R$197-297 = 5000cr, Growth R$497-697 = 20000cr, Scale R$997-1397 = 50000cr
+    // Packs: R$49 = 5000cr, R$149 = 20000cr, R$299 = 50000cr
     const paymentValue = payment.value || 0;
-    const creditsAmount = Math.round(paymentValue * creditsPerReal);
+    
+    function valueToCreditAmount(value: number): number {
+      // Subscription plan mapping
+      if (value >= 997) return 50000;
+      if (value >= 497) return 20000;
+      if (value >= 197) return 5000;
+      // Credit pack mapping
+      if (value >= 299) return 50000;
+      if (value >= 149) return 20000;
+      if (value >= 49) return 5000;
+      return Math.round(value * 100); // fallback: 100 credits per R$1
+    }
+
+    const creditsAmount = valueToCreditAmount(paymentValue);
 
     // ── PAYMENT_CONFIRMED / PAYMENT_RECEIVED ──
     if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {

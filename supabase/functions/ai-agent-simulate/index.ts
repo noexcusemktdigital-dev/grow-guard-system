@@ -1,8 +1,12 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const CREDIT_COST = 100;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -18,13 +22,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { agent_config, message, history } = await req.json();
+    const { agent_config, message, history, organization_id } = await req.json();
 
     if (!agent_config || !message) {
       return new Response(JSON.stringify({ error: "Missing agent_config or message" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Pre-check credits
+    if (organization_id) {
+      const { data: wallet } = await supabaseAdmin
+        .from("credit_wallets")
+        .select("balance")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+
+      if (!wallet || wallet.balance < CREDIT_COST) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const persona = agent_config.persona || {};
@@ -39,7 +64,6 @@ Deno.serve(async (req) => {
       suporte: "Você atua como Suporte. Seu foco é resolver problemas com empatia, coletar informações relevantes e escalar quando necessário.",
     };
 
-    // Build system prompt
     let systemPrompt = promptConfig.system_prompt || `Você é ${agent_config.name || "um assistente virtual"}.`;
     systemPrompt += `\n\n${rolePrompts[role] || ""}`;
 
@@ -100,7 +124,6 @@ Deno.serve(async (req) => {
     const data = await aiResponse.json();
     let reply = data.choices?.[0]?.message?.content || "";
 
-    // Parse actions (for display only in simulation)
     const actionRegex = /\[AI_ACTION:([A-Z_]+):([^\]]+)\]/g;
     const actions: { type: string; value: string }[] = [];
     let match;
@@ -108,6 +131,20 @@ Deno.serve(async (req) => {
       actions.push({ type: match[1], value: match[2] });
     }
     reply = reply.replace(/\[AI_ACTION:[^\]]+\]/g, "").trim();
+
+    // Debit credits after successful simulation
+    if (organization_id) {
+      try {
+        await supabaseAdmin.rpc("debit_credits", {
+          _org_id: organization_id,
+          _amount: CREDIT_COST,
+          _description: "Simulação de agente IA",
+          _source: "ai-agent-simulate",
+        });
+      } catch (debitErr) {
+        console.error("Debit error (non-blocking):", debitErr);
+      }
+    }
 
     return new Response(JSON.stringify({ reply, actions }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

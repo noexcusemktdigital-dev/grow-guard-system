@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const CREDIT_COST = 200;
 
 function getVisualGuideByType(tipo: string): string {
   const guides: Record<string, string> = {
@@ -77,9 +80,30 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo } = await req.json();
+    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo, organization_id } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Pre-check credits
+    if (organization_id) {
+      const { data: wallet } = await supabaseAdmin
+        .from("credit_wallets")
+        .select("balance")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+
+      if (!wallet || wallet.balance < CREDIT_COST) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     const tipoGuide = getVisualGuideByType(tipo_post || "institucional");
     const nivelGuide = getNivelInstructions(nivel || "simples");
@@ -250,6 +274,20 @@ Gere ${quantidade} conceitos de posts com prompts visuais EXTREMAMENTE detalhado
     if (!toolCall) throw new Error("No tool call response");
 
     const concepts = JSON.parse(toolCall.function.arguments);
+
+    // Debit credits after successful generation
+    if (organization_id) {
+      try {
+        await supabaseAdmin.rpc("debit_credits", {
+          _org_id: organization_id,
+          _amount: CREDIT_COST,
+          _description: `Geração de ${quantidade} conceitos visuais`,
+          _source: "generate-social-concepts",
+        });
+      } catch (debitErr) {
+        console.error("Debit error (non-blocking):", debitErr);
+      }
+    }
 
     return new Response(JSON.stringify(concepts), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

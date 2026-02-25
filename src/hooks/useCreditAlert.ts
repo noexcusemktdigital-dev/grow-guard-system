@@ -17,7 +17,7 @@ export function useCreditAlert(): CreditAlertData {
   const { data: subscription, isLoading: sl } = useClienteSubscription();
 
   const plan = getPlanBySlug(subscription?.plan);
-  const total = plan?.credits ?? 2000;
+  const total = plan?.credits ?? 5000;
   const balance = wallet?.balance ?? 0;
   const percent = total > 0 ? Math.min((balance / total) * 100, 100) : 0;
 

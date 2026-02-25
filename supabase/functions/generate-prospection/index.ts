@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const CREDIT_COST = 250;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -37,7 +39,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { regiao, nicho, porte, desafio, objetivo, nome_empresa, site, redes_sociais, conhecimento_previo, nivel_contato, contato_decisor, cargo_decisor } = await req.json();
+    const { regiao, nicho, porte, desafio, objetivo, nome_empresa, site, redes_sociais, conhecimento_previo, nivel_contato, contato_decisor, cargo_decisor, organization_id } = await req.json();
 
     if (!regiao || !nicho) {
       return new Response(
@@ -52,6 +54,15 @@ serve(async (req) => {
         JSON.stringify({ error: "AI not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Pre-check credits
+    if (organization_id) {
+      const adminCheck = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: wallet } = await adminCheck.from("credit_wallets").select("balance").eq("organization_id", organization_id).maybeSingle();
+      if (!wallet || wallet.balance < CREDIT_COST) {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     const nivelContatoLabel = nivel_contato === "quente" ? "Quente (já demonstrou interesse)" : nivel_contato === "morno" ? "Morno (já houve contato)" : "Frio (nunca falou)";
@@ -278,6 +289,18 @@ Sempre responda em português brasileiro. Seja prático, direto e use linguagem 
         tokens_used: tokensUsed,
         model: "google/gemini-3-flash-preview",
       });
+
+      // Debit credits
+      try {
+        await serviceClient.rpc("debit_credits", {
+          _org_id: orgData,
+          _amount: CREDIT_COST,
+          _description: `Prospecção IA (${nicho})`,
+          _source: "generate-prospection",
+        });
+      } catch (debitErr) {
+        console.error("Debit error (non-blocking):", debitErr);
+      }
     }
 
     return new Response(

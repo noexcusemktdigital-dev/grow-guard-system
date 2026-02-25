@@ -22,7 +22,7 @@ export const PLANS: PlanConfig[] = [
     basePrice: 197,
     comboPrice: 297,
     price: 197,
-    credits: 500,
+    credits: 5000,
     maxUsers: 2,
     popular: false,
     maxContents: 8,
@@ -31,7 +31,7 @@ export const PLANS: PlanConfig[] = [
     siteTypes: ["lp"],
     features: [
       "CRM completo",
-      "500 créditos/mês",
+      "5.000 créditos/mês",
       "2 usuários inclusos",
       "8 conteúdos/mês",
       "4 artes sociais/mês",
@@ -44,7 +44,7 @@ export const PLANS: PlanConfig[] = [
     basePrice: 497,
     comboPrice: 697,
     price: 497,
-    credits: 2000,
+    credits: 20000,
     maxUsers: 5,
     popular: true,
     maxContents: 12,
@@ -53,7 +53,7 @@ export const PLANS: PlanConfig[] = [
     siteTypes: ["lp", "3pages", "5pages"],
     features: [
       "Tudo do Starter",
-      "2.000 créditos/mês",
+      "20.000 créditos/mês",
       "5 usuários inclusos",
       "12 conteúdos/mês",
       "8 artes sociais/mês",
@@ -67,7 +67,7 @@ export const PLANS: PlanConfig[] = [
     basePrice: 997,
     comboPrice: 1397,
     price: 997,
-    credits: 5000,
+    credits: 50000,
     maxUsers: 15,
     popular: false,
     maxContents: 20,
@@ -76,7 +76,7 @@ export const PLANS: PlanConfig[] = [
     siteTypes: ["lp", "3pages", "5pages", "8pages"],
     features: [
       "Tudo do Growth",
-      "5.000 créditos/mês",
+      "50.000 créditos/mês",
       "15 usuários inclusos",
       "20 conteúdos/mês",
       "12 artes sociais/mês",
@@ -96,12 +96,28 @@ export interface CreditPack {
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "pack-500", credits: 500, price: 49, popular: false },
-  { id: "pack-2000", credits: 2000, price: 149, popular: true },
-  { id: "pack-5000", credits: 5000, price: 299, popular: false },
+  { id: "pack-5000", credits: 5000, price: 49, popular: false },
+  { id: "pack-20000", credits: 20000, price: 149, popular: true },
+  { id: "pack-50000", credits: 50000, price: 299, popular: false },
 ];
 
 export const EXTRA_USER_PRICE = 29; // R$/mês por usuário adicional
+
+/** Custo em créditos por ação de IA */
+export const CREDIT_COSTS: Record<string, { cost: number; label: string }> = {
+  "generate-content":        { cost: 200,  label: "Gerar conteúdos (lote)" },
+  "generate-site":           { cost: 500,  label: "Gerar site" },
+  "generate-script":         { cost: 150,  label: "Gerar script de vendas" },
+  "generate-strategy":       { cost: 300,  label: "Gerar estratégia comercial" },
+  "generate-prospection":    { cost: 250,  label: "Gerar plano de prospecção" },
+  "generate-social-concepts":{ cost: 200,  label: "Gerar conceitos visuais" },
+  "generate-social-image":   { cost: 100,  label: "Gerar arte social" },
+  "ai-agent-simulate":       { cost: 100,  label: "Simular agente IA" },
+  "ai-generate-agent-config":{ cost: 100,  label: "Config. automática agente" },
+  "generate-daily-checklist": { cost: 50,  label: "Checklist diário IA" },
+  "ai-agent-reply":          { cost: 0,    label: "Resposta agente (variável)" },
+  "agent-followup-cron":     { cost: 0,    label: "Follow-up automático (variável)" },
+};
 
 export function getPlanBySlug(slug: string | undefined | null): PlanConfig | undefined {
   return PLANS.find((p) => p.id === slug);

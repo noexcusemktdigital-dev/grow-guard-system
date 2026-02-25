@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,15 +7,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const CREDIT_COST = 200;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { briefing, formatos, estrategia, persona } = await req.json();
+    const { briefing, formatos, estrategia, persona, organization_id } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Pre-check credits
+    if (organization_id) {
+      const { data: wallet } = await supabaseAdmin
+        .from("credit_wallets")
+        .select("balance")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+
+      if (!wallet || wallet.balance < CREDIT_COST) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos para esta ação." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     const totalConteudos =
       (formatos?.feed || 0) +
@@ -94,41 +118,14 @@ Gere os ${totalConteudos} conteúdos distribuídos nos formatos solicitados.`;
                         type: "object",
                         properties: {
                           titulo: { type: "string", description: "Título do conteúdo" },
-                          formato: {
-                            type: "string",
-                            enum: ["Feed", "Carrossel", "Reels", "Story"],
-                          },
-                          rede: {
-                            type: "string",
-                            enum: ["Instagram", "LinkedIn", "TikTok"],
-                          },
-                          funil: {
-                            type: "string",
-                            enum: ["Topo", "Meio", "Fundo"],
-                          },
-                          roteiro: {
-                            type: "string",
-                            description: "Roteiro/texto completo do conteúdo",
-                          },
-                          hashtags: {
-                            type: "array",
-                            items: { type: "string" },
-                          },
-                          embasamento: {
-                            type: "string",
-                            description:
-                              "Explicação de 2-3 linhas sobre POR QUE esse formato e conteúdo foram escolhidos",
-                          },
+                          formato: { type: "string", enum: ["Feed", "Carrossel", "Reels", "Story"] },
+                          rede: { type: "string", enum: ["Instagram", "LinkedIn", "TikTok"] },
+                          funil: { type: "string", enum: ["Topo", "Meio", "Fundo"] },
+                          roteiro: { type: "string", description: "Roteiro/texto completo do conteúdo" },
+                          hashtags: { type: "array", items: { type: "string" } },
+                          embasamento: { type: "string", description: "Explicação de 2-3 linhas sobre POR QUE esse formato e conteúdo foram escolhidos" },
                         },
-                        required: [
-                          "titulo",
-                          "formato",
-                          "rede",
-                          "funil",
-                          "roteiro",
-                          "hashtags",
-                          "embasamento",
-                        ],
+                        required: ["titulo", "formato", "rede", "funil", "roteiro", "hashtags", "embasamento"],
                         additionalProperties: false,
                       },
                     },
@@ -180,6 +177,20 @@ Gere os ${totalConteudos} conteúdos distribuídos nos formatos solicitados.`;
     }
 
     const result = JSON.parse(toolCall.function.arguments);
+
+    // Debit credits after successful generation
+    if (organization_id) {
+      try {
+        await supabaseAdmin.rpc("debit_credits", {
+          _org_id: organization_id,
+          _amount: CREDIT_COST,
+          _description: `Geração de ${totalConteudos} conteúdos`,
+          _source: "generate-content",
+        });
+      } catch (debitErr) {
+        console.error("Debit error (non-blocking):", debitErr);
+      }
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
