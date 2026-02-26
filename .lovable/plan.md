@@ -1,65 +1,82 @@
 
 
-## Ajustes no Plano de Vendas e Estratégia de Marketing
+## Modulo SaaS na Franqueadora
 
-### 1. Plano de Vendas (`ClientePlanoVendas.tsx`)
+Novo modulo completo no painel da Franqueadora para gestao centralizada da plataforma SaaS, com 5 sub-abas internas.
 
-**Remover historico da aba Diagnostico:**
-- Remover o bloco `Collapsible` de "Historico de Diagnosticos" (linhas 1198-1240) que esta dentro da `TabsContent value="diagnostico"`
+### Estrutura do Modulo
 
-**Adicionar nova aba "Historico" ao lado de "Metas":**
-- Adicionar `TabsTrigger value="historico"` com icone `Clock` na TabsList (apos Metas)
-- Criar `TabsContent value="historico"` com o conteudo de historico de planos de vendas (similar ao historico de metas mas para diagnosticos anteriores)
-- Persistir historico no banco de dados (atualmente usa localStorage e mock data com `useState`)
+O modulo sera acessado via `/franqueadora/saas` e tera navegacao interna por Tabs com as seguintes abas:
 
-**Corrigir minimizacao do diagnostico:**
-- O Collapsible existe mas o icone ChevronDown nao rotaciona e o trigger visual nao e claro
-- Melhorar o CollapsibleTrigger com rotacao do icone e visual mais explicito (seta animada, estilo toggle)
-- Manter `defaultOpen={!completed}` para abrir quando nao completou
+1. **Clientes Ativos** - Lista de todas as organizacoes tipo `client` com status da subscription, plano, creditos, data de criacao, ultimo acesso
+2. **Dashboard de Custos** - Visao consolidada de receita vs custos (creditos consumidos por org, transacoes, margem estimada por cliente)
+3. **Gerenciamento** - Acoes administrativas: ativar/desativar orgs, alterar planos, ajustar creditos manualmente, ver detalhes de cada org
+4. **Suporte** - Visao de todos os tickets de suporte de TODAS as orgs (nao filtrado por org do admin), com status e respostas
+5. **Erros** - Log de erros da plataforma capturados automaticamente (erros de Edge Functions, falhas de pagamento, erros de IA)
 
-### 2. Estrategia de Marketing (`ClientePlanoMarketing.tsx`)
+### Banco de Dados
 
-**Resultado aberto com opcao de refazer:**
-- Quando `completed = true`, mostrar resultado diretamente (ja faz isso)
-- Garantir que o botao "Refazer Estrategia" salve a estrategia atual no historico antes de resetar
-- O `handleRestart` atual apenas limpa estado -- precisa chamar `useSaveStrategy` para garantir que a ativa vai para historico antes de refazer
+**Nova tabela: `platform_error_logs`**
+```sql
+CREATE TABLE platform_error_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id),
+  source TEXT NOT NULL DEFAULT 'edge_function',  -- edge_function, webhook, client_app
+  function_name TEXT,
+  error_message TEXT NOT NULL,
+  error_stack TEXT,
+  metadata JSONB DEFAULT '{}',
+  severity TEXT DEFAULT 'error',  -- warning, error, critical
+  resolved BOOLEAN DEFAULT false,
+  resolved_by UUID,
+  resolved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
 
-**Renomear aba "Historico" para "Historico de Estrategias":**
-- Alterar o label da TabsTrigger de "Historico" para "Historico de Estrategias"
+RLS: Apenas super_admin e admin podem ler/gerenciar.
 
----
+### Arquivos a Criar
+
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/pages/franqueadora/SaasDashboard.tsx` | Pagina principal com Tabs para as 5 abas |
+| `src/hooks/useSaasAdmin.ts` | Hooks para queries: orgs com subscriptions, custos agregados, error logs |
+
+### Arquivos a Editar
+
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/FranqueadoraSidebar.tsx` | Adicionar item "SaaS" na secao Administrativo com icone `Cloud` |
+| `src/App.tsx` | Adicionar rota `saas` dentro do bloco franqueadora |
 
 ### Detalhes Tecnicos
 
-**Arquivo: `src/pages/cliente/ClientePlanoVendas.tsx`**
-
-1. Na TabsList (linha 965-972), adicionar terceira aba:
-```
-<TabsTrigger value="historico" className="gap-1.5">
-  <Clock className="w-3.5 h-3.5" /> Historico
-</TabsTrigger>
+**Sidebar (`FranqueadoraSidebar.tsx`):**
+- Adicionar na `adminSection` antes de "Drive Corporativo":
+```tsx
+{ label: "SaaS", icon: Cloud, path: "/franqueadora/saas" }
 ```
 
-2. Remover linhas 1198-1240 (Collapsible de historico dentro da tab diagnostico)
+**Rota (`App.tsx`):**
+```tsx
+<Route path="saas" element={<SaasDashboard />} />
+```
 
-3. Melhorar o CollapsibleTrigger do diagnostico (linha 978) -- adicionar `data-state` para rotacionar o ChevronDown e tornar mais visivel que e colapsavel
+**Hook `useSaasAdmin.ts`:**
+- `useSaasClients()` - Query que faz join de `organizations` (type=client) + `subscriptions` + `credit_wallets` para montar lista completa
+- `useSaasCostDashboard()` - Agrega `credit_transactions` por org para calcular consumo
+- `usePlatformErrors()` - Query na tabela `platform_error_logs` ordenada por data
+- `useAllSupportTickets()` - Query em `support_tickets` SEM filtro de org (visao global)
 
-4. Adicionar `TabsContent value="historico"` apos a tab Metas com:
-   - Lista de diagnosticos anteriores do localStorage (mock por enquanto, dados estaticos atuais)
-   - Card visual similar ao historico de metas
+**Pagina `SaasDashboard.tsx`:**
+- Tab "Clientes" mostra tabela com: Nome, Plano, Status, Creditos, Usuarios, Data Criacao
+- Tab "Custos" mostra KPIs (MRR total, creditos consumidos no mes, custo estimado IA) + tabela por cliente
+- Tab "Gerenciamento" mostra acoes: badge de status, botao para ajustar creditos, ver detalhes
+- Tab "Suporte" reutiliza dados do `support_tickets` com visao global
+- Tab "Erros" mostra lista de erros com filtros por severidade e source, com botao "Resolver"
 
-**Arquivo: `src/pages/cliente/ClientePlanoMarketing.tsx`**
-
-1. Renomear aba "Historico" (linha 843) para "Historico de Estrategias"
-
-2. No `handleRestart` (linha 732-734), a logica atual ja funciona corretamente porque ao refazer e completar novamente, o `useSaveStrategy` ja desativa a estrategia anterior automaticamente (`is_active = false`). Nao precisa mudar a logica -- apenas garantir que o fluxo esta claro para o usuario
-
----
-
-### Resumo de Arquivos
-
-| Arquivo | Mudancas |
-|---------|----------|
-| `src/pages/cliente/ClientePlanoVendas.tsx` | Remover historico da aba diagnostico, adicionar aba Historico, melhorar Collapsible |
-| `src/pages/cliente/ClientePlanoMarketing.tsx` | Renomear aba para "Historico de Estrategias" |
+**Edge Functions - Log de erros automatico:**
+- Adicionar try/catch wrapper nas edge functions existentes que registra erros na tabela `platform_error_logs` automaticamente
+- Prioridade: `asaas-webhook`, `ai-agent-reply`, `generate-content`, `whatsapp-send`
 
