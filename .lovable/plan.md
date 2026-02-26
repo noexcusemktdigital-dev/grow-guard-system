@@ -1,117 +1,89 @@
 
 
-## Referências Visuais para Geração de Artes com IA
+## Gating de Estratégia + Referências por Arquivo + Geração de Vídeo
 
-### Problema
-Atualmente o cliente preenche campos de texto para descrever o que deseja, mas a IA não tem contexto visual real. Permitir envio de imagens de referência (uploads e URLs) dá à IA a capacidade de "ver" o estilo desejado e gerar prompts muito mais precisos.
+### Visão Geral
 
----
-
-### Arquitetura da Solução
-
-```text
-Cliente envia referencias (imagens + URLs)
-           |
-           v
-  generate-social-concepts (multimodal)
-  → IA analisa as referencias visuais
-  → Gera prompts ultra-detalhados baseados no estilo visto
-           |
-           v
-  generate-social-image (usa os prompts enriquecidos)
-  → Arte final gerada com contexto visual real
-```
-
-A chave é usar o modelo multimodal (Gemini) que aceita imagens como input na etapa de geração de conceitos. A IA vê as referências e extrai estilo, composição, paleta e mood para criar prompts melhores.
+Três mudanças principais:
+1. **Estratégia de Marketing como pré-requisito** — Conteúdos e Redes Sociais ficam bloqueados até a estratégia ser completada (mesma mecânica do Plano de Vendas)
+2. **Referências visuais por arquivo** — Aceitar uploads de arquivos (não só imagens) como referências no briefing
+3. **Geração de vídeos curtos** — Novo tipo de criação para Reels/Stories em vídeo
 
 ---
 
-### 1. UI — Campo de Referências Visuais no Briefing
+### 1. Gating: Estratégia obrigatória para Conteúdos e Redes Sociais
+
+**Arquivo**: `src/contexts/FeatureGateContext.tsx`
+
+- Adicionar novo `GateReason`: `"no_marketing_strategy"`
+- Criar lista `MARKETING_STRATEGY_REQUIRED` com `/cliente/conteudos` e `/cliente/redes-sociais`
+- Verificar se existe estratégia ativa no banco (usar `useActiveStrategy` ou verificar via localStorage/query)
+- Adicionar lógica no `getGateReason` para checar essa condição
+
+**Arquivo**: `src/components/FeatureGateOverlay.tsx`
+
+- Adicionar configuração visual para `no_marketing_strategy`:
+  - Ícone: `Megaphone`
+  - Título: "Complete a Estratégia de Marketing"
+  - Descrição: "Para desbloquear esta funcionalidade, complete primeiro sua Estratégia de Marketing."
+  - CTA: "Criar Estratégia" → navega para `/cliente/plano-marketing`
+
+**Arquivo**: `src/hooks/useMarketingStrategy.ts`
+
+- Exportar um hook simples `useHasActiveStrategy()` que retorna `boolean` para uso no contexto de gating (evita carregar dados completos)
+
+---
+
+### 2. Referências visuais: aceitar arquivos além de imagens
 
 **Arquivo**: `src/pages/cliente/ClienteRedesSociais.tsx`
 
-Adicionar no wizard de briefing (etapa "briefing"), antes do botão de gerar:
+Alterações no briefing (seção "Referências Visuais"):
+- Mudar o `accept` do input de `image/*` para `image/*,.pdf,.ai,.psd,.svg,.fig` — aceitar arquivos de design como referência
+- Adicionar label explicando que PDFs e arquivos de design podem ser enviados como referência de estilo
+- Manter o upload para o bucket `social-arts/references/{orgId}/`
+- Para arquivos não-imagem, exibir ícone de arquivo em vez de thumbnail
+- Atualizar o tipo `bReferenceImages` para incluir `fileName` e `mimeType`
 
-- **Seção "Referências Visuais"** com:
-  - Upload de até 5 imagens (drag & drop ou botão) para o bucket `social-arts`
-  - Input de URL para colar links de imagens de referência (Instagram, Pinterest, sites)
-  - Preview em miniatura das imagens adicionadas com botão de remover
-  - HelpTooltip explicando: "Envie exemplos de artes que você gosta. A IA analisa o estilo, cores e composição para criar algo similar."
-
-- **Estado novo**:
-  - `bReferenceImages: { url: string; isUpload: boolean }[]` — lista de URLs (uploads e links externos)
-  - `uploadingRef: boolean` — estado de loading do upload
-
-- **Upload**: Envia para `social-arts/references/{orgId}/{timestamp}-{filename}` e obtém URL pública
-
-- **Passagem para a edge function**: As URLs são enviadas no body como `reference_images: string[]`
+Não há mudança no backend — os arquivos de referência são enviados como URLs públicas para a IA, que já aceita URLs de qualquer tipo de imagem.
 
 ---
 
-### 2. Edge Function — Conceitos com Análise Multimodal
+### 3. Geração de Vídeos para Redes Sociais
+
+Atualmente só existem artes estáticas (Feed e Story). Adicionar geração de vídeos curtos usando o modelo Veo do Lovable AI Gateway.
+
+**Nota importante**: O Lovable AI Gateway atualmente não suporta modelos de geração de vídeo nativamente. A abordagem será:
+- Gerar **roteiro de vídeo detalhado** (storyboard frame-by-frame) via IA
+- Gerar **thumbnail/capa do vídeo** como imagem estática
+- Fornecer o roteiro completo com timecodes para o cliente gravar/editar
+
+**Arquivo**: `src/pages/cliente/ClienteRedesSociais.tsx`
+
+Alterações:
+- Adicionar novo formato no briefing: `"video"` além de "feed" e "story"
+- Checkbox "Gerar roteiro de vídeo" no wizard
+- Quando ativado, a IA gera além das artes:
+  - Roteiro com timecodes (0-3s gancho, 3-15s contexto, etc.)
+  - Descrição visual frame-by-frame
+  - Sugestão de áudio/música
+  - Thumbnail/capa do vídeo (imagem gerada)
+- Na visualização da arte, adicionar aba "Vídeo" que mostra o roteiro completo
 
 **Arquivo**: `supabase/functions/generate-social-concepts/index.ts`
 
 Alterações:
-- Receber `reference_images: string[]` no body
-- Montar a mensagem do usuário como array multimodal (content parts):
-  ```text
-  [
-    { type: "text", text: "Briefing do cliente: ..." },
-    { type: "image_url", image_url: { url: "https://..." } },
-    { type: "image_url", image_url: { url: "https://..." } },
-    { type: "text", text: "Analise as imagens acima como referências visuais..." }
-  ]
-  ```
-- Adicionar instrução no system prompt:
-  ```text
-  REFERENCE IMAGES: The user has provided visual references.
-  Analyze them carefully:
-  - Extract the dominant color palette
-  - Identify the composition style (grid, centered, asymmetric)
-  - Note the lighting approach (soft, dramatic, flat)
-  - Observe textures, materials, and visual elements
-  - Understand the overall mood and aesthetic
-  
-  Your generated visual_prompt_feed and visual_prompt_story MUST
-  replicate the style, mood, and quality seen in these references
-  while adapting to the brand identity and briefing.
-  ```
-- Trocar o modelo para `google/gemini-2.5-flash` (suporta multimodal com imagens e é eficiente)
-
----
-
-### 3. Edge Function — Geração de Imagem com Referência
+- Receber `incluir_video: boolean` no body
+- Quando ativo, adicionar ao tool schema:
+  - `video_script`: roteiro completo com timecodes
+  - `video_description`: descrição visual frame-by-frame
+  - `audio_suggestion`: sugestão de trilha/áudio
+  - `visual_prompt_thumbnail`: prompt para gerar thumbnail do vídeo
+- Atualizar system prompt para gerar roteiros de vídeo quando solicitado
 
 **Arquivo**: `supabase/functions/generate-social-image/index.ts`
 
-Alterações:
-- Receber `reference_images: string[]` opcional no body
-- Se houver referências, montar a mensagem como multimodal:
-  ```text
-  messages: [{
-    role: "user",
-    content: [
-      { type: "text", text: fullPrompt },
-      { type: "image_url", image_url: { url: ref1 } },
-      { type: "image_url", image_url: { url: ref2 } },
-      { type: "text", text: "Use these reference images as style guide..." }
-    ]
-  }]
-  ```
-- Adicionar no prompt: "Study the provided reference images and match their visual style, color treatment, composition approach, and overall aesthetic quality."
-- Limitar a no máximo 3 referências para não estourar context
-
----
-
-### 4. Identidade Visual — Campo de Banco de Imagens
-
-**Arquivo**: `src/pages/cliente/ClienteRedesSociais.tsx`
-
-Na aba "Identidade Visual", o campo `image_bank_urls` já existe na tabela mas não está sendo usado na UI. Adicionar:
-- Seção "Banco de Imagens" com upload múltiplo
-- Essas imagens ficam salvas permanentemente e podem ser usadas como referências padrão em toda geração
-- Na geração, se o cliente não enviar referências específicas, usar as imagens do banco como fallback
+- Sem alterações — thumbnail é gerada com o mesmo fluxo de imagem
 
 ---
 
@@ -119,15 +91,15 @@ Na aba "Identidade Visual", o campo `image_bank_urls` já existe na tabela mas n
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar | Campo de upload/URL de referências no briefing + banco de imagens na identidade visual |
-| `supabase/functions/generate-social-concepts/index.ts` | Editar | Receber e analisar imagens de referência via multimodal |
-| `supabase/functions/generate-social-image/index.ts` | Editar | Usar referências como style guide na geração |
+| `src/contexts/FeatureGateContext.tsx` | Editar | Adicionar gate `no_marketing_strategy` para Conteúdos e Redes Sociais |
+| `src/components/FeatureGateOverlay.tsx` | Editar | Adicionar config visual do gate de estratégia |
+| `src/hooks/useMarketingStrategy.ts` | Editar | Adicionar `useHasActiveStrategy()` para o gating |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar | Aceitar arquivos de design como referência + checkbox de vídeo + exibição de roteiro |
+| `supabase/functions/generate-social-concepts/index.ts` | Editar | Gerar roteiros de vídeo quando solicitado |
 
-### Detalhes Técnicos
+### Ordem de Implementação
 
-- **Modelo multimodal**: `google/gemini-2.5-flash` para conceitos (aceita imagens, rápido e eficiente)
-- **Modelo de imagem**: Mantém `google/gemini-3-pro-image-preview` para geração final
-- **Storage**: Bucket `social-arts` (já existe, público) — path `references/{orgId}/`
-- **Limite**: Máximo 5 referências no briefing, máximo 3 enviadas para geração de imagem
-- **Formato multimodal**: Array de content parts com `type: "image_url"` conforme spec da API Lovable AI Gateway
+1. Hook `useHasActiveStrategy` + FeatureGateContext + Overlay
+2. Referências por arquivo no briefing
+3. Geração de roteiros de vídeo (conceitos + UI)
 
