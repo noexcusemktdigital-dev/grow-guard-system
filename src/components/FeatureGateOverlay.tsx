@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
-import { Lock, Zap, Crown, Target } from "lucide-react";
+import { Lock, Zap, Crown, Target, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function FeatureGateOverlay() {
@@ -39,6 +39,16 @@ export function FeatureGateOverlay() {
         "Para desbloquear esta funcionalidade, você precisa primeiro estruturar seu comercial completando o Plano de Vendas. Leva apenas alguns minutos!",
       cta: "Criar Plano de Vendas",
       ctaPath: "/cliente/plano-vendas",
+      accent: "from-primary/90 to-primary/70",
+      iconBg: "bg-primary/15 text-primary",
+    },
+    no_marketing_strategy: {
+      icon: Megaphone,
+      title: "Complete a Estratégia de Marketing",
+      description:
+        "Para desbloquear esta funcionalidade, complete primeiro sua Estratégia de Marketing. Ela guia toda a geração de conteúdo e artes com IA.",
+      cta: "Criar Estratégia",
+      ctaPath: "/cliente/plano-marketing",
       accent: "from-primary/90 to-primary/70",
       iconBg: "bg-primary/15 text-primary",
     },

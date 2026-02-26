@@ -1,13 +1,15 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
+import { useHasActiveStrategy } from "@/hooks/useMarketingStrategy";
 
-type GateReason = "trial_expired" | "no_credits" | "no_sales_plan" | null;
+type GateReason = "trial_expired" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | null;
 
 interface FeatureGateContextType {
   isTrialExpired: boolean;
   hasNoCredits: boolean;
   salesPlanCompleted: boolean;
+  hasActiveStrategy: boolean;
   /** Check if a specific route/feature is gated */
   getGateReason: (feature: string) => GateReason;
   /** For demo: toggle states */
@@ -52,12 +54,19 @@ const SALES_PLAN_REQUIRED = [
   "/cliente/dashboard",
 ];
 
+// Routes that require marketing strategy to be completed
+const MARKETING_STRATEGY_REQUIRED = [
+  "/cliente/conteudos",
+  "/cliente/redes-sociais",
+];
+
 export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const [simulateTrialExpired, setSimulateTrialExpired] = useState(false);
   const [simulateNoCredits, setSimulateNoCredits] = useState(false);
 
   const { data: subscription } = useClienteSubscription();
   const { data: wallet } = useClienteWallet();
+  const hasActiveStrategy = useHasActiveStrategy();
 
   const isTrialExpired =
     simulateTrialExpired ||
@@ -86,6 +95,9 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
     if (!salesPlanCompleted && SALES_PLAN_REQUIRED.some((r) => feature.startsWith(r)))
       return "no_sales_plan";
 
+    if (!hasActiveStrategy && MARKETING_STRATEGY_REQUIRED.some((r) => feature.startsWith(r)))
+      return "no_marketing_strategy";
+
     if (hasNoCredits && CREDIT_REQUIRED.some((r) => feature.startsWith(r)))
       return "no_credits";
 
@@ -98,6 +110,7 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
         isTrialExpired,
         hasNoCredits,
         salesPlanCompleted,
+        hasActiveStrategy,
         getGateReason,
         simulateTrialExpired,
         setSimulateTrialExpired,

@@ -80,7 +80,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo, organization_id, reference_images } = await req.json();
+    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo, organization_id, reference_images, incluir_video } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -198,6 +198,10 @@ Cada conceito DEVE ter:
 - hashtags: array de 5-8 hashtags relevantes sem #
 - visual_prompt_feed: prompt ULTRA DETALHADO em inglês para gerar uma arte de Instagram Feed (1:1 square, 1080x1080). 
 - visual_prompt_story: prompt ULTRA DETALHADO em inglês para gerar uma arte de Instagram Story (9:16 vertical, 1080x1920).
+${incluir_video ? `- video_script: roteiro completo de vídeo curto (15-60s) com timecodes detalhados (ex: "0-3s: Gancho visual impactante...", "3-8s: Contexto do problema...", "8-15s: Solução...")
+- video_description: descrição visual frame-by-frame de cada cena do vídeo (movimentos de câmera, transições, elementos visuais)
+- audio_suggestion: sugestão de trilha sonora/áudio (gênero, mood, exemplos de músicas)
+- visual_prompt_thumbnail: prompt ULTRA DETALHADO em inglês para gerar uma thumbnail/capa do vídeo (1:1 square, 1080x1080). Deve ser impactante e convidativo para assistir.` : ""}
 
 REGRAS CRÍTICAS para os prompts visuais:
 1. SEMPRE inclua "Do NOT include any text, letters, numbers or words in the image"
@@ -209,7 +213,10 @@ REGRAS CRÍTICAS para os prompts visuais:
 7. Feed é quadrado (1:1), Story é vertical (9:16) - adapte a composição para cada formato
 8. Para Story, use composição vertical com elementos empilhados
 9. Para Feed, use composição centrada e equilibrada
-10. NUNCA gere prompts genéricos como "professional social media post" - seja ESPECÍFICO sobre cada elemento visual`;
+10. NUNCA gere prompts genéricos como "professional social media post" - seja ESPECÍFICO sobre cada elemento visual
+${incluir_video ? `11. Para roteiros de vídeo, crie conteúdo dinâmico e envolvente pensando em Reels/TikTok
+12. O roteiro deve ter gancho nos primeiros 3 segundos para prender a atenção
+13. A thumbnail deve ser a cena mais impactante do vídeo` : ""}`;
 
     const userTextPrompt = `Briefing do cliente:
 - Mês: ${briefing.mes}
@@ -273,8 +280,14 @@ Gere ${quantidade} conceitos de posts com prompts visuais EXTREMAMENTE detalhado
                         hashtags: { type: "array", items: { type: "string" } },
                         visual_prompt_feed: { type: "string" },
                         visual_prompt_story: { type: "string" },
+                        ...(incluir_video ? {
+                          video_script: { type: "string" },
+                          video_description: { type: "string" },
+                          audio_suggestion: { type: "string" },
+                          visual_prompt_thumbnail: { type: "string" },
+                        } : {}),
                       },
-                      required: ["titulo", "legenda", "cta", "hashtags", "visual_prompt_feed", "visual_prompt_story"],
+                      required: ["titulo", "legenda", "cta", "hashtags", "visual_prompt_feed", "visual_prompt_story", ...(incluir_video ? ["video_script", "video_description", "audio_suggestion", "visual_prompt_thumbnail"] : [])],
                       additionalProperties: false,
                     },
                   },

@@ -52,6 +52,11 @@ export function useStrategyHistory() {
   });
 }
 
+export function useHasActiveStrategy(): boolean {
+  const { data } = useActiveStrategy();
+  return !!data;
+}
+
 export function useSaveStrategy() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
