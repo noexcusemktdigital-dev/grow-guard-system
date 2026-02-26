@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.generate-social-video-frames]
 verify_jwt = false
+
+[functions.generate-traffic-strategy]
+verify_jwt = false
