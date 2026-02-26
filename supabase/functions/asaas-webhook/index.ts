@@ -90,6 +90,22 @@ Deno.serve(async (req) => {
 
     // ── PAYMENT_CONFIRMED / PAYMENT_RECEIVED ──
     if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
+      // Check if this is a system fee payment
+      const externalRef = payment.externalReference;
+      if (externalRef && typeof externalRef === "string" && externalRef.startsWith("system_fee|")) {
+        const asaasPaymentId = payment.id;
+        if (asaasPaymentId) {
+          await adminClient
+            .from("franchisee_system_payments")
+            .update({ status: "paid", paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+            .eq("asaas_payment_id", asaasPaymentId);
+          console.log(`System fee payment ${asaasPaymentId} marked as paid`);
+        }
+        return new Response(JSON.stringify({ success: true, event, type: "system_fee" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Check if this is a franchisee charge
       const asaasPaymentId = payment.id;
       if (asaasPaymentId) {
