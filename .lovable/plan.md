@@ -1,120 +1,116 @@
 
 
-## Plano: Pagamento do Sistema pelo Franqueado (R$250) + Finalizar Ferramentas da Franquia
+## Roadmap: Desenvolvimento dos Modulos da Franqueadora
 
-### Resumo
+### Estado Atual de Cada Modulo
 
-Duas frentes:
-1. **Pagamento self-service do sistema (R$250/mes)** — O franqueado acessa uma aba "Meu Plano" nas Configuracoes e paga diretamente via PIX, Boleto ou Cartao, usando a integracao Asaas ja existente
-2. **Finalizar ferramentas de gestao** — Completar o Diagnostico NOE (hoje placeholder) e adicionar aba de pagamento do sistema no Financeiro
+| # | Modulo | Estado | O que falta |
+|---|--------|--------|-------------|
+| 1 | **Dashboard** | Funcional | KPIs reais, "Hoje eu preciso" inteligente |
+| 2 | **Agenda** | Funcional | OK (Google Calendar integrado) |
+| 3 | **Comunicados** | Funcional | OK (CRUD + segmentacao) |
+| 4 | **Unidades** | Basico | Abas de detalhe (usuarios, docs, financeiro) sao placeholders |
+| 5 | **CRM Expansao** | Basico | Sem detail sheet, sem drag-drop, sem filtros avancados, sem atividades |
+| 6 | **Onboarding** | Basico | Sem CRUD para criar implantacoes, sem toggle de checklist, sem atas |
+| 7 | **Atendimento** | Basico | Detail minimo, sem timeline de respostas, sem atribuicao |
+| 8 | **Matriz** | Placeholder | Apenas lista perfis, sem gestao de permissoes reais |
+| 9 | **Marketing** | Placeholder | Upload nao funciona, sem pastas, sem download |
+| 10 | **Treinamentos** | Funcional | OK (Academy com gestao + player) |
+| 11 | **Metas e Ranking** | Placeholder | Todas as abas mostram empty state |
+| 12 | **Contratos** | Basico | CRUD funciona, falta preview/editor de template |
+| 13 | **Financeiro** | Basico | CRUD funciona, falta graficos e DRE real |
+| 14 | **SaaS** | Funcional | OK (5 abas operacionais) |
+| 15 | **Drive** | Desativado | Nao implementado |
+
+### Ordem Proposta (por dependencia e impacto)
+
+**Fase 1 — Rede (core da operacao)**
+1. **Unidades** — base para tudo (vincular usuarios, docs, financeiro por unidade)
+2. **CRM Expansao** — motor comercial da franqueadora
+3. **Onboarding** — depende de Unidades (nova unidade -> onboarding)
+4. **Atendimento** — suporte da rede
+5. **Matriz** — permissoes e usuarios
+
+**Fase 2 — Comercial**
+6. **Metas e Ranking** — CRUD de metas, dashboard, ranking gamificado
+7. **Marketing** — upload real, pastas, distribuicao para rede
+
+**Fase 3 — Administrativo**
+8. **Financeiro** — graficos, DRE automatico, projecoes
+9. **Contratos** — editor de template, variaveis dinamicas
+10. **Dashboard** — consolidar KPIs de todos os modulos
 
 ---
 
-### 1. Edge Function: `asaas-charge-system-fee`
+### Modulo 1: Unidades (Detalhamento Completo)
 
-Nova edge function dedicada ao pagamento self-service do franqueado. Diferente da `asaas-charge-franchisee` (disparada pela franqueadora para cobrar royalties + sistema em lote), esta e iniciada pelo proprio franqueado.
+Hoje as abas de detalhe da unidade (Usuarios, Documentos, Financeiro) sao placeholders. Vamos implementar cada uma.
 
-**Fluxo:**
-1. Franqueado clica em "Pagar Sistema" na interface
-2. Seleciona metodo de pagamento (PIX, Boleto, Cartao)
-3. Frontend chama `asaas-charge-system-fee` passando `organization_id` e `billing_type`
-4. Edge function:
-   - Valida autenticacao
-   - Busca ou cria customer no Asaas (mesmo padrao do `asaas-create-charge`)
-   - Cria cobranca de R$250 com `externalReference: "system_fee|{org_id}|{month}"`
-   - Se PIX, busca QR code base64
-   - Registra na tabela `franchisee_system_payments` (nova)
-   - Retorna dados de pagamento (invoice_url, pix_qr_code, etc.)
+#### 1.1 Aba "Dados" — Editar Unidade
+- Formulario editavel (inline ou Dialog) com todos os campos: nome, cidade, estado, telefone, email, responsavel, status, observacoes
+- Botao "Salvar Alteracoes" que chama `updateUnit`
+- Select de status: Ativa, Suspensa, Encerrada
 
-**Webhook:** Atualizar `asaas-webhook` para detectar `system_fee|` no externalReference e marcar como pago
+#### 1.2 Aba "Usuarios" — Membros da Unidade
+- Listar membros da organizacao (`organization_memberships` + `profiles`) filtrados pelo `unit_id`
+- Colunas: Nome, Email, Funcao, Permissao, Status
+- Botao "Convidar Usuario" abrindo Dialog com: nome, email, funcao (Select: Franqueado, Comercial, Atendimento, Performance, Criativo, Financeiro), permissao (Admin da Unidade, Operador, Somente leitura)
+- Acoes por usuario: Editar funcao, Ativar/Desativar
+- Como a tabela `units` ja existe e tem `organization_id`, os membros sao filtrados por org
 
-### 2. Nova Tabela: `franchisee_system_payments`
+#### 1.3 Aba "Documentos" — Repositorio por Unidade
+- Listar documentos vinculados a unidade (nova tabela `unit_documents`)
+- Upload de arquivo (storage bucket `unit-documents`)
+- Campos: Tipo (Contrato de franquia, Docs administrativos, Arquivos internos, Outros), Nome, Visibilidade (Somente Franqueadora / Ambos), Observacao
+- Acoes: Download, Excluir
+- Badge de visibilidade na listagem
 
+#### 1.4 Aba "Financeiro" — Config por Unidade
+- Formulario editavel com campos financeiros da unidade: % repasse, % royalties, mensalidade sistema (R$), sistema ativo (toggle)
+- Historico de cobranças geradas para esta unidade (query em `franchisee_charges` filtrado por `franchisee_org_id`)
+- Status de pagamento do sistema (query em `franchisee_system_payments`)
+
+#### Mudancas no Banco de Dados
+
+**Nova tabela: `unit_documents`**
 ```text
-franchisee_system_payments
-  id             uuid PK
+unit_documents
+  id              uuid PK
+  unit_id         uuid FK -> units
   organization_id uuid FK -> organizations
-  month          text (YYYY-MM)
-  amount         numeric default 250
-  billing_type   text (PIX/BOLETO/CREDIT_CARD)
-  asaas_payment_id text
-  status         text default 'pending' (pending/paid/overdue)
-  paid_at        timestamptz
-  created_at     timestamptz
-  updated_at     timestamptz
-  UNIQUE(organization_id, month)
+  name            text NOT NULL
+  type            text (Contrato de franquia | Docs administrativos | Arquivos internos | Outros)
+  file_url        text
+  visibility      text default 'both' (franqueadora_only | both)
+  notes           text
+  uploaded_by     uuid FK -> auth.users
+  created_at      timestamptz
 ```
 
-RLS: franqueados podem ver seus proprios pagamentos via `is_member_of_org`
+**Alterar tabela `units`**: Adicionar colunas se nao existirem:
+- `royalty_percent` numeric default 1
+- `system_fee` numeric default 250
+- `transfer_percent` numeric default 20
+- `system_active` boolean default true
+- `financial_notes` text
 
-### 3. Interface do Franqueado — Aba "Sistema" no Financeiro
+**Novo storage bucket**: `unit-documents` (public)
 
-Adicionar uma 4a aba no `FranqueadoFinanceiro.tsx`: **"Pagamento Sistema"**
+**RLS**: `unit_documents` — SELECT/INSERT/DELETE para membros da org (`is_member_of_org`)
 
-Conteudo:
-- Card com status do mes atual: "Pago", "Pendente" ou "Vencido"
-- Historico de pagamentos (ultimos 12 meses) com status
-- Botao "Pagar R$250" que abre Dialog com:
-  - Selecao de metodo: PIX, Boleto, Cartao
-  - Ao selecionar PIX: mostra QR Code base64 + codigo copia e cola inline
-  - Ao selecionar Boleto/Cartao: mostra iframe com invoice_url do Asaas
-- Badge no sidebar indicando se ha pendencia
-
-### 4. Webhook Update
-
-Atualizar `asaas-webhook/index.ts`:
-- Antes de verificar `franchisee_charges`, verificar se o `externalReference` comeca com `system_fee|`
-- Se sim, buscar na tabela `franchisee_system_payments` pelo `asaas_payment_id`
-- Marcar como `paid` com `paid_at`
-
-### 5. Diagnostico NOE (Finalizar)
-
-O `FranqueadoDiagnostico.tsx` hoje e um placeholder. Implementar:
-- Formulario estruturado em etapas (Accordion) com perguntas de diagnostico do cliente
-- Perguntas agrupadas por categoria: Comercial, Marketing, Operacional, Financeiro, Digital
-- Cada pergunta com select de 1-5 (nota)
-- Score geral calculado automaticamente (radar chart opcional)
-- Salvar no banco vinculado ao lead_id
-- Botao "Gerar Estrategia a partir do Diagnostico" que redireciona para `/franqueado/estrategia` pre-preenchido
-
-Entretanto, como o diagnostico depende de uma tabela nova e ja tem integracao com o CRM (lead_id), fara parte de uma migration adicional.
-
-### 6. Rota do Diagnostico
-
-Adicionar rota no `App.tsx`:
-```
-<Route path="diagnostico" element={<FranqueadoDiagnostico />} />
-```
-
-Adicionar no `FranqueadoSidebar.tsx` na secao Comercial:
-```
-{ label: "Diagnostico", icon: ClipboardCheck, path: "/franqueado/diagnostico" }
-```
-
----
-
-### Resumo de Arquivos
+#### Arquivos a Criar/Editar
 
 | Arquivo | Acao |
 |---|---|
-| `supabase/functions/asaas-charge-system-fee/index.ts` | Criar — nova edge function para pagamento self-service R$250 |
-| `supabase/config.toml` | Nao editar (auto-gerenciado) |
-| `supabase/functions/asaas-webhook/index.ts` | Editar — adicionar handler para `system_fee|` no externalReference |
-| Migration SQL | Criar tabela `franchisee_system_payments` com RLS |
-| `src/pages/franqueado/FranqueadoFinanceiro.tsx` | Editar — adicionar 4a aba "Pagamento Sistema" com dialog de pagamento inline |
-| `src/pages/franqueado/FranqueadoDiagnostico.tsx` | Reescrever — formulario de diagnostico completo com scoring |
-| `src/components/FranqueadoSidebar.tsx` | Editar — adicionar link Diagnostico na secao Comercial |
-| `src/App.tsx` | Editar — adicionar rota `/franqueado/diagnostico` |
-| `src/hooks/useFranqueadoSystemPayments.ts` | Criar — hook para buscar pagamentos do sistema |
-| Migration SQL | Criar tabela `client_diagnostics` para salvar diagnosticos |
+| Migration SQL | Criar tabela `unit_documents`, adicionar colunas em `units`, criar bucket |
+| `src/hooks/useUnitDocuments.ts` | Criar — hook para CRUD de documentos de unidade |
+| `src/hooks/useUnitMembers.ts` | Criar — hook para listar/gerenciar membros de uma unidade |
+| `src/components/unidades/UnidadeDadosEdit.tsx` | Criar — formulario editavel de dados da unidade |
+| `src/components/unidades/UnidadeUsuariosReal.tsx` | Criar — listagem real de membros + convidar |
+| `src/components/unidades/UnidadeDocumentosReal.tsx` | Criar — upload + listagem de documentos |
+| `src/components/unidades/UnidadeFinanceiroReal.tsx` | Criar — config financeira + historico de cobrancas |
+| `src/pages/Unidades.tsx` | Editar — substituir placeholders pelos componentes reais |
 
-### Sequencia de Implementacao
+### Proximos Passos
 
-1. Migration: criar `franchisee_system_payments` e `client_diagnostics`
-2. Edge function `asaas-charge-system-fee`
-3. Atualizar webhook
-4. Hook `useFranqueadoSystemPayments`
-5. Aba de pagamento no Financeiro
-6. Diagnostico NOE completo
-7. Sidebar + rotas
-
+Apos a aprovacao, implemento o Modulo 1 (Unidades) completo. Depois seguimos para o CRM Expansao, Onboarding, e assim por diante na ordem proposta.
