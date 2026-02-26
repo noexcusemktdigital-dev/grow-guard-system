@@ -444,10 +444,27 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
               </p>
             </div>
           ) : (
-            messagesWithSeparators.map((item, i) => {
-              if (item.type === "date") return <DateSeparator key={`date-${i}`} date={item.date!} />;
-              return <ChatMessageBubble key={item.message!.id} message={item.message!} isGrouped={item.isGrouped} />;
-            })
+            <>
+              {messagesWithSeparators.map((item, i) => {
+                if (item.type === "date") return <DateSeparator key={`date-${i}`} date={item.date!} />;
+                return <ChatMessageBubble key={item.message!.id} message={item.message!} isGrouped={item.isGrouped} />;
+              })}
+              {/* AI typing indicator */}
+              {attendingMode === "ai" && messages.length > 0 && messages[messages.length - 1]?.direction === "inbound" && (
+                <div className="flex justify-start mb-2">
+                  <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
+                    <div className="flex items-center gap-1.5">
+                      <Bot className="w-3.5 h-3.5 text-purple-400" />
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           <div ref={bottomRef} />
         </div>
