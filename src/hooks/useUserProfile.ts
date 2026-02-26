@@ -23,7 +23,7 @@ export function useUserProfile() {
   const qc = useQueryClient();
 
   const update = useMutation({
-    mutationFn: async (updates: { full_name?: string; phone?: string; job_title?: string }) => {
+    mutationFn: async (updates: { full_name?: string; phone?: string; job_title?: string; avatar_url?: string }) => {
       const { error } = await supabase
         .from("profiles")
         .update(updates)

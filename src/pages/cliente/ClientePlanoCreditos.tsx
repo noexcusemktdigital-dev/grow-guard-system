@@ -554,14 +554,37 @@ export default function ClientePlanoCreditos() {
             <TabsList className="h-8">
               <TabsTrigger value="comercial" className="text-xs px-3 h-7">Comercial</TabsTrigger>
               <TabsTrigger value="marketing" className="text-xs px-3 h-7">Marketing</TabsTrigger>
-              <TabsTrigger value="combo" className="text-xs px-3 h-7">Combo</TabsTrigger>
+              <TabsTrigger value="combo" className="text-xs px-3 h-7">🔥 Combo</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
+
+        {moduleToggle === "combo" && (
+          <Card className="mb-4 border-primary/30 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Star className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Economize até 30% com o Combo!</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ao escolher Comercial + Marketing juntos, você desbloqueia o CRM completo, geração de conteúdos, artes sociais, sites, scripts de vendas e estratégias — tudo em um só plano com desconto.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {["CRM + Funis", "Conteúdos IA", "Sites", "Artes Sociais", "Scripts", "Estratégias"].map((b) => (
+                      <Badge key={b} variant="secondary" className="text-[10px]">{b}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((plan) => {
             const isCurrent = plan.id === currentPlanSlug;
             const displayPrice = getPlanPrice(plan, moduleToggle);
+            const comboSavings = moduleToggle === "combo" ? Math.round((1 - plan.comboPrice / (plan.basePrice * 2)) * 100) : 0;
             return (
               <Card key={plan.id} className={`relative ${plan.popular ? "border-primary ring-2 ring-primary/20" : ""} ${isCurrent ? "bg-primary/5" : ""}`}>
                 {plan.popular && (
@@ -583,6 +606,9 @@ export default function ClientePlanoCreditos() {
                     <span className="text-3xl font-bold text-foreground">R$ {displayPrice}</span>
                     <span className="text-sm text-muted-foreground">/mês</span>
                   </div>
+                  {moduleToggle === "combo" && comboSavings > 0 && (
+                    <Badge variant="secondary" className="text-[10px] w-fit mt-1">Economize {comboSavings}%</Badge>
+                  )}
                   <p className="text-sm text-muted-foreground">
                     {plan.credits.toLocaleString("pt-BR")} créditos · {plan.maxUsers} usuários
                   </p>
@@ -616,22 +642,50 @@ export default function ClientePlanoCreditos() {
 
       {/* Credit Packs */}
       <div>
-        <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+        <h2 className="text-xl font-semibold text-foreground mb-2 flex items-center gap-2">
           <Package className="w-5 h-5 text-primary" /> Pacotes de Créditos Avulsos
         </h2>
+        <Card className="mb-4 border-dashed">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium text-foreground mb-2">Para que servem os créditos?</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Créditos são consumidos por ações de IA como gerar conteúdos, criar sites, enviar disparos inteligentes e muito mais. Compre pacotes avulsos quando precisar de mais capacidade.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {[
+                { label: "Gerar site", cost: 500 },
+                { label: "Estratégia comercial", cost: 300 },
+                { label: "Prospecção IA", cost: 250 },
+                { label: "Conteúdos (lote)", cost: 200 },
+                { label: "Script de vendas", cost: 150 },
+                { label: "Arte social", cost: 100 },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between text-xs p-2 rounded bg-muted/30">
+                  <span className="text-muted-foreground">{item.label}</span>
+                  <span className="font-semibold text-foreground">{item.cost} cr</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {CREDIT_PACKS.map((pack) => (
-            <Card key={pack.id} className={pack.popular ? "border-primary ring-1 ring-primary/20" : ""}>
-              <CardContent className="p-5 text-center space-y-3">
-                <p className="text-2xl font-bold text-foreground">{pack.credits.toLocaleString("pt-BR")}</p>
-                <p className="text-sm text-muted-foreground">créditos</p>
-                <p className="text-xl font-bold text-foreground">R$ {pack.price}</p>
-                <Button className="w-full" variant={pack.popular ? "default" : "outline"} onClick={() => { setSelectedPack(pack); setPackDialogOpen(true); }}>
-                  Comprar
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+          {CREDIT_PACKS.map((pack) => {
+            const equivContents = Math.floor(pack.credits / 200);
+            const equivSites = Math.floor(pack.credits / 500);
+            return (
+              <Card key={pack.id} className={pack.popular ? "border-primary ring-1 ring-primary/20" : ""}>
+                <CardContent className="p-5 text-center space-y-3">
+                  <p className="text-2xl font-bold text-foreground">{pack.credits.toLocaleString("pt-BR")}</p>
+                  <p className="text-sm text-muted-foreground">créditos</p>
+                  <p className="text-[10px] text-muted-foreground">≈ {equivContents} lotes de conteúdo ou {equivSites} sites</p>
+                  <p className="text-xl font-bold text-foreground">R$ {pack.price}</p>
+                  <Button className="w-full" variant={pack.popular ? "default" : "outline"} onClick={() => { setSelectedPack(pack); setPackDialogOpen(true); }}>
+                    Comprar
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
 
