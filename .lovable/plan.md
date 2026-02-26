@@ -1,70 +1,106 @@
 
 
-## Fotos de Perfil dos Contatos WhatsApp
+## Agentes de IA com Consciencia de Agenda e Direcionamento de Equipe
 
 ### Problema
-O campo `photo_url` existe na tabela `whatsapp_contacts`, mas nunca e preenchido. O webhook salva o contato sem buscar a foto de perfil no WhatsApp.
+Os agentes de IA marcam reunioes sem consultar a agenda dos vendedores e nao sabem para quem direcionar o lead. Isso causa conflitos de horario e falta de contexto sobre a equipe disponivel.
 
 ### Solucao
 
-**Arquivo**: `supabase/functions/whatsapp-webhook/index.ts`
+**Arquivo**: `supabase/functions/ai-agent-reply/index.ts`
 
-Apos criar ou atualizar um contato, buscar a foto de perfil via Z-API usando o endpoint:
-```
-GET https://api.z-api.io/instances/{id}/token/{token}/profile-picture?phone={phone}
-```
+Adicionar dois blocos de contexto ao system prompt do agente:
 
-Logica:
-1. Apos o upsert do contato, verificar se `photo_url` ja existe (para nao buscar toda vez)
-2. Se nao existir, chamar o endpoint da Z-API para obter a URL da foto
-3. Atualizar o campo `photo_url` do contato com a URL retornada
-4. Fazer isso de forma "fire and forget" para nao atrasar o webhook
+---
 
-### Detalhes tecnicos
+### 1. Contexto da equipe disponivel
 
-- O endpoint retorna um JSON com a URL da foto (geralmente `{ "link": "https://..." }`)
-- Precisamos do `instance_id`, `token` e `client_token` da instancia (ja disponivel no webhook)
-- A busca sera feita apenas quando `photo_url` for null (primeira vez ou contato novo)
-- Para contatos existentes sem foto, tambem busca na primeira interacao apos o deploy
-
-### Alteracoes no webhook (~linha 113-145)
+Buscar os membros da organizacao com seus perfis para que o agente saiba quem sao os vendedores/closers disponiveis:
 
 ```typescript
-// Apos upsert, buscar foto se nao tiver
-const needsPhoto = !existingContact || !(existingContact as any).photo_url;
-if (needsPhoto) {
-  try {
-    const picUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/profile-picture?phone=${phone}`;
-    const picRes = await fetch(picUrl, {
-      headers: { "Client-Token": instance.client_token },
-    });
-    if (picRes.ok) {
-      const picData = await picRes.json();
-      const photoUrl = picData.link || picData.url || null;
-      if (photoUrl) {
-        await adminClient
-          .from("whatsapp_contacts")
-          .update({ photo_url: photoUrl })
-          .eq("id", contactId);
-      }
-    }
-  } catch (e) {
-    console.error("Failed to fetch profile picture:", e);
-  }
+const { data: teamMembers } = await adminClient
+  .from("organization_memberships")
+  .select("user_id, profiles(full_name)")
+  .eq("organization_id", organization_id);
+```
+
+Se o lead tiver `assigned_to`, informar ao agente quem e o responsavel pelo lead. Se nao tiver, listar os membros disponiveis para o agente sugerir direcionamento.
+
+---
+
+### 2. Contexto da agenda (proximas 48h)
+
+Buscar os eventos do calendario da organizacao nas proximas 48 horas para que o agente saiba os horarios ocupados:
+
+```typescript
+const now = new Date();
+const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+const { data: upcomingEvents } = await adminClient
+  .from("calendar_events")
+  .select("title, start_at, end_at, created_by")
+  .eq("organization_id", organization_id)
+  .gte("start_at", now.toISOString())
+  .lte("start_at", in48h.toISOString())
+  .order("start_at", { ascending: true })
+  .limit(20);
+```
+
+---
+
+### 3. Instrucoes no system prompt
+
+Adicionar ao prompt (apos o bloco de `leadContext`):
+
+```
+Informacoes da equipe:
+- Responsavel pelo lead: [nome] (ou "Nenhum atribuido")
+- Membros da equipe: [lista]
+
+Agenda das proximas 48h (horarios ja ocupados):
+- [data/hora] - [titulo] (responsavel: [nome])
+- ...
+
+REGRAS PARA AGENDAMENTO:
+1. Nunca marque reuniao em horario que ja esteja ocupado na agenda acima
+2. Sugira horarios livres dentro do horario comercial (seg-sex, 9h-18h)
+3. Sempre confirme o horario com o lead antes de agendar
+4. Direcione a reuniao para o responsavel do lead. Se nao houver, sugira um membro da equipe
+5. Ao confirmar uma reuniao, use a acao [AI_ACTION:SCHEDULE_MEETING:titulo|data_hora_inicio|data_hora_fim|responsavel_nome]
+```
+
+---
+
+### 4. Nova acao: SCHEDULE_MEETING
+
+Adicionar ao bloco de parse de acoes (linhas 431-474) o tratamento da nova acao que cria um evento no calendario automaticamente:
+
+```typescript
+if (action.type === "SCHEDULE_MEETING") {
+  const [title, startAt, endAt, assigneeName] = action.value.split("|");
+  await adminClient.from("calendar_events").insert({
+    organization_id,
+    title: title || "Reuniao com lead",
+    start_at: startAt,
+    end_at: endAt || new Date(new Date(startAt).getTime() + 60*60*1000).toISOString(),
+    description: `Reuniao agendada pela IA (${agent.name}) com ${contact.name || contact.phone}`,
+    visibility: "private",
+  });
 }
 ```
 
-Tambem preciso atualizar o `select` do contato existente (linha 115) para incluir `photo_url`:
-```typescript
-.select("id, unread_count, photo_url")
-```
+---
 
-### UI
-A interface ja usa `contact.photo_url` no `ChatContactItem` e no `ChatConversation` (Avatar components). Assim que a URL for salva no banco, as fotos aparecerao automaticamente.
+### Resumo das alteracoes
+
+- **1 arquivo alterado**: `supabase/functions/ai-agent-reply/index.ts`
+- **2 queries adicionais**: membros da equipe + eventos das proximas 48h
+- **1 nova acao de IA**: `SCHEDULE_MEETING` para criar eventos automaticamente
+- **Instrucoes de prompt**: regras claras de agendamento e direcionamento
 
 ### Impacto
-- 1 arquivo alterado (webhook)
-- Fotos aparecem automaticamente na lista de contatos e no cabecalho da conversa
-- Sem mudancas no frontend (ja preparado)
+- Agentes nunca mais marcam reuniao em horario ocupado
+- Agentes sabem quem e o responsavel e para quem direcionar
+- Reunioes agendadas aparecem automaticamente no calendario da plataforma
 - Deploy automatico
 
