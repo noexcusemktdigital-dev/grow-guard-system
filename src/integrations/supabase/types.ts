@@ -2939,6 +2939,94 @@ export type Database = {
           },
         ]
       }
+      marketing_strategies: {
+        Row: {
+          answers: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          nivel: string
+          organization_id: string
+          score_percentage: number
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          nivel?: string
+          organization_id: string
+          score_percentage?: number
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          nivel?: string
+          organization_id?: string
+          score_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_strategies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_visual_identities: {
+        Row: {
+          created_at: string | null
+          fonts: Json | null
+          id: string
+          image_bank_urls: Json | null
+          logo_url: string | null
+          organization_id: string
+          palette: Json | null
+          reference_links: Json | null
+          style: string | null
+          tone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fonts?: Json | null
+          id?: string
+          image_bank_urls?: Json | null
+          logo_url?: string | null
+          organization_id: string
+          palette?: Json | null
+          reference_links?: Json | null
+          style?: string | null
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fonts?: Json | null
+          id?: string
+          image_bank_urls?: Json | null
+          logo_url?: string | null
+          organization_id?: string
+          palette?: Json | null
+          reference_links?: Json | null
+          style?: string | null
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_visual_identities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           can_create: boolean | null
