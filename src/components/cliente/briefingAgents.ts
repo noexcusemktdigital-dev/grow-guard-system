@@ -468,6 +468,20 @@ export const LUNA_STEPS: BriefingStep[] = [
   { id: "persona_descricao", agentMessage: "Me descreve essa persona: idade, profissão, dores, desejos...", inputType: "textarea", placeholder: "Idade, profissão, dores, desejos, comportamento...", optional: true,
     skipIf: (ans) => !ans.persona_nome,
   },
+  // ── Formatos e Quantidades
+  { id: "_section_formatos", section: "Formatos", agentMessage: "Ótimo! Agora vamos definir os formatos. Quantos de cada tipo você quer nessa campanha?", inputType: "info" },
+  { id: "qFeed", section: "Formatos", agentMessage: "Quantos Posts Feed (imagem quadrada)?", inputType: "select", helpText: "Posts feed são ideais para conteúdo estático e educativo.",
+    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }],
+  },
+  { id: "qCarrossel", section: "Formatos", agentMessage: "Quantos Carrosséis?", inputType: "select", helpText: "Carrosséis têm 3x mais salvamentos que posts normais.",
+    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }],
+  },
+  { id: "qReels", section: "Formatos", agentMessage: "Quantos roteiros de Reels?", inputType: "select", helpText: "Reels têm o maior alcance orgânico no Instagram.",
+    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }],
+  },
+  { id: "qStory", section: "Formatos", agentMessage: "E quantos Stories?", inputType: "select", helpText: "Stories geram interação direta com enquetes e caixas de pergunta.",
+    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }],
+  },
 ];
 
 /* ══════════════════════════════════════════════
@@ -505,6 +519,59 @@ export const THEO_STEPS: BriefingStep[] = [
   { id: "persona_nome", agentMessage: "Tem uma persona definida? Me diz o nome/perfil!", inputType: "text", placeholder: "Ex: Maria, 38 anos", optional: true },
   { id: "persona_descricao", agentMessage: "Descreve essa persona pra mim!", inputType: "textarea", placeholder: "Idade, profissão, dores, desejos...", optional: true,
     skipIf: (ans) => !ans.persona_nome,
+  },
+  // ── Formatos e Quantidades
+  { id: "_section_formatos", section: "Formatos", agentMessage: "Perfeito! Agora vamos definir os formatos e quantidades.", inputType: "info" },
+  { id: "fmtFeed", section: "Formatos", agentMessage: "Quantas artes de Feed (1080×1080)?", inputType: "select",
+    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }],
+  },
+  { id: "fmtStory", section: "Formatos", agentMessage: "Quantas artes de Story (1080×1920)?", inputType: "select",
+    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }],
+  },
+  { id: "fmtCarrossel", section: "Formatos", agentMessage: "Quantos Carrosséis?", inputType: "select",
+    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }],
+  },
+  { id: "fmtReels", section: "Formatos", agentMessage: "E vídeos Reels (curtos, 5-15s)?", inputType: "select",
+    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }],
+  },
+  { id: "fmtStoryVideo", section: "Formatos", agentMessage: "Stories animados (vídeo curto)?", inputType: "select",
+    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }],
+  },
+  // ── Estilos Visuais
+  { id: "artStyle", section: "Estilo Visual", agentMessage: "Qual estilo visual para as artes?", inputType: "select",
+    categories: [
+      { title: "Gráfica", icon: "🎨", description: "Design gráfico profissional", options: [
+        { value: "grafica_moderna", label: "Design Moderno", desc: "Formas geométricas, cores vibrantes" },
+        { value: "grafica_elegante", label: "Design Elegante", desc: "Fundo escuro, detalhes dourados" },
+        { value: "grafica_bold", label: "Design Bold", desc: "Cores fortes, texto grande" },
+        { value: "grafica_minimalista", label: "Design Minimalista", desc: "Espaço negativo, tipografia fina" },
+      ]},
+      { title: "Imagem", icon: "📸", description: "Fotografia ou ilustração", options: [
+        { value: "foto_editorial", label: "Foto Editorial", desc: "Iluminação cinematográfica" },
+        { value: "foto_produto", label: "Foto de Produto", desc: "Produto em contexto lifestyle" },
+        { value: "ilustracao", label: "Ilustração Digital", desc: "Flat ou 3D moderno" },
+        { value: "collage", label: "Colagem Criativa", desc: "Mix de elementos visuais" },
+      ]},
+    ],
+    skipIf: (ans) => {
+      const feed = parseInt(ans.fmtFeed) || 0;
+      const story = parseInt(ans.fmtStory) || 0;
+      const carrossel = parseInt(ans.fmtCarrossel) || 0;
+      return feed + story + carrossel === 0;
+    },
+  },
+  { id: "videoStyle", section: "Estilo de Vídeo", agentMessage: "E o estilo dos vídeos curtos?", inputType: "select",
+    options: [
+      { value: "slideshow", label: "Slideshow + Texto", desc: "Imagens com texto animado (5-15s)" },
+      { value: "kinetic", label: "Texto Animado", desc: "Kinetic typography (5-10s)" },
+      { value: "revelacao", label: "Revelação", desc: "Zoom in dramático (10-15s)" },
+      { value: "countdown", label: "Countdown", desc: "Contagem regressiva (5-10s)" },
+    ],
+    skipIf: (ans) => {
+      const reels = parseInt(ans.fmtReels) || 0;
+      const storyVideo = parseInt(ans.fmtStoryVideo) || 0;
+      return reels + storyVideo === 0;
+    },
   },
 ];
 

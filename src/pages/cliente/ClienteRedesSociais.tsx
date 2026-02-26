@@ -32,6 +32,8 @@ import { HelpTooltip } from "@/components/HelpTooltip";
 import { useVisualIdentity, useSaveVisualIdentity, isVisualIdentityComplete } from "@/hooks/useVisualIdentity";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { renderMotionGraphics, type SceneText, type SceneConfig } from "@/lib/motionGraphicsEngine";
+import { ChatBriefing } from "@/components/cliente/ChatBriefing";
+import { AGENTS, THEO_STEPS } from "@/components/cliente/briefingAgents";
 // canvasTemplateEngine kept for future use but decoupled from main flow
 
 /* ── Types ── */
@@ -446,6 +448,8 @@ export default function ClienteRedesSociais() {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
   // Active tab
   const [activeTab, setActiveTab] = useState("campanhas");
+  const [theoChatOpen, setTheoChatOpen] = useState(false);
+  const [pendingGenerate, setPendingGenerate] = useState(false);
 
   // Arts quota
   const artsThisMonth = campaigns.reduce((acc, c) => acc + c.arts.length, 0);
@@ -456,6 +460,36 @@ export default function ClienteRedesSociais() {
     const interval = setInterval(() => setLoadingPhrase((p) => (p + 1) % loadingPhrases.length), 2500);
     return () => clearInterval(interval);
   }, [isGenerating, genProgress]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (pendingGenerate) { setPendingGenerate(false); handleGenerate(); } }, [pendingGenerate]);
+
+  const handleTheoChatComplete = (answers: Record<string, any>) => {
+    setTheoChatOpen(false);
+    setBTipoPost(answers.tipo_post || "institucional");
+    setBNivel(answers.nivel || "elaborado");
+    setBMes(answers.mes || "Março 2026");
+    setBObjetivo(answers.objetivo || "");
+    setBEstilo(answers.estilo || "");
+    setBTemas(answers.temas || "");
+    setBPromocoes(answers.promocoes || "");
+    setBObs(answers.obs || "");
+    setBDescricaoProduto(answers.descricao_produto || "");
+    setPersonaNome(answers.persona_nome || "");
+    setPersonaDescricao(answers.persona_descricao || "");
+    setFmtFeed(parseInt(answers.fmtFeed) || 0);
+    setFmtStory(parseInt(answers.fmtStory) || 0);
+    setFmtCarrossel(parseInt(answers.fmtCarrossel) || 0);
+    setFmtReels(parseInt(answers.fmtReels) || 0);
+    setFmtStoryVideo(parseInt(answers.fmtStoryVideo) || 0);
+    setSelectedArtStyle(answers.artStyle || "");
+    setSelectedVideoStyle(answers.videoStyle || "");
+    setBQtd(String((parseInt(answers.fmtFeed) || 0) + (parseInt(answers.fmtStory) || 0) + (parseInt(answers.fmtCarrossel) || 0)));
+    setBIncluirVideo((parseInt(answers.fmtReels) || 0) + (parseInt(answers.fmtStoryVideo) || 0) > 0);
+    setWizardOpen(true);
+    setWizardFlow("briefing");
+    setPendingGenerate(true);
+  };
 
   /* ── Build identity visual for AI ── */
   const getIdentidadeVisual = () => ({
@@ -1018,7 +1052,7 @@ export default function ClienteRedesSociais() {
                             <ArrowRight className="w-5 h-5 text-primary" />
                           </CardContent>
                         </Card>
-                        <Card className="cursor-pointer glass-card hover:bg-muted/30 transition-all" onClick={() => setWizardFlow("briefing")}>
+                        <Card className="cursor-pointer glass-card hover:bg-muted/30 transition-all" onClick={() => { setWizardOpen(false); setTheoChatOpen(true); }}>
                           <CardContent className="py-4 flex items-center gap-4">
                             <div className="p-2.5 rounded-xl bg-muted"><Edit3 className="w-5 h-5 text-muted-foreground" /></div>
                             <div className="flex-1">
@@ -1869,6 +1903,18 @@ export default function ClienteRedesSociais() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ChatBriefing Dialog (Theo) */}
+      <Dialog open={theoChatOpen} onOpenChange={setTheoChatOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden p-0">
+          <ChatBriefing
+            agent={AGENTS.theo}
+            steps={THEO_STEPS}
+            onComplete={handleTheoChatComplete}
+            onCancel={() => setTheoChatOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
