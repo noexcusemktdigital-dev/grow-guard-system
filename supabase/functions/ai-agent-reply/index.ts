@@ -482,6 +482,21 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     const cleanPhone = contact.phone.replace(/[\s\-\+\(\)]/g, "");
+
+    // ─── Simulate human typing delay ───
+    const delayMs = Math.min(Math.max(Math.round((cleanReply.length / 40) * 1000 + 1500), 2000), 12000);
+    try {
+      const typingUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/send-typing`;
+      await fetch(typingUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Client-Token": instance.client_token },
+        body: JSON.stringify({ phone: cleanPhone }),
+      });
+    } catch (e) {
+      console.error("Failed to send typing indicator:", e);
+    }
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+
     const zapiUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/send-text`;
     const zapiRes = await fetch(zapiUrl, {
       method: "POST",
