@@ -289,11 +289,102 @@ function PlanSubscriptionDialog({
   );
 }
 
+/* ── Inline Payment View ── */
+function InlinePaymentView({ result, billingType, onClose }: { result: any; billingType: string; onClose: () => void }) {
+  const copyPixCode = () => {
+    if (result.pix_copy_paste) {
+      navigator.clipboard.writeText(result.pix_copy_paste);
+      toast.success("Código PIX copiado!");
+    }
+  };
+
+  if (billingType === "PIX") {
+    return (
+      <div className="space-y-4 py-2 text-center">
+        <p className="text-sm text-muted-foreground">Escaneie o QR Code ou copie o código abaixo</p>
+        {result.pix_qr_code_base64 ? (
+          <img
+            src={`data:image/png;base64,${result.pix_qr_code_base64}`}
+            alt="QR Code PIX"
+            className="mx-auto w-56 h-56 rounded-lg border"
+          />
+        ) : result.pix_qr_code ? (
+          <img src={result.pix_qr_code} alt="QR Code PIX" className="mx-auto w-56 h-56 rounded-lg border" />
+        ) : (
+          <p className="text-sm text-muted-foreground">QR Code não disponível</p>
+        )}
+        {result.pix_copy_paste && (
+          <div className="space-y-2">
+            <div className="bg-muted rounded-lg p-3 text-xs font-mono break-all max-h-20 overflow-y-auto text-foreground">
+              {result.pix_copy_paste}
+            </div>
+            <Button onClick={copyPixCode} variant="outline" className="w-full">
+              Copiar código PIX
+            </Button>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-sm pt-2 border-t">
+          <span className="text-muted-foreground">Valor</span>
+          <span className="font-semibold text-foreground">R$ {result.value}</span>
+        </div>
+        <Button variant="secondary" onClick={onClose} className="w-full">Fechar</Button>
+      </div>
+    );
+  }
+
+  if (billingType === "BOLETO") {
+    return (
+      <div className="space-y-4 py-2">
+        <p className="text-sm text-muted-foreground text-center">Seu boleto foi gerado com sucesso</p>
+        {result.bank_slip_url ? (
+          <iframe src={result.bank_slip_url} className="w-full h-80 rounded-lg border" title="Boleto" />
+        ) : (
+          <p className="text-sm text-muted-foreground text-center">Boleto não disponível para visualização</p>
+        )}
+        <div className="flex items-center justify-between text-sm pt-2 border-t">
+          <span className="text-muted-foreground">Valor</span>
+          <span className="font-semibold text-foreground">R$ {result.value}</span>
+        </div>
+        <div className="flex gap-2">
+          {result.bank_slip_url && (
+            <Button variant="outline" className="flex-1" onClick={() => window.open(result.bank_slip_url, "_blank")}>
+              Abrir Boleto
+            </Button>
+          )}
+          <Button variant="secondary" onClick={onClose} className="flex-1">Fechar</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // CREDIT_CARD — hosted checkout in iframe
+  return (
+    <div className="space-y-4 py-2">
+      <p className="text-sm text-muted-foreground text-center">Complete o pagamento abaixo</p>
+      {result.invoice_url ? (
+        <iframe src={result.invoice_url} className="w-full h-96 rounded-lg border" title="Pagamento" />
+      ) : (
+        <p className="text-sm text-muted-foreground text-center">Link de pagamento não disponível</p>
+      )}
+      <Button variant="secondary" onClick={onClose} className="w-full">Fechar</Button>
+    </div>
+  );
+}
+
 /* ── Credit Pack Purchase Dialog ── */
 function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const [billingType, setBillingType] = useState("PIX");
+  const [paymentResult, setPaymentResult] = useState<any>(null);
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
+
+  const handleClose = (o: boolean) => {
+    if (!o) {
+      setPaymentResult(null);
+      setBillingType("PIX");
+    }
+    onOpenChange(o);
+  };
 
   const purchase = useMutation({
     mutationFn: async () => {
@@ -306,9 +397,8 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
     },
     onSuccess: (data) => {
       toast.success(`Cobrança de R$ ${data.value} criada!`);
-      if (data.invoice_url) window.open(data.invoice_url, "_blank");
+      setPaymentResult(data);
       qc.invalidateQueries({ queryKey: ["asaas-payments"] });
-      onOpenChange(false);
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -316,35 +406,43 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
   if (!pack) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Comprar {pack.credits.toLocaleString()} Créditos</DialogTitle>
+          <DialogTitle>
+            {paymentResult ? "Dados do Pagamento" : `Comprar ${pack.credits.toLocaleString()} Créditos`}
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-foreground">R$ {pack.price}</span>
-            <span className="text-muted-foreground">pagamento único</span>
-          </div>
-          <RadioGroup value={billingType} onValueChange={setBillingType} className="space-y-2">
-            {[
-              { value: "PIX", label: "PIX" },
-              { value: "CREDIT_CARD", label: "Cartão de Crédito" },
-              { value: "BOLETO", label: "Boleto" },
-            ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50">
-                <RadioGroupItem value={opt.value} id={`cp-${opt.value}`} />
-                <Label htmlFor={`cp-${opt.value}`} className="cursor-pointer flex-1 font-medium">{opt.label}</Label>
+        {paymentResult ? (
+          <InlinePaymentView result={paymentResult} billingType={billingType} onClose={() => handleClose(false)} />
+        ) : (
+          <>
+            <div className="space-y-4 py-2">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-foreground">R$ {pack.price}</span>
+                <span className="text-muted-foreground">pagamento único</span>
               </div>
-            ))}
-          </RadioGroup>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={() => purchase.mutate()} disabled={purchase.isPending}>
-            {purchase.isPending ? "Processando..." : "Comprar"}
-          </Button>
-        </DialogFooter>
+              <RadioGroup value={billingType} onValueChange={setBillingType} className="space-y-2">
+                {[
+                  { value: "PIX", label: "PIX" },
+                  { value: "CREDIT_CARD", label: "Cartão de Crédito" },
+                  { value: "BOLETO", label: "Boleto" },
+                ].map((opt) => (
+                  <div key={opt.value} className="flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50">
+                    <RadioGroupItem value={opt.value} id={`cp-${opt.value}`} />
+                    <Label htmlFor={`cp-${opt.value}`} className="cursor-pointer flex-1 font-medium">{opt.label}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
+              <Button onClick={() => purchase.mutate()} disabled={purchase.isPending}>
+                {purchase.isPending ? "Processando..." : "Comprar"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
