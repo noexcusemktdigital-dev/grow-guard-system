@@ -25,30 +25,47 @@ export interface AiAgent {
   updated_at: string;
 }
 
-export const agentRoleConfig: Record<AgentRole, { label: string; description: string; color: string; objectives: string[] }> = {
+export interface AgentRoleInfo {
+  label: string;
+  description: string;
+  color: string;
+  objectives: string[];
+  longDescription: string;
+  workflow: string[];
+}
+
+export const agentRoleConfig: Record<AgentRole, AgentRoleInfo> = {
   sdr: {
     label: "SDR",
     description: "Prospecção e qualificação",
     color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    objectives: ["Qualificar lead", "Coletar informações", "Agendar reunião", "Identificar decisor"],
+    objectives: ["Qualificar lead (BANT)", "Identificar decisor", "Coletar necessidade e orçamento", "Agendar reunião com vendedor", "Enviar lead qualificado com resumo"],
+    longDescription: "O agente SDR tem foco em qualificar leads com perguntas assertivas e objetivas. Ele identifica o decisor, compreende a necessidade real, avalia orçamento disponível e, quando o lead está qualificado, envia para os vendedores humanos com um resumo completo da qualificação. Nunca tenta fechar vendas — seu papel é preparar o terreno.",
+    workflow: ["Recepcionar o contato com saudação personalizada", "Fazer perguntas de qualificação (BANT: Budget, Authority, Need, Timeline)", "Classificar o lead como Quente, Morno ou Frio", "Gerar resumo da qualificação para o vendedor", "Transferir (handoff) para atendimento humano com contexto completo"],
   },
   closer: {
     label: "Closer",
     description: "Fechamento de vendas",
     color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    objectives: ["Apresentar proposta", "Negociar", "Fechar venda", "Superar objeções"],
+    objectives: ["Qualificar rapidamente", "Apresentar produto/serviço", "Enviar links de venda", "Superar objeções", "Fechar venda diretamente"],
+    longDescription: "O agente Closer combina qualificação rápida com fechamento direto. Diferente do SDR, ele não agenda reuniões — já apresenta os produtos/serviços, envia links de venda e conduz o lead até a conversão. Ideal para vendas de ticket mais baixo ou produtos com ciclo de venda curto.",
+    workflow: ["Qualificar o interesse do lead rapidamente", "Apresentar o produto/serviço ideal para a necessidade", "Enviar link de venda ou página do produto", "Responder objeções com argumentos da base de conhecimento", "Conduzir ao fechamento e confirmar a venda"],
   },
   pos_venda: {
     label: "Pós-venda",
-    description: "Acompanhamento e fidelização",
+    description: "Feedback e NPS",
     color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-    objectives: ["Verificar satisfação", "Coletar feedback", "Oferecer upsell", "Resolver dúvidas"],
+    objectives: ["Parabenizar pela compra/contratação", "Perguntar sobre a experiência", "Coletar nota NPS (1-10)", "Registrar feedback detalhado", "Identificar oportunidades de upsell"],
+    longDescription: "O agente de Pós-venda é ativado após uma venda ou contratação. Seu foco é colher feedback genuíno e medir a satisfação do cliente (NPS). Ele parabeniza, pergunta sobre a experiência, coleta uma nota de 1 a 10, registra comentários e identifica possíveis melhorias ou oportunidades de upsell.",
+    workflow: ["Parabenizar o cliente pela compra/contratação", "Perguntar sobre a experiência com o produto/serviço", "Solicitar nota NPS de 1 a 10", "Registrar comentário e feedback detalhado", "Agradecer e encerrar de forma positiva"],
   },
   suporte: {
     label: "Suporte",
     description: "Resolução de problemas",
     color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-    objectives: ["Resolver problema", "Escalar ticket", "Coletar informações do erro", "Encaminhar para setor"],
+    objectives: ["Compreender a dor real do cliente", "Diagnosticar o problema com perguntas assertivas", "Resolver usando a base de conhecimento", "Confirmar se o problema foi resolvido", "Encaminhar para especialista com diagnóstico completo"],
+    longDescription: "O agente de Suporte foca em compreender profundamente a dor do cliente antes de tentar resolver. Ele faz perguntas diagnósticas assertivas, busca soluções na base de conhecimento, verifica se a resolução funcionou e, caso não consiga resolver, transfere para um humano especialista já com o problema completamente identificado e documentado.",
+    workflow: ["Acolher o cliente e demonstrar empatia", "Fazer perguntas diagnósticas para entender o problema real", "Buscar solução na base de conhecimento", "Apresentar solução e confirmar se resolveu", "Se não resolveu, transferir para especialista com resumo do diagnóstico"],
   },
 };
 

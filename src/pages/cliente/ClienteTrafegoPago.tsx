@@ -1,82 +1,21 @@
 import { useState } from "react";
 import {
-  DollarSign, Save, Edit3, Check, Sparkles, BookOpen, Target,
-  Users, Globe, BarChart3, Zap, Eye, MousePointer, TrendingUp,
-  CheckCircle2, PlayCircle, ExternalLink, ChevronRight,
+  DollarSign, Sparkles, Target, Users, Globe, BarChart3, Zap,
+  Eye, MousePointer, TrendingUp, PlayCircle, ExternalLink,
+  ChevronDown, ChevronUp, Clock, Loader2, History, CheckCircle2,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
-
-/* ── Knowledge Base ── */
-interface KBField {
-  key: string;
-  label: string;
-  type: "text" | "textarea" | "checklist";
-  value: string;
-}
-
-const initialFields: KBField[] = [
-  { key: "publico", label: "Público-alvo Detalhado (idade, localização, interesses)", type: "textarea", value: "Empreendedores 30-55 anos, São Paulo e região, interessados em franquias, gestão empresarial, marketing digital" },
-  { key: "orcamento", label: "Orçamento Mensal Disponível (R$)", type: "text", value: "5.000" },
-  { key: "plataformas", label: "Plataformas de Interesse", type: "text", value: "Google, Meta, LinkedIn" },
-  { key: "historico", label: "Histórico de Campanhas Anteriores", type: "textarea", value: "Meta Ads: 3 campanhas de leads com CPA médio de R$ 12\nGoogle Ads: Search Brand com CPC de R$ 1.50" },
-  { key: "lps", label: "Páginas de Destino (URLs)", type: "textarea", value: "https://noexcuse.com.br/demo\nhttps://noexcuse.com.br/promo-marco" },
-  { key: "pixels", label: "Pixel/Tags Instalados?", type: "text", value: "Meta Pixel: Sim | Google Tag: Sim | LinkedIn Insight: Não" },
-  { key: "objetivos", label: "Objetivos de Negócio", type: "text", value: "Gerar 200 leads/mês, CPA máximo R$ 15" },
-];
-
-/* ── Platform campaigns ── */
-interface CampaignSuggestion {
-  platform: "Google" | "Meta" | "TikTok" | "LinkedIn";
-  name: string;
-  objective: string;
-  audience: string;
-  budget: string;
-  copy: string;
-  creative: string;
-  kpis: { reach: string; clicks: string; cpc: string };
-}
-
-const mockCampaigns: CampaignSuggestion[] = [
-  {
-    platform: "Meta", name: "Leads — Franquias Interessados", objective: "Geração de Leads",
-    audience: "Empreendedores 30-55 anos, interesse em franquias, gestão empresarial",
-    budget: "R$ 2.000/mês", copy: "Triplique os resultados da sua franquia com IA. Agende uma demo gratuita!",
-    creative: "Carrossel com 3 slides: Problema → Solução → CTA",
-    kpis: { reach: "45.000", clicks: "1.350", cpc: "R$ 1.48" },
-  },
-  {
-    platform: "Google", name: "Search — CRM Franquias", objective: "Conversão",
-    audience: "Pessoas buscando 'crm franquia', 'gestão franquia', 'marketing franquia'",
-    budget: "R$ 1.500/mês", copy: "CRM completo para franquias. Teste grátis por 14 dias.",
-    creative: "Anúncio de texto responsivo + extensões de site",
-    kpis: { reach: "12.000", clicks: "720", cpc: "R$ 2.08" },
-  },
-  {
-    platform: "LinkedIn", name: "Awareness — Decisores", objective: "Reconhecimento de Marca",
-    audience: "CEOs, Diretores e Gerentes de Franquias, empresas 50+ funcionários",
-    budget: "R$ 1.000/mês", copy: "A gestão da sua rede de franquias precisa de IA. Descubra como.",
-    creative: "Single Image Ad + Document Ad com whitepaper",
-    kpis: { reach: "25.000", clicks: "500", cpc: "R$ 2.00" },
-  },
-  {
-    platform: "TikTok", name: "Awareness — Jovens Empreendedores", objective: "Tráfego",
-    audience: "Empreendedores 25-40 anos, interesse em negócios e tecnologia",
-    budget: "R$ 500/mês", copy: "3 erros que todo franqueado comete (e como evitar). Link na bio!",
-    creative: "Vídeo curto 15s — formato talking head + texto na tela",
-    kpis: { reach: "80.000", clicks: "2.400", cpc: "R$ 0.21" },
-  },
-];
+import { useActiveTrafficStrategy, useTrafficStrategyHistory, useGenerateTrafficStrategy } from "@/hooks/useTrafficStrategy";
+import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const platformIcons: Record<string, React.ReactNode> = {
   Google: <Globe className="w-5 h-5" />,
@@ -92,193 +31,271 @@ const platformColors: Record<string, string> = {
   LinkedIn: "bg-sky-500/10 text-sky-500 border-sky-500/20",
 };
 
-/* ── Tutorials ── */
-interface Tutorial {
-  platform: string;
-  steps: string[];
-  tips: string[];
-  checklist: string[];
-}
+const platformLinks: Record<string, string> = {
+  Google: "https://ads.google.com",
+  Meta: "https://business.facebook.com/adsmanager",
+  TikTok: "https://ads.tiktok.com",
+  LinkedIn: "https://www.linkedin.com/campaignmanager",
+};
 
-const tutorials: Tutorial[] = [
+const tutorials = [
   {
     platform: "Meta",
     steps: ["Acesse o Gerenciador de Anúncios do Meta", "Clique em 'Criar' para nova campanha", "Selecione o objetivo (Leads, Tráfego, Conversão)", "Defina o público-alvo com interesses e comportamentos", "Configure o orçamento diário ou vitalício", "Crie o anúncio (imagem/vídeo + copy)", "Revise e publique a campanha"],
-    tips: ["Use Lookalike de clientes existentes para melhor performance", "Teste pelo menos 3 criativos diferentes", "Comece com orçamento baixo e escale o que funciona"],
+    tips: ["Use Lookalike de clientes existentes", "Teste pelo menos 3 criativos diferentes", "Comece com orçamento baixo e escale"],
     checklist: ["Pixel Meta instalado no site", "Evento de conversão configurado", "Público-alvo definido", "Criativos aprovados", "Landing page testada"],
   },
   {
     platform: "Google",
-    steps: ["Acesse o Google Ads (ads.google.com)", "Crie uma nova campanha Search", "Defina as palavras-chave alvo", "Escreva os anúncios responsivos (títulos + descrições)", "Configure extensões (sitelinks, callouts)", "Defina o orçamento e lances", "Ative a campanha e monitore"],
-    tips: ["Use correspondência de frase para palavras-chave", "Adicione palavras-chave negativas desde o início", "Configure o acompanhamento de conversões"],
+    steps: ["Acesse o Google Ads (ads.google.com)", "Crie uma nova campanha Search", "Defina as palavras-chave alvo", "Escreva os anúncios responsivos", "Configure extensões (sitelinks, callouts)", "Defina o orçamento e lances", "Ative a campanha e monitore"],
+    tips: ["Use correspondência de frase para palavras-chave", "Adicione palavras-chave negativas desde o início", "Configure acompanhamento de conversões"],
     checklist: ["Google Tag Manager instalado", "Conversão configurada no GA4", "Lista de palavras-chave negativas", "Anúncios responsivos criados", "Extensões configuradas"],
   },
   {
     platform: "TikTok",
-    steps: ["Crie uma conta no TikTok Ads Manager", "Instale o pixel do TikTok no seu site", "Crie uma campanha com objetivo de Tráfego ou Conversão", "Defina a segmentação por idade, interesses e comportamento", "Faça upload do vídeo criativo (9:16, até 60s)", "Configure o orçamento e período", "Publique e acompanhe os resultados"],
-    tips: ["Use vídeos nativos e autênticos (não polidos demais)", "Os primeiros 3 segundos são cruciais — comece com impacto", "Teste diferentes hooks e CTAs"],
-    checklist: ["Pixel TikTok instalado", "Vídeo no formato 9:16", "CTA claro no vídeo e descrição", "Landing page mobile-first"],
+    steps: ["Crie uma conta no TikTok Ads Manager", "Instale o pixel do TikTok no seu site", "Crie uma campanha com objetivo de Tráfego ou Conversão", "Defina a segmentação", "Faça upload do vídeo criativo (9:16, até 60s)", "Configure o orçamento e período", "Publique e acompanhe"],
+    tips: ["Use vídeos nativos e autênticos", "Os primeiros 3 segundos são cruciais", "Teste diferentes hooks e CTAs"],
+    checklist: ["Pixel TikTok instalado", "Vídeo no formato 9:16", "CTA claro no vídeo", "Landing page mobile-first"],
   },
   {
     platform: "LinkedIn",
-    steps: ["Acesse o Campaign Manager do LinkedIn", "Crie uma nova campanha com objetivo de Awareness ou Leads", "Segmente por cargo, setor, tamanho da empresa", "Escolha o formato (Single Image, Carousel, Document)", "Escreva o copy profissional e objetivo", "Defina orçamento e lances", "Publique e acompanhe métricas"],
-    tips: ["Conteúdo educativo performa melhor que comercial", "Use Document Ads para distribuir whitepapers", "Segmente decisores (C-level, Diretores)"],
+    steps: ["Acesse o Campaign Manager do LinkedIn", "Crie uma campanha com objetivo de Awareness ou Leads", "Segmente por cargo, setor, tamanho da empresa", "Escolha o formato (Single Image, Carousel, Document)", "Escreva o copy profissional", "Defina orçamento e lances", "Publique e acompanhe"],
+    tips: ["Conteúdo educativo performa melhor que comercial", "Use Document Ads para whitepapers", "Segmente decisores (C-level, Diretores)"],
     checklist: ["LinkedIn Insight Tag instalado", "Formulário de Lead Gen configurado", "Criativo profissional aprovado", "Segmentação por cargo definida"],
   },
 ];
 
 export default function ClienteTrafegoPago() {
-  const [fields, setFields] = useState(initialFields);
-  const [isEditing, setIsEditing] = useState(false);
+  const { data: activeStrategy, isLoading: loadingStrategy } = useActiveTrafficStrategy();
+  const { data: history, isLoading: loadingHistory } = useTrafficStrategyHistory();
+  const { data: marketingStrategy } = useActiveStrategy();
+  const generateMutation = useGenerateTrafficStrategy();
+  const [activeTab, setActiveTab] = useState("estrategia");
+  const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
-  // Briefing
-  const [objetivo, setObjetivo] = useState("Gerar 200 leads qualificados");
-  const [promocoes, setPromocoes] = useState("20% off plano anual");
-  const [orcamento, setOrcamento] = useState("5.000");
+  const togglePlatform = (p: string) => setExpandedPlatforms((prev) => ({ ...prev, [p]: !prev[p] }));
+  const toggleCheck = (key: string) => setCheckedItems((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const filledCount = fields.filter(f => f.value.trim()).length;
-
-  const updateField = (key: string, value: string) => {
-    setFields(prev => prev.map(f => f.key === key ? { ...f, value } : f));
+  const handleGenerate = () => {
+    if (!marketingStrategy) {
+      toast({ title: "Estratégia de marketing necessária", description: "Gere primeiro sua estratégia de marketing para basear o tráfego pago.", variant: "destructive" });
+      return;
+    }
+    generateMutation.mutate(undefined, {
+      onSuccess: () => toast({ title: "Estratégia gerada!", description: "Sua estratégia de tráfego pago foi criada com sucesso." }),
+      onError: (err: any) => {
+        if (err.code === "INSUFFICIENT_CREDITS") {
+          toast({ title: "Créditos insuficientes", description: "Você precisa de 200 créditos para gerar a estratégia.", variant: "destructive" });
+        } else {
+          toast({ title: "Erro ao gerar estratégia", description: err.message, variant: "destructive" });
+        }
+      },
+    });
   };
+
+  const platforms = (activeStrategy?.platforms || []) as any[];
 
   return (
     <div className="w-full space-y-6">
       <PageHeader
         title="Tráfego Pago"
-        subtitle="Base de conhecimento, campanhas e tutoriais por plataforma"
+        subtitle="Estratégia de campanhas gerada por IA + tutoriais por plataforma"
         icon={<DollarSign className="w-5 h-5 text-primary" />}
       />
 
-      <Tabs defaultValue="base">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="base" className="text-xs gap-1.5"><BookOpen className="w-3.5 h-3.5" /> Base de Conhecimento</TabsTrigger>
-          <TabsTrigger value="campanhas" className="text-xs gap-1.5"><Zap className="w-3.5 h-3.5" /> Campanhas</TabsTrigger>
+          <TabsTrigger value="estrategia" className="text-xs gap-1.5"><Target className="w-3.5 h-3.5" /> Estratégia</TabsTrigger>
           <TabsTrigger value="tutoriais" className="text-xs gap-1.5"><PlayCircle className="w-3.5 h-3.5" /> Tutoriais</TabsTrigger>
+          <TabsTrigger value="historico" className="text-xs gap-1.5"><History className="w-3.5 h-3.5" /> Histórico</TabsTrigger>
         </TabsList>
 
-        {/* ═══ BASE ═══ */}
-        <TabsContent value="base" className="space-y-5 mt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">{filledCount}/{fields.length} campos preenchidos</Badge>
-            </div>
-            <Button
-              variant={isEditing ? "default" : "outline"}
-              size="sm"
-              className="text-xs gap-1"
-              onClick={() => {
-                if (isEditing) toast({ title: "Base salva!" });
-                setIsEditing(!isEditing);
-              }}
-            >
-              {isEditing ? <><Check className="w-3.5 h-3.5" /> Salvar</> : <><Edit3 className="w-3.5 h-3.5" /> Editar Base</>}
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            {fields.map(f => (
-              <Card key={f.key} className="glass-card">
-                <CardContent className="py-4">
-                  <Label className="text-xs font-medium">{f.label}</Label>
-                  {isEditing ? (
-                    f.type === "textarea" ? (
-                      <Textarea value={f.value} onChange={e => updateField(f.key, e.target.value)} rows={3} className="mt-1.5" />
-                    ) : (
-                      <Input value={f.value} onChange={e => updateField(f.key, e.target.value)} className="mt-1.5" />
-                    )
-                  ) : (
-                    <p className="text-sm mt-1.5 whitespace-pre-line">{f.value || <span className="text-muted-foreground italic">Não preenchido</span>}</p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* ═══ CAMPANHAS ═══ */}
-        <TabsContent value="campanhas" className="space-y-5 mt-4">
-          {/* Briefing */}
-          <Card className="glass-card border-primary/20 bg-primary/5">
+        {/* ═══ ESTRATÉGIA ═══ */}
+        <TabsContent value="estrategia" className="space-y-5 mt-4">
+          <Card className="border-primary/20 bg-primary/5">
             <CardContent className="py-5">
-              <p className="section-label mb-3">BRIEFING MENSAL</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="space-y-2"><Label className="text-xs">Objetivo do Mês</Label><Input value={objetivo} onChange={e => setObjetivo(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="text-xs">Promoções</Label><Input value={promocoes} onChange={e => setPromocoes(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="text-xs">Orçamento Total (R$)</Label><Input value={orcamento} onChange={e => setOrcamento(e.target.value)} /></div>
+              <div className="flex items-start gap-3 mb-4">
+                <Sparkles className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">Estratégia de Tráfego com IA</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Gera estratégia completa por plataforma baseada nas suas metas, estratégia de marketing, conteúdos e site.
+                    <Badge variant="outline" className="ml-2 text-[9px]">200 créditos</Badge>
+                  </p>
+                </div>
               </div>
-              <Button className="w-full gap-2" onClick={() => toast({ title: "Campanhas geradas!", description: "4 estruturas de campanha criadas para Google, Meta, TikTok e LinkedIn." })}>
-                <Sparkles className="w-4 h-4" /> Gerar Estrutura de Campanhas
+              <Button
+                className="w-full gap-2"
+                onClick={handleGenerate}
+                disabled={generateMutation.isPending}
+              >
+                {generateMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Gerando estratégia...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> {activeStrategy ? "Regerar Estratégia" : "Gerar Estratégia de Tráfego"}</>
+                )}
               </Button>
+              {!marketingStrategy && (
+                <p className="text-xs text-destructive mt-2 text-center">⚠️ Gere sua Estratégia de Marketing primeiro para resultados melhores.</p>
+              )}
             </CardContent>
           </Card>
 
-          {/* Campaign cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {mockCampaigns.map(c => (
-              <Card key={c.name} className={`glass-card hover-lift border-l-4 ${platformColors[c.platform].split(" ").find(s => s.startsWith("border-")) || ""}`}>
-                <CardContent className="py-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`p-2 rounded-xl ${platformColors[c.platform]}`}>
-                        {platformIcons[c.platform]}
+          {loadingStrategy ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i}><CardContent className="p-5 h-32 animate-pulse bg-muted/20" /></Card>
+              ))}
+            </div>
+          ) : platforms.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {platforms.map((p: any) => {
+                const isOpen = expandedPlatforms[p.platform] ?? false;
+                return (
+                  <Card key={p.platform} className={`border-l-4 ${platformColors[p.platform]?.split(" ").find((s: string) => s.startsWith("border-")) || ""}`}>
+                    <CardContent className="py-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`p-2 rounded-xl ${platformColors[p.platform]}`}>
+                            {platformIcons[p.platform]}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold">{p.platform} Ads</p>
+                            <Badge className={`text-[9px] mt-0.5 ${platformColors[p.platform]}`}>{p.objective}</Badge>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold">{c.name}</p>
-                        <Badge className={`text-[9px] mt-0.5 ${platformColors[c.platform]}`}>{c.platform}</Badge>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-[9px]">{c.objective}</Badge>
-                  </div>
 
-                  <div className="space-y-2">
-                    <div className="p-3 rounded-xl bg-muted/30 border">
-                      <p className="text-[10px] font-medium text-muted-foreground">PÚBLICO</p>
-                      <p className="text-xs mt-1">{c.audience}</p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-muted/30 border">
-                      <p className="text-[10px] font-medium text-muted-foreground">COPY DO ANÚNCIO</p>
-                      <p className="text-xs mt-1 italic">"{c.copy}"</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
                       <div className="p-3 rounded-xl bg-muted/30 border">
-                        <p className="text-[10px] font-medium text-muted-foreground">ORÇAMENTO</p>
-                        <p className="text-sm font-bold mt-1">{c.budget}</p>
+                        <p className="text-[10px] font-medium text-muted-foreground">PÚBLICO-ALVO</p>
+                        <p className="text-xs mt-1">{p.audience}</p>
                       </div>
-                      <div className="p-3 rounded-xl bg-muted/30 border">
-                        <p className="text-[10px] font-medium text-muted-foreground">CRIATIVO</p>
-                        <p className="text-xs mt-1">{c.creative}</p>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Estimated KPIs */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="text-center p-2 rounded-lg bg-muted/20">
-                      <Eye className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-1" />
-                      <p className="text-xs font-bold">{c.kpis.reach}</p>
-                      <p className="text-[9px] text-muted-foreground">Alcance</p>
-                    </div>
-                    <div className="text-center p-2 rounded-lg bg-muted/20">
-                      <MousePointer className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-1" />
-                      <p className="text-xs font-bold">{c.kpis.clicks}</p>
-                      <p className="text-[9px] text-muted-foreground">Cliques</p>
-                    </div>
-                    <div className="text-center p-2 rounded-lg bg-muted/20">
-                      <TrendingUp className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-1" />
-                      <p className="text-xs font-bold">{c.kpis.cpc}</p>
-                      <p className="text-[9px] text-muted-foreground">CPC Est.</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="p-3 rounded-xl bg-muted/30 border">
+                          <p className="text-[10px] font-medium text-muted-foreground">ORÇAMENTO SUGERIDO</p>
+                          <p className="text-sm font-bold mt-1">{p.budget_suggestion}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-muted/30 border">
+                          <p className="text-[10px] font-medium text-muted-foreground">CRIATIVOS</p>
+                          <p className="text-xs mt-1">{p.creative_formats}</p>
+                        </div>
+                      </div>
+
+                      {/* KPIs */}
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[
+                          { icon: Eye, label: "Alcance", value: p.kpis?.estimated_reach },
+                          { icon: MousePointer, label: "Cliques", value: p.kpis?.estimated_clicks },
+                          { icon: TrendingUp, label: "CPC", value: p.kpis?.estimated_cpc },
+                          { icon: DollarSign, label: "CPL", value: p.kpis?.estimated_cpl },
+                        ].map((kpi) => (
+                          <div key={kpi.label} className="text-center p-2 rounded-lg bg-muted/20">
+                            <kpi.icon className="w-3 h-3 mx-auto text-muted-foreground mb-0.5" />
+                            <p className="text-[10px] font-bold">{kpi.value || "—"}</p>
+                            <p className="text-[8px] text-muted-foreground">{kpi.label}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <Collapsible open={isOpen} onOpenChange={() => togglePlatform(p.platform)}>
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-full text-xs gap-1.5">
+                            {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            {isOpen ? "Menos detalhes" : "Mais detalhes"}
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-3 pt-2">
+                          {/* Ad copies */}
+                          {p.ad_copies?.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Copies de Anúncio</p>
+                              {p.ad_copies.map((copy: string, i: number) => (
+                                <div key={i} className="p-2.5 rounded-lg bg-muted/20 border mb-1.5">
+                                  <p className="text-xs italic">"{copy}"</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Keywords (Google) */}
+                          {p.keywords?.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Palavras-chave</p>
+                              <div className="flex flex-wrap gap-1">
+                                {p.keywords.map((kw: string, i: number) => (
+                                  <Badge key={i} variant="outline" className="text-[9px]">{kw}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Interests */}
+                          {p.interests?.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Interesses / Comportamentos</p>
+                              <div className="flex flex-wrap gap-1">
+                                {p.interests.map((int: string, i: number) => (
+                                  <Badge key={i} variant="outline" className="text-[9px]">{int}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Tips */}
+                          {p.tips?.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Dicas</p>
+                              {p.tips.map((tip: string, i: number) => (
+                                <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10 mb-1">
+                                  <Sparkles className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                                  <p className="text-[11px]">{tip}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          className="flex-1 text-xs gap-1.5"
+                          onClick={() => {
+                            setActiveTab("tutoriais");
+                          }}
+                        >
+                          <Zap className="w-3.5 h-3.5" /> Criar Campanha
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs gap-1.5"
+                          onClick={() => window.open(platformLinks[p.platform], "_blank")}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" /> Abrir {p.platform}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-16 text-center">
+                <Target className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm font-medium">Nenhuma estratégia gerada</p>
+                <p className="text-xs text-muted-foreground mt-1">Clique em "Gerar Estratégia de Tráfego" para criar sua primeira estratégia com IA.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* ═══ TUTORIAIS ═══ */}
         <TabsContent value="tutoriais" className="space-y-5 mt-4">
-          <Card className="glass-card border-primary/20 bg-primary/5">
+          <Card className="border-primary/20 bg-primary/5">
             <CardContent className="py-4 flex items-start gap-3">
               <PlayCircle className="w-5 h-5 text-primary mt-0.5 shrink-0" />
               <div>
@@ -288,56 +305,106 @@ export default function ClienteTrafegoPago() {
             </CardContent>
           </Card>
 
-          {tutorials.map(t => (
-            <Card key={t.platform} className="glass-card">
+          {tutorials.map((t) => (
+            <Card key={t.platform}>
               <CardContent className="py-5">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className={`p-2.5 rounded-xl ${platformColors[t.platform]}`}>
-                    {platformIcons[t.platform]}
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl ${platformColors[t.platform]}`}>
+                      {platformIcons[t.platform]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">Como Criar Campanhas no {t.platform}</p>
+                      <p className="text-[10px] text-muted-foreground">{t.steps.length} passos · {t.checklist.length} itens no checklist</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold">Como Criar Campanhas no {t.platform}</p>
-                    <p className="text-[10px] text-muted-foreground">{t.steps.length} passos · {t.checklist.length} itens no checklist</p>
-                  </div>
+                  <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => window.open(platformLinks[t.platform], "_blank")}>
+                    <ExternalLink className="w-3.5 h-3.5" /> Abrir {t.platform}
+                  </Button>
                 </div>
 
-                {/* Steps */}
-                <p className="section-label mb-3">PASSO A PASSO</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">PASSO A PASSO</p>
                 <div className="space-y-2 mb-5">
                   {t.steps.map((step, i) => (
                     <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border">
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">
-                        {i + 1}
-                      </div>
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">{i + 1}</div>
                       <p className="text-sm">{step}</p>
                     </div>
                   ))}
                 </div>
 
-                {/* Tips */}
-                <p className="section-label mb-3">DICAS</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">DICAS</p>
                 <div className="space-y-2 mb-5">
                   {t.tips.map((tip, i) => (
-                    <div key={i} className="flex items-start gap-2 p-3 rounded-xl bg-chart-blue/5 border border-chart-blue/10">
-                      <Sparkles className="w-3.5 h-3.5 text-chart-blue mt-0.5 shrink-0" />
+                    <div key={i} className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                      <Sparkles className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                       <p className="text-xs">{tip}</p>
                     </div>
                   ))}
                 </div>
 
-                {/* Checklist */}
-                <p className="section-label mb-3">CHECKLIST DE CONFIGURAÇÃO</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">CHECKLIST</p>
                 <div className="space-y-2">
-                  {t.checklist.map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/30 transition-colors">
-                      <Checkbox id={`${t.platform}-${i}`} />
-                      <Label htmlFor={`${t.platform}-${i}`} className="text-xs cursor-pointer">{item}</Label>
-                    </div>
-                  ))}
+                  {t.checklist.map((item, i) => {
+                    const key = `${t.platform}-${i}`;
+                    return (
+                      <div key={key} className="flex items-center gap-2.5 p-2.5 rounded-lg border bg-muted/10">
+                        <Checkbox
+                          checked={checkedItems[key] ?? false}
+                          onCheckedChange={() => toggleCheck(key)}
+                        />
+                        <span className={`text-xs ${checkedItems[key] ? "line-through text-muted-foreground" : ""}`}>{item}</span>
+                        {checkedItems[key] && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 ml-auto" />}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
           ))}
+        </TabsContent>
+
+        {/* ═══ HISTÓRICO ═══ */}
+        <TabsContent value="historico" className="space-y-4 mt-4">
+          {loadingHistory ? (
+            <Card><CardContent className="p-5 h-20 animate-pulse bg-muted/20" /></Card>
+          ) : history && history.length > 0 ? (
+            history.map((h) => (
+              <Card key={h.id}>
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <p className="text-sm font-medium">
+                        Estratégia de {format(new Date(h.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-[9px]">
+                      {(h.platforms as any[])?.length || 0} plataformas
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {(h.platforms as any[])?.map((p: any) => (
+                      <Badge key={p.platform} className={`text-[9px] ${platformColors[p.platform]}`}>
+                        {p.platform} — {p.objective}
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2">
+                    Baseado em: {(h.source_data as any)?.org_name || "—"} · {(h.source_data as any)?.contents_count || 0} conteúdos · {(h.source_data as any)?.sites_count || 0} sites
+                  </p>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <History className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm font-medium">Nenhum histórico</p>
+                <p className="text-xs text-muted-foreground mt-1">Estratégias anteriores aparecerão aqui.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

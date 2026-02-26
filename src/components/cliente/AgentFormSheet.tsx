@@ -390,6 +390,36 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               </div>
             </div>
 
+            {/* ─── Role Explainer Card ─── */}
+            {form.role && (
+              <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge className={`text-xs ${roleInfo.color}`}>{roleInfo.label}</Badge>
+                  <span className="text-xs font-medium">{roleInfo.description}</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{roleInfo.longDescription}</p>
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Fluxo de trabalho</p>
+                  <div className="space-y-1.5">
+                    {roleInfo.workflow.map((step, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0 mt-0.5">{i + 1}</div>
+                        <p className="text-xs">{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Objetivos padrão</p>
+                  <div className="flex flex-wrap gap-1">
+                    {roleInfo.objectives.map((obj) => (
+                      <Badge key={obj} variant="outline" className="text-[9px]">{obj}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Número de WhatsApp</Label>
               {whatsappInstances && whatsappInstances.length > 0 ? (

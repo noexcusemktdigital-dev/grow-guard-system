@@ -1027,6 +1027,51 @@ export type Database = {
           },
         ]
       }
+      client_nps_responses: {
+        Row: {
+          agent_id: string | null
+          comment: string | null
+          contact_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          score: number
+        }
+        Insert: {
+          agent_id?: string | null
+          comment?: string | null
+          contact_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          score: number
+        }
+        Update: {
+          agent_id?: string | null
+          comment?: string | null
+          contact_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_nps_responses_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "client_ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_nps_responses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_scripts: {
         Row: {
           category: string | null
@@ -3774,6 +3819,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "support_tickets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      traffic_strategies: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          organization_id: string
+          platforms: Json
+          source_data: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          organization_id: string
+          platforms?: Json
+          source_data?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          organization_id?: string
+          platforms?: Json
+          source_data?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traffic_strategies_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
