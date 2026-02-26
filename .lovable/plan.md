@@ -1,110 +1,49 @@
 
 
-## Melhorias no Plano de Vendas, Relatorios, Chat e CRM
+## Corrigir audio nas Conversas
 
-### 1. Plano de Vendas: icone de duvida em cada pergunta
+### Problema raiz
 
-**Arquivo**: `src/pages/cliente/ClientePlanoVendas.tsx`
+O Z-API envia mensagens de voz (notas de voz / push-to-talk) com o campo `ptt` no payload, nao `audio`. O webhook atual so verifica `body.audio`, entao mensagens de voz sao salvas como `type: "text"` sem conteudo e sem media_url — ficam invisiveis.
 
-- Adicionar um campo `helpText` em cada pergunta do array `salesSections`
-- Na renderizacao de cada pergunta, exibir um icone `HelpCircle` ao lado do texto da pergunta
-- Ao clicar/hover no icone, exibir um `Tooltip` com a explicacao contextual
-- Exemplo: "Qual o segmento da sua empresa?" teria helpText "Identifique o setor principal de atuacao para personalizar as recomendacoes"
-- O icone ja esta importado (linha 8: `HelpCircle`)
+### Correcoes
 
----
+**1. Webhook: `supabase/functions/whatsapp-webhook/index.ts`**
 
-### 2. Relatorios mais completos
+Linha 97 — adicionar deteccao de `ptt` (push-to-talk / nota de voz):
 
-**Arquivo**: `src/pages/cliente/ClienteDashboard.tsx`
-
-Adicionar metricas e graficos adicionais baseados nos dados ja disponiveis:
-
-**Aba CRM:**
-- Leads perdidos (count + motivos se disponiveis)
-- Tempo medio de fechamento (diferenca entre `created_at` e `won_at`)
-- Leads criados por periodo (grafico de linha com agrupamento por semana/mes)
-- Valor total no pipeline (leads ativos)
-- Taxa de perda (`lost / total`)
-
-**Aba Chat:**
-- Tempo medio de resposta (diferenca entre mensagem inbound e proxima outbound)
-- Mensagens por dia (grafico de barras com ultimos 7/30 dias)
-- Distribuicao por tipo de atendimento (IA vs humano)
-- Contatos sem resposta (ultima msg inbound sem outbound)
-
-**Aba Agentes IA:**
-- Conversas por agente (grafico de barras)
-- Taxa de handoff (quantas conversas foram transferidas para humano)
-- Media de tokens por conversa
-
----
-
-### 3. Chat: botao "Criar Lead" com destaque ao lado de "Assumir"
-
-**Arquivo**: `src/components/cliente/ChatConversation.tsx`
-
-- Mover o botao "Criar Lead" do painel colapsavel (linhas 364-367) para o header principal (linhas 285-331)
-- Posicionar ao lado do botao "Assumir", mantendo visibilidade constante
-- Usar `variant="default"` com cor destaque (verde ou primary) em vez de `variant="outline"`
-- Se ja for lead vinculado, mostrar badge com status do lead no header (nome + etapa) em vez do botao
-
----
-
-### 4. Chat: suporte a audio e regras IA/Humano
-
-**4a. Audio**: O `ChatMessageBubble` ja renderiza placeholder para audio (linha 49: `message.type === "audio"` mostra icone Music). Para ouvir audio:
-- Quando `message.type === "audio"` e `message.media_url` existe, renderizar um `<audio>` player inline em vez do bloco placeholder
-- Usar `<audio controls src={message.media_url} className="w-48" />` com estilo compacto
-
-**4b. Regras IA vs Humano**: Ja implementado - a regra e:
-- Campo `attending_mode` no contato: `"ai"` = IA atende, `"human"` = humano atende
-- Botao "Assumir" muda para modo humano; botao "IA" reativa o agente
-- Limites do agente: max 10 mensagens por conversa, timeout de 48h de inatividade, horarios programados
-- Se a IA nao conseguir resolver, ela solicita handoff automatico
-
-**4c. Status do lead no chat**: Se o contato ja esta vinculado a um lead (`crm_lead_id`):
-- Exibir badge com etapa do lead diretamente no header do chat (ao lado do nome)
-- Ja existe parcialmente (linha 297), mas esta com `variant="outline"` discreto
-- Melhorar para badge colorido com a cor da etapa do funil
-
-**Arquivo**: `src/components/cliente/ChatMessageBubble.tsx`
-- Substituir placeholder de audio por player `<audio>` real
-
-**Arquivo**: `src/components/cliente/ChatConversation.tsx`
-- Mover "Criar Lead" para header
-- Melhorar badge de status do lead
-
----
-
-### 5. CRM Kanban: temperatura nos cards + checkbox reposicionado
-
-**Arquivo**: `src/pages/cliente/ClienteCRM.tsx`
-
-**5a. Temperatura nos cards:**
-- O banco `crm_leads` nao tem campo de temperatura. Sera necessario verificar se existe ou adicionar
-- Se nao existir, adicionar via migracao: `ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS temperature text DEFAULT 'Morno'`
-- No `DraggableLeadCard`, adicionar badges clicaveis de temperatura (Frio=azul, Morno=amarelo, Quente=vermelho) com icones (termometro ou circulos coloridos)
-- Ao clicar, alterna entre frio/morno/quente e faz update no banco
-
-**5b. Checkbox reposicionado:**
-- Atualmente o checkbox esta posicionado `absolute top-2 left-2` (linha 632), sobrepondo o icone de drag `GripVertical` que esta `-ml-1` (linha 93)
-- Mover o checkbox para `absolute top-2 right-2` ou para o canto inferior-direito do card
-- Alternativa: mover para a direita do nome, antes do menu `MoreHorizontal`
-
----
-
-### Migracao SQL necessaria
-
-```text
-ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS temperature text DEFAULT 'Morno';
+```typescript
+const messageType = body.image ? "image" 
+  : (body.audio || body.ptt) ? "audio" 
+  : body.video ? "video" 
+  : body.document ? "document" 
+  : body.sticker ? "sticker"
+  : "text";
 ```
 
-### Ordem de implementacao
+Linha 98 — extrair URL do ptt:
 
-1. Migracao SQL (temperatura)
-2. CRM Kanban: temperatura + checkbox (bug visual critico)
-3. Chat: audio player + "Criar Lead" no header + status do lead
-4. Plano de Vendas: helpText nas perguntas
-5. Relatorios: metricas adicionais
+```typescript
+const mediaUrl = body.image?.imageUrl 
+  || body.audio?.audioUrl 
+  || body.ptt?.audioUrl || body.ptt?.pttUrl
+  || body.video?.videoUrl 
+  || body.document?.documentUrl 
+  || null;
+```
+
+**2. ChatMessageBubble: `src/components/cliente/ChatMessageBubble.tsx`**
+
+- Quando `message.type === "audio"` e `media_url` nao existe: mostrar um indicador visual "Audio nao disponivel" em vez de nada
+- Estilizar o player de audio com visual WhatsApp (fundo arredondado, icone de microfone)
+- Tambem tratar mensagens antigas que ja foram salvas sem media_url
+
+**3. Mensagens existentes sem media_url**
+
+Para mensagens de audio ja salvas incorretamente (sem `media_url`), verificar se o `metadata` contem `ptt.audioUrl` ou `ptt.pttUrl` e usar como fallback no componente.
+
+### Arquivos alterados
+
+1. `supabase/functions/whatsapp-webhook/index.ts` — adicionar deteccao ptt
+2. `src/components/cliente/ChatMessageBubble.tsx` — fallback de audio via metadata + visual melhorado
 
