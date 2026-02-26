@@ -1,109 +1,175 @@
 
 
-## Plano: Estilos de Arte Claros + Prompts Especializados
+## Plano Atualizado: Briefing Conversacional com Agentes Especialistas
 
-Em vez de usar o motor Canvas para compor templates, vamos melhorar drasticamente os estilos de arte e os prompts para que a IA gere diretamente o resultado certo — seja uma arte gráfica estilo postagem ou uma imagem fotográfica.
+Incluir a **Estrategia de Marketing** e o **Plano de Vendas** no formato conversacional, alem dos modulos ja planejados (Conteudos, Artes, Sites, Trafego). Toda a logica de scoring, insights, projecoes e plano de acao permanece 100% intacta.
 
 ---
 
-### Problema
+### Modulos Cobertos (Total: 6)
 
-Os 5 estilos atuais (`foto_texto`, `composicao`, `mockup`, `quote`, `before_after`) tem descricoes curtas e prompts genericos. O cliente nao entende bem a diferenca e a IA nao recebe instrucoes suficientes para gerar o estilo correto.
+| Modulo | Agente | Qtd Perguntas |
+|---|---|---|
+| Estrategia de Marketing | **Sofia** — Consultora de Marketing | ~30 (9 secoes) |
+| Plano de Vendas | **Rafael** — Consultor Comercial | ~25 (8 secoes) |
+| Conteudos | **Luna** — Estrategista de Conteudo | ~8 |
+| Artes / Redes Sociais | **Theo** — Diretor de Arte | ~8 |
+| Sites | **Alex** — Arquiteto Web | ~22 |
+| Campanhas / Trafego | **Dani** — Estrategista de Trafego | ~3 |
 
-### Solucao
+---
 
-1. Reorganizar os estilos em categorias claras: **Grafica** vs **Imagem**
-2. Expandir massivamente os prompts de cada estilo no edge function
-3. Remover a logica de `needs_template` e Canvas template overlay (nao necessario)
+### Arquitetura
+
+```text
+ChatBriefing.tsx (componente generico)
+   |
+   +-- briefingAgents.ts (define agentes + roteiros)
+   |     +-- SOFIA_STEPS (marketing) — mapeia strategySections[]
+   |     +-- RAFAEL_STEPS (vendas) — mapeia salesSections[]
+   |     +-- LUNA_STEPS (conteudos)
+   |     +-- THEO_STEPS (artes)
+   |     +-- ALEX_STEPS (sites)
+   |     +-- DANI_STEPS (trafego)
+   |
+   +-- Cada pagina usa <ChatBriefing> dentro do mesmo fluxo
+```
 
 ---
 
 ### Mudancas
 
-#### 1. Atualizar `ART_STYLES` em `ClienteRedesSociais.tsx`
+#### 1. Criar `src/components/cliente/ChatBriefing.tsx`
 
-Reorganizar em duas categorias visuais com previews claros:
+Componente generico reutilizavel para todos os 6 modulos.
 
+**Funcionalidades:**
+- Header com avatar (emoji/iniciais), nome e cargo do agente
+- Historico de mensagens (bolhas agente a esquerda, usuario a direita)
+- Animacao "digitando..." (3 pontos, 400ms delay) antes de cada mensagem do agente
+- Scroll automatico para ultima mensagem
+- Barra de progresso (step X de Y) no topo
+- Botao "Voltar" para desfazer ultima resposta
+- Suporte a inputs: `choice`, `multi-choice`, `text`, `textarea`, `info` (mensagem sem input)
+- Transicoes entre secoes com mensagem do agente: "Otimo! Agora vamos falar sobre [proxima secao]..."
+- Opcao `skipIf` para pular perguntas condicionais (ex: URL do site so aparece se tem site)
+- Ao finalizar: chama `onComplete(answers)` com o mesmo formato Record<string, string | string[] | number>
+
+**Visual:**
+- Bolhas agente: fundo `muted`, borda suave, avatar colorido com iniciais
+- Bolhas usuario: fundo `primary/10`, alinhadas a direita
+- Input fixado na parte inferior do container
+- Para `choice`: mesmos botoes estilizados atuais (grid 2-3 colunas) dentro da area de input
+- Para `multi-choice`: mesmos checkboxes estilizados
+- Para `text`/`textarea`: campo de input com botao enviar
+- HelpTooltip preservado em cada pergunta (aparece como icone na bolha do agente)
+
+#### 2. Criar `src/components/cliente/briefingAgents.ts`
+
+**Agentes:**
 ```typescript
-const ART_STYLE_CATEGORIES = [
-  {
-    category: "Gráfica",
-    description: "Design gráfico profissional — formas, tipografia estilizada, layout estruturado",
-    styles: [
-      { value: "grafica_moderna", label: "Design Moderno", desc: "Formas geométricas, cores vibrantes, layout clean tipo Canva", icon: "🎨" },
-      { value: "grafica_elegante", label: "Design Elegante", desc: "Fundo escuro, detalhes dourados, tipografia serifada sofisticada", icon: "✨" },
-      { value: "grafica_bold", label: "Design Bold", desc: "Cores fortes, faixas diagonais, texto grande e impactante", icon: "💥" },
-      { value: "grafica_minimalista", label: "Design Minimalista", desc: "Muito espaço negativo, poucos elementos, tipografia fina", icon: "◻️" },
-    ]
-  },
-  {
-    category: "Imagem",
-    description: "Fotografia ou ilustração realista como base visual",
-    styles: [
-      { value: "foto_editorial", label: "Foto Editorial", desc: "Fotografia profissional com espaço para texto, iluminação cinematográfica", icon: "📸" },
-      { value: "foto_produto", label: "Foto de Produto", desc: "Produto em contexto lifestyle, fundo clean ou cenário natural", icon: "📦" },
-      { value: "ilustracao", label: "Ilustração Digital", desc: "Ilustração moderna flat ou 3D, estilo tech/startup", icon: "🖌️" },
-      { value: "collage", label: "Colagem Criativa", desc: "Mix de elementos visuais, texturas, recortes sobrepostos", icon: "🔄" },
-    ]
-  }
-];
+const AGENTS = {
+  sofia: { name: "Sofia", role: "Consultora de Marketing", avatar: "S", color: "#8b5cf6" },
+  rafael: { name: "Rafael", role: "Consultor Comercial", avatar: "R", color: "#0ea5e9" },
+  luna: { name: "Luna", role: "Estrategista de Conteúdo", avatar: "L", color: "#f59e0b" },
+  theo: { name: "Theo", role: "Diretor de Arte", avatar: "T", color: "#ec4899" },
+  alex: { name: "Alex", role: "Arquiteto Web", avatar: "A", color: "#10b981" },
+  dani: { name: "Dani", role: "Estrategista de Tráfego", avatar: "D", color: "#f97316" },
+};
 ```
 
-Mostrar as categorias com separador visual ("Estilo Grafico" | "Estilo Fotografia") para o cliente entender a diferenca.
+**Roteiro Sofia (Marketing) — mapeamento exato:**
+- Cada pergunta das 9 `strategySections` vira um `BriefingStep`
+- O `id` do step = `id` da question original (ex: `segmento`, `tempo_mercado`, etc.)
+- O `agentMessage` e uma versao conversacional da question original
+- O `inputType` mapeia: `choice` -> `select`, `multi-choice` -> `multi-select`, `text` -> `text`/`textarea`
+- Entre secoes, insere um step `info` com transicao: "Perfeito! Agora me conta sobre [titulo proxima secao]..."
+- `condition` da question original vira `skipIf` invertido
+- `helpText` preservado como tooltip na bolha
+- `optional` preservado
 
-#### 2. Expandir prompts no `generate-social-image/index.ts`
-
-Substituir o `artStyleMap` atual (1 linha por estilo) por prompts de 10-15 linhas cada com instrucoes visuais detalhadas:
-
-**Estilos Graficos** — instruir a IA a gerar design grafico flat, nao fotografia:
-
-- `grafica_moderna`: "Create a flat graphic design composition. Use bold color blocks, geometric shapes (circles, rectangles, triangles), clean lines. The style should look like a professionally designed social media template — NOT a photograph. Use solid background colors, layered shapes with brand colors, decorative elements like dots, lines, abstract patterns. Leave clear structured space for text. Think: Canva Pro template, Behance social media design, Adobe Express layout."
-
-- `grafica_elegante`: "Create a luxury graphic design composition with a dark background (deep navy, black, or charcoal). Add subtle gold or metallic accent elements — thin decorative lines, ornamental borders, small geometric details. The composition should feel high-end like a fashion brand or premium service announcement. Use serif-inspired visual elements, subtle gradients, and sophisticated color palette. NOT a photograph."
-
-- `grafica_bold`: "Create an energetic, high-contrast graphic design. Use large bold color blocks, diagonal stripes or slashes, strong geometric shapes. Colors should be vibrant and attention-grabbing. The composition should feel dynamic and modern — like a sports brand announcement or sale promotion. Use brand colors in large areas, create visual tension with contrasting elements."
-
-- `grafica_minimalista`: "Create an ultra-clean minimalist graphic design. Maximum negative space (60%+ of canvas should be empty or single-color). Use only 1-2 subtle geometric elements. Monochromatic or two-tone color scheme. Inspired by Japanese minimalism, Muji aesthetic, Apple marketing. The design should breathe and feel premium through restraint."
-
-**Estilos Imagem** — manter instrucoes fotograficas mas mais detalhadas:
-
-- `foto_editorial`: "Create a cinematic editorial photograph with professional studio or golden-hour lighting. Depth of field, intentional composition with rule of thirds. Leave clean negative space (top 20% or bottom 25%) for text overlay. Sharp focus on subject with soft background bokeh. Think: magazine cover, editorial spread, brand campaign photography."
-
-- `foto_produto`: "Create a product photography scene. Product in lifestyle context — on a textured surface (marble, wood, fabric), held in hand, or in a curated flat lay. Soft directional lighting, subtle shadows, clean but warm color palette. Professional commercial photography quality."
-
-- `ilustracao`: "Create a modern digital illustration. Flat design or soft 3D style, clean vector-like aesthetic. Stylized characters or objects, consistent color palette, modern tech/startup feel. Think: Slack illustrations, Notion artwork, Stripe marketing visuals."
-
-- `collage`: "Create a creative mixed-media collage composition. Layer photographic elements with graphic shapes, textures, and color blocks. Use paper-cut effect, overlapping elements, varied scales. Contemporary editorial collage style — artistic and eye-catching."
-
-#### 3. Atualizar chain-of-thought em `analyzeAndOptimizePrompt`
-
-Adicionar ao system prompt da otimizacao o contexto de que o estilo pode ser "grafico" ou "fotografico", para que a IA otimize o prompt na direcao correta.
-
-#### 4. Remover logica de `needs_template`
-
-No `generate-social-image`, remover o check de `TEMPLATE_ART_STYLES` e o campo `needs_template` do retorno. Todos os estilos serao gerados diretamente pela IA sem necessidade de composicao Canvas posterior.
-
-No `ClienteRedesSociais.tsx`, remover imports e logica do `canvasTemplateEngine` (manter o arquivo para uso futuro, mas desacoplar do fluxo principal).
-
-#### 5. UI: Seletor visual com categorias
-
-Substituir o grid flat atual por um layout com duas secoes:
-
+Exemplo de mapeamento (Sofia):
+```typescript
+// Original: { id: "segmento", question: "Qual é o segmento da sua empresa?", type: "choice", options: [...] }
+// Conversacional:
+{ id: "segmento", agentMessage: "Pra começar, me conta: qual o segmento da sua empresa?",
+  inputType: "select", options: [...mesmas options...], helpText: "O segmento define..." }
 ```
-┌─────────────────────────────────────────┐
-│  🎨 ESTILO GRÁFICO                     │
-│  Design profissional com formas e cores │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐   │
-│  │Modern│ │Elegan│ │ Bold │ │Minim │   │
-│  └──────┘ └──────┘ └──────┘ └──────┘   │
-├─────────────────────────────────────────┤
-│  📸 ESTILO IMAGEM                       │
-│  Fotografia ou ilustração como base     │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐   │
-│  │Editor│ │Produt│ │Ilustr│ │Collag│   │
-│  └──────┘ └──────┘ └──────┘ └──────┘   │
-└─────────────────────────────────────────┘
-```
+
+**Roteiro Rafael (Vendas) — mesmo mapeamento:**
+- 8 `salesSections` com ~25 questions viram steps
+- Mensagens de transicao entre secoes
+- Intro: "Oi! Sou o Rafael, seu consultor comercial. Vou analisar sua operacao de vendas..."
+
+**Roteiros Luna, Theo, Alex, Dani:**
+- Conforme plano anterior ja aprovado (conteudos, artes, sites, trafego)
+
+#### 3. Atualizar `src/pages/cliente/ClientePlanoMarketing.tsx`
+
+**O que muda:**
+- A secao de diagnostico (wizard step-by-step) e substituida pelo `<ChatBriefing>` com agente Sofia
+- O `ChatBriefing` aparece no lugar do card de wizard quando `!completed`
+- O `onComplete(answers)` recebe as mesmas chaves (segmento, tempo_mercado, etc.)
+- Chama `computeScores(answers)` normalmente
+- Salva via `saveStrategy.mutate(...)` identico
+- Todo o dashboard pos-diagnostico (termometro, radar, insights, projecoes, plano de acao, cards de produto) permanece IDENTICO
+
+**O que NAO muda:**
+- `computeScores()` — nenhuma alteracao
+- `getNivel()` — nenhuma alteracao
+- `generateInsights()` — nenhuma alteracao
+- `getLeadsProjection()` — nenhuma alteracao
+- `getRevenueProjection()` — nenhuma alteracao
+- `generateActionPlan()` — nenhuma alteracao
+- `products[]` — nenhuma alteracao
+- Dashboard renderizado apos `completed = true` — nenhuma alteracao
+- `useActiveStrategy`, `useStrategyHistory`, `useSaveStrategy` — nenhuma alteracao
+
+#### 4. Atualizar `src/pages/cliente/ClientePlanoVendas.tsx`
+
+**O que muda:**
+- A secao de diagnostico e substituida pelo `<ChatBriefing>` com agente Rafael
+- O `onComplete(answers)` salva no localStorage identico ao atual
+- Sets `completed = true` e dispara scoring
+
+**O que NAO muda:**
+- `computeScores()` — identico
+- `getNivel()` — identico
+- `generateInsights()` — identico
+- `getLeadsProjection()`, `getRevenueProjection()`, `generateActionPlan()` — identicos
+- Aba de Metas (goals, charts, CRUD) — ZERO alteracao
+- Welcome popup — adaptado para ser a intro do Rafael
+- Historico de diagnosticos — identico
+
+#### 5. Atualizar `ClienteConteudos.tsx` — ChatBriefing com Luna
+
+Conforme plano anterior. O wizard dentro do Dialog vira chat.
+
+#### 6. Atualizar `ClienteRedesSociais.tsx` — ChatBriefing com Theo
+
+Conforme plano anterior. O briefing de artes vira chat.
+
+#### 7. Atualizar `ClienteSites.tsx` — ChatBriefing com Alex
+
+Conforme plano anterior. Os 3 steps do wizard viram chat.
+
+#### 8. Atualizar `ClienteTrafegoPago.tsx` — Mini-chat com Dani
+
+Conforme plano anterior.
+
+---
+
+### Garantias de Integridade
+
+1. **Mesmo `answers` Record** — As chaves dos answers sao IDENTICAS as atuais (`segmento`, `tempo_mercado`, `faturamento`, etc.). O ChatBriefing apenas muda a forma de coletar, nao o formato dos dados.
+
+2. **Mesma logica de scoring** — `computeScores()` recebe o mesmo objeto `Answers` e retorna o mesmo resultado. Zero alteracao.
+
+3. **Mesmos prompts** — Nenhum edge function e alterado. Os dados coletados alimentam os mesmos payloads.
+
+4. **Mesma persistencia** — Marketing salva via `useSaveStrategy`, Vendas via localStorage, Conteudos/Artes/Sites via seus hooks existentes.
+
+5. **Mesma UI pos-diagnostico** — Termometro, radar, insights, projecoes, plano de acao, cards — tudo renderizado identico apos `completed = true`.
 
 ---
 
@@ -111,6 +177,12 @@ Substituir o grid flat atual por um layout com duas secoes:
 
 | Arquivo | Acao |
 |---|---|
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar — novos estilos com categorias, remover refs ao canvasTemplateEngine, UI com separador Grafica/Imagem |
-| `supabase/functions/generate-social-image/index.ts` | Editar — prompts expandidos (10-15 linhas cada), remover needs_template, atualizar chain-of-thought |
+| `src/components/cliente/ChatBriefing.tsx` | Criar — componente generico de chat conversacional |
+| `src/components/cliente/briefingAgents.ts` | Criar — 6 agentes + roteiros completos de perguntas |
+| `src/pages/cliente/ClientePlanoMarketing.tsx` | Editar — substituir wizard por ChatBriefing (Sofia) |
+| `src/pages/cliente/ClientePlanoVendas.tsx` | Editar — substituir wizard por ChatBriefing (Rafael) |
+| `src/pages/cliente/ClienteConteudos.tsx` | Editar — substituir wizard por ChatBriefing (Luna) |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar — substituir briefing por ChatBriefing (Theo) |
+| `src/pages/cliente/ClienteSites.tsx` | Editar — substituir wizard por ChatBriefing (Alex) |
+| `src/pages/cliente/ClienteTrafegoPago.tsx` | Editar — adicionar mini-chat com Dani |
 
