@@ -865,6 +865,57 @@ export type Database = {
           },
         ]
       }
+      client_diagnostics: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          lead_id: string | null
+          notes: string | null
+          organization_id: string
+          scores: Json
+          total_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          organization_id: string
+          scores?: Json
+          total_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          organization_id?: string
+          scores?: Json
+          total_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_diagnostics_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_diagnostics_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_dispatches: {
         Row: {
           channel: string
@@ -2659,6 +2710,56 @@ export type Database = {
           },
           {
             foreignKeyName: "franchisee_charges_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      franchisee_system_payments: {
+        Row: {
+          amount: number
+          asaas_payment_id: string | null
+          billing_type: string
+          created_at: string
+          id: string
+          invoice_url: string | null
+          month: string
+          organization_id: string
+          paid_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          asaas_payment_id?: string | null
+          billing_type?: string
+          created_at?: string
+          id?: string
+          invoice_url?: string | null
+          month: string
+          organization_id: string
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          asaas_payment_id?: string | null
+          billing_type?: string
+          created_at?: string
+          id?: string
+          invoice_url?: string | null
+          month?: string
+          organization_id?: string
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franchisee_system_payments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileSignature, DollarSign, TrendingUp, Calendar, Inbox, FileDown, CheckCircle, Clock, AlertCircle, Receipt } from "lucide-react";
+import { FileSignature, DollarSign, TrendingUp, Calendar, Inbox, FileDown, CheckCircle, Clock, AlertCircle, Receipt, Wallet } from "lucide-react";
+import { SystemPaymentTab } from "@/components/franqueado/SystemPaymentTab";
 import { useContracts } from "@/hooks/useContracts";
 import { useFinanceClosings } from "@/hooks/useFinance";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -114,10 +115,11 @@ export default function FranqueadoFinanceiro() {
       <PageHeader title="Financeiro Comercial" subtitle="Visão financeira baseada nos contratos e vendas da unidade" />
 
       <Tabs defaultValue="visao" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="visao">Visão Geral</TabsTrigger>
           <TabsTrigger value="pagamentos">Controle de Pagamentos</TabsTrigger>
           <TabsTrigger value="fechamentos">Fechamentos</TabsTrigger>
+          <TabsTrigger value="sistema" className="gap-1"><Wallet className="w-3.5 h-3.5" />Sistema</TabsTrigger>
         </TabsList>
 
         {/* ========== VISÃO GERAL ========== */}
@@ -296,6 +298,11 @@ export default function FranqueadoFinanceiro() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* ========== PAGAMENTO SISTEMA ========== */}
+        <TabsContent value="sistema" className="space-y-4">
+          <SystemPaymentTab />
         </TabsContent>
       </Tabs>
     </div>
