@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Megaphone, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle,
   Lightbulb, FileText, Share2, Globe, DollarSign, TrendingUp,
@@ -17,6 +17,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { DiagnosticoTermometro } from "@/components/diagnostico/DiagnosticoTermometro";
+import { HelpTooltip } from "@/components/HelpTooltip";
+import { useActiveStrategy, useStrategyHistory, useSaveStrategy } from "@/hooks/useMarketingStrategy";
+import { toast } from "@/hooks/use-toast";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -32,6 +35,7 @@ interface StrategyQuestion {
   id: string;
   question: string;
   subtitle?: string;
+  helpText?: string;
   type: "choice" | "multi-choice" | "text";
   options?: { label: string; value: string; icon?: React.ElementType }[];
   placeholder?: string;
@@ -57,7 +61,9 @@ const strategySections: StrategySection[] = [
     icon: Building2,
     questions: [
       {
-        id: "segmento", question: "Qual é o segmento da sua empresa?", type: "choice",
+        id: "segmento", question: "Qual é o segmento da sua empresa?",
+        helpText: "O segmento define o tipo de mercado em que você atua. Isso ajuda a personalizar toda a estratégia.",
+        type: "choice",
         options: [
           { label: "Serviços", value: "servicos" }, { label: "Varejo / Loja", value: "varejo" },
           { label: "Alimentação", value: "alimentacao" }, { label: "Saúde / Estética", value: "saude" },
@@ -66,21 +72,27 @@ const strategySections: StrategySection[] = [
         ],
       },
       {
-        id: "tempo_mercado", question: "Há quanto tempo está no mercado?", type: "choice",
+        id: "tempo_mercado", question: "Há quanto tempo está no mercado?",
+        helpText: "Empresas mais novas precisam de estratégias de awareness, enquanto empresas maduras focam em escala e retenção.",
+        type: "choice",
         options: [
           { label: "Menos de 1 ano", value: "0-1" }, { label: "1 a 3 anos", value: "1-3" },
           { label: "3 a 5 anos", value: "3-5" }, { label: "Mais de 5 anos", value: "5+" },
         ],
       },
       {
-        id: "modelo_negocio", question: "Qual o modelo de negócio?", type: "choice",
+        id: "modelo_negocio", question: "Qual o modelo de negócio?",
+        helpText: "B2B e B2C demandam canais, tom e funis completamente diferentes.",
+        type: "choice",
         options: [
           { label: "B2B (empresas)", value: "b2b" }, { label: "B2C (consumidor final)", value: "b2c" },
           { label: "Ambos", value: "ambos" },
         ],
       },
       {
-        id: "num_funcionarios", question: "Quantos funcionários?", type: "choice",
+        id: "num_funcionarios", question: "Quantos funcionários?",
+        helpText: "O tamanho da equipe influencia a capacidade de execução do marketing.",
+        type: "choice",
         options: [
           { label: "1 a 5", value: "1-5" }, { label: "6 a 20", value: "6-20" },
           { label: "21 a 50", value: "21-50" }, { label: "51 a 200", value: "51-200" },
@@ -94,7 +106,9 @@ const strategySections: StrategySection[] = [
     icon: Wallet,
     questions: [
       {
-        id: "faturamento", question: "Qual o faturamento mensal aproximado?", type: "choice",
+        id: "faturamento", question: "Qual o faturamento mensal aproximado?",
+        helpText: "O faturamento ajuda a dimensionar o investimento ideal em marketing (recomendado: 5-15% do faturamento).",
+        type: "choice",
         options: [
           { label: "Até R$ 10 mil", value: "0-10k" }, { label: "R$ 10-30 mil", value: "10-30k" },
           { label: "R$ 30-50 mil", value: "30-50k" }, { label: "R$ 50-100 mil", value: "50-100k" },
@@ -103,7 +117,9 @@ const strategySections: StrategySection[] = [
         ],
       },
       {
-        id: "ticket_medio", question: "Qual o ticket médio do seu produto/serviço?", type: "choice",
+        id: "ticket_medio", question: "Qual o ticket médio do seu produto/serviço?",
+        helpText: "Ticket médio é o valor médio de cada venda. Influencia diretamente no ROI das campanhas.",
+        type: "choice",
         options: [
           { label: "Até R$ 100", value: "0-100" }, { label: "R$ 100-500", value: "100-500" },
           { label: "R$ 500-2 mil", value: "500-2k" }, { label: "R$ 2-5 mil", value: "2-5k" },
@@ -117,18 +133,24 @@ const strategySections: StrategySection[] = [
     icon: Users,
     questions: [
       {
-        id: "cliente_ideal", question: "Descreva seu cliente ideal", type: "text",
+        id: "cliente_ideal", question: "Descreva seu cliente ideal",
+        helpText: "A persona é uma representação semi-fictícia do seu cliente ideal. Quanto mais detalhada, melhor será a segmentação das campanhas.",
+        type: "text",
         placeholder: "Ex: Mulheres de 25-40 anos, classe B, que buscam praticidade...",
       },
       {
-        id: "faixa_etaria", question: "Faixa etária principal do público", type: "choice",
+        id: "faixa_etaria", question: "Faixa etária principal do público",
+        helpText: "A faixa etária define tom, canal e formato de conteúdo mais eficaz.",
+        type: "choice",
         options: [
           { label: "18-24 anos", value: "18-24" }, { label: "25-34 anos", value: "25-34" },
           { label: "35-44 anos", value: "35-44" }, { label: "45+ anos", value: "45+" },
         ],
       },
       {
-        id: "onde_esta", question: "Onde seu público está mais presente?", type: "multi-choice",
+        id: "onde_esta", question: "Onde seu público está mais presente?",
+        helpText: "Saber onde seu público navega ajuda a direcionar investimento e conteúdo nos canais certos.",
+        type: "multi-choice",
         options: [
           { label: "Instagram", value: "instagram" }, { label: "Facebook", value: "facebook" },
           { label: "TikTok", value: "tiktok" }, { label: "Google", value: "google" },
@@ -137,7 +159,9 @@ const strategySections: StrategySection[] = [
         ],
       },
       {
-        id: "como_decide", question: "Como o cliente decide a compra?", type: "multi-choice",
+        id: "como_decide", question: "Como o cliente decide a compra?",
+        helpText: "Entender o processo decisório ajuda a criar conteúdos para cada etapa do funil.",
+        type: "multi-choice",
         options: [
           { label: "Indicação", value: "indicacao" }, { label: "Pesquisa no Google", value: "google" },
           { label: "Redes sociais", value: "redes" }, { label: "Preço", value: "preco" },
@@ -151,21 +175,27 @@ const strategySections: StrategySection[] = [
     icon: Swords,
     questions: [
       {
-        id: "qtd_concorrentes", question: "Quantos concorrentes diretos você tem?", type: "choice",
+        id: "qtd_concorrentes", question: "Quantos concorrentes diretos você tem?",
+        helpText: "Concorrentes diretos são empresas que vendem produtos/serviços similares para o mesmo público.",
+        type: "choice",
         options: [
           { label: "1 a 3", value: "1-3" }, { label: "4 a 10", value: "4-10" },
           { label: "Mais de 10", value: "10+" }, { label: "Não sei", value: "nao_sei" },
         ],
       },
       {
-        id: "concorrentes_digital", question: "Seus concorrentes investem em marketing digital?", type: "choice",
+        id: "concorrentes_digital", question: "Seus concorrentes investem em marketing digital?",
+        helpText: "Se seus concorrentes investem pesado, você precisa ser mais estratégico para competir.",
+        type: "choice",
         options: [
           { label: "Não investem", value: "nao" }, { label: "Pouco", value: "pouco" },
           { label: "Sim, bastante", value: "bastante" }, { label: "São referência", value: "referencia" },
         ],
       },
       {
-        id: "diferencial", question: "Qual seu principal diferencial competitivo?", type: "text",
+        id: "diferencial", question: "Qual seu principal diferencial competitivo?",
+        helpText: "Seu diferencial é o que te torna único. Ele será a base da comunicação da marca.",
+        type: "text",
         placeholder: "Ex: Atendimento personalizado, preço justo, rapidez na entrega...",
       },
     ],
@@ -175,7 +205,9 @@ const strategySections: StrategySection[] = [
     icon: Share2,
     questions: [
       {
-        id: "redes_ativas", question: "Quais redes sociais sua empresa usa ativamente?", type: "multi-choice",
+        id: "redes_ativas", question: "Quais redes sociais sua empresa usa ativamente?",
+        helpText: "Redes ativas são aquelas que você publica pelo menos 1x por semana.",
+        type: "multi-choice",
         options: [
           { label: "Instagram", value: "instagram" }, { label: "Facebook", value: "facebook" },
           { label: "TikTok", value: "tiktok" }, { label: "LinkedIn", value: "linkedin" },
@@ -184,7 +216,9 @@ const strategySections: StrategySection[] = [
         ],
       },
       {
-        id: "url_rede", question: "Link do Instagram ou principal rede social", type: "text",
+        id: "url_rede", question: "Link do Instagram ou principal rede social",
+        helpText: "Usamos para analisar sua presença atual e sugerir melhorias.",
+        type: "text",
         placeholder: "https://instagram.com/suaempresa", optional: true,
         condition: (ans) => {
           const redes = ans.redes_ativas;
@@ -192,14 +226,18 @@ const strategySections: StrategySection[] = [
         },
       },
       {
-        id: "freq_publicacao", question: "Com que frequência publica conteúdo?", type: "choice",
+        id: "freq_publicacao", question: "Com que frequência publica conteúdo?",
+        helpText: "Consistência é mais importante que volume. Publicar regularmente aumenta o alcance orgânico.",
+        type: "choice",
         options: [
           { label: "Não publico", value: "nunca" }, { label: "Esporadicamente", value: "esporadico" },
           { label: "Semanalmente", value: "semanal" }, { label: "Diariamente", value: "diario" },
         ],
       },
       {
-        id: "tem_site", question: "Possui site ou landing page?", type: "choice",
+        id: "tem_site", question: "Possui site ou landing page?",
+        helpText: "Um site otimizado é essencial para captura de leads e credibilidade da marca.",
+        type: "choice",
         options: [
           { label: "Não possui", value: "nao" }, { label: "Sim, desatualizado", value: "desatualizado" },
           { label: "Sim, atualizado", value: "atualizado" }, { label: "Sim, otimizado p/ SEO", value: "otimizado" },
@@ -207,6 +245,7 @@ const strategySections: StrategySection[] = [
       },
       {
         id: "url_site", question: "URL do site", type: "text",
+        helpText: "Analisamos para verificar SEO, velocidade e conversão.",
         placeholder: "https://suaempresa.com.br", optional: true,
         condition: (ans) => ans.tem_site !== "nao" && !!ans.tem_site,
       },
@@ -217,14 +256,18 @@ const strategySections: StrategySection[] = [
     icon: TrendingUp,
     questions: [
       {
-        id: "investe_trafego", question: "Investe em tráfego pago atualmente?", type: "choice",
+        id: "investe_trafego", question: "Investe em tráfego pago atualmente?",
+        helpText: "Tráfego pago (Meta Ads, Google Ads) é a forma mais rápida de gerar leads qualificados.",
+        type: "choice",
         options: [
           { label: "Nunca investi", value: "nunca" }, { label: "Já testei sem resultado", value: "testou" },
           { label: "Invisto mensalmente", value: "mensal" }, { label: "Tenho campanha otimizada", value: "otimizado" },
         ],
       },
       {
-        id: "valor_trafego", question: "Quanto investe em tráfego por mês?", type: "choice",
+        id: "valor_trafego", question: "Quanto investe em tráfego por mês?",
+        helpText: "O investimento ideal em tráfego depende do CAC desejado e do ticket médio.",
+        type: "choice",
         options: [
           { label: "Não invisto", value: "0" }, { label: "Até R$ 500", value: "0-500" },
           { label: "R$ 500-2 mil", value: "500-2k" }, { label: "R$ 2-5 mil", value: "2-5k" },
@@ -232,7 +275,9 @@ const strategySections: StrategySection[] = [
         ],
       },
       {
-        id: "leads_mes", question: "Quantos leads recebe por mês?", type: "choice",
+        id: "leads_mes", question: "Quantos leads recebe por mês?",
+        helpText: "Leads são potenciais clientes que demonstraram interesse no seu produto/serviço.",
+        type: "choice",
         options: [
           { label: "0 a 10", value: "0-10" }, { label: "11 a 30", value: "11-30" },
           { label: "31 a 100", value: "31-100" }, { label: "100 a 500", value: "100-500" },
@@ -240,7 +285,9 @@ const strategySections: StrategySection[] = [
         ],
       },
       {
-        id: "taxa_conversao", question: "Taxa de conversão estimada (lead → venda)", type: "choice",
+        id: "taxa_conversao", question: "Taxa de conversão estimada (lead → venda)",
+        helpText: "A taxa de conversão é o percentual de leads que se tornam clientes. Média do mercado: 5-15%.",
+        type: "choice",
         options: [
           { label: "Não sei", value: "nao_sei" }, { label: "Menos de 5%", value: "0-5" },
           { label: "5% a 15%", value: "5-15" }, { label: "15% a 30%", value: "15-30" },
@@ -254,7 +301,9 @@ const strategySections: StrategySection[] = [
     icon: BarChart3,
     questions: [
       {
-        id: "sabe_cac", question: "Sabe quanto custa adquirir um cliente (CAC)?", type: "choice",
+        id: "sabe_cac", question: "Sabe quanto custa adquirir um cliente (CAC)?",
+        helpText: "CAC (Custo de Aquisição de Cliente) é o total investido em marketing e vendas dividido pelo número de clientes adquiridos no período.",
+        type: "choice",
         options: [
           { label: "Não sei", value: "nao_sei" }, { label: "Até R$ 50", value: "0-50" },
           { label: "R$ 50-200", value: "50-200" }, { label: "R$ 200-500", value: "200-500" },
@@ -262,14 +311,18 @@ const strategySections: StrategySection[] = [
         ],
       },
       {
-        id: "ltv_medio", question: "Quanto tempo em média um cliente fica com você?", type: "choice",
+        id: "ltv_medio", question: "Quanto tempo em média um cliente fica com você?",
+        helpText: "LTV (Lifetime Value) é a receita total que um cliente gera durante todo o relacionamento. Quanto maior o LTV vs CAC, mais saudável o negócio.",
+        type: "choice",
         options: [
           { label: "Compra única", value: "unica" }, { label: "1 a 3 meses", value: "1-3" },
           { label: "3 a 12 meses", value: "3-12" }, { label: "Mais de 1 ano", value: "1ano+" },
         ],
       },
       {
-        id: "processo_recompra", question: "Tem processo de recompra / fidelização?", type: "choice",
+        id: "processo_recompra", question: "Tem processo de recompra / fidelização?",
+        helpText: "Um programa de fidelização pode reduzir o CAC em até 60% ao gerar recompra e indicações.",
+        type: "choice",
         options: [
           { label: "Não tenho", value: "nao" }, { label: "Informal", value: "informal" },
           { label: "Sim, estruturado", value: "estruturado" },
@@ -282,21 +335,27 @@ const strategySections: StrategySection[] = [
     icon: Database,
     questions: [
       {
-        id: "usa_crm", question: "Usa algum CRM ou planilha para gerenciar leads/clientes?", type: "choice",
+        id: "usa_crm", question: "Usa algum CRM ou planilha para gerenciar leads/clientes?",
+        helpText: "CRM (Customer Relationship Management) centraliza dados de leads e clientes para acompanhar o funil de vendas.",
+        type: "choice",
         options: [
           { label: "Não gerencio", value: "nao" }, { label: "Planilha", value: "planilha" },
           { label: "CRM básico", value: "crm_basico" }, { label: "CRM profissional", value: "crm_pro" },
         ],
       },
       {
-        id: "historico_dados", question: "Tem histórico de dados dos seus clientes?", type: "choice",
+        id: "historico_dados", question: "Tem histórico de dados dos seus clientes?",
+        helpText: "Dados históricos permitem segmentar campanhas e personalizar comunicações.",
+        type: "choice",
         options: [
           { label: "Nenhum", value: "nenhum" }, { label: "Parcial", value: "parcial" },
           { label: "Sim, completo", value: "completo" },
         ],
       },
       {
-        id: "estrategias_offline", question: "Usa estratégias de marketing além do digital?", type: "multi-choice",
+        id: "estrategias_offline", question: "Usa estratégias de marketing além do digital?",
+        helpText: "Integrar estratégias offline com digital amplia o alcance e permite medir resultados.",
+        type: "multi-choice",
         options: [
           { label: "Eventos", value: "eventos" }, { label: "Panfletos", value: "panfletos" },
           { label: "Networking", value: "networking" }, { label: "Parcerias locais", value: "parcerias" },
@@ -310,7 +369,9 @@ const strategySections: StrategySection[] = [
     icon: Target,
     questions: [
       {
-        id: "meta_principal", question: "Qual seu objetivo principal com o marketing?", type: "choice",
+        id: "meta_principal", question: "Qual seu objetivo principal com o marketing?",
+        helpText: "Definir um objetivo claro permite focar os esforços e medir o sucesso das campanhas.",
+        type: "choice",
         options: [
           { label: "Gerar mais leads", value: "leads", icon: Target },
           { label: "Aumentar vendas", value: "vendas", icon: DollarSign },
@@ -319,14 +380,18 @@ const strategySections: StrategySection[] = [
         ],
       },
       {
-        id: "prazo", question: "Em quanto tempo espera ver resultados?", type: "choice",
+        id: "prazo", question: "Em quanto tempo espera ver resultados?",
+        helpText: "Marketing digital geralmente leva 3-6 meses para resultados consistentes. Expectativas alinhadas evitam frustrações.",
+        type: "choice",
         options: [
           { label: "1-2 meses", value: "1-2" }, { label: "3-4 meses", value: "3-4" },
           { label: "5-6 meses", value: "5-6" }, { label: "Mais de 6 meses", value: "6+" },
         ],
       },
       {
-        id: "dificuldades", question: "Quais são suas maiores dificuldades?", type: "multi-choice",
+        id: "dificuldades", question: "Quais são suas maiores dificuldades?",
+        helpText: "Conhecer suas dores permite priorizar ações e recomendar soluções específicas.",
+        type: "multi-choice",
         options: [
           { label: "Falta de tempo", value: "tempo" }, { label: "Não sei o que postar", value: "conteudo" },
           { label: "Não gero leads", value: "leads" }, { label: "Não tenho equipe", value: "equipe" },
@@ -336,7 +401,9 @@ const strategySections: StrategySection[] = [
         ],
       },
       {
-        id: "tentativas", question: "O que já tentou que não funcionou?", type: "text",
+        id: "tentativas", question: "O que já tentou que não funcionou?",
+        helpText: "Saber o que não funcionou evita repetir erros e direciona para abordagens mais eficazes.",
+        type: "text",
         placeholder: "Ex: Contratei um social media, mas não deu resultado...", optional: true,
       },
     ],
@@ -344,7 +411,7 @@ const strategySections: StrategySection[] = [
 ];
 
 /* ══════════════════════════════════════════════
-   SCORING LOGIC — 7 AXES
+   SCORING LOGIC — 7 AXES (unchanged)
    ══════════════════════════════════════════════ */
 
 function computeScores(answers: Answers) {
@@ -474,69 +541,34 @@ function getNivel(pct: number) {
 }
 
 /* ══════════════════════════════════════════════
-   INSIGHTS GENERATOR
+   INSIGHTS, PROJECTIONS, ACTION PLAN (unchanged logic)
    ══════════════════════════════════════════════ */
 
 function generateInsights(answers: Answers, scoreMap: Record<string, number>, maxMap: Record<string, number>) {
   const insights: { text: string; type: "success" | "warning" | "opportunity"; icon: React.ElementType }[] = [];
   const pct = (k: string) => maxMap[k] > 0 ? (scoreMap[k] / maxMap[k]) * 100 : 0;
 
-  // Presença Digital
-  if (pct("Presença Digital") >= 70)
-    insights.push({ text: "Sua presença digital está sólida. Continue investindo em conteúdo consistente.", type: "success", icon: CheckCircle2 });
-  else
-    insights.push({ text: "Sua presença digital precisa de atenção. Ative mais canais e publique com frequência.", type: "warning", icon: AlertCircle });
+  if (pct("Presença Digital") >= 70) insights.push({ text: "Sua presença digital está sólida. Continue investindo em conteúdo consistente.", type: "success", icon: CheckCircle2 });
+  else insights.push({ text: "Sua presença digital precisa de atenção. Ative mais canais e publique com frequência.", type: "warning", icon: AlertCircle });
 
-  // Tráfego
-  if (pct("Tráfego") < 50)
-    insights.push({ text: "Você não está aproveitando o potencial do tráfego pago. Campanhas estruturadas podem acelerar seus resultados.", type: "opportunity", icon: Lightbulb });
+  if (pct("Tráfego") < 50) insights.push({ text: "Você não está aproveitando o potencial do tráfego pago. Campanhas estruturadas podem acelerar seus resultados.", type: "opportunity", icon: Lightbulb });
+  if (pct("Conteúdo") < 50) insights.push({ text: "A produção de conteúdo está baixa. Com roteiros gerados por IA, você publica mais sem esforço.", type: "opportunity", icon: Lightbulb });
+  else insights.push({ text: "Você já produz conteúdo regularmente. Diversifique formatos para aumentar o alcance.", type: "success", icon: CheckCircle2 });
+  if (pct("Estratégia") < 50) insights.push({ text: "Falta clareza na estratégia. Defina persona, funil e KPIs para direcionar suas ações.", type: "warning", icon: AlertCircle });
 
-  // Conteúdo
-  if (pct("Conteúdo") < 50)
-    insights.push({ text: "A produção de conteúdo está baixa. Com roteiros gerados por IA, você publica mais sem esforço.", type: "opportunity", icon: Lightbulb });
-  else
-    insights.push({ text: "Você já produz conteúdo regularmente. Diversifique formatos para aumentar o alcance.", type: "success", icon: CheckCircle2 });
+  const siteVal = answers.tem_site as string;
+  if (siteVal === "nao" || siteVal === "desatualizado") insights.push({ text: "Você precisa de um site ou landing page otimizada para capturar leads e converter visitantes.", type: "opportunity", icon: Lightbulb });
+  if (answers.sabe_cac === "nao_sei") insights.push({ text: "Você não sabe seu CAC — sem isso, é impossível medir o ROI das suas campanhas de marketing.", type: "warning", icon: AlertCircle });
+  if (pct("Gestão de Dados") < 50) insights.push({ text: "Seus dados não estão organizados. O CRM centraliza leads, pipeline e histórico de clientes.", type: "opportunity", icon: Lightbulb });
+  if (answers.concorrentes_digital === "bastante" || answers.concorrentes_digital === "referencia") insights.push({ text: "Seus concorrentes investem forte em digital. Você precisa acelerar para não perder mercado.", type: "warning", icon: AlertCircle });
+  if (pct("Vendas e Retenção") < 50) insights.push({ text: "Sem processo de fidelização, você perde receita recorrente. LTV baixo encarece o CAC.", type: "warning", icon: AlertCircle });
+  if (answers.taxa_conversao === "0-5") insights.push({ text: "Taxa de conversão abaixo de 5%. Foque na qualificação de leads e melhoria do funil de vendas.", type: "opportunity", icon: Lightbulb });
 
-  // Estratégia
-  if (pct("Estratégia") < 50)
-    insights.push({ text: "Falta clareza na estratégia. Defina persona, funil e KPIs para direcionar suas ações.", type: "warning", icon: AlertCircle });
-
-  // Site
-  const site = answers.tem_site as string;
-  if (site === "nao" || site === "desatualizado")
-    insights.push({ text: "Você precisa de um site ou landing page otimizada para capturar leads e converter visitantes.", type: "opportunity", icon: Lightbulb });
-
-  // CAC / LTV
-  if (answers.sabe_cac === "nao_sei")
-    insights.push({ text: "Você não sabe seu CAC — sem isso, é impossível medir o ROI das suas campanhas de marketing.", type: "warning", icon: AlertCircle });
-
-  // CRM / Gestão de Dados
-  if (pct("Gestão de Dados") < 50)
-    insights.push({ text: "Seus dados não estão organizados. O CRM centraliza leads, pipeline e histórico de clientes.", type: "opportunity", icon: Lightbulb });
-
-  // Concorrência
-  if (answers.concorrentes_digital === "bastante" || answers.concorrentes_digital === "referencia")
-    insights.push({ text: "Seus concorrentes investem forte em digital. Você precisa acelerar para não perder mercado.", type: "warning", icon: AlertCircle });
-
-  // Retenção
-  if (pct("Vendas e Retenção") < 50)
-    insights.push({ text: "Sem processo de fidelização, você perde receita recorrente. LTV baixo encarece o CAC.", type: "warning", icon: AlertCircle });
-
-  // Conversão
-  if (answers.taxa_conversao === "0-5")
-    insights.push({ text: "Taxa de conversão abaixo de 5%. Foque na qualificação de leads e melhoria do funil de vendas.", type: "opportunity", icon: Lightbulb });
-
-  // Offline integration
   const offline = answers.estrategias_offline;
-  if (Array.isArray(offline) && offline.length > 0 && !offline.includes("nenhuma"))
-    insights.push({ text: "Você usa estratégias offline — integre com digital para medir ROI e amplificar resultados.", type: "opportunity", icon: Lightbulb });
+  if (Array.isArray(offline) && offline.length > 0 && !offline.includes("nenhuma")) insights.push({ text: "Você usa estratégias offline — integre com digital para medir ROI e amplificar resultados.", type: "opportunity", icon: Lightbulb });
 
   return insights;
 }
-
-/* ══════════════════════════════════════════════
-   PROJECTION DATA
-   ══════════════════════════════════════════════ */
 
 function getLeadsProjection(pct: number) {
   const base = Math.round(pct * 0.5);
@@ -551,16 +583,11 @@ function getLeadsProjection(pct: number) {
 }
 
 function getRevenueProjection(answers: Answers, pct: number) {
-  const ticketMap: Record<string, number> = {
-    "0-100": 75, "100-500": 300, "500-2k": 1250, "2-5k": 3500, "5-15k": 10000, "15k+": 20000,
-  };
-  const convMap: Record<string, number> = {
-    "nao_sei": 0.05, "0-5": 0.03, "5-15": 0.10, "15-30": 0.22, "30+": 0.35,
-  };
+  const ticketMap: Record<string, number> = { "0-100": 75, "100-500": 300, "500-2k": 1250, "2-5k": 3500, "5-15k": 10000, "15k+": 20000 };
+  const convMap: Record<string, number> = { "nao_sei": 0.05, "0-5": 0.03, "5-15": 0.10, "15-30": 0.22, "30+": 0.35 };
   const ticket = ticketMap[answers.ticket_medio as string] || 500;
   const conv = convMap[answers.taxa_conversao as string] || 0.05;
   const baseLeads = Math.round(pct * 0.5);
-
   return [
     { mes: "Mês 1", atual: Math.round(baseLeads * conv * ticket), comEstrategia: Math.round((baseLeads + 10) * conv * ticket * 1.1) },
     { mes: "Mês 2", atual: Math.round((baseLeads + 3) * conv * ticket), comEstrategia: Math.round((baseLeads + 25) * conv * ticket * 1.15) },
@@ -571,48 +598,32 @@ function getRevenueProjection(answers: Answers, pct: number) {
   ];
 }
 
-/* ══════════════════════════════════════════════
-   DYNAMIC ACTION PLAN
-   ══════════════════════════════════════════════ */
-
 function generateActionPlan(scoreMap: Record<string, number>, maxMap: Record<string, number>, answers: Answers) {
   const pct = (k: string) => maxMap[k] > 0 ? (scoreMap[k] / maxMap[k]) * 100 : 0;
-
-  const fase1: string[] = [];
-  const fase2: string[] = [];
-  const fase3: string[] = [];
-
-  // Foundation always starts with strategy
-  fase1.push("Definir persona e posicionamento de marca");
+  const fase1: string[] = ["Definir persona e posicionamento de marca"];
+  const fase2: string[] = ["Implementar calendário editorial semanal"];
+  const fase3: string[] = ["Otimizar campanhas com base em dados e ROI"];
 
   if (pct("Gestão de Dados") < 50) fase1.push("Implantar CRM e organizar base de clientes");
   if (pct("Presença Digital") < 50) fase1.push("Criar perfis profissionais e começar a publicar");
   if (answers.tem_site === "nao") fase1.push("Criar landing page de captura de leads");
   else if (answers.tem_site === "desatualizado") fase1.push("Atualizar site e otimizar para conversão");
   if (answers.sabe_cac === "nao_sei") fase1.push("Implementar rastreamento de CAC e métricas básicas");
-
   if (fase1.length < 3) fase1.push("Criar identidade visual e guia de comunicação");
 
-  // Growth
-  fase2.push("Implementar calendário editorial semanal");
   if (pct("Tráfego") < 50) fase2.push("Iniciar campanhas de tráfego pago com orçamento controlado");
-  if (answers.concorrentes_digital === "bastante" || answers.concorrentes_digital === "referencia")
-    fase2.push("Análise competitiva e estratégia de diferenciação");
+  if (answers.concorrentes_digital === "bastante" || answers.concorrentes_digital === "referencia") fase2.push("Análise competitiva e estratégia de diferenciação");
   if (pct("Conteúdo") < 50) fase2.push("Diversificar formatos: carrossel, reels, stories");
   fase2.push("Configurar funil de nutrição por WhatsApp");
-
   if (fase2.length < 3) fase2.push("Otimizar conversões com A/B testing");
 
-  // Scale
-  fase3.push("Otimizar campanhas com base em dados e ROI");
   if (pct("Vendas e Retenção") < 50) fase3.push("Criar programa de fidelização e recompra");
   fase3.push("Automatizar geração de conteúdo com IA");
   if (pct("Gestão de Dados") >= 50) fase3.push("Integrar dados do CRM com campanhas de marketing");
   else fase3.push("Escalar investimento nos canais com melhor retorno");
 
   const offline = answers.estrategias_offline;
-  if (Array.isArray(offline) && offline.length > 0 && !offline.includes("nenhuma"))
-    fase3.push("Integrar estratégias offline com rastreamento digital");
+  if (Array.isArray(offline) && offline.length > 0 && !offline.includes("nenhuma")) fase3.push("Integrar estratégias offline com rastreamento digital");
 
   return [
     { fase: "Fase 1 — Fundação", periodo: "Mês 1-2", cor: "hsl(var(--chart-blue))", items: fase1.slice(0, 5) },
@@ -622,13 +633,10 @@ function generateActionPlan(scoreMap: Record<string, number>, maxMap: Record<str
 }
 
 /* ══════════════════════════════════════════════
-   PRODUCT CARDS (now includes CRM)
+   PRODUCT CARDS
    ══════════════════════════════════════════════ */
 
-interface ProductCard {
-  name: string; description: string; icon: React.ElementType;
-  path: string; scoreKey: string; kpi: string;
-}
+interface ProductCard { name: string; description: string; icon: React.ElementType; path: string; scoreKey: string; kpi: string; }
 
 const products: ProductCard[] = [
   { name: "Conteúdos", description: "Roteiros com IA baseados na sua estratégia. Feed, Stories e Reels planejados.", icon: FileText, path: "/cliente/conteudos", scoreKey: "Conteúdo", kpi: "0 roteiros gerados" },
@@ -649,16 +657,23 @@ export default function ClientePlanoMarketing() {
   const [completed, setCompleted] = useState(false);
   const [activeTab, setActiveTab] = useState("estrategia");
 
-  const [history] = useState([
-    { date: "2026-01-15", score: 32, nivel: "Iniciante" },
-    { date: "2026-02-01", score: 48, nivel: "Básico" },
-  ]);
+  // Persistence hooks
+  const { data: activeStrategy, isLoading: loadingStrategy } = useActiveStrategy();
+  const { data: historyData = [], isLoading: loadingHistory } = useStrategyHistory();
+  const saveStrategy = useSaveStrategy();
+
+  // Load active strategy on mount
+  useEffect(() => {
+    if (activeStrategy) {
+      setAnswers(activeStrategy.answers as Answers);
+      setCompleted(true);
+    }
+  }, [activeStrategy]);
 
   const section = strategySections[currentSection];
   const totalSections = strategySections.length;
   const progressPct = ((currentSection + 1) / totalSections) * 100;
 
-  // Get visible questions for current section (handle conditionals)
   const visibleQuestions = useMemo(() => {
     if (!section) return [];
     return section.questions.filter(q => !q.condition || q.condition(answers));
@@ -685,9 +700,17 @@ export default function ClientePlanoMarketing() {
     if (currentSection < totalSections - 1) setCurrentSection(currentSection + 1);
     else {
       setCompleted(true);
-      localStorage.setItem("estrategia_data", JSON.stringify(answers));
+      // Save to database
+      saveStrategy.mutate(
+        { answers, score_percentage: percentage, nivel: nivel.label },
+        {
+          onSuccess: () => toast({ title: "Estratégia salva!", description: "Seu diagnóstico foi salvo e pode ser consultado a qualquer momento." }),
+          onError: () => toast({ title: "Erro ao salvar", description: "Tente novamente.", variant: "destructive" }),
+        }
+      );
     }
   };
+
   const handlePrev = () => {
     if (currentSection > 0) setCurrentSection(currentSection - 1);
   };
@@ -717,11 +740,14 @@ export default function ClientePlanoMarketing() {
     return { label: "Otimizar", className: "bg-success/10 text-success border-success/20" };
   };
 
-  /* ── Render Question ── */
+  /* ── Render Question with HelpTooltip ── */
   const renderQuestion = (q: StrategyQuestion) => (
     <div key={q.id} className="space-y-3">
       <div>
-        <p className="text-sm font-semibold">{q.question}</p>
+        <p className="text-sm font-semibold flex items-center gap-1.5">
+          {q.question}
+          {q.helpText && <HelpTooltip text={q.helpText} />}
+        </p>
         {q.subtitle && <p className="text-xs text-muted-foreground">{q.subtitle}</p>}
         {q.optional && <span className="text-[10px] text-muted-foreground italic ml-1">(opcional)</span>}
       </div>
@@ -791,6 +817,17 @@ export default function ClientePlanoMarketing() {
   );
 
   /* ── Main Render ── */
+  if (loadingStrategy) {
+    return (
+      <div className="w-full space-y-6">
+        <PageHeader title="Estratégia de Marketing" subtitle="Carregando..." icon={<Megaphone className="w-5 h-5 text-primary" />} />
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-6">
       <PageHeader
@@ -868,7 +905,7 @@ export default function ClientePlanoMarketing() {
                   <p className="text-sm text-muted-foreground">Resultado baseado nas suas respostas</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleRestart} className="gap-2">
-                  <RotateCcw className="w-3.5 h-3.5" /> Refazer
+                  <RotateCcw className="w-3.5 h-3.5" /> Refazer Estratégia
                 </Button>
               </div>
 
@@ -925,7 +962,6 @@ export default function ClientePlanoMarketing() {
                 <CardContent className="py-6">
                   <p className="section-label mb-4">PROJEÇÃO DE RESULTADOS — LEADS</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Sem Estratégia */}
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-2">Sem Estratégia</p>
                       <div className="h-48">
@@ -940,7 +976,6 @@ export default function ClientePlanoMarketing() {
                         </ResponsiveContainer>
                       </div>
                     </div>
-                    {/* Com Estratégia */}
                     <div>
                       <p className="text-xs font-medium text-primary mb-2">Com Estratégia</p>
                       <div className="h-48">
@@ -964,7 +999,6 @@ export default function ClientePlanoMarketing() {
                 <CardContent className="py-6">
                   <p className="section-label mb-4">PROJEÇÃO DE FATURAMENTO ESTIMADO</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Sem Estratégia */}
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-2">Sem Estratégia</p>
                       <div className="h-48">
@@ -979,7 +1013,6 @@ export default function ClientePlanoMarketing() {
                         </ResponsiveContainer>
                       </div>
                     </div>
-                    {/* Com Estratégia */}
                     <div>
                       <p className="text-xs font-medium text-success mb-2">Com Estratégia</p>
                       <div className="h-48">
@@ -1085,7 +1118,11 @@ export default function ClientePlanoMarketing() {
             <p className="section-label mb-1">HISTÓRICO DE ESTRATÉGIAS</p>
             <p className="text-sm text-muted-foreground">Acompanhe a evolução do seu marketing ao longo do tempo</p>
           </div>
-          {history.length === 0 ? (
+          {loadingHistory ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+            </div>
+          ) : historyData.length === 0 && !activeStrategy ? (
             <Card className="glass-card">
               <CardContent className="py-12 text-center">
                 <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
@@ -1095,17 +1132,38 @@ export default function ClientePlanoMarketing() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {history.map((h, i) => (
-                <Card key={i} className="glass-card">
+              {/* Current active strategy */}
+              {activeStrategy && (
+                <Card className="glass-card ring-2 ring-primary/20">
                   <CardContent className="py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col items-center">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        {i < history.length - 1 && <div className="w-0.5 h-6 bg-border mt-1" />}
+                        <div className="w-2.5 h-2.5 rounded-full bg-primary" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{new Date(h.date).toLocaleDateString("pt-BR")}</p>
-                        <p className="text-xs text-muted-foreground">Score: {h.score}% — {h.nivel}</p>
+                        <p className="text-sm font-medium flex items-center gap-2">
+                          {new Date(activeStrategy.created_at).toLocaleDateString("pt-BR")}
+                          <Badge className="text-[9px] bg-primary/10 text-primary border-primary/20">Ativa</Badge>
+                        </p>
+                        <p className="text-xs text-muted-foreground">Score: {activeStrategy.score_percentage}% — {activeStrategy.nivel}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[9px]">{activeStrategy.nivel}</Badge>
+                  </CardContent>
+                </Card>
+              )}
+              {/* Past strategies */}
+              {historyData.map((h, i) => (
+                <Card key={h.id} className="glass-card">
+                  <CardContent className="py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                        {i < historyData.length - 1 && <div className="w-0.5 h-6 bg-border mt-1" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{new Date(h.created_at).toLocaleDateString("pt-BR")}</p>
+                        <p className="text-xs text-muted-foreground">Score: {h.score_percentage}% — {h.nivel}</p>
                       </div>
                     </div>
                     <Badge variant="outline" className="text-[9px]">{h.nivel}</Badge>

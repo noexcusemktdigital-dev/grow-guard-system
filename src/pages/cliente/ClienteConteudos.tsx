@@ -22,6 +22,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { HelpTooltip } from "@/components/HelpTooltip";
+import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ApprovalPanel, ApprovalStatusBadge, type ApprovalStatus } from "@/components/approval/ApprovalPanel";
 import { ApprovalSummary } from "@/components/approval/ApprovalSummary";
 import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
@@ -182,6 +185,7 @@ export default function ClienteConteudos() {
   const plan = getPlanBySlug(subscription?.plan);
   const maxContents = plan?.maxContents ?? 8;
   const planName = plan?.name ?? "Starter";
+  const { data: activeStrategy } = useActiveStrategy();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>(() =>
     initialCampaigns.map(c => ({ ...c, conteudos: c.conteudos.map(migrateContentStatus) }))
@@ -199,7 +203,7 @@ export default function ClienteConteudos() {
 
   // Briefing fields
   const [bMes, setBMes] = useState("Março 2026");
-  const [bObjetivo, setBObjetivo] = useState("");
+  const [bObjetivos, setBObjetivos] = useState<string[]>([]);
   const [bTema, setBTema] = useState("");
   const [bPromocoes, setBPromocoes] = useState("");
   const [bDatas, setBDatas] = useState("");
@@ -235,7 +239,7 @@ export default function ClienteConteudos() {
   }, [isGenerating]);
 
   const handleGenerate = async () => {
-    if (!bObjetivo || !bTema || !bTom) {
+    if (bObjetivos.length === 0 || !bTema || !bTom) {
       toast({ title: "Preencha os campos obrigatórios", description: "Objetivo, tema e tom são necessários.", variant: "destructive" });
       return;
     }
@@ -244,11 +248,7 @@ export default function ClienteConteudos() {
     setLoadingPhrase(0);
 
     try {
-      let estrategia = null;
-      try {
-        const stored = localStorage.getItem("estrategia_data");
-        if (stored) estrategia = JSON.parse(stored);
-      } catch {}
+      const estrategia = activeStrategy?.answers || null;
 
       const personaData = (personaNome || personaDescricao)
         ? { nome: personaNome, descricao: personaDescricao }
@@ -256,7 +256,7 @@ export default function ClienteConteudos() {
 
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
-          briefing: { mes: bMes, objetivo: bObjetivo, tema: bTema, promocoes: bPromocoes, datas: bDatas, destaques: bDestaques, tom: bTom },
+          briefing: { mes: bMes, objetivo: bObjetivos.join(", "), tema: bTema, promocoes: bPromocoes, datas: bDatas, destaques: bDestaques, tom: bTom },
           formatos: { feed: qFeed, carrossel: qCarrossel, reels: qReels, story: qStory },
           estrategia,
           persona: personaData,
@@ -278,7 +278,7 @@ export default function ClienteConteudos() {
         mes: bMes,
         label: bMes,
         createdAt: new Date().toLocaleDateString("pt-BR"),
-        briefing: { objetivo: bObjetivo, tema: bTema, tom: bTom },
+        briefing: { objetivo: bObjetivos.join(", "), tema: bTema, tom: bTom },
         conteudos,
       };
 
@@ -454,22 +454,36 @@ export default function ClienteConteudos() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs font-medium">Objetivo Principal *</Label>
-                        <Select value={bObjetivo} onValueChange={setBObjetivo}>
-                          <SelectTrigger><SelectValue placeholder="Selecione o objetivo" /></SelectTrigger>
-                          <SelectContent>
-                            {OBJETIVOS.map((o) => (
-                              <SelectItem key={o} value={o}>{o}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label className="text-xs font-medium flex items-center gap-1.5">
+                          Objetivos *
+                          <HelpTooltip text="Selecione um ou mais objetivos para a campanha. A IA vai equilibrar os conteúdos entre eles." />
+                        </Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {OBJETIVOS.map((o) => (
+                            <label key={o} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all ${bObjetivos.includes(o) ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                              <Checkbox
+                                checked={bObjetivos.includes(o)}
+                                onCheckedChange={(checked) => {
+                                  setBObjetivos(prev => checked ? [...prev, o] : prev.filter(v => v !== o));
+                                }}
+                              />
+                              <span className="text-xs font-medium">{o}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs font-medium">Tema Central *</Label>
+                        <Label className="text-xs font-medium flex items-center gap-1.5">
+                          Tema Central *
+                          <HelpTooltip text="O tema central guia toda a campanha. Ex: 'Automação de Marketing' ou 'Black Friday'." />
+                        </Label>
                         <Input value={bTema} onChange={(e) => setBTema(e.target.value)} placeholder="Ex: Mês da Automação, Crescimento Inteligente..." />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs font-medium">Tom de Comunicação *</Label>
+                        <Label className="text-xs font-medium flex items-center gap-1.5">
+                          Tom de Comunicação *
+                          <HelpTooltip text="O tom define como a marca 'fala'. Educativo ensina, Inspirador motiva, Direto vende." />
+                        </Label>
                         <Select value={bTom} onValueChange={setBTom}>
                           <SelectTrigger><SelectValue placeholder="Selecione o tom" /></SelectTrigger>
                           <SelectContent>
@@ -509,7 +523,7 @@ export default function ClienteConteudos() {
                         </div>
                       </div>
 
-                      <Button className="w-full" onClick={() => setWizardStep(2)} disabled={!bObjetivo || !bTema || !bTom}>
+                      <Button className="w-full" onClick={() => setWizardStep(2)} disabled={bObjetivos.length === 0 || !bTema || !bTom}>
                         Próximo <ArrowRight className="w-4 h-4" />
                       </Button>
                     </div>
@@ -591,7 +605,7 @@ export default function ClienteConteudos() {
                             <span className="text-muted-foreground">Mês:</span>
                             <span className="font-medium">{bMes}</span>
                             <span className="text-muted-foreground">Objetivo:</span>
-                            <span className="font-medium">{bObjetivo}</span>
+                            <span className="font-medium">{bObjetivos.join(", ")}</span>
                             <span className="text-muted-foreground">Tema:</span>
                             <span className="font-medium">{bTema}</span>
                             <span className="text-muted-foreground">Tom:</span>
