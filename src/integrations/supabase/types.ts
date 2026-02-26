@@ -3497,6 +3497,59 @@ export type Database = {
           },
         ]
       }
+      platform_error_logs: {
+        Row: {
+          created_at: string
+          error_message: string
+          error_stack: string | null
+          function_name: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          error_message: string
+          error_stack?: string | null
+          function_name?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string
+          error_stack?: string | null
+          function_name?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_error_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           accepted_terms_at: string | null
