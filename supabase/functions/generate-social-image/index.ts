@@ -33,6 +33,12 @@ async function analyzeAndOptimizePrompt(
 
 Your job: Analyze the user's brief and all brand context, then produce an OPTIMIZED visual prompt in English that will generate the highest-quality social media image possible.
 
+IMPORTANT: The art_style determines whether this should be a GRAPHIC DESIGN or a PHOTOGRAPH/IMAGE.
+- Styles starting with "grafica_" → Generate a FLAT GRAPHIC DESIGN (shapes, color blocks, patterns). NOT a photograph.
+- Styles starting with "foto_" → Generate a PHOTOGRAPHIC image (cinematic, editorial, product photography).
+- "ilustracao" → Generate a DIGITAL ILLUSTRATION (flat/3D, vector-like aesthetic).
+- "collage" → Generate a MIXED-MEDIA COLLAGE (layered elements, textures, photo cutouts).
+
 Your optimized prompt must:
 - Be 200-400 words, highly descriptive and specific
 - Describe exact visual elements, lighting, materials, textures, camera angle
@@ -265,11 +271,38 @@ serve(async (req) => {
     let artStyleInstructions = "";
     if (art_style) {
       const artStyleMap: Record<string, string> = {
-        foto_texto: "ART APPROACH: Photorealistic image with clean negative space for text overlay. Professional photography aesthetic. Studio or natural lighting, sharp details.",
-        composicao: "ART APPROACH: Graphic design composition with abstract shapes, geometric elements, bold color blocks. Modern, layered, visually dynamic.",
-        mockup: "ART APPROACH: Product mockup in realistic context (desk, hand, lifestyle). Natural lighting, contextual background, commercial photography.",
-        quote: "ART APPROACH: Stylized background (gradient, texture, pattern) optimized for text overlay. Minimalist and clean. Focus on atmosphere and mood.",
-        before_after: "ART APPROACH: Split composition showing two contrasting states. Clear visual contrast, same framing perspective, transformation narrative.",
+        // ── Graphic Design Styles ──
+        grafica_moderna: `ART APPROACH: FLAT GRAPHIC DESIGN — NOT a photograph.
+Create a flat graphic design composition. Use bold color blocks, geometric shapes (circles, rectangles, triangles), clean lines. The style should look like a professionally designed social media template — NOT a photograph. Use solid background colors, layered shapes with brand colors, decorative elements like dots, lines, abstract patterns. Leave clear structured space for text overlay. Think: Canva Pro template, Behance social media design, Adobe Express layout. Use the brand's color palette as the dominant color scheme. Create visual hierarchy through shape size and placement. The overall feel should be modern, clean, and immediately recognizable as a designed graphic — not generated photography.`,
+
+        grafica_elegante: `ART APPROACH: LUXURY GRAPHIC DESIGN — NOT a photograph.
+Create a luxury graphic design composition with a dark background (deep navy, black, or charcoal). Add subtle gold or metallic accent elements — thin decorative lines, ornamental borders, small geometric details. The composition should feel high-end like a fashion brand or premium service announcement. Use serif-inspired visual elements, subtle gradients, and sophisticated color palette. NOT a photograph. Think: luxury brand social media, premium event invitation, high-end restaurant menu aesthetic. Use deep shadows, metallic textures, and restrained elegance. The design should whisper "exclusive" and "premium" through restraint and sophistication.`,
+
+        grafica_bold: `ART APPROACH: HIGH-ENERGY GRAPHIC DESIGN — NOT a photograph.
+Create an energetic, high-contrast graphic design. Use large bold color blocks, diagonal stripes or slashes, strong geometric shapes. Colors should be vibrant and attention-grabbing — use the brand's most vivid colors in large areas. The composition should feel dynamic and modern — like a sports brand announcement, flash sale promotion, or festival poster. Create visual tension with contrasting elements, asymmetric layouts, and bold scale contrasts. Think: Nike campaigns, Spotify playlists, streetwear brand graphics. Every element should scream energy and urgency.`,
+
+        grafica_minimalista: `ART APPROACH: ULTRA-MINIMALIST GRAPHIC DESIGN — NOT a photograph.
+Create an ultra-clean minimalist graphic design. Maximum negative space (60%+ of canvas should be empty or single-color). Use only 1-2 subtle geometric elements. Monochromatic or two-tone color scheme. Inspired by Japanese minimalism, Muji aesthetic, Apple marketing. The design should breathe and feel premium through restraint. Think: single accent line, one small geometric shape, vast empty space with purpose. Use the brand's most neutral color as the dominant background. Every pixel of negative space is intentional. Less is dramatically more.`,
+
+        // ── Photography Styles ──
+        foto_editorial: `ART APPROACH: CINEMATIC EDITORIAL PHOTOGRAPHY.
+Create a cinematic editorial photograph with professional studio or golden-hour lighting. Use depth of field with professional bokeh (f/1.4 - f/2.8 equivalent), intentional composition following the rule of thirds. Leave clean negative space (top 20% OR bottom 25%) for text overlay. Sharp focus on subject with soft background blur. Professional color grading with film-like tones. Think: magazine cover, editorial spread, brand campaign photography by Annie Leibovitz or Peter Lindbergh. The lighting should be dramatic yet flattering, with clear directional light source and controlled shadows.`,
+
+        foto_produto: `ART APPROACH: LIFESTYLE PRODUCT PHOTOGRAPHY.
+Create a product photography scene with the product in a lifestyle context — on a textured surface (marble, wood, linen fabric), held in a hand, or arranged in a curated flat lay composition. Use soft directional lighting with subtle shadows, clean but warm color palette. Professional commercial photography quality — think: Apple product shoots, cosmetics brand photography, food styling by a professional photographer. The background should complement but never compete with the product. Include contextual props that tell a story. Every shadow and reflection should be intentional.`,
+
+        ilustracao: `ART APPROACH: MODERN DIGITAL ILLUSTRATION.
+Create a modern digital illustration with flat design or soft 3D style, clean vector-like aesthetic. Use stylized characters or objects with consistent color palette. The feel should be modern tech/startup — friendly, approachable, professional. Think: Slack illustrations, Notion artwork, Stripe marketing visuals, Headspace app illustrations. Use smooth gradients, rounded shapes, and a limited but cohesive color palette. Characters (if any) should be diverse and stylized, not photorealistic. The overall composition should feel like a premium SaaS marketing asset.`,
+
+        collage: `ART APPROACH: CREATIVE MIXED-MEDIA COLLAGE.
+Create a creative mixed-media collage composition. Layer photographic elements with graphic shapes, textures, and color blocks. Use paper-cut effect, overlapping elements at varied scales, torn paper edges, vintage textures mixed with modern graphics. Contemporary editorial collage style — artistic and eye-catching. Think: Vogue editorial layouts, contemporary art posters, festival marketing collages. Mix photography snippets with bold color fields, halftone patterns, and hand-drawn elements. The composition should feel intentionally chaotic yet balanced.`,
+
+        // ── Legacy fallbacks ──
+        foto_texto: `ART APPROACH: CINEMATIC EDITORIAL PHOTOGRAPHY with clean negative space for text overlay. Professional lighting, sharp details, rule-of-thirds composition.`,
+        composicao: `ART APPROACH: FLAT GRAPHIC DESIGN composition with abstract shapes, geometric elements, bold color blocks. Modern, layered, visually dynamic. NOT a photograph.`,
+        mockup: `ART APPROACH: LIFESTYLE PRODUCT PHOTOGRAPHY in realistic context. Natural lighting, contextual background, commercial photography quality.`,
+        quote: `ART APPROACH: MINIMALIST GRAPHIC DESIGN background (gradient, texture, pattern) optimized for text overlay. Clean, atmospheric, focused on mood.`,
+        before_after: `ART APPROACH: Split composition showing two contrasting states. Clear visual contrast, same framing perspective, transformation narrative.`,
       };
       artStyleInstructions = artStyleMap[art_style] || "";
     }
@@ -395,13 +428,8 @@ Generate this image now. Prioritize brand color accuracy and compositional excel
 
     console.log(`✅ Image uploaded: ${urlData.publicUrl}`);
 
-    // Check if this is a template-style art that needs Canvas composition
-    const TEMPLATE_ART_STYLES = ['foto_texto', 'composicao', 'mockup', 'quote'];
-    const needsTemplate = art_style && TEMPLATE_ART_STYLES.includes(art_style);
-
     return new Response(JSON.stringify({ 
       url: urlData.publicUrl,
-      needs_template: needsTemplate || false,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
