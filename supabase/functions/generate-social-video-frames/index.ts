@@ -8,6 +8,36 @@ const corsHeaders = {
 
 const CREDIT_COST_PER_FRAME = 100;
 
+/* ── Scene config mapping by video style ── */
+
+interface SceneConfigMeta {
+  textAnimation: string;
+  transition: string;
+  showLogo: boolean;
+  graphicStyle: string;
+  brandOverlayOpacity: number;
+  showParticles: boolean;
+}
+
+function getSceneConfigsForStyle(
+  videoStyle: string | undefined,
+  numScenes: number,
+): SceneConfigMeta[] {
+  const styleMap: Record<string, Omit<SceneConfigMeta, "showLogo">> = {
+    slideshow: { textAnimation: "fadeIn", transition: "dissolve", graphicStyle: "minimal", brandOverlayOpacity: 0.15, showParticles: true },
+    kinetic: { textAnimation: "kinetic", transition: "slideLeft", graphicStyle: "geometric", brandOverlayOpacity: 0.25, showParticles: false },
+    revelacao: { textAnimation: "scaleIn", transition: "zoomIn", graphicStyle: "organic", brandOverlayOpacity: 0.2, showParticles: true },
+    countdown: { textAnimation: "slideUp", transition: "wipe", graphicStyle: "geometric", brandOverlayOpacity: 0.3, showParticles: false },
+  };
+
+  const base = styleMap[videoStyle || ""] || styleMap.slideshow;
+
+  return Array.from({ length: numScenes }, (_, i) => ({
+    ...base,
+    showLogo: i === 0 || i === numScenes - 1, // logo on first and last
+  }));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -51,7 +81,8 @@ serve(async (req) => {
     // Parse scene descriptions from video_description
     const scenes = parseScenes(video_description, num_frames);
     const sceneTexts = generateSceneTexts(video_description, scenes);
-    console.log(`Generating ${scenes.length} video frames for art ${art_id}...`);
+    const sceneConfigs = getSceneConfigsForStyle(video_style, scenes.length);
+    console.log(`Generating ${scenes.length} video frames for art ${art_id} (style: ${video_style})...`);
 
     // Build brand context
     let brandContext = "";
@@ -76,13 +107,12 @@ The generated frames MUST feel like they belong to this brand's visual ecosystem
       };
       videoStyleContext = styleGuides[video_style] || "";
     }
-    }
 
     const frameUrls: string[] = [];
 
     for (let i = 0; i < scenes.length; i++) {
       const scene = scenes[i];
-    const framePrompt = `You are creating frame ${i + 1} of ${scenes.length} for a short-form vertical video (Instagram Reels / TikTok).
+      const framePrompt = `You are creating frame ${i + 1} of ${scenes.length} for a short-form vertical video (Instagram Reels / TikTok).
 
 OUTPUT FORMAT: Vertical (9:16), 1080×1920px.
 
@@ -147,7 +177,6 @@ Generate this single frame now.`;
             status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        // Skip this frame but continue
         console.error(`Skipping frame ${i + 1}`);
         continue;
       }
@@ -192,7 +221,7 @@ Generate this single frame now.`;
       }
     }
 
-    return new Response(JSON.stringify({ frameUrls, sceneTexts }), {
+    return new Response(JSON.stringify({ frameUrls, sceneTexts, sceneConfigs }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
@@ -208,20 +237,17 @@ function parseScenes(videoDescription: string, maxFrames: number): string[] {
     return Array.from({ length: maxFrames }, (_, i) => `Scene ${i + 1} of the video`);
   }
 
-  // Try to split by numbered scenes, timecodes, or line breaks
   const lines = videoDescription
     .split(/\n/)
     .map(l => l.trim())
     .filter(l => l.length > 10);
 
   if (lines.length >= 3) {
-    // Take evenly spaced lines if there are more than maxFrames
     if (lines.length <= maxFrames) return lines;
     const step = lines.length / maxFrames;
     return Array.from({ length: maxFrames }, (_, i) => lines[Math.floor(i * step)]);
   }
 
-  // Fallback: split by sentences
   const sentences = videoDescription
     .split(/[.!?]+/)
     .map(s => s.trim())
@@ -233,20 +259,15 @@ function parseScenes(videoDescription: string, maxFrames: number): string[] {
     return Array.from({ length: maxFrames }, (_, i) => sentences[Math.floor(i * step)]);
   }
 
-  // Ultimate fallback
   return [videoDescription];
 }
 
 function generateSceneTexts(videoDescription: string, scenes: string[]): { main: string; sub?: string }[] {
   return scenes.map((scene, i) => {
-    // Extract a short title from each scene (first ~60 chars or first sentence)
     const firstSentence = scene.split(/[.!?]/)[0]?.trim() || scene;
     const main = firstSentence.length > 60 ? firstSentence.substring(0, 57) + "..." : firstSentence;
-
-    // Last scene gets a CTA subtitle
     const isLast = i === scenes.length - 1;
     const sub = isLast ? "Saiba mais →" : undefined;
-
     return { main, sub };
   });
 }
