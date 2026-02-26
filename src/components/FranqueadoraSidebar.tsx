@@ -5,7 +5,7 @@ import {
   LayoutDashboard, DollarSign, FileText, FolderOpen, Building2, TrendingUp,
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
   Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt,
-  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User,
+  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, Cloud,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -65,6 +65,7 @@ const adminSection: SidebarItem[] = [
       { label: "Configurações", icon: Settings, path: "/franqueadora/financeiro/configuracoes" },
     ],
   },
+  { label: "SaaS", icon: Cloud, path: "/franqueadora/saas" },
   { label: "Drive Corporativo", icon: FolderOpen, path: "/franqueadora/drive", disabled: true },
 ];
 
