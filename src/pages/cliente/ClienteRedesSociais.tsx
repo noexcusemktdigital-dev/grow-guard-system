@@ -31,7 +31,7 @@ import { getPlanBySlug, CREDIT_PACKS } from "@/constants/plans";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { useVisualIdentity, useSaveVisualIdentity, isVisualIdentityComplete } from "@/hooks/useVisualIdentity";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { renderMotionGraphics, type SceneText } from "@/lib/motionGraphicsEngine";
+import { renderMotionGraphics, type SceneText, type SceneConfig } from "@/lib/motionGraphicsEngine";
 
 /* ── Types ── */
 interface SocialConcept {
@@ -738,11 +738,12 @@ export default function ClienteRedesSociais() {
             if (!framesError && framesData?.frameUrls?.length) {
               videoFrameUrls = framesData.frameUrls;
               const sceneTexts: SceneText[] = framesData.sceneTexts || [];
+              const sceneConfigsFromApi: SceneConfig[] = framesData.sceneConfigs || [];
               
-              // Assemble video with Motion Graphics Engine (Canvas + MediaRecorder)
+              // Assemble video with Motion Graphics Engine v2
               setGenMessage(`Montando vídeo ${i + 1}/${concepts.length}...`);
               try {
-                // Adapt motion config based on selected video style
+                // Timing config per video style
                 const styleConfigs: Record<string, Partial<Parameters<typeof renderMotionGraphics>[2]>> = {
                   slideshow: { frameDurationMs: 3000, kenBurnsIntensity: 0.12, transitionDurationMs: 600 },
                   kinetic: { frameDurationMs: 2000, kenBurnsIntensity: 0.05, transitionDurationMs: 300 },
@@ -750,6 +751,11 @@ export default function ClienteRedesSociais() {
                   countdown: { frameDurationMs: 2500, kenBurnsIntensity: 0.1, transitionDurationMs: 400 },
                 };
                 const styleConfig = styleConfigs[selectedVideoStyle] || {};
+
+                // Extract brand assets from visual identity
+                const viData = visualIdentity;
+                const brandColors = viData?.palette?.map((c: any) => c.hex).filter(Boolean) || [];
+                const logoUrl = viData?.logo_url || undefined;
 
                 const videoBlob = await renderMotionGraphics(videoFrameUrls, sceneTexts, {
                   frameDurationMs: 3000,
@@ -759,8 +765,11 @@ export default function ClienteRedesSociais() {
                   outputWidth: 1080,
                   outputHeight: 1920,
                   ...styleConfig,
+                  logoUrl,
+                  brandColors,
+                  showParticles: selectedVideoStyle !== "kinetic" && selectedVideoStyle !== "countdown",
                   onProgress: (_pct, msg) => setGenMessage(msg),
-                });
+                }, sceneConfigsFromApi);
                 
                 // Upload video to storage
                 const videoPath = `videos/${orgId}/${artId}/reel.webm`;
