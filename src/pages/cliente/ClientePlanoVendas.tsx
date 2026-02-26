@@ -1,4 +1,7 @@
 import { useState, useMemo } from "react";
+// ChatBriefing integration
+import { ChatBriefing } from "@/components/cliente/ChatBriefing";
+import { AGENTS, RAFAEL_STEPS } from "@/components/cliente/briefingAgents";
 import {
   Target, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle,
   Lightbulb, TrendingUp, Users, Rocket, RotateCcw, Clock,
@@ -604,7 +607,6 @@ export default function ClientePlanoVendas() {
   const anoAtual = new Date().getFullYear();
 
   // ── Diagnostic state ──
-  const [currentSection, setCurrentSection] = useState(0);
   const [answers, setAnswers] = useState<Answers>(() => {
     const saved = localStorage.getItem("plano_vendas_data");
     return saved ? JSON.parse(saved) : {};
@@ -642,15 +644,6 @@ export default function ClientePlanoVendas() {
   const isMonetaryMetric = (m: string) => ["revenue", "avg_ticket"].includes(m);
 
   // ── Diagnostic computed ──
-  const section = salesSections[currentSection];
-  const totalSections = salesSections.length;
-  const progressPct = ((currentSection + 1) / totalSections) * 100;
-
-  const visibleQuestions = useMemo(() => {
-    if (!section) return [];
-    return section.questions;
-  }, [section]);
-
   const { scoreMap, maxMap, radarData, percentage } = useMemo(() => computeScores(answers), [answers]);
   const nivel = getNivel(percentage);
   const insights = useMemo(() => generateInsights(answers, scoreMap, maxMap), [answers, scoreMap, maxMap]);
@@ -724,38 +717,15 @@ export default function ClientePlanoVendas() {
   const progValues = goalProgress ? Object.values(goalProgress) : [];
   const hasGoals = activeGoals && activeGoals.length > 0;
 
-  // ── Diagnostic handlers ──
-  const canGoNext = () => {
-    return visibleQuestions.every(q => {
-      if (q.optional) return true;
-      const val = answers[q.id];
-      if (q.type === "text") return !!val && String(val).length > 0;
-      if (q.type === "multi-choice") return Array.isArray(val) && val.length > 0;
-      return !!val;
-    });
+  // ── ChatBriefing handler ──
+  const handleChatComplete = (chatAnswers: Record<string, any>) => {
+    setAnswers(chatAnswers as Answers);
+    setCompleted(true);
+    localStorage.setItem("plano_vendas_data", JSON.stringify(chatAnswers));
   };
-
-  const handleNext = () => {
-    if (currentSection < totalSections - 1) setCurrentSection(currentSection + 1);
-    else {
-      setCompleted(true);
-      localStorage.setItem("plano_vendas_data", JSON.stringify(answers));
-    }
-  };
-  const handlePrev = () => { if (currentSection > 0) setCurrentSection(currentSection - 1); };
-
-  const handleChoiceSelect = (qId: string, value: string) => setAnswers(prev => ({ ...prev, [qId]: value }));
-  const handleMultiChoiceToggle = (qId: string, value: string) => {
-    setAnswers(prev => {
-      const current = (prev[qId] as string[]) || [];
-      if (current.includes(value)) return { ...prev, [qId]: current.filter(v => v !== value) };
-      return { ...prev, [qId]: [...current, value] };
-    });
-  };
-  const handleTextChange = (qId: string, val: string) => setAnswers(prev => ({ ...prev, [qId]: val }));
 
   const handleRestart = () => {
-    setAnswers({}); setCurrentSection(0); setCompleted(false);
+    setAnswers({}); setCompleted(false);
     localStorage.removeItem("plano_vendas_data");
   };
 
@@ -828,86 +798,6 @@ export default function ClientePlanoVendas() {
       },
     });
   };
-
-  /* ── Render Question ── */
-  const renderQuestion = (q: StrategyQuestion) => (
-    <div key={q.id} className="space-y-3">
-      <div>
-        <div className="flex items-center gap-1.5">
-          <p className="text-sm font-semibold">{q.question}</p>
-          {q.helpText && (
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground hover:text-primary transition-colors">
-                    <HelpCircle className="w-3.5 h-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-[240px] text-xs">
-                  {q.helpText}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-        {q.subtitle && <p className="text-xs text-muted-foreground">{q.subtitle}</p>}
-        {q.optional && <span className="text-[10px] text-muted-foreground italic ml-1">(opcional)</span>}
-      </div>
-
-      {q.type === "choice" && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {q.options?.map(opt => {
-            const selected = answers[q.id] === opt.value;
-            const Icon = opt.icon;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => handleChoiceSelect(q.id, opt.value)}
-                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all duration-200
-                  ${selected ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
-              >
-                {Icon && <Icon className={`w-4 h-4 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />}
-                <span className={`text-xs font-medium ${selected ? "text-foreground" : "text-muted-foreground"}`}>{opt.label}</span>
-                {selected && <CheckCircle2 className="w-3.5 h-3.5 text-primary ml-auto shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {q.type === "multi-choice" && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {q.options?.map(opt => {
-            const arr = (answers[q.id] as string[]) || [];
-            const selected = arr.includes(opt.value);
-            return (
-              <button
-                key={opt.value}
-                onClick={() => handleMultiChoiceToggle(q.id, opt.value)}
-                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all duration-200
-                  ${selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
-              >
-                <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors
-                  ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
-                  {selected && <CheckCircle2 className="w-2.5 h-2.5 text-primary-foreground" />}
-                </div>
-                <span className={`text-xs ${selected ? "font-medium text-foreground" : "text-muted-foreground"}`}>{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {q.type === "text" && (
-        <Input
-          value={(answers[q.id] as string) || ""}
-          onChange={e => handleTextChange(q.id, e.target.value)}
-          placeholder={q.placeholder}
-          className="text-sm"
-        />
-      )}
-    </div>
-  );
 
   /* ══════════════════════════════════════════════
      RENDER
@@ -986,53 +876,12 @@ export default function ClientePlanoVendas() {
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-4">
               {!completed ? (
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {section && <section.icon className="w-4 h-4 text-primary" />}
-                        <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                          {section?.title}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        {currentSection + 1} de {totalSections}
-                      </span>
-                    </div>
-                    <Progress value={progressPct} className="h-1.5" />
-                  </div>
-
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={section?.id}
-                      initial={{ opacity: 0, x: 30 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -30 }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                    >
-                      <Card className="glass-card overflow-hidden">
-                        <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
-                        <CardContent className="py-6 px-6 md:px-10 space-y-6">
-                          <div>
-                            <h2 className="text-lg font-black tracking-tight">{section?.title}</h2>
-                            <p className="text-sm text-muted-foreground">{section?.subtitle}</p>
-                          </div>
-                          {visibleQuestions.map(renderQuestion)}
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  </AnimatePresence>
-
-                  <div className="flex items-center justify-between">
-                    <Button variant="ghost" onClick={handlePrev} disabled={currentSection === 0} className="gap-2">
-                      <ArrowLeft className="w-4 h-4" /> Voltar
-                    </Button>
-                    <Button onClick={handleNext} disabled={!canGoNext()} className="gap-2">
-                      {currentSection === totalSections - 1 ? "Ver Resultado" : "Próximo"}
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                <ChatBriefing
+                  agent={AGENTS.rafael}
+                  steps={RAFAEL_STEPS}
+                  onComplete={handleChatComplete}
+                  onCancel={() => setShowWelcome(true)}
+                />
               ) : (
                 /* ── RESULT ── */
                 <div className="space-y-6">
