@@ -1,89 +1,74 @@
 
 
-## Gating de Estratégia + Referências por Arquivo + Geração de Vídeo
+## Geração de Vídeos Reais para Redes Sociais (Reels 9:16)
 
-### Visão Geral
+### Conceito
 
-Três mudanças principais:
-1. **Estratégia de Marketing como pré-requisito** — Conteúdos e Redes Sociais ficam bloqueados até a estratégia ser completada (mesma mecânica do Plano de Vendas)
-2. **Referências visuais por arquivo** — Aceitar uploads de arquivos (não só imagens) como referências no briefing
-3. **Geração de vídeos curtos** — Novo tipo de criação para Reels/Stories em vídeo
+Gerar vídeos curtos reais (MP4) no formato Reels (9:16, 1080x1920) a partir de keyframes gerados por IA. O fluxo:
 
----
+1. A IA gera o roteiro com timecodes (já implementado)
+2. A IA gera 4-6 imagens-chave (keyframes) representando cada cena do roteiro
+3. O ffmpeg.wasm (já instalado no projeto) monta essas imagens em um vídeo MP4 com transições suaves (fade/crossfade)
+4. O vídeo final é salvo no bucket `social-arts` e disponibilizado para download
 
-### 1. Gating: Estratégia obrigatória para Conteúdos e Redes Sociais
-
-**Arquivo**: `src/contexts/FeatureGateContext.tsx`
-
-- Adicionar novo `GateReason`: `"no_marketing_strategy"`
-- Criar lista `MARKETING_STRATEGY_REQUIRED` com `/cliente/conteudos` e `/cliente/redes-sociais`
-- Verificar se existe estratégia ativa no banco (usar `useActiveStrategy` ou verificar via localStorage/query)
-- Adicionar lógica no `getGateReason` para checar essa condição
-
-**Arquivo**: `src/components/FeatureGateOverlay.tsx`
-
-- Adicionar configuração visual para `no_marketing_strategy`:
-  - Ícone: `Megaphone`
-  - Título: "Complete a Estratégia de Marketing"
-  - Descrição: "Para desbloquear esta funcionalidade, complete primeiro sua Estratégia de Marketing."
-  - CTA: "Criar Estratégia" → navega para `/cliente/plano-marketing`
-
-**Arquivo**: `src/hooks/useMarketingStrategy.ts`
-
-- Exportar um hook simples `useHasActiveStrategy()` que retorna `boolean` para uso no contexto de gating (evita carregar dados completos)
+```text
+Roteiro IA → Keyframes (4-6 imagens 9:16) → ffmpeg.wasm → MP4 Reels
+```
 
 ---
 
-### 2. Referências visuais: aceitar arquivos além de imagens
+### 1. Nova Edge Function: `generate-social-video-frames`
+
+**Arquivo**: `supabase/functions/generate-social-video-frames/index.ts`
+
+- Recebe: `video_description` (frame-by-frame), `visual_prompt_thumbnail`, identidade visual, referências
+- Gera 4-6 imagens sequenciais em formato 9:16 (1080x1920) usando `google/gemini-3-pro-image-preview`
+- Cada imagem representa uma cena do roteiro (ex: cena 1 = gancho, cena 2 = contexto, etc.)
+- Faz upload de cada frame para `social-arts/videos/{orgId}/{artId}/frame-{n}.png`
+- Retorna array de URLs dos frames
+- Custo: 100 creditos por frame (400-600 total por video)
+
+---
+
+### 2. Montagem do Vídeo no Cliente com ffmpeg.wasm
+
+**Arquivo**: `src/lib/videoGenerator.ts` (novo)
+
+- Função `generateVideoFromFrames(frameUrls: string[], options)`:
+  - Carrega o ffmpeg.wasm
+  - Baixa cada frame e escreve no filesystem virtual do ffmpeg
+  - Monta o vídeo com duração de 2-3s por frame, transição fade entre cenas
+  - Exporta como MP4 em 9:16 (1080x1920)
+  - Retorna Blob do vídeo
+- Parâmetros configuráveis: duração por frame, tipo de transição, FPS
+
+---
+
+### 3. Alterações na UI
 
 **Arquivo**: `src/pages/cliente/ClienteRedesSociais.tsx`
 
-Alterações no briefing (seção "Referências Visuais"):
-- Mudar o `accept` do input de `image/*` para `image/*,.pdf,.ai,.psd,.svg,.fig` — aceitar arquivos de design como referência
-- Adicionar label explicando que PDFs e arquivos de design podem ser enviados como referência de estilo
-- Manter o upload para o bucket `social-arts/references/{orgId}/`
-- Para arquivos não-imagem, exibir ícone de arquivo em vez de thumbnail
-- Atualizar o tipo `bReferenceImages` para incluir `fileName` e `mimeType`
+Alterações no fluxo de geração (quando `bIncluirVideo = true`):
 
-Não há mudança no backend — os arquivos de referência são enviados como URLs públicas para a IA, que já aceita URLs de qualquer tipo de imagem.
+- Após gerar conceitos e artes estáticas, adicionar etapa: "Gerando vídeo..."
+- Chamar `generate-social-video-frames` para gerar os keyframes
+- Chamar `generateVideoFromFrames()` no cliente para montar o MP4
+- Upload do MP4 final para `social-arts/videos/{orgId}/{artId}/reel.mp4`
+- Salvar `videoUrl` no objeto da arte
+
+Na aba "Vídeo" do editor:
+- Player de vídeo HTML5 com o Reel gerado (em vez de só mostrar o roteiro)
+- Botão "Baixar Vídeo (MP4)" para download direto
+- Manter roteiro, storyboard e sugestão de áudio abaixo do player
+- Indicador de progresso durante a geração ("Gerando frame 2/5...")
 
 ---
 
-### 3. Geração de Vídeos para Redes Sociais
+### 4. Tipo atualizado
 
-Atualmente só existem artes estáticas (Feed e Story). Adicionar geração de vídeos curtos usando o modelo Veo do Lovable AI Gateway.
-
-**Nota importante**: O Lovable AI Gateway atualmente não suporta modelos de geração de vídeo nativamente. A abordagem será:
-- Gerar **roteiro de vídeo detalhado** (storyboard frame-by-frame) via IA
-- Gerar **thumbnail/capa do vídeo** como imagem estática
-- Fornecer o roteiro completo com timecodes para o cliente gravar/editar
-
-**Arquivo**: `src/pages/cliente/ClienteRedesSociais.tsx`
-
-Alterações:
-- Adicionar novo formato no briefing: `"video"` além de "feed" e "story"
-- Checkbox "Gerar roteiro de vídeo" no wizard
-- Quando ativado, a IA gera além das artes:
-  - Roteiro com timecodes (0-3s gancho, 3-15s contexto, etc.)
-  - Descrição visual frame-by-frame
-  - Sugestão de áudio/música
-  - Thumbnail/capa do vídeo (imagem gerada)
-- Na visualização da arte, adicionar aba "Vídeo" que mostra o roteiro completo
-
-**Arquivo**: `supabase/functions/generate-social-concepts/index.ts`
-
-Alterações:
-- Receber `incluir_video: boolean` no body
-- Quando ativo, adicionar ao tool schema:
-  - `video_script`: roteiro completo com timecodes
-  - `video_description`: descrição visual frame-by-frame
-  - `audio_suggestion`: sugestão de trilha/áudio
-  - `visual_prompt_thumbnail`: prompt para gerar thumbnail do vídeo
-- Atualizar system prompt para gerar roteiros de vídeo quando solicitado
-
-**Arquivo**: `supabase/functions/generate-social-image/index.ts`
-
-- Sem alterações — thumbnail é gerada com o mesmo fluxo de imagem
+No tipo `SocialArt`:
+- Adicionar `videoUrl?: string | null` — URL do vídeo MP4 gerado
+- Adicionar `videoFrameUrls?: string[]` — URLs dos keyframes individuais
 
 ---
 
@@ -91,15 +76,12 @@ Alterações:
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `src/contexts/FeatureGateContext.tsx` | Editar | Adicionar gate `no_marketing_strategy` para Conteúdos e Redes Sociais |
-| `src/components/FeatureGateOverlay.tsx` | Editar | Adicionar config visual do gate de estratégia |
-| `src/hooks/useMarketingStrategy.ts` | Editar | Adicionar `useHasActiveStrategy()` para o gating |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar | Aceitar arquivos de design como referência + checkbox de vídeo + exibição de roteiro |
-| `supabase/functions/generate-social-concepts/index.ts` | Editar | Gerar roteiros de vídeo quando solicitado |
+| `supabase/functions/generate-social-video-frames/index.ts` | Criar | Edge function para gerar keyframes sequenciais |
+| `src/lib/videoGenerator.ts` | Criar | Utilitário ffmpeg.wasm para montar MP4 a partir de frames |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar | Integrar geração de vídeo no fluxo + player na aba Vídeo |
 
 ### Ordem de Implementação
 
-1. Hook `useHasActiveStrategy` + FeatureGateContext + Overlay
-2. Referências por arquivo no briefing
-3. Geração de roteiros de vídeo (conceitos + UI)
-
+1. Edge function `generate-social-video-frames`
+2. Utilitário `videoGenerator.ts` com ffmpeg.wasm
+3. Integração na UI: fluxo de geração + player de vídeo
