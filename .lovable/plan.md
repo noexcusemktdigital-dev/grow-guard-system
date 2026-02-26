@@ -1,29 +1,56 @@
 
 
-## Audio Transcription for AI Agents
+## Corrigir Transcrição de Áudio dos Agentes de IA
 
-### Problem
-Two gaps prevent AI agents from processing audio messages:
+### Problema
+A transcrição de áudio não funciona porque o código atual envia apenas a URL do áudio como texto para o modelo de IA (`"Transcreva este áudio: https://..."`) . O modelo não consegue acessar URLs externas -- ele precisa receber o conteúdo do áudio diretamente como dados binários (base64).
 
-1. **Webhook (`whatsapp-webhook/index.ts`, line 161)**: Only triggers `ai-agent-reply` when `messageText` exists. Audio messages have no text, only `media_url` -- so the AI is never called.
-2. **Webhook doesn't pass `message_type` or `media_url`** to the AI agent function, so even if triggered, the agent can't find the audio URL.
-3. **AI Agent (`ai-agent-reply/index.ts`, line 105)**: Requires `message_text` to be present (`!message_text` returns error). For audio, `message_text` will be empty.
+### Solução
 
-### Solution
+**Arquivo**: `supabase/functions/ai-agent-reply/index.ts` (bloco de transcrição, linhas 241-265)
 
-**File 1: `supabase/functions/whatsapp-webhook/index.ts`**
+Modificar o fluxo de transcrição para:
 
-- Change the trigger condition (line 161) from `if (messageText)` to `if (messageText || mediaUrl)` so audio/media messages also invoke the AI agent.
-- Pass `message_type` and `media_url` in the payload sent to `ai-agent-reply`.
+1. **Baixar o arquivo de áudio** da URL usando `fetch`
+2. **Converter para base64** usando `btoa` ou equivalente Deno
+3. **Enviar como conteúdo multimodal** para o Gemini usando o formato de mensagem com `image_url` (que no Gemini suporta áudio também) ou content parts com tipo `audio`
 
-**File 2: `supabase/functions/ai-agent-reply/index.ts`**
+O formato correto para enviar áudio ao Gemini via a API de chat completions compatível com OpenAI:
 
-- Update the destructuring (line 93) to also extract `media_url`.
-- Change the validation (line 105) to accept messages that have either `message_text` or `media_url`.
-- Update the audio transcription block (line 243) to use `media_url` when `message_text` is empty (audio-only messages).
+```typescript
+// 1. Baixar o áudio
+const audioResponse = await fetch(audioUrl);
+const audioBuffer = await audioResponse.arrayBuffer();
+const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
 
-### Impact
-- 2 edge functions updated
-- AI agents will automatically transcribe incoming voice notes and respond based on the transcribed content
-- No UI changes needed
-- Both functions will be auto-deployed
+// 2. Detectar MIME type
+const contentType = audioResponse.headers.get("content-type") || "audio/ogg";
+
+// 3. Enviar como multimodal
+const transcribeRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  method: "POST",
+  headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+  body: JSON.stringify({
+    model: "google/gemini-2.5-flash",
+    messages: [
+      { role: "system", content: "Transcreva o áudio. Retorne apenas o texto transcrito." },
+      { role: "user", content: [
+        { type: "input_audio", input_audio: { data: audioBase64, format: "ogg" } }
+      ]}
+    ],
+  }),
+});
+```
+
+Caso o formato `input_audio` nao funcione com o gateway, usaremos o fallback com `image_url` com data URI (que o Gemini aceita para áudio):
+
+```typescript
+{ type: "image_url", image_url: { url: `data:${contentType};base64,${audioBase64}` } }
+```
+
+Tambem adicionaremos logs de debug (`console.log`) para confirmar que o áudio foi baixado e o resultado da transcrição.
+
+### Impacto
+- 1 arquivo alterado (`ai-agent-reply/index.ts`)
+- O agente passara a realmente ouvir e entender os áudios recebidos
+- Funcao sera redeployada automaticamente
