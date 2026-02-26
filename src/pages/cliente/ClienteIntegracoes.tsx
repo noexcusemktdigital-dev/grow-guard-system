@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link2, Wifi, WifiOff, Settings2, RefreshCw, Unplug, AlertTriangle, Headset, Tag, Copy, Key, Webhook, Calendar, BarChart3, Globe, Megaphone } from "lucide-react";
+import { WebsiteChatConfig } from "@/components/cliente/WebsiteChatConfig";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -227,6 +228,9 @@ export default function ClienteIntegracoes() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Website Chat Widget */}
+          <WebsiteChatConfig />
 
           {/* Support CTA */}
           <Card>
