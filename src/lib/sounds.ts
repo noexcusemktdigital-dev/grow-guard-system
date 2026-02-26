@@ -1,4 +1,4 @@
-type SoundType = "success" | "notification" | "warning" | "click";
+type SoundType = "success" | "notification" | "warning" | "click" | "celebration";
 
 let audioCtx: AudioContext | null = null;
 
@@ -43,6 +43,13 @@ export function playSound(type: SoundType) {
       }
       case "click": {
         playTone(600, 0.04, "square", 0.05);
+        break;
+      }
+      case "celebration": {
+        playTone(523, 0.12, "sine", 0.12);
+        setTimeout(() => playTone(659, 0.1, "sine", 0.12), 100);
+        setTimeout(() => playTone(784, 0.1, "sine", 0.13), 200);
+        setTimeout(() => playTone(1047, 0.25, "sine", 0.15), 320);
         break;
       }
     }

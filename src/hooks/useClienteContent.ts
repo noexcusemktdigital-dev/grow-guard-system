@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
+import { playSound } from "@/lib/sounds";
 
 export function useClienteContent() {
   const { data: orgId } = useUserOrgId();
@@ -214,9 +215,12 @@ export function useClienteContentMutations() {
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["client-checklist"] });
       qc.invalidateQueries({ queryKey: ["client-gamification"] });
+      if (variables.is_completed) {
+        playSound("success");
+      }
     },
   });
 
