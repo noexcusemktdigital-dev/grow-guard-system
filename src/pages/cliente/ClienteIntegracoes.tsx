@@ -1,28 +1,124 @@
 import { useState } from "react";
-import { Link2, Wifi, WifiOff, Settings2, RefreshCw, Unplug, AlertTriangle, Headset, Tag, Copy, Key, Webhook, Calendar, BarChart3, Globe, Megaphone } from "lucide-react";
+import { Link2, Wifi, WifiOff, Settings2, RefreshCw, Unplug, AlertTriangle, Headset, Copy, Key, Webhook, Calendar, BarChart3, Globe, Megaphone, MessageSquare, Database, Code2, TrendingUp } from "lucide-react";
 import { WebsiteChatConfig } from "@/components/cliente/WebsiteChatConfig";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { WhatsAppSetupWizard } from "@/components/cliente/WhatsAppSetupWizard";
 import { useWhatsAppInstances, useSetupWhatsApp } from "@/hooks/useWhatsApp";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const SUPPORT_LINK = "https://wa.me/5500000000000?text=Olá! Preciso de ajuda com a integração Z-API.";
 
-const UPCOMING_INTEGRATIONS = [
-  { name: "Google Agenda", icon: Calendar, desc: "Sincronize eventos e reuniões", status: "Em breve" },
-  { name: "RD Station", icon: BarChart3, desc: "Importe leads automaticamente", status: "Em breve" },
-  { name: "Meta Ads", icon: Megaphone, desc: "Conecte campanhas do Facebook e Instagram", status: "Em breve" },
-  { name: "Google Ads", icon: Globe, desc: "Importe leads de campanhas Google", status: "Em breve" },
+interface IntegrationItem {
+  name: string;
+  icon: any;
+  desc: string;
+  provider: string;
+  fields: { key: string; label: string; placeholder: string }[];
+}
+
+const INTEGRATIONS_BY_SECTION: { title: string; icon: any; items: IntegrationItem[] }[] = [
+  {
+    title: "Comunicação",
+    icon: MessageSquare,
+    items: [
+      { name: "WhatsApp Z-API", icon: MessageSquare, desc: "Envie e receba mensagens via WhatsApp", provider: "whatsapp_zapi", fields: [] },
+      { name: "Widget de Chat", icon: MessageSquare, desc: "Chat ao vivo no seu site", provider: "website_chat", fields: [] },
+    ],
+  },
+  {
+    title: "Anúncios & Tráfego",
+    icon: TrendingUp,
+    items: [
+      { name: "Meta Ads", icon: Megaphone, desc: "Conecte campanhas do Facebook e Instagram", provider: "meta_ads", fields: [{ key: "access_token", label: "Token de Acesso", placeholder: "EAAx..." }, { key: "account_id", label: "ID da Conta", placeholder: "act_123456" }] },
+      { name: "Google Ads", icon: Globe, desc: "Importe leads de campanhas Google", provider: "google_ads", fields: [{ key: "access_token", label: "Token de Acesso", placeholder: "ya29..." }, { key: "customer_id", label: "Customer ID", placeholder: "123-456-7890" }] },
+      { name: "TikTok Ads", icon: TrendingUp, desc: "Conecte campanhas do TikTok", provider: "tiktok_ads", fields: [{ key: "access_token", label: "Token de Acesso", placeholder: "tok_..." }, { key: "advertiser_id", label: "Advertiser ID", placeholder: "123456" }] },
+    ],
+  },
+  {
+    title: "CRM & Automação",
+    icon: Database,
+    items: [
+      { name: "RD Station", icon: BarChart3, desc: "Importe leads automaticamente", provider: "rd_station", fields: [{ key: "api_token", label: "Token da API", placeholder: "Seu token RD Station" }] },
+      { name: "Webhook de Leads", icon: Webhook, desc: "Receba leads de fontes externas", provider: "webhook_leads", fields: [] },
+    ],
+  },
+  {
+    title: "Produtividade",
+    icon: Calendar,
+    items: [
+      { name: "Google Agenda", icon: Calendar, desc: "Sincronize eventos e reuniões", provider: "google_calendar", fields: [{ key: "client_id", label: "Client ID", placeholder: "xxxxx.apps.googleusercontent.com" }, { key: "client_secret", label: "Client Secret", placeholder: "GOCSPX-..." }] },
+    ],
+  },
 ];
+
+function IntegrationConnectDialog({ integration, open, onOpenChange }: { integration: IntegrationItem | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [config, setConfig] = useState<Record<string, string>>({});
+  const { data: orgId } = useUserOrgId();
+  const qc = useQueryClient();
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("organization_integrations" as any)
+        .upsert({
+          organization_id: orgId!,
+          provider: integration!.provider,
+          config,
+          status: "connected",
+        }, { onConflict: "organization_id,provider" } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(`${integration!.name} conectado!`);
+      qc.invalidateQueries({ queryKey: ["org-integrations"] });
+      onOpenChange(false);
+      setConfig({});
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  if (!integration) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Conectar {integration.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <p className="text-sm text-muted-foreground">{integration.desc}</p>
+          {integration.fields.map((field) => (
+            <div key={field.key} className="space-y-2">
+              <Label>{field.label}</Label>
+              <Input
+                value={config[field.key] || ""}
+                onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })}
+                placeholder={field.placeholder}
+              />
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? "Salvando..." : "Conectar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function ClienteIntegracoes() {
   const { data: instances, isLoading, refetch } = useWhatsAppInstances();
@@ -31,6 +127,23 @@ export default function ClienteIntegracoes() {
   const { data: org } = useOrgProfile();
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
+  const [connectDialog, setConnectDialog] = useState<IntegrationItem | null>(null);
+  const [connectOpen, setConnectOpen] = useState(false);
+
+  const { data: savedIntegrations } = useQuery({
+    queryKey: ["org-integrations", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_integrations" as any)
+        .select("*")
+        .eq("organization_id", orgId!);
+      if (error) throw error;
+      return (data ?? []) as unknown as { provider: string; status: string }[];
+    },
+    enabled: !!orgId,
+  });
+
+  const isConnected = (provider: string) => savedIntegrations?.some((i) => i.provider === provider && i.status === "connected");
 
   const generateApiKey = useMutation({
     mutationFn: async () => {
@@ -77,10 +190,10 @@ export default function ClienteIntegracoes() {
         <Skeleton className="h-40 rounded-xl" />
       ) : (
         <>
-          {/* Active integrations: WhatsApp */}
+          {/* ── WhatsApp Section ── */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Wifi className="w-4 h-4 text-primary" /> Integrações Ativas
+              <MessageSquare className="w-4 h-4 text-primary" /> Comunicação — WhatsApp
             </h3>
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground">WhatsApp via Z-API</p>
@@ -100,33 +213,28 @@ export default function ClienteIntegracoes() {
               </Card>
             ) : (
               instances.map((instance) => {
-                const isConnected = instance.status === "connected";
+                const isConn = instance.status === "connected";
                 return (
                   <Card key={instance.id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isConnected ? "bg-emerald-500/10" : "bg-muted"}`}>
-                            <svg viewBox="0 0 24 24" className={`w-5 h-5 ${isConnected ? "text-emerald-500" : "text-muted-foreground"}`} fill="currentColor">
-                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.613.613l4.458-1.495A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22a9.94 9.94 0 01-5.382-1.572l-.376-.226-3.897 1.306 1.306-3.897-.226-.376A9.94 9.94 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
-                            </svg>
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isConn ? "bg-emerald-500/10" : "bg-muted"}`}>
+                            <MessageSquare className={`w-5 h-5 ${isConn ? "text-emerald-500" : "text-muted-foreground"}`} />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-semibold">
-                                {instance.label || instance.phone_number || `Instância ${instance.instance_id.slice(0, 8)}...`}
-                              </h4>
-                              <Badge variant="outline" className={`text-[10px] gap-1 ${isConnected ? "text-primary border-primary/30" : "text-muted-foreground border-border"}`}>
-                                {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                                {isConnected ? "Conectado" : "Desconectado"}
+                              <h4 className="text-sm font-semibold">{instance.label || instance.phone_number || `Instância ${instance.instance_id.slice(0, 8)}...`}</h4>
+                              <Badge variant="outline" className={`text-[10px] gap-1 ${isConn ? "text-primary border-primary/30" : "text-muted-foreground border-border"}`}>
+                                {isConn ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                                {isConn ? "Conectado" : "Desconectado"}
                               </Badge>
                             </div>
                             {instance.phone_number && <p className="text-xs text-muted-foreground">Número: {instance.phone_number}</p>}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {isConnected ? (
+                          {isConn ? (
                             <>
                               <Button variant="outline" size="sm" onClick={() => handleCheckStatus(instance.instance_id, instance.token, instance.client_token)} disabled={setupMutation.isPending}>
                                 <RefreshCw className={`w-3.5 h-3.5 mr-1 ${setupMutation.isPending ? "animate-spin" : ""}`} /> Verificar
@@ -162,31 +270,47 @@ export default function ClienteIntegracoes() {
             )}
           </div>
 
-          {/* Upcoming Integrations */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Integrações Disponíveis</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {UPCOMING_INTEGRATIONS.map((int) => (
-                <Card key={int.name} className="opacity-70">
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                      <int.icon className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">{int.name}</p>
-                      <p className="text-xs text-muted-foreground">{int.desc}</p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px]">{int.status}</Badge>
-                  </CardContent>
-                </Card>
-              ))}
+          {/* ── Integration Sections ── */}
+          {INTEGRATIONS_BY_SECTION.filter((s) => s.title !== "Comunicação").map((section) => (
+            <div key={section.title} className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <section.icon className="w-4 h-4 text-primary" /> {section.title}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {section.items.map((int) => {
+                  const connected = isConnected(int.provider);
+                  const isSpecial = int.provider === "webhook_leads" || int.provider === "website_chat";
+                  return (
+                    <Card key={int.provider} className={connected ? "border-primary/30" : ""}>
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${connected ? "bg-primary/10" : "bg-muted"}`}>
+                          <int.icon className={`w-5 h-5 ${connected ? "text-primary" : "text-muted-foreground"}`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">{int.name}</p>
+                          <p className="text-xs text-muted-foreground">{int.desc}</p>
+                        </div>
+                        {connected ? (
+                          <Badge className="text-[10px] gap-1 bg-primary/10 text-primary border-primary/30">
+                            <Wifi className="w-3 h-3" /> Conectado
+                          </Badge>
+                        ) : isSpecial ? null : (
+                          <Button size="sm" variant="outline" onClick={() => { setConnectDialog(int); setConnectOpen(true); }}>
+                            Conectar
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ))}
 
-          {/* API & Webhooks */}
+          {/* ── API & Developers ── */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Key className="w-4 h-4 text-primary" /> API & Webhooks
+              <Code2 className="w-4 h-4 text-primary" /> API & Desenvolvedores
             </h3>
 
             <Card>
@@ -251,6 +375,7 @@ export default function ClienteIntegracoes() {
       )}
 
       <WhatsAppSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      <IntegrationConnectDialog integration={connectDialog} open={connectOpen} onOpenChange={setConnectOpen} />
     </div>
   );
 }

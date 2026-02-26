@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Star, ClipboardCheck, User } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Star, ClipboardCheck, User, ChevronRight, TrendingUp, FolderOpen } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,26 +8,81 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Progress } from "@/components/ui/progress";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useEvaluations, useEvaluationMutations } from "@/hooks/useEvaluations";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const CATEGORIES = ["Comercial", "Atendimento", "Engajamento", "Proatividade"];
 
-function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function StarRating({ value, onChange, size = "md" }: { value: number; onChange?: (v: number) => void; size?: "sm" | "md" }) {
+  const sizeClass = size === "sm" ? "w-3 h-3" : "w-5 h-5";
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map((s) => (
-        <button key={s} type="button" onClick={() => onChange(s)} className="focus:outline-none">
-          <Star
-            className={`w-5 h-5 transition-colors ${s <= value ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
-          />
+        <button key={s} type="button" onClick={() => onChange?.(s)} className="focus:outline-none" disabled={!onChange}>
+          <Star className={`${sizeClass} transition-colors ${s <= value ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
         </button>
       ))}
     </div>
+  );
+}
+
+function MemberEvolutionSheet({ member, evaluations, open, onOpenChange }: {
+  member: { user_id: string; full_name: string; role: string };
+  evaluations: any[];
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
+  const userEvals = evaluations.filter((e) => e.user_id === member.user_id).sort((a, b) => a.period.localeCompare(b.period));
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-lg overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Evolução — {member.full_name}</SheetTitle>
+        </SheetHeader>
+        <div className="mt-6 space-y-4">
+          {userEvals.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Sem avaliações registradas.</p>
+          ) : (
+            userEvals.map((ev) => {
+              const cats = (ev.categories || {}) as Record<string, number>;
+              return (
+                <Card key={ev.id}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline">{ev.period}</Badge>
+                      <div className="flex items-center gap-2">
+                        <StarRating value={ev.score} size="sm" />
+                        <span className="text-sm font-semibold">{ev.score}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {CATEGORIES.map((cat) => (
+                        <div key={cat} className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground w-24 shrink-0">{cat}</span>
+                          <Progress value={(cats[cat] ?? 0) * 20} className="h-1.5 flex-1" />
+                          <span className="text-xs font-medium w-4 text-right">{cats[cat] ?? "—"}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {ev.comment && <p className="text-xs text-muted-foreground italic">"{ev.comment}"</p>}
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -40,20 +95,32 @@ export default function ClienteAvaliacoes() {
   const [open, setOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [period, setPeriod] = useState(format(new Date(), "yyyy-MM"));
+  const [generalScore, setGeneralScore] = useState(0);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [comment, setComment] = useState("");
+  const [sheetMember, setSheetMember] = useState<any>(null);
 
   const members = (team ?? []).filter((m) => m.user_id !== user?.id);
 
+  // Group evaluations by period for History tab
+  const evalsByPeriod = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+    for (const ev of evaluations ?? []) {
+      if (!grouped[ev.period]) grouped[ev.period] = [];
+      grouped[ev.period].push(ev);
+    }
+    return Object.entries(grouped).sort(([a], [b]) => b.localeCompare(a));
+  }, [evaluations]);
+
   const handleSubmit = () => {
     if (!selectedUser) return toast.error("Selecione um membro");
-    const avgScore = Math.round(
+    const score = generalScore > 0 ? generalScore : Math.round(
       Object.values(scores).reduce((a, b) => a + b, 0) / Math.max(Object.keys(scores).length, 1)
     );
-    if (avgScore < 1) return toast.error("Preencha ao menos uma categoria");
+    if (score < 1) return toast.error("Preencha a nota geral ou ao menos uma categoria");
 
     createEvaluation.mutate(
-      { user_id: selectedUser, period, score: avgScore, categories: scores, comment: comment || undefined },
+      { user_id: selectedUser, period, score, categories: scores, comment: comment || undefined },
       {
         onSuccess: () => {
           toast.success("Avaliação salva!");
@@ -61,6 +128,7 @@ export default function ClienteAvaliacoes() {
           setScores({});
           setComment("");
           setSelectedUser("");
+          setGeneralScore(0);
         },
       }
     );
@@ -70,6 +138,11 @@ export default function ClienteAvaliacoes() {
     const userEvals = (evaluations ?? []).filter((e) => e.user_id === uid);
     if (userEvals.length === 0) return null;
     return (userEvals.reduce((a, e) => a + e.score, 0) / userEvals.length).toFixed(1);
+  };
+
+  const getLatestCatsForUser = (uid: string) => {
+    const userEvals = (evaluations ?? []).filter((e) => e.user_id === uid).sort((a, b) => b.period.localeCompare(a.period));
+    return (userEvals[0]?.categories || {}) as Record<string, number>;
   };
 
   if (teamLoading || evalLoading) {
@@ -112,12 +185,19 @@ export default function ClienteAvaliacoes() {
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Período</label>
                   <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm bg-background" />
                 </div>
-                {CATEGORIES.map((cat) => (
-                  <div key={cat} className="flex items-center justify-between">
-                    <span className="text-sm">{cat}</span>
-                    <StarRating value={scores[cat] ?? 0} onChange={(v) => setScores((s) => ({ ...s, [cat]: v }))} />
-                  </div>
-                ))}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border">
+                  <span className="text-sm font-medium">Nota Geral</span>
+                  <StarRating value={generalScore} onChange={setGeneralScore} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Notas por Categoria</p>
+                  {CATEGORIES.map((cat) => (
+                    <div key={cat} className="flex items-center justify-between">
+                      <span className="text-sm">{cat}</span>
+                      <StarRating value={scores[cat] ?? 0} onChange={(v) => setScores((s) => ({ ...s, [cat]: v }))} />
+                    </div>
+                  ))}
+                </div>
                 <Textarea placeholder="Comentário (opcional)" value={comment} onChange={(e) => setComment(e.target.value)} />
                 <Button className="w-full" onClick={handleSubmit} disabled={createEvaluation.isPending}>
                   Salvar Avaliação
@@ -128,77 +208,140 @@ export default function ClienteAvaliacoes() {
         }
       />
 
-      {members.length === 0 ? (
-        <div className="text-center py-12">
-          <User className="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">Nenhum membro na equipe para avaliar.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {members.map((member) => {
-            const avg = getAvgForUser(member.user_id);
-            const userEvals = (evaluations ?? []).filter((e) => e.user_id === member.user_id);
-            const initials = member.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
-            return (
-              <Card key={member.user_id} className="hover:shadow-sm transition-shadow">
-                <CardContent className="py-4 flex items-center gap-4">
-                  <Avatar className="w-12 h-12">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm">{initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{member.full_name}</p>
-                    <p className="text-xs text-muted-foreground">{member.role}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {avg ? (
-                        <>
-                          <div className="flex gap-0.5">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star key={s} className={`w-3 h-3 ${s <= Math.round(Number(avg)) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
-                            ))}
-                          </div>
-                          <span className="text-xs font-medium">{avg}</span>
-                          <Badge variant="outline" className="text-[9px]">{userEvals.length} avaliações</Badge>
-                        </>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground">Sem avaliações</span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      <Tabs defaultValue="equipe">
+        <TabsList>
+          <TabsTrigger value="equipe" className="gap-1.5"><User className="w-4 h-4" /> Equipe</TabsTrigger>
+          <TabsTrigger value="historico" className="gap-1.5"><FolderOpen className="w-4 h-4" /> Histórico Mensal</TabsTrigger>
+        </TabsList>
 
-      {/* Recent evaluations */}
-      {(evaluations ?? []).length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Avaliações Recentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {(evaluations ?? []).slice(0, 10).map((ev) => {
-                const member = (team ?? []).find((m) => m.user_id === ev.user_id);
+        {/* ── TAB EQUIPE ── */}
+        <TabsContent value="equipe">
+          {members.length === 0 ? (
+            <div className="text-center py-12">
+              <User className="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">Nenhum membro na equipe para avaliar.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+              {members.map((member) => {
+                const avg = getAvgForUser(member.user_id);
+                const cats = getLatestCatsForUser(member.user_id);
+                const userEvals = (evaluations ?? []).filter((e) => e.user_id === member.user_id);
+                const initials = member.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
                 return (
-                  <div key={ev.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/20">
-                    <div className="flex gap-0.5">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} className={`w-3 h-3 ${s <= ev.score ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
-                      ))}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{member?.full_name ?? "—"}</p>
-                      {ev.comment && <p className="text-[10px] text-muted-foreground truncate">{ev.comment}</p>}
-                    </div>
-                    <Badge variant="outline" className="text-[9px]">{ev.period}</Badge>
-                  </div>
+                  <Card key={member.user_id} className="hover:shadow-sm transition-shadow cursor-pointer" onClick={() => setSheetMember(member)}>
+                    <CardContent className="py-4 space-y-3">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="w-12 h-12">
+                          <AvatarFallback className="bg-primary/10 text-primary text-sm">{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{member.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{member.role}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {avg ? (
+                              <>
+                                <StarRating value={Math.round(Number(avg))} size="sm" />
+                                <span className="text-xs font-medium">{avg}</span>
+                                <Badge variant="outline" className="text-[9px]">{userEvals.length} aval.</Badge>
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">Sem avaliações</span>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </div>
+                      {/* Category bars */}
+                      {Object.keys(cats).length > 0 && (
+                        <div className="space-y-1.5 pt-2 border-t">
+                          {CATEGORIES.map((cat) => (
+                            <div key={cat} className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted-foreground w-20 shrink-0 truncate">{cat}</span>
+                              <Progress value={(cats[cat] ?? 0) * 20} className="h-1 flex-1" />
+                              <span className="text-[10px] font-medium w-3 text-right">{cats[cat] ?? "—"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </TabsContent>
+
+        {/* ── TAB HISTÓRICO MENSAL ── */}
+        <TabsContent value="historico">
+          {evalsByPeriod.length === 0 ? (
+            <div className="text-center py-12">
+              <FolderOpen className="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">Nenhuma avaliação registrada ainda.</p>
+            </div>
+          ) : (
+            <Accordion type="single" collapsible className="mt-3">
+              {evalsByPeriod.map(([periodKey, evals]) => {
+                const [year, month] = periodKey.split("-");
+                const monthName = format(new Date(Number(year), Number(month) - 1), "MMMM yyyy", { locale: ptBR });
+                return (
+                  <AccordionItem key={periodKey} value={periodKey}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center gap-3">
+                        <FolderOpen className="w-4 h-4 text-primary" />
+                        <span className="capitalize font-medium">{monthName}</span>
+                        <Badge variant="secondary" className="text-[10px]">{evals.length} avaliações</Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-2 pl-7">
+                        {evals.map((ev: any) => {
+                          const member = (team ?? []).find((m) => m.user_id === ev.user_id);
+                          const cats = (ev.categories || {}) as Record<string, number>;
+                          return (
+                            <Card key={ev.id}>
+                              <CardContent className="p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium">{member?.full_name ?? "—"}</span>
+                                  <div className="flex items-center gap-2">
+                                    <StarRating value={ev.score} size="sm" />
+                                    <span className="text-xs font-semibold">{ev.score}</span>
+                                  </div>
+                                </div>
+                                {Object.keys(cats).length > 0 && (
+                                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                    {CATEGORIES.map((cat) => (
+                                      <div key={cat} className="flex items-center gap-2">
+                                        <span className="text-[10px] text-muted-foreground w-20 shrink-0">{cat}</span>
+                                        <Progress value={(cats[cat] ?? 0) * 20} className="h-1 flex-1" />
+                                        <span className="text-[10px] font-medium">{cats[cat] ?? "—"}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {ev.comment && <p className="text-[10px] text-muted-foreground italic">"{ev.comment}"</p>}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Evolution Sheet */}
+      {sheetMember && (
+        <MemberEvolutionSheet
+          member={sheetMember}
+          evaluations={evaluations ?? []}
+          open={!!sheetMember}
+          onOpenChange={(o) => !o && setSheetMember(null)}
+        />
       )}
     </div>
   );

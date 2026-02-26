@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Settings, User, Building2, Users, Bell, UserPlus, Copy, Shield } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Settings, User, Building2, Users, Bell, UserPlus, Copy, Shield, Camera } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -27,6 +27,8 @@ function ProfileTab() {
   const { user } = useAuth();
   const { data: profile, isLoading, update } = useUserProfile();
   const [form, setForm] = useState({ full_name: "", phone: "", job_title: "" });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (profile) {
@@ -38,7 +40,31 @@ function ProfileTab() {
     }
   }, [profile]);
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 2 * 1024 * 1024) return toast.error("Imagem deve ter no máximo 2MB");
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
+      update.mutate({ avatar_url: urlWithCacheBuster });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao enviar foto");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
+
+  const initials = (form.full_name || "U").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <Card>
@@ -48,14 +74,26 @@ function ProfileTab() {
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
-              {(form.full_name || "U").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative group">
+            <Avatar className="h-16 w-16">
+              {profile?.avatar_url ? (
+                <AvatarImage src={profile.avatar_url} alt="Foto de perfil" />
+              ) : null}
+              <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">{initials}</AvatarFallback>
+            </Avatar>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              <Camera className="w-5 h-5 text-white" />
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+          </div>
           <div>
             <p className="font-medium text-foreground">{form.full_name || "Usuário"}</p>
             <p className="text-sm text-muted-foreground">{user?.email}</p>
+            {uploading && <p className="text-xs text-primary animate-pulse">Enviando foto...</p>}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -163,12 +201,7 @@ function UsersTab() {
   const inviteMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("invite-user", {
-        body: {
-          email: inviteForm.email,
-          full_name: inviteForm.full_name,
-          role: inviteForm.role,
-          organization_id: orgId,
-        },
+        body: { email: inviteForm.email, full_name: inviteForm.full_name, role: inviteForm.role, organization_id: orgId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -183,12 +216,7 @@ function UsersTab() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const roleLabels: Record<string, string> = {
-    cliente_admin: "Admin",
-    cliente_user: "Usuário",
-    super_admin: "Super Admin",
-    admin: "Admin",
-  };
+  const roleLabels: Record<string, string> = { cliente_admin: "Admin", cliente_user: "Usuário", super_admin: "Super Admin", admin: "Admin" };
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
 
@@ -199,9 +227,7 @@ function UsersTab() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Usuários</CardTitle>
-              <CardDescription>
-                {currentCount}/{maxUsers} usuários · {maxUsers - currentCount > 0 ? `${maxUsers - currentCount} disponíveis` : "Limite atingido"}
-              </CardDescription>
+              <CardDescription>{currentCount}/{maxUsers} usuários · {maxUsers - currentCount > 0 ? `${maxUsers - currentCount} disponíveis` : "Limite atingido"}</CardDescription>
             </div>
             <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)} disabled={currentCount >= maxUsers}>
               <UserPlus className="w-4 h-4" /> Convidar
@@ -223,35 +249,22 @@ function UsersTab() {
                     <p className="text-xs text-muted-foreground">{m.job_title || "—"}</p>
                   </div>
                 </div>
-                <Badge variant="outline" className="gap-1">
-                  <Shield className="w-3 h-3" />
-                  {roleLabels[m.role] || m.role}
-                </Badge>
+                <Badge variant="outline" className="gap-1"><Shield className="w-3 h-3" />{roleLabels[m.role] || m.role}</Badge>
               </div>
             ))}
           </div>
           {currentCount >= maxUsers && (
-            <p className="text-xs text-muted-foreground mt-4 text-center">
-              Limite de usuários do plano atingido. Faça upgrade ou compre usuários adicionais (R$ 29/mês cada).
-            </p>
+            <p className="text-xs text-muted-foreground mt-4 text-center">Limite de usuários do plano atingido. Faça upgrade ou compre usuários adicionais (R$ 29/mês cada).</p>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Convidar Usuário</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Convidar Usuário</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>E-mail</Label>
-              <Input value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="usuario@empresa.com" />
-            </div>
-            <div className="space-y-2">
-              <Label>Nome</Label>
-              <Input value={inviteForm.full_name} onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })} placeholder="Nome completo" />
-            </div>
+            <div className="space-y-2"><Label>E-mail</Label><Input value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="usuario@empresa.com" /></div>
+            <div className="space-y-2"><Label>Nome</Label><Input value={inviteForm.full_name} onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })} placeholder="Nome completo" /></div>
             <div className="space-y-2">
               <Label>Permissão</Label>
               <Select value={inviteForm.role} onValueChange={(v) => setInviteForm({ ...inviteForm, role: v })}>
@@ -277,11 +290,7 @@ function UsersTab() {
 
 function NotificationsTab() {
   const [notifications, setNotifications] = useState({
-    novosLeads: true,
-    creditosBaixos: true,
-    renovacao: true,
-    whatsapp: false,
-    relatorios: true,
+    novosLeads: true, creditosBaixos: true, renovacao: true, whatsapp: false, relatorios: true,
   });
 
   return (
@@ -321,7 +330,6 @@ export default function ClienteConfiguracoes() {
   return (
     <div className="w-full space-y-6">
       <PageHeader title="Configurações" subtitle="Preferências da conta e organização" icon={<Settings className="w-5 h-5 text-primary" />} />
-
       <Tabs defaultValue="perfil">
         <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="perfil" className="gap-1.5 text-xs sm:text-sm"><User className="w-4 h-4" /> Perfil</TabsTrigger>
@@ -329,7 +337,6 @@ export default function ClienteConfiguracoes() {
           <TabsTrigger value="usuarios" className="gap-1.5 text-xs sm:text-sm"><Users className="w-4 h-4" /> Usuários</TabsTrigger>
           <TabsTrigger value="notificacoes" className="gap-1.5 text-xs sm:text-sm"><Bell className="w-4 h-4" /> Alertas</TabsTrigger>
         </TabsList>
-
         <TabsContent value="perfil"><ProfileTab /></TabsContent>
         <TabsContent value="organizacao"><OrgTab /></TabsContent>
         <TabsContent value="usuarios"><UsersTab /></TabsContent>

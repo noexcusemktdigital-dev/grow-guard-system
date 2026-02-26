@@ -1,16 +1,19 @@
 export interface PlanConfig {
   id: string;
   name: string;
-  basePrice: number;   // preço com 1 módulo
-  comboPrice: number;  // preço com 2 módulos (comercial + marketing)
+  basePrice: number;
+  comboPrice: number;
   credits: number;
   maxUsers: number;
   popular: boolean;
   features: string[];
-  maxContents: number; // -1 = ilimitado
-  maxSocialArts: number; // -1 = ilimitado
+  maxContents: number;
+  maxSocialArts: number;
   maxSites: number;
-  siteTypes: string[]; // "lp" | "3pages" | "5pages" | "8pages"
+  siteTypes: string[];
+  maxAgents: number;
+  maxDispatches: number;
+  maxDispatchRecipients: number;
   /** @deprecated use basePrice or comboPrice */
   price: number;
 }
@@ -29,10 +32,15 @@ export const PLANS: PlanConfig[] = [
     maxSocialArts: 4,
     maxSites: 1,
     siteTypes: ["lp"],
+    maxAgents: 1,
+    maxDispatches: 0,
+    maxDispatchRecipients: 0,
     features: [
       "CRM completo",
       "5.000 créditos/mês",
       "2 usuários inclusos",
+      "1 Agente de IA",
+      "1 Site / Landing Page",
       "8 conteúdos/mês",
       "4 artes sociais/mês",
       "Suporte por chat",
@@ -51,14 +59,18 @@ export const PLANS: PlanConfig[] = [
     maxSocialArts: 8,
     maxSites: 2,
     siteTypes: ["lp", "3pages", "5pages"],
+    maxAgents: 2,
+    maxDispatches: 1,
+    maxDispatchRecipients: 500,
     features: [
       "Tudo do Starter",
       "20.000 créditos/mês",
       "5 usuários inclusos",
+      "2 Agentes de IA",
+      "2 Sites",
       "12 conteúdos/mês",
       "8 artes sociais/mês",
-      "Agentes de IA",
-      "Disparos WhatsApp",
+      "1 Disparo WhatsApp (até 500 números)",
     ],
   },
   {
@@ -72,14 +84,20 @@ export const PLANS: PlanConfig[] = [
     popular: false,
     maxContents: 20,
     maxSocialArts: 12,
-    maxSites: 5,
+    maxSites: 3,
     siteTypes: ["lp", "3pages", "5pages", "8pages"],
+    maxAgents: 4,
+    maxDispatches: 3,
+    maxDispatchRecipients: 2000,
     features: [
       "Tudo do Growth",
       "50.000 créditos/mês",
       "15 usuários inclusos",
+      "4 Agentes de IA",
+      "3 Sites",
       "20 conteúdos/mês",
       "12 artes sociais/mês",
+      "3 Disparos WhatsApp (até 2.000 números)",
       "API avançada",
       "Gerente dedicado",
     ],
