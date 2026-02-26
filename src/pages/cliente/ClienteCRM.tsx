@@ -5,7 +5,7 @@ import {
   GripVertical, Settings2, Filter, X, Copy, MoreHorizontal,
   MessageCircle, CircleDot, XCircle, ChevronDown,
   Calendar, DollarSign, UserCircle, FileSpreadsheet, BookUser,
-  Tag, Trash2, ArrowRightLeft
+  Tag, Trash2, ArrowRightLeft, Thermometer
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,13 +66,14 @@ interface LeadRow {
 }
 
 // ===== Draggable Lead Card =====
-function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost, onDelete }: {
+function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost, onDelete, onUpdateTemperature }: {
   lead: LeadRow;
   onClick: () => void;
   stageColor: string;
   onCopyPhone: () => void;
   onMarkLost: () => void;
   onDelete: () => void;
+  onUpdateTemperature: (temp: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id });
   const style = {
@@ -129,9 +130,32 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
             <span className="text-[13px] font-bold text-primary">
               {lead.value ? `R$ ${Number(lead.value).toLocaleString()}` : "—"}
             </span>
-            {lead.source && (
-              <Badge variant="secondary" className="text-[8px] px-1.5 py-0 font-normal">{lead.source}</Badge>
-            )}
+            <div className="flex items-center gap-1">
+              {/* Temperature badges */}
+              <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+                {(["Frio", "Morno", "Quente"] as const).map(temp => {
+                  const isActive = (lead as any).temperature === temp || (!((lead as any).temperature) && temp === "Morno");
+                  const colors: Record<string, string> = {
+                    Frio: isActive ? "bg-blue-500 text-white" : "bg-blue-100 text-blue-400 dark:bg-blue-900/30 dark:text-blue-600",
+                    Morno: isActive ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-400 dark:bg-amber-900/30 dark:text-amber-600",
+                    Quente: isActive ? "bg-red-500 text-white" : "bg-red-100 text-red-400 dark:bg-red-900/30 dark:text-red-600",
+                  };
+                  return (
+                    <button
+                      key={temp}
+                      title={temp}
+                      onClick={() => onUpdateTemperature(temp)}
+                      className={`w-5 h-5 rounded-full flex items-center justify-center transition-all text-[8px] font-bold ${colors[temp]} hover:scale-110`}
+                    >
+                      {temp[0]}
+                    </button>
+                  );
+                })}
+              </div>
+              {lead.source && (
+                <Badge variant="secondary" className="text-[8px] px-1.5 py-0 font-normal">{lead.source}</Badge>
+              )}
+            </div>
           </div>
 
           {lead.tags && lead.tags.length > 0 && (
@@ -629,7 +653,7 @@ export default function ClienteCRM() {
                       <DroppableColumn stageKey={stage.key}>
                         {stageLeads.map(lead => (
                           <div key={lead.id} className="relative group/check">
-                            <div className={`absolute top-2 left-2 z-10 ${someLeadsSelected ? 'opacity-100' : 'opacity-0 group-hover/check:opacity-100'} transition-opacity`} onClick={e => e.stopPropagation()}>
+                            <div className={`absolute top-2 right-2 z-10 ${someLeadsSelected ? 'opacity-100' : 'opacity-0 group-hover/check:opacity-100'} transition-opacity`} onClick={e => e.stopPropagation()}>
                               <Checkbox checked={selectedLeadIds.has(lead.id)} onCheckedChange={() => toggleLeadSelection(lead.id)} />
                             </div>
                             <DraggableLeadCard
@@ -651,6 +675,9 @@ export default function ClienteCRM() {
                               onDelete={() => {
                                 deleteLead.mutate(lead.id);
                                 toast({ title: "Lead excluído" });
+                              }}
+                              onUpdateTemperature={(temp) => {
+                                updateLead.mutate({ id: lead.id, temperature: temp });
                               }}
                             />
                           </div>

@@ -102,9 +102,52 @@ export default function ClienteDashboard() {
   // CRM computed values
   const allLeads = leads ?? [];
   const wonLeads = allLeads.filter(l => l.won_at);
+  const lostLeads = allLeads.filter(l => l.lost_at);
+  const activeLeads = allLeads.filter(l => !l.won_at && !l.lost_at);
   const totalValue = wonLeads.reduce((sum, l) => sum + Number(l.value || 0), 0);
+  const pipelineValue = activeLeads.reduce((sum, l) => sum + Number(l.value || 0), 0);
   const conversionRate = allLeads.length > 0 ? ((wonLeads.length / allLeads.length) * 100).toFixed(1) : "0";
+  const lossRate = allLeads.length > 0 ? ((lostLeads.length / allLeads.length) * 100).toFixed(1) : "0";
   const ticketMedio = wonLeads.length > 0 ? totalValue / wonLeads.length : 0;
+
+  // Average closing time (days between created_at and won_at)
+  const avgClosingDays = useMemo(() => {
+    const closedLeads = wonLeads.filter(l => l.won_at && l.created_at);
+    if (closedLeads.length === 0) return 0;
+    const totalDays = closedLeads.reduce((sum, l) => {
+      const diff = new Date(l.won_at!).getTime() - new Date(l.created_at).getTime();
+      return sum + diff / (1000 * 60 * 60 * 24);
+    }, 0);
+    return Math.round(totalDays / closedLeads.length);
+  }, [wonLeads]);
+
+  // Leads created per week (last 8 weeks)
+  const leadsPerWeek = useMemo(() => {
+    const weeks: { name: string; value: number }[] = [];
+    const now = new Date();
+    for (let i = 7; i >= 0; i--) {
+      const start = new Date(now);
+      start.setDate(start.getDate() - (i + 1) * 7);
+      const end = new Date(now);
+      end.setDate(end.getDate() - i * 7);
+      const count = allLeads.filter(l => {
+        const d = new Date(l.created_at);
+        return d >= start && d < end;
+      }).length;
+      weeks.push({ name: `S${8 - i}`, value: count });
+    }
+    return weeks;
+  }, [allLeads]);
+
+  // Lost reasons
+  const lostReasons = useMemo(() => {
+    const map: Record<string, number> = {};
+    lostLeads.forEach(l => {
+      const reason = l.lost_reason || "Sem motivo";
+      map[reason] = (map[reason] || 0) + 1;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
+  }, [lostLeads]);
 
   // Leads by source
   const leadsBySource = useMemo(() => {
@@ -136,10 +179,90 @@ export default function ClienteDashboard() {
   const todayStr = new Date().toISOString().slice(0, 10);
   const messagesToday = allMessages.filter((m: any) => m.created_at?.startsWith(todayStr));
 
+  // Messages per day (last 7 days)
+  const messagesPerDay = useMemo(() => {
+    const days: { name: string; inbound: number; outbound: number }[] = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayStr = d.toISOString().slice(0, 10);
+      const dayMsgs = allMessages.filter((m: any) => m.created_at?.startsWith(dayStr));
+      days.push({
+        name: d.toLocaleDateString("pt-BR", { weekday: "short" }),
+        inbound: dayMsgs.filter((m: any) => m.direction === "inbound").length,
+        outbound: dayMsgs.filter((m: any) => m.direction === "outbound").length,
+      });
+    }
+    return days;
+  }, [allMessages]);
+
+  // AI vs Human distribution
+  const aiVsHuman = useMemo(() => {
+    const aiContacts = allContacts.filter((c: any) => c.attending_mode === "ai").length;
+    const humanContacts = allContacts.filter((c: any) => c.attending_mode === "human").length;
+    return [
+      { name: "IA", value: aiContacts },
+      { name: "Humano", value: humanContacts },
+    ];
+  }, [allContacts]);
+
+  // Contacts without response
+  const noResponseCount = useMemo(() => {
+    return allContacts.filter((c: any) => {
+      const contactMsgs = allMessages.filter((m: any) => m.contact_id === c.id);
+      if (contactMsgs.length === 0) return false;
+      const lastMsg = contactMsgs[0]; // already ordered desc
+      return lastMsg.direction === "inbound";
+    }).length;
+  }, [allContacts, allMessages]);
+
+  // Average response time (minutes)
+  const avgResponseTime = useMemo(() => {
+    let totalTime = 0;
+    let count = 0;
+    const sorted = [...allMessages].sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const m = sorted[i] as any;
+      if (m.direction === "inbound") {
+        const next = sorted.slice(i + 1).find((n: any) => n.direction === "outbound" && n.contact_id === m.contact_id);
+        if (next) {
+          const diff = (new Date((next as any).created_at).getTime() - new Date(m.created_at).getTime()) / (1000 * 60);
+          if (diff < 1440) { // ignore gaps > 24h
+            totalTime += diff;
+            count++;
+          }
+        }
+      }
+    }
+    return count > 0 ? Math.round(totalTime / count) : 0;
+  }, [allMessages]);
+
   // AI computed
   const allAgents = agents ?? [];
   const activeAgents = allAgents.filter((a: any) => a.status === "active");
   const totalTokens = (aiLogs ?? []).reduce((s: number, l: any) => s + (l.tokens_used || 0), 0);
+  const avgTokensPerConvo = (aiLogs ?? []).length > 0 ? Math.round(totalTokens / (aiLogs ?? []).length) : 0;
+
+  // Conversations per agent
+  const conversationsPerAgent = useMemo(() => {
+    const map: Record<string, { name: string; count: number }> = {};
+    (aiLogs ?? []).forEach((log: any) => {
+      const agent = allAgents.find((a: any) => a.id === log.agent_id);
+      const name = agent?.name || "Desconhecido";
+      if (!map[log.agent_id]) map[log.agent_id] = { name, count: 0 };
+      map[log.agent_id].count++;
+    });
+    return Object.values(map).sort((a, b) => b.count - a.count);
+  }, [aiLogs, allAgents]);
+
+  // Handoff rate
+  const handoffRate = useMemo(() => {
+    const total = allContacts.length;
+    if (total === 0) return "0";
+    const handoffs = allContacts.filter((c: any) => c.attending_mode === "human").length;
+    return ((handoffs / total) * 100).toFixed(1);
+  }, [allContacts]);
 
   const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--muted-foreground))"];
 
@@ -192,6 +315,13 @@ export default function ClienteDashboard() {
             <KpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" />
             <KpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" />
             <KpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={Eye} gradient="from-amber-500/15 to-amber-600/5" />
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard label="Pipeline Ativo" value={`R$ ${pipelineValue.toLocaleString("pt-BR")}`} icon={TrendingUp} gradient="from-sky-500/15 to-sky-600/5" />
+            <KpiCard label="Leads Perdidos" value={String(lostLeads.length)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
+            <KpiCard label="Taxa de Perda" value={`${lossRate}%`} icon={ArrowDownRight} gradient="from-orange-500/15 to-orange-600/5" />
+            <KpiCard label="Tempo Médio Fechamento" value={`${avgClosingDays}d`} icon={Target} gradient="from-indigo-500/15 to-indigo-600/5" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -288,6 +418,44 @@ export default function ClienteDashboard() {
               </Card>
             </div>
           </div>
+
+          {/* Leads per week + Lost reasons */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Leads Criados por Semana</CardTitle></CardHeader>
+              <CardContent>
+                {leadsPerWeek.some(w => w.value > 0) ? (
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={leadsPerWeek}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <ReTooltip />
+                        <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados</p>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Motivos de Perda</CardTitle></CardHeader>
+              <CardContent>
+                {lostReasons.length > 0 ? (
+                  <div className="space-y-2">
+                    {lostReasons.map(r => (
+                      <div key={r.name} className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground truncate flex-1">{r.name}</span>
+                        <Badge variant="secondary" className="text-[10px]">{r.value}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-muted-foreground text-center py-8">Nenhum lead perdido</p>}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* ===== CHAT TAB ===== */}
@@ -306,9 +474,48 @@ export default function ClienteDashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard label="Total Conversas" value={String(allContacts.length)} icon={MessageCircle} gradient="from-emerald-500/15 to-emerald-600/5" />
             <KpiCard label="Mensagens Hoje" value={String(messagesToday.length)} icon={MessageCircle} gradient="from-blue-500/15 to-blue-600/5" />
-            <KpiCard label="Conversas Ativas" value={String(allContacts.filter((c: any) => c.attending_mode === "human").length)} icon={Users} gradient="from-purple-500/15 to-purple-600/5" />
-            <KpiCard label="Total Mensagens" value={String(allMessages.length)} icon={TrendingUp} gradient="from-amber-500/15 to-amber-600/5" />
+            <KpiCard label="Tempo Médio Resposta" value={`${avgResponseTime}min`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" />
+            <KpiCard label="Sem Resposta" value={String(noResponseCount)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
           </div>
+
+          {/* Messages per day + AI vs Human */}
+          {allMessages.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Mensagens por Dia (7 dias)</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={messagesPerDay}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <ReTooltip />
+                        <Bar dataKey="inbound" name="Recebidas" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="outbound" name="Enviadas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Atendimento: IA vs Humano</CardTitle></CardHeader>
+                <CardContent className="flex items-center justify-center">
+                  <div className="h-48 w-full max-w-xs">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={aiVsHuman} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value}`}>
+                          {aiVsHuman.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        </Pie>
+                        <ReTooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {allContacts.length === 0 && (
             <Card className="border-dashed">
@@ -337,9 +544,29 @@ export default function ClienteDashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard label="Total Agentes" value={String(allAgents.length)} icon={Bot} gradient="from-emerald-500/15 to-emerald-600/5" />
             <KpiCard label="Agentes Ativos" value={String(activeAgents.length)} icon={Bot} gradient="from-blue-500/15 to-blue-600/5" />
-            <KpiCard label="Mensagens IA" value={String((aiLogs ?? []).length)} icon={MessageCircle} gradient="from-purple-500/15 to-purple-600/5" />
-            <KpiCard label="Tokens Utilizados" value={totalTokens.toLocaleString("pt-BR")} icon={TrendingUp} gradient="from-amber-500/15 to-amber-600/5" />
+            <KpiCard label="Taxa de Handoff" value={`${handoffRate}%`} icon={Users} gradient="from-purple-500/15 to-purple-600/5" />
+            <KpiCard label="Média Tokens/Conversa" value={String(avgTokensPerConvo)} icon={TrendingUp} gradient="from-amber-500/15 to-amber-600/5" />
           </div>
+
+          {/* Conversations per agent */}
+          {conversationsPerAgent.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Conversas por Agente</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={conversationsPerAgent} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis type="number" tick={{ fontSize: 10 }} />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} />
+                      <ReTooltip />
+                      <Bar dataKey="count" name="Conversas" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {allAgents.length === 0 && (
             <Card className="border-dashed">

@@ -46,7 +46,16 @@ export function ChatMessageBubble({ message, isGrouped = false }: Props) {
       );
     }
 
-    const Icon = message.type === "audio" ? Music : message.type === "video" ? Video : message.type === "document" ? FileText : ImageIcon;
+    // Audio: render inline player
+    if (message.type === "audio") {
+      return (
+        <div className="mb-1.5">
+          <audio controls src={message.media_url} className="w-48 h-8" preload="metadata" />
+        </div>
+      );
+    }
+
+    const Icon = message.type === "video" ? Video : message.type === "document" ? FileText : ImageIcon;
     return (
       <a href={message.media_url} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
         <div className={`w-48 h-32 rounded-md flex items-center justify-center ${isOutbound ? "bg-[#d4edda]" : "bg-muted"}`}>
