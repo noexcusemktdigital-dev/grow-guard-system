@@ -64,6 +64,11 @@ interface GeneratedArt {
   thumbnailUrl?: string | null;
   videoUrl?: string | null;
   videoFrameUrls?: string[];
+  format?: string;
+  artStyle?: string;
+  hasRevision?: boolean;
+  revisionNote?: string;
+  originalPrompt?: string;
 }
 
 interface ArtCampaign {
@@ -100,6 +105,34 @@ const NIVEIS = [
   { value: "alto_padrao", label: "Alto Padrão", desc: "Ultra-premium, qualidade de revista" },
 ];
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+/* ── Art Style Types ── */
+const ART_STYLES = [
+  { value: "foto_texto", label: "Foto + Texto", desc: "Foto de fundo com texto sobreposto elegante", icon: "📸" },
+  { value: "composicao", label: "Composição Gráfica", desc: "Design gráfico com formas e elementos visuais", icon: "🎨" },
+  { value: "mockup", label: "Mockup de Produto", desc: "Produto em contexto realista (mesa, mão, etc)", icon: "📦" },
+  { value: "quote", label: "Quote Card", desc: "Citação ou dado em destaque com fundo estilizado", icon: "💬" },
+  { value: "before_after", label: "Antes & Depois", desc: "Comparação visual lado a lado", icon: "🔄" },
+];
+
+const VIDEO_STYLES = [
+  { value: "slideshow", label: "Slideshow + Texto", desc: "Imagens com texto animado e transições suaves (5-15s)", icon: "🖼️" },
+  { value: "kinetic", label: "Texto Animado", desc: "Kinetic typography sobre fundo estilizado (5-10s)", icon: "✨" },
+  { value: "revelacao", label: "Revelação de Produto", desc: "Zoom in dramático com texto revelado (10-15s)", icon: "🎬" },
+  { value: "countdown", label: "Countdown", desc: "Contagem regressiva para oferta ou lançamento (5-10s)", icon: "⏳" },
+];
+
+/* ── Format Types ── */
+const ART_FORMATS = [
+  { value: "feed", label: "Feed (1:1)", desc: "1080×1080px", icon: "⬜" },
+  { value: "story", label: "Story (9:16)", desc: "1080×1920px", icon: "📱" },
+  { value: "carrossel", label: "Carrossel", desc: "Múltiplos slides 1:1", icon: "📑" },
+];
+
+const VIDEO_FORMATS = [
+  { value: "reels", label: "Reels (9:16)", desc: "Vídeo curto 5-15s", icon: "🎬" },
+  { value: "story_video", label: "Story Animado", desc: "Vídeo vertical 5-10s", icon: "📱" },
+];
 
 const loadingPhrases = [
   "Analisando seu briefing...",
@@ -363,6 +396,28 @@ export default function ClienteRedesSociais() {
   // Video
   const [bIncluirVideo, setBIncluirVideo] = useState(false);
 
+  // Format quantities (new wizard)
+  const [fmtFeed, setFmtFeed] = useState(0);
+  const [fmtStory, setFmtStory] = useState(0);
+  const [fmtCarrossel, setFmtCarrossel] = useState(0);
+  const [fmtReels, setFmtReels] = useState(0);
+  const [fmtStoryVideo, setFmtStoryVideo] = useState(0);
+  const totalFormats = fmtFeed + fmtStory + fmtCarrossel + fmtReels + fmtStoryVideo;
+
+  // Style selection
+  const [selectedArtStyle, setSelectedArtStyle] = useState("");
+  const [selectedVideoStyle, setSelectedVideoStyle] = useState("");
+  const hasVideoFormats = fmtReels > 0 || fmtStoryVideo > 0;
+  const hasArtFormats = fmtFeed > 0 || fmtStory > 0 || fmtCarrossel > 0;
+
+  // Wizard step for briefing flow
+  const [briefingStep, setBriefingStep] = useState(1);
+
+  // Revision state
+  const [revisionArtId, setRevisionArtId] = useState<string | null>(null);
+  const [revisionNote, setRevisionNote] = useState("");
+  const [isRevising, setIsRevising] = useState(false);
+
   // Image Bank (visual identity)
   const [uploadingBank, setUploadingBank] = useState(false);
 
@@ -483,6 +538,63 @@ export default function ClienteRedesSociais() {
 
   const removeColor = (idx: number) => {
     setViPalette(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  /* ── Revision Handler ── */
+  const handleRevision = async (art: GeneratedArt) => {
+    if (!revisionNote.trim() || !orgId) return;
+    setIsRevising(true);
+    try {
+      const identidade_visual = getIdentidadeVisual();
+      const revisedPrompt = `${art.originalPrompt || art.titulo}\n\nALTERAÇÃO SOLICITADA: ${revisionNote}`;
+      const slug = art.titulo.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30);
+      const timestamp = Date.now();
+
+      const { data: feedData } = await supabase.functions.invoke("generate-social-image", {
+        body: {
+          prompt: revisedPrompt, format: "feed",
+          file_path: `${timestamp}/${slug}-rev-feed.png`, nivel: bNivel,
+          identidade_visual, organization_id: orgId,
+        },
+      });
+
+      const { data: storyData } = await supabase.functions.invoke("generate-social-image", {
+        body: {
+          prompt: revisedPrompt, format: "story",
+          file_path: `${timestamp}/${slug}-rev-story.png`, nivel: bNivel,
+          identidade_visual, organization_id: orgId,
+        },
+      });
+
+      setCampaigns(prev => prev.map(c => ({
+        ...c,
+        arts: c.arts.map(a => a.id === art.id ? {
+          ...a,
+          feedUrl: feedData?.url || a.feedUrl,
+          storyUrl: storyData?.url || a.storyUrl,
+          hasRevision: true,
+          revisionNote,
+        } : a),
+      })));
+
+      if (selectedArt?.id === art.id) {
+        setSelectedArt(prev => prev ? {
+          ...prev,
+          feedUrl: feedData?.url || prev.feedUrl,
+          storyUrl: storyData?.url || prev.storyUrl,
+          hasRevision: true,
+          revisionNote,
+        } : null);
+      }
+
+      setRevisionArtId(null);
+      setRevisionNote("");
+      toast({ title: "Arte regenerada com sucesso!" });
+    } catch (err: any) {
+      toast({ title: "Erro na revisão", description: err?.message, variant: "destructive" });
+    } finally {
+      setIsRevising(false);
+    }
   };
 
   /* ── Generate Arts ── */
@@ -889,210 +1001,304 @@ export default function ClienteRedesSociais() {
                       </div>
                     </>
                   ) : (
-                    /* ── BRIEFING ── */
+                    /* ── BRIEFING (Multi-step) ── */
                     <>
                       <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2"><Edit3 className="w-5 h-5 text-primary" /> Briefing Visual</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Edit3 className="w-5 h-5 text-primary" /> Briefing Visual — Etapa {briefingStep} de 4
+                        </DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-4 mt-2">
-                        {/* VI summary */}
-                        {viComplete && (
-                          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
-                            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold">Identidade Visual aplicada</p>
-                              <div className="flex gap-1 mt-1">
-                                {viPalette.slice(0, 5).map((c, i) => (
-                                  <div key={i} className="w-4 h-4 rounded-full border" style={{ backgroundColor: c.hex }} />
-                                ))}
-                                <span className="text-[10px] text-muted-foreground ml-1">{viStyle}</span>
+                      {/* Step indicators */}
+                      <div className="flex gap-2 mb-2">
+                        {[1, 2, 3, 4].map((s) => (
+                          <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= briefingStep ? "bg-primary" : "bg-muted"}`} />
+                        ))}
+                      </div>
+
+                      {briefingStep === 1 && (
+                        <div className="space-y-4 mt-2">
+                          <p className="text-xs text-muted-foreground">Preencha o briefing da criação. Quanto mais detalhado, melhor.</p>
+                          {/* VI summary */}
+                          {viComplete && (
+                            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
+                              <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold">Identidade Visual aplicada</p>
+                                <div className="flex gap-1 mt-1">
+                                  {viPalette.slice(0, 5).map((c, i) => (
+                                    <div key={i} className="w-4 h-4 rounded-full border" style={{ backgroundColor: c.hex }} />
+                                  ))}
+                                  <span className="text-[10px] text-muted-foreground ml-1">{viStyle}</span>
+                                </div>
                               </div>
                             </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium flex items-center gap-1">Tipo de Post * <HelpTooltip text="Define a composição visual." /></Label>
+                              <Select value={bTipoPost} onValueChange={setBTipoPost}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{TIPOS_POST.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}</SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium flex items-center gap-1">Nível * <HelpTooltip text="Alto Padrão gera imagens ultra-premium." /></Label>
+                              <Select value={bNivel} onValueChange={setBNivel}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{NIVEIS.map((n) => (<SelectItem key={n.value} value={n.value}><span>{n.label}</span> <span className="text-muted-foreground ml-1">— {n.desc}</span></SelectItem>))}</SelectContent>
+                              </Select>
+                            </div>
                           </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium flex items-center gap-1">Tipo de Post * <HelpTooltip text="O tipo de post define a composição visual. Produto = foto clean; Promoção = destaque bold." /></Label>
-                            <Select value={bTipoPost} onValueChange={setBTipoPost}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>{TIPOS_POST.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}</SelectContent>
-                            </Select>
+                          {(bTipoPost === "produto" || bTipoPost === "servico") && (
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium">Descrição do {bTipoPost === "produto" ? "Produto" : "Serviço"}</Label>
+                              <Textarea value={bDescricaoProduto} onChange={(e) => setBDescricaoProduto(e.target.value)} rows={2} placeholder="Descreva: materiais, cores, formato..." />
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium">Mês *</Label>
+                              <Select value={bMes} onValueChange={setBMes}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{MESES.map((m) => (<SelectItem key={m} value={`${m} 2026`}>{m} 2026</SelectItem>))}</SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium flex items-center gap-1">Objetivo * <HelpTooltip text="Define o foco visual." /></Label>
+                              <Select value={bObjetivo} onValueChange={setBObjetivo}>
+                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>{OBJETIVOS.map((o) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium flex items-center gap-1">Estilo Visual * <HelpTooltip text="Minimalista, Bold, etc." /></Label>
+                              <Select value={bEstilo} onValueChange={setBEstilo}>
+                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>{ESTILOS.map((e) => (<SelectItem key={e} value={e}>{e}</SelectItem>))}</SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium">Temas Visuais</Label>
+                              <Input value={bTemas} onChange={(e) => setBTemas(e.target.value)} placeholder="Ex: Tecnologia, crescimento" />
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs font-medium flex items-center gap-1">Nível de Qualidade * <HelpTooltip text="Alto Padrão gera imagens ultra-premium com iluminação cinematográfica e texturas ricas." /></Label>
-                            <Select value={bNivel} onValueChange={setBNivel}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>{NIVEIS.map((n) => (<SelectItem key={n.value} value={n.value}><span>{n.label}</span> <span className="text-muted-foreground ml-1">— {n.desc}</span></SelectItem>))}</SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        {(bTipoPost === "produto" || bTipoPost === "servico") && (
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium">Descrição do {bTipoPost === "produto" ? "Produto" : "Serviço"}</Label>
-                            <Textarea value={bDescricaoProduto} onChange={(e) => setBDescricaoProduto(e.target.value)} rows={2} placeholder={`Descreva: materiais, cores, formato...`} />
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium">Mês *</Label>
-                            <Select value={bMes} onValueChange={setBMes}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>{MESES.map((m) => (<SelectItem key={m} value={`${m} 2026`}>{m} 2026</SelectItem>))}</SelectContent>
-                            </Select>
+                            <Label className="text-xs font-medium">Promoções / Ofertas</Label>
+                            <Textarea value={bPromocoes} onChange={(e) => setBPromocoes(e.target.value)} rows={2} placeholder="Ex: 20% OFF no plano anual" />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs font-medium flex items-center gap-1">Qtd de Posts * <HelpTooltip text="Cada post gera 1 arte Feed (1:1) + 1 arte Story (9:16)." /></Label>
-                            <Input type="number" min={1} max={maxArts === -1 ? 10 : Math.min(10, saldoRestanteArtes)} value={bQtd} onChange={(e) => setBQtd(e.target.value)} />
-                            <p className="text-[10px] text-muted-foreground">Gera {Number(bQtd) * 2 || 0} artes • Saldo: {maxArts === -1 ? "Ilimitado" : `${saldoRestanteArtes}`}</p>
+                            <Label className="text-xs font-medium">Observações</Label>
+                            <Textarea value={bObs} onChange={(e) => setBObs(e.target.value)} rows={2} placeholder="Instruções adicionais..." />
                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium flex items-center gap-1">Objetivo * <HelpTooltip text="Define o foco visual: Promoção = bold com destaque; Engajamento = interativo e social." /></Label>
-                            <Select value={bObjetivo} onValueChange={setBObjetivo}>
-                              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                              <SelectContent>{OBJETIVOS.map((o) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium flex items-center gap-1">Estilo Visual * <HelpTooltip text="Minimalista = clean e espaçoso; Bold = cores vibrantes e contrastes fortes." /></Label>
-                            <Select value={bEstilo} onValueChange={setBEstilo}>
-                              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                              <SelectContent>{ESTILOS.map((e) => (<SelectItem key={e} value={e}>{e}</SelectItem>))}</SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Temas Visuais</Label>
-                          <Input value={bTemas} onChange={(e) => setBTemas(e.target.value)} placeholder="Ex: Tecnologia, crescimento, equipe" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Promoções / Ofertas</Label>
-                          <Textarea value={bPromocoes} onChange={(e) => setBPromocoes(e.target.value)} rows={2} placeholder="Ex: 20% OFF no plano anual" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Observações</Label>
-                          <Textarea value={bObs} onChange={(e) => setBObs(e.target.value)} rows={2} placeholder="Instruções adicionais..." />
-                        </div>
-
-                        <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
-                          <p className="text-xs font-semibold flex items-center gap-1.5">
-                            <Users className="w-3.5 h-3.5 text-primary" /> Persona <HelpTooltip text="Definir a persona ajuda a IA a criar visuais que conectam com seu público específico." />
-                          </p>
-                          <div className="space-y-2">
-                            <Label className="text-[11px]">Nome da Persona</Label>
+                          {/* Persona */}
+                          <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                            <p className="text-xs font-semibold flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-primary" /> Persona</p>
                             <Input value={personaNome} onChange={(e) => setPersonaNome(e.target.value)} placeholder='Ex: "Maria, 38 anos"' className="h-8 text-xs" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[11px]">Descrição</Label>
                             <Textarea value={personaDescricao} onChange={(e) => setPersonaDescricao(e.target.value)} rows={2} placeholder="Idade, profissão, dores, desejos..." className="text-xs" />
                           </div>
-                        </div>
-
-                        {/* ── Referências Visuais ── */}
-                        <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
-                          <p className="text-xs font-semibold flex items-center gap-1.5">
-                            <Eye className="w-3.5 h-3.5 text-primary" /> Referências Visuais
-                            <HelpTooltip text="Envie exemplos de artes que você gosta. A IA analisa o estilo, cores e composição para criar algo similar." />
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">Até 5 imagens ou arquivos de design (.pdf, .ai, .psd, .svg). A IA analisa o estilo e usa como guia visual.</p>
-
-                          {/* Preview thumbnails */}
-                          {bReferenceImages.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {bReferenceImages.map((ref, i) => (
-                                <div key={i} className="relative group w-16 h-16 rounded-lg overflow-hidden border">
-                                  {ref.isFile ? (
-                                    <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 p-1">
-                                      <FileText className="w-5 h-5 text-muted-foreground" />
-                                      <span className="text-[7px] text-muted-foreground truncate w-full text-center mt-0.5">{ref.fileName || "arquivo"}</span>
-                                    </div>
-                                  ) : (
-                                    <img src={ref.url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
-                                  )}
-                                  <button
-                                    onClick={() => removeRef(i)}
-                                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                                  >
-                                    <Minus className="w-4 h-4 text-white" />
-                                  </button>
-                                  {ref.isUpload && <Badge className="absolute bottom-0.5 left-0.5 text-[7px] px-1 py-0 bg-primary/80 border-0">Upload</Badge>}
+                          {/* Refs */}
+                          <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                            <p className="text-xs font-semibold flex items-center gap-1.5"><Eye className="w-3.5 h-3.5 text-primary" /> Referências Visuais</p>
+                            <p className="text-[10px] text-muted-foreground">Até 5 imagens. A IA analisa o estilo.</p>
+                            {bReferenceImages.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {bReferenceImages.map((ref, i) => (
+                                  <div key={i} className="relative group w-16 h-16 rounded-lg overflow-hidden border">
+                                    {ref.isFile ? (
+                                      <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 p-1"><FileText className="w-5 h-5 text-muted-foreground" /></div>
+                                    ) : (
+                                      <img src={ref.url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                                    )}
+                                    <button onClick={() => removeRef(i)} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Minus className="w-4 h-4 text-white" /></button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {bReferenceImages.length < 5 && (
+                              <div className="space-y-2">
+                                <input type="file" accept="image/*,.pdf,.ai,.psd,.svg,.fig" multiple id="ref-upload" className="hidden" onChange={(e) => handleRefUpload(e.target.files)} />
+                                <Button variant="outline" size="sm" className="text-xs gap-1.5 w-full" onClick={() => document.getElementById("ref-upload")?.click()} disabled={uploadingRef}>
+                                  <Upload className="w-3.5 h-3.5" /> {uploadingRef ? "Enviando..." : "Upload de Referências"}
+                                </Button>
+                                <div className="flex gap-1.5">
+                                  <Input value={refUrlInput} onChange={(e) => setRefUrlInput(e.target.value)} placeholder="Cole URL de referência" className="h-8 text-xs flex-1" onKeyDown={(e) => e.key === "Enter" && addRefUrl()} />
+                                  <Button variant="outline" size="sm" className="h-8 text-xs px-2" onClick={addRefUrl}><Plus className="w-3.5 h-3.5" /></Button>
                                 </div>
-                              ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" className="flex-none" onClick={() => { setWizardFlow("choose"); setBriefingStep(1); }}><ArrowLeft className="w-4 h-4" /></Button>
+                            <Button className="flex-1" onClick={() => setBriefingStep(2)} disabled={!bObjetivo || !bEstilo}>
+                              Próximo <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {briefingStep === 2 && (
+                        <div className="space-y-4 mt-2">
+                          <p className="text-xs text-muted-foreground">Escolha os formatos e quantidades de cada tipo.</p>
+                          <div className={`rounded-lg border p-3 flex items-center justify-between ${
+                            maxArts !== -1 && totalFormats > saldoRestanteArtes ? "border-destructive/30 bg-destructive/5" : "border-primary/20 bg-primary/5"
+                          }`}>
+                            <div>
+                              <p className="text-xs font-semibold">Saldo: {maxArts === -1 ? "Ilimitado" : `${saldoRestanteArtes} artes`}</p>
+                              <p className="text-[10px] text-muted-foreground">{artsThisMonth} de {maxArts === -1 ? "∞" : maxArts} usados</p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">🎨 Artes</p>
+                            <div className="grid grid-cols-3 gap-2">
+                              {ART_FORMATS.map((f) => {
+                                const val = f.value === "feed" ? fmtFeed : f.value === "story" ? fmtStory : fmtCarrossel;
+                                const set = f.value === "feed" ? setFmtFeed : f.value === "story" ? setFmtStory : setFmtCarrossel;
+                                return (
+                                  <Card key={f.value} className="border">
+                                    <CardContent className="py-3 flex flex-col items-center gap-1.5">
+                                      <span className="text-lg">{f.icon}</span>
+                                      <p className="text-[11px] font-semibold">{f.label}</p>
+                                      <p className="text-[9px] text-muted-foreground">{f.desc}</p>
+                                      <Input type="number" min={0} max={10} value={val} onChange={(e) => set(Math.max(0, parseInt(e.target.value) || 0))} className="w-16 text-center h-8 text-xs" />
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">🎬 Vídeos Curtos (5-15s)</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {VIDEO_FORMATS.map((f) => {
+                                const val = f.value === "reels" ? fmtReels : fmtStoryVideo;
+                                const set = f.value === "reels" ? setFmtReels : setFmtStoryVideo;
+                                return (
+                                  <Card key={f.value} className="border">
+                                    <CardContent className="py-3 flex flex-col items-center gap-1.5">
+                                      <span className="text-lg">{f.icon}</span>
+                                      <p className="text-[11px] font-semibold">{f.label}</p>
+                                      <p className="text-[9px] text-muted-foreground">{f.desc}</p>
+                                      <Input type="number" min={0} max={5} value={val} onChange={(e) => set(Math.max(0, parseInt(e.target.value) || 0))} className="w-16 text-center h-8 text-xs" />
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div className={`flex items-center justify-between rounded-lg p-3 ${
+                            maxArts !== -1 && totalFormats > saldoRestanteArtes ? "bg-destructive/10" : "bg-muted/50"
+                          }`}>
+                            <span className="text-sm font-medium">Total de peças</span>
+                            <Badge variant={maxArts !== -1 && totalFormats > saldoRestanteArtes ? "destructive" : "default"} className="text-sm px-3 py-1">{totalFormats}</Badge>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button variant="outline" className="flex-1" onClick={() => setBriefingStep(1)}><ArrowLeft className="w-4 h-4" /> Voltar</Button>
+                            <Button className="flex-1" onClick={() => setBriefingStep(3)} disabled={totalFormats === 0 || (maxArts !== -1 && totalFormats > saldoRestanteArtes)}>
+                              Próximo <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {briefingStep === 3 && (
+                        <div className="space-y-4 mt-2">
+                          <p className="text-xs text-muted-foreground">Selecione o tipo/estilo visual para suas peças. Isso ajuda a IA a entregar o resultado ideal.</p>
+
+                          {hasArtFormats && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">🎨 Tipo de Arte</p>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {ART_STYLES.map((s) => (
+                                  <Card
+                                    key={s.value}
+                                    className={`cursor-pointer transition-all hover:shadow-md ${selectedArtStyle === s.value ? "ring-2 ring-primary border-primary/30 bg-primary/5" : "hover:bg-muted/30"}`}
+                                    onClick={() => setSelectedArtStyle(s.value)}
+                                  >
+                                    <CardContent className="py-3 text-center space-y-1">
+                                      <span className="text-2xl block">{s.icon}</span>
+                                      <p className="text-[11px] font-semibold">{s.label}</p>
+                                      <p className="text-[9px] text-muted-foreground leading-tight">{s.desc}</p>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
                             </div>
                           )}
 
-                          {bReferenceImages.length < 5 && (
-                            <div className="space-y-2">
-                              {/* Upload */}
-                              <div>
-                                <input
-                                  type="file"
-                                  accept="image/*,.pdf,.ai,.psd,.svg,.fig"
-                                  multiple
-                                  id="ref-upload"
-                                  className="hidden"
-                                  onChange={(e) => handleRefUpload(e.target.files)}
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs gap-1.5 w-full"
-                                  onClick={() => document.getElementById("ref-upload")?.click()}
-                                  disabled={uploadingRef}
-                                >
-                                  <Upload className="w-3.5 h-3.5" />
-                                  {uploadingRef ? "Enviando..." : "Upload de Imagens / Arquivos"}
-                                </Button>
-                              </div>
-                              {/* URL input */}
-                              <div className="flex gap-1.5">
-                                <Input
-                                  value={refUrlInput}
-                                  onChange={(e) => setRefUrlInput(e.target.value)}
-                                  placeholder="Cole URL de imagem de referência"
-                                  className="h-8 text-xs flex-1"
-                                  onKeyDown={(e) => e.key === "Enter" && addRefUrl()}
-                                />
-                                <Button variant="outline" size="sm" className="h-8 text-xs px-2" onClick={addRefUrl}>
-                                  <Plus className="w-3.5 h-3.5" />
-                                </Button>
+                          {hasVideoFormats && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">🎬 Tipo de Vídeo (curto, 5-15s)</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {VIDEO_STYLES.map((s) => (
+                                  <Card
+                                    key={s.value}
+                                    className={`cursor-pointer transition-all hover:shadow-md ${selectedVideoStyle === s.value ? "ring-2 ring-primary border-primary/30 bg-primary/5" : "hover:bg-muted/30"}`}
+                                    onClick={() => setSelectedVideoStyle(s.value)}
+                                  >
+                                    <CardContent className="py-3 text-center space-y-1">
+                                      <span className="text-2xl block">{s.icon}</span>
+                                      <p className="text-[11px] font-semibold">{s.label}</p>
+                                      <p className="text-[9px] text-muted-foreground leading-tight">{s.desc}</p>
+                                    </CardContent>
+                                  </Card>
+                                ))}
                               </div>
                             </div>
                           )}
 
-                          {bReferenceImages.length === 0 && visualIdentity?.image_bank_urls?.length ? (
-                            <p className="text-[10px] text-muted-foreground/70 italic">
-                              Sem referências específicas? As {visualIdentity.image_bank_urls.length} imagens do seu Banco de Imagens serão usadas automaticamente.
-                            </p>
-                          ) : null}
+                          <div className="flex gap-2">
+                            <Button variant="outline" className="flex-1" onClick={() => setBriefingStep(2)}><ArrowLeft className="w-4 h-4" /> Voltar</Button>
+                            <Button className="flex-1" onClick={() => setBriefingStep(4)} disabled={(hasArtFormats && !selectedArtStyle) || (hasVideoFormats && !selectedVideoStyle)}>
+                              Próximo <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
+                      )}
 
-                        {/* Video checkbox */}
-                        <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
-                          <label className="flex items-center gap-2.5 cursor-pointer">
-                            <input type="checkbox" checked={bIncluirVideo} onChange={(e) => setBIncluirVideo(e.target.checked)} className="rounded" />
-                            <div className="flex-1">
-                              <p className="text-xs font-semibold flex items-center gap-1.5"><Video className="w-3.5 h-3.5 text-primary" /> Gerar vídeo Reels (MP4)</p>
-                              <p className="text-[10px] text-muted-foreground">A IA gera keyframes sequenciais e monta um vídeo MP4 no formato 9:16 para Reels/TikTok. Custo adicional: ~500 créditos por vídeo.</p>
-                            </div>
-                          </label>
+                      {briefingStep === 4 && (
+                        <div className="space-y-4 mt-2">
+                          <p className="text-xs text-muted-foreground">Revise e confirme a geração.</p>
+                          <Card className="bg-muted/30">
+                            <CardContent className="py-4 space-y-2">
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                <span className="text-muted-foreground">Mês:</span><span className="font-medium">{bMes}</span>
+                                <span className="text-muted-foreground">Objetivo:</span><span className="font-medium">{bObjetivo}</span>
+                                <span className="text-muted-foreground">Estilo:</span><span className="font-medium">{bEstilo}</span>
+                                <span className="text-muted-foreground">Total:</span><span className="font-medium">{totalFormats} peças</span>
+                              </div>
+                              <div className="flex gap-1.5 mt-2 flex-wrap">
+                                {fmtFeed > 0 && <Badge variant="outline" className="text-[10px]">{fmtFeed} Feed</Badge>}
+                                {fmtStory > 0 && <Badge variant="outline" className="text-[10px]">{fmtStory} Story</Badge>}
+                                {fmtCarrossel > 0 && <Badge variant="outline" className="text-[10px]">{fmtCarrossel} Carrossel</Badge>}
+                                {fmtReels > 0 && <Badge variant="outline" className="text-[10px]">{fmtReels} Reels</Badge>}
+                                {fmtStoryVideo > 0 && <Badge variant="outline" className="text-[10px]">{fmtStoryVideo} Story Vídeo</Badge>}
+                              </div>
+                              <div className="flex gap-1.5 flex-wrap">
+                                {selectedArtStyle && <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">{ART_STYLES.find(s => s.value === selectedArtStyle)?.label}</Badge>}
+                                {selectedVideoStyle && <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">{VIDEO_STYLES.find(s => s.value === selectedVideoStyle)?.label}</Badge>}
+                              </div>
+                            </CardContent>
+                          </Card>
+                          <div className="flex gap-2">
+                            <Button variant="outline" className="flex-1" onClick={() => setBriefingStep(3)}><ArrowLeft className="w-4 h-4" /> Voltar</Button>
+                            <Button className="flex-1 gap-2 h-11 font-semibold" onClick={() => {
+                              // Set bQtd and bIncluirVideo from format selections for backward compat
+                              const artCount = fmtFeed + fmtStory + fmtCarrossel;
+                              setBQtd(String(artCount || 1));
+                              setBIncluirVideo(hasVideoFormats);
+                              handleGenerate();
+                            }}>
+                              <Sparkles className="w-4 h-4" /> Gerar {totalFormats} Peças com IA
+                            </Button>
+                          </div>
                         </div>
-
-                        <div className="flex gap-2">
-                          <Button variant="outline" className="flex-none" onClick={() => setWizardFlow("choose")}><ArrowLeft className="w-4 h-4" /></Button>
-                          <Button className="flex-1 gap-2 h-11 font-semibold" onClick={handleGenerate}>
-                            <Sparkles className="w-4 h-4" /> Gerar {Number(bQtd) * 2 || 0} Artes{bIncluirVideo ? " + Vídeos" : ""} com IA
-                          </Button>
-                        </div>
-                      </div>
+                      )}
                     </>
                   )}
                 </DialogContent>
@@ -1220,6 +1426,40 @@ export default function ClienteRedesSociais() {
                             onRequestChanges={(note) => { updateArtStatus(selectedArt.id, "changes_requested", note); toast({ title: "Alteração solicitada!" }); }}
                             onReject={() => { updateArtStatus(selectedArt.id, "rejected"); toast({ title: "Arte rejeitada." }); }}
                           />
+
+                          {/* Revision System */}
+                          <div className="pt-3 border-t border-border/50">
+                            {selectedArt.hasRevision ? (
+                              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30">
+                                <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-xs font-medium text-muted-foreground">Revisão utilizada</p>
+                                  {selectedArt.revisionNote && <p className="text-[10px] text-muted-foreground/70 mt-0.5">"{selectedArt.revisionNote}"</p>}
+                                </div>
+                              </div>
+                            ) : revisionArtId === selectedArt.id ? (
+                              <div className="space-y-2">
+                                <Label className="text-xs font-medium">Descreva a alteração desejada</Label>
+                                <Textarea
+                                  value={revisionNote}
+                                  onChange={(e) => setRevisionNote(e.target.value)}
+                                  rows={2}
+                                  placeholder="Ex: Troque a cor de fundo para azul, aumente o texto..."
+                                  className="text-xs"
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" className="text-xs" onClick={() => { setRevisionArtId(null); setRevisionNote(""); }}>Cancelar</Button>
+                                  <Button size="sm" className="text-xs gap-1.5" onClick={() => handleRevision(selectedArt)} disabled={!revisionNote.trim() || isRevising}>
+                                    <Sparkles className="w-3 h-3" /> {isRevising ? "Regenerando..." : "Regerar com Alteração"}
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <Button size="sm" variant="outline" className="text-xs gap-1.5 w-full" onClick={() => setRevisionArtId(selectedArt.id)}>
+                                <Edit3 className="w-3 h-3" /> Solicitar Alteração (1 revisão inclusa)
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                       )}

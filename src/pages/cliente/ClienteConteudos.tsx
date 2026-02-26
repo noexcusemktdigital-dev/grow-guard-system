@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   FileText, Check, Plus, Sparkles, Copy,
   BookOpen, FolderOpen, Folder, Clock, ArrowLeft,
@@ -6,7 +7,7 @@ import {
   Star, ArrowRight, Play, Image, Layers, Video,
   Monitor, Smartphone, Square, RectangleHorizontal,
   Camera, Mic, Sun, Download, Filter,
-  ChevronDown, History, GraduationCap, Megaphone,
+  ChevronDown, History, GraduationCap, Megaphone, Palette,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -181,11 +182,17 @@ const initialCampaigns: Campaign[] = [
 ];
 
 export default function ClienteConteudos() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: subscription } = useClienteSubscription();
   const plan = getPlanBySlug(subscription?.plan);
   const maxContents = plan?.maxContents ?? 8;
   const planName = plan?.name ?? "Starter";
   const { data: activeStrategy } = useActiveStrategy();
+
+  // Tab from URL (for "Gravar" redirect)
+  const initialTab = searchParams.get("tab") || "campanhas";
+  const initialFormat = searchParams.get("formato") || null;
 
   const [campaigns, setCampaigns] = useState<Campaign[]>(() =>
     initialCampaigns.map(c => ({ ...c, conteudos: c.conteudos.map(migrateContentStatus) }))
@@ -366,7 +373,9 @@ export default function ClienteConteudos() {
         icon={<Megaphone className="w-5 h-5 text-primary" />}
       />
 
-      <Tabs defaultValue="campanhas">
+      <Tabs defaultValue={initialTab} onValueChange={(v) => {
+        if (v !== "tutorial") setSearchParams({});
+      }}>
         <TabsList>
           <TabsTrigger value="campanhas" className="text-xs gap-1.5">
             <FolderOpen className="w-3.5 h-3.5" /> Campanhas
@@ -719,6 +728,66 @@ export default function ClienteConteudos() {
                     toast({ title: "Conteúdo rejeitado." });
                   }}
                 />
+
+                {/* ── Action Buttons ── */}
+                <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border/50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5 h-8"
+                    onClick={() => {
+                      navigator.clipboard.writeText(openContent.roteiro);
+                      toast({ title: "Roteiro copiado!" });
+                    }}
+                  >
+                    <Copy className="w-3.5 h-3.5" /> Copiar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5 h-8"
+                    onClick={() => {
+                      const el = document.createElement("div");
+                      el.innerHTML = `
+                        <div style="font-family:sans-serif;padding:32px;max-width:600px;">
+                          <h1 style="font-size:18px;margin-bottom:8px;">${openContent.titulo}</h1>
+                          <p style="font-size:12px;color:#888;margin-bottom:16px;">${openContent.formato} · ${openContent.rede} · ${openContent.funil}</p>
+                          <div style="white-space:pre-line;font-size:13px;line-height:1.7;margin-bottom:16px;">${openContent.roteiro}</div>
+                          ${openContent.hashtags?.length ? `<p style="font-size:11px;color:#666;">${openContent.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ')}</p>` : ''}
+                          ${openContent.embasamento ? `<div style="margin-top:16px;padding:12px;background:#f5f5f5;border-radius:8px;font-size:11px;"><strong>Embasamento:</strong> ${openContent.embasamento}</div>` : ''}
+                        </div>
+                      `;
+                      import("html2pdf.js").then(({ default: html2pdf }) => {
+                        html2pdf().set({ margin: 0.5, filename: `${openContent.titulo.slice(0, 40)}.pdf`, html2canvas: { scale: 2 } }).from(el).save();
+                      });
+                    }}
+                  >
+                    <Download className="w-3.5 h-3.5" /> PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5 h-8"
+                    onClick={() => {
+                      navigate(`/cliente/redes-sociais?fromContent=${openContent.id}&titulo=${encodeURIComponent(openContent.titulo)}&roteiro=${encodeURIComponent(openContent.roteiro.slice(0, 500))}`);
+                    }}
+                  >
+                    <Palette className="w-3.5 h-3.5" /> Gerar Arte
+                  </Button>
+                  {(openContent.formato === "Reels" || openContent.formato === "Story") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs gap-1.5 h-8"
+                      onClick={() => {
+                        setSearchParams({ tab: "tutorial", formato: openContent.formato });
+                        setOpenContent(null);
+                      }}
+                    >
+                      <Video className="w-3.5 h-3.5" /> Gravar Vídeo
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ) : openCampaign && currentCampaign ? (
@@ -866,9 +935,26 @@ export default function ClienteConteudos() {
             <p className="text-sm text-muted-foreground mt-1">Tudo que você precisa saber para produzir conteúdo profissional</p>
           </div>
 
+          {initialFormat && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary" />
+              <p className="text-xs font-medium">Mostrando instruções para <span className="text-primary font-bold">{initialFormat}</span></p>
+              <Button variant="ghost" size="sm" className="text-xs h-6 ml-auto" onClick={() => setSearchParams({})}>
+                Ver todos
+              </Button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {tutorialData.map((item) => (
-              <Card key={item.formato} className={`border ${item.cor.split(" ").filter(c => c.startsWith("border-")).join(" ")} overflow-hidden`}>
+            {tutorialData
+              .filter(item => {
+                if (!initialFormat) return true;
+                if (initialFormat === "Reels") return item.formato.includes("Reels") || item.formato.includes("Vídeo Curto");
+                if (initialFormat === "Story") return item.formato === "Story";
+                return true;
+              })
+              .map((item) => (
+              <Card key={item.formato} className={`border ${item.cor.split(" ").filter(c => c.startsWith("border-")).join(" ")} overflow-hidden ${initialFormat ? "ring-2 ring-primary/30" : ""}`}>
                 <CardContent className="py-5 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
