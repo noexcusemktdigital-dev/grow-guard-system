@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
     // Upsert contact
     const { data: existingContact } = await adminClient
       .from("whatsapp_contacts")
-      .select("id, unread_count")
+      .select("id, unread_count, photo_url")
       .eq("organization_id", orgId)
       .eq("phone", phone)
       .maybeSingle();
@@ -142,6 +142,29 @@ Deno.serve(async (req) => {
         .select("id")
         .single();
       contactId = newContact!.id;
+    }
+
+    // Fetch profile picture if missing
+    const needsPhoto = !existingContact || !existingContact.photo_url;
+    if (needsPhoto) {
+      try {
+        const picUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/profile-picture?phone=${phone}`;
+        const picRes = await fetch(picUrl, {
+          headers: { "Client-Token": instance.client_token },
+        });
+        if (picRes.ok) {
+          const picData = await picRes.json();
+          const photoUrl = picData.link || picData.url || null;
+          if (photoUrl) {
+            await adminClient
+              .from("whatsapp_contacts")
+              .update({ photo_url: photoUrl })
+              .eq("id", contactId);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch profile picture:", e);
+      }
     }
 
     // Insert message
