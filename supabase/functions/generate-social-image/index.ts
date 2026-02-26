@@ -395,7 +395,14 @@ Generate this image now. Prioritize brand color accuracy and compositional excel
 
     console.log(`✅ Image uploaded: ${urlData.publicUrl}`);
 
-    return new Response(JSON.stringify({ url: urlData.publicUrl }), {
+    // Check if this is a template-style art that needs Canvas composition
+    const TEMPLATE_ART_STYLES = ['foto_texto', 'composicao', 'mockup', 'quote'];
+    const needsTemplate = art_style && TEMPLATE_ART_STYLES.includes(art_style);
+
+    return new Response(JSON.stringify({ 
+      url: urlData.publicUrl,
+      needs_template: needsTemplate || false,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
