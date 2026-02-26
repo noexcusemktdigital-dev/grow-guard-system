@@ -31,11 +31,10 @@ const principalSection: SidebarItem[] = [
 ];
 
 const redeSection: SidebarItem[] = [
+  { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
   { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
-  { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
-  { label: "Matriz", icon: Shield, path: "/franqueadora/matriz" },
 ];
 
 const comercialSection: SidebarItem[] = [
@@ -65,6 +64,7 @@ const adminSection: SidebarItem[] = [
       { label: "Configurações", icon: Settings, path: "/franqueadora/financeiro/configuracoes" },
     ],
   },
+  { label: "Matriz", icon: Shield, path: "/franqueadora/matriz" },
   { label: "SaaS", icon: Cloud, path: "/franqueadora/saas" },
   { label: "Drive Corporativo", icon: FolderOpen, path: "/franqueadora/drive", disabled: true },
 ];

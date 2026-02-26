@@ -80,7 +80,7 @@ export function useOnboardingMutations() {
   const { data: orgId } = useUserOrgId();
 
   const createUnit = useMutation({
-    mutationFn: async (unit: { name: string; start_date?: string; target_date?: string; unit_org_id?: string }) => {
+    mutationFn: async (unit: { name: string; start_date?: string; target_date?: string; unit_org_id?: string; responsible?: string }) => {
       const { data, error } = await supabase.from("onboarding_units").insert({ ...unit, organization_id: orgId! }).select().single();
       if (error) throw error;
       return data;
@@ -88,5 +88,65 @@ export function useOnboardingMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-units"] }),
   });
 
-  return { createUnit };
+  const updateUnit = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { data, error } = await supabase.from("onboarding_units").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-units"] }),
+  });
+
+  const toggleChecklistItem = useMutation({
+    mutationFn: async ({ id, is_completed }: { id: string; is_completed: boolean }) => {
+      const { error } = await supabase.from("onboarding_checklist").update({ is_completed, completed_at: is_completed ? new Date().toISOString() : null }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-checklist"] }),
+  });
+
+  const createChecklistItem = useMutation({
+    mutationFn: async (item: { title: string; onboarding_unit_id: string; phase?: string; sort_order?: number }) => {
+      const { data, error } = await supabase.from("onboarding_checklist").insert({ ...item, organization_id: orgId! }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-checklist"] }),
+  });
+
+  const createMeeting = useMutation({
+    mutationFn: async (meeting: { title: string; onboarding_unit_id: string; date?: string; type?: string; notes?: string; status?: string }) => {
+      const { data, error } = await supabase.from("onboarding_meetings").insert({ ...meeting, organization_id: orgId! }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-meetings"] }),
+  });
+
+  const updateMeeting = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { error } = await supabase.from("onboarding_meetings").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-meetings"] }),
+  });
+
+  const createTask = useMutation({
+    mutationFn: async (task: { title: string; onboarding_unit_id: string; due_date?: string; assigned_to?: string }) => {
+      const { data, error } = await supabase.from("onboarding_tasks").insert({ ...task, organization_id: orgId! }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-tasks"] }),
+  });
+
+  const toggleTask = useMutation({
+    mutationFn: async ({ id, is_completed }: { id: string; is_completed: boolean }) => {
+      const { error } = await supabase.from("onboarding_tasks").update({ is_completed, completed_at: is_completed ? new Date().toISOString() : null }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-tasks"] }),
+  });
+
+  return { createUnit, updateUnit, toggleChecklistItem, createChecklistItem, createMeeting, updateMeeting, createTask, toggleTask };
 }
