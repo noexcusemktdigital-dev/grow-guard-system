@@ -294,7 +294,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-white/70">{contact.phone}</span>
             {linkedLead && (
-              <Badge variant="outline" className="text-[8px] px-1 py-0 border-white/30 text-white/80">{linkedLead.stage}</Badge>
+              <Badge className="text-[8px] px-1.5 py-0 bg-emerald-600/80 text-white border-0">{linkedLead.stage}</Badge>
             )}
           </div>
         </div>
@@ -318,6 +318,25 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
             >
               {attendingMode === "ai" ? <><User className="w-3 h-3" /> Assumir</> : <><RefreshCw className="w-3 h-3" /> IA</>}
             </Button>
+          )}
+
+          {/* Criar Lead button - always visible in header */}
+          {!linkedLead && (
+            <Button
+              size="sm"
+              className="h-7 text-[11px] gap-1 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md"
+              onClick={handleCreateLead}
+              disabled={createLead.isPending || linkMutation.isPending}
+            >
+              <UserPlus className="w-3 h-3" /> Criar Lead
+            </Button>
+          )}
+
+          {/* Lead stage badge in header */}
+          {linkedLead && (
+            <Badge className="text-[10px] gap-1 rounded-full bg-emerald-600/80 text-white border-0">
+              {linkedLead.stage}
+            </Badge>
           )}
 
           <Collapsible open={actionsOpen} onOpenChange={setActionsOpen}>

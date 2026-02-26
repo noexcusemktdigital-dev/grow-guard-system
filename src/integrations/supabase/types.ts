@@ -1668,6 +1668,7 @@ export type Database = {
           source: string | null
           stage: string
           tags: string[] | null
+          temperature: string | null
           updated_at: string
           value: number | null
           whatsapp_contact_id: string | null
@@ -1690,6 +1691,7 @@ export type Database = {
           source?: string | null
           stage?: string
           tags?: string[] | null
+          temperature?: string | null
           updated_at?: string
           value?: number | null
           whatsapp_contact_id?: string | null
@@ -1712,6 +1714,7 @@ export type Database = {
           source?: string | null
           stage?: string
           tags?: string[] | null
+          temperature?: string | null
           updated_at?: string
           value?: number | null
           whatsapp_contact_id?: string | null
