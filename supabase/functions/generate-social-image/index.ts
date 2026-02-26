@@ -11,19 +11,115 @@ const CREDIT_COST = 100;
 function getQualityInstructions(nivel: string): string {
   switch (nivel) {
     case "alto_padrao":
-      return `QUALITY: Ultra-premium, luxury brand quality. Magazine-level photography or design.
-Rich textures, dramatic lighting with deep shadows and golden-hour highlights.
-Cinematic color grading. Every pixel must be perfect. Think high-end advertising campaign.
-Depth of field, bokeh effects, premium materials visible in textures.`;
+      return `QUALITY TIER: ULTRA-PREMIUM (Magazine/Campaign Level)
+- Cinematic lighting: golden-hour warmth, dramatic shadows, volumetric light rays
+- Rich material textures: brushed metal, soft fabric, glossy surfaces with realistic reflections
+- Depth of field with professional bokeh (f/1.4 - f/2.8 equivalent)
+- Color grading: film-like tones, split-toning with warm highlights and cool shadows
+- Every element must have photographic or hyper-realistic render quality
+- Think: Apple product shoots, Rolex advertisements, luxury fashion editorials`;
     case "elaborado":
-      return `QUALITY: High-quality professional design. Strong composition with visual depth.
-Vibrant but harmonious colors, polished finish. Professional lighting setup.
-Layered visual interest with foreground/midground/background elements.
-Agency-quality creative work with attention to detail.`;
+      return `QUALITY TIER: PROFESSIONAL (Agency Level)
+- Strong directional lighting with fill and accent lights
+- Vibrant but harmonious color palette with intentional contrast
+- Layered composition: clear foreground interest, mid-ground subject, background depth
+- Professional retouching quality: clean edges, consistent shadows
+- Think: Nike social media campaigns, Spotify Wrapped visuals`;
     default:
-      return `QUALITY: Clean, professional design. Simple but effective composition.
-Clear focal point, balanced layout. Professional and trustworthy appearance.
-Well-lit, properly exposed, ready for social media publishing.`;
+      return `QUALITY TIER: CLEAN PROFESSIONAL (Brand Level)
+- Even, well-balanced lighting with soft shadows
+- Clean, uncluttered composition with a single clear focal point
+- Professional color balance, properly exposed
+- Suitable for immediate social media publishing
+- Think: Mailchimp illustrations, Stripe marketing visuals`;
+  }
+}
+
+function getTypeComposition(tipo: string): string {
+  switch (tipo) {
+    case "produto":
+      return `COMPOSITION TYPE: PRODUCT SHOWCASE
+- Product centered on solid or gradient background
+- Clean negative space around the product (60%+ of frame)
+- Subtle shadow grounding the product
+- Hero lighting from upper-left or upper-right
+- Lifestyle context hints through props or environment blur`;
+    case "servico":
+      return `COMPOSITION TYPE: SERVICE VISUAL
+- Abstract representation of the service concept
+- Human elements: hands, silhouettes, or workspace environments
+- Metaphorical visual storytelling
+- Warm, inviting atmosphere suggesting trust and expertise`;
+    case "promocao":
+      return `COMPOSITION TYPE: PROMOTIONAL IMPACT
+- Bold visual impact with strong color blocking
+- Dynamic diagonal or asymmetric composition
+- High contrast between elements for eye-catching effect
+- Energy and urgency through visual rhythm
+- Large clear area for price/offer text overlay (30%+ of frame)`;
+    case "educativo":
+      return `COMPOSITION TYPE: EDUCATIONAL/INFORMATIVE
+- Clean, organized visual hierarchy
+- Infographic-inspired layouts with visual data representation
+- Icons and geometric shapes as visual anchors
+- Professional, trustworthy aesthetic`;
+    case "depoimento":
+      return `COMPOSITION TYPE: TESTIMONIAL/SOCIAL PROOF
+- Warm, authentic atmosphere
+- Human-centric with space for quote overlay
+- Soft lighting suggesting approachability
+- Subtle brand color accents in background`;
+    default:
+      return `COMPOSITION TYPE: INSTITUTIONAL/BRAND
+- Brand-forward composition emphasizing values
+- Balanced, symmetrical or rule-of-thirds layout
+- Professional yet approachable mood
+- Clear visual hierarchy with focal point`;
+  }
+}
+
+function getStyleInstructions(estilo: string): string {
+  switch (estilo?.toLowerCase()) {
+    case "minimalista":
+      return `STYLE: MINIMALIST
+- Vast negative space (70%+ of frame)
+- Maximum 2-3 visual elements
+- Monochromatic or analogous color scheme
+- Geometric precision, clean lines, no decoration
+- Inspired by: Japanese design, Muji, Apple`;
+    case "bold":
+      return `STYLE: BOLD / MAXIMALIST
+- Strong color blocking with high saturation
+- Oversized typography-inspired shapes
+- Dynamic angles and overlapping elements
+- High contrast, energetic composition
+- Inspired by: Nike, Beats, Spotify`;
+    case "corporativo":
+      return `STYLE: CORPORATE / PROFESSIONAL
+- Navy, charcoal, and accent color palette
+- Structured grid-based composition
+- Subtle gradients and professional photography
+- Trust-building visual language
+- Inspired by: McKinsey, Deloitte, IBM`;
+    case "criativo":
+      return `STYLE: CREATIVE / ARTISTIC
+- Unexpected color combinations
+- Mixed media aesthetics: collage, illustration + photo
+- Playful asymmetry and organic shapes
+- Textural interest: grain, halftone, watercolor
+- Inspired by: Airbnb, Dropbox, Notion`;
+    case "elegante":
+      return `STYLE: ELEGANT / LUXURY
+- Dark backgrounds with metallic accents (gold, silver)
+- Refined serif-inspired visual weight
+- Subtle textures: marble, linen, leather
+- Generous spacing and visual breathing room
+- Inspired by: Chanel, Dior, Four Seasons`;
+    default:
+      return `STYLE: MODERN PROFESSIONAL
+- Contemporary design language
+- Clean sans-serif visual weight
+- Balanced composition with clear hierarchy`;
   }
 }
 
@@ -58,52 +154,68 @@ serve(async (req) => {
     const qualityInstructions = getQualityInstructions(nivel || "simples");
 
     const aspectInstruction = format === "feed"
-      ? "Square format (1:1 aspect ratio), 1080x1080 pixels. Centered, balanced composition."
-      : "Vertical format (9:16 aspect ratio), 1080x1920 pixels. Vertical composition with stacked visual elements.";
+      ? "OUTPUT FORMAT: Square (1:1), 1080×1080px. Centered, balanced composition optimized for Instagram feed."
+      : "OUTPUT FORMAT: Vertical (9:16), 1080×1920px. Vertical composition with stacked elements, optimized for Stories/Reels.";
 
+    // Extract visual style from identidade_visual
+    const estilo = identidade_visual?.estilo || "";
+    const styleInstructions = getStyleInstructions(estilo);
+
+    // Build brand context from identity
     let brandContext = "";
     if (identidade_visual) {
       const iv = identidade_visual;
-      brandContext = `\nBRAND IDENTITY:
-${iv.paleta ? `- Primary colors: ${iv.paleta}` : ""}
-${iv.estilo ? `- Visual style: ${iv.estilo}` : ""}
-${iv.tom_visual ? `- Visual tone: ${iv.tom_visual}` : ""}
+      const colors = iv.paleta || "";
+      brandContext = `
+BRAND IDENTITY (MANDATORY):
+- COLOR PALETTE: Use ONLY these colors as the dominant palette: ${colors}
+  → Primary color for focal elements
+  → Secondary colors for accents and backgrounds
+  → Do NOT introduce colors outside this palette
+${iv.estilo ? `- VISUAL STYLE: ${iv.estilo}` : ""}
+${iv.tom_visual ? `- VISUAL TONE: ${iv.tom_visual}` : ""}
+${iv.fontes ? `- TYPOGRAPHY REFERENCE: ${iv.fontes} (do not render text, but match the weight/feel)` : ""}
+${iv.referencias ? `- VISUAL REFERENCES: ${iv.referencias}` : ""}
 
-Match these brand guidelines precisely in the generated image.
-Use the brand colors as dominant palette elements.`;
+The generated image MUST feel like it belongs to this brand's visual ecosystem.`;
     }
 
     let audienceContext = "";
     if (persona?.descricao || persona?.nome) {
-      audienceContext = `\nTARGET AUDIENCE: ${persona.nome ? `${persona.nome} — ` : ""}${persona.descricao || ""}
-Ensure the visual style, color palette, and composition appeal to this specific audience.`;
+      audienceContext = `
+TARGET AUDIENCE: ${persona.nome ? `${persona.nome} — ` : ""}${persona.descricao || ""}
+Visual style, mood, and composition must appeal to and resonate with this specific audience.`;
     }
 
-    const fullPrompt = `You are a world-class art director and visual designer for premium social media campaigns.
+    const fullPrompt = `You are a world-class art director creating a single social media visual asset.
 
 ${qualityInstructions}
 
+${styleInstructions}
+
 ${aspectInstruction}
+
 ${brandContext}
 ${audienceContext}
 
 COMPOSITION RULES:
-- Leave clear space for text overlay (top 20% or bottom 25% of the image should have simpler areas)
-- Create visual hierarchy with a clear focal point
-- Use professional color theory and complementary colors
-- Ensure the image works at small mobile screen sizes
+- Reserve clear, low-detail space for text overlay (top 20% OR bottom 25%)
+- Create visual hierarchy: one unmistakable focal point
+- Professional color theory: complementary/analogous relationships
+- Must work at small mobile screen sizes (key elements visible at 150×150px)
 
-CRITICAL RULES:
-- Do NOT include any text, letters, numbers, words, or watermarks in the image
-- No generic stock photo aesthetics
-- Every element must serve the composition
+ABSOLUTE RULES (NEVER VIOLATE):
+- ZERO text, letters, numbers, words, logos, or watermarks in the image
+- ZERO generic stock photo aesthetics — every element must be intentional
+- ZERO busy backgrounds that compete with the focal point
+- Every pixel must serve the composition and brand identity
 
 VISUAL BRIEF:
 ${prompt}
 
-Generate this image now with the highest possible quality and attention to detail.`;
+Generate this image now. Prioritize brand color accuracy and compositional excellence above all else.`;
 
-    console.log(`Generating ${format} image (nivel: ${nivel || "simples"})...`);
+    console.log(`Generating ${format} image (nivel: ${nivel || "simples"}, style: ${estilo})...`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -147,21 +259,16 @@ Generate this image now with the highest possible quality and attention to detai
 
     const { error: uploadError } = await supabase.storage
       .from("social-arts")
-      .upload(file_path, binaryData, {
-        contentType: "image/png",
-        upsert: true,
-      });
+      .upload(file_path, binaryData, { contentType: "image/png", upsert: true });
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
       throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
-    const { data: urlData } = supabase.storage
-      .from("social-arts")
-      .getPublicUrl(file_path);
+    const { data: urlData } = supabase.storage.from("social-arts").getPublicUrl(file_path);
 
-    // Debit credits after successful generation
+    // Debit credits
     if (organization_id) {
       try {
         await supabase.rpc("debit_credits", {

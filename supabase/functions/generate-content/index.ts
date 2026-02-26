@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { briefing, formatos, estrategia, persona, organization_id } = await req.json();
+    const { briefing, formatos, estrategia, persona, organization_id, objetivos, materiais } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -47,7 +47,23 @@ serve(async (req) => {
       (formatos?.story || 0);
 
     const estrategiaContext = estrategia
-      ? `\n\nDados da estratégia do cliente:\n${JSON.stringify(estrategia, null, 2)}`
+      ? `\n\nDados da estratégia ativa do cliente:
+Persona: ${estrategia.answers?.persona_nome || "N/A"} — ${estrategia.answers?.persona_descricao || "N/A"}
+Segmento: ${estrategia.answers?.segmento || "N/A"}
+Tom de voz: ${estrategia.answers?.tom_comunicacao || "N/A"}
+Diferenciais: ${estrategia.answers?.diferenciais || "N/A"}
+Objetivos: ${estrategia.answers?.objetivo_principal || "N/A"}
+Canais: ${estrategia.answers?.canais_ativos || "N/A"}
+Nível de maturidade: ${estrategia.nivel || "N/A"} (score: ${estrategia.score_percentage || 0}%)
+\nUse estes dados para alinhar 100% dos conteúdos com a estratégia.`
+      : "";
+
+    const objetivosText = Array.isArray(objetivos) && objetivos.length > 0
+      ? `Objetivos selecionados: ${objetivos.join(", ")}`
+      : `Objetivo: ${briefing.objetivo}`;
+
+    const materiaisContext = Array.isArray(materiais) && materiais.length > 0
+      ? `\n\nMateriais de apoio fornecidos:\n${materiais.map((m: any, i: number) => `${i + 1}. ${m.type === "link" ? `Link: ${m.url}` : `Arquivo: ${m.name}`}`).join("\n")}\nConsidere estes materiais ao criar os conteúdos.`
       : "";
 
     const personaContext = persona?.nome || persona?.descricao
@@ -75,11 +91,11 @@ REGRAS OBRIGATÓRIAS:
 - Inclua hashtags relevantes (5-10 por conteúdo)
 - IMPORTANTE: Para cada conteúdo, inclua um "embasamento" de 2-3 linhas explicando POR QUE esse formato e conteúdo foram escolhidos, com dados ou lógica de marketing
 - Sugira a rede social mais adequada (Instagram, LinkedIn, TikTok)
-${estrategiaContext}`;
+${estrategiaContext}${materiaisContext}`;
 
     const userPrompt = `Gere a campanha de conteúdo para o mês de ${briefing.mes} com as seguintes informações:
 
-Objetivo: ${briefing.objetivo}
+${objetivosText}
 Tema central: ${briefing.tema}
 Tom de comunicação: ${briefing.tom}
 ${briefing.promocoes ? `Promoções/Ofertas: ${briefing.promocoes}` : ""}
