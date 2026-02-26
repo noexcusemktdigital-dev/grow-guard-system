@@ -1,0 +1,1 @@
+UPDATE credit_wallets SET balance = 0, updated_at = now() WHERE organization_id = 'adb09618-e9f3-4dbd-a89c-29e3eb1bec9f';

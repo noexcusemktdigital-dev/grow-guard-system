@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
-  MessageCircle, Bot, Download, FileText
+  MessageCircle, Bot, Download, FileText, Calendar
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import { useCrmLeads } from "@/hooks/useClienteCrm";
 import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -56,6 +58,8 @@ export default function ClienteDashboard() {
   const { data: orgId } = useUserOrgId();
   const { toast } = useToast();
   const [period, setPeriod] = useState("30d");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
 
   // Chat data
   const { data: chatContacts } = useQuery({
@@ -282,10 +286,32 @@ export default function ClienteDashboard() {
         subtitle="Analise e exporte relatórios das suas frentes comerciais"
         icon={<BarChart3 className="w-5 h-5 text-primary" />}
         actions={
-          <div className="flex gap-1 p-1 rounded-lg bg-muted/50 border">
-            {["7d", "30d", "90d"].map(p => (
-              <Button key={p} variant={period === p ? "default" : "ghost"} size="sm" className="text-xs h-7 px-3" onClick={() => setPeriod(p)}>{p}</Button>
+          <div className="flex gap-1 p-1 rounded-lg bg-muted/50 border items-center flex-wrap">
+            {[
+              { key: "7d", label: "7 dias" },
+              { key: "30d", label: "30 dias" },
+              { key: "90d", label: "90 dias" },
+              { key: "all", label: "Todo período" },
+            ].map(p => (
+              <Button key={p.key} variant={period === p.key ? "default" : "ghost"} size="sm" className="text-xs h-7 px-3" onClick={() => setPeriod(p.key)}>{p.label}</Button>
             ))}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={period === "custom" ? "default" : "ghost"} size="sm" className="text-xs h-7 px-3 gap-1">
+                  <Calendar className="w-3 h-3" /> Personalizado
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-3 space-y-2" align="end">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground font-medium">De</label>
+                  <Input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setPeriod("custom"); }} className="h-8 text-xs" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground font-medium">Até</label>
+                  <Input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setPeriod("custom"); }} className="h-8 text-xs" />
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         }
       />
@@ -578,31 +604,6 @@ export default function ClienteDashboard() {
             </Card>
           )}
 
-          {(aiLogs ?? []).length > 0 && (
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Últimas Conversas IA</CardTitle></CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Modelo</TableHead>
-                      <TableHead className="text-xs">Tokens</TableHead>
-                      <TableHead className="text-xs text-right">Data</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(aiLogs ?? []).slice(0, 10).map((log: any) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="py-2 text-xs">{log.model || "—"}</TableCell>
-                        <TableCell className="py-2 text-xs">{log.tokens_used || 0}</TableCell>
-                        <TableCell className="py-2 text-xs text-right">{new Date(log.created_at).toLocaleDateString("pt-BR")}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
       </Tabs>
     </div>
