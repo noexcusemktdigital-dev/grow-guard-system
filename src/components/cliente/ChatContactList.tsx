@@ -1,14 +1,13 @@
 import { useState, useMemo } from "react";
-import { Search, User, Bot, Clock, MessageCircle, Wifi, Users } from "lucide-react";
+import { Search, User, Bot, Clock, MessageCircle, Wifi, Users, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChatContactItem } from "@/components/cliente/ChatContactItem";
 import type { WhatsAppContact } from "@/hooks/useWhatsApp";
-import { isToday, isYesterday, format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { isToday, isYesterday } from "date-fns";
 
 interface Props {
   contacts: WhatsAppContact[];
@@ -20,15 +19,7 @@ interface Props {
   lastMessages?: Map<string, string>;
 }
 
-type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
-
-function formatContactTime(dateStr: string | null) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isToday(d)) return format(d, "HH:mm");
-  if (isYesterday(d)) return "Ontem";
-  return format(d, "dd/MM", { locale: ptBR });
-}
+type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups" | "website";
 
 function getDateGroup(dateStr: string | null): string {
   if (!dateStr) return "older";
@@ -49,28 +40,52 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
     const matchSearch = !q || (c.name?.toLowerCase().includes(q) || c.phone.includes(q));
     const contactAny = c as any;
     const mode = contactAny.attending_mode || null;
-    const contactType = (c as any).contact_type || "individual";
+    const contactType = contactAny.contact_type || "individual";
     let matchMode = true;
     if (modeFilter === "ai") matchMode = mode === "ai";
     else if (modeFilter === "human") matchMode = mode === "human";
     else if (modeFilter === "waiting") matchMode = c.unread_count > 0;
     else if (modeFilter === "groups") matchMode = contactType === "group";
+    else if (modeFilter === "website") matchMode = contactType === "website";
     const matchAgent = !agentFilter || contactAny.agent_id === agentFilter;
     const contactStage = leadStages?.get(c.id) || "";
     const matchStage = !stageFilter || contactStage === stageFilter;
     return matchSearch && matchMode && matchAgent && matchStage;
   });
 
-  // Sort: unread first, then by last_message_at
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      if (a.unread_count > 0 && b.unread_count === 0) return -1;
-      if (a.unread_count === 0 && b.unread_count > 0) return 1;
+  // Split into unread and read
+  const { unread, read } = useMemo(() => {
+    const unread: WhatsAppContact[] = [];
+    const read: WhatsAppContact[] = [];
+    const sorted = [...filtered].sort((a, b) => {
       const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
       const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
       return db - da;
     });
+    sorted.forEach((c) => {
+      if (c.unread_count > 0) unread.push(c);
+      else read.push(c);
+    });
+    return { unread, read };
   }, [filtered]);
+
+  // Group read contacts by date
+  const readGroups = useMemo(() => {
+    const groups: { key: string; label: string; contacts: WhatsAppContact[] }[] = [];
+    const map = new Map<string, WhatsAppContact[]>();
+    read.forEach((c) => {
+      const g = getDateGroup(c.last_message_at);
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(c);
+    });
+    const order = ["today", "yesterday", "older"];
+    const labels: Record<string, string> = { today: "Hoje", yesterday: "Ontem", older: "Anteriores" };
+    order.forEach((k) => {
+      const items = map.get(k);
+      if (items && items.length > 0) groups.push({ key: k, label: labels[k], contacts: items });
+    });
+    return groups;
+  }, [read]);
 
   const uniqueStages = leadStages ? Array.from(new Set(leadStages.values())).filter(Boolean).sort() : [];
 
@@ -80,12 +95,10 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
     { key: "human", label: "Humano", icon: <User className="w-3 h-3" /> },
     { key: "waiting", label: "Espera", icon: <Clock className="w-3 h-3" /> },
     { key: "groups", label: "Grupos", icon: <Users className="w-3 h-3" /> },
+    { key: "website", label: "Site", icon: <Globe className="w-3 h-3" /> },
   ];
 
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
-
-  // Group by date
-  let lastGroup = "";
 
   return (
     <div className="flex flex-col h-full border-r border-border bg-card/50">
@@ -108,7 +121,7 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
         </div>
 
         {/* Mode pills */}
-        <div className="flex gap-1 mb-2">
+        <div className="flex gap-1 mb-2 flex-wrap">
           {modeButtons.map((btn) => (
             <Button
               key={btn.key}
@@ -168,100 +181,55 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
       </div>
 
       <ScrollArea className="flex-1">
-        {sorted.length === 0 ? (
+        {unread.length === 0 && read.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4">
             <MessageCircle className="w-8 h-8 text-muted-foreground/20 mb-2" />
             <p className="text-xs text-muted-foreground">Nenhum contato encontrado</p>
           </div>
         ) : (
-          sorted.map((contact) => {
-            const contactAny = contact as any;
-            const mode = contactAny.attending_mode || null;
-            const contactType = contactAny.contact_type || "individual";
-            const stageLabel = leadStages?.get(contact.id);
-            const preview = lastMessages?.get(contact.id);
-            const group = getDateGroup(contact.last_message_at);
-            let showSeparator = false;
-            if (group !== lastGroup) {
-              showSeparator = true;
-              lastGroup = group;
-            }
-            const isGroup = contactType === "group";
-            const isLid = contactType === "lid";
-
-            return (
-              <div key={contact.id}>
-                {showSeparator && (
-                  <div className="px-4 py-1.5">
-                    <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
-                      {group === "today" ? "Hoje" : group === "yesterday" ? "Ontem" : "Anteriores"}
-                    </span>
-                  </div>
-                )}
-                <button
-                  onClick={() => onSelect(contact)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-150 ${
-                    selectedId === contact.id
-                      ? "bg-primary/10"
-                      : "hover:bg-muted/40"
-                  } ${contact.unread_count > 0 ? "bg-primary/[0.03]" : ""}`}
-                >
-                  <div className="relative shrink-0">
-                    {isGroup ? (
-                      <div className="h-11 w-11 rounded-full bg-purple-500/15 border-2 border-purple-500/30 flex items-center justify-center">
-                        <Users className="w-5 h-5 text-purple-400" />
-                      </div>
-                    ) : (
-                      <Avatar className="h-11 w-11">
-                        <AvatarImage src={contact.photo_url || undefined} />
-                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
-                          {(contact.name || contact.phone).substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    {mode && !isGroup && (
-                      <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card flex items-center justify-center ${
-                        mode === "ai" ? "bg-purple-500" : "bg-emerald-500"
-                      }`}>
-                        {mode === "ai" ? <Bot className="w-2.5 h-2.5 text-white" /> : <User className="w-2.5 h-2.5 text-white" />}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <p className={`text-sm truncate ${contact.unread_count > 0 ? "font-bold" : "font-medium"}`}>
-                          {contact.name || contact.phone}
-                        </p>
-                        {isGroup && (
-                          <Badge variant="secondary" className="text-[8px] px-1 py-0 shrink-0 bg-purple-500/15 text-purple-400 border-0">Grupo</Badge>
-                        )}
-                        {isLid && (
-                          <Badge variant="secondary" className="text-[8px] px-1 py-0 shrink-0 bg-blue-500/15 text-blue-400 border-0">Anúncio</Badge>
-                        )}
-                      </div>
-                      <span className={`text-[10px] shrink-0 ml-2 ${contact.unread_count > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                        {formatContactTime(contact.last_message_at)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <p className="text-xs text-muted-foreground truncate pr-2">
-                        {preview || contact.phone}
-                      </p>
-                      {contact.unread_count > 0 && (
-                        <Badge className="h-[18px] min-w-[18px] px-1 text-[9px] bg-primary text-primary-foreground shrink-0 rounded-full">
-                          {contact.unread_count}
-                        </Badge>
-                      )}
-                    </div>
-                    {stageLabel && (
-                      <Badge variant="outline" className="text-[8px] px-1 py-0 font-normal mt-1">{stageLabel}</Badge>
-                    )}
-                  </div>
-                </button>
+          <>
+            {/* Unread section */}
+            {unread.length > 0 && (
+              <div className="bg-primary/[0.04]">
+                <div className="px-4 py-2 flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Novas</span>
+                  <Badge className="h-4 min-w-4 px-1 text-[9px] bg-primary text-primary-foreground rounded-full">{unread.length}</Badge>
+                </div>
+                {unread.map((contact) => (
+                  <ChatContactItem
+                    key={contact.id}
+                    contact={contact}
+                    isSelected={selectedId === contact.id}
+                    onSelect={onSelect}
+                    stageLabel={leadStages?.get(contact.id)}
+                    preview={lastMessages?.get(contact.id)}
+                  />
+                ))}
+                <div className="h-px bg-border mx-4" />
               </div>
-            );
-          })
+            )}
+
+            {/* Read section grouped by date */}
+            {readGroups.map((group) => (
+              <div key={group.key}>
+                <div className="px-4 py-1.5">
+                  <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {group.label}
+                  </span>
+                </div>
+                {group.contacts.map((contact) => (
+                  <ChatContactItem
+                    key={contact.id}
+                    contact={contact}
+                    isSelected={selectedId === contact.id}
+                    onSelect={onSelect}
+                    stageLabel={leadStages?.get(contact.id)}
+                    preview={lastMessages?.get(contact.id)}
+                  />
+                ))}
+              </div>
+            ))}
+          </>
         )}
       </ScrollArea>
     </div>

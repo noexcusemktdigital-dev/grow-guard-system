@@ -3774,6 +3774,99 @@ export type Database = {
         }
         Relationships: []
       }
+      website_chat_messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          direction: string
+          id: string
+          organization_id: string
+          session_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          organization_id: string
+          session_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          organization_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_chat_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_chat_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          status: string
+          updated_at: string
+          visitor_email: string | null
+          visitor_metadata: Json | null
+          visitor_name: string | null
+          whatsapp_contact_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          status?: string
+          updated_at?: string
+          visitor_email?: string | null
+          visitor_metadata?: Json | null
+          visitor_name?: string | null
+          whatsapp_contact_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          status?: string
+          updated_at?: string
+          visitor_email?: string | null
+          visitor_metadata?: Json | null
+          visitor_name?: string | null
+          whatsapp_contact_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_chat_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_chat_sessions_whatsapp_contact_id_fkey"
+            columns: ["whatsapp_contact_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_contacts: {
         Row: {
           agent_id: string | null
