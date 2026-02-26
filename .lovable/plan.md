@@ -1,208 +1,109 @@
 
-## Plano: Motor de Templates Canvas para Artes de Post
 
-Criar um sistema hibrido onde a IA gera a imagem de fundo e um motor Canvas renderiza por cima elementos de design grafico (tipografia, molduras, formas geometricas, logo) para atingir qualidade de template profissional.
+## Plano: Estilos de Arte Claros + Prompts Especializados
 
----
-
-### Problema Atual
-
-O sistema atual gera imagens via IA com a regra "ZERO texto na imagem". As referencias do usuario mostram templates estilo Canva com:
-- Tipografia estilizada e hierarquica (titulo grande, subtitulo, CTA)
-- Molduras e frames geometricos ao redor das fotos
-- Formas decorativas (faixas diagonais, circulos, retangulos)
-- Logo e marca d'agua posicionados estrategicamente
-- Layout estruturado com grid e alinhamento preciso
-
-A IA sozinha nao consegue produzir esse nivel de controle tipografico e geometrico. Precisa de renderizacao programatica.
+Em vez de usar o motor Canvas para compor templates, vamos melhorar drasticamente os estilos de arte e os prompts para que a IA gere diretamente o resultado certo — seja uma arte gráfica estilo postagem ou uma imagem fotográfica.
 
 ---
 
-### Arquitetura Hibrida
+### Problema
 
-```text
-1. IA gera imagem de fundo (foto/cena) ──> URL da imagem
-2. IA gera layout JSON (posicoes dos elementos) ──> Template config
-3. Canvas no browser compoe tudo:
-   - Desenha imagem de fundo (com crop/mask)
-   - Renderiza formas geometricas (faixas, frames, circulos)
-   - Renderiza textos com tipografia controlada
-   - Aplica logo da marca
-   - Exporta como PNG 1080x1080 ou 1080x1920
-```
+Os 5 estilos atuais (`foto_texto`, `composicao`, `mockup`, `quote`, `before_after`) tem descricoes curtas e prompts genericos. O cliente nao entende bem a diferenca e a IA nao recebe instrucoes suficientes para gerar o estilo correto.
+
+### Solucao
+
+1. Reorganizar os estilos em categorias claras: **Grafica** vs **Imagem**
+2. Expandir massivamente os prompts de cada estilo no edge function
+3. Remover a logica de `needs_template` e Canvas template overlay (nao necessario)
 
 ---
 
 ### Mudancas
 
-#### 1. Criar `src/lib/canvasTemplateEngine.ts`
+#### 1. Atualizar `ART_STYLES` em `ClienteRedesSociais.tsx`
 
-Motor de renderizacao Canvas que compoe templates profissionais:
-
-**Tipos principais:**
-```typescript
-interface TemplateConfig {
-  width: number;          // 1080 feed, 1080 story
-  height: number;         // 1080 feed, 1920 story
-  background: BackgroundConfig;
-  elements: TemplateElement[];
-  brandColors: string[];
-  logoUrl?: string;
-}
-
-interface BackgroundConfig {
-  type: 'image' | 'solid' | 'gradient';
-  imageUrl?: string;
-  imageFit: 'cover' | 'contain' | 'fill';
-  imageMask?: 'full' | 'left-half' | 'right-half' | 'center-circle' | 'frame-inset';
-  overlay?: { color: string; opacity: number };
-}
-
-type TemplateElement =
-  | TextElement
-  | ShapeElement
-  | ImageElement;
-
-interface TextElement {
-  type: 'text';
-  content: string;
-  x: number; y: number; width: number;
-  fontSize: number;
-  fontFamily: string;
-  fontWeight: 'normal' | 'bold' | 'black';
-  color: string;
-  align: 'left' | 'center' | 'right';
-  letterSpacing?: number;
-  lineHeight?: number;
-  textTransform?: 'uppercase' | 'none';
-  shadow?: { blur: number; color: string; offsetX: number; offsetY: number };
-}
-
-interface ShapeElement {
-  type: 'shape';
-  shape: 'rect' | 'circle' | 'line' | 'diagonal-stripe' | 'frame';
-  x: number; y: number; width: number; height: number;
-  color: string;
-  opacity: number;
-  rotation?: number;
-  borderRadius?: number;
-  borderWidth?: number;
-  borderColor?: string;
-}
-
-interface ImageElement {
-  type: 'image';
-  src: string;    // logo URL ou outra imagem
-  x: number; y: number; width: number; height: number;
-  opacity?: number;
-  borderRadius?: number;
-}
-```
-
-**Funcao principal:**
-```typescript
-async function renderTemplate(config: TemplateConfig): Promise<Blob>
-```
-
-Fluxo:
-1. Cria canvas offscreen no tamanho especificado
-2. Carrega imagem de fundo e aplica mask/crop
-3. Aplica overlay de cor se configurado
-4. Itera sobre `elements` em ordem e renderiza cada um:
-   - `shape`: usa `ctx.fillRect`, `ctx.arc`, linhas diagonais com `ctx.rotate`
-   - `text`: usa `ctx.fillText` com fontes Google carregadas via FontFace API
-   - `image`: desenha imagem (logo) na posicao especificada
-5. Exporta canvas como PNG blob
-
-**Fontes:**
-- Carrega fontes Google (Montserrat, Poppins, Playfair Display, Space Grotesk, Inter) via FontFace API antes de renderizar
-- Fallback para sans-serif se a fonte nao carregar
-
-#### 2. Criar edge function `supabase/functions/generate-template-layout/index.ts`
-
-Nova edge function que usa a IA para gerar o JSON de layout do template:
-
-**Input:**
-```json
-{
-  "titulo": "PROMOÇÃO DE VERÃO",
-  "subtitulo": "Até 50% OFF",
-  "cta": "Compre agora",
-  "format": "feed",
-  "estilo": "bold",
-  "identidade_visual": { "paleta": [...], "fontes": [...] },
-  "art_style": "foto_texto",
-  "background_image_url": "https://..."
-}
-```
-
-**O que a IA faz:**
-- Recebe o titulo, subtitulo, CTA, estilo e identidade visual
-- Gera um `TemplateConfig` JSON com posicoes exatas de cada elemento
-- Decide o layout (texto a esquerda + foto a direita, texto sobre imagem com overlay, etc.)
-- Aplica cores da paleta da marca nos elementos
-- Escolhe fontes e tamanhos adequados ao estilo
-
-**Output:** JSON com a `TemplateConfig` completa pronta para o Canvas renderizar.
-
-**Prompt da IA incluira:**
-- Exemplos de layouts profissionais para cada estilo (minimalista, bold, corporativo, elegante, criativo)
-- Regras de tipografia (hierarquia de tamanhos, espacamento)
-- Regras de composicao (regra dos tercos, ponto focal, respiro visual)
-- Paleta de cores da marca para aplicar
-
-#### 3. Atualizar `supabase/functions/generate-social-image/index.ts`
-
-Adicionar novo modo de geracao `template`:
-
-- Quando `art_style` for um dos estilos de template (foto_texto, composicao, mockup, quote):
-  1. Gerar imagem de fundo via IA (sem texto, como ja faz)
-  2. Fazer upload da imagem de fundo
-  3. Retornar a URL junto com um flag `needs_template: true`
-
-- A composicao final sera feita no frontend pelo Canvas engine
-
-#### 4. Atualizar `src/pages/cliente/ClienteRedesSociais.tsx`
-
-Novo fluxo de geracao para posts com template:
-
-1. Usuario preenche briefing (titulo, subtitulo, CTA, estilo)
-2. Sistema gera imagem de fundo via `generate-social-image` (apenas a foto)
-3. Sistema chama `generate-template-layout` com o titulo, estilo e URL da foto
-4. Canvas engine renderiza o template completo no browser
-5. Resultado e exibido para aprovacao
-6. Upload do PNG final para storage
-
-**Nova UI:**
-- Preview do template em tempo real no Canvas
-- Opcao de ajustar texto antes de finalizar (editar titulo/subtitulo inline)
-- Selector de "Template Style" com previews visuais:
-  - **Minimalista**: Muito espaco negativo, texto discreto, moldura fina
-  - **Bold**: Faixas diagonais coloridas, texto grande, alto contraste
-  - **Corporativo**: Grid limpo, cores neutras, tipografia serifada
-  - **Elegante**: Fundo escuro, detalhes dourados/metalicos, moldura decorativa
-  - **Criativo**: Formas organicas, cores vibrantes, layout assimetrico
-
-#### 5. Templates pre-definidos (fallback)
-
-Criar 10-15 layouts pre-definidos como fallback caso a IA nao gere um layout valido:
+Reorganizar em duas categorias visuais com previews claros:
 
 ```typescript
-const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
-  "bold-diagonal": {
-    elements: [
-      { type: 'shape', shape: 'diagonal-stripe', ... },
-      { type: 'text', content: '{{titulo}}', fontSize: 72, fontWeight: 'black', ... },
-      { type: 'text', content: '{{subtitulo}}', fontSize: 36, ... },
+const ART_STYLE_CATEGORIES = [
+  {
+    category: "Gráfica",
+    description: "Design gráfico profissional — formas, tipografia estilizada, layout estruturado",
+    styles: [
+      { value: "grafica_moderna", label: "Design Moderno", desc: "Formas geométricas, cores vibrantes, layout clean tipo Canva", icon: "🎨" },
+      { value: "grafica_elegante", label: "Design Elegante", desc: "Fundo escuro, detalhes dourados, tipografia serifada sofisticada", icon: "✨" },
+      { value: "grafica_bold", label: "Design Bold", desc: "Cores fortes, faixas diagonais, texto grande e impactante", icon: "💥" },
+      { value: "grafica_minimalista", label: "Design Minimalista", desc: "Muito espaço negativo, poucos elementos, tipografia fina", icon: "◻️" },
     ]
   },
-  "minimal-frame": { ... },
-  "corporate-split": { ... },
-  // etc.
-};
+  {
+    category: "Imagem",
+    description: "Fotografia ou ilustração realista como base visual",
+    styles: [
+      { value: "foto_editorial", label: "Foto Editorial", desc: "Fotografia profissional com espaço para texto, iluminação cinematográfica", icon: "📸" },
+      { value: "foto_produto", label: "Foto de Produto", desc: "Produto em contexto lifestyle, fundo clean ou cenário natural", icon: "📦" },
+      { value: "ilustracao", label: "Ilustração Digital", desc: "Ilustração moderna flat ou 3D, estilo tech/startup", icon: "🖌️" },
+      { value: "collage", label: "Colagem Criativa", desc: "Mix de elementos visuais, texturas, recortes sobrepostos", icon: "🔄" },
+    ]
+  }
+];
 ```
 
-Os placeholders `{{titulo}}`, `{{subtitulo}}`, `{{cta}}` sao substituidos pelo conteudo real antes de renderizar.
+Mostrar as categorias com separador visual ("Estilo Grafico" | "Estilo Fotografia") para o cliente entender a diferenca.
+
+#### 2. Expandir prompts no `generate-social-image/index.ts`
+
+Substituir o `artStyleMap` atual (1 linha por estilo) por prompts de 10-15 linhas cada com instrucoes visuais detalhadas:
+
+**Estilos Graficos** — instruir a IA a gerar design grafico flat, nao fotografia:
+
+- `grafica_moderna`: "Create a flat graphic design composition. Use bold color blocks, geometric shapes (circles, rectangles, triangles), clean lines. The style should look like a professionally designed social media template — NOT a photograph. Use solid background colors, layered shapes with brand colors, decorative elements like dots, lines, abstract patterns. Leave clear structured space for text. Think: Canva Pro template, Behance social media design, Adobe Express layout."
+
+- `grafica_elegante`: "Create a luxury graphic design composition with a dark background (deep navy, black, or charcoal). Add subtle gold or metallic accent elements — thin decorative lines, ornamental borders, small geometric details. The composition should feel high-end like a fashion brand or premium service announcement. Use serif-inspired visual elements, subtle gradients, and sophisticated color palette. NOT a photograph."
+
+- `grafica_bold`: "Create an energetic, high-contrast graphic design. Use large bold color blocks, diagonal stripes or slashes, strong geometric shapes. Colors should be vibrant and attention-grabbing. The composition should feel dynamic and modern — like a sports brand announcement or sale promotion. Use brand colors in large areas, create visual tension with contrasting elements."
+
+- `grafica_minimalista`: "Create an ultra-clean minimalist graphic design. Maximum negative space (60%+ of canvas should be empty or single-color). Use only 1-2 subtle geometric elements. Monochromatic or two-tone color scheme. Inspired by Japanese minimalism, Muji aesthetic, Apple marketing. The design should breathe and feel premium through restraint."
+
+**Estilos Imagem** — manter instrucoes fotograficas mas mais detalhadas:
+
+- `foto_editorial`: "Create a cinematic editorial photograph with professional studio or golden-hour lighting. Depth of field, intentional composition with rule of thirds. Leave clean negative space (top 20% or bottom 25%) for text overlay. Sharp focus on subject with soft background bokeh. Think: magazine cover, editorial spread, brand campaign photography."
+
+- `foto_produto`: "Create a product photography scene. Product in lifestyle context — on a textured surface (marble, wood, fabric), held in hand, or in a curated flat lay. Soft directional lighting, subtle shadows, clean but warm color palette. Professional commercial photography quality."
+
+- `ilustracao`: "Create a modern digital illustration. Flat design or soft 3D style, clean vector-like aesthetic. Stylized characters or objects, consistent color palette, modern tech/startup feel. Think: Slack illustrations, Notion artwork, Stripe marketing visuals."
+
+- `collage`: "Create a creative mixed-media collage composition. Layer photographic elements with graphic shapes, textures, and color blocks. Use paper-cut effect, overlapping elements, varied scales. Contemporary editorial collage style — artistic and eye-catching."
+
+#### 3. Atualizar chain-of-thought em `analyzeAndOptimizePrompt`
+
+Adicionar ao system prompt da otimizacao o contexto de que o estilo pode ser "grafico" ou "fotografico", para que a IA otimize o prompt na direcao correta.
+
+#### 4. Remover logica de `needs_template`
+
+No `generate-social-image`, remover o check de `TEMPLATE_ART_STYLES` e o campo `needs_template` do retorno. Todos os estilos serao gerados diretamente pela IA sem necessidade de composicao Canvas posterior.
+
+No `ClienteRedesSociais.tsx`, remover imports e logica do `canvasTemplateEngine` (manter o arquivo para uso futuro, mas desacoplar do fluxo principal).
+
+#### 5. UI: Seletor visual com categorias
+
+Substituir o grid flat atual por um layout com duas secoes:
+
+```
+┌─────────────────────────────────────────┐
+│  🎨 ESTILO GRÁFICO                     │
+│  Design profissional com formas e cores │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐   │
+│  │Modern│ │Elegan│ │ Bold │ │Minim │   │
+│  └──────┘ └──────┘ └──────┘ └──────┘   │
+├─────────────────────────────────────────┤
+│  📸 ESTILO IMAGEM                       │
+│  Fotografia ou ilustração como base     │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐   │
+│  │Editor│ │Produt│ │Ilustr│ │Collag│   │
+│  └──────┘ └──────┘ └──────┘ └──────┘   │
+└─────────────────────────────────────────┘
+```
 
 ---
 
@@ -210,20 +111,6 @@ Os placeholders `{{titulo}}`, `{{subtitulo}}`, `{{cta}}` sao substituidos pelo c
 
 | Arquivo | Acao |
 |---|---|
-| `src/lib/canvasTemplateEngine.ts` | Criar — motor Canvas para renderizar templates com texto, formas e logo |
-| `supabase/functions/generate-template-layout/index.ts` | Criar — IA gera layout JSON do template |
-| `supabase/functions/generate-social-image/index.ts` | Editar — adicionar modo template (retornar flag needs_template) |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar — integrar fluxo hibrido (foto IA + template Canvas) |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar — novos estilos com categorias, remover refs ao canvasTemplateEngine, UI com separador Grafica/Imagem |
+| `supabase/functions/generate-social-image/index.ts` | Editar — prompts expandidos (10-15 linhas cada), remover needs_template, atualizar chain-of-thought |
 
----
-
-### Resultado Esperado
-
-Com essa abordagem hibrida:
-- **Fotos de fundo**: Qualidade de IA (ja funciona bem)
-- **Tipografia**: Controlada pixel a pixel pelo Canvas (fontes reais, tamanhos exatos, espaçamento)
-- **Elementos graficos**: Faixas diagonais, molduras, circulos — tudo renderizado programaticamente
-- **Logo**: Posicionado com precisao
-- **Consistencia de marca**: Cores da paleta aplicadas em todos os elementos
-
-Isso replica o padrao dos templates profissionais das referencias (estilo Canva/Figma) usando a foto gerada por IA como base.
