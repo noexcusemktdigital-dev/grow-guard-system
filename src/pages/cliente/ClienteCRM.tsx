@@ -5,7 +5,7 @@ import {
   GripVertical, Settings2, Filter, X, Copy, MoreHorizontal,
   MessageCircle, CircleDot, XCircle, ChevronDown,
   Calendar, DollarSign, UserCircle, FileSpreadsheet, BookUser,
-  Tag, Trash2, ArrowRightLeft, Thermometer
+  Tag, Trash2, ArrowRightLeft, Thermometer, Snowflake, Sun, Flame
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -138,23 +138,19 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
                   const current = (lead as any).temperature || "Morno";
                   const idx = temps.indexOf(current as any);
                   const next = temps[(idx + 1) % temps.length];
-                  const styles: Record<string, string> = {
-                    Frio: "bg-blue-500 text-white",
-                    Morno: "bg-amber-500 text-white",
-                    Quente: "bg-red-500 text-white",
+                  const cfg: Record<string, { bg: string; icon: React.ReactNode }> = {
+                    Frio: { bg: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400", icon: <Snowflake className="w-3 h-3" /> },
+                    Morno: { bg: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400", icon: <Sun className="w-3 h-3" /> },
+                    Quente: { bg: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400", icon: <Flame className="w-3 h-3" /> },
                   };
-                  const icons: Record<string, string> = {
-                    Frio: "❄️",
-                    Morno: "🌤",
-                    Quente: "🔥",
-                  };
+                  const c = cfg[current];
                   return (
                     <button
-                      title={`${current} → clique para ${next}`}
+                      title={`${current} → ${next}`}
                       onClick={() => onUpdateTemperature(next)}
-                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-all text-[10px] ${styles[current]} hover:scale-110`}
+                      className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors duration-150 ${c.bg} hover:brightness-90`}
                     >
-                      {icons[current]}
+                      {c.icon}
                     </button>
                   );
                 })()}
