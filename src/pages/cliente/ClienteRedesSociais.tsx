@@ -32,6 +32,7 @@ import { HelpTooltip } from "@/components/HelpTooltip";
 import { useVisualIdentity, useSaveVisualIdentity, isVisualIdentityComplete } from "@/hooks/useVisualIdentity";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { renderMotionGraphics, type SceneText, type SceneConfig } from "@/lib/motionGraphicsEngine";
+import { renderTemplate, getPresetTemplate, getRandomPresetForStyle, type TemplateConfig, type TemplateStyle } from "@/lib/canvasTemplateEngine";
 
 /* ── Types ── */
 interface SocialConcept {
