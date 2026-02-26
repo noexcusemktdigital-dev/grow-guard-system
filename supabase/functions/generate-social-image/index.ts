@@ -8,6 +8,123 @@ const corsHeaders = {
 
 const CREDIT_COST = 100;
 
+// --- Chain-of-Thought: Step 1 — Analyze & optimize prompt via Flash model ---
+
+interface OptimizedPromptResult {
+  optimized_prompt: string;
+  composition_notes: string;
+  color_strategy: string;
+}
+
+async function analyzeAndOptimizePrompt(
+  apiKey: string,
+  context: {
+    userPrompt: string;
+    format: string;
+    nivel: string;
+    estilo: string;
+    identidade_visual: any;
+    persona: any;
+  }
+): Promise<OptimizedPromptResult | null> {
+  const { userPrompt, format, nivel, estilo, identidade_visual, persona } = context;
+
+  const systemPrompt = `You are an elite prompt engineer specialized in AI image generation (Gemini, DALL-E, Midjourney).
+
+Your job: Analyze the user's brief and all brand context, then produce an OPTIMIZED visual prompt in English that will generate the highest-quality social media image possible.
+
+Your optimized prompt must:
+- Be 200-400 words, highly descriptive and specific
+- Describe exact visual elements, lighting, materials, textures, camera angle
+- Apply the brand's color palette strategically (specify WHERE each color appears)
+- Match the visual style/tone to the target audience
+- Include composition details (focal point, negative space for text overlay, visual hierarchy)
+- Reference real-world photography/design aesthetics for the AI to emulate
+- NEVER include any text, letters, words, logos, or watermarks in the image description
+
+You must also provide composition notes and a color strategy explaining your decisions.`;
+
+  const userMessage = `BRIEF FROM USER: ${userPrompt}
+
+FORMAT: ${format === "feed" ? "Square 1:1 (1080×1080px) for Instagram feed" : "Vertical 9:16 (1080×1920px) for Stories/Reels"}
+
+QUALITY LEVEL: ${nivel || "simples"}
+
+VISUAL STYLE: ${estilo || "modern professional"}
+
+${identidade_visual ? `BRAND IDENTITY:
+- Color palette: ${identidade_visual.paleta || "not specified"}
+- Style: ${identidade_visual.estilo || "not specified"}
+- Visual tone: ${identidade_visual.tom_visual || "not specified"}
+- Typography feel: ${identidade_visual.fontes || "not specified"}
+- References: ${identidade_visual.referencias || "not specified"}` : "No brand identity provided."}
+
+${persona ? `TARGET AUDIENCE: ${persona.nome ? `${persona.nome} — ` : ""}${persona.descricao || "general audience"}` : "No specific target audience."}
+
+Analyze everything above and produce the optimized visual prompt, composition notes, and color strategy.`;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "optimized_visual_prompt",
+              description: "Return the optimized visual prompt, composition notes, and color strategy.",
+              parameters: {
+                type: "object",
+                properties: {
+                  optimized_prompt: { type: "string", description: "Detailed visual prompt in English, 200-400 words" },
+                  composition_notes: { type: "string", description: "Notes about composition, focal point, layout" },
+                  color_strategy: { type: "string", description: "How brand colors will be applied in the image" },
+                },
+                required: ["optimized_prompt", "composition_notes", "color_strategy"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "optimized_visual_prompt" } },
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn("Chain-of-thought optimization failed (HTTP):", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+
+    if (toolCall?.function?.arguments) {
+      const parsed = JSON.parse(toolCall.function.arguments);
+      console.log("✅ Chain-of-thought optimized prompt:", parsed.optimized_prompt.slice(0, 200) + "...");
+      console.log("📐 Composition notes:", parsed.composition_notes);
+      console.log("🎨 Color strategy:", parsed.color_strategy);
+      return parsed as OptimizedPromptResult;
+    }
+
+    console.warn("Chain-of-thought: no tool call in response, falling back to original prompt.");
+    return null;
+  } catch (err) {
+    console.warn("Chain-of-thought optimization error (non-blocking):", err);
+    return null;
+  }
+}
+
+// --- Helper functions for fallback/fixed instructions ---
+
 function getQualityInstructions(nivel: string): string {
   switch (nivel) {
     case "alto_padrao":
@@ -35,93 +152,24 @@ function getQualityInstructions(nivel: string): string {
   }
 }
 
-function getTypeComposition(tipo: string): string {
-  switch (tipo) {
-    case "produto":
-      return `COMPOSITION TYPE: PRODUCT SHOWCASE
-- Product centered on solid or gradient background
-- Clean negative space around the product (60%+ of frame)
-- Subtle shadow grounding the product
-- Hero lighting from upper-left or upper-right
-- Lifestyle context hints through props or environment blur`;
-    case "servico":
-      return `COMPOSITION TYPE: SERVICE VISUAL
-- Abstract representation of the service concept
-- Human elements: hands, silhouettes, or workspace environments
-- Metaphorical visual storytelling
-- Warm, inviting atmosphere suggesting trust and expertise`;
-    case "promocao":
-      return `COMPOSITION TYPE: PROMOTIONAL IMPACT
-- Bold visual impact with strong color blocking
-- Dynamic diagonal or asymmetric composition
-- High contrast between elements for eye-catching effect
-- Energy and urgency through visual rhythm
-- Large clear area for price/offer text overlay (30%+ of frame)`;
-    case "educativo":
-      return `COMPOSITION TYPE: EDUCATIONAL/INFORMATIVE
-- Clean, organized visual hierarchy
-- Infographic-inspired layouts with visual data representation
-- Icons and geometric shapes as visual anchors
-- Professional, trustworthy aesthetic`;
-    case "depoimento":
-      return `COMPOSITION TYPE: TESTIMONIAL/SOCIAL PROOF
-- Warm, authentic atmosphere
-- Human-centric with space for quote overlay
-- Soft lighting suggesting approachability
-- Subtle brand color accents in background`;
-    default:
-      return `COMPOSITION TYPE: INSTITUTIONAL/BRAND
-- Brand-forward composition emphasizing values
-- Balanced, symmetrical or rule-of-thirds layout
-- Professional yet approachable mood
-- Clear visual hierarchy with focal point`;
-  }
-}
-
 function getStyleInstructions(estilo: string): string {
   switch (estilo?.toLowerCase()) {
     case "minimalista":
-      return `STYLE: MINIMALIST
-- Vast negative space (70%+ of frame)
-- Maximum 2-3 visual elements
-- Monochromatic or analogous color scheme
-- Geometric precision, clean lines, no decoration
-- Inspired by: Japanese design, Muji, Apple`;
+      return `STYLE: MINIMALIST — Vast negative space, max 2-3 elements, monochromatic. Inspired by Muji, Apple.`;
     case "bold":
-      return `STYLE: BOLD / MAXIMALIST
-- Strong color blocking with high saturation
-- Oversized typography-inspired shapes
-- Dynamic angles and overlapping elements
-- High contrast, energetic composition
-- Inspired by: Nike, Beats, Spotify`;
+      return `STYLE: BOLD — Strong color blocking, oversized shapes, dynamic angles. Inspired by Nike, Beats.`;
     case "corporativo":
-      return `STYLE: CORPORATE / PROFESSIONAL
-- Navy, charcoal, and accent color palette
-- Structured grid-based composition
-- Subtle gradients and professional photography
-- Trust-building visual language
-- Inspired by: McKinsey, Deloitte, IBM`;
+      return `STYLE: CORPORATE — Navy/charcoal palette, grid-based, subtle gradients. Inspired by McKinsey, IBM.`;
     case "criativo":
-      return `STYLE: CREATIVE / ARTISTIC
-- Unexpected color combinations
-- Mixed media aesthetics: collage, illustration + photo
-- Playful asymmetry and organic shapes
-- Textural interest: grain, halftone, watercolor
-- Inspired by: Airbnb, Dropbox, Notion`;
+      return `STYLE: CREATIVE — Unexpected colors, mixed media, playful asymmetry. Inspired by Airbnb, Notion.`;
     case "elegante":
-      return `STYLE: ELEGANT / LUXURY
-- Dark backgrounds with metallic accents (gold, silver)
-- Refined serif-inspired visual weight
-- Subtle textures: marble, linen, leather
-- Generous spacing and visual breathing room
-- Inspired by: Chanel, Dior, Four Seasons`;
+      return `STYLE: ELEGANT — Dark backgrounds, metallic accents, refined textures. Inspired by Chanel, Dior.`;
     default:
-      return `STYLE: MODERN PROFESSIONAL
-- Contemporary design language
-- Clean sans-serif visual weight
-- Balanced composition with clear hierarchy`;
+      return `STYLE: MODERN PROFESSIONAL — Contemporary, clean, balanced hierarchy.`;
   }
 }
+
+// --- Main handler ---
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -151,41 +199,37 @@ serve(async (req) => {
       }
     }
 
+    const estilo = identidade_visual?.estilo || "";
+
+    // --- Chain-of-Thought Step 1: Optimize the prompt ---
+    console.log(`🧠 Starting chain-of-thought analysis for ${format} image (nivel: ${nivel || "simples"}, style: ${estilo})...`);
+
+    const optimized = await analyzeAndOptimizePrompt(LOVABLE_API_KEY, {
+      userPrompt: prompt,
+      format,
+      nivel: nivel || "simples",
+      estilo,
+      identidade_visual,
+      persona,
+    });
+
+    // --- Build final image generation prompt ---
     const qualityInstructions = getQualityInstructions(nivel || "simples");
+    const styleInstructions = getStyleInstructions(estilo);
 
     const aspectInstruction = format === "feed"
       ? "OUTPUT FORMAT: Square (1:1), 1080×1080px. Centered, balanced composition optimized for Instagram feed."
       : "OUTPUT FORMAT: Vertical (9:16), 1080×1920px. Vertical composition with stacked elements, optimized for Stories/Reels.";
 
-    // Extract visual style from identidade_visual
-    const estilo = identidade_visual?.estilo || "";
-    const styleInstructions = getStyleInstructions(estilo);
+    // Use optimized prompt if available, otherwise fall back to original
+    const visualBrief = optimized
+      ? `OPTIMIZED VISUAL BRIEF (AI-analyzed):
+${optimized.optimized_prompt}
 
-    // Build brand context from identity
-    let brandContext = "";
-    if (identidade_visual) {
-      const iv = identidade_visual;
-      const colors = iv.paleta || "";
-      brandContext = `
-BRAND IDENTITY (MANDATORY):
-- COLOR PALETTE: Use ONLY these colors as the dominant palette: ${colors}
-  → Primary color for focal elements
-  → Secondary colors for accents and backgrounds
-  → Do NOT introduce colors outside this palette
-${iv.estilo ? `- VISUAL STYLE: ${iv.estilo}` : ""}
-${iv.tom_visual ? `- VISUAL TONE: ${iv.tom_visual}` : ""}
-${iv.fontes ? `- TYPOGRAPHY REFERENCE: ${iv.fontes} (do not render text, but match the weight/feel)` : ""}
-${iv.referencias ? `- VISUAL REFERENCES: ${iv.referencias}` : ""}
-
-The generated image MUST feel like it belongs to this brand's visual ecosystem.`;
-    }
-
-    let audienceContext = "";
-    if (persona?.descricao || persona?.nome) {
-      audienceContext = `
-TARGET AUDIENCE: ${persona.nome ? `${persona.nome} — ` : ""}${persona.descricao || ""}
-Visual style, mood, and composition must appeal to and resonate with this specific audience.`;
-    }
+COMPOSITION STRATEGY: ${optimized.composition_notes}
+COLOR APPLICATION: ${optimized.color_strategy}`
+      : `VISUAL BRIEF:
+${prompt}`;
 
     const fullPrompt = `You are a world-class art director creating a single social media visual asset.
 
@@ -194,9 +238,6 @@ ${qualityInstructions}
 ${styleInstructions}
 
 ${aspectInstruction}
-
-${brandContext}
-${audienceContext}
 
 COMPOSITION RULES:
 - Reserve clear, low-detail space for text overlay (top 20% OR bottom 25%)
@@ -210,12 +251,11 @@ ABSOLUTE RULES (NEVER VIOLATE):
 - ZERO busy backgrounds that compete with the focal point
 - Every pixel must serve the composition and brand identity
 
-VISUAL BRIEF:
-${prompt}
+${visualBrief}
 
 Generate this image now. Prioritize brand color accuracy and compositional excellence above all else.`;
 
-    console.log(`Generating ${format} image (nivel: ${nivel || "simples"}, style: ${estilo}, refs: ${reference_images?.length || 0})...`);
+    console.log(`🎨 Generating ${format} image (refs: ${reference_images?.length || 0}, chain-of-thought: ${optimized ? "YES" : "FALLBACK"})...`);
 
     // Build message content — multimodal if references exist
     const hasRefs = reference_images && reference_images.length > 0;
@@ -295,7 +335,7 @@ Generate this image now. Prioritize brand color accuracy and compositional excel
       }
     }
 
-    console.log(`Image uploaded: ${urlData.publicUrl}`);
+    console.log(`✅ Image uploaded: ${urlData.publicUrl}`);
 
     return new Response(JSON.stringify({ url: urlData.publicUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
