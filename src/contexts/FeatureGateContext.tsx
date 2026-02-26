@@ -58,6 +58,8 @@ const SALES_PLAN_REQUIRED = [
 const MARKETING_STRATEGY_REQUIRED = [
   "/cliente/conteudos",
   "/cliente/redes-sociais",
+  "/cliente/sites",
+  "/cliente/trafego-pago",
 ];
 
 export function FeatureGateProvider({ children }: { children: ReactNode }) {
