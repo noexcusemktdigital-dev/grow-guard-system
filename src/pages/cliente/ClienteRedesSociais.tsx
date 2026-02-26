@@ -770,6 +770,7 @@ export default function ClienteRedesSociais() {
           videoScript: concept.video_script, videoDescription: concept.video_description,
           audioSuggestion: concept.audio_suggestion, thumbnailUrl,
           videoUrl, videoFrameUrls: videoFrameUrls.length > 0 ? videoFrameUrls : undefined,
+          originalPrompt: concept.visual_prompt_feed,
         });
       }
 
@@ -792,11 +793,33 @@ export default function ClienteRedesSociais() {
     }
   };
 
-  const updateArtStatus = (artId: string, newStatus: ApprovalStatus, changeNote?: string) => {
+  const updateArtStatus = async (artId: string, newStatus: ApprovalStatus, changeNote?: string) => {
     setCampaigns((prev) => prev.map((c) => ({
       ...c, arts: c.arts.map((a) => a.id === artId ? { ...a, status: newStatus, changeNote: changeNote || a.changeNote } : a),
     })));
     if (selectedArt?.id === artId) setSelectedArt((prev) => prev ? { ...prev, status: newStatus, changeNote: changeNote || prev.changeNote } : null);
+
+    // Save feedback to DB for the feedback loop
+    if (orgId && (newStatus === "approved" || newStatus === "rejected" || newStatus === "changes_requested")) {
+      try {
+        // Find the art to get its prompt
+        let artData: GeneratedArt | undefined;
+        campaigns.forEach(c => { const found = c.arts.find(a => a.id === artId); if (found) artData = found; });
+        
+        await supabase.from("social_art_feedback").insert({
+          organization_id: orgId,
+          art_id: artId,
+          status: newStatus,
+          prompt_used: artData?.originalPrompt || artData?.titulo || null,
+          style: bEstilo || null,
+          nivel: bNivel || null,
+          format: artData?.format || "feed",
+          feedback_note: changeNote || null,
+        });
+      } catch (err) {
+        console.error("Feedback save error (non-blocking):", err);
+      }
+    }
   };
 
   const approveAll = (campaignId: string) => {

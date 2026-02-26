@@ -169,6 +169,45 @@ function getStyleInstructions(estilo: string): string {
   }
 }
 
+// --- Feedback history helper ---
+
+async function getFeedbackHistory(
+  supabase: any,
+  organizationId: string
+): Promise<string> {
+  try {
+    const { data: feedback } = await supabase
+      .from("social_art_feedback")
+      .select("status, prompt_used, style, nivel, feedback_note")
+      .eq("organization_id", organizationId)
+      .in("status", ["approved", "rejected", "changes_requested"])
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (!feedback || feedback.length === 0) return "";
+
+    const approved = feedback.filter((f: any) => f.status === "approved");
+    const rejected = feedback.filter((f: any) => f.status === "rejected");
+    const changes = feedback.filter((f: any) => f.status === "changes_requested");
+
+    let summary = "\n\nFEEDBACK HISTORY (learn from past results):";
+    if (approved.length > 0) {
+      summary += `\n- ${approved.length} arts were APPROVED. Successful prompts included themes like: ${approved.slice(0, 5).map((a: any) => a.prompt_used?.slice(0, 80) || "N/A").join("; ")}`;
+    }
+    if (rejected.length > 0) {
+      summary += `\n- ${rejected.length} arts were REJECTED. Avoid similar approaches: ${rejected.slice(0, 5).map((r: any) => `"${r.prompt_used?.slice(0, 60) || "N/A"}" ${r.feedback_note ? `(reason: ${r.feedback_note})` : ""}`).join("; ")}`;
+    }
+    if (changes.length > 0) {
+      summary += `\n- ${changes.length} arts had CHANGES REQUESTED: ${changes.slice(0, 5).map((c: any) => c.feedback_note || "no detail").join("; ")}`;
+    }
+    summary += "\nUse this feedback to improve the quality and match the client's preferences.";
+    return summary;
+  } catch (err) {
+    console.warn("Feedback history query error (non-blocking):", err);
+    return "";
+  }
+}
+
 // --- Main handler ---
 
 serve(async (req) => {
@@ -182,7 +221,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
     // Pre-check credits
     if (organization_id) {
       const { data: wallet } = await supabase
@@ -201,11 +239,17 @@ serve(async (req) => {
 
     const estilo = identidade_visual?.estilo || "";
 
+    // --- Fetch feedback history for this org ---
+    let feedbackContext = "";
+    if (organization_id) {
+      feedbackContext = await getFeedbackHistory(supabase, organization_id);
+    }
+
     // --- Chain-of-Thought Step 1: Optimize the prompt ---
-    console.log(`🧠 Starting chain-of-thought analysis for ${format} image (nivel: ${nivel || "simples"}, style: ${estilo})...`);
+    console.log(`🧠 Starting chain-of-thought analysis for ${format} image (nivel: ${nivel || "simples"}, style: ${estilo}, feedback: ${feedbackContext ? "YES" : "NONE"})...`);
 
     const optimized = await analyzeAndOptimizePrompt(LOVABLE_API_KEY, {
-      userPrompt: prompt,
+      userPrompt: prompt + feedbackContext,
       format,
       nivel: nivel || "simples",
       estilo,

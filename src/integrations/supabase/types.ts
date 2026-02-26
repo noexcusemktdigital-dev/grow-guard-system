@@ -3717,6 +3717,53 @@ export type Database = {
           },
         ]
       }
+      social_art_feedback: {
+        Row: {
+          art_id: string
+          created_at: string
+          feedback_note: string | null
+          format: string | null
+          id: string
+          nivel: string | null
+          organization_id: string
+          prompt_used: string | null
+          status: string
+          style: string | null
+        }
+        Insert: {
+          art_id: string
+          created_at?: string
+          feedback_note?: string | null
+          format?: string | null
+          id?: string
+          nivel?: string | null
+          organization_id: string
+          prompt_used?: string | null
+          status?: string
+          style?: string | null
+        }
+        Update: {
+          art_id?: string
+          created_at?: string
+          feedback_note?: string | null
+          format?: string | null
+          id?: string
+          nivel?: string | null
+          organization_id?: string
+          prompt_used?: string | null
+          status?: string
+          style?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_art_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           asaas_billing_type: string | null
