@@ -584,6 +584,12 @@ export default function ClientePlanoVendas() {
     return !!localStorage.getItem("plano_vendas_data") && Object.keys(JSON.parse(localStorage.getItem("plano_vendas_data") || "{}")).length > 5;
   });
 
+  // ── Welcome popup for first-time users ──
+  const [showWelcome, setShowWelcome] = useState(() => {
+    const saved = localStorage.getItem("plano_vendas_data");
+    return !saved || Object.keys(JSON.parse(saved || "{}")).length <= 5;
+  });
+
   // ── History state ──
   const [history] = useState([
     { date: "2026-01-15", score: 32, nivel: "Inicial" },
@@ -864,6 +870,46 @@ export default function ClientePlanoVendas() {
 
   return (
     <div className="w-full space-y-6">
+      {/* Welcome popup for first-time users */}
+      <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Rocket className="w-5 h-5 text-primary" />
+              Estruture seu Comercial
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              O <strong>Plano de Vendas</strong> é o primeiro passo para desbloquear todo o potencial da plataforma. Em poucos minutos você terá:
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                { icon: Activity, text: "Diagnóstico completo do seu comercial" },
+                { icon: Lightbulb, text: "Insights personalizados com plano de ação" },
+                { icon: TrendingUp, text: "Projeções de crescimento de leads e receita" },
+                { icon: Target, text: "Metas claras e acompanhamento em tempo real" },
+              ].map((item, i) => (
+                <li key={i} className="flex items-center gap-2.5 text-sm">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <item.icon className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  {item.text}
+                </li>
+              ))}
+            </ul>
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5" />
+                Sem o Plano de Vendas, CRM, Chat, Agentes IA e outras funções ficam bloqueados.
+              </p>
+            </div>
+          </div>
+          <Button className="w-full font-semibold" onClick={() => setShowWelcome(false)}>
+            <Rocket className="w-4 h-4 mr-2" /> Começar agora
+          </Button>
+        </DialogContent>
+      </Dialog>
       <PageHeader
         title="Plano de Vendas"
         subtitle="Consultoria comercial interativa para diagnosticar e evoluir seu comercial"

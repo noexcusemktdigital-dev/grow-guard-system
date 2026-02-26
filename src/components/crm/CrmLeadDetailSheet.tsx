@@ -573,17 +573,23 @@ function WhatsAppTab({ lead }: { lead: LeadRow }) {
   }
 
   return (
-    <div className="flex flex-col" style={{ maxHeight: "400px" }}>
-      {/* Header */}
-      <div className="flex items-center justify-between pb-2">
-        <p className="text-xs font-semibold">Mensagens ({messages.length})</p>
-        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => navigate("/cliente/chat")}>
-          <ExternalLink className="w-3 h-3" /> Abrir no Chat
+    <div className="flex flex-col rounded-xl overflow-hidden border" style={{ maxHeight: "450px" }}>
+      {/* WhatsApp-style header */}
+      <div className="flex items-center gap-3 px-3 py-2.5 bg-[#075e54] dark:bg-[#1f2c34] text-white">
+        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold flex-shrink-0">
+          {lead.name?.charAt(0)?.toUpperCase() || "?"}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{lead.name}</p>
+          {lead.phone && <p className="text-[10px] opacity-70">{lead.phone}</p>}
+        </div>
+        <Button variant="ghost" size="sm" className="h-7 text-[10px] gap-1 text-white/80 hover:text-white hover:bg-white/10" onClick={() => navigate("/cliente/chat")}>
+          <ExternalLink className="w-3 h-3" /> Chat
         </Button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto border rounded-lg p-2 bg-muted/10 min-h-[200px] max-h-[280px]">
+      {/* Messages area with WhatsApp background */}
+      <div className="flex-1 overflow-y-auto p-3 min-h-[200px] max-h-[300px] whatsapp-bg">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -596,20 +602,25 @@ function WhatsAppTab({ lead }: { lead: LeadRow }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* WhatsApp-style input */}
       <form
         onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-        className="flex items-center gap-2 mt-2"
+        className="flex items-center gap-2 px-3 py-2 bg-[#f0f0f0] dark:bg-[#1f2c34] border-t"
       >
         <Input
-          placeholder="Enviar mensagem..."
-          className="flex-1 h-8 text-xs rounded-full"
+          placeholder="Mensagem..."
+          className="flex-1 h-9 text-xs rounded-full bg-white dark:bg-[#2a3942] border-0 px-4"
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={sendMutation.isPending}
         />
-        <Button type="submit" size="icon" className="h-8 w-8 rounded-full shrink-0" disabled={!text.trim() || sendMutation.isPending}>
-          {sendMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+        <Button
+          type="submit"
+          size="icon"
+          className="h-9 w-9 rounded-full shrink-0 bg-[#25d366] hover:bg-[#1ebe57] text-white"
+          disabled={!text.trim() || sendMutation.isPending}
+        >
+          {sendMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
         </Button>
       </form>
     </div>
