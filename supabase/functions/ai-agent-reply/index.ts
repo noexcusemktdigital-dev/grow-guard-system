@@ -556,10 +556,6 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
 
     const aiData = await aiResponse.json();
     let replyText = aiData.choices?.[0]?.message?.content || "";
