@@ -31,6 +31,8 @@ import { ApprovalSummary } from "@/components/approval/ApprovalSummary";
 import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getPlanBySlug, recommendContentDistribution } from "@/constants/plans";
+import { ChatBriefing } from "@/components/cliente/ChatBriefing";
+import { AGENTS, LUNA_STEPS } from "@/components/cliente/briefingAgents";
 
 /* ── Types ── */
 interface GeneratedContent {
@@ -245,6 +247,67 @@ export default function ClienteConteudos() {
     return () => clearInterval(interval);
   }, [isGenerating]);
 
+  const handleChatComplete = async (answers: Record<string, any>) => {
+    const objetivos = Array.isArray(answers.objetivos) ? answers.objetivos : [];
+    const tema = (answers.tema || "") as string;
+    const tom = (answers.tom || "") as string;
+    const mes = (answers.mes || "Março 2026") as string;
+    const feed = parseInt(answers.qFeed) || 0;
+    const carrossel = parseInt(answers.qCarrossel) || 0;
+    const reels = parseInt(answers.qReels) || 0;
+    const story = parseInt(answers.qStory) || 0;
+
+    if (objetivos.length === 0 || !tema || !tom) {
+      toast({ title: "Preencha os campos obrigatórios", description: "Objetivo, tema e tom são necessários.", variant: "destructive" });
+      return;
+    }
+    const total = feed + carrossel + reels + story;
+    if (total === 0) {
+      toast({ title: "Selecione ao menos 1 formato", variant: "destructive" });
+      return;
+    }
+
+    setIsGenerating(true);
+    setLoadingPhrase(0);
+    try {
+      const estrategia = activeStrategy?.answers || null;
+      const personaData = (answers.persona_nome || answers.persona_descricao)
+        ? { nome: answers.persona_nome, descricao: answers.persona_descricao }
+        : undefined;
+
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: {
+          briefing: { mes, objetivo: objetivos.join(", "), tema, promocoes: answers.promocoes || "", datas: answers.datas || "", destaques: answers.destaques || "", tom },
+          formatos: { feed, carrossel, reels, story },
+          estrategia,
+          persona: personaData,
+        },
+      });
+      if (error) throw error;
+
+      const conteudos: GeneratedContent[] = (data?.conteudos || []).map(
+        (c: any, i: number) => ({ ...c, id: `gen-${Date.now()}-${i}`, status: "pending" as ApprovalStatus })
+      );
+      const newCampaign: Campaign = {
+        id: `campaign-${Date.now()}`, mes, label: mes,
+        createdAt: new Date().toLocaleDateString("pt-BR"),
+        briefing: { objetivo: objetivos.join(", "), tema, tom },
+        conteudos,
+      };
+      const updatedCampaigns = [newCampaign, ...campaigns];
+      setCampaigns(updatedCampaigns);
+      try { localStorage.setItem("content-campaigns", JSON.stringify(updatedCampaigns)); } catch {}
+      setWizardOpen(false);
+      setOpenCampaign(newCampaign.id);
+      toast({ title: "Campanha gerada com sucesso!", description: `${conteudos.length} conteúdos criados para ${mes}.` });
+    } catch (err: any) {
+      console.error("Generation error:", err);
+      toast({ title: "Erro ao gerar conteúdos", description: err?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (bObjetivos.length === 0 || !bTema || !bTom) {
       toast({ title: "Preencha os campos obrigatórios", description: "Objetivo, tema e tom são necessários.", variant: "destructive" });
@@ -407,11 +470,11 @@ export default function ClienteConteudos() {
             <Plus className="w-4 h-4" /> Nova Campanha Mensal
           </Button>
 
-          {/* Wizard Dialog */}
+          {/* Wizard Dialog — ChatBriefing com Luna */}
           <Dialog open={wizardOpen} onOpenChange={(open) => { if (!isGenerating) setWizardOpen(open); }}>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden p-0">
               {isGenerating ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-6">
+                <div className="flex flex-col items-center justify-center py-16 gap-6 px-6">
                   <motion.div
                     animate={{ scale: [1, 1.15, 1] }}
                     transition={{ repeat: Infinity, duration: 2 }}
@@ -433,214 +496,12 @@ export default function ClienteConteudos() {
                   <p className="text-xs text-muted-foreground/60">Isso pode levar até 30 segundos...</p>
                 </div>
               ) : (
-                <>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-primary" />
-                      Nova Campanha — Etapa {wizardStep} de 3
-                    </DialogTitle>
-                  </DialogHeader>
-
-                  {/* Step indicators */}
-                  <div className="flex gap-2 mb-2">
-                    {[1, 2, 3].map((s) => (
-                      <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= wizardStep ? "bg-primary" : "bg-muted"}`} />
-                    ))}
-                  </div>
-
-                  {wizardStep === 1 && (
-                    <div className="space-y-4 mt-2">
-                      <p className="text-xs text-muted-foreground">Preencha o briefing da campanha. Quanto mais detalhado, melhor o resultado.</p>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium">Mês de Referência *</Label>
-                        <Select value={bMes} onValueChange={setBMes}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {MESES.map((m) => (
-                              <SelectItem key={m} value={`${m} 2026`}>{m} 2026</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium flex items-center gap-1.5">
-                          Objetivos *
-                          <HelpTooltip text="Selecione um ou mais objetivos para a campanha. A IA vai equilibrar os conteúdos entre eles." />
-                        </Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {OBJETIVOS.map((o) => (
-                            <label key={o} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all ${bObjetivos.includes(o) ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
-                              <Checkbox
-                                checked={bObjetivos.includes(o)}
-                                onCheckedChange={(checked) => {
-                                  setBObjetivos(prev => checked ? [...prev, o] : prev.filter(v => v !== o));
-                                }}
-                              />
-                              <span className="text-xs font-medium">{o}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium flex items-center gap-1.5">
-                          Tema Central *
-                          <HelpTooltip text="O tema central guia toda a campanha. Ex: 'Automação de Marketing' ou 'Black Friday'." />
-                        </Label>
-                        <Input value={bTema} onChange={(e) => setBTema(e.target.value)} placeholder="Ex: Mês da Automação, Crescimento Inteligente..." />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium flex items-center gap-1.5">
-                          Tom de Comunicação *
-                          <HelpTooltip text="O tom define como a marca 'fala'. Educativo ensina, Inspirador motiva, Direto vende." />
-                        </Label>
-                        <Select value={bTom} onValueChange={setBTom}>
-                          <SelectTrigger><SelectValue placeholder="Selecione o tom" /></SelectTrigger>
-                          <SelectContent>
-                            {TONS.map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Promoções/Ofertas</Label>
-                          <Textarea value={bPromocoes} onChange={(e) => setBPromocoes(e.target.value)} placeholder="Ex: 30% off plano anual..." rows={2} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Datas Comemorativas</Label>
-                          <Textarea value={bDatas} onChange={(e) => setBDatas(e.target.value)} placeholder="Ex: Dia da Mulher (08/03)..." rows={2} />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium">Destaques/Novidades</Label>
-                        <Textarea value={bDestaques} onChange={(e) => setBDestaques(e.target.value)} placeholder="Ex: Novo recurso, case de sucesso..." rows={2} />
-                      </div>
-
-                      {/* Persona */}
-                      <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
-                        <p className="text-xs font-semibold flex items-center gap-1.5">
-                          <GraduationCap className="w-3.5 h-3.5 text-primary" /> Persona / Público-Alvo
-                        </p>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Nome da Persona</Label>
-                          <Input value={personaNome} onChange={(e) => setPersonaNome(e.target.value)} placeholder='Ex: "Maria, dona de franquia, 38 anos"' />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Descrição da Persona</Label>
-                          <Textarea value={personaDescricao} onChange={(e) => setPersonaDescricao(e.target.value)} rows={3} placeholder="Idade, profissão, dores, desejos, comportamento de compra, redes que usa, tom que prefere..." />
-                        </div>
-                      </div>
-
-                      <Button className="w-full" onClick={() => setWizardStep(2)} disabled={bObjetivos.length === 0 || !bTema || !bTom}>
-                        Próximo <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-
-                  {wizardStep === 2 && (
-                    <div className="space-y-4 mt-2">
-                      <p className="text-xs text-muted-foreground">Escolha quantos conteúdos de cada formato deseja gerar.</p>
-
-                      {/* Saldo card */}
-                      <div className={`rounded-lg border p-3 flex items-center justify-between ${quotaExceeded ? "border-destructive/30 bg-destructive/5" : "border-primary/20 bg-primary/5"}`}>
-                        <div>
-                          <p className="text-xs font-semibold">Saldo disponível: {maxContents === -1 ? "Ilimitado" : `${saldoRestante} conteúdos`}</p>
-                          <p className="text-[10px] text-muted-foreground">{contentsThisMonth} de {maxContents === -1 ? "∞" : maxContents} usados este mês</p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-[10px] h-7 gap-1"
-                          onClick={() => {
-                            const rec = recommendContentDistribution(maxContents === -1 ? 12 : saldoRestante);
-                            setQFeed(rec.feed);
-                            setQCarrossel(rec.carrossel);
-                            setQReels(rec.reels);
-                            setQStory(rec.story);
-                          }}
-                        >
-                          <Lightbulb className="w-3 h-3" /> Recomendar para mim
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        {[
-                          { label: "Posts Feed", icon: <Image className="w-5 h-5" />, value: qFeed, set: setQFeed, color: "bg-blue-500/10 border-blue-500/20" },
-                          { label: "Carrosséis", icon: <Layers className="w-5 h-5" />, value: qCarrossel, set: setQCarrossel, color: "bg-purple-500/10 border-purple-500/20" },
-                          { label: "Roteiros Reels", icon: <Video className="w-5 h-5" />, value: qReels, set: setQReels, color: "bg-pink-500/10 border-pink-500/20" },
-                          { label: "Stories", icon: <Smartphone className="w-5 h-5" />, value: qStory, set: setQStory, color: "bg-amber-500/10 border-amber-500/20" },
-                        ].map((f) => (
-                          <Card key={f.label} className={`border ${f.color} cursor-pointer`}>
-                            <CardContent className="py-4 flex flex-col items-center gap-2">
-                              <div className="text-muted-foreground">{f.icon}</div>
-                              <p className="text-xs font-semibold">{f.label}</p>
-                              <Input
-                                type="number"
-                                min={0}
-                                max={maxContents === -1 ? 20 : saldoRestante}
-                                value={f.value}
-                                onChange={(e) => f.set(Math.max(0, Math.min(maxContents === -1 ? 20 : saldoRestante, parseInt(e.target.value) || 0)))}
-                                className="w-20 text-center h-9"
-                              />
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                      <div className={`flex items-center justify-between rounded-lg p-3 ${quotaExceeded ? "bg-destructive/10" : "bg-muted/50"}`}>
-                        <span className="text-sm font-medium">Total de conteúdos</span>
-                        <Badge variant={quotaExceeded ? "destructive" : "default"} className="text-sm px-3 py-1">{totalFormatos}</Badge>
-                      </div>
-                      {quotaExceeded && (
-                        <p className="text-xs text-destructive font-medium">Reduza a quantidade. Você pode gerar até {saldoRestante} conteúdos.</p>
-                      )}
-                      <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1" onClick={() => setWizardStep(1)}>
-                          <ArrowLeft className="w-4 h-4" /> Voltar
-                        </Button>
-                        <Button className="flex-1" onClick={() => setWizardStep(3)} disabled={totalFormatos === 0 || quotaExceeded}>
-                          Próximo <ArrowRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {wizardStep === 3 && (
-                    <div className="space-y-4 mt-2">
-                      <p className="text-xs text-muted-foreground">Revise e confirme a geração da campanha.</p>
-                      <Card className="bg-muted/30">
-                        <CardContent className="py-4 space-y-2">
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                            <span className="text-muted-foreground">Mês:</span>
-                            <span className="font-medium">{bMes}</span>
-                            <span className="text-muted-foreground">Objetivo:</span>
-                            <span className="font-medium">{bObjetivos.join(", ")}</span>
-                            <span className="text-muted-foreground">Tema:</span>
-                            <span className="font-medium">{bTema}</span>
-                            <span className="text-muted-foreground">Tom:</span>
-                            <span className="font-medium">{bTom}</span>
-                            <span className="text-muted-foreground">Total:</span>
-                            <span className="font-medium">{totalFormatos} conteúdos</span>
-                          </div>
-                          <div className="flex gap-2 mt-2 flex-wrap">
-                            {qFeed > 0 && <Badge variant="outline" className="text-[10px]">{qFeed} Feed</Badge>}
-                            {qCarrossel > 0 && <Badge variant="outline" className="text-[10px]">{qCarrossel} Carrossel</Badge>}
-                            {qReels > 0 && <Badge variant="outline" className="text-[10px]">{qReels} Reels</Badge>}
-                            {qStory > 0 && <Badge variant="outline" className="text-[10px]">{qStory} Story</Badge>}
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1" onClick={() => setWizardStep(2)}>
-                          <ArrowLeft className="w-4 h-4" /> Voltar
-                        </Button>
-                        <Button className="flex-1 gap-2" onClick={handleGenerate}>
-                          <Sparkles className="w-4 h-4" /> Gerar Conteúdos com IA
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
+                <ChatBriefing
+                  agent={AGENTS.luna}
+                  steps={LUNA_STEPS}
+                  onComplete={handleChatComplete}
+                  onCancel={() => setWizardOpen(false)}
+                />
               )}
             </DialogContent>
           </Dialog>
