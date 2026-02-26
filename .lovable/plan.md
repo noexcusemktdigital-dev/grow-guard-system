@@ -1,33 +1,29 @@
 
 
-## Correcao: Audio nao sendo salvo no webhook
+## Audio Transcription for AI Agents
 
-### Problema
-Na linha 59 do `whatsapp-webhook/index.ts`, a condicao para detectar "status update" e:
-```
-body.status !== undefined && !body.text && !body.image
-```
+### Problem
+Two gaps prevent AI agents from processing audio messages:
 
-Mensagens de audio/PTT do Z-API chegam com `status: "RECEIVED"` mas sem `text` nem `image`. Resultado: o webhook acha que e uma atualizacao de status e retorna na linha 70 sem salvar a mensagem.
+1. **Webhook (`whatsapp-webhook/index.ts`, line 161)**: Only triggers `ai-agent-reply` when `messageText` exists. Audio messages have no text, only `media_url` -- so the AI is never called.
+2. **Webhook doesn't pass `message_type` or `media_url`** to the AI agent function, so even if triggered, the agent can't find the audio URL.
+3. **AI Agent (`ai-agent-reply/index.ts`, line 105)**: Requires `message_text` to be present (`!message_text` returns error). For audio, `message_text` will be empty.
 
-### Solucao
-Expandir a condicao `isStatus` para tambem verificar que nao ha audio, ptt, video, document ou sticker:
+### Solution
 
-**Arquivo**: `supabase/functions/whatsapp-webhook/index.ts` (linha 59)
+**File 1: `supabase/functions/whatsapp-webhook/index.ts`**
 
-De:
-```js
-const isStatus = body.status !== undefined && !body.text && !body.image;
-```
+- Change the trigger condition (line 161) from `if (messageText)` to `if (messageText || mediaUrl)` so audio/media messages also invoke the AI agent.
+- Pass `message_type` and `media_url` in the payload sent to `ai-agent-reply`.
 
-Para:
-```js
-const isStatus = body.status !== undefined && !body.text && !body.image && !body.audio && !body.ptt && !body.video && !body.document && !body.sticker;
-```
+**File 2: `supabase/functions/ai-agent-reply/index.ts`**
 
-Tambem adicionar um `console.log` para debug do payload recebido, facilitando diagnostico futuro.
+- Update the destructuring (line 93) to also extract `media_url`.
+- Change the validation (line 105) to accept messages that have either `message_text` or `media_url`.
+- Update the audio transcription block (line 243) to use `media_url` when `message_text` is empty (audio-only messages).
 
-### Impacto
-- Apenas 1 linha alterada no webhook
-- Audios, videos, documentos e stickers que antes eram ignorados passarao a ser salvos corretamente
-- O player de audio no `ChatMessageBubble.tsx` ja esta preparado para renderizar (o codigo ja existe)
+### Impact
+- 2 edge functions updated
+- AI agents will automatically transcribe incoming voice notes and respond based on the transcribed content
+- No UI changes needed
+- Both functions will be auto-deployed
