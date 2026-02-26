@@ -54,9 +54,11 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
 
+    console.log("Webhook payload:", JSON.stringify(body).slice(0, 500));
+
     // Z-API webhook payload for received messages
     // Common fields: phone, senderName, messageId, text, type
-    const isStatus = body.status !== undefined && !body.text && !body.image;
+    const isStatus = body.status !== undefined && !body.text && !body.image && !body.audio && !body.ptt && !body.video && !body.document && !body.sticker;
 
     if (isStatus) {
       // Status update (delivered, read, etc.)
