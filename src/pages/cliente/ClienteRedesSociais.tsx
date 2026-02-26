@@ -1912,6 +1912,7 @@ export default function ClienteRedesSociais() {
             steps={THEO_STEPS}
             onComplete={handleTheoChatComplete}
             onCancel={() => setTheoChatOpen(false)}
+            context={{ maxArts: maxArts, usedArts: artsThisMonth, planName }}
           />
         </DialogContent>
       </Dialog>

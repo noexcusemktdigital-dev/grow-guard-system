@@ -37,7 +37,9 @@ export interface BriefingStep {
   helpText?: string;
   optional?: boolean;
   skipIf?: (answers: Record<string, any>) => boolean;
-  section?: string; // section label for transition messages
+  section?: string;
+  /** Dynamic options based on plan context and current answers */
+  dynamicOptions?: (ctx: Record<string, any>, answers: Record<string, any>) => BriefingStepOption[];
 }
 
 export interface BriefingAgent {
@@ -60,13 +62,52 @@ interface ChatBriefingProps {
   onComplete: (answers: Record<string, any>) => void;
   onCancel: () => void;
   className?: string;
+  /** Plan context for dynamic limits: { maxContents, usedContents, maxArts, usedArts, maxSites, usedSites, planName } */
+  context?: Record<string, any>;
+}
+
+/* ══════════════════════════════════════════════
+   HELPERS
+   ══════════════════════════════════════════════ */
+
+/** Interpolate {varName} in agent messages using context */
+function interpolateMessage(msg: string, ctx: Record<string, any>, answers: Record<string, any>): string {
+  // Build plan limit message
+  let planLimitMessage = "";
+  if (ctx.maxContents !== undefined) {
+    const saldo = Math.max(0, (ctx.maxContents ?? 0) - (ctx.usedContents ?? 0));
+    planLimitMessage = `Seu plano ${ctx.planName || ""} permite até ${ctx.maxContents} conteúdos/mês. Você já usou ${ctx.usedContents ?? 0}, então pode criar até ${saldo}.`;
+  } else if (ctx.maxArts !== undefined) {
+    const saldo = Math.max(0, (ctx.maxArts ?? 0) - (ctx.usedArts ?? 0));
+    planLimitMessage = `Seu plano ${ctx.planName || ""} permite até ${ctx.maxArts} artes/mês. Saldo disponível: ${saldo}.`;
+  } else if (ctx.maxSites !== undefined) {
+    const saldo = Math.max(0, (ctx.maxSites ?? 0) - (ctx.usedSites ?? 0));
+    planLimitMessage = saldo > 0
+      ? `Seu plano ${ctx.planName || ""} permite até ${ctx.maxSites} sites. Você já tem ${ctx.usedSites ?? 0}.`
+      : `⚠️ Seu plano ${ctx.planName || ""} já atingiu o limite de ${ctx.maxSites} sites.`;
+  }
+
+  return msg
+    .replace(/\{planLimitMessage\}/g, planLimitMessage)
+    .replace(/\{planName\}/g, ctx.planName || "")
+    .replace(/\{maxContents\}/g, String(ctx.maxContents ?? ""))
+    .replace(/\{usedContents\}/g, String(ctx.usedContents ?? ""))
+    .replace(/\{maxArts\}/g, String(ctx.maxArts ?? ""))
+    .replace(/\{usedArts\}/g, String(ctx.usedArts ?? ""))
+    .replace(/\{maxSites\}/g, String(ctx.maxSites ?? ""))
+    .replace(/\{usedSites\}/g, String(ctx.usedSites ?? ""))
+    .replace(/\{saldo\}/g, String(
+      ctx.maxContents !== undefined ? Math.max(0, (ctx.maxContents ?? 0) - (ctx.usedContents ?? 0)) :
+      ctx.maxArts !== undefined ? Math.max(0, (ctx.maxArts ?? 0) - (ctx.usedArts ?? 0)) :
+      ctx.maxSites !== undefined ? Math.max(0, (ctx.maxSites ?? 0) - (ctx.usedSites ?? 0)) : ""
+    ));
 }
 
 /* ══════════════════════════════════════════════
    COMPONENT
    ══════════════════════════════════════════════ */
 
-export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: ChatBriefingProps) {
+export function ChatBriefing({ agent, steps, onComplete, onCancel, className, context = {} }: ChatBriefingProps) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -83,6 +124,15 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
 
   const currentStep = activeSteps[currentStepIdx];
   const progressPct = activeSteps.length > 0 ? Math.round(((currentStepIdx) / activeSteps.length) * 100) : 0;
+
+  // Resolve options for current step (static or dynamic)
+  const resolvedOptions = useMemo(() => {
+    if (!currentStep) return [];
+    if (currentStep.dynamicOptions) {
+      return currentStep.dynamicOptions(context, answers);
+    }
+    return currentStep.options || [];
+  }, [currentStep, context, answers]);
 
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -108,7 +158,8 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
   useEffect(() => {
     if (messages.length === 0 && activeSteps.length > 0) {
       const firstStep = activeSteps[0];
-      addAgentMessage(firstStep.agentMessage, firstStep.id);
+      const msg = interpolateMessage(firstStep.agentMessage, context, answers);
+      addAgentMessage(msg, firstStep.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -116,18 +167,20 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
   // Format user answer for display
   const formatAnswer = (step: BriefingStep, value: any): string => {
     if (step.inputType === "multi-select") {
-      const labels = (value as string[]).map(v => {
-        const allOpts = step.categories
+      const allOpts = step.dynamicOptions
+        ? step.dynamicOptions(context, answers)
+        : step.categories
           ? step.categories.flatMap(c => c.options)
           : (step.options || []);
-        return allOpts.find(o => o.value === v)?.label || v;
-      });
+      const labels = (value as string[]).map(v => allOpts.find(o => o.value === v)?.label || v);
       return labels.join(", ");
     }
     if (step.inputType === "select") {
-      const allOpts = step.categories
-        ? step.categories.flatMap(c => c.options)
-        : (step.options || []);
+      const allOpts = step.dynamicOptions
+        ? step.dynamicOptions(context, answers)
+        : step.categories
+          ? step.categories.flatMap(c => c.options)
+          : (step.options || []);
       return allOpts.find(o => o.value === value)?.label || value;
     }
     return String(value);
@@ -156,7 +209,6 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
     let nextIdx = currentStepIdx + 1;
     while (nextIdx < steps.length) {
       const nextStep = steps[nextIdx];
-      // Check if this step is in activeSteps
       if (!nextStep.skipIf || !nextStep.skipIf(newAnswers)) {
         break;
       }
@@ -168,7 +220,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
     const nextActiveIdx = newActiveSteps.findIndex((s, i) => i > currentStepIdx && !messages.find(m => m.stepId === s.id && m.sender === "agent"));
 
     if (nextActiveIdx === -1 || currentStepIdx >= newActiveSteps.length - 1) {
-      // We're done - show completion message
+      // We're done
       addAgentMessage("Perfeito! Tenho tudo que preciso. Vamos lá! 🚀");
       setTimeout(() => onComplete(newAnswers), 1200);
       return;
@@ -178,27 +230,25 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
     const nextStep = newActiveSteps[currentStepIdx + 1];
 
     if (nextStep) {
-      // Check if there's a section transition
       const prevSection = currentStep.section;
       const nextSection = nextStep.section;
+      const msg = interpolateMessage(nextStep.agentMessage, context, newAnswers);
 
       if (nextSection && nextSection !== prevSection && currentStep.inputType !== "info") {
-        // Insert section transition
         addAgentMessage(`Ótimo! Agora vamos falar sobre **${nextSection}**...`);
         setTimeout(() => {
-          addAgentMessage(nextStep.agentMessage, nextStep.id);
+          addAgentMessage(msg, nextStep.id);
         }, 900);
       } else {
-        addAgentMessage(nextStep.agentMessage, nextStep.id);
+        addAgentMessage(msg, nextStep.id);
       }
     }
-  }, [currentStep, currentStepIdx, answers, steps, messages, addAgentMessage, onComplete]);
+  }, [currentStep, currentStepIdx, answers, steps, messages, addAgentMessage, onComplete, context]);
 
   // Handle undo
   const handleUndo = () => {
     if (currentStepIdx <= 0) return;
 
-    // Remove last user message and corresponding agent message
     let lastUserMsgIdx = -1;
     for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].sender === "user") { lastUserMsgIdx = i; break; } }
     if (lastUserMsgIdx === -1) return;
@@ -206,7 +256,6 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
     const lastUserMsg = messages[lastUserMsgIdx];
     const stepId = lastUserMsg.stepId;
 
-    // Remove answer
     if (stepId) {
       setAnswers(prev => {
         const next = { ...prev };
@@ -215,7 +264,6 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
       });
     }
 
-    // Remove messages after the previous agent message for this step
     let prevAgentIdx = -1;
     for (let i = lastUserMsgIdx - 1; i >= 0; i--) { if (messages[i].sender === "agent") { prevAgentIdx = i; break; } }
     setMessages(prev => prev.slice(0, prevAgentIdx === -1 ? 0 : prevAgentIdx + 1));
@@ -224,28 +272,20 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
     setMultiSelectValues([]);
   };
 
-  // Handle select
-  const handleSelect = (value: string) => {
-    advanceStep(value);
-  };
+  const handleSelect = (value: string) => { advanceStep(value); };
 
-  // Handle multi-select confirm
   const handleMultiConfirm = () => {
     if (multiSelectValues.length === 0 && !currentStep?.optional) return;
     advanceStep(multiSelectValues);
   };
 
-  // Handle text submit
   const handleTextSubmit = () => {
     const val = textValue.trim();
     if (!val && !currentStep?.optional) return;
     advanceStep(val || "");
   };
 
-  // Handle info advance
-  const handleInfoAdvance = () => {
-    advanceStep();
-  };
+  const handleInfoAdvance = () => { advanceStep(); };
 
   const toggleMulti = (value: string) => {
     setMultiSelectValues(prev =>
@@ -253,16 +293,17 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
     );
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [messages, isTyping, scrollToBottom]);
 
-  // Focus input when step changes
   useEffect(() => {
     if (currentStep && (currentStep.inputType === "text" || currentStep.inputType === "textarea")) {
       setTimeout(() => inputRef.current?.focus(), 500);
     }
   }, [currentStepIdx, currentStep]);
+
+  // Determine which options to show for select/multi-select
+  const displayOptions = resolvedOptions;
+  const hasCategories = currentStep?.categories && !currentStep?.dynamicOptions;
 
   return (
     <div className={cn("flex flex-col h-[calc(100vh-12rem)] min-h-[500px] max-h-[700px] border rounded-2xl overflow-hidden bg-background", className)}>
@@ -380,26 +421,29 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
             </Button>
           )}
 
-          {/* Select — button grid */}
-          {currentStep.inputType === "select" && currentStep.options && (
+          {/* Select — button grid (static options or dynamic) */}
+          {currentStep.inputType === "select" && !hasCategories && displayOptions.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
-              {currentStep.options.map(opt => (
+              {displayOptions.map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => handleSelect(opt.value)}
                   className="flex items-center gap-2 p-2.5 rounded-xl border-2 border-border text-left transition-all duration-150 hover:border-primary/40 hover:bg-primary/5 active:scale-[0.98]"
                 >
                   {opt.icon && <span className="text-sm">{opt.icon}</span>}
-                  <span className="text-xs font-medium text-foreground">{opt.label}</span>
+                  <div className="min-w-0">
+                    <span className="text-xs font-medium text-foreground">{opt.label}</span>
+                    {opt.desc && <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">{opt.desc}</p>}
+                  </div>
                 </button>
               ))}
             </div>
           )}
 
           {/* Select with categories */}
-          {currentStep.inputType === "select" && currentStep.categories && (
+          {currentStep.inputType === "select" && hasCategories && (
             <div className="space-y-3 max-h-64 overflow-y-auto">
-              {currentStep.categories.map(cat => (
+              {currentStep.categories!.map(cat => (
                 <div key={cat.title}>
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span className="text-sm">{cat.icon}</span>
@@ -428,7 +472,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className }: 
           {currentStep.inputType === "multi-select" && (
             <div className="space-y-2">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
-                {(currentStep.options || []).map(opt => {
+                {displayOptions.map(opt => {
                   const selected = multiSelectValues.includes(opt.value);
                   return (
                     <button

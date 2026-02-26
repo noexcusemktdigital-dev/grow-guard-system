@@ -14,6 +14,39 @@ export const AGENTS: Record<string, BriefingAgent> = {
 };
 
 /* ══════════════════════════════════════════════
+   SHARED OPTIONS (reusable across agents)
+   ══════════════════════════════════════════════ */
+
+const SEGMENTO_OPTIONS = [
+  { value: "servicos", label: "Serviços" }, { value: "varejo", label: "Varejo / Loja" },
+  { value: "alimentacao", label: "Alimentação" }, { value: "saude", label: "Saúde / Estética" },
+  { value: "educacao", label: "Educação" }, { value: "tecnologia", label: "Tecnologia" },
+  { value: "industria", label: "Indústria" }, { value: "construcao", label: "Construção" },
+  { value: "financeiro", label: "Financeiro" }, { value: "outro", label: "Outro" },
+];
+
+const FAIXA_ETARIA_OPTIONS = [
+  { value: "18-24", label: "18-24 anos" }, { value: "25-34", label: "25-34 anos" },
+  { value: "35-44", label: "35-44 anos" }, { value: "45-54", label: "45-54 anos" },
+  { value: "55+", label: "55+ anos" }, { value: "todas", label: "Todas as idades" },
+];
+
+const PERSONA_NOME_OPTIONS = [
+  { value: "empreendedor", label: "Empreendedor(a)" }, { value: "gestor", label: "Gestor(a)" },
+  { value: "profissional_liberal", label: "Profissional Liberal" }, { value: "dono_loja", label: "Dono(a) de Loja" },
+  { value: "estudante", label: "Estudante" }, { value: "executivo", label: "Executivo(a)" },
+  { value: "personalizar", label: "Personalizar..." },
+];
+
+const PERSONA_DESCRICAO_OPTIONS = [
+  { value: "25-34", label: "25-34 anos" }, { value: "35-44", label: "35-44 anos" },
+  { value: "45-54", label: "45-54 anos" }, { value: "classe_ab", label: "Classe A/B" },
+  { value: "classe_bc", label: "Classe B/C" }, { value: "busca_praticidade", label: "Busca praticidade" },
+  { value: "busca_economia", label: "Busca economia" }, { value: "usa_redes", label: "Usa redes sociais" },
+  { value: "decide_indicacao", label: "Decide por indicação" }, { value: "pesquisa_muito", label: "Pesquisa muito antes de comprar" },
+];
+
+/* ══════════════════════════════════════════════
    SOFIA — Estratégia de Marketing (~30 questions, 9 sections)
    ══════════════════════════════════════════════ */
 
@@ -22,13 +55,8 @@ export const SOFIA_STEPS: BriefingStep[] = [
   { id: "_intro_sofia", agentMessage: "Oi! 👋 Sou a Sofia, sua consultora de marketing. Vou fazer um diagnóstico completo do seu marketing em poucos minutos. Vamos começar?", inputType: "info" },
 
   // ── 1. Seu Negócio
-  { id: "segmento", section: "Seu Negócio", agentMessage: "Pra começar, me conta: qual o segmento da sua empresa?", inputType: "select", helpText: "O segmento define o tipo de mercado em que você atua. Isso ajuda a personalizar toda a estratégia.",
-    options: [
-      { value: "servicos", label: "Serviços" }, { value: "varejo", label: "Varejo / Loja" },
-      { value: "alimentacao", label: "Alimentação" }, { value: "saude", label: "Saúde / Estética" },
-      { value: "educacao", label: "Educação" }, { value: "tecnologia", label: "Tecnologia" },
-      { value: "industria", label: "Indústria" }, { value: "outro", label: "Outro" },
-    ],
+  { id: "segmento", section: "Seu Negócio", agentMessage: "Pra começar, me conta: qual o segmento da sua empresa?", inputType: "select", helpText: "O segmento define o tipo de mercado em que você atua.",
+    options: SEGMENTO_OPTIONS,
   },
   { id: "tempo_mercado", section: "Seu Negócio", agentMessage: "Há quanto tempo sua empresa está no mercado?", inputType: "select", helpText: "Empresas mais novas precisam de estratégias de awareness, enquanto empresas maduras focam em escala e retenção.",
     options: [
@@ -68,12 +96,19 @@ export const SOFIA_STEPS: BriefingStep[] = [
   },
 
   // ── 3. Seu Público
-  { id: "cliente_ideal", section: "Seu Público", agentMessage: "Me descreve seu cliente ideal. Quanto mais detalhes, melhor o diagnóstico!", inputType: "textarea", helpText: "A persona é uma representação semi-fictícia do seu cliente ideal. Quanto mais detalhada, melhor será a segmentação das campanhas.", placeholder: "Ex: Mulheres de 25-40 anos, classe B, que buscam praticidade..." },
-  { id: "faixa_etaria", section: "Seu Público", agentMessage: "Qual a faixa etária principal do público?", inputType: "select", helpText: "A faixa etária define tom, canal e formato de conteúdo mais eficaz.",
+  { id: "cliente_ideal", section: "Seu Público", agentMessage: "Qual o perfil do seu cliente ideal? Pode marcar vários!", inputType: "multi-select", helpText: "A persona é uma representação semi-fictícia do seu cliente ideal.",
     options: [
-      { value: "18-24", label: "18-24 anos" }, { value: "25-34", label: "25-34 anos" },
-      { value: "35-44", label: "35-44 anos" }, { value: "45+", label: "45+ anos" },
+      { value: "empresas_pme", label: "Empresas PME" }, { value: "grandes_empresas", label: "Grandes Empresas" },
+      { value: "profissionais_liberais", label: "Profissionais Liberais" }, { value: "consumidor_final", label: "Consumidor Final" },
+      { value: "jovens_18_30", label: "Jovens 18-30" }, { value: "adultos_30_50", label: "Adultos 30-50" },
+      { value: "premium", label: "Público Premium" }, { value: "personalizar", label: "Personalizar..." },
     ],
+  },
+  { id: "cliente_ideal_custom", section: "Seu Público", agentMessage: "Descreve seu cliente ideal com mais detalhes!", inputType: "textarea", placeholder: "Ex: Mulheres de 25-40 anos, classe B, que buscam praticidade...", optional: true,
+    skipIf: (ans) => !Array.isArray(ans.cliente_ideal) || !ans.cliente_ideal.includes("personalizar"),
+  },
+  { id: "faixa_etaria", section: "Seu Público", agentMessage: "Qual a faixa etária principal do público?", inputType: "select", helpText: "A faixa etária define tom, canal e formato de conteúdo mais eficaz.",
+    options: FAIXA_ETARIA_OPTIONS,
   },
   { id: "onde_esta", section: "Seu Público", agentMessage: "Onde seu público está mais presente? Pode marcar mais de um!", inputType: "multi-select", helpText: "Saber onde seu público navega ajuda a direcionar investimento e conteúdo nos canais certos.",
     options: [
@@ -104,7 +139,14 @@ export const SOFIA_STEPS: BriefingStep[] = [
       { value: "bastante", label: "Sim, bastante" }, { value: "referencia", label: "São referência" },
     ],
   },
-  { id: "diferencial", section: "Concorrência", agentMessage: "Qual seu principal diferencial competitivo? O que te torna único?", inputType: "textarea", helpText: "Seu diferencial é o que te torna único. Ele será a base da comunicação da marca.", placeholder: "Ex: Atendimento personalizado, preço justo, rapidez na entrega..." },
+  { id: "diferencial", section: "Concorrência", agentMessage: "Qual seu principal diferencial competitivo?", inputType: "multi-select", helpText: "Seu diferencial é o que te torna único. Ele será a base da comunicação da marca.",
+    options: [
+      { value: "atendimento", label: "Atendimento personalizado" }, { value: "preco", label: "Preço competitivo" },
+      { value: "velocidade", label: "Velocidade" }, { value: "qualidade", label: "Qualidade premium" },
+      { value: "tecnologia", label: "Tecnologia" }, { value: "localizacao", label: "Localização" },
+      { value: "experiencia", label: "Experiência/Tradição" }, { value: "outro", label: "Outro" },
+    ],
+  },
 
   // ── 5. Presença Digital
   { id: "redes_ativas", section: "Presença Digital", agentMessage: "Quais redes sociais sua empresa usa ativamente? (pelo menos 1x por semana)", inputType: "multi-select", helpText: "Redes ativas são aquelas que você publica pelo menos 1x por semana.",
@@ -171,7 +213,7 @@ export const SOFIA_STEPS: BriefingStep[] = [
       { value: "500+", label: "R$ 500+" },
     ],
   },
-  { id: "ltv_medio", section: "Métricas CAC / LTV", agentMessage: "Quanto tempo em média um cliente fica com você?", inputType: "select", helpText: "LTV (Lifetime Value) é a receita total que um cliente gera. Quanto maior o LTV vs CAC, mais saudável o negócio.",
+  { id: "ltv_medio", section: "Métricas CAC / LTV", agentMessage: "Quanto tempo em média um cliente fica com você?", inputType: "select", helpText: "LTV (Lifetime Value) é a receita total que um cliente gera.",
     options: [
       { value: "unica", label: "Compra única" }, { value: "1-3", label: "1 a 3 meses" },
       { value: "3-12", label: "3 a 12 meses" }, { value: "1ano+", label: "Mais de 1 ano" },
@@ -227,11 +269,18 @@ export const SOFIA_STEPS: BriefingStep[] = [
       { value: "concorrencia", label: "Concorrência forte" },
     ],
   },
-  { id: "tentativas", section: "Objetivos e Dores", agentMessage: "Pra finalizar: o que já tentou que não funcionou?", inputType: "textarea", helpText: "Saber o que não funcionou evita repetir erros.", placeholder: "Ex: Contratei um social media, mas não deu resultado...", optional: true },
+  { id: "tentativas", section: "Objetivos e Dores", agentMessage: "Pra finalizar: o que já tentou que não funcionou?", inputType: "multi-select", helpText: "Saber o que não funcionou evita repetir erros.", optional: true,
+    options: [
+      { value: "agencia", label: "Contratei agência" }, { value: "sozinho", label: "Fiz sozinho" },
+      { value: "ads", label: "Ads sem resultado" }, { value: "influenciadores", label: "Influenciadores" },
+      { value: "nada_funcionou", label: "Nada funcionou" }, { value: "nunca_tentei", label: "Nunca tentei" },
+    ],
+  },
 ];
 
 /* ══════════════════════════════════════════════
    RAFAEL — Plano de Vendas (~25 questions, 8 sections)
+   100% fechado, sem mudanças
    ══════════════════════════════════════════════ */
 
 export const RAFAEL_STEPS: BriefingStep[] = [
@@ -239,12 +288,7 @@ export const RAFAEL_STEPS: BriefingStep[] = [
 
   // ── 1. Sobre o Negócio
   { id: "segmento", section: "Sobre o Negócio", agentMessage: "Qual é o segmento da sua empresa?", inputType: "select", helpText: "Identifique o setor principal de atuação para personalizar as recomendações.",
-    options: [
-      { value: "servicos", label: "Serviços" }, { value: "varejo", label: "Varejo / Loja" },
-      { value: "alimentacao", label: "Alimentação" }, { value: "saude", label: "Saúde / Estética" },
-      { value: "educacao", label: "Educação" }, { value: "tecnologia", label: "Tecnologia" },
-      { value: "industria", label: "Indústria" }, { value: "outro", label: "Outro" },
-    ],
+    options: SEGMENTO_OPTIONS,
   },
   { id: "modelo_negocio", section: "Sobre o Negócio", agentMessage: "Modelo de negócio: B2B, B2C ou ambos?", inputType: "select", helpText: "Saber se vende para empresas ou consumidor final muda toda a estratégia de abordagem.",
     options: [
@@ -441,7 +485,7 @@ export const RAFAEL_STEPS: BriefingStep[] = [
 ];
 
 /* ══════════════════════════════════════════════
-   LUNA — Conteúdos (~8 questions)
+   LUNA — Conteúdos (perguntas fechadas + limites de plano)
    ══════════════════════════════════════════════ */
 
 const MESES_OPT = [
@@ -455,37 +499,89 @@ const OBJETIVOS_CONTENT = [
 
 const TONS_OPT = ["Educativo", "Inspirador", "Direto", "Storytelling", "Misto"].map(t => ({ value: t, label: t }));
 
+const TEMAS_CONTENT = [
+  { value: "automacao", label: "Automação" }, { value: "vendas", label: "Vendas" },
+  { value: "black_friday", label: "Black Friday" }, { value: "lancamento", label: "Lançamento" },
+  { value: "autoridade", label: "Autoridade" }, { value: "cases", label: "Cases de Sucesso" },
+  { value: "bastidores", label: "Bastidores" }, { value: "tendencias", label: "Tendências" },
+  { value: "sazonalidade", label: "Sazonalidade" }, { value: "produto_servico", label: "Produto/Serviço" },
+  { value: "educativo", label: "Educativo" },
+];
+
+const DATAS_COMEMORATIVAS = [
+  { value: "carnaval", label: "Carnaval" }, { value: "dia_mulher", label: "Dia da Mulher" },
+  { value: "pascoa", label: "Páscoa" }, { value: "dia_maes", label: "Dia das Mães" },
+  { value: "dia_namorados", label: "Dia dos Namorados" }, { value: "dia_pais", label: "Dia dos Pais" },
+  { value: "black_friday", label: "Black Friday" }, { value: "natal", label: "Natal" },
+  { value: "nenhuma", label: "Nenhuma" },
+];
+
+const DESTAQUES_OPTIONS = [
+  { value: "novo_produto", label: "Novo produto" }, { value: "case_sucesso", label: "Case de sucesso" },
+  { value: "parceria", label: "Parceria" }, { value: "premiacao", label: "Premiação" },
+  { value: "evento", label: "Evento" }, { value: "nenhum", label: "Nenhum" },
+];
+
 export const LUNA_STEPS: BriefingStep[] = [
   { id: "_intro_luna", agentMessage: "Oi! 👋 Sou a Luna, sua estrategista de conteúdo. Vou montar uma campanha completa pra você em poucos minutos!", inputType: "info" },
   { id: "mes", agentMessage: "Pra qual mês você quer essa campanha?", inputType: "select", options: MESES_OPT },
   { id: "objetivos", agentMessage: "Qual o foco principal? Pode marcar mais de um!", inputType: "multi-select", options: OBJETIVOS_CONTENT, helpText: "A IA vai equilibrar os conteúdos entre os objetivos selecionados." },
-  { id: "tema", agentMessage: "Me conta o tema central dessa campanha. Pode ser algo como 'Automação', 'Black Friday', 'Lançamento'...", inputType: "text", placeholder: "Ex: Mês da Automação, Crescimento Inteligente..." },
+  { id: "tema", agentMessage: "Qual o tema central dessa campanha?", inputType: "select", helpText: "O tema guia todo o conteúdo da campanha.",
+    options: TEMAS_CONTENT,
+  },
   { id: "tom", agentMessage: "E o tom de voz? Como a marca quer 'falar' nessa campanha?", inputType: "select", options: TONS_OPT, helpText: "Educativo ensina, Inspirador motiva, Direto vende." },
-  { id: "promocoes", agentMessage: "Tem alguma promoção ou oferta especial pra incluir? Se não tiver, pode pular!", inputType: "textarea", placeholder: "Ex: 30% off plano anual", optional: true },
-  { id: "datas", agentMessage: "Alguma data comemorativa importante nesse mês?", inputType: "textarea", placeholder: "Ex: Dia da Mulher (08/03)", optional: true },
-  { id: "destaques", agentMessage: "Tem algum destaque ou novidade pra incluir?", inputType: "textarea", placeholder: "Ex: Novo recurso, case de sucesso...", optional: true },
-  { id: "persona_nome", agentMessage: "Qual o nome/perfil da persona dessa campanha?", inputType: "text", placeholder: "Ex: Maria, 38 anos, dona de franquia", optional: true, helpText: "Persona ajuda a personalizar o tom e abordagem." },
-  { id: "persona_descricao", agentMessage: "Me descreve essa persona: idade, profissão, dores, desejos...", inputType: "textarea", placeholder: "Idade, profissão, dores, desejos, comportamento...", optional: true,
+  { id: "promocoes_tem", agentMessage: "Tem alguma promoção ou oferta especial?", inputType: "select", optional: true,
+    options: [{ value: "sim", label: "Sim, tenho" }, { value: "nao", label: "Não tenho" }],
+  },
+  { id: "promocoes", agentMessage: "Descreve a promoção pra eu incluir nos conteúdos!", inputType: "textarea", placeholder: "Ex: 30% off plano anual, frete grátis...", optional: true,
+    skipIf: (ans) => ans.promocoes_tem !== "sim",
+  },
+  { id: "datas", agentMessage: "Alguma data comemorativa importante nesse mês?", inputType: "multi-select", optional: true, helpText: "Datas sazonais aumentam relevância e engajamento.",
+    options: DATAS_COMEMORATIVAS,
+  },
+  { id: "destaques", agentMessage: "Tem algum destaque ou novidade pra incluir?", inputType: "multi-select", optional: true,
+    options: DESTAQUES_OPTIONS,
+  },
+  { id: "persona_nome", agentMessage: "Qual o perfil da persona dessa campanha?", inputType: "select", optional: true, helpText: "Persona ajuda a personalizar o tom e abordagem.",
+    options: PERSONA_NOME_OPTIONS,
+  },
+  { id: "persona_nome_custom", agentMessage: "Descreve o nome/perfil da persona:", inputType: "text", placeholder: "Ex: Maria, 38 anos, dona de franquia", optional: true,
+    skipIf: (ans) => ans.persona_nome !== "personalizar",
+  },
+  { id: "persona_descricao", agentMessage: "Quais características dessa persona? Marque as que se aplicam!", inputType: "multi-select", optional: true,
+    options: PERSONA_DESCRICAO_OPTIONS,
     skipIf: (ans) => !ans.persona_nome,
   },
-  // ── Formatos e Quantidades
-  { id: "_section_formatos", section: "Formatos", agentMessage: "Ótimo! Agora vamos definir os formatos. Quantos de cada tipo você quer nessa campanha?", inputType: "info" },
+  // ── Formatos e Quantidades (com limites de plano via context)
+  { id: "_section_formatos", section: "Formatos", agentMessage: "Ótimo! Agora vamos definir os formatos. {planLimitMessage}", inputType: "info" },
   { id: "qFeed", section: "Formatos", agentMessage: "Quantos Posts Feed (imagem quadrada)?", inputType: "select", helpText: "Posts feed são ideais para conteúdo estático e educativo.",
-    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }],
+    dynamicOptions: (ctx, ans) => {
+      const saldo = computeContentSaldo(ctx, ans, ["qCarrossel", "qReels", "qStory"]);
+      return makeQtyOptions(saldo);
+    },
   },
   { id: "qCarrossel", section: "Formatos", agentMessage: "Quantos Carrosséis?", inputType: "select", helpText: "Carrosséis têm 3x mais salvamentos que posts normais.",
-    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }],
+    dynamicOptions: (ctx, ans) => {
+      const saldo = computeContentSaldo(ctx, ans, ["qFeed", "qReels", "qStory"]);
+      return makeQtyOptions(saldo);
+    },
   },
   { id: "qReels", section: "Formatos", agentMessage: "Quantos roteiros de Reels?", inputType: "select", helpText: "Reels têm o maior alcance orgânico no Instagram.",
-    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }],
+    dynamicOptions: (ctx, ans) => {
+      const saldo = computeContentSaldo(ctx, ans, ["qFeed", "qCarrossel", "qStory"]);
+      return makeQtyOptions(saldo);
+    },
   },
   { id: "qStory", section: "Formatos", agentMessage: "E quantos Stories?", inputType: "select", helpText: "Stories geram interação direta com enquetes e caixas de pergunta.",
-    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }],
+    dynamicOptions: (ctx, ans) => {
+      const saldo = computeContentSaldo(ctx, ans, ["qFeed", "qCarrossel", "qReels"]);
+      return makeQtyOptions(saldo);
+    },
   },
 ];
 
 /* ══════════════════════════════════════════════
-   THEO — Artes / Redes Sociais (~8 questions)
+   THEO — Artes / Redes Sociais (perguntas fechadas + limites)
    ══════════════════════════════════════════════ */
 
 const TIPOS_POST_OPT = [
@@ -503,6 +599,25 @@ const NIVEIS_OPT = [
 const OBJETIVOS_ART = ["Promoção", "Engajamento", "Institucional", "Lançamento", "Depoimento"].map(o => ({ value: o, label: o }));
 const ESTILOS_ART = ["Minimalista", "Bold", "Corporativo", "Criativo", "Elegante"].map(e => ({ value: e, label: e }));
 
+const TEMAS_VISUAIS = [
+  { value: "tecnologia", label: "Tecnologia" }, { value: "crescimento", label: "Crescimento" },
+  { value: "natureza", label: "Natureza" }, { value: "luxo", label: "Luxo" },
+  { value: "urbano", label: "Urbano" }, { value: "abstrato", label: "Abstrato" },
+  { value: "pessoas", label: "Pessoas" }, { value: "minimalismo", label: "Minimalismo" },
+];
+
+const OBS_INSTRUCOES = [
+  { value: "incluir_logo", label: "Incluir logo" }, { value: "cores_marca", label: "Usar cores da marca" },
+  { value: "texto_grande", label: "Texto grande" }, { value: "sem_texto", label: "Sem texto na imagem" },
+  { value: "qr_code", label: "Incluir QR Code" },
+];
+
+const DESCRICAO_PRODUTO_OPTIONS = [
+  { value: "premium", label: "Premium / Luxo" }, { value: "acessivel", label: "Acessível / Popular" },
+  { value: "tecnologico", label: "Tecnológico" }, { value: "artesanal", label: "Artesanal" },
+  { value: "natural", label: "Natural / Orgânico" }, { value: "minimalista", label: "Minimalista" },
+];
+
 export const THEO_STEPS: BriefingStep[] = [
   { id: "_intro_theo", agentMessage: "E aí! 👋 Sou o Theo, seu diretor de arte. Vou criar artes incríveis pra suas redes sociais. Me conta o que precisa!", inputType: "info" },
   { id: "tipo_post", agentMessage: "Que tipo de post você quer criar?", inputType: "select", options: TIPOS_POST_OPT, helpText: "Define a composição visual da arte." },
@@ -510,32 +625,63 @@ export const THEO_STEPS: BriefingStep[] = [
   { id: "mes", agentMessage: "Pra qual mês?", inputType: "select", options: MESES_OPT },
   { id: "objetivo", agentMessage: "Qual o objetivo dessa criação?", inputType: "select", options: OBJETIVOS_ART },
   { id: "estilo", agentMessage: "E o estilo visual?", inputType: "select", options: ESTILOS_ART, helpText: "Minimalista, Bold, Corporativo, etc." },
-  { id: "temas", agentMessage: "Tem algum tema visual específico?", inputType: "text", placeholder: "Ex: Tecnologia, crescimento, natureza...", optional: true },
-  { id: "promocoes", agentMessage: "Promoções ou ofertas pra incluir?", inputType: "textarea", placeholder: "Ex: 20% OFF no plano anual", optional: true },
-  { id: "obs", agentMessage: "Alguma observação ou instrução adicional?", inputType: "textarea", placeholder: "Instruções adicionais...", optional: true },
-  { id: "descricao_produto", agentMessage: "Descreve o produto/serviço (materiais, cores, formato...)", inputType: "textarea", placeholder: "Descreva: materiais, cores, formato...", optional: true,
+  { id: "temas", agentMessage: "Temas visuais? Pode marcar vários!", inputType: "multi-select", optional: true, helpText: "Define a direção estética das imagens.",
+    options: TEMAS_VISUAIS,
+  },
+  { id: "promocoes_tem", agentMessage: "Tem promoções ou ofertas pra incluir?", inputType: "select", optional: true,
+    options: [{ value: "sim", label: "Sim, tenho" }, { value: "nao", label: "Não tenho" }],
+  },
+  { id: "promocoes", agentMessage: "Descreve a promoção!", inputType: "textarea", placeholder: "Ex: 20% OFF no plano anual", optional: true,
+    skipIf: (ans) => ans.promocoes_tem !== "sim",
+  },
+  { id: "obs", agentMessage: "Instruções visuais? Marque o que se aplica!", inputType: "multi-select", optional: true, helpText: "Instrua a IA sobre elementos visuais obrigatórios.",
+    options: OBS_INSTRUCOES,
+  },
+  { id: "obs_custom", agentMessage: "Algo mais específico?", inputType: "textarea", placeholder: "Instruções adicionais...", optional: true,
+    skipIf: (ans) => !Array.isArray(ans.obs) || ans.obs.length === 0,
+  },
+  { id: "descricao_produto", agentMessage: "Qual o perfil do produto/serviço?", inputType: "multi-select", optional: true, helpText: "Ajuda a definir o estilo visual adequado.",
+    options: DESCRICAO_PRODUTO_OPTIONS,
     skipIf: (ans) => ans.tipo_post !== "produto" && ans.tipo_post !== "servico",
   },
-  { id: "persona_nome", agentMessage: "Tem uma persona definida? Me diz o nome/perfil!", inputType: "text", placeholder: "Ex: Maria, 38 anos", optional: true },
-  { id: "persona_descricao", agentMessage: "Descreve essa persona pra mim!", inputType: "textarea", placeholder: "Idade, profissão, dores, desejos...", optional: true,
+  { id: "persona_nome", agentMessage: "Tem uma persona definida?", inputType: "select", optional: true,
+    options: PERSONA_NOME_OPTIONS,
+  },
+  { id: "persona_descricao", agentMessage: "Características dessa persona?", inputType: "multi-select", optional: true,
+    options: PERSONA_DESCRICAO_OPTIONS,
     skipIf: (ans) => !ans.persona_nome,
   },
-  // ── Formatos e Quantidades
-  { id: "_section_formatos", section: "Formatos", agentMessage: "Perfeito! Agora vamos definir os formatos e quantidades.", inputType: "info" },
+  // ── Formatos e Quantidades (com limites de plano)
+  { id: "_section_formatos", section: "Formatos", agentMessage: "Perfeito! Agora vamos definir os formatos e quantidades. {planLimitMessage}", inputType: "info" },
   { id: "fmtFeed", section: "Formatos", agentMessage: "Quantas artes de Feed (1080×1080)?", inputType: "select",
-    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }],
+    dynamicOptions: (ctx, ans) => {
+      const saldo = computeArtSaldo(ctx, ans, ["fmtStory", "fmtCarrossel", "fmtReels", "fmtStoryVideo"]);
+      return makeQtyOptions(saldo);
+    },
   },
   { id: "fmtStory", section: "Formatos", agentMessage: "Quantas artes de Story (1080×1920)?", inputType: "select",
-    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }],
+    dynamicOptions: (ctx, ans) => {
+      const saldo = computeArtSaldo(ctx, ans, ["fmtFeed", "fmtCarrossel", "fmtReels", "fmtStoryVideo"]);
+      return makeQtyOptions(saldo);
+    },
   },
   { id: "fmtCarrossel", section: "Formatos", agentMessage: "Quantos Carrosséis?", inputType: "select",
-    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }],
+    dynamicOptions: (ctx, ans) => {
+      const saldo = computeArtSaldo(ctx, ans, ["fmtFeed", "fmtStory", "fmtReels", "fmtStoryVideo"]);
+      return makeQtyOptions(saldo);
+    },
   },
   { id: "fmtReels", section: "Formatos", agentMessage: "E vídeos Reels (curtos, 5-15s)?", inputType: "select",
-    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }],
+    dynamicOptions: (ctx, ans) => {
+      const saldo = computeArtSaldo(ctx, ans, ["fmtFeed", "fmtStory", "fmtCarrossel", "fmtStoryVideo"]);
+      return makeQtyOptions(Math.min(saldo, 3));
+    },
   },
   { id: "fmtStoryVideo", section: "Formatos", agentMessage: "Stories animados (vídeo curto)?", inputType: "select",
-    options: [{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }],
+    dynamicOptions: (ctx, ans) => {
+      const saldo = computeArtSaldo(ctx, ans, ["fmtFeed", "fmtStory", "fmtCarrossel", "fmtReels"]);
+      return makeQtyOptions(Math.min(saldo, 3));
+    },
   },
   // ── Estilos Visuais
   { id: "artStyle", section: "Estilo Visual", agentMessage: "Qual estilo visual para as artes?", inputType: "select",
@@ -576,19 +722,20 @@ export const THEO_STEPS: BriefingStep[] = [
 ];
 
 /* ══════════════════════════════════════════════
-   ALEX — Sites (~22 questions grouped)
+   ALEX — Sites (perguntas condicionais + fechadas)
    ══════════════════════════════════════════════ */
 
 const SITE_TYPES_OPT = [
-  { value: "lp", label: "Landing Page", desc: "Página única para captura" },
-  { value: "institucional", label: "Site Institucional", desc: "Multi-páginas" },
-  { value: "portfolio", label: "Portfólio", desc: "Showcase de trabalhos" },
-  { value: "ecommerce", label: "E-commerce", desc: "Loja virtual" },
+  { value: "lp", label: "Landing Page", desc: "1 página — hero, features, CTA", icon: "📄" },
+  { value: "institucional", label: "Site Institucional", desc: "3-5 páginas completas", icon: "🏢" },
+  { value: "portfolio", label: "Portfólio / Showcase", desc: "Galeria de trabalhos", icon: "🎨" },
+  { value: "ecommerce", label: "E-commerce / Loja", desc: "Catálogo e vendas online", icon: "🛒" },
+  { value: "blog", label: "Blog / Conteúdo", desc: "Publicações e artigos", icon: "📝" },
 ];
 
 const SITE_OBJETIVO_OPT = [
-  { value: "gerar_leads", label: "Gerar Leads" }, { value: "vender_online", label: "Vender Online" },
-  { value: "apresentar_empresa", label: "Apresentar Empresa" }, { value: "portfolio", label: "Mostrar Portfólio" },
+  { value: "gerar_leads", label: "Gerar Leads", icon: "🎯" }, { value: "vender_online", label: "Vender Online", icon: "💰" },
+  { value: "apresentar_empresa", label: "Apresentar Empresa", icon: "🏢" }, { value: "portfolio", label: "Mostrar Portfólio", icon: "🎨" },
 ];
 
 const SITE_ESTILO_OPT = [
@@ -597,40 +744,212 @@ const SITE_ESTILO_OPT = [
   { value: "elegante", label: "Elegante" },
 ];
 
+const CTA_OPTIONS = [
+  { value: "solicitar_orcamento", label: "Solicitar Orçamento" }, { value: "agendar_demo", label: "Agendar Demonstração" },
+  { value: "comprar_agora", label: "Comprar Agora" }, { value: "falar_whatsapp", label: "Falar no WhatsApp" },
+  { value: "baixar_material", label: "Baixar Material" }, { value: "conhecer_planos", label: "Conhecer Planos" },
+  { value: "outro", label: "Outro (personalizar)" },
+];
+
+const COR_OPTIONS = [
+  { value: "azul", label: "Azul", icon: "🔵" }, { value: "verde", label: "Verde", icon: "🟢" },
+  { value: "vermelho", label: "Vermelho", icon: "🔴" }, { value: "roxo", label: "Roxo", icon: "🟣" },
+  { value: "laranja", label: "Laranja", icon: "🟠" }, { value: "preto_dourado", label: "Preto / Dourado", icon: "⚫" },
+  { value: "rosa", label: "Rosa", icon: "🩷" }, { value: "usar_marca", label: "Usar da minha marca" },
+  { value: "ia_escolher", label: "Deixar a IA escolher" },
+];
+
+const FONTE_OPTIONS = [
+  { value: "moderna", label: "Moderna (Inter, Poppins)" }, { value: "classica", label: "Clássica (Playfair, Merriweather)" },
+  { value: "clean", label: "Clean (Helvetica, Arial)" }, { value: "ousada", label: "Ousada (Montserrat Bold)" },
+  { value: "ia_escolher", label: "Deixar a IA escolher" },
+];
+
+const TOM_OPTIONS = [
+  { value: "profissional", label: "Profissional" }, { value: "descontraido", label: "Descontraído" },
+  { value: "tecnico", label: "Técnico" }, { value: "inspirador", label: "Inspirador" },
+  { value: "sofisticado", label: "Sofisticado" },
+];
+
+const PUBLICO_ALVO_OPTIONS = [
+  { value: "b2b", label: "Empresas (B2B)" }, { value: "consumidor_final", label: "Consumidor final" },
+  { value: "profissionais_liberais", label: "Profissionais liberais" }, { value: "jovens_18_30", label: "Jovens 18-30" },
+  { value: "adultos_30_50", label: "Adultos 30-50" }, { value: "premium", label: "Premium / Alto padrão" },
+];
+
+const DORES_SITE_OPTIONS = [
+  { value: "falta_tempo", label: "Falta de tempo" }, { value: "dificuldade_encontrar", label: "Dificuldade de encontrar" },
+  { value: "preco_alto", label: "Preço alto do mercado" }, { value: "falta_confianca", label: "Falta de confiança" },
+  { value: "necessidade_urgente", label: "Necessidade urgente" }, { value: "baixa_visibilidade", label: "Baixa visibilidade online" },
+];
+
+const FAIXA_PRECO_SITE = [
+  { value: "nao_exibir", label: "Não exibir" }, { value: "ate_100", label: "Até R$ 100" },
+  { value: "100_500", label: "R$ 100-500" }, { value: "500_2k", label: "R$ 500-2 mil" },
+  { value: "2k_10k", label: "R$ 2-10 mil" }, { value: "10k_mais", label: "R$ 10 mil+" },
+  { value: "sob_consulta", label: "Sob consulta" },
+];
+
+// Seções condicionais por tipo de site
+const SECOES_LP = [
+  { value: "hero_cta", label: "Hero com CTA" }, { value: "features", label: "Features / Benefícios" },
+  { value: "depoimentos", label: "Depoimentos" }, { value: "faq", label: "FAQ" },
+  { value: "numeros", label: "Números de Impacto" }, { value: "formulario", label: "Formulário" },
+  { value: "footer", label: "Footer" },
+];
+
+const SECOES_INSTITUCIONAL = [
+  { value: "hero", label: "Hero" }, { value: "sobre", label: "Sobre Nós" },
+  { value: "servicos", label: "Serviços" }, { value: "equipe", label: "Equipe" },
+  { value: "depoimentos", label: "Depoimentos" }, { value: "blog", label: "Blog" },
+  { value: "contato", label: "Contato" }, { value: "faq", label: "FAQ" },
+  { value: "footer", label: "Footer" },
+];
+
+const SECOES_PORTFOLIO = [
+  { value: "hero", label: "Hero" }, { value: "galeria", label: "Galeria de Projetos" },
+  { value: "sobre", label: "Sobre" }, { value: "servicos", label: "Serviços" },
+  { value: "contato", label: "Contato" }, { value: "footer", label: "Footer" },
+];
+
+const SECOES_ECOMMERCE = [
+  { value: "hero", label: "Hero" }, { value: "catalogo", label: "Catálogo" },
+  { value: "produto_destaque", label: "Produto Destaque" }, { value: "depoimentos", label: "Depoimentos" },
+  { value: "faq", label: "FAQ" }, { value: "contato", label: "Contato" },
+  { value: "footer", label: "Footer" },
+];
+
+function getSecoesForType(tipo: string) {
+  switch (tipo) {
+    case "lp": return SECOES_LP;
+    case "institucional": return SECOES_INSTITUCIONAL;
+    case "portfolio": return SECOES_PORTFOLIO;
+    case "ecommerce": return SECOES_ECOMMERCE;
+    default: return SECOES_LP;
+  }
+}
+
 export const ALEX_STEPS: BriefingStep[] = [
-  { id: "_intro_alex", agentMessage: "Olá! 👋 Sou o Alex, seu arquiteto web. Vou criar um site profissional pra você. Me conta tudo sobre o projeto!", inputType: "info" },
+  { id: "_intro_alex", agentMessage: "Olá! 👋 Sou o Alex, seu arquiteto web. Vou criar um site profissional pra você. {planLimitMessage}", inputType: "info" },
 
   // Tipo e objetivo
   { id: "siteType", section: "Tipo de Site", agentMessage: "Que tipo de site você precisa?", inputType: "select", options: SITE_TYPES_OPT },
   { id: "objetivo", section: "Objetivo", agentMessage: "Qual o objetivo principal do site?", inputType: "select", options: SITE_OBJETIVO_OPT },
   { id: "estilo", section: "Estilo", agentMessage: "Qual estilo visual combina mais com sua marca?", inputType: "select", options: SITE_ESTILO_OPT },
-  { id: "cta", section: "Estilo", agentMessage: "Qual deve ser o CTA principal? (Ex: 'Solicitar Orçamento', 'Comprar Agora')", inputType: "text", placeholder: "Ex: Agende uma demonstração", optional: true },
 
-  // Empresa
+  // Seções desejadas (condicional ao tipo)
+  { id: "secoes", section: "Seções", agentMessage: "Quais seções você quer no site? Pode marcar várias!", inputType: "multi-select", helpText: "Selecione as seções que farão parte do site.",
+    dynamicOptions: (ctx, ans) => getSecoesForType(ans.siteType || "lp"),
+  },
+
+  // CTA (fechado)
+  { id: "cta", section: "CTA", agentMessage: "Qual deve ser o CTA principal?", inputType: "select", options: CTA_OPTIONS },
+  { id: "cta_custom", section: "CTA", agentMessage: "Qual o texto do CTA personalizado?", inputType: "text", placeholder: "Ex: Agende uma demonstração", optional: true,
+    skipIf: (ans) => ans.cta !== "outro",
+  },
+
+  // Empresa (texto livre — dados únicos)
   { id: "nomeEmpresa", section: "Sobre a Empresa", agentMessage: "Qual o nome da empresa?", inputType: "text", placeholder: "Nome da empresa" },
   { id: "slogan", section: "Sobre a Empresa", agentMessage: "Tem um slogan? Se não tiver, pode pular!", inputType: "text", placeholder: "Ex: Transformando negócios desde 2010", optional: true },
   { id: "descricaoNegocio", section: "Sobre a Empresa", agentMessage: "Me descreve o negócio em poucas palavras.", inputType: "textarea", placeholder: "O que a empresa faz, pra quem, como..." },
-  { id: "segmento", section: "Sobre a Empresa", agentMessage: "Qual o segmento de atuação?", inputType: "text", placeholder: "Ex: Tecnologia, Alimentação, Saúde..." },
+  { id: "segmento", section: "Sobre a Empresa", agentMessage: "Qual o segmento de atuação?", inputType: "select", options: SEGMENTO_OPTIONS },
   { id: "servicos", section: "Sobre a Empresa", agentMessage: "Quais os principais serviços/produtos oferecidos?", inputType: "textarea", placeholder: "Liste os principais serviços ou produtos..." },
   { id: "diferencial", section: "Sobre a Empresa", agentMessage: "Qual o principal diferencial?", inputType: "text", placeholder: "Ex: Atendimento 24h, garantia vitalícia..." },
-  { id: "faixaPreco", section: "Sobre a Empresa", agentMessage: "Tem faixa de preço pra exibir no site?", inputType: "text", placeholder: "Ex: A partir de R$ 299/mês", optional: true },
+  { id: "faixaPreco", section: "Sobre a Empresa", agentMessage: "Faixa de preço pra exibir no site?", inputType: "select", optional: true,
+    options: FAIXA_PRECO_SITE,
+  },
 
-  // Público
-  { id: "publicoAlvo", section: "Público-Alvo", agentMessage: "Quem é o público-alvo?", inputType: "textarea", placeholder: "Descreva seu público ideal..." },
-  { id: "faixaEtaria", section: "Público-Alvo", agentMessage: "Qual a faixa etária do público?", inputType: "text", placeholder: "Ex: 25-45 anos", optional: true },
-  { id: "dores", section: "Público-Alvo", agentMessage: "Quais as principais dores que o site deve resolver?", inputType: "textarea", placeholder: "Ex: Falta de tempo, dificuldade em encontrar...", optional: true },
+  // Público (fechado)
+  { id: "publicoAlvo", section: "Público-Alvo", agentMessage: "Quem é o público-alvo? Marque os que se aplicam!", inputType: "multi-select",
+    options: PUBLICO_ALVO_OPTIONS,
+  },
+  { id: "faixaEtaria", section: "Público-Alvo", agentMessage: "Qual a faixa etária do público?", inputType: "select", optional: true,
+    options: FAIXA_ETARIA_OPTIONS,
+  },
+  { id: "dores", section: "Público-Alvo", agentMessage: "Quais as principais dores que o site deve resolver?", inputType: "multi-select", optional: true,
+    options: DORES_SITE_OPTIONS,
+  },
 
-  // Prova social
-  { id: "depoimentos", section: "Prova Social", agentMessage: "Tem depoimentos de clientes pra incluir?", inputType: "textarea", placeholder: "Cole depoimentos ou escreva resumos...", optional: true },
-  { id: "numerosImpacto", section: "Prova Social", agentMessage: "Tem números de impacto? (Ex: 500+ clientes, 10 anos...)", inputType: "text", placeholder: "Ex: 500+ clientes, 98% satisfação", optional: true },
+  // Prova social (condicional ao tipo de site)
+  { id: "depoimentos_tem", section: "Prova Social", agentMessage: "Tem depoimentos de clientes pra incluir?", inputType: "select", optional: true,
+    options: [{ value: "sim", label: "Sim, tenho" }, { value: "nao", label: "Não tenho" }],
+    skipIf: (ans) => ans.siteType === "blog",
+  },
+  { id: "depoimentos", section: "Prova Social", agentMessage: "Ótimo! Cole os depoimentos aqui:", inputType: "textarea", placeholder: "Nome do cliente — depoimento...", optional: true,
+    skipIf: (ans) => ans.depoimentos_tem !== "sim",
+  },
+  { id: "numerosImpacto_tem", section: "Prova Social", agentMessage: "Tem números de impacto? (Ex: 500+ clientes, 10 anos...)", inputType: "select", optional: true,
+    options: [{ value: "sim", label: "Sim, tenho" }, { value: "nao", label: "Não tenho" }],
+    skipIf: (ans) => ans.siteType === "portfolio" || ans.siteType === "blog",
+  },
+  { id: "numerosImpacto", section: "Prova Social", agentMessage: "Quais são esses números?", inputType: "text", placeholder: "Ex: 500+ clientes, 98% satisfação", optional: true,
+    skipIf: (ans) => ans.numerosImpacto_tem !== "sim",
+  },
 
-  // Visual
-  { id: "coresPrincipais", section: "Identidade Visual", agentMessage: "Cores principais da marca? (pode colar hex ou descrever)", inputType: "text", placeholder: "Ex: Azul #1e40af, Branco", optional: true },
-  { id: "fontesPreferidas", section: "Identidade Visual", agentMessage: "Tem fontes preferidas?", inputType: "text", placeholder: "Ex: Inter, Montserrat", optional: true },
-  { id: "tomComunicacao", section: "Identidade Visual", agentMessage: "Qual o tom de comunicação? (formal, descontraído, técnico...)", inputType: "text", placeholder: "Ex: Profissional mas acessível", optional: true },
-  { id: "referenciaVisual", section: "Identidade Visual", agentMessage: "Tem algum site de referência visual?", inputType: "text", placeholder: "https://site-referencia.com", optional: true },
+  // Perguntas condicionais por tipo
+  { id: "qtd_paginas", section: "Estrutura", agentMessage: "Quantas páginas você precisa?", inputType: "select",
+    options: [{ value: "3", label: "3 páginas" }, { value: "5", label: "5 páginas" }, { value: "8", label: "8 páginas" }, { value: "10+", label: "10+ páginas" }],
+    skipIf: (ans) => ans.siteType === "lp",
+  },
+  { id: "catalogo_produtos", section: "E-commerce", agentMessage: "Quantos produtos no catálogo?", inputType: "select",
+    options: [{ value: "1-10", label: "1-10" }, { value: "11-50", label: "11-50" }, { value: "51-200", label: "51-200" }, { value: "200+", label: "200+" }],
+    skipIf: (ans) => ans.siteType !== "ecommerce",
+  },
+  { id: "gateway_pagamento", section: "E-commerce", agentMessage: "Precisa de gateway de pagamento?", inputType: "select",
+    options: [{ value: "sim", label: "Sim" }, { value: "nao", label: "Não, só catálogo" }],
+    skipIf: (ans) => ans.objetivo !== "vender_online",
+  },
+  { id: "cases_trabalhos", section: "Portfólio", agentMessage: "Quantos cases/trabalhos quer exibir?", inputType: "select",
+    options: [{ value: "3-5", label: "3-5" }, { value: "6-10", label: "6-10" }, { value: "10+", label: "10+" }],
+    skipIf: (ans) => ans.siteType !== "portfolio",
+  },
+  { id: "formulario_lead", section: "Lead", agentMessage: "Quer um formulário de captura de leads (lead magnet)?", inputType: "select",
+    options: [{ value: "sim", label: "Sim" }, { value: "nao", label: "Não preciso" }],
+    skipIf: (ans) => ans.objetivo !== "gerar_leads",
+  },
+  { id: "secao_equipe", section: "Equipe", agentMessage: "Quer uma seção de equipe com fotos/bios?", inputType: "select",
+    options: [{ value: "sim", label: "Sim" }, { value: "nao", label: "Não" }],
+    skipIf: (ans) => ans.objetivo !== "apresentar_empresa",
+  },
+  { id: "blog_integrado", section: "Blog", agentMessage: "Quer um blog integrado ao site?", inputType: "select",
+    options: [{ value: "sim", label: "Sim" }, { value: "nao", label: "Não" }],
+    skipIf: (ans) => ans.siteType !== "institucional",
+  },
 
-  // Contato
+  // Visual (fechado)
+  { id: "coresPrincipais", section: "Identidade Visual", agentMessage: "Cores principais da marca?", inputType: "select", optional: true,
+    options: COR_OPTIONS,
+  },
+  { id: "fontesPreferidas", section: "Identidade Visual", agentMessage: "Estilo de fonte preferido?", inputType: "select", optional: true,
+    options: FONTE_OPTIONS,
+  },
+  { id: "tomComunicacao", section: "Identidade Visual", agentMessage: "Qual o tom de comunicação do site?", inputType: "select", optional: true,
+    options: TOM_OPTIONS,
+  },
+
+  // Referências visuais (novo — multi-step)
+  { id: "tem_referencia", section: "Referências", agentMessage: "Tem algum site de referência visual?", inputType: "select",
+    options: [{ value: "sim", label: "Sim, tenho links" }, { value: "nao", label: "Não tenho" }],
+  },
+  { id: "referencia_url1", section: "Referências", agentMessage: "Cole o link da primeira referência:", inputType: "text", placeholder: "https://site-referencia.com", optional: true,
+    skipIf: (ans) => ans.tem_referencia !== "sim",
+  },
+  { id: "referencia_url2", section: "Referências", agentMessage: "Tem mais algum link? (pode pular)", inputType: "text", placeholder: "https://outro-site.com", optional: true,
+    skipIf: (ans) => ans.tem_referencia !== "sim" || !ans.referencia_url1,
+  },
+  { id: "referencia_url3", section: "Referências", agentMessage: "Último link de referência? (pode pular)", inputType: "text", placeholder: "https://mais-um-site.com", optional: true,
+    skipIf: (ans) => ans.tem_referencia !== "sim" || !ans.referencia_url2,
+  },
+  { id: "referencia_gosta", section: "Referências", agentMessage: "O que você gosta nessas referências?", inputType: "multi-select", optional: true,
+    options: [
+      { value: "layout", label: "Layout" }, { value: "cores", label: "Cores" },
+      { value: "tipografia", label: "Tipografia" }, { value: "animacoes", label: "Animações" },
+      { value: "fotos", label: "Fotos" }, { value: "estilo_geral", label: "Estilo geral" },
+    ],
+    skipIf: (ans) => ans.tem_referencia !== "sim",
+  },
+
+  // Contato (texto livre — dados únicos)
   { id: "telefone", section: "Dados de Contato", agentMessage: "Telefone pra contato no site?", inputType: "text", placeholder: "(11) 99999-9999", optional: true },
   { id: "email", section: "Dados de Contato", agentMessage: "Email de contato?", inputType: "text", placeholder: "contato@empresa.com", optional: true },
   { id: "endereco", section: "Dados de Contato", agentMessage: "Endereço físico? (se quiser exibir no site)", inputType: "text", placeholder: "Rua, número, cidade...", optional: true },
@@ -653,3 +972,26 @@ export const DANI_STEPS: BriefingStep[] = [
     ],
   },
 ];
+
+/* ══════════════════════════════════════════════
+   HELPERS — Dynamic options for plan limits
+   ══════════════════════════════════════════════ */
+
+function makeQtyOptions(maxQty: number): { value: string; label: string }[] {
+  const safeMax = Math.max(0, Math.min(maxQty, 20));
+  return Array.from({ length: safeMax + 1 }, (_, i) => ({ value: String(i), label: String(i) }));
+}
+
+function computeContentSaldo(ctx: Record<string, any>, ans: Record<string, any>, otherKeys: string[]): number {
+  const max = ctx.maxContents ?? 999;
+  const used = ctx.usedContents ?? 0;
+  const otherTotal = otherKeys.reduce((sum, k) => sum + (parseInt(ans[k]) || 0), 0);
+  return Math.max(0, max - used - otherTotal);
+}
+
+function computeArtSaldo(ctx: Record<string, any>, ans: Record<string, any>, otherKeys: string[]): number {
+  const max = ctx.maxArts ?? 999;
+  const used = ctx.usedArts ?? 0;
+  const otherTotal = otherKeys.reduce((sum, k) => sum + (parseInt(ans[k]) || 0), 0);
+  return Math.max(0, max - used - otherTotal);
+}

@@ -206,6 +206,7 @@ export default function ClienteSites() {
             steps={ALEX_STEPS}
             onComplete={handleChatComplete}
             onCancel={resetWizard}
+            context={{ maxSites: maxSites, usedSites: sites.length, planName: plan?.name ?? "Starter" }}
           />
         )}
       </div>
