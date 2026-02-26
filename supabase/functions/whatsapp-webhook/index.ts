@@ -94,8 +94,18 @@ Deno.serve(async (req) => {
 
     const senderName = body.senderName || body.pushName || null;
     const messageText = body.text?.message || body.text || body.caption || null;
-    const messageType = body.image ? "image" : body.audio ? "audio" : body.video ? "video" : body.document ? "document" : "text";
-    const mediaUrl = body.image?.imageUrl || body.audio?.audioUrl || body.video?.videoUrl || body.document?.documentUrl || null;
+    const messageType = body.image ? "image" 
+      : (body.audio || body.ptt) ? "audio" 
+      : body.video ? "video" 
+      : body.document ? "document" 
+      : body.sticker ? "sticker"
+      : "text";
+    const mediaUrl = body.image?.imageUrl 
+      || body.audio?.audioUrl 
+      || body.ptt?.audioUrl || body.ptt?.pttUrl
+      || body.video?.videoUrl 
+      || body.document?.documentUrl 
+      || null;
 
     // Upsert contact
     const { data: existingContact } = await adminClient

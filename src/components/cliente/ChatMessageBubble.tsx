@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, CheckCheck, Bot, User, Image as ImageIcon, FileText, Music, Video } from "lucide-react";
+import { Check, CheckCheck, Bot, User, Image as ImageIcon, FileText, Mic, Video } from "lucide-react";
 import type { WhatsAppMessage } from "@/hooks/useWhatsApp";
 
 interface Props {
@@ -29,14 +29,38 @@ export function ChatMessageBubble({ message, isGrouped = false }: Props) {
   const metadata = (message.metadata || {}) as Record<string, unknown>;
   const isAiGenerated = !!metadata.ai_generated;
 
-  const renderMedia = () => {
-    if (!message.media_url) return null;
+  // Fallback: try to get audio URL from metadata for old messages saved without media_url
+  const resolvedMediaUrl = message.media_url 
+    || (message.type === "audio" && metadata.ptt ? ((metadata.ptt as any)?.audioUrl || (metadata.ptt as any)?.pttUrl) : null)
+    || (message.type === "audio" && metadata.audio ? (metadata.audio as any)?.audioUrl : null)
+    || null;
 
-    if (isImageUrl(message.media_url, message.type) && !imgError) {
+  const renderMedia = () => {
+    // Audio messages — always render even without URL
+    if (message.type === "audio") {
+      if (resolvedMediaUrl) {
+        return (
+          <div className="flex items-center gap-2 mb-1.5 min-w-[200px]">
+            <Mic className={`w-4 h-4 shrink-0 ${isOutbound ? "text-emerald-700/60" : "text-muted-foreground/60"}`} />
+            <audio controls src={resolvedMediaUrl} className="w-full h-8" preload="metadata" />
+          </div>
+        );
+      }
       return (
-        <a href={message.media_url} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
+        <div className="flex items-center gap-2 mb-1.5 min-w-[160px] opacity-60">
+          <Mic className={`w-4 h-4 shrink-0 ${isOutbound ? "text-emerald-700/60" : "text-muted-foreground/60"}`} />
+          <span className="text-xs italic">Áudio não disponível</span>
+        </div>
+      );
+    }
+
+    if (!resolvedMediaUrl) return null;
+
+    if (isImageUrl(resolvedMediaUrl, message.type) && !imgError) {
+      return (
+        <a href={resolvedMediaUrl} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
           <img
-            src={message.media_url}
+            src={resolvedMediaUrl}
             alt="Mídia"
             className="w-48 max-h-48 rounded-md object-cover cursor-pointer"
             onError={() => setImgError(true)}
@@ -46,18 +70,9 @@ export function ChatMessageBubble({ message, isGrouped = false }: Props) {
       );
     }
 
-    // Audio: render inline player
-    if (message.type === "audio") {
-      return (
-        <div className="mb-1.5">
-          <audio controls src={message.media_url} className="w-48 h-8" preload="metadata" />
-        </div>
-      );
-    }
-
     const Icon = message.type === "video" ? Video : message.type === "document" ? FileText : ImageIcon;
     return (
-      <a href={message.media_url} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
+      <a href={resolvedMediaUrl} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
         <div className={`w-48 h-32 rounded-md flex items-center justify-center ${isOutbound ? "bg-[#d4edda]" : "bg-muted"}`}>
           <Icon className={`w-8 h-8 ${isOutbound ? "text-emerald-700/40" : "text-muted-foreground/40"}`} />
         </div>
