@@ -1,0 +1,159 @@
+import { useState } from "react";
+import { DollarSign, Percent, Monitor, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useUnitMutations } from "@/hooks/useUnits";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface Props {
+  unit: any;
+}
+
+export function UnidadeFinanceiroReal({ unit }: Props) {
+  const { updateUnit } = useUnitMutations();
+  const [form, setForm] = useState({
+    transfer_percent: unit.transfer_percent ?? 20,
+    royalty_percent: unit.royalty_percent ?? 1,
+    system_fee: unit.system_fee ?? 250,
+    system_active: unit.system_active ?? true,
+    financial_notes: unit.financial_notes || "",
+  });
+
+  // Fetch payment history if unit has a linked org
+  const { data: payments, isLoading: loadingPayments } = useQuery({
+    queryKey: ["unit-payments", unit.unit_org_id],
+    queryFn: async () => {
+      if (!unit.unit_org_id) return [];
+      const { data, error } = await supabase
+        .from("franchisee_system_payments")
+        .select("*")
+        .eq("organization_id", unit.unit_org_id)
+        .order("created_at", { ascending: false })
+        .limit(12);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!unit.unit_org_id,
+  });
+
+  const handleSave = () => {
+    updateUnit.mutate(
+      { id: unit.id, ...form },
+      {
+        onSuccess: () => toast.success("Configuração financeira salva!"),
+        onError: (e) => toast.error(`Erro: ${e.message}`),
+      }
+    );
+  };
+
+  const cards = [
+    { label: "% Repasse", icon: Percent, value: form.transfer_percent, key: "transfer_percent" as const, suffix: "%" },
+    { label: "% Royalties", icon: Percent, value: form.royalty_percent, key: "royalty_percent" as const, suffix: "%" },
+    { label: "Mensalidade Sistema", icon: DollarSign, value: form.system_fee, key: "system_fee" as const, prefix: "R$" },
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {cards.map((c) => {
+          const Icon = c.icon;
+          return (
+            <Card key={c.key} className="p-5 space-y-3">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Icon className="w-4 h-4" />
+                <span className="text-sm font-medium">{c.label}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {c.prefix && <span className="text-sm text-muted-foreground">{c.prefix}</span>}
+                <Input
+                  type="number"
+                  className="text-lg font-bold"
+                  value={c.value}
+                  onChange={(e) => setForm((f) => ({ ...f, [c.key]: Number(e.target.value) }))}
+                />
+                {c.suffix && <span className="text-sm text-muted-foreground">{c.suffix}</span>}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Card className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Monitor className="w-4 h-4 text-muted-foreground" />
+            <Label className="text-sm font-medium">Sistema ativo</Label>
+          </div>
+          <Switch checked={form.system_active} onCheckedChange={(v) => setForm((f) => ({ ...f, system_active: v }))} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Observações financeiras</Label>
+          <Textarea rows={3} value={form.financial_notes} onChange={(e) => setForm((f) => ({ ...f, financial_notes: e.target.value }))} />
+        </div>
+      </Card>
+
+      <div className="flex items-start gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4 text-sm text-muted-foreground">
+        <Info className="w-4 h-4 mt-0.5 text-blue-500 flex-shrink-0" />
+        <span>Estas configurações alimentam automaticamente Repasse, DRE e Fechamentos do módulo Financeiro.</span>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={updateUnit.isPending}>
+          {updateUnit.isPending ? "Salvando..." : "Salvar"}
+        </Button>
+      </div>
+
+      {/* Payment history */}
+      {unit.unit_org_id && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Histórico de Pagamentos do Sistema</h3>
+          {loadingPayments ? (
+            <Skeleton className="h-24 w-full" />
+          ) : !payments || payments.length === 0 ? (
+            <Card className="p-4 text-center text-sm text-muted-foreground">Nenhum pagamento registrado.</Card>
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mês</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Método</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Pago em</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((p: any) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.month}</TableCell>
+                      <TableCell>R$ {Number(p.amount).toFixed(2)}</TableCell>
+                      <TableCell className="text-xs">{p.billing_type || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant={p.status === "paid" ? "default" : p.status === "overdue" ? "destructive" : "secondary"}>
+                          {p.status === "paid" ? "Pago" : p.status === "overdue" ? "Vencido" : "Pendente"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {p.paid_at ? new Date(p.paid_at).toLocaleDateString("pt-BR") : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
