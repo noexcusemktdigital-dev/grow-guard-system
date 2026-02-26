@@ -155,6 +155,24 @@ Deno.serve(async (req) => {
 
     console.log(`Charge created for org ${org.id}: type=${charge_type}, amount=${amount}`);
 
+    // For PIX, fetch QR code base64 and copy-paste code
+    let pixQrCodeBase64 = null;
+    let pixCopyPaste = null;
+    if (billing_type === "PIX" && paymentData.id) {
+      try {
+        const pixRes = await fetch(`${ASAAS_BASE}/payments/${paymentData.id}/pixQrCode`, {
+          headers: { access_token: asaasApiKey },
+        });
+        if (pixRes.ok) {
+          const pixData = await pixRes.json();
+          pixQrCodeBase64 = pixData.encodedImage;
+          pixCopyPaste = pixData.payload;
+        }
+      } catch (e) {
+        console.error("Failed to fetch PIX QR code:", e);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -162,8 +180,11 @@ Deno.serve(async (req) => {
         invoice_url: paymentData.invoiceUrl,
         bank_slip_url: paymentData.bankSlipUrl,
         pix_qr_code: paymentData.pixQrCodeUrl,
+        pix_qr_code_base64: pixQrCodeBase64,
+        pix_copy_paste: pixCopyPaste,
         value: amount,
         credit_amount: creditAmount,
+        billing_type,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
