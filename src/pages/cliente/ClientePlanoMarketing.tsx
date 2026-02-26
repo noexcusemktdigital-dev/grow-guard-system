@@ -840,7 +840,7 @@ export default function ClientePlanoMarketing() {
         <TabsList>
           <TabsTrigger value="estrategia" className="text-xs gap-1.5"><Activity className="w-3.5 h-3.5" /> Estratégia</TabsTrigger>
           <TabsTrigger value="produtos" className="text-xs gap-1.5" disabled={!completed}><Sparkles className="w-3.5 h-3.5" /> Produtos Recomendados</TabsTrigger>
-          <TabsTrigger value="historico" className="text-xs gap-1.5"><Clock className="w-3.5 h-3.5" /> Histórico</TabsTrigger>
+          <TabsTrigger value="historico" className="text-xs gap-1.5"><Clock className="w-3.5 h-3.5" /> Histórico de Estratégias</TabsTrigger>
         </TabsList>
 
         {/* ═══════ ESTRATÉGIA ═══════ */}

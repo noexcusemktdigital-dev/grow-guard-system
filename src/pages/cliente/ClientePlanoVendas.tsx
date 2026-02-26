@@ -969,16 +969,20 @@ export default function ClientePlanoVendas() {
           <TabsTrigger value="metas" className="gap-1.5">
             <BarChart3 className="w-3.5 h-3.5" /> Metas
           </TabsTrigger>
+          <TabsTrigger value="historico" className="gap-1.5">
+            <Clock className="w-3.5 h-3.5" /> Histórico
+          </TabsTrigger>
         </TabsList>
 
         {/* ═══════ TAB: DIAGNÓSTICO ═══════ */}
         <TabsContent value="diagnostico" className="space-y-6 mt-4">
           <div className="space-y-4">
             <Collapsible defaultOpen={!completed}>
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold hover:text-primary transition-colors w-full">
+              <CollapsibleTrigger className="group flex items-center gap-2 text-sm font-semibold hover:text-primary transition-colors w-full py-2 px-3 rounded-lg bg-muted/50 hover:bg-muted">
                 <Activity className="w-4 h-4 text-primary" />
                 Diagnóstico Comercial
-                <ChevronDown className="w-4 h-4 ml-auto" />
+                {completed && <Badge variant="outline" className="text-[9px] ml-1 border-primary/30 text-primary">Concluído</Badge>}
+                <ChevronDown className="w-4 h-4 ml-auto transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-4">
               {!completed ? (
@@ -1195,49 +1199,47 @@ export default function ClientePlanoVendas() {
             </Collapsible>
           </div>
 
-          {/* Histórico de Diagnósticos */}
-          <Collapsible>
-            <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors w-full">
-              <Clock className="w-4 h-4" />
-              Histórico de Diagnósticos ({history.length})
-              <ChevronDown className="w-4 h-4 ml-auto" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3 space-y-3">
-              {history.length === 0 ? (
-                <Card className="border-dashed">
-                  <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                    <Clock className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                    <p className="text-sm font-medium">Nenhum diagnóstico realizado</p>
-                    <p className="text-xs text-muted-foreground mt-1">Complete o diagnóstico para ver seu histórico aqui.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
-                  {history.map((h, i) => {
-                    const nv = getNivel(h.score);
-                    return (
-                      <Card key={i} className="glass-card">
-                        <CardContent className="py-3 px-4 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground" style={{ backgroundColor: nv.cor }}>
-                              {h.score}%
-                            </div>
-                            <div>
-                              <p className="text-xs font-semibold">{h.nivel}</p>
-                              <p className="text-[10px] text-muted-foreground">{new Date(h.date).toLocaleDateString("pt-BR")}</p>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="text-[9px]" style={{ borderColor: nv.cor, color: nv.cor }}>
-                            {h.nivel}
-                          </Badge>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
+        </TabsContent>
+
+        {/* ═══════ TAB: HISTÓRICO ═══════ */}
+        <TabsContent value="historico" className="space-y-6 mt-4">
+          <div>
+            <p className="text-sm font-semibold">Histórico de Diagnósticos</p>
+            <p className="text-xs text-muted-foreground">Acompanhe a evolução do seu comercial ao longo do tempo</p>
+          </div>
+          {history.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Clock className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                <p className="text-sm font-medium">Nenhum diagnóstico realizado</p>
+                <p className="text-xs text-muted-foreground mt-1">Complete o diagnóstico para ver seu histórico aqui.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {history.map((h, i) => {
+                const nv = getNivel(h.score);
+                return (
+                  <Card key={i} className="glass-card">
+                    <CardContent className="py-3 px-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground" style={{ backgroundColor: nv.cor }}>
+                          {h.score}%
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold">{h.nivel}</p>
+                          <p className="text-[10px] text-muted-foreground">{new Date(h.date).toLocaleDateString("pt-BR")}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-[9px]" style={{ borderColor: nv.cor, color: nv.cor }}>
+                        {h.nivel}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         {/* ═══════ TAB: METAS ═══════ */}
