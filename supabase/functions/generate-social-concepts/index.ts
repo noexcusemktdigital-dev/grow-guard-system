@@ -80,7 +80,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo, organization_id } = await req.json();
+    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo, organization_id, reference_images } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -156,6 +156,25 @@ Use these references as inspiration for the visual style, composition, and aesth
 Match the quality level and visual approach shown in these references.`;
     }
 
+    let referenceImageContext = "";
+    if (reference_images && reference_images.length > 0) {
+      referenceImageContext = `
+
+REFERENCE IMAGES: The user has provided ${reference_images.length} visual reference image(s).
+Analyze them carefully:
+- Extract the dominant color palette and color treatment
+- Identify the composition style (grid, centered, asymmetric, layered)
+- Note the lighting approach (soft, dramatic, flat, cinematic)
+- Observe textures, materials, and visual elements
+- Understand the overall mood, aesthetic, and quality level
+- Note any recurring patterns, shapes, or design motifs
+
+Your generated visual_prompt_feed and visual_prompt_story MUST
+replicate the style, mood, and quality seen in these references
+while adapting to the brand identity and briefing.
+Be EXTREMELY specific about replicating the visual language you observe.`;
+    }
+
     const systemPrompt = `Você é um diretor criativo SÊNIOR de uma agência de marketing digital premiada, especializado em artes para redes sociais de altíssima qualidade.
 
 Gere exatamente ${quantidade} conceitos de posts para redes sociais.
@@ -170,6 +189,7 @@ ${importedContext}
 ${personaContext}
 ${identityContext}
 ${referenciasTipoContext}
+${referenceImageContext}
 
 Cada conceito DEVE ter:
 - titulo: título curto e chamativo do post (máx 60 caracteres)
@@ -191,7 +211,7 @@ REGRAS CRÍTICAS para os prompts visuais:
 9. Para Feed, use composição centrada e equilibrada
 10. NUNCA gere prompts genéricos como "professional social media post" - seja ESPECÍFICO sobre cada elemento visual`;
 
-    const userPrompt = `Briefing do cliente:
+    const userTextPrompt = `Briefing do cliente:
 - Mês: ${briefing.mes}
 - Objetivo: ${briefing.objetivo}
 - Tipo de Post: ${tipo_post || "Institucional"}
@@ -205,6 +225,22 @@ ${descricao_produto ? `- Descrição do Produto/Serviço: ${descricao_produto}` 
 
 Gere ${quantidade} conceitos de posts com prompts visuais EXTREMAMENTE detalhados.`;
 
+    // Build multimodal user message if references exist
+    const hasRefs = reference_images && reference_images.length > 0;
+    const userContent: any = hasRefs
+      ? [
+          { type: "text", text: userTextPrompt },
+          ...reference_images.slice(0, 5).map((url: string) => ({
+            type: "image_url",
+            image_url: { url },
+          })),
+          { type: "text", text: "Analyze the images above as visual references. Replicate their style, composition, lighting, and color treatment in your generated visual prompts." },
+        ]
+      : userTextPrompt;
+
+    // Use multimodal model when references are provided
+    const model = hasRefs ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview";
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -212,10 +248,10 @@ Gere ${quantidade} conceitos de posts com prompts visuais EXTREMAMENTE detalhado
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "user", content: userContent },
         ],
         tools: [
           {
