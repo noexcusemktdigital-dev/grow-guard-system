@@ -131,26 +131,33 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
               {lead.value ? `R$ ${Number(lead.value).toLocaleString()}` : "—"}
             </span>
             <div className="flex items-center gap-1">
-              {/* Temperature badges */}
-              <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
-                {(["Frio", "Morno", "Quente"] as const).map(temp => {
-                  const isActive = (lead as any).temperature === temp || (!((lead as any).temperature) && temp === "Morno");
-                  const colors: Record<string, string> = {
-                    Frio: isActive ? "bg-blue-500 text-white" : "bg-blue-100 text-blue-400 dark:bg-blue-900/30 dark:text-blue-600",
-                    Morno: isActive ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-400 dark:bg-amber-900/30 dark:text-amber-600",
-                    Quente: isActive ? "bg-red-500 text-white" : "bg-red-100 text-red-400 dark:bg-red-900/30 dark:text-red-600",
+              {/* Temperature cycling button */}
+              <div onClick={e => e.stopPropagation()}>
+                {(() => {
+                  const temps = ["Frio", "Morno", "Quente"] as const;
+                  const current = (lead as any).temperature || "Morno";
+                  const idx = temps.indexOf(current as any);
+                  const next = temps[(idx + 1) % temps.length];
+                  const styles: Record<string, string> = {
+                    Frio: "bg-blue-500 text-white",
+                    Morno: "bg-amber-500 text-white",
+                    Quente: "bg-red-500 text-white",
+                  };
+                  const icons: Record<string, string> = {
+                    Frio: "❄️",
+                    Morno: "🌤",
+                    Quente: "🔥",
                   };
                   return (
                     <button
-                      key={temp}
-                      title={temp}
-                      onClick={() => onUpdateTemperature(temp)}
-                      className={`w-5 h-5 rounded-full flex items-center justify-center transition-all text-[8px] font-bold ${colors[temp]} hover:scale-110`}
+                      title={`${current} → clique para ${next}`}
+                      onClick={() => onUpdateTemperature(next)}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-all text-[10px] ${styles[current]} hover:scale-110`}
                     >
-                      {temp[0]}
+                      {icons[current]}
                     </button>
                   );
-                })}
+                })()}
               </div>
               {lead.source && (
                 <Badge variant="secondary" className="text-[8px] px-1.5 py-0 font-normal">{lead.source}</Badge>
@@ -216,6 +223,7 @@ export default function ClienteCRM() {
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [bulkDeleteLeadsOpen, setBulkDeleteLeadsOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [bulkMoveStage, setBulkMoveStage] = useState("");
   const [bulkTagInput, setBulkTagInput] = useState("");
   const [bulkAssigned, setBulkAssigned] = useState("");
@@ -577,6 +585,19 @@ export default function ClienteCRM() {
                 <X className="w-3 h-3" /> Limpar filtros
               </Button>
             )}
+
+            <Button
+              variant={selectionMode ? "default" : "outline"}
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              onClick={() => {
+                setSelectionMode(!selectionMode);
+                if (selectionMode) setSelectedLeadIds(new Set());
+              }}
+            >
+              <Checkbox className="w-3.5 h-3.5 pointer-events-none" checked={selectionMode} />
+              Selecionar
+            </Button>
           </div>
 
           {/* Bulk Actions Bar */}
@@ -653,9 +674,11 @@ export default function ClienteCRM() {
                       <DroppableColumn stageKey={stage.key}>
                         {stageLeads.map(lead => (
                           <div key={lead.id} className="relative group/check">
-                            <div className={`absolute top-2 right-2 z-10 ${someLeadsSelected ? 'opacity-100' : 'opacity-0 group-hover/check:opacity-100'} transition-opacity`} onClick={e => e.stopPropagation()}>
-                              <Checkbox checked={selectedLeadIds.has(lead.id)} onCheckedChange={() => toggleLeadSelection(lead.id)} />
-                            </div>
+                            {selectionMode && (
+                              <div className="absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
+                                <Checkbox checked={selectedLeadIds.has(lead.id)} onCheckedChange={() => toggleLeadSelection(lead.id)} />
+                              </div>
+                            )}
                             <DraggableLeadCard
                               lead={lead}
                               onClick={() => setSelectedLead(lead)}
