@@ -61,12 +61,11 @@ export function CrmAutomations() {
   const [triggerConfig, setTriggerConfig] = useState<Record<string, any>>({});
   const [selectedFunnels, setSelectedFunnels] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-  const [priority, setPriority] = useState(0);
   const [filterFunnel, setFilterFunnel] = useState("");
 
   const reset = () => {
     setEditingId(null); setName(""); setDescription(""); setTriggerType("lead_created"); setActionType("create_task");
-    setActionConfig({}); setTriggerConfig({}); setSelectedFunnels([]); setSelectedTeams([]); setPriority(0);
+    setActionConfig({}); setTriggerConfig({}); setSelectedFunnels([]); setSelectedTeams([]);
   };
 
   const openNew = () => { reset(); setDialogOpen(true); };
@@ -81,7 +80,6 @@ export function CrmAutomations() {
     setTriggerConfig(auto.trigger_config || {});
     setSelectedFunnels(Array.isArray(auto.funnel_ids) ? auto.funnel_ids : []);
     setSelectedTeams(Array.isArray(auto.team_ids) ? auto.team_ids : []);
-    setPriority(auto.priority || 0);
     setDialogOpen(true);
   };
 
@@ -90,7 +88,7 @@ export function CrmAutomations() {
     const payload = {
       name, description, trigger_type: triggerType, action_type: actionType,
       action_config: actionConfig, trigger_config: triggerConfig,
-      funnel_ids: selectedFunnels, team_ids: selectedTeams, priority,
+      funnel_ids: selectedFunnels, team_ids: selectedTeams,
     };
     if (editingId) {
       updateAutomation.mutate({ id: editingId, ...payload });
@@ -306,20 +304,8 @@ export function CrmAutomations() {
                 </div>
               )}
             </div>
-
-            {/* Priority */}
-            <div>
-              <Label className="text-xs">Prioridade da automação</Label>
-              <Select value={String(priority)} onValueChange={v => setPriority(Number(v))}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0" className="text-xs">Normal</SelectItem>
-                  <SelectItem value="1" className="text-xs">Alta</SelectItem>
-                  <SelectItem value="2" className="text-xs">Urgente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave}>{editingId ? "Salvar" : "Criar"}</Button>

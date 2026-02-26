@@ -8,9 +8,9 @@ interface Props {
 }
 
 const statusIcon: Record<string, React.ReactNode> = {
-  sent: <Check className="w-3 h-3 text-primary-foreground/50" />,
-  delivered: <CheckCheck className="w-3 h-3 text-primary-foreground/50" />,
-  read: <CheckCheck className="w-3 h-3 text-blue-300" />,
+  sent: <Check className="w-3 h-3 text-muted-foreground/50" />,
+  delivered: <CheckCheck className="w-3 h-3 text-muted-foreground/50" />,
+  read: <CheckCheck className="w-3 h-3 text-blue-400" />,
 };
 
 function isImageUrl(url: string, type?: string): boolean {
@@ -46,12 +46,11 @@ export function ChatMessageBubble({ message, isGrouped = false }: Props) {
       );
     }
 
-    // Fallback placeholder for non-image or broken image
     const Icon = message.type === "audio" ? Music : message.type === "video" ? Video : message.type === "document" ? FileText : ImageIcon;
     return (
       <a href={message.media_url} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
-        <div className={`w-48 h-32 rounded-md flex items-center justify-center ${isOutbound ? "bg-primary-foreground/10" : "bg-muted"}`}>
-          <Icon className={`w-8 h-8 ${isOutbound ? "text-primary-foreground/40" : "text-muted-foreground/40"}`} />
+        <div className={`w-48 h-32 rounded-md flex items-center justify-center ${isOutbound ? "bg-[#d4edda]" : "bg-muted"}`}>
+          <Icon className={`w-8 h-8 ${isOutbound ? "text-emerald-700/40" : "text-muted-foreground/40"}`} />
         </div>
       </a>
     );
@@ -63,8 +62,8 @@ export function ChatMessageBubble({ message, isGrouped = false }: Props) {
         <div
           className={`rounded-lg px-3 py-1.5 text-[13px] leading-relaxed shadow-sm ${
             isOutbound
-              ? "bg-[hsl(var(--primary)/0.9)] text-primary-foreground"
-              : "bg-card text-card-foreground border border-border/50"
+              ? "wa-bubble-out"
+              : "wa-bubble-in"
           } ${!isGrouped && isOutbound ? "rounded-tr-none" : ""} ${!isGrouped && !isOutbound ? "rounded-tl-none" : ""}`}
         >
           {renderMedia()}
@@ -74,16 +73,16 @@ export function ChatMessageBubble({ message, isGrouped = false }: Props) {
           {/* Footer */}
           <div className={`flex items-center gap-1.5 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
             {isOutbound && isAiGenerated && (
-              <span className={`text-[9px] font-medium flex items-center gap-0.5 ${isOutbound ? "text-primary-foreground/50" : "text-muted-foreground"}`}>
+              <span className="text-[9px] font-medium flex items-center gap-0.5 text-emerald-700/50 dark:text-emerald-300/50">
                 <Bot className="w-2.5 h-2.5" />IA
               </span>
             )}
             {isOutbound && !isAiGenerated && (
-              <span className={`text-[9px] font-medium flex items-center gap-0.5 ${isOutbound ? "text-primary-foreground/50" : "text-muted-foreground"}`}>
+              <span className="text-[9px] font-medium flex items-center gap-0.5 text-emerald-700/50 dark:text-emerald-300/50">
                 <User className="w-2.5 h-2.5" />
               </span>
             )}
-            <span className={`text-[10px] ${isOutbound ? "text-primary-foreground/50" : "text-muted-foreground"}`}>
+            <span className={`text-[10px] ${isOutbound ? "text-emerald-700/50 dark:text-emerald-300/50" : "text-muted-foreground"}`}>
               {time}
             </span>
             {isOutbound && statusIcon[message.status]}

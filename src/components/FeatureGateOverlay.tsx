@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
-import { Lock, Zap, Crown } from "lucide-react";
+import { Lock, Zap, Crown, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function FeatureGateOverlay() {
@@ -18,6 +18,7 @@ export function FeatureGateOverlay() {
       description:
         "Para continuar usando esta funcionalidade, escolha um plano e desbloqueie todo o potencial do NOEXCUSE.",
       cta: "Ver planos disponíveis",
+      ctaPath: "/cliente/plano-creditos",
       accent: "from-primary/90 to-primary/70",
       iconBg: "bg-primary/15 text-primary",
     },
@@ -27,8 +28,19 @@ export function FeatureGateOverlay() {
       description:
         "Você não tem créditos disponíveis para usar este recurso. Recarregue para continuar gerando conteúdo com IA.",
       cta: "Comprar créditos",
+      ctaPath: "/cliente/plano-creditos",
       accent: "from-amber-500/90 to-orange-500/70",
       iconBg: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+    },
+    no_sales_plan: {
+      icon: Target,
+      title: "Complete o Plano de Vendas",
+      description:
+        "Para desbloquear esta funcionalidade, você precisa primeiro estruturar seu comercial completando o Plano de Vendas. Leva apenas alguns minutos!",
+      cta: "Criar Plano de Vendas",
+      ctaPath: "/cliente/plano-vendas",
+      accent: "from-primary/90 to-primary/70",
+      iconBg: "bg-primary/15 text-primary",
     },
   }[reason];
 
@@ -70,7 +82,7 @@ export function FeatureGateOverlay() {
           <Button
             size="lg"
             className="w-full font-semibold"
-            onClick={() => navigate("/cliente/plano-creditos")}
+            onClick={() => navigate(config.ctaPath)}
           >
             {config.cta}
           </Button>

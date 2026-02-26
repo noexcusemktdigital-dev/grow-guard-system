@@ -314,8 +314,12 @@
     right: -6px;
     width: 0;
     height: 0;
-    border-left: 6px solid hsl(var(--primary) / 0.9);
+    border-left: 6px solid #dcf8c6;
     border-top: 6px solid transparent;
+  }
+
+  .dark .chat-bubble-out::after {
+    border-left-color: hsl(152 25% 18%);
   }
 
   .chat-bubble-in::after {
@@ -327,5 +331,33 @@
     height: 0;
     border-right: 6px solid hsl(var(--card));
     border-top: 6px solid transparent;
+  }
+
+  /* WhatsApp bubble colors */
+  .wa-bubble-out {
+    background-color: #dcf8c6;
+    color: hsl(0 0% 10%);
+  }
+
+  .dark .wa-bubble-out {
+    background-color: hsl(152 25% 18%);
+    color: hsl(0 0% 90%);
+  }
+
+  .wa-bubble-in {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  /* WhatsApp header bar */
+  .wa-header {
+    background-color: #075e54;
+    color: white;
+  }
+
+  .dark .wa-header {
+    background-color: hsl(225 16% 10%);
+    color: hsl(0 0% 90%);
   }
 }

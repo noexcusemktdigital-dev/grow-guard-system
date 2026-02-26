@@ -1932,6 +1932,7 @@ export type Database = {
           lead_roulette_enabled: boolean
           organization_id: string
           outbound_webhooks: Json
+          roulette_last_index: number | null
           roulette_members: Json
           sla_first_contact_hours: number
           sla_first_contact_minutes: number
@@ -1948,6 +1949,7 @@ export type Database = {
           lead_roulette_enabled?: boolean
           organization_id: string
           outbound_webhooks?: Json
+          roulette_last_index?: number | null
           roulette_members?: Json
           sla_first_contact_hours?: number
           sla_first_contact_minutes?: number
@@ -1964,6 +1966,7 @@ export type Database = {
           lead_roulette_enabled?: boolean
           organization_id?: string
           outbound_webhooks?: Json
+          roulette_last_index?: number | null
           roulette_members?: Json
           sla_first_contact_hours?: number
           sla_first_contact_minutes?: number

@@ -2,11 +2,12 @@ import { createContext, useContext, useState, ReactNode } from "react";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 
-type GateReason = "trial_expired" | "no_credits" | null;
+type GateReason = "trial_expired" | "no_credits" | "no_sales_plan" | null;
 
 interface FeatureGateContextType {
   isTrialExpired: boolean;
   hasNoCredits: boolean;
+  salesPlanCompleted: boolean;
   /** Check if a specific route/feature is gated */
   getGateReason: (feature: string) => GateReason;
   /** For demo: toggle states */
@@ -23,6 +24,12 @@ const ALWAYS_ACCESSIBLE = [
   "/cliente/inicio",
   "/cliente/plano-creditos",
   "/cliente/configuracoes",
+  "/cliente/plano-vendas",
+  "/cliente/checklist",
+  "/cliente/gamificacao",
+  "/cliente/plano-marketing",
+  "/cliente/avaliacoes",
+  "/cliente/integracoes",
 ];
 
 // Routes that require credits (IA-powered features)
@@ -33,6 +40,16 @@ const CREDIT_REQUIRED = [
   "/cliente/disparos",
   "/cliente/redes-sociais",
   "/cliente/trafego-pago",
+];
+
+// Routes that require sales plan to be completed
+const SALES_PLAN_REQUIRED = [
+  "/cliente/crm",
+  "/cliente/chat",
+  "/cliente/agentes-ia",
+  "/cliente/scripts",
+  "/cliente/disparos",
+  "/cliente/dashboard",
 ];
 
 export function FeatureGateProvider({ children }: { children: ReactNode }) {
@@ -51,10 +68,23 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const hasNoCredits =
     simulateNoCredits || (wallet ? wallet.balance <= 0 : false);
 
+  const salesPlanCompleted = (() => {
+    try {
+      const saved = localStorage.getItem("plano_vendas_data");
+      if (!saved) return false;
+      return Object.keys(JSON.parse(saved)).length > 5;
+    } catch {
+      return false;
+    }
+  })();
+
   const getGateReason = (feature: string): GateReason => {
     if (ALWAYS_ACCESSIBLE.some((r) => feature.startsWith(r))) return null;
 
     if (isTrialExpired) return "trial_expired";
+
+    if (!salesPlanCompleted && SALES_PLAN_REQUIRED.some((r) => feature.startsWith(r)))
+      return "no_sales_plan";
 
     if (hasNoCredits && CREDIT_REQUIRED.some((r) => feature.startsWith(r)))
       return "no_credits";
@@ -67,6 +97,7 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
       value={{
         isTrialExpired,
         hasNoCredits,
+        salesPlanCompleted,
         getGateReason,
         simulateTrialExpired,
         setSimulateTrialExpired,
