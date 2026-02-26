@@ -1,56 +1,37 @@
 
 
-## Corrigir Transcrição de Áudio dos Agentes de IA
+## Simular Digitacao Humana nos Agentes de IA
 
-### Problema
-A transcrição de áudio não funciona porque o código atual envia apenas a URL do áudio como texto para o modelo de IA (`"Transcreva este áudio: https://..."`) . O modelo não consegue acessar URLs externas -- ele precisa receber o conteúdo do áudio diretamente como dados binários (base64).
+### O que muda
+Antes de enviar a resposta final, o agente vai:
+1. Calcular um tempo de digitacao proporcional ao tamanho da resposta (simula leitura + digitacao)
+2. Ativar o indicador "digitando..." no WhatsApp via Z-API
+3. Aguardar o tempo calculado
+4. Enviar a mensagem
 
-### Solução
+### Detalhes Tecnicos
 
-**Arquivo**: `supabase/functions/ai-agent-reply/index.ts` (bloco de transcrição, linhas 241-265)
+**Arquivo**: `supabase/functions/ai-agent-reply/index.ts`
 
-Modificar o fluxo de transcrição para:
+**Calculo do delay**:
+- Base: 1.5 segundos (tempo de "ler" a mensagem recebida)
+- Digitacao: ~40 caracteres por segundo (velocidade humana rapida)
+- Minimo: 2 segundos
+- Maximo: 12 segundos
+- Exemplo: resposta com 200 caracteres = 1.5s + 5s = 6.5 segundos de espera
 
-1. **Baixar o arquivo de áudio** da URL usando `fetch`
-2. **Converter para base64** usando `btoa` ou equivalente Deno
-3. **Enviar como conteúdo multimodal** para o Gemini usando o formato de mensagem com `image_url` (que no Gemini suporta áudio também) ou content parts com tipo `audio`
+**Indicador "digitando..."**:
+- Z-API disponibiliza o endpoint `POST /send-typing` que mostra o status "digitando..." para o contato
+- Sera chamado logo antes do delay, assim o contato ve que alguem esta "digitando"
 
-O formato correto para enviar áudio ao Gemini via a API de chat completions compatível com OpenAI:
+**Alteracoes no codigo** (entre a geracao da resposta da IA e o envio via Z-API, ~linhas 476-490):
 
-```typescript
-// 1. Baixar o áudio
-const audioResponse = await fetch(audioUrl);
-const audioBuffer = await audioResponse.arrayBuffer();
-const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
-
-// 2. Detectar MIME type
-const contentType = audioResponse.headers.get("content-type") || "audio/ogg";
-
-// 3. Enviar como multimodal
-const transcribeRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-  method: "POST",
-  headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
-  body: JSON.stringify({
-    model: "google/gemini-2.5-flash",
-    messages: [
-      { role: "system", content: "Transcreva o áudio. Retorne apenas o texto transcrito." },
-      { role: "user", content: [
-        { type: "input_audio", input_audio: { data: audioBase64, format: "ogg" } }
-      ]}
-    ],
-  }),
-});
-```
-
-Caso o formato `input_audio` nao funcione com o gateway, usaremos o fallback com `image_url` com data URI (que o Gemini aceita para áudio):
-
-```typescript
-{ type: "image_url", image_url: { url: `data:${contentType};base64,${audioBase64}` } }
-```
-
-Tambem adicionaremos logs de debug (`console.log`) para confirmar que o áudio foi baixado e o resultado da transcrição.
+1. Calcular delay baseado no tamanho de `cleanReply`
+2. Chamar `https://api.z-api.io/instances/{id}/token/{token}/send-typing` com o telefone do contato
+3. Aguardar com `await new Promise(resolve => setTimeout(resolve, delayMs))`
+4. Enviar a mensagem normalmente
 
 ### Impacto
-- 1 arquivo alterado (`ai-agent-reply/index.ts`)
-- O agente passara a realmente ouvir e entender os áudios recebidos
-- Funcao sera redeployada automaticamente
+- 1 arquivo alterado
+- Experiencia muito mais natural para quem recebe as mensagens
+- Sem impacto em performance (o delay e assincrono dentro da funcao)
