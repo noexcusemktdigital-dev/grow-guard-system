@@ -1,105 +1,95 @@
 
+## Plano: Melhorias em Avaliacoes, Integracoes, Planos, Perfil e Revisao Geral
 
-## Plano: Inteligencia Especializada por Funcao dos Agentes + Modulo Trafego Pago com IA
-
-Duas grandes entregas neste plano: (1) refinar a inteligencia dos agentes por funcao com onboarding explicativo, e (2) reconstruir o modulo de Trafego Pago para gerar estrategias reais com IA.
-
----
-
-### PARTE 1: Inteligencia Especializada por Funcao do Agente
-
-**Problema atual**: Os `rolePrompts` no `ai-agent-reply/index.ts` sao genericos (4-5 linhas cada). As descricoes no `agentRoleConfig` sao curtas ("Prospeccao e qualificacao"). Nao ha explicacao ao usuario sobre o que cada funcao faz.
-
-**Mudancas**:
-
-#### 1.1 Expandir `agentRoleConfig` em `src/types/cliente.ts`
-- Adicionar campo `longDescription` com explicacao detalhada de cada funcao
-- Adicionar campo `workflow` descrevendo o fluxo de trabalho do agente
-- Adicionar campo `defaultObjectives` com objetivos mais especificos
-
-| Funcao | Foco | Fluxo |
-|--------|------|-------|
-| **SDR** | Qualificar leads com perguntas assertivas, identificar decisor, necessidade e orcamento. Enviar leads qualificados aos vendedores | Pergunta -> Qualifica -> Classifica -> Agenda/Handoff |
-| **Closer** | Qualificar e ja enviar links de venda/produtos. Nao agenda, fecha direto | Qualifica -> Apresenta produto -> Envia link -> Fecha |
-| **Suporte** | Compreender a dor real, resolver com base de dados, verificar se resolveu, se nao envia para humano com problema identificado | Escuta -> Diagnostica -> Resolve -> Confirma -> Handoff especialista |
-| **Pos-venda** | Colher feedback e NPS apos venda/contratacao | Parabeniza -> Pergunta experiencia -> Coleta NPS -> Registra |
-
-#### 1.2 Tela explicativa ao selecionar funcao no `AgentFormSheet.tsx`
-- Ao selecionar a funcao na aba "Identidade", exibir um card explicativo com:
-  - Descricao longa da funcao
-  - Fluxo de trabalho visual (passos numerados)
-  - Objetivos padrao que serao configurados
-- Isso molda o restante da criacao (objetivos, prompt, persona)
-
-#### 1.3 Expandir `rolePrompts` no `ai-agent-reply/index.ts`
-- Prompts detalhados por funcao com instrucoes especificas de comportamento:
-  - **SDR**: Fazer perguntas de qualificacao (BANT), ser objetivo, enviar lead qualificado com resumo
-  - **Closer**: Qualificar rapidamente, apresentar produto/servico, enviar links de venda, usar acao `[AI_ACTION:SEND_LINK:url]`
-  - **Suporte**: Fazer perguntas diagnosticas, buscar na base de dados, confirmar resolucao, handoff com resumo do problema
-  - **Pos-venda**: Iniciar com parabens pela compra, perguntar sobre experiencia, coletar nota NPS (1-10), registrar feedback
-
-#### 1.4 Nova acao de IA: `SEND_PRODUCT_LINK`
-- Para Closers: permitir enviar links de produtos/servicos configurados na base de conhecimento
-- Formato: `[AI_ACTION:SEND_PRODUCT_LINK:url_do_produto]`
-
-#### 1.5 Nova acao de IA: `REGISTER_NPS`
-- Para Pos-venda: registrar nota NPS e comentario
-- Formato: `[AI_ACTION:REGISTER_NPS:nota|comentario]`
-- Salvar em tabela `client_nps_responses` (nova)
-
-**Nova tabela**: `client_nps_responses`
-```text
-id, organization_id, contact_id, agent_id, score (1-10), comment, created_at
-```
+Seis grandes blocos de melhorias para refinar modulos existentes do cliente.
 
 ---
 
-### PARTE 2: Modulo Trafego Pago com IA
+### 1. Avaliacoes de Desempenho - Reestruturacao Completa
 
-**Problema atual**: A pagina `ClienteTrafegoPago.tsx` usa dados mockados. Nao consome estrategia de marketing nem metas. Os tutoriais sao estaticos.
+**Problema atual**: A pagina mostra apenas nota geral e lista recente. Nao tem historico por mes, nota por categoria visivel, nem pasta mensal.
 
-**Mudancas**:
+**Mudancas em `ClienteAvaliacoes.tsx`**:
+- Adicionar **Tabs**: "Equipe" (visao geral por membro), "Historico Mensal" (pastas por mes)
+- No card de cada membro, mostrar **nota geral** + **nota por categoria** (Comercial, Atendimento, Engajamento, Proatividade) com barras de progresso
+- Na aba Historico Mensal, agrupar avaliacoes por periodo (yyyy-MM) como "pastas" expansiveis usando Accordion
+- Cada pasta mostra as avaliacoes daquele mes com detalhes por categoria
+- No dialog de nova avaliacao, adicionar campo de **nota geral** separado (alem das notas por categoria)
+- Ao clicar num membro, abrir Sheet lateral com evolucao mensal (grafico simples de notas ao longo dos meses)
 
-#### 2.1 Nova Edge Function: `generate-traffic-strategy`
-- Recebe: dados do plano de vendas (metas), estrategia de marketing ativa, conteudos gerados, informacao do site
-- Gera estrategia de trafego por plataforma (Google, Meta, TikTok, LinkedIn) com:
-  - Objetivo da campanha
-  - Publico-alvo detalhado
-  - Orcamento sugerido (baseado nas metas)
-  - Copies de anuncio
-  - Formatos de criativos
-  - KPIs estimados (alcance, cliques, CPC, CPL)
-  - Palavras-chave (para Google)
-  - Interesses/comportamentos (para Meta)
+**Mudancas no banco** (`user_evaluations`):
+- A tabela ja tem `score` (geral) e `categories` (JSONB por tipo). Nao precisa de migracao.
 
-#### 2.2 Nova tabela: `traffic_strategies`
+---
+
+### 2. Integracoes - Reorganizar por Tipo
+
+**Mudancas em `ClienteIntegracoes.tsx`**:
+- Dividir em secoes claras com headers visuais:
+  1. **Comunicacao** (WhatsApp Z-API, Widget de Chat)
+  2. **Anuncios & Trafego** (Meta Ads, Google Ads, TikTok Ads) - marcar como "Conectar" em vez de "Em breve"
+  3. **CRM & Automacao** (RD Station, Webhook de Leads)
+  4. **Produtividade** (Google Agenda)
+  5. **API & Desenvolvedores** (API Key, Webhook)
+- Mudar status de "Em breve" para "Disponivel" com botao "Conectar" que abre dialog de configuracao (mesmo que simplificado com campo de token/chave)
+- Cada integracao de anuncios tera campos: Token de acesso, ID da conta, com botao salvar (dados salvos em tabela `organization_integrations`)
+
+**Nova tabela**: `organization_integrations`
 ```text
-id, organization_id, platforms (JSONB - array com estrategia por plataforma),
-source_data (JSONB - snapshot das metas e estrategia usadas),
-created_at, is_active, created_by
+id, organization_id, provider (text), config (JSONB), status (text), created_at, updated_at
 ```
+RLS: membros da org podem ler, admins podem gerenciar.
 
-#### 2.3 Hook: `useTrafficStrategy`
-- `useActiveTrafficStrategy()` - estrategia ativa
-- `useGenerateTrafficStrategy()` - mutation que chama a edge function
-- `useTrafficStrategyHistory()` - historico
+---
 
-#### 2.4 Reconstruir `ClienteTrafegoPago.tsx` com 3 abas:
+### 3. Plano & Creditos - Ajustes de Limites e UX
 
-**Aba 1 - Estrategia (nova)**
-- Botao "Gerar Estrategia de Trafego com IA" que consome metas + estrategia de marketing
-- Exibe estrategia por plataforma em cards expandiveis com todos os detalhes
-- Cada card de plataforma tem botao "Criar Campanha" que leva para a aba Tutoriais filtrada por aquela plataforma
+**Mudancas em `src/constants/plans.ts`**:
+- Adicionar campos ao `PlanConfig`: `maxAgents`, `maxDispatches`, `maxDispatchRecipients`
+- **Starter**: maxAgents=1, maxSites=1, maxDispatches=0, maxDispatchRecipients=0
+- **Growth**: maxAgents=2, maxSites=2, maxDispatches=1, maxDispatchRecipients=500
+- **Scale**: maxAgents=4, maxSites=3, maxDispatches=3, maxDispatchRecipients=2000
+- Atualizar `features` de cada plano para refletir esses novos limites
+- Adicionar destaque visual do combo: economia percentual, badge "Economize X%"
 
-**Aba 2 - Tutoriais (melhorada)**
-- Manter tutoriais existentes (Meta, Google, TikTok, LinkedIn)
-- Adicionar checklist interativo com estado persistido
-- Botao de link externo para abrir a plataforma de anuncios
+**Mudancas em `ClientePlanoCreditos.tsx`**:
+- Na secao de planos, quando `moduleToggle === "combo"`, mostrar banner de destaque: "Economize ate X% com o Combo" e listar beneficios de ter ambos os modulos
+- Na secao de creditos avulsos, adicionar explicacao contextual: titulo "Para que servem os creditos?", lista de acoes com custo (usando `CREDIT_COSTS`), e texto "Creditos sao consumidos por acoes de IA como gerar conteudos, criar sites, enviar disparos inteligentes..."
+- Cada card de pacote de creditos tera subtexto como "Equivale a ~25 conteudos" ou "~10 sites"
 
-**Aba 3 - Historico**
-- Estrategias anteriores com data e dados usados
+**Reset de creditos do usuario teste**: Sera feito via insert tool (UPDATE na credit_wallets) para zerar o saldo.
 
-#### 2.5 Credito: 200 creditos por geracao de estrategia de trafego
+---
+
+### 4. Perfil com Foto - Upload de Avatar
+
+**Mudancas em `ClienteConfiguracoes.tsx` (ProfileTab)**:
+- Adicionar botao de upload de foto sobre o Avatar existente
+- Ao clicar, abrir file input para selecionar imagem
+- Upload para storage bucket `avatars` (ou bucket existente)
+- Salvar URL no campo `avatar_url` da tabela `profiles`
+- Mostrar a foto quando `avatar_url` existe, fallback para iniciais
+
+**Mudancas em `useUserProfile.ts`**:
+- Adicionar `avatar_url` ao tipo de updates aceitos na mutation
+
+**Storage**: Criar bucket `avatars` se nao existir (via migracao).
+
+---
+
+### 5. Revisao e Otimizacoes dos Modulos
+
+Apos analise dos modulos, ajustes adicionais necessarios:
+
+**ClienteConfiguracoes.tsx**:
+- O Avatar ja exibe iniciais, basta adicionar o upload (item 4)
+- Notificacoes usam estado local, nao persistem. Adicionar persistencia futura (nao critico agora)
+
+**ClienteIntegracoes.tsx**:
+- Webhook URL expoe project ID do backend diretamente. Manter como esta (necessario para funcionamento)
+
+**ClientePlanoCreditos.tsx**:
+- O toggle Comercial/Marketing/Combo funciona mas nao explica o beneficio. Sera melhorado (item 3)
 
 ---
 
@@ -107,20 +97,21 @@ created_at, is_active, created_by
 
 | Arquivo | Descricao |
 |---------|-----------|
-| `supabase/functions/generate-traffic-strategy/index.ts` | Edge function que gera estrategia de trafego com IA |
-| `src/hooks/useTrafficStrategy.ts` | Hooks para estrategia de trafego |
+| Nenhum novo arquivo | Todas as mudancas sao em arquivos existentes |
 
 ### Arquivos a Editar
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/types/cliente.ts` | Expandir `agentRoleConfig` com `longDescription`, `workflow`, `defaultObjectives` |
-| `src/components/cliente/AgentFormSheet.tsx` | Card explicativo da funcao selecionada na aba Identidade |
-| `supabase/functions/ai-agent-reply/index.ts` | Expandir rolePrompts com instrucoes detalhadas + novas acoes SEND_PRODUCT_LINK e REGISTER_NPS |
-| `src/pages/cliente/ClienteTrafegoPago.tsx` | Reconstruir com 3 abas: Estrategia (IA), Tutoriais, Historico |
+| `src/constants/plans.ts` | Adicionar maxAgents, maxDispatches, maxDispatchRecipients. Atualizar features e limites de sites |
+| `src/pages/cliente/ClienteAvaliacoes.tsx` | Reestruturar com tabs Equipe/Historico, notas por categoria, pastas mensais |
+| `src/pages/cliente/ClienteIntegracoes.tsx` | Reorganizar por tipo, mudar status para "Disponivel", adicionar dialogs de conexao |
+| `src/pages/cliente/ClientePlanoCreditos.tsx` | Destaque combo, explicacao de creditos avulsos, equivalencias |
+| `src/pages/cliente/ClienteConfiguracoes.tsx` | Upload de foto de perfil no ProfileTab |
+| `src/hooks/useUserProfile.ts` | Aceitar avatar_url na mutation |
 
-### Migracoes de Banco
+### Migracoes
 
-1. Tabela `client_nps_responses` para armazenar NPS coletado pelo agente pos-venda
-2. Tabela `traffic_strategies` para armazenar estrategias de trafego geradas
-
+1. Tabela `organization_integrations` para armazenar conexoes de integracoes
+2. Bucket de storage `avatars` para fotos de perfil
+3. UPDATE via insert tool para zerar creditos do usuario teste
