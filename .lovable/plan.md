@@ -1,115 +1,93 @@
 
-## Plano: Tutorial de Primeiro Acesso, Suporte no Header, Comemoracao de Venda, Notificacoes Funcionais e Efeitos Sonoros
+## Plano: Refinamento de Artes/Videos, Acoes nos Conteudos e Tutorial Interativo
 
-Quatro entregas principais para melhorar a experiencia do usuario na plataforma.
-
----
-
-### 1. Tutorial de Primeiro Acesso (Onboarding Tour)
-
-Criar um componente `OnboardingTour` que aparece apenas no primeiro acesso do usuario. Usa `localStorage` para persistir se ja foi visualizado.
-
-**Novo arquivo: `src/components/cliente/OnboardingTour.tsx`**
-- Componente de tour guiado com steps em modal/dialog
-- Steps sequenciais com titulo, descricao e icone explicando as principais areas:
-  1. Boas-vindas e visao geral da plataforma
-  2. Modulo Comercial (CRM, Agentes IA, Scripts)
-  3. Modulo Marketing (Estrategia, Conteudos, Sites, Trafego)
-  4. Checklist diario e Gamificacao
-  5. Creditos e Plano
-- Cada step tem botoes "Anterior", "Proximo" e "Pular tour"
-- Ao final, botao "Comecar" que fecha o tour
-- Salva `onboarding_tour_done` no `localStorage` para nao exibir novamente
-- Tambem salvar no banco (`profiles.onboarding_completed`) para persistir entre dispositivos
-
-**Editar: `src/components/ClienteLayout.tsx`**
-- Importar e renderizar `<OnboardingTour />` dentro do layout
+Tres blocos de melhorias para o fluxo criativo do cliente.
 
 ---
 
-### 2. Botao de Suporte no Header
+### 1. Tutorial de Primeiro Acesso - Tour Interativo na Interface
 
-**Editar: `src/pages/Index.tsx`**
-- Adicionar um botao de suporte (icone `Headphones` ou `LifeBuoy`) ao lado da `NotificationBell`
-- Ao clicar, abre um Popover com:
-  - Botao "Abrir ticket de suporte" (navega para pagina de suporte ou abre dialog)
-  - Link para documentacao/FAQ
-  - Email de contato
-- Exibir apenas para roles `cliente_admin` e `cliente_user`
+Reconstruir `OnboardingTour.tsx` como um tour com overlay que destaca elementos reais da sidebar.
 
----
+**Mudancas em `src/components/cliente/OnboardingTour.tsx`**:
+- Substituir o dialog generico por um tooltip flutuante posicionado ao lado de elementos da sidebar
+- Usar `document.querySelector('[data-tour="..."]')` + `getBoundingClientRect()` para posicionar cada step
+- Overlay escuro com recorte (clip-path ou mask) para destacar o elemento alvo
+- Steps:
+  1. Boas-vindas (overlay central)
+  2. Secao "Vendas" na sidebar (CRM, Agentes IA, Scripts)
+  3. Secao "Marketing" (Estrategia, Conteudos, Redes Sociais, Sites, Trafego)
+  4. Checklist e Gamificacao (items globais)
+  5. Creditos e Plano (footer da sidebar)
+  6. Suporte e Notificacoes (header)
+- Botoes "Anterior", "Proximo", "Pular tour"
+- Manter localStorage para persistencia
 
-### 3. Efeito de Comemoracao ao Marcar Venda
-
-**Novo arquivo: `src/components/CelebrationEffect.tsx`**
-- Componente que renderiza confetes animados usando CSS/canvas
-- Efeito de particulas coloridas caindo por 3 segundos
-- Exporta funcao `triggerCelebration()` que pode ser chamada de qualquer lugar
-- Usa um portal para renderizar sobre toda a tela
-
-**Editar: `src/components/crm/CrmLeadDetailSheet.tsx` (linha ~230)**
-- No onClick do botao "Vendido", apos `markAsWon.mutate()`:
-  - Chamar `triggerCelebration()`
-  - Chamar `playSound("success")`
-
-**Editar: `src/hooks/useCrmLeads.ts` (markAsWon, linha ~138)**
-- No `onSuccess`, alem de invalidar queries, disparar notificacao no banco:
-  - Inserir em `client_notifications` com tipo "Metas" e mensagem de venda
+**Mudancas em `src/components/ClienteSidebar.tsx`**:
+- Adicionar `data-tour="vendas"`, `data-tour="marketing"`, `data-tour="sistema"`, `data-tour="creditos"` nos elementos relevantes
 
 ---
 
-### 4. Notificacoes Funcionais (Bell real)
+### 2. Refinamento de Artes e Videos em Redes Sociais
 
-**Editar: `src/components/NotificationBell.tsx`**
-- Remover dados mockados estaticos
-- Importar `useClienteNotifications` e `useClienteContentMutations` de `useClienteContent`
-- Buscar notificacoes reais do banco (`client_notifications`)
-- Mostrar badge com contagem de nao-lidas
-- Ao clicar numa notificacao, marcar como lida
-- Botao "Ver todas" navega para `/cliente/notificacoes`
-- Adicionar `playSound("notification")` quando ha novas notificacoes (comparar count anterior)
-- Para roles nao-cliente (franqueadora/franqueado), manter comportamento simples ou adaptar
+**Mudancas em `src/pages/cliente/ClienteRedesSociais.tsx`**:
 
-**Gerar notificacoes automaticas** - Editar hooks para criar notificacoes em acoes-chave:
-- `useCrmLeadMutations` (createLead): notificacao "Novo lead criado: {nome}"
-- `useCrmLeadMutations` (markAsWon): notificacao "Venda realizada: {lead.name}"
+#### 2.1 Selecao de Formato e Quantidade Individual
+- No wizard briefing, substituir o campo unico `bQtd` por campos individuais:
+  - Artes: Feed (1:1), Story (9:16), Carrossel
+  - Videos: Reels (9:16), Story animado
+- Cada formato tem campo numerico de quantidade
+- Total respeita limite do plano (`saldoRestanteArtes`)
+
+#### 2.2 Selecao de Tipo/Estilo Visual com Exemplos
+- Adicionar step no wizard antes de gerar, com galeria de "tipos visuais":
+  - **Tipos de Arte**: Foto com texto overlay, Composicao grafica, Mockup de produto, Quote card, Before/After
+  - **Tipos de Video**: Slideshow com texto, Animacao de texto (kinetic), Revelacao de produto, Countdown
+- Cada tipo e um card selecionavel com icone representativo, nome e descricao curta
+- O tipo selecionado e enviado ao prompt da IA
+
+#### 2.3 Sistema de Revisao (1 alteracao por peca)
+- No `GeneratedArt`, adicionar campos `hasRevision: boolean` e `revisionNote: string`
+- Na visualizacao de cada arte, adicionar botao "Solicitar Alteracao"
+- Ao clicar, abre textarea para descrever a alteracao
+- Botao "Regerar com Alteracao" chama `generate-social-image` com prompt original + nota de revisao
+- Apos usar a revisao, botao desabilitado com texto "Revisao utilizada"
+
+#### 2.4 Videos curtos com foco em imagem+texto
+- Deixar claro no UI que videos sao curtos (5-15s), formato Reels (9:16) ou Stories
+- Opcoes de tipo de video: Slideshow com texto, Revelacao de produto, Kinetic text
 
 ---
 
-### 5. Efeitos Sonoros em Acoes Importantes
+### 3. Acoes nos Conteudos (PDF, Gerar Arte, Gravar Video)
 
-**Editar: `src/lib/sounds.ts`**
-- Adicionar novo tipo `"celebration"` com melodia mais elaborada (ascendente triunfante)
-- Manter os tipos existentes
+**Mudancas em `src/pages/cliente/ClienteConteudos.tsx`**:
 
-**Pontos de integracao de sons (editar cada arquivo)**:
+Na view de detalhe do conteudo (`openContent`), adicionar barra de acoes abaixo do `ApprovalPanel`:
 
-| Acao | Som | Arquivo |
-|------|-----|---------|
-| Marcar venda no CRM | `celebration` | `src/components/crm/CrmLeadDetailSheet.tsx` |
-| Criar novo lead | `success` | `src/hooks/useCrmLeads.ts` (onSuccess do createLead) |
-| Completar item do checklist | `success` | `src/hooks/useClienteContent.ts` (toggleChecklistItem onSuccess) |
-| Nova notificacao recebida | `notification` | `src/components/NotificationBell.tsx` |
-| Gerar conteudo/estrategia com IA | `success` | Nos respectivos hooks de geracao |
-| Erro/warning | `warning` | Em toasts de erro relevantes |
+- **Copiar**: Ja existe. Manter.
+- **Baixar PDF**: Usar `html2pdf.js` (ja instalado) para gerar PDF com titulo, formato, rede, funil, roteiro, hashtags e embasamento
+- **Gerar Arte**: Botao que navega para `/cliente/redes-sociais?fromContent=ID` pre-preenchendo briefing de arte com dados do conteudo
+- **Gravar Video**: Se o formato for Reels ou Story (conteudo de video), botao "Gravar" que navega para a aba Tutorial de Conteudos (`/cliente/conteudos` aba tutorial) filtrada pelo formato correspondente (Reels/Story), mostrando as instrucoes de gravacao
 
 ---
 
 ### Resumo de Arquivos
 
-**Criar:**
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/components/cliente/OnboardingTour.tsx` | Tour guiado de primeiro acesso com steps |
-| `src/components/CelebrationEffect.tsx` | Confetes animados para comemoracao de venda |
-
 **Editar:**
+
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/ClienteLayout.tsx` | Adicionar OnboardingTour |
-| `src/pages/Index.tsx` | Botao de suporte no header |
-| `src/components/NotificationBell.tsx` | Notificacoes reais do banco + som |
-| `src/components/crm/CrmLeadDetailSheet.tsx` | Comemoracao + som ao marcar venda |
-| `src/hooks/useCrmLeads.ts` | Notificacao automatica ao criar lead e marcar venda |
-| `src/hooks/useClienteContent.ts` | Som ao completar checklist |
-| `src/lib/sounds.ts` | Novo tipo "celebration" |
+| `src/components/cliente/OnboardingTour.tsx` | Reconstruir como tour com overlay + tooltips posicionados sobre sidebar |
+| `src/components/ClienteSidebar.tsx` | Adicionar atributos `data-tour` nos elementos de menu |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Formato/quantidade individual, tipos visuais com exemplos, sistema de revisao |
+| `src/pages/cliente/ClienteConteudos.tsx` | Botoes PDF, Gerar Arte, Gravar Video na view de detalhe |
+
+### Detalhes Tecnicos
+
+- O tour usa `getBoundingClientRect()` para posicionar tooltips e `clip-path` para o overlay com recorte
+- A revisao reutiliza a edge function `generate-social-image` adicionando `revision_note` ao prompt
+- O PDF usa `html2pdf.js` ja instalado como dependencia
+- "Gravar Video" em Conteudos navega para a aba Tutorial dentro da propria pagina de Conteudos, filtrada pelo formato (Reels/Story), onde ficam as instrucoes didaticas de gravacao
+- "Gerar Arte" navega para Redes Sociais com query params para pre-preencher o briefing
+- A navegacao usa `useNavigate` e `useSearchParams`
