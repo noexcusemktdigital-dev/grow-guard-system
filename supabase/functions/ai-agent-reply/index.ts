@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { organization_id, contact_id, message_text, message_type, contact_phone } = await req.json();
+    const { organization_id, contact_id, message_text, message_type, media_url, contact_phone } = await req.json();
 
     // Skip groups and broadcasts
     if (contact_phone) {
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (!organization_id || !contact_id || !message_text) {
+    if (!organization_id || !contact_id || (!message_text && !media_url)) {
       return new Response(JSON.stringify({ error: "Missing params" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -239,8 +239,9 @@ Deno.serve(async (req) => {
     // ─── All checks passed — process message ───
 
     // Handle audio transcription if message_type is audio
-    let processedMessage = message_text;
-    if (message_type === "audio" && message_text.startsWith("http")) {
+    let processedMessage = message_text || "";
+    const audioUrl = media_url || message_text;
+    if (message_type === "audio" && audioUrl && audioUrl.startsWith("http")) {
       try {
         const transcribeRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -249,7 +250,7 @@ Deno.serve(async (req) => {
             model: "google/gemini-2.5-flash",
             messages: [
               { role: "system", content: "Transcreva o áudio a seguir. Retorne apenas o texto transcrito, sem formatação." },
-              { role: "user", content: `Transcreva este áudio: ${message_text}` },
+              { role: "user", content: `Transcreva este áudio: ${audioUrl}` },
             ],
           }),
         });

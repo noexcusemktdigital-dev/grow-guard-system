@@ -157,8 +157,8 @@ Deno.serve(async (req) => {
       metadata: body,
     });
 
-    // Trigger AI agent reply if contact is in AI mode and message has text
-    if (messageText) {
+    // Trigger AI agent reply if contact is in AI mode and message has text or media
+    if (messageText || mediaUrl) {
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -175,6 +175,8 @@ Deno.serve(async (req) => {
             organization_id: orgId,
             contact_id: contactId,
             message_text: messageText,
+            message_type: messageType,
+            media_url: mediaUrl,
             contact_phone: phone,
           }),
         }).catch((e) => console.error("AI reply trigger error:", e));
