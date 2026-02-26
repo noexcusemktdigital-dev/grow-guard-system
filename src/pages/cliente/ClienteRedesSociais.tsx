@@ -31,7 +31,7 @@ import { getPlanBySlug, CREDIT_PACKS } from "@/constants/plans";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { useVisualIdentity, useSaveVisualIdentity, isVisualIdentityComplete } from "@/hooks/useVisualIdentity";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { generateVideoFromFrames } from "@/lib/videoGenerator";
+import { renderMotionGraphics, type SceneText } from "@/lib/motionGraphicsEngine";
 
 /* ── Types ── */
 interface SocialConcept {
@@ -732,29 +732,33 @@ export default function ClienteRedesSociais() {
             
             if (!framesError && framesData?.frameUrls?.length) {
               videoFrameUrls = framesData.frameUrls;
+              const sceneTexts: SceneText[] = framesData.sceneTexts || [];
               
-              // Assemble video with ffmpeg.wasm
+              // Assemble video with Motion Graphics Engine (Canvas + MediaRecorder)
               setGenMessage(`Montando vídeo ${i + 1}/${concepts.length}...`);
               try {
-                const videoBlob = await generateVideoFromFrames(videoFrameUrls, {
-                  frameDurationSeconds: 3,
-                  fps: 24,
-                  transitionFrames: 12,
-                  onProgress: (msg) => setGenMessage(msg),
+                const videoBlob = await renderMotionGraphics(videoFrameUrls, sceneTexts, {
+                  frameDurationMs: 3000,
+                  transitionDurationMs: 500,
+                  fps: 30,
+                  kenBurnsIntensity: 0.15,
+                  outputWidth: 1080,
+                  outputHeight: 1920,
+                  onProgress: (_pct, msg) => setGenMessage(msg),
                 });
                 
                 // Upload video to storage
-                const videoPath = `videos/${orgId}/${artId}/reel.mp4`;
+                const videoPath = `videos/${orgId}/${artId}/reel.webm`;
                 const { error: videoUploadError } = await supabase.storage
                   .from("social-arts")
-                  .upload(videoPath, videoBlob, { contentType: "video/mp4", upsert: true });
+                  .upload(videoPath, videoBlob, { contentType: "video/webm", upsert: true });
                 
                 if (!videoUploadError) {
                   const { data: videoUrlData } = supabase.storage.from("social-arts").getPublicUrl(videoPath);
                   videoUrl = videoUrlData.publicUrl;
                 }
-              } catch (ffmpegErr) {
-                console.error("FFmpeg assembly error:", ffmpegErr);
+              } catch (renderErr) {
+                console.error("Motion graphics render error:", renderErr);
                 toast({ title: "Aviso", description: "Frames gerados, mas a montagem do vídeo falhou. Os frames estão disponíveis individualmente.", variant: "destructive" });
               }
             }

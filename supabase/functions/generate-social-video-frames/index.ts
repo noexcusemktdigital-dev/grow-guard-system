@@ -49,6 +49,7 @@ serve(async (req) => {
 
     // Parse scene descriptions from video_description
     const scenes = parseScenes(video_description, num_frames);
+    const sceneTexts = generateSceneTexts(video_description, scenes);
     console.log(`Generating ${scenes.length} video frames for art ${art_id}...`);
 
     // Build brand context
@@ -67,7 +68,7 @@ The generated frames MUST feel like they belong to this brand's visual ecosystem
 
     for (let i = 0; i < scenes.length; i++) {
       const scene = scenes[i];
-      const framePrompt = `You are creating frame ${i + 1} of ${scenes.length} for a short-form vertical video (Instagram Reels / TikTok).
+    const framePrompt = `You are creating frame ${i + 1} of ${scenes.length} for a short-form vertical video (Instagram Reels / TikTok).
 
 OUTPUT FORMAT: Vertical (9:16), 1080×1920px.
 
@@ -85,7 +86,9 @@ CRITICAL RULES:
 - Cinematic quality with professional lighting
 - Each frame should feel like a still from a high-end video production
 - Maintain visual consistency across all frames (same style, lighting, color grading)
-- Leave space for text overlay (top or bottom 20%)
+- Leave space for text overlay (bottom 20%)
+- VARY the camera angle/composition subtly between frames for dynamic Ken Burns motion
+- Use slightly different zoom levels and perspectives across frames
 
 ${visual_prompt_thumbnail ? `Visual reference style: ${visual_prompt_thumbnail}` : ""}
 
@@ -174,7 +177,7 @@ Generate this single frame now.`;
       }
     }
 
-    return new Response(JSON.stringify({ frameUrls }), {
+    return new Response(JSON.stringify({ frameUrls, sceneTexts }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
@@ -217,4 +220,18 @@ function parseScenes(videoDescription: string, maxFrames: number): string[] {
 
   // Ultimate fallback
   return [videoDescription];
+}
+
+function generateSceneTexts(videoDescription: string, scenes: string[]): { main: string; sub?: string }[] {
+  return scenes.map((scene, i) => {
+    // Extract a short title from each scene (first ~60 chars or first sentence)
+    const firstSentence = scene.split(/[.!?]/)[0]?.trim() || scene;
+    const main = firstSentence.length > 60 ? firstSentence.substring(0, 57) + "..." : firstSentence;
+
+    // Last scene gets a CTA subtitle
+    const isLast = i === scenes.length - 1;
+    const sub = isLast ? "Saiba mais →" : undefined;
+
+    return { main, sub };
+  });
 }
