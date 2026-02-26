@@ -637,8 +637,10 @@ export default function ClienteRedesSociais() {
           persona: personaData,
           identidade_visual,
           referencias_tipo: referenciasTipo || undefined,
-           organization_id: orgId,
+          organization_id: orgId,
           incluir_video: bIncluirVideo || undefined,
+          art_style: selectedArtStyle || undefined,
+          video_style: selectedVideoStyle || undefined,
           reference_images: bReferenceImages.length > 0
             ? bReferenceImages.map(r => r.url)
             : (visualIdentity?.image_bank_urls?.length ? visualIdentity.image_bank_urls.slice(0, 3) : undefined),
@@ -666,6 +668,7 @@ export default function ClienteRedesSociais() {
               prompt: concept.visual_prompt_feed, format: "feed",
               file_path: `${timestamp}/${slug}-feed.png`, nivel: bNivel,
               persona: personaData, identidade_visual, organization_id: orgId,
+              art_style: selectedArtStyle || undefined,
               reference_images: bReferenceImages.length > 0
                 ? bReferenceImages.slice(0, 3).map(r => r.url)
                 : (visualIdentity?.image_bank_urls?.slice(0, 3) || undefined),
@@ -684,6 +687,7 @@ export default function ClienteRedesSociais() {
               prompt: concept.visual_prompt_story, format: "story",
               file_path: `${timestamp}/${slug}-story.png`, nivel: bNivel,
               persona: personaData, identidade_visual, organization_id: orgId,
+              art_style: selectedArtStyle || undefined,
               reference_images: bReferenceImages.length > 0
                 ? bReferenceImages.slice(0, 3).map(r => r.url)
                 : (visualIdentity?.image_bank_urls?.slice(0, 3) || undefined),
@@ -724,6 +728,7 @@ export default function ClienteRedesSociais() {
                 organization_id: orgId,
                 art_id: artId,
                 num_frames: 5,
+                video_style: selectedVideoStyle || undefined,
                 reference_images: bReferenceImages.length > 0
                   ? bReferenceImages.slice(0, 2).map(r => r.url)
                   : undefined,
@@ -737,6 +742,15 @@ export default function ClienteRedesSociais() {
               // Assemble video with Motion Graphics Engine (Canvas + MediaRecorder)
               setGenMessage(`Montando vídeo ${i + 1}/${concepts.length}...`);
               try {
+                // Adapt motion config based on selected video style
+                const styleConfigs: Record<string, Partial<Parameters<typeof renderMotionGraphics>[2]>> = {
+                  slideshow: { frameDurationMs: 3000, kenBurnsIntensity: 0.12, transitionDurationMs: 600 },
+                  kinetic: { frameDurationMs: 2000, kenBurnsIntensity: 0.05, transitionDurationMs: 300 },
+                  revelacao: { frameDurationMs: 3500, kenBurnsIntensity: 0.25, transitionDurationMs: 500 },
+                  countdown: { frameDurationMs: 2500, kenBurnsIntensity: 0.1, transitionDurationMs: 400 },
+                };
+                const styleConfig = styleConfigs[selectedVideoStyle] || {};
+
                 const videoBlob = await renderMotionGraphics(videoFrameUrls, sceneTexts, {
                   frameDurationMs: 3000,
                   transitionDurationMs: 500,
@@ -744,6 +758,7 @@ export default function ClienteRedesSociais() {
                   kenBurnsIntensity: 0.15,
                   outputWidth: 1080,
                   outputHeight: 1920,
+                  ...styleConfig,
                   onProgress: (_pct, msg) => setGenMessage(msg),
                 });
                 

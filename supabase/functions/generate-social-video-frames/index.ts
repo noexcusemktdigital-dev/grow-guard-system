@@ -20,6 +20,7 @@ serve(async (req) => {
       art_id,
       num_frames = 5,
       reference_images,
+      video_style,
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -64,6 +65,19 @@ ${iv.tom_visual ? `- VISUAL TONE: ${iv.tom_visual}` : ""}
 The generated frames MUST feel like they belong to this brand's visual ecosystem.`;
     }
 
+    // Video style context
+    let videoStyleContext = "";
+    if (video_style) {
+      const styleGuides: Record<string, string> = {
+        slideshow: "VIDEO STYLE: Cinematic slideshow. Each frame should be a distinct visual moment with subtle angle/zoom variations for smooth Ken Burns transitions.",
+        kinetic: "VIDEO STYLE: Kinetic typography backgrounds. Generate bold, high-contrast backgrounds/textures. Frames should be visually striking but leave space for animated text overlays.",
+        revelacao: "VIDEO STYLE: Product reveal sequence. Progress from wide/mysterious to close-up detail. Dramatic lighting, suspenseful visual progression across frames.",
+        countdown: "VIDEO STYLE: Countdown/urgency. Escalating visual intensity across frames. Each frame more dynamic than the last. Bold compositions, energetic mood.",
+      };
+      videoStyleContext = styleGuides[video_style] || "";
+    }
+    }
+
     const frameUrls: string[] = [];
 
     for (let i = 0; i < scenes.length; i++) {
@@ -91,6 +105,7 @@ CRITICAL RULES:
 - Use slightly different zoom levels and perspectives across frames
 
 ${visual_prompt_thumbnail ? `Visual reference style: ${visual_prompt_thumbnail}` : ""}
+${videoStyleContext}
 
 Generate this single frame now.`;
 
