@@ -32,7 +32,7 @@ import { HelpTooltip } from "@/components/HelpTooltip";
 import { useVisualIdentity, useSaveVisualIdentity, isVisualIdentityComplete } from "@/hooks/useVisualIdentity";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { renderMotionGraphics, type SceneText, type SceneConfig } from "@/lib/motionGraphicsEngine";
-import { renderTemplate, getPresetTemplate, getRandomPresetForStyle, type TemplateConfig, type TemplateStyle } from "@/lib/canvasTemplateEngine";
+// canvasTemplateEngine kept for future use but decoupled from main flow
 
 /* ── Types ── */
 interface SocialConcept {
@@ -107,14 +107,34 @@ const NIVEIS = [
 ];
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
-/* ── Art Style Types ── */
-const ART_STYLES = [
-  { value: "foto_texto", label: "Foto + Texto", desc: "Foto de fundo com texto sobreposto elegante", icon: "📸" },
-  { value: "composicao", label: "Composição Gráfica", desc: "Design gráfico com formas e elementos visuais", icon: "🎨" },
-  { value: "mockup", label: "Mockup de Produto", desc: "Produto em contexto realista (mesa, mão, etc)", icon: "📦" },
-  { value: "quote", label: "Quote Card", desc: "Citação ou dado em destaque com fundo estilizado", icon: "💬" },
-  { value: "before_after", label: "Antes & Depois", desc: "Comparação visual lado a lado", icon: "🔄" },
+/* ── Art Style Categories ── */
+const ART_STYLE_CATEGORIES = [
+  {
+    category: "Gráfica",
+    description: "Design gráfico profissional — formas, tipografia estilizada, layout estruturado",
+    icon: "🎨",
+    styles: [
+      { value: "grafica_moderna", label: "Design Moderno", desc: "Formas geométricas, cores vibrantes, layout clean tipo Canva", icon: "🎨" },
+      { value: "grafica_elegante", label: "Design Elegante", desc: "Fundo escuro, detalhes dourados, tipografia serifada sofisticada", icon: "✨" },
+      { value: "grafica_bold", label: "Design Bold", desc: "Cores fortes, faixas diagonais, texto grande e impactante", icon: "💥" },
+      { value: "grafica_minimalista", label: "Design Minimalista", desc: "Muito espaço negativo, poucos elementos, tipografia fina", icon: "◻️" },
+    ],
+  },
+  {
+    category: "Imagem",
+    description: "Fotografia ou ilustração realista como base visual",
+    icon: "📸",
+    styles: [
+      { value: "foto_editorial", label: "Foto Editorial", desc: "Fotografia profissional com iluminação cinematográfica", icon: "📸" },
+      { value: "foto_produto", label: "Foto de Produto", desc: "Produto em contexto lifestyle, fundo clean ou cenário natural", icon: "📦" },
+      { value: "ilustracao", label: "Ilustração Digital", desc: "Ilustração moderna flat ou 3D, estilo tech/startup", icon: "🖌️" },
+      { value: "collage", label: "Colagem Criativa", desc: "Mix de elementos visuais, texturas, recortes sobrepostos", icon: "🔄" },
+    ],
+  },
 ];
+
+// Flat list for lookup
+const ALL_ART_STYLES = ART_STYLE_CATEGORIES.flatMap(c => c.styles);
 
 const VIDEO_STYLES = [
   { value: "slideshow", label: "Slideshow + Texto", desc: "Imagens com texto animado e transições suaves (5-15s)", icon: "🖼️" },
@@ -1263,23 +1283,31 @@ export default function ClienteRedesSociais() {
                           <p className="text-xs text-muted-foreground">Selecione o tipo/estilo visual para suas peças. Isso ajuda a IA a entregar o resultado ideal.</p>
 
                           {hasArtFormats && (
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">🎨 Tipo de Arte</p>
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                {ART_STYLES.map((s) => (
-                                  <Card
-                                    key={s.value}
-                                    className={`cursor-pointer transition-all hover:shadow-md ${selectedArtStyle === s.value ? "ring-2 ring-primary border-primary/30 bg-primary/5" : "hover:bg-muted/30"}`}
-                                    onClick={() => setSelectedArtStyle(s.value)}
-                                  >
-                                    <CardContent className="py-3 text-center space-y-1">
-                                      <span className="text-2xl block">{s.icon}</span>
-                                      <p className="text-[11px] font-semibold">{s.label}</p>
-                                      <p className="text-[9px] text-muted-foreground leading-tight">{s.desc}</p>
-                                    </CardContent>
-                                  </Card>
-                                ))}
-                              </div>
+                            <div className="space-y-4">
+                              {ART_STYLE_CATEGORIES.map((cat) => (
+                                <div key={cat.category}>
+                                  <div className="flex items-center gap-2 mb-1.5">
+                                    <span className="text-base">{cat.icon}</span>
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">{cat.category}</p>
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground mb-2">{cat.description}</p>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    {cat.styles.map((s) => (
+                                      <Card
+                                        key={s.value}
+                                        className={`cursor-pointer transition-all hover:shadow-md ${selectedArtStyle === s.value ? "ring-2 ring-primary border-primary/30 bg-primary/5" : "hover:bg-muted/30"}`}
+                                        onClick={() => setSelectedArtStyle(s.value)}
+                                      >
+                                        <CardContent className="py-3 text-center space-y-1">
+                                          <span className="text-2xl block">{s.icon}</span>
+                                          <p className="text-[11px] font-semibold">{s.label}</p>
+                                          <p className="text-[9px] text-muted-foreground leading-tight">{s.desc}</p>
+                                        </CardContent>
+                                      </Card>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           )}
 
@@ -1332,7 +1360,7 @@ export default function ClienteRedesSociais() {
                                 {fmtStoryVideo > 0 && <Badge variant="outline" className="text-[10px]">{fmtStoryVideo} Story Vídeo</Badge>}
                               </div>
                               <div className="flex gap-1.5 flex-wrap">
-                                {selectedArtStyle && <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">{ART_STYLES.find(s => s.value === selectedArtStyle)?.label}</Badge>}
+                                {selectedArtStyle && <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">{ALL_ART_STYLES.find(s => s.value === selectedArtStyle)?.label}</Badge>}
                                 {selectedVideoStyle && <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">{VIDEO_STYLES.find(s => s.value === selectedVideoStyle)?.label}</Badge>}
                               </div>
                             </CardContent>
