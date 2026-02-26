@@ -20,7 +20,6 @@ export default function Comunicados() {
   const { createAnnouncement, updateAnnouncement, deleteAnnouncement } = useAnnouncementMutations();
   const { user } = useAuth();
 
-  // Map DB types to component types
   const comunicados: Comunicado[] = (announcements ?? []).map(a => ({
     id: a.id,
     titulo: a.title,
@@ -39,6 +38,7 @@ export default function Comunicados() {
     autorNome: "Admin",
     criadoEm: a.created_at,
     atualizadoEm: a.updated_at,
+    attachmentUrl: (a as any).attachment_url || undefined,
   }));
 
   const selected = selectedId ? comunicados.find((c) => c.id === selectedId) : null;
@@ -74,7 +74,7 @@ export default function Comunicados() {
     setView("list");
   };
 
-  const handlePublish = (data: Partial<Comunicado>) => {
+  const handlePublish = (data: Partial<Comunicado> & { attachmentUrl?: string }) => {
     const payload: any = {
       title: data.titulo,
       content: data.conteudo,
@@ -84,6 +84,7 @@ export default function Comunicados() {
       target_unit_ids: data.unidadesEspecificas?.length ? data.unidadesEspecificas : [],
       published_at: new Date().toISOString(),
       expires_at: data.dataExpiracao || null,
+      attachment_url: data.attachmentUrl || null,
     };
     if (view === "edit" && selectedId) {
       updateAnnouncement.mutate({ id: selectedId, ...payload });
@@ -96,7 +97,7 @@ export default function Comunicados() {
     setSelectedId(null);
   };
 
-  const handleSaveDraft = (data: Partial<Comunicado>) => {
+  const handleSaveDraft = (data: Partial<Comunicado> & { attachmentUrl?: string }) => {
     const payload: any = {
       title: data.titulo || "Sem título",
       content: data.conteudo || "",
@@ -104,6 +105,7 @@ export default function Comunicados() {
       priority: data.prioridade || "Normal",
       target_roles: data.publico,
       target_unit_ids: data.unidadesEspecificas?.length ? data.unidadesEspecificas : [],
+      attachment_url: data.attachmentUrl || null,
     };
     if (view === "edit" && selectedId) {
       updateAnnouncement.mutate({ id: selectedId, ...payload });
@@ -126,7 +128,6 @@ export default function Comunicados() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {view !== "list" && (
@@ -151,7 +152,6 @@ export default function Comunicados() {
         )}
       </div>
 
-      {/* Content */}
       {view === "list" && comunicados.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
@@ -162,40 +162,19 @@ export default function Comunicados() {
       )}
 
       {view === "list" && comunicados.length > 0 && (
-        <ComunicadosList
-          comunicados={comunicados}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDuplicate={handleDuplicate}
-          onArchive={handleArchive}
-        />
+        <ComunicadosList comunicados={comunicados} onView={handleView} onEdit={handleEdit} onDuplicate={handleDuplicate} onArchive={handleArchive} />
       )}
 
       {view === "create" && (
-        <ComunicadoForm
-          onPublish={handlePublish}
-          onSaveDraft={handleSaveDraft}
-          onCancel={() => setView("list")}
-        />
+        <ComunicadoForm onPublish={handlePublish} onSaveDraft={handleSaveDraft} onCancel={() => setView("list")} />
       )}
 
       {view === "edit" && selected && (
-        <ComunicadoForm
-          comunicado={selected}
-          onPublish={handlePublish}
-          onSaveDraft={handleSaveDraft}
-          onCancel={() => setView("list")}
-        />
+        <ComunicadoForm comunicado={selected} onPublish={handlePublish} onSaveDraft={handleSaveDraft} onCancel={() => setView("list")} />
       )}
 
       {view === "detail" && selected && (
-        <ComunicadoDetail
-          comunicado={selected}
-          onEdit={() => setView("edit")}
-          onDuplicate={() => handleDuplicate(selected.id)}
-          onArchive={() => handleArchive(selected.id)}
-          onDelete={handleDelete}
-        />
+        <ComunicadoDetail comunicado={selected} onEdit={() => setView("edit")} onDuplicate={() => handleDuplicate(selected.id)} onArchive={() => handleArchive(selected.id)} onDelete={handleDelete} />
       )}
     </div>
   );

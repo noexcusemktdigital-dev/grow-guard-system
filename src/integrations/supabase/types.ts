@@ -385,6 +385,7 @@ export type Database = {
       }
       announcements: {
         Row: {
+          attachment_url: string | null
           content: string | null
           created_at: string
           created_by: string | null
@@ -400,6 +401,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachment_url?: string | null
           content?: string | null
           created_at?: string
           created_by?: string | null
@@ -415,6 +417,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachment_url?: string | null
           content?: string | null
           created_at?: string
           created_by?: string | null

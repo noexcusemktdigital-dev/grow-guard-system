@@ -33,6 +33,7 @@ import {
   ExternalLink,
   Paperclip,
   Image,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -95,25 +96,16 @@ export default function ComunicadoDetail({ comunicado, onEdit, onDuplicate, onAr
         <CardContent className="space-y-4">
           <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: comunicado.conteudo }} />
 
-          {comunicado.imagemUrl && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Image className="w-4 h-4" />
-              <img src={comunicado.imagemUrl} alt="" className="max-h-48 rounded-md object-cover" />
-            </div>
-          )}
-
-          {comunicado.linkExterno && (
-            <a href={comunicado.linkExterno} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
-              <ExternalLink className="w-3.5 h-3.5" />
-              {comunicado.linkExterno}
+          {(comunicado as any).attachmentUrl && (
+            <a
+              href={(comunicado as any).attachmentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-primary hover:underline p-3 rounded-lg border border-border bg-muted/30"
+            >
+              <Download className="w-4 h-4 shrink-0" />
+              <span className="truncate">{(comunicado as any).attachmentUrl.split("/").pop()}</span>
             </a>
-          )}
-
-          {comunicado.anexo && (
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Paperclip className="w-3.5 h-3.5" />
-              {comunicado.anexo}
-            </div>
           )}
 
           <Separator />

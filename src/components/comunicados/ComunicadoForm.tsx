@@ -15,34 +15,24 @@ import {
   PublicoAlvo,
 } from "@/types/comunicados";
 import {
-  FileText,
-  Users,
-  Tag,
-  Settings2,
-  AlertTriangle,
-  LayoutDashboard,
-  MonitorSmartphone,
-  ShieldCheck,
-  CalendarClock,
-  CalendarX,
-  Building2,
+  FileText, Users, Tag, Settings2, AlertTriangle,
+  LayoutDashboard, MonitorSmartphone, ShieldCheck,
+  CalendarClock, CalendarX, Building2, Upload, X, Loader2,
 } from "lucide-react";
 import { useUnits } from "@/hooks/useUnits";
-
-const mockUnidades: string[] = []; // replaced by real units from DB
+import { supabase } from "@/integrations/supabase/client";
 
 const tipoOptions: ComunicadoTipo[] = [
   "Informativo", "Atualização de sistema", "Alerta operacional", "Campanha", "Institucional", "Urgente",
 ];
 
 const prioridadeOptions: ComunicadoPrioridade[] = ["Normal", "Alta", "Crítica"];
-
 const publicoOptions: PublicoAlvo[] = ["Franqueadora", "Franqueados", "Clientes finais", "Todos"];
 
 interface ComunicadoFormProps {
   comunicado?: Comunicado | null;
-  onPublish: (data: Partial<Comunicado>) => void;
-  onSaveDraft: (data: Partial<Comunicado>) => void;
+  onPublish: (data: Partial<Comunicado> & { attachmentUrl?: string }) => void;
+  onSaveDraft: (data: Partial<Comunicado> & { attachmentUrl?: string }) => void;
   onCancel: () => void;
 }
 
@@ -50,9 +40,6 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
   const { data: dbUnits } = useUnits();
   const [titulo, setTitulo] = useState(comunicado?.titulo || "");
   const [conteudo, setConteudo] = useState(comunicado?.conteudo || "");
-  const [imagemUrl, setImagemUrl] = useState(comunicado?.imagemUrl || "");
-  const [linkExterno, setLinkExterno] = useState(comunicado?.linkExterno || "");
-  const [anexo, setAnexo] = useState(comunicado?.anexo || "");
   const [publico, setPublico] = useState<PublicoAlvo[]>(comunicado?.publico || []);
   const [unidadesEspecificas, setUnidadesEspecificas] = useState<string[]>(comunicado?.unidadesEspecificas || []);
   const [tipo, setTipo] = useState<ComunicadoTipo>(comunicado?.tipo || "Informativo");
@@ -64,6 +51,11 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
   const [dataProgramada, setDataProgramada] = useState(comunicado?.dataProgramada?.slice(0, 16) || "");
   const [definirExpiracao, setDefinirExpiracao] = useState(!!comunicado?.dataExpiracao);
   const [dataExpiracao, setDataExpiracao] = useState(comunicado?.dataExpiracao?.slice(0, 10) || "");
+
+  // File upload state
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentUrl, setAttachmentUrl] = useState<string | undefined>((comunicado as any)?.attachmentUrl);
+  const [uploading, setUploading] = useState(false);
 
   const handlePublicoToggle = (p: PublicoAlvo) => {
     if (p === "Todos") {
@@ -78,22 +70,58 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
     setUnidadesEspecificas((prev) => (prev.includes(u) ? prev.filter((x) => x !== u) : [...prev, u]));
   };
 
-  const buildData = (): Partial<Comunicado> => ({
-    titulo,
-    conteudo,
-    imagemUrl: imagemUrl || undefined,
-    linkExterno: linkExterno || undefined,
-    anexo: anexo || undefined,
-    publico,
-    unidadesEspecificas,
-    tipo,
-    prioridade,
-    mostrarDashboard,
-    mostrarPopup,
-    exigirConfirmacao,
-    dataProgramada: programar ? dataProgramada : undefined,
-    dataExpiracao: definirExpiracao ? dataExpiracao : undefined,
-  });
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert("Arquivo deve ter no máximo 10MB");
+        return;
+      }
+      setAttachmentFile(file);
+      setAttachmentUrl(undefined);
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachmentFile(null);
+    setAttachmentUrl(undefined);
+  };
+
+  const uploadFile = async (): Promise<string | undefined> => {
+    if (!attachmentFile) return attachmentUrl;
+    setUploading(true);
+    try {
+      const ext = attachmentFile.name.split(".").pop();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("announcement-attachments").upload(path, attachmentFile);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("announcement-attachments").getPublicUrl(path);
+      return urlData.publicUrl;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const buildData = async (): Promise<Partial<Comunicado> & { attachmentUrl?: string }> => {
+    const url = await uploadFile();
+    return {
+      titulo, conteudo, publico, unidadesEspecificas, tipo, prioridade,
+      mostrarDashboard, mostrarPopup, exigirConfirmacao,
+      dataProgramada: programar ? dataProgramada : undefined,
+      dataExpiracao: definirExpiracao ? dataExpiracao : undefined,
+      attachmentUrl: url,
+    };
+  };
+
+  const handlePublish = async () => {
+    const data = await buildData();
+    onPublish(data);
+  };
+
+  const handleDraft = async () => {
+    const data = await buildData();
+    onSaveDraft(data);
+  };
 
   return (
     <div className="space-y-6">
@@ -114,19 +142,27 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
             <Label htmlFor="conteudo">Conteúdo *</Label>
             <Textarea id="conteudo" value={conteudo} onChange={(e) => setConteudo(e.target.value)} placeholder="Escreva o conteúdo do comunicado..." className="min-h-[160px]" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="imagemUrl">Imagem URL</Label>
-              <Input id="imagemUrl" value={imagemUrl} onChange={(e) => setImagemUrl(e.target.value)} placeholder="https://..." />
-            </div>
-            <div>
-              <Label htmlFor="linkExterno">Link externo</Label>
-              <Input id="linkExterno" value={linkExterno} onChange={(e) => setLinkExterno(e.target.value)} placeholder="https://..." />
-            </div>
-            <div>
-              <Label htmlFor="anexo">Anexo</Label>
-              <Input id="anexo" value={anexo} onChange={(e) => setAnexo(e.target.value)} placeholder="nome-do-arquivo.pdf" />
-            </div>
+
+          {/* File attachment */}
+          <div>
+            <Label>Anexo</Label>
+            {!attachmentFile && !attachmentUrl ? (
+              <label className="flex items-center gap-2 border border-dashed rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors mt-1">
+                <Upload className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Clique para anexar arquivo (máx. 10MB)</span>
+                <input type="file" className="hidden" onChange={handleFileSelect} />
+              </label>
+            ) : (
+              <div className="flex items-center gap-2 border rounded-lg p-3 mt-1">
+                <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="text-sm truncate flex-1">
+                  {attachmentFile?.name || attachmentUrl?.split("/").pop() || "Arquivo anexado"}
+                </span>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={removeAttachment}>
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -184,9 +220,7 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
               <Select value={tipo} onValueChange={(v) => setTipo(v as ComunicadoTipo)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {tipoOptions.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
+                  {tipoOptions.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -195,9 +229,7 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
               <Select value={prioridade} onValueChange={(v) => setPrioridade(v as ComunicadoPrioridade)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {prioridadeOptions.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
+                  {prioridadeOptions.map((p) => (<SelectItem key={p} value={p}>{p}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -258,8 +290,12 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
       {/* Actions */}
       <div className="flex gap-3 justify-end">
         <Button variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button variant="secondary" onClick={() => onSaveDraft(buildData())}>Salvar Rascunho</Button>
-        <Button onClick={() => onPublish(buildData())} disabled={!titulo.trim() || !conteudo.trim() || publico.length === 0}>
+        <Button variant="secondary" onClick={handleDraft} disabled={uploading}>
+          {uploading && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+          Salvar Rascunho
+        </Button>
+        <Button onClick={handlePublish} disabled={!titulo.trim() || !conteudo.trim() || publico.length === 0 || uploading}>
+          {uploading && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
           Publicar
         </Button>
       </div>
