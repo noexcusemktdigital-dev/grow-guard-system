@@ -1,37 +1,70 @@
 
 
-## Simular Digitacao Humana nos Agentes de IA
+## Fotos de Perfil dos Contatos WhatsApp
 
-### O que muda
-Antes de enviar a resposta final, o agente vai:
-1. Calcular um tempo de digitacao proporcional ao tamanho da resposta (simula leitura + digitacao)
-2. Ativar o indicador "digitando..." no WhatsApp via Z-API
-3. Aguardar o tempo calculado
-4. Enviar a mensagem
+### Problema
+O campo `photo_url` existe na tabela `whatsapp_contacts`, mas nunca e preenchido. O webhook salva o contato sem buscar a foto de perfil no WhatsApp.
 
-### Detalhes Tecnicos
+### Solucao
 
-**Arquivo**: `supabase/functions/ai-agent-reply/index.ts`
+**Arquivo**: `supabase/functions/whatsapp-webhook/index.ts`
 
-**Calculo do delay**:
-- Base: 1.5 segundos (tempo de "ler" a mensagem recebida)
-- Digitacao: ~40 caracteres por segundo (velocidade humana rapida)
-- Minimo: 2 segundos
-- Maximo: 12 segundos
-- Exemplo: resposta com 200 caracteres = 1.5s + 5s = 6.5 segundos de espera
+Apos criar ou atualizar um contato, buscar a foto de perfil via Z-API usando o endpoint:
+```
+GET https://api.z-api.io/instances/{id}/token/{token}/profile-picture?phone={phone}
+```
 
-**Indicador "digitando..."**:
-- Z-API disponibiliza o endpoint `POST /send-typing` que mostra o status "digitando..." para o contato
-- Sera chamado logo antes do delay, assim o contato ve que alguem esta "digitando"
+Logica:
+1. Apos o upsert do contato, verificar se `photo_url` ja existe (para nao buscar toda vez)
+2. Se nao existir, chamar o endpoint da Z-API para obter a URL da foto
+3. Atualizar o campo `photo_url` do contato com a URL retornada
+4. Fazer isso de forma "fire and forget" para nao atrasar o webhook
 
-**Alteracoes no codigo** (entre a geracao da resposta da IA e o envio via Z-API, ~linhas 476-490):
+### Detalhes tecnicos
 
-1. Calcular delay baseado no tamanho de `cleanReply`
-2. Chamar `https://api.z-api.io/instances/{id}/token/{token}/send-typing` com o telefone do contato
-3. Aguardar com `await new Promise(resolve => setTimeout(resolve, delayMs))`
-4. Enviar a mensagem normalmente
+- O endpoint retorna um JSON com a URL da foto (geralmente `{ "link": "https://..." }`)
+- Precisamos do `instance_id`, `token` e `client_token` da instancia (ja disponivel no webhook)
+- A busca sera feita apenas quando `photo_url` for null (primeira vez ou contato novo)
+- Para contatos existentes sem foto, tambem busca na primeira interacao apos o deploy
+
+### Alteracoes no webhook (~linha 113-145)
+
+```typescript
+// Apos upsert, buscar foto se nao tiver
+const needsPhoto = !existingContact || !(existingContact as any).photo_url;
+if (needsPhoto) {
+  try {
+    const picUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/profile-picture?phone=${phone}`;
+    const picRes = await fetch(picUrl, {
+      headers: { "Client-Token": instance.client_token },
+    });
+    if (picRes.ok) {
+      const picData = await picRes.json();
+      const photoUrl = picData.link || picData.url || null;
+      if (photoUrl) {
+        await adminClient
+          .from("whatsapp_contacts")
+          .update({ photo_url: photoUrl })
+          .eq("id", contactId);
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch profile picture:", e);
+  }
+}
+```
+
+Tambem preciso atualizar o `select` do contato existente (linha 115) para incluir `photo_url`:
+```typescript
+.select("id, unread_count, photo_url")
+```
+
+### UI
+A interface ja usa `contact.photo_url` no `ChatContactItem` e no `ChatConversation` (Avatar components). Assim que a URL for salva no banco, as fotos aparecerao automaticamente.
 
 ### Impacto
-- 1 arquivo alterado
-- Experiencia muito mais natural para quem recebe as mensagens
-- Sem impacto em performance (o delay e assincrono dentro da funcao)
+- 1 arquivo alterado (webhook)
+- Fotos aparecem automaticamente na lista de contatos e no cabecalho da conversa
+- Sem mudancas no frontend (ja preparado)
+- Deploy automatico
+
