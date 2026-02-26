@@ -5,7 +5,7 @@ import {
   ChevronRight, BookOpen, Clock, FolderOpen, Folder,
   ArrowLeft, Hash, Layout, CheckCircle2, Circle, Star,
   Type, AlignCenter, AlignLeft, AlignRight, Minus,
-  ZoomIn, ArrowRight, Users, FileText, Lock, CreditCard, AlertTriangle, Video, Music, Film,
+  ZoomIn, ArrowRight, Users, FileText, Lock, CreditCard, AlertTriangle, Video, Music, Film, Play,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +31,7 @@ import { getPlanBySlug, CREDIT_PACKS } from "@/constants/plans";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { useVisualIdentity, useSaveVisualIdentity, isVisualIdentityComplete } from "@/hooks/useVisualIdentity";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { generateVideoFromFrames } from "@/lib/videoGenerator";
 
 /* ── Types ── */
 interface SocialConcept {
@@ -61,6 +62,8 @@ interface GeneratedArt {
   videoDescription?: string;
   audioSuggestion?: string;
   thumbnailUrl?: string | null;
+  videoUrl?: string | null;
+  videoFrameUrls?: string[];
 }
 
 interface ArtCampaign {
@@ -592,12 +595,69 @@ export default function ClienteRedesSociais() {
           } catch (e) { console.error("Thumbnail error:", e); }
         }
 
+        const artId = `art-${timestamp}-${i}`;
+        
+        // Generate video frames if video is enabled and we have a description
+        let videoUrl: string | null = null;
+        let videoFrameUrls: string[] = [];
+        
+        if (bIncluirVideo && concept.video_description) {
+          setGenMessage(`Gerando frames de vídeo ${i + 1}/${concepts.length}...`);
+          try {
+            const { data: framesData, error: framesError } = await supabase.functions.invoke("generate-social-video-frames", {
+              body: {
+                video_description: concept.video_description,
+                visual_prompt_thumbnail: concept.visual_prompt_thumbnail,
+                identidade_visual,
+                organization_id: orgId,
+                art_id: artId,
+                num_frames: 5,
+                reference_images: bReferenceImages.length > 0
+                  ? bReferenceImages.slice(0, 2).map(r => r.url)
+                  : undefined,
+              },
+            });
+            
+            if (!framesError && framesData?.frameUrls?.length) {
+              videoFrameUrls = framesData.frameUrls;
+              
+              // Assemble video with ffmpeg.wasm
+              setGenMessage(`Montando vídeo ${i + 1}/${concepts.length}...`);
+              try {
+                const videoBlob = await generateVideoFromFrames(videoFrameUrls, {
+                  frameDurationSeconds: 3,
+                  fps: 24,
+                  transitionFrames: 12,
+                  onProgress: (msg) => setGenMessage(msg),
+                });
+                
+                // Upload video to storage
+                const videoPath = `videos/${orgId}/${artId}/reel.mp4`;
+                const { error: videoUploadError } = await supabase.storage
+                  .from("social-arts")
+                  .upload(videoPath, videoBlob, { contentType: "video/mp4", upsert: true });
+                
+                if (!videoUploadError) {
+                  const { data: videoUrlData } = supabase.storage.from("social-arts").getPublicUrl(videoPath);
+                  videoUrl = videoUrlData.publicUrl;
+                }
+              } catch (ffmpegErr) {
+                console.error("FFmpeg assembly error:", ffmpegErr);
+                toast({ title: "Aviso", description: "Frames gerados, mas a montagem do vídeo falhou. Os frames estão disponíveis individualmente.", variant: "destructive" });
+              }
+            }
+          } catch (videoErr) {
+            console.error("Video frames error:", videoErr);
+          }
+        }
+
         arts.push({
-          id: `art-${timestamp}-${i}`, titulo: concept.titulo, legenda: concept.legenda,
+          id: artId, titulo: concept.titulo, legenda: concept.legenda,
           cta: concept.cta, hashtags: concept.hashtags, feedUrl, storyUrl,
           status: "pending" as ApprovalStatus, createdAt: new Date().toISOString(),
           videoScript: concept.video_script, videoDescription: concept.video_description,
           audioSuggestion: concept.audio_suggestion, thumbnailUrl,
+          videoUrl, videoFrameUrls: videoFrameUrls.length > 0 ? videoFrameUrls : undefined,
         });
       }
 
@@ -1020,8 +1080,8 @@ export default function ClienteRedesSociais() {
                           <label className="flex items-center gap-2.5 cursor-pointer">
                             <input type="checkbox" checked={bIncluirVideo} onChange={(e) => setBIncluirVideo(e.target.checked)} className="rounded" />
                             <div className="flex-1">
-                              <p className="text-xs font-semibold flex items-center gap-1.5"><Video className="w-3.5 h-3.5 text-primary" /> Gerar roteiro de vídeo</p>
-                              <p className="text-[10px] text-muted-foreground">A IA cria roteiro com timecodes, storyboard e sugestão de áudio para cada post.</p>
+                              <p className="text-xs font-semibold flex items-center gap-1.5"><Video className="w-3.5 h-3.5 text-primary" /> Gerar vídeo Reels (MP4)</p>
+                              <p className="text-[10px] text-muted-foreground">A IA gera keyframes sequenciais e monta um vídeo MP4 no formato 9:16 para Reels/TikTok. Custo adicional: ~500 créditos por vídeo.</p>
                             </div>
                           </label>
                         </div>
@@ -1057,7 +1117,30 @@ export default function ClienteRedesSociais() {
                       </div>
                       {(editorFormat as string) === "video" && selectedArt.videoScript ? (
                         <div className="space-y-4">
-                          {selectedArt.thumbnailUrl && (
+                          {/* Video Player */}
+                          {selectedArt.videoUrl ? (
+                            <div className="rounded-xl overflow-hidden border bg-black">
+                              <video
+                                src={selectedArt.videoUrl}
+                                controls
+                                className="w-full max-h-[480px] mx-auto"
+                                poster={selectedArt.thumbnailUrl || undefined}
+                              />
+                              <div className="p-3 bg-muted/30 flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                  <Play className="w-3.5 h-3.5" /> Vídeo Reels (9:16)
+                                </span>
+                                <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7" onClick={() => {
+                                  const a = document.createElement("a");
+                                  a.href = selectedArt.videoUrl!;
+                                  a.download = `${selectedArt.titulo.replace(/[^a-zA-Z0-9]/g, "-")}-reel.mp4`;
+                                  a.click();
+                                }}>
+                                  <Download className="w-3 h-3" /> Baixar Vídeo (MP4)
+                                </Button>
+                              </div>
+                            </div>
+                          ) : selectedArt.thumbnailUrl ? (
                             <div className="rounded-xl overflow-hidden border">
                               <img src={selectedArt.thumbnailUrl} alt="Thumbnail" className="w-full max-h-64 object-cover" />
                               <div className="p-2 bg-muted/30 flex justify-between items-center">
@@ -1067,7 +1150,20 @@ export default function ClienteRedesSociais() {
                                 </Button>
                               </div>
                             </div>
+                          ) : null}
+
+                          {/* Video Frames Preview */}
+                          {selectedArt.videoFrameUrls && selectedArt.videoFrameUrls.length > 0 && (
+                            <div>
+                              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-2"><Image className="w-3.5 h-3.5" /> Keyframes ({selectedArt.videoFrameUrls.length} cenas)</Label>
+                              <div className="flex gap-2 overflow-x-auto pb-2">
+                                {selectedArt.videoFrameUrls.map((url, idx) => (
+                                  <img key={idx} src={url} alt={`Frame ${idx + 1}`} className="h-32 rounded-lg border flex-shrink-0" />
+                                ))}
+                              </div>
+                            </div>
                           )}
+
                           <div>
                             <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Film className="w-3.5 h-3.5" /> Roteiro com Timecodes</Label>
                             <div className="mt-1 p-3 rounded-lg bg-muted/30 text-sm whitespace-pre-line max-h-60 overflow-y-auto font-mono text-xs">{selectedArt.videoScript}</div>
