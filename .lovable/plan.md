@@ -1,86 +1,111 @@
 
 
-## Plano: Ajustes nos Modulos da Franqueadora
+## Plano: Melhorias no Sistema Franqueado
 
-Sao 6 mudancas solicitadas. Vou implementar todas nesta iteracao.
+### Resumo das Mudancas
+
+8 alteracoes solicitadas, organizadas por area.
 
 ---
 
-### 1. Comunicados — Anexo como upload de arquivo
+### 1. Agenda — Visualizacao Semana, Mes e Dia
 
-**Remover:** campos `imagemUrl`, `linkExterno` e `anexo` (texto) do formulario
-**Adicionar:** upload de arquivo real usando storage bucket `announcement-attachments`
-**Adicionar coluna:** `attachment_url` na tabela `announcements`
+A agenda atual so tem visualizacao mensal. Adicionar toggle com 3 modos:
+- **Mes**: grid atual (ja funcional)
+- **Semana**: grid de 7 colunas com slots de hora (7h-22h), mostrando eventos posicionados no horario correto
+- **Dia**: coluna unica com slots de hora detalhados
 
 Alteracoes:
-- Migration: criar bucket `announcement-attachments`, adicionar coluna `attachment_url text` em `announcements`
-- `ComunicadoForm.tsx`: remover os 3 campos (imagemUrl, linkExterno, anexo texto), adicionar input type="file" com upload para storage
-- `ComunicadoDetail.tsx`: exibir link de download do anexo se existir
-- `useAnnouncements.ts`: incluir `attachment_url` no payload de create/update
-- `tipos/comunicados.ts`: remover `imagemUrl`, `linkExterno` dos campos do Comunicado (ou manter opcionais para retrocompatibilidade)
+- `FranqueadoAgenda.tsx`: adicionar state `viewMode` ("month" | "week" | "day"), botoes de toggle no header, componentes `WeekView` e `DayView` internos com navegacao (anterior/proximo semana ou dia)
 
 ---
 
-### 2. Unidades — Visualizacao por Card/Lista + Remover aba Creditos SaaS
+### 2. Suporte — Chamados direto ao Atendimento da Franqueadora
 
-**Remover:** aba "Creditos SaaS" (`CreditosSaasTab`) da pagina Unidades — esse conteudo vai para o novo modulo SaaS
-**Adicionar:** toggle Card/Lista na listagem de unidades (ja temos cards, adicionar view de tabela)
+O suporte do franqueado ja cria tickets na tabela `support_tickets` que a franqueadora le via `Atendimento.tsx`. Os chamados ja sao compartilhados pela `organization_id` pai. Preciso confirmar que o fluxo esta conectado — se necessario, garantir que ao criar ticket o franqueado envia para a org da franqueadora.
 
 Alteracoes:
-- `Unidades.tsx`: remover `CreditosSaasTab` e a aba `TabsTrigger/TabsContent` de creditos. Adicionar toggle view (Card/Lista) com tabela alternativa mostrando colunas: Nome, Cidade/Estado, Responsavel, Status
+- Verificar se `useSupportTickets` filtra corretamente para que a franqueadora veja os tickets criados pelas unidades
+- Se necessario, adicionar campo `parent_org_id` ou ajustar filtro no Atendimento da franqueadora para agregar tickets de todas as unidades da rede
 
 ---
 
-### 3. CRM Expansao — Copiar o CRM do Cliente Final
+### 3. CRM de Vendas — Mesma estrutura do ClienteCRM (SaaS)
 
-Substituir o `CrmExpansao.tsx` atual pelo mesmo nivel de funcionalidade do `ClienteCRM.tsx`:
-- Selecao em massa (bulk actions: mover etapa, atribuir, tags, excluir, marcar perdido)
-- Modo selecao com checkboxes
-- Filtros avancados completos (responsavel, tag, status, valor min/max, data)
-- Cards com temperature cycling, dropdown de acoes (copiar telefone, WhatsApp, marcar perdido)
-- Drag handle separado do click do card
-- Aba Contatos integrada
-- Gestao de funis (botao config)
+Substituir o CRM atual do franqueado pelo nivel completo do `ClienteCRM.tsx`:
+- Drag-and-drop com `@dnd-kit` (DragOverlay, useDraggable, useDroppable)
+- Selecao em massa com checkboxes e bulk actions (mover, tags, excluir, marcar perdido)
+- Filtros avancados em Popover (responsavel, tag, status, temperatura, valor, data)
+- Temperature cycling nos cards
+- Dropdown de acoes por card (copiar telefone, WhatsApp, marcar perdido, excluir)
+- Gestao de funis (CrmFunnelManager)
 - Import CSV
-- DragOverlay com visual melhorado
+- Aba Contatos integrada
 
 Alteracoes:
-- `CrmExpansao.tsx`: reescrever baseado no `ClienteCRM.tsx`, adaptando imports para usar hooks da franqueadora (`useCrmLeads` de `@/hooks/useCrmLeads`, `useCrmFunnels` de `@/hooks/useCrmFunnels`)
+- `FranqueadoCRM.tsx`: reescrever baseado no `ClienteCRM.tsx`, adaptando imports para hooks do franqueado (`useCrmLeads` de `@/hooks/useCrmLeads`, `useCrmFunnels` de `@/hooks/useCrmFunnels`)
 
 ---
 
-### 4. Onboarding — Status e passo a passo robusto
+### 4. Retirar aba Diagnostico
 
-Melhorar a pagina atual com:
-- Cards de unidade mostrando: barra de progresso, status com cores (Em implantacao, Concluido, Pausado, Atrasado), data inicio/meta, responsavel
-- Botao "Nova Implantacao" abrindo Dialog completo (selecionar unidade, definir responsavel, data alvo)
-- Na view de detalhe: toggle de checklist items (marcar como concluido), adicionar nova etapa, CRUD de reunioes (com ata), adicionar tarefas ao plano de acao
-- Indicadores visuais de progresso por fase
+Remover o modulo Diagnostico como item separado da sidebar. A funcionalidade de diagnostico ja esta incorporada dentro do Criador de Estrategia (primeira aba "Novo Diagnostico").
 
 Alteracoes:
-- `Onboarding.tsx`: reescrever com cards mais ricos, dialog de criacao, CRUD funcional nos checklist/meetings/tasks
-- `useOnboarding.ts`: adicionar mutations para toggle checklist, criar/editar meetings, criar/editar tasks
+- `FranqueadoSidebar.tsx`: remover `{ label: "Diagnostico", ... }` do `comercialSection`
+- A rota pode ser mantida no App.tsx para retrocompatibilidade, mas nao aparece no menu
 
 ---
 
-### 5. Atendimento — Primeira aba da Rede + Configuracoes
+### 5. Criador de Estrategia — Salvar historico completo
 
-**Reordenar sidebar:** Atendimento vira o primeiro item da secao "Rede"
-**Adicionar aba Configuracoes:** com categorias/subcategorias, SLA por prioridade, responsaveis, regras de automacao (reutilizar `AtendimentoConfig.tsx` ja existente)
-**Melhorar o modulo:** detail com timeline de mensagens, atribuicao de responsavel, mudanca de status, filtro por categoria/prioridade
+O historico ja esta implementado! A aba "Historico" no `FranqueadoEstrategia.tsx` lista todas as estrategias salvas com busca, edicao de titulo, vinculacao a lead e regeneracao. As estrategias ja sao persistidas na tabela via `useStrategies/useCreateStrategy`.
 
-Alteracoes:
-- `FranqueadoraSidebar.tsx`: reordenar `redeSection` para Atendimento ser o primeiro
-- `Atendimento.tsx`: adicionar aba "Configuracoes" com `AtendimentoConfig`, melhorar detail view com timeline, adicionar selects de categoria/subcategoria ao criar chamado
+**Nao precisa de mudancas aqui** — ja funciona conforme solicitado.
 
 ---
 
-### 6. Matriz — Mover para Administrativo
+### 6. Estrategias e Propostas vinculadas aos Leads do CRM
 
-**Mover** o item "Matriz" de `redeSection` para `adminSection` na sidebar.
+As estrategias ja tem campo `lead_id` e vinculacao no historico. As propostas tambem tem `lead_id` via `CrmProposals`.
+
+O que falta: garantir que no **CrmLeadDetailSheet** do franqueado (a sheet de detalhe do lead) exista abas mostrando estrategias e propostas vinculadas ao lead.
 
 Alteracoes:
-- `FranqueadoraSidebar.tsx`: remover Matriz de `redeSection`, adicionar em `adminSection` (antes de Drive Corporativo)
+- `CrmLeadDetailSheet.tsx` (franqueado): adicionar abas/secoes para "Estrategias" e "Propostas" vinculadas ao lead, com links para visualizar e botoes para criar nova estrategia/proposta vinculada
+
+---
+
+### 7. Contratos — Obrigatorio vincular Lead + Proposta Aceita
+
+Ao criar novo contrato:
+- **Lead do CRM** e **Proposta aceita** sao **obrigatorios** (nao opcionais como hoje)
+- Ao selecionar proposta aceita, puxar automaticamente: valores, servicos, forma de pagamento
+- O unico campo que o franqueado precisa preencher manualmente alem disso: **dia de pagamento**
+- Contratos ativos devem mostrar: status de assinatura (assinado/nao), status de envio (enviado/nao), proximidade de vencimento (badge "Vence em X dias")
+- Gerar **arquivo PDF A4** profissional do contrato (usando html2pdf.js ja instalado), com layout formal de contrato
+
+Alteracoes:
+- `FranqueadoContratos.tsx`: 
+  - Tornar lead_id e proposal_id obrigatorios no formulario
+  - Simplificar formulario: ao selecionar proposta, pre-preencher tudo, so pedir dia de pagamento + dados do cliente
+  - Na listagem, adicionar badges de status (Assinado/Nao assinado, Enviado, Vence em X dias)
+  - Melhorar funcao `downloadContractPdf` para gerar layout A4 profissional com secoes de contrato formais
+
+---
+
+### 8. Financeiro — Vincular pagamentos dos clientes
+
+No financeiro do franqueado:
+- Mostrar pagamentos dos clientes vinculados aos contratos
+- Calcular automaticamente a participacao de 20% do franqueado
+- Quando o cliente paga (status "pago" no contrato/payment), atualizar o valor liquido do franqueado
+
+Alteracoes:
+- `FranqueadoFinanceiro.tsx`:
+  - Na aba "Visao Geral", adicionar KPI "Participacao (20%)" calculada sobre o MRR
+  - Na aba "Controle de Pagamentos", adicionar coluna "Sua Participacao (20%)" e status de recebimento
+  - Adicionar toggle "Marcar como Recebido" nos pagamentos para controle do franqueado
 
 ---
 
@@ -88,24 +113,19 @@ Alteracoes:
 
 | Arquivo | Acao |
 |---|---|
-| Migration SQL | Criar bucket `announcement-attachments`, coluna `attachment_url` em `announcements` |
-| `src/components/comunicados/ComunicadoForm.tsx` | Editar — remover 3 campos, adicionar file upload |
-| `src/components/comunicados/ComunicadoDetail.tsx` | Editar — exibir anexo como link de download |
-| `src/hooks/useAnnouncements.ts` | Editar — suportar `attachment_url` |
-| `src/pages/Unidades.tsx` | Editar — remover aba Creditos SaaS, adicionar toggle Card/Lista |
-| `src/pages/CrmExpansao.tsx` | Reescrever — copiar estrutura do ClienteCRM |
-| `src/pages/Onboarding.tsx` | Reescrever — cards com progresso, CRUD funcional |
-| `src/hooks/useOnboarding.ts` | Editar — adicionar mutations |
-| `src/pages/Atendimento.tsx` | Reescrever — aba config, detail com timeline, categorias |
-| `src/components/FranqueadoraSidebar.tsx` | Editar — reordenar Atendimento para 1o da Rede, mover Matriz para Admin |
+| `src/pages/franqueado/FranqueadoAgenda.tsx` | Reescrever — adicionar views Semana e Dia |
+| `src/pages/franqueado/FranqueadoCRM.tsx` | Reescrever — copiar estrutura do ClienteCRM |
+| `src/pages/franqueado/FranqueadoContratos.tsx` | Editar — obrigatoriedade Lead+Proposta, PDF A4, badges de status |
+| `src/pages/franqueado/FranqueadoFinanceiro.tsx` | Editar — participacao 20%, pagamentos vinculados |
+| `src/components/FranqueadoSidebar.tsx` | Editar — remover Diagnostico |
+| `src/components/franqueado/CrmLeadDetailSheet.tsx` | Editar — adicionar abas Estrategias e Propostas |
 
 ### Sequencia de Implementacao
 
-1. Migration (bucket + coluna)
-2. Sidebar (reordenar Atendimento + mover Matriz)
-3. Comunicados (file upload)
-4. Unidades (remover creditos, toggle view)
-5. CRM Expansao (reescrever)
-6. Onboarding (reescrever)
-7. Atendimento (reescrever)
+1. Sidebar (remover Diagnostico)
+2. Agenda (views semana/dia)
+3. CRM de Vendas (reescrever completo)
+4. Lead Detail Sheet (vincular estrategias/propostas)
+5. Contratos (obrigatoriedade + PDF A4 + badges)
+6. Financeiro (participacao 20%)
 
