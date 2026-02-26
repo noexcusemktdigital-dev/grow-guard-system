@@ -1,116 +1,111 @@
 
 
-## Roadmap: Desenvolvimento dos Modulos da Franqueadora
+## Plano: Ajustes nos Modulos da Franqueadora
 
-### Estado Atual de Cada Modulo
-
-| # | Modulo | Estado | O que falta |
-|---|--------|--------|-------------|
-| 1 | **Dashboard** | Funcional | KPIs reais, "Hoje eu preciso" inteligente |
-| 2 | **Agenda** | Funcional | OK (Google Calendar integrado) |
-| 3 | **Comunicados** | Funcional | OK (CRUD + segmentacao) |
-| 4 | **Unidades** | Basico | Abas de detalhe (usuarios, docs, financeiro) sao placeholders |
-| 5 | **CRM Expansao** | Basico | Sem detail sheet, sem drag-drop, sem filtros avancados, sem atividades |
-| 6 | **Onboarding** | Basico | Sem CRUD para criar implantacoes, sem toggle de checklist, sem atas |
-| 7 | **Atendimento** | Basico | Detail minimo, sem timeline de respostas, sem atribuicao |
-| 8 | **Matriz** | Placeholder | Apenas lista perfis, sem gestao de permissoes reais |
-| 9 | **Marketing** | Placeholder | Upload nao funciona, sem pastas, sem download |
-| 10 | **Treinamentos** | Funcional | OK (Academy com gestao + player) |
-| 11 | **Metas e Ranking** | Placeholder | Todas as abas mostram empty state |
-| 12 | **Contratos** | Basico | CRUD funciona, falta preview/editor de template |
-| 13 | **Financeiro** | Basico | CRUD funciona, falta graficos e DRE real |
-| 14 | **SaaS** | Funcional | OK (5 abas operacionais) |
-| 15 | **Drive** | Desativado | Nao implementado |
-
-### Ordem Proposta (por dependencia e impacto)
-
-**Fase 1 — Rede (core da operacao)**
-1. **Unidades** — base para tudo (vincular usuarios, docs, financeiro por unidade)
-2. **CRM Expansao** — motor comercial da franqueadora
-3. **Onboarding** — depende de Unidades (nova unidade -> onboarding)
-4. **Atendimento** — suporte da rede
-5. **Matriz** — permissoes e usuarios
-
-**Fase 2 — Comercial**
-6. **Metas e Ranking** — CRUD de metas, dashboard, ranking gamificado
-7. **Marketing** — upload real, pastas, distribuicao para rede
-
-**Fase 3 — Administrativo**
-8. **Financeiro** — graficos, DRE automatico, projecoes
-9. **Contratos** — editor de template, variaveis dinamicas
-10. **Dashboard** — consolidar KPIs de todos os modulos
+Sao 6 mudancas solicitadas. Vou implementar todas nesta iteracao.
 
 ---
 
-### Modulo 1: Unidades (Detalhamento Completo)
+### 1. Comunicados — Anexo como upload de arquivo
 
-Hoje as abas de detalhe da unidade (Usuarios, Documentos, Financeiro) sao placeholders. Vamos implementar cada uma.
+**Remover:** campos `imagemUrl`, `linkExterno` e `anexo` (texto) do formulario
+**Adicionar:** upload de arquivo real usando storage bucket `announcement-attachments`
+**Adicionar coluna:** `attachment_url` na tabela `announcements`
 
-#### 1.1 Aba "Dados" — Editar Unidade
-- Formulario editavel (inline ou Dialog) com todos os campos: nome, cidade, estado, telefone, email, responsavel, status, observacoes
-- Botao "Salvar Alteracoes" que chama `updateUnit`
-- Select de status: Ativa, Suspensa, Encerrada
+Alteracoes:
+- Migration: criar bucket `announcement-attachments`, adicionar coluna `attachment_url text` em `announcements`
+- `ComunicadoForm.tsx`: remover os 3 campos (imagemUrl, linkExterno, anexo texto), adicionar input type="file" com upload para storage
+- `ComunicadoDetail.tsx`: exibir link de download do anexo se existir
+- `useAnnouncements.ts`: incluir `attachment_url` no payload de create/update
+- `tipos/comunicados.ts`: remover `imagemUrl`, `linkExterno` dos campos do Comunicado (ou manter opcionais para retrocompatibilidade)
 
-#### 1.2 Aba "Usuarios" — Membros da Unidade
-- Listar membros da organizacao (`organization_memberships` + `profiles`) filtrados pelo `unit_id`
-- Colunas: Nome, Email, Funcao, Permissao, Status
-- Botao "Convidar Usuario" abrindo Dialog com: nome, email, funcao (Select: Franqueado, Comercial, Atendimento, Performance, Criativo, Financeiro), permissao (Admin da Unidade, Operador, Somente leitura)
-- Acoes por usuario: Editar funcao, Ativar/Desativar
-- Como a tabela `units` ja existe e tem `organization_id`, os membros sao filtrados por org
+---
 
-#### 1.3 Aba "Documentos" — Repositorio por Unidade
-- Listar documentos vinculados a unidade (nova tabela `unit_documents`)
-- Upload de arquivo (storage bucket `unit-documents`)
-- Campos: Tipo (Contrato de franquia, Docs administrativos, Arquivos internos, Outros), Nome, Visibilidade (Somente Franqueadora / Ambos), Observacao
-- Acoes: Download, Excluir
-- Badge de visibilidade na listagem
+### 2. Unidades — Visualizacao por Card/Lista + Remover aba Creditos SaaS
 
-#### 1.4 Aba "Financeiro" — Config por Unidade
-- Formulario editavel com campos financeiros da unidade: % repasse, % royalties, mensalidade sistema (R$), sistema ativo (toggle)
-- Historico de cobranças geradas para esta unidade (query em `franchisee_charges` filtrado por `franchisee_org_id`)
-- Status de pagamento do sistema (query em `franchisee_system_payments`)
+**Remover:** aba "Creditos SaaS" (`CreditosSaasTab`) da pagina Unidades — esse conteudo vai para o novo modulo SaaS
+**Adicionar:** toggle Card/Lista na listagem de unidades (ja temos cards, adicionar view de tabela)
 
-#### Mudancas no Banco de Dados
+Alteracoes:
+- `Unidades.tsx`: remover `CreditosSaasTab` e a aba `TabsTrigger/TabsContent` de creditos. Adicionar toggle view (Card/Lista) com tabela alternativa mostrando colunas: Nome, Cidade/Estado, Responsavel, Status
 
-**Nova tabela: `unit_documents`**
-```text
-unit_documents
-  id              uuid PK
-  unit_id         uuid FK -> units
-  organization_id uuid FK -> organizations
-  name            text NOT NULL
-  type            text (Contrato de franquia | Docs administrativos | Arquivos internos | Outros)
-  file_url        text
-  visibility      text default 'both' (franqueadora_only | both)
-  notes           text
-  uploaded_by     uuid FK -> auth.users
-  created_at      timestamptz
-```
+---
 
-**Alterar tabela `units`**: Adicionar colunas se nao existirem:
-- `royalty_percent` numeric default 1
-- `system_fee` numeric default 250
-- `transfer_percent` numeric default 20
-- `system_active` boolean default true
-- `financial_notes` text
+### 3. CRM Expansao — Copiar o CRM do Cliente Final
 
-**Novo storage bucket**: `unit-documents` (public)
+Substituir o `CrmExpansao.tsx` atual pelo mesmo nivel de funcionalidade do `ClienteCRM.tsx`:
+- Selecao em massa (bulk actions: mover etapa, atribuir, tags, excluir, marcar perdido)
+- Modo selecao com checkboxes
+- Filtros avancados completos (responsavel, tag, status, valor min/max, data)
+- Cards com temperature cycling, dropdown de acoes (copiar telefone, WhatsApp, marcar perdido)
+- Drag handle separado do click do card
+- Aba Contatos integrada
+- Gestao de funis (botao config)
+- Import CSV
+- DragOverlay com visual melhorado
 
-**RLS**: `unit_documents` — SELECT/INSERT/DELETE para membros da org (`is_member_of_org`)
+Alteracoes:
+- `CrmExpansao.tsx`: reescrever baseado no `ClienteCRM.tsx`, adaptando imports para usar hooks da franqueadora (`useCrmLeads` de `@/hooks/useCrmLeads`, `useCrmFunnels` de `@/hooks/useCrmFunnels`)
 
-#### Arquivos a Criar/Editar
+---
+
+### 4. Onboarding — Status e passo a passo robusto
+
+Melhorar a pagina atual com:
+- Cards de unidade mostrando: barra de progresso, status com cores (Em implantacao, Concluido, Pausado, Atrasado), data inicio/meta, responsavel
+- Botao "Nova Implantacao" abrindo Dialog completo (selecionar unidade, definir responsavel, data alvo)
+- Na view de detalhe: toggle de checklist items (marcar como concluido), adicionar nova etapa, CRUD de reunioes (com ata), adicionar tarefas ao plano de acao
+- Indicadores visuais de progresso por fase
+
+Alteracoes:
+- `Onboarding.tsx`: reescrever com cards mais ricos, dialog de criacao, CRUD funcional nos checklist/meetings/tasks
+- `useOnboarding.ts`: adicionar mutations para toggle checklist, criar/editar meetings, criar/editar tasks
+
+---
+
+### 5. Atendimento — Primeira aba da Rede + Configuracoes
+
+**Reordenar sidebar:** Atendimento vira o primeiro item da secao "Rede"
+**Adicionar aba Configuracoes:** com categorias/subcategorias, SLA por prioridade, responsaveis, regras de automacao (reutilizar `AtendimentoConfig.tsx` ja existente)
+**Melhorar o modulo:** detail com timeline de mensagens, atribuicao de responsavel, mudanca de status, filtro por categoria/prioridade
+
+Alteracoes:
+- `FranqueadoraSidebar.tsx`: reordenar `redeSection` para Atendimento ser o primeiro
+- `Atendimento.tsx`: adicionar aba "Configuracoes" com `AtendimentoConfig`, melhorar detail view com timeline, adicionar selects de categoria/subcategoria ao criar chamado
+
+---
+
+### 6. Matriz — Mover para Administrativo
+
+**Mover** o item "Matriz" de `redeSection` para `adminSection` na sidebar.
+
+Alteracoes:
+- `FranqueadoraSidebar.tsx`: remover Matriz de `redeSection`, adicionar em `adminSection` (antes de Drive Corporativo)
+
+---
+
+### Resumo de Arquivos
 
 | Arquivo | Acao |
 |---|---|
-| Migration SQL | Criar tabela `unit_documents`, adicionar colunas em `units`, criar bucket |
-| `src/hooks/useUnitDocuments.ts` | Criar — hook para CRUD de documentos de unidade |
-| `src/hooks/useUnitMembers.ts` | Criar — hook para listar/gerenciar membros de uma unidade |
-| `src/components/unidades/UnidadeDadosEdit.tsx` | Criar — formulario editavel de dados da unidade |
-| `src/components/unidades/UnidadeUsuariosReal.tsx` | Criar — listagem real de membros + convidar |
-| `src/components/unidades/UnidadeDocumentosReal.tsx` | Criar — upload + listagem de documentos |
-| `src/components/unidades/UnidadeFinanceiroReal.tsx` | Criar — config financeira + historico de cobrancas |
-| `src/pages/Unidades.tsx` | Editar — substituir placeholders pelos componentes reais |
+| Migration SQL | Criar bucket `announcement-attachments`, coluna `attachment_url` em `announcements` |
+| `src/components/comunicados/ComunicadoForm.tsx` | Editar — remover 3 campos, adicionar file upload |
+| `src/components/comunicados/ComunicadoDetail.tsx` | Editar — exibir anexo como link de download |
+| `src/hooks/useAnnouncements.ts` | Editar — suportar `attachment_url` |
+| `src/pages/Unidades.tsx` | Editar — remover aba Creditos SaaS, adicionar toggle Card/Lista |
+| `src/pages/CrmExpansao.tsx` | Reescrever — copiar estrutura do ClienteCRM |
+| `src/pages/Onboarding.tsx` | Reescrever — cards com progresso, CRUD funcional |
+| `src/hooks/useOnboarding.ts` | Editar — adicionar mutations |
+| `src/pages/Atendimento.tsx` | Reescrever — aba config, detail com timeline, categorias |
+| `src/components/FranqueadoraSidebar.tsx` | Editar — reordenar Atendimento para 1o da Rede, mover Matriz para Admin |
 
-### Proximos Passos
+### Sequencia de Implementacao
 
-Apos a aprovacao, implemento o Modulo 1 (Unidades) completo. Depois seguimos para o CRM Expansao, Onboarding, e assim por diante na ordem proposta.
+1. Migration (bucket + coluna)
+2. Sidebar (reordenar Atendimento + mover Matriz)
+3. Comunicados (file upload)
+4. Unidades (remover creditos, toggle view)
+5. CRM Expansao (reescrever)
+6. Onboarding (reescrever)
+7. Atendimento (reescrever)
+
