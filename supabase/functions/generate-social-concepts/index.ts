@@ -80,7 +80,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo, organization_id, reference_images, incluir_video } = await req.json();
+    const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo, organization_id, reference_images, incluir_video, art_style, video_style } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -175,6 +175,29 @@ while adapting to the brand identity and briefing.
 Be EXTREMELY specific about replicating the visual language you observe.`;
     }
 
+    let artStyleContext = "";
+    if (art_style) {
+      const artStyleGuides: Record<string, string> = {
+        foto_texto: "ART STYLE: Photo + Text overlay. Use photorealistic backgrounds (professional photography) with clean compositional space for text. Studio lighting, sharp details, editorial feel.",
+        composicao: "ART STYLE: Graphic Composition. Abstract shapes, geometric elements, bold color blocks, layered visual design. Modern graphic design aesthetic with dynamic composition.",
+        mockup: "ART STYLE: Product Mockup. Show products in realistic contexts (desk, hand, lifestyle setting). Natural lighting, contextual backgrounds, commercial photography feel.",
+        quote: "ART STYLE: Quote Card. Stylized background (gradient, texture, or pattern) optimized for text overlay. Minimalist, clean, focused on legibility. Think inspirational quote format.",
+        before_after: "ART STYLE: Before & After. Split composition showing two contrasting states side by side or top/bottom. Clear visual contrast, same framing angle, transformation theme.",
+      };
+      artStyleContext = `\n\n${artStyleGuides[art_style] || ""}`;
+    }
+
+    let videoStyleContext = "";
+    if (video_style) {
+      const videoStyleGuides: Record<string, string> = {
+        slideshow: "VIDEO STYLE: Slideshow + Text. Generate frames that work as a cinematic slideshow with smooth Ken Burns transitions. Each frame should have a distinct visual moment. Subtle variations in angle and zoom for dynamic motion.",
+        kinetic: "VIDEO STYLE: Kinetic Typography. Generate bold, high-contrast backgrounds/textures. The motion graphics engine will add animated text. Focus on visually striking but text-overlay-friendly compositions.",
+        revelacao: "VIDEO STYLE: Product Reveal. Generate frames with dramatic zoom-in progression. Start wide/mysterious, progressively reveal the subject. Dramatic lighting, suspenseful composition.",
+        countdown: "VIDEO STYLE: Countdown. Generate frames with escalating visual intensity. Each frame should feel more urgent/exciting than the last. Bold compositions, dynamic energy.",
+      };
+      videoStyleContext = `\n\n${videoStyleGuides[video_style] || ""}`;
+    }
+
     const systemPrompt = `Você é um diretor criativo SÊNIOR de uma agência de marketing digital premiada, especializado em artes para redes sociais de altíssima qualidade.
 
 Gere exatamente ${quantidade} conceitos de posts para redes sociais.
@@ -190,6 +213,8 @@ ${personaContext}
 ${identityContext}
 ${referenciasTipoContext}
 ${referenceImageContext}
+${artStyleContext}
+${videoStyleContext}
 
 Cada conceito DEVE ter:
 - titulo: título curto e chamativo do post (máx 60 caracteres)

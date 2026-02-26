@@ -214,7 +214,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, format, file_path, nivel, persona, identidade_visual, organization_id, reference_images } = await req.json();
+    const { prompt, format, file_path, nivel, persona, identidade_visual, organization_id, reference_images, art_style } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -261,6 +261,19 @@ serve(async (req) => {
     const qualityInstructions = getQualityInstructions(nivel || "simples");
     const styleInstructions = getStyleInstructions(estilo);
 
+    // Art style instructions
+    let artStyleInstructions = "";
+    if (art_style) {
+      const artStyleMap: Record<string, string> = {
+        foto_texto: "ART APPROACH: Photorealistic image with clean negative space for text overlay. Professional photography aesthetic. Studio or natural lighting, sharp details.",
+        composicao: "ART APPROACH: Graphic design composition with abstract shapes, geometric elements, bold color blocks. Modern, layered, visually dynamic.",
+        mockup: "ART APPROACH: Product mockup in realistic context (desk, hand, lifestyle). Natural lighting, contextual background, commercial photography.",
+        quote: "ART APPROACH: Stylized background (gradient, texture, pattern) optimized for text overlay. Minimalist and clean. Focus on atmosphere and mood.",
+        before_after: "ART APPROACH: Split composition showing two contrasting states. Clear visual contrast, same framing perspective, transformation narrative.",
+      };
+      artStyleInstructions = artStyleMap[art_style] || "";
+    }
+
     const aspectInstruction = format === "feed"
       ? "OUTPUT FORMAT: Square (1:1), 1080×1080px. Centered, balanced composition optimized for Instagram feed."
       : "OUTPUT FORMAT: Vertical (9:16), 1080×1920px. Vertical composition with stacked elements, optimized for Stories/Reels.";
@@ -279,6 +292,7 @@ ${prompt}`;
 
 ${qualityInstructions}
 
+${artStyleInstructions ? `\n${artStyleInstructions}\n` : ""}
 ${styleInstructions}
 
 ${aspectInstruction}
