@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, CreditCard, RefreshCw, Link2 } from "lucide-react";
+import { UnidadeDadosEdit } from "@/components/unidades/UnidadeDadosEdit";
+import { UnidadeUsuariosReal } from "@/components/unidades/UnidadeUsuariosReal";
+import { UnidadeDocumentosReal } from "@/components/unidades/UnidadeDocumentosReal";
+import { UnidadeFinanceiroReal } from "@/components/unidades/UnidadeFinanceiroReal";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -287,21 +291,17 @@ export default function Unidades() {
               <TabsTrigger value="financeiro" className="gap-2"><Settings className="w-4 h-4" /> Financeiro</TabsTrigger>
             </TabsList>
             <TabsContent value="dados">
-              <Card className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{selected.name}</span></div>
-                  <div><span className="text-muted-foreground">Status:</span> <span className="font-medium">{selected.status}</span></div>
-                  <div><span className="text-muted-foreground">Cidade:</span> <span className="font-medium">{selected.city || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Estado:</span> <span className="font-medium">{selected.state || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Telefone:</span> <span className="font-medium">{selected.phone || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{selected.email || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Responsável:</span> <span className="font-medium">{selected.manager_name || "—"}</span></div>
-                </div>
-              </Card>
+              <UnidadeDadosEdit unit={selected} />
             </TabsContent>
-            <TabsContent value="usuarios"><Card className="p-6 text-center text-muted-foreground">Nenhum usuário vinculado a esta unidade.</Card></TabsContent>
-            <TabsContent value="documentos"><Card className="p-6 text-center text-muted-foreground">Nenhum documento cadastrado.</Card></TabsContent>
-            <TabsContent value="financeiro"><Card className="p-6 text-center text-muted-foreground">Configuração financeira não definida.</Card></TabsContent>
+            <TabsContent value="usuarios">
+              <UnidadeUsuariosReal unitOrgId={selected.unit_org_id} />
+            </TabsContent>
+            <TabsContent value="documentos">
+              <UnidadeDocumentosReal unitId={selected.id} />
+            </TabsContent>
+            <TabsContent value="financeiro">
+              <UnidadeFinanceiroReal unit={selected} />
+            </TabsContent>
           </Tabs>
         </div>
       )}

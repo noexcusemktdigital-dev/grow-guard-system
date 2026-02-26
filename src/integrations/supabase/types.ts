@@ -4050,20 +4050,79 @@ export type Database = {
           },
         ]
       }
+      unit_documents: {
+        Row: {
+          created_at: string | null
+          file_url: string | null
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string
+          type: string | null
+          unit_id: string
+          uploaded_by: string | null
+          visibility: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_url?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          organization_id: string
+          type?: string | null
+          unit_id: string
+          uploaded_by?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_url?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          type?: string | null
+          unit_id?: string
+          uploaded_by?: string | null
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_documents_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units: {
         Row: {
           address: string | null
           city: string | null
           created_at: string
           email: string | null
+          financial_notes: string | null
           id: string
           manager_name: string | null
           name: string
           opened_at: string | null
           organization_id: string
           phone: string | null
+          royalty_percent: number | null
           state: string | null
           status: string
+          system_active: boolean | null
+          system_fee: number | null
+          transfer_percent: number | null
           unit_org_id: string | null
           updated_at: string
         }
@@ -4072,14 +4131,19 @@ export type Database = {
           city?: string | null
           created_at?: string
           email?: string | null
+          financial_notes?: string | null
           id?: string
           manager_name?: string | null
           name: string
           opened_at?: string | null
           organization_id: string
           phone?: string | null
+          royalty_percent?: number | null
           state?: string | null
           status?: string
+          system_active?: boolean | null
+          system_fee?: number | null
+          transfer_percent?: number | null
           unit_org_id?: string | null
           updated_at?: string
         }
@@ -4088,14 +4152,19 @@ export type Database = {
           city?: string | null
           created_at?: string
           email?: string | null
+          financial_notes?: string | null
           id?: string
           manager_name?: string | null
           name?: string
           opened_at?: string | null
           organization_id?: string
           phone?: string | null
+          royalty_percent?: number | null
           state?: string | null
           status?: string
+          system_active?: boolean | null
+          system_fee?: number | null
+          transfer_percent?: number | null
           unit_org_id?: string | null
           updated_at?: string
         }
