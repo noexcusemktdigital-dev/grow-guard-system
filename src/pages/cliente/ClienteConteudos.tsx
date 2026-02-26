@@ -501,6 +501,7 @@ export default function ClienteConteudos() {
                   steps={LUNA_STEPS}
                   onComplete={handleChatComplete}
                   onCancel={() => setWizardOpen(false)}
+                  context={{ maxContents: maxContents, usedContents: contentsThisMonth, planName }}
                 />
               )}
             </DialogContent>
