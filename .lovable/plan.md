@@ -1,119 +1,216 @@
 
+## Reestruturacao Completa do Modulo de Marketing
 
-## Otimizacoes CRM, Conversas e Agentes de IA
+### Visao Geral
 
-Avaliacao completa dos tres modulos com problemas identificados e correcoes propostas, organizados por prioridade.
-
----
-
-### Prioridade Alta (impacto direto na experiencia)
-
-#### 1. Preview de ultima mensagem vazio no Chat
-O mapa `lastMessages` em `ClienteChat.tsx` e criado vazio e nunca preenchido. Resultado: a lista de contatos nao mostra preview da ultima mensagem.
-
-**Correcao**: Fazer uma query leve buscando a ultima mensagem de cada contato, ou aproveitar o realtime para manter um cache local.
-
-**Arquivo**: `src/pages/cliente/ClienteChat.tsx`
+Reorganizar o fluxo de marketing para: Estrategia primeiro (obrigatoria) → Conteudos (puxa da estrategia) → Redes Sociais (identidade visual obrigatoria). Adicionar tooltips de duvida, historico de estrategias, melhorar prompts de geracao de artes e tornar tudo mais claro e objetivo.
 
 ---
 
-#### 2. Paginacao de mensagens no backend
-`useWhatsAppMessages` busca TODAS as mensagens sem limite. Contatos com centenas de mensagens sobrecarregam o frontend.
+### 1. Estrategia — Persistencia e Historico
 
-**Correcao**: Adicionar `.limit(200)` na query inicial e implementar "carregar mais" com offset.
+**Problema atual**: A estrategia salva no `localStorage` e se perde. Nao tem historico.
 
-**Arquivo**: `src/hooks/useWhatsApp.ts`
+**Solucao**: Criar tabela `marketing_strategies` no banco para persistir a estrategia ativa e o historico.
 
----
+**Migracao SQL**:
+```sql
+CREATE TABLE public.marketing_strategies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  answers JSONB NOT NULL DEFAULT '{}',
+  score_percentage INT NOT NULL DEFAULT 0,
+  nivel TEXT NOT NULL DEFAULT 'Iniciante',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
-#### 3. Indicador de "IA processando" no chat
-O agente mostra "digitando" no WhatsApp, mas dentro da plataforma nao ha indicacao visual de que a IA esta processando uma resposta.
+ALTER TABLE public.marketing_strategies ENABLE ROW LEVEL SECURITY;
 
-**Correcao**: Quando uma mensagem inbound chega e o contato esta em modo `ai`, exibir um indicador de "digitando..." temporario na conversa (3 pontinhos animados).
+CREATE POLICY "Membros da org podem ler estrategias"
+  ON public.marketing_strategies FOR SELECT
+  USING (is_member_of_org(auth.uid(), organization_id));
 
-**Arquivo**: `src/components/cliente/ChatConversation.tsx`
+CREATE POLICY "Membros da org podem inserir estrategias"
+  ON public.marketing_strategies FOR INSERT
+  WITH CHECK (is_member_of_org(auth.uid(), organization_id));
 
----
+CREATE POLICY "Membros da org podem atualizar estrategias"
+  ON public.marketing_strategies FOR UPDATE
+  USING (is_member_of_org(auth.uid(), organization_id));
+```
 
-#### 4. Validacao de conflito no SCHEDULE_MEETING
-A acao `SCHEDULE_MEETING` insere o evento sem verificar se o horario ja esta ocupado. Se o LLM alucinar, cria eventos duplicados.
+**Arquivo**: `src/pages/cliente/ClientePlanoMarketing.tsx`
 
-**Correcao**: Antes de inserir, fazer query em `calendar_events` para verificar overlap. Se houver conflito, nao criar e logar o erro.
+Alteracoes:
+- Ao completar a estrategia, salvar no banco (nao mais localStorage) com `is_active = true`
+- Ao refazer, marcar a anterior como `is_active = false` (vai para historico)
+- Na aba de resultados, a estrategia fica sempre visivel e editavel
+- Adicionar aba "Historico" com lista de estrategias anteriores (data, score, nivel)
+- Adicionar botao "Refazer Estrategia" que abre o wizard novamente
+- Ao carregar a pagina, buscar a estrategia ativa do banco
 
-**Arquivo**: `supabase/functions/ai-agent-reply/index.ts`
-
----
-
-### Prioridade Media (performance e robustez)
-
-#### 5. Realtime muito amplo
-O channel realtime invalida TODAS as queries de mensagens em qualquer mudanca, mesmo de contatos nao selecionados.
-
-**Correcao**: Filtrar o listener do realtime pelo `contact_id` selecionado para mensagens, mantendo o listener amplo apenas para contatos (unread badges).
-
-**Arquivo**: `src/pages/cliente/ClienteChat.tsx`
-
----
-
-#### 6. Fallback de agente desativado
-Se o agente atribuido ao contato foi desativado, a mensagem e ignorada silenciosamente.
-
-**Correcao**: Se a query com `agent_id` retorna vazio, buscar qualquer agente ativo da organizacao como fallback. Logar o fallback.
-
-**Arquivo**: `supabase/functions/ai-agent-reply/index.ts`
-
----
-
-#### 7. Retry com backoff em rate limit (429)
-A funcao retorna erro imediatamente quando o gateway da 429.
-
-**Correcao**: Implementar 1 retry com delay de 3 segundos antes de desistir.
-
-**Arquivo**: `supabase/functions/ai-agent-reply/index.ts`
+**Novo hook**: `src/hooks/useMarketingStrategy.ts`
+- `useActiveStrategy()` — busca a estrategia ativa da org
+- `useSaveStrategy()` — mutation para salvar nova estrategia
+- `useStrategyHistory()` — lista historico de estrategias anteriores
 
 ---
 
-#### 8. Bulk update de tags faz N chamadas
-`handleBulkAddTag` no CRM faz um `updateLead.mutate()` por lead selecionado.
+### 2. Tooltips de Duvida em Todos os Modulos
 
-**Correcao**: Usar `bulkUpdateLeads` com logica de merge de tags no backend, ou pelo menos agrupar as chamadas.
+**Componente reutilizavel**: `src/components/HelpTooltip.tsx`
 
-**Arquivo**: `src/pages/cliente/ClienteCRM.tsx`
+```text
+[?] ← icone discreto ao lado de labels
+     └─ Tooltip com texto explicativo
+```
 
----
+Sera usado em:
+- **Estrategia**: ao lado de cada pergunta (ex: "CAC e o custo medio para adquirir um novo cliente")
+- **Conteudos**: ao lado de campos do wizard (ex: "O funil de conteudo ajuda a atrair, engajar e converter")
+- **Redes Sociais**: ao lado de campos da identidade visual (ex: "A paleta de cores define a personalidade visual da marca")
 
-### Prioridade Baixa (limpeza e consistencia)
-
-#### 9. Remover CrmKanban.tsx legado
-O componente `CrmKanban.tsx` usa tipos mock e nao e usado no fluxo real do cliente. Pode ser removido.
-
-**Arquivo**: `src/components/crm/CrmKanban.tsx`
-
----
-
-#### 10. Limitar tamanho do system prompt
-O prompt acumula muitas secoes e pode ultrapassar o context window com bases de conhecimento extensas.
-
-**Correcao**: Truncar a base de conhecimento para no maximo 4000 caracteres e o historico de chat para 15 mensagens.
-
-**Arquivo**: `supabase/functions/ai-agent-reply/index.ts`
+Cada pergunta/campo tera um `helpText` opcional no tipo.
 
 ---
 
-### Resumo de impacto
+### 3. Conteudos — Multi-objetivo e Anexos
 
-| Item | Arquivos | Complexidade |
-|------|---------|-------------|
-| Preview ultima msg | ClienteChat.tsx | Baixa |
-| Paginacao mensagens | useWhatsApp.ts | Baixa |
-| Indicador IA digitando | ChatConversation.tsx | Media |
-| Validacao SCHEDULE_MEETING | ai-agent-reply | Baixa |
-| Realtime otimizado | ClienteChat.tsx | Media |
-| Fallback agente | ai-agent-reply | Baixa |
-| Retry 429 | ai-agent-reply | Baixa |
-| Bulk tags | ClienteCRM.tsx | Baixa |
-| Remover legado | CrmKanban.tsx | Trivial |
-| Truncar prompt | ai-agent-reply | Baixa |
+**Arquivo**: `src/pages/cliente/ClienteConteudos.tsx`
 
-Total: 6 arquivos afetados, maioria das correcoes sao pontuais.
+Alteracoes no wizard de briefing:
+- **Multi-objetivo**: campo de objetivo passa de `Select` para `multi-choice` (checkboxes). O usuario pode marcar "Gerar leads" + "Aumentar engajamento" ao mesmo tempo
+- **Anexos/Links**: Novo campo "Materiais de apoio" com:
+  - Input de URL (para links de referencia)
+  - Upload de arquivo (PDF, imagem) para o bucket `social-arts`
+  - Lista de anexos adicionados com botao de remover
+- **Puxa da estrategia**: Ao abrir o wizard, buscar a estrategia ativa e pre-preencher campos relevantes (persona, segmento, tom, diferenciais). Injetar esses dados no prompt da IA
+- **Tooltips**: Adicionar `HelpTooltip` em cada campo do wizard
 
+**Arquivo**: `supabase/functions/generate-content/index.ts`
+
+Alteracoes no prompt:
+- Receber `estrategia` como parametro com dados completos da estrategia ativa
+- Receber `objetivos` como array (multi-select)
+- Receber `materiais` como array de URLs/descricoes de anexos
+- Injetar contexto da estrategia no system prompt para gerar conteudos mais alinhados
+
+---
+
+### 4. Redes Sociais — Identidade Visual Obrigatoria
+
+**Arquivo**: `src/pages/cliente/ClienteRedesSociais.tsx`
+
+**Bloqueio de geracao**: Se a secao "Identidade Visual" nao estiver preenchida (paleta, fontes, estilo), exibir um overlay/card bloqueando o botao "Nova Criacao Mensal" com mensagem: "Preencha a Identidade Visual antes de gerar artes."
+
+**Identidade Visual aprimorada**: Adicionar campos na secao:
+- Logo (upload para bucket)
+- Cores primarias e secundarias (inputs de cor)
+- Fontes (texto livre)
+- Links de referencia visual (URLs de perfis/sites inspiradores)
+- Banco de imagens (upload multiplo)
+
+**Persistencia**: Salvar identidade visual na tabela `marketing_strategies` (campo JSONB `visual_identity`) ou criar tabela separada `marketing_visual_identities`.
+
+**Calendario de postagens**: Renomear a aba "Calendario" para "Calendario de Postagens". Mostrar mes a mes as artes ja criadas/aprovadas em formato de calendario visual.
+
+**Saldo de artes claro**: Exibir card fixo no topo com:
+```text
+Artes do mes: 3/8 usadas | Plano Growth
+[Recarregar Artes] [Ver Planos]
+```
+
+---
+
+### 5. Melhoria Drastica nos Prompts de Geracao de Artes
+
+**Arquivo**: `supabase/functions/generate-social-image/index.ts`
+
+O problema atual e que os prompts sao genericos demais. A correcao:
+
+1. **Injetar identidade visual completa** no prompt (cores HEX exatas, estilo, tom, referencias)
+2. **Ser mais especifico no estilo**: ao inves de "Modern design", usar "Flat design with geometric shapes, color blocks using #E63946 and #1D3557, negative space, no gradients"
+3. **Adicionar exemplos de composicao**: "Layout similar to Apple advertising: minimal elements, single focal point, vast negative space"
+4. **Separar tipos de arte**: produto, servico, promocao, institucional — cada um com template de prompt diferente
+5. **Usar o tipo de post** para definir composicao (ex: produto = foto clean com fundo solido; promocao = bold com destaque de preco)
+
+Novo formato do prompt:
+```text
+STYLE: [estilo da identidade] (ex: Minimalist flat design)
+COLORS: Use ONLY these colors: [paleta HEX]
+COMPOSITION: [regras de composicao por tipo]
+MOOD: [tom visual da marca]
+SUBJECT: [descricao do visual brief]
+FORMAT: [feed 1:1 ou story 9:16]
+
+ABSOLUTE RULES:
+- NO text, letters, numbers or watermarks
+- Use ONLY the specified color palette
+- Maintain consistent visual style across all generated images
+- Leave 25% clear space for text overlay
+```
+
+6. **Nivel de qualidade** mais detalhado com instrucoes de iluminacao, textura e profundidade
+
+---
+
+### 6. Tabela de Identidade Visual Persistente
+
+**Migracao SQL**:
+```sql
+CREATE TABLE public.marketing_visual_identities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) UNIQUE,
+  palette JSONB DEFAULT '[]',
+  fonts JSONB DEFAULT '[]',
+  style TEXT,
+  tone TEXT,
+  logo_url TEXT,
+  reference_links JSONB DEFAULT '[]',
+  image_bank_urls JSONB DEFAULT '[]',
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.marketing_visual_identities ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Membros da org podem ler identidade"
+  ON public.marketing_visual_identities FOR SELECT
+  USING (is_member_of_org(auth.uid(), organization_id));
+
+CREATE POLICY "Membros da org podem inserir identidade"
+  ON public.marketing_visual_identities FOR INSERT
+  WITH CHECK (is_member_of_org(auth.uid(), organization_id));
+
+CREATE POLICY "Membros da org podem atualizar identidade"
+  ON public.marketing_visual_identities FOR UPDATE
+  USING (is_member_of_org(auth.uid(), organization_id));
+```
+
+---
+
+### Resumo de Arquivos
+
+| Arquivo | Tipo | Descricao |
+|---------|------|-----------|
+| Migracao SQL (2 tabelas) | Novo | `marketing_strategies` + `marketing_visual_identities` |
+| `src/hooks/useMarketingStrategy.ts` | Novo | Hook para estrategia ativa e historico |
+| `src/hooks/useVisualIdentity.ts` | Novo | Hook para identidade visual persistente |
+| `src/components/HelpTooltip.tsx` | Novo | Componente de tooltip de duvida |
+| `src/pages/cliente/ClientePlanoMarketing.tsx` | Editar | Persistencia, historico, tooltips |
+| `src/pages/cliente/ClienteConteudos.tsx` | Editar | Multi-objetivo, anexos, puxar estrategia, tooltips |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar | Identidade obrigatoria, calendario postagens, saldo claro, tooltips |
+| `supabase/functions/generate-social-image/index.ts` | Editar | Prompts drasticamente melhores |
+| `supabase/functions/generate-content/index.ts` | Editar | Receber estrategia e multi-objetivos |
+
+### Ordem de Implementacao
+
+1. Migracoes SQL (tabelas + RLS)
+2. Hooks novos (useMarketingStrategy, useVisualIdentity)
+3. HelpTooltip componente
+4. Estrategia (persistencia + historico)
+5. Identidade Visual (persistencia + campos aprimorados)
+6. Redes Sociais (bloqueio, calendario, saldo, prompts)
+7. Conteudos (multi-objetivo, anexos, contexto da estrategia)
+8. Edge functions (prompts melhorados)
