@@ -657,11 +657,6 @@ export default function ClienteRedesSociais() {
                 <p className="text-xs text-muted-foreground">Plano {planName} • {maxArts === -1 ? "Ilimitado" : `${saldoRestanteArtes} artes restantes`}</p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => toast({ title: "Em breve", description: "Recarga de créditos será habilitada em breve." })}>
-                <CreditCard className="w-3.5 h-3.5" /> Recarregar Artes
-              </Button>
-            </div>
           </div>
           {maxArts !== -1 && (
             <Progress value={(artsThisMonth / maxArts) * 100} className="h-1.5 mt-3" />
