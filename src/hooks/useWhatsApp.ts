@@ -118,8 +118,11 @@ export function useWhatsAppMessages(contactId: string | null) {
         .select("*")
         .eq("organization_id", orgId)
         .eq("contact_id", contactId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
+      // Reverse to show oldest first
+      return ((data || []) as unknown as WhatsAppMessage[]).reverse();
       return (data || []) as unknown as WhatsAppMessage[];
     },
     enabled: !!orgId && !!contactId,

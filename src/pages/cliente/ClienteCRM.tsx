@@ -345,13 +345,18 @@ export default function ClienteCRM() {
 
   const handleBulkAddTag = () => {
     if (!bulkTagInput.trim()) return;
-    const leadsToUpdate = allLeads.filter(l => selectedLeadIds.has(l.id));
-    leadsToUpdate.forEach(l => {
-      const existing = l.tags || [];
-      if (!existing.includes(bulkTagInput.trim())) {
-        updateLead.mutate({ id: l.id, tags: [...existing, bulkTagInput.trim()] });
-      }
-    });
+    const tag = bulkTagInput.trim();
+    const idsToUpdate = allLeads
+      .filter(l => selectedLeadIds.has(l.id) && !(l.tags || []).includes(tag))
+      .map(l => l.id);
+
+    if (idsToUpdate.length > 0) {
+      // Use bulk update — tags merge must still be per-lead since each has different existing tags
+      idsToUpdate.forEach(id => {
+        const lead = allLeads.find(l => l.id === id);
+        if (lead) updateLead.mutate({ id, tags: [...(lead.tags || []), tag] });
+      });
+    }
     setBulkTagInput("");
     setSelectedLeadIds(new Set());
     toast({ title: "Tag adicionada em massa" });

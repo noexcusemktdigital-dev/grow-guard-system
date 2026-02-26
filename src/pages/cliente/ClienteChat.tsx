@@ -57,13 +57,41 @@ export default function ClienteChat() {
     return map;
   }, [contacts, leadsData]);
 
-  // Build last message preview map
-  const lastMessages = useMemo(() => {
-    const map = new Map<string, string>();
-    // We don't have all messages loaded, but we can use contacts' last_message_at as hint
-    // For now, just use phone as fallback — real previews would need a separate query
-    return map;
-  }, []);
+  // Fetch last message preview for each contact
+  const [lastMessages, setLastMessages] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    if (!instance?.organization_id || contacts.length === 0) return;
+    const orgId = instance.organization_id;
+
+    // Fetch last message for all contacts in one query using distinct on
+    const fetchPreviews = async () => {
+      const contactIds = contacts.map(c => c.id);
+      // Batch fetch: get recent messages for all contacts, then pick last per contact
+      const { data } = await supabase
+        .from("whatsapp_messages" as any)
+        .select("contact_id, content, direction, type, created_at")
+        .eq("organization_id", orgId)
+        .in("contact_id", contactIds)
+        .order("created_at", { ascending: false })
+        .limit(contacts.length * 2); // rough: 2 msgs per contact max
+
+      if (data) {
+        const map = new Map<string, string>();
+        const seen = new Set<string>();
+        for (const msg of data as any[]) {
+          if (seen.has(msg.contact_id)) continue;
+          seen.add(msg.contact_id);
+          const prefix = msg.direction === "outbound" ? "Você: " : "";
+          const text = msg.type === "audio" ? "🎵 Áudio" : msg.type === "image" ? "📷 Imagem" : (msg.content || "");
+          map.set(msg.contact_id, prefix + (text.length > 60 ? text.slice(0, 57) + "..." : text));
+        }
+        setLastMessages(map);
+      }
+    };
+
+    fetchPreviews();
+  }, [instance?.organization_id, contacts]);
 
   const handleSelectContact = (contact: WhatsAppContact) => {
     setSelectedContactId(contact.id);
@@ -72,13 +100,18 @@ export default function ClienteChat() {
     }
   };
 
-  // Realtime subscriptions
+  // Realtime subscriptions — optimized: only invalidate selected contact's messages
   useEffect(() => {
     if (!instance?.organization_id) return;
     const channel = supabase
       .channel("whatsapp-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, (payload: any) => {
+        const changedContactId = payload.new?.contact_id || payload.old?.contact_id;
+        // Only invalidate messages for the currently selected contact
+        if (changedContactId && changedContactId === selectedContactId) {
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+        }
+        // Always update contacts list (for unread badges & last_message_at)
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
@@ -86,7 +119,7 @@ export default function ClienteChat() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [instance?.organization_id, queryClient]);
+  }, [instance?.organization_id, queryClient, selectedContactId]);
 
   if (loadingInstance) {
     return (

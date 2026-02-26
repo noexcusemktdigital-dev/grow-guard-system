@@ -136,20 +136,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find active AI agent
-    let agentQuery = adminClient
-      .from("client_ai_agents")
-      .select("*")
-      .eq("organization_id", organization_id)
-      .eq("status", "active")
-      .eq("channel", "whatsapp");
-
+    // Find active AI agent — with fallback if assigned agent is inactive
+    let agent: any = null;
     if (contact.agent_id) {
-      agentQuery = agentQuery.eq("id", contact.agent_id);
+      const { data: assignedAgents } = await adminClient
+        .from("client_ai_agents")
+        .select("*")
+        .eq("id", contact.agent_id)
+        .eq("organization_id", organization_id)
+        .eq("status", "active")
+        .eq("channel", "whatsapp")
+        .limit(1);
+      agent = assignedAgents?.[0] || null;
     }
 
-    const { data: agents } = await agentQuery.limit(1);
-    const agent = agents?.[0];
+    // Fallback: if assigned agent not found/inactive, pick any active agent
+    if (!agent) {
+      const { data: fallbackAgents } = await adminClient
+        .from("client_ai_agents")
+        .select("*")
+        .eq("organization_id", organization_id)
+        .eq("status", "active")
+        .eq("channel", "whatsapp")
+        .limit(1);
+      agent = fallbackAgents?.[0] || null;
+      if (agent && contact.agent_id) {
+        console.warn(`Agent fallback: assigned agent ${contact.agent_id} inactive, using ${agent.id} (${agent.name})`);
+        await adminClient.from("whatsapp_contacts").update({ agent_id: agent.id }).eq("id", contact_id);
+      }
+    }
 
     if (!agent) {
       return new Response(JSON.stringify({ skipped: true, reason: "no active agent" }), {
@@ -337,7 +352,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
       .eq("contact_id", contact_id)
       .eq("organization_id", organization_id)
       .order("created_at", { ascending: false })
-      .limit(historyLimit);
+      .limit(Math.min(historyLimit, 15));
 
     const chatHistory = (history || []).reverse().map((m: any) => ({
       role: m.direction === "inbound" ? "user" : "assistant",
@@ -378,9 +393,11 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     if (Array.isArray(knowledgeBase) && knowledgeBase.length > 0) {
-      const kbText = knowledgeBase
+      let kbText = knowledgeBase
         .map((item: any) => typeof item === "string" ? item : item.content || JSON.stringify(item))
         .join("\n---\n");
+      // Truncate knowledge base to avoid exceeding context window
+      if (kbText.length > 4000) kbText = kbText.slice(0, 4000) + "\n[...base de conhecimento truncada]";
       systemPrompt += `\n\nBase de conhecimento:\n${kbText}`;
     }
 
@@ -448,19 +465,29 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
 
     const model = promptConfig.model || "google/gemini-3-flash-preview";
 
-    // Call AI
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...chatHistory,
-          { role: "user", content: processedMessage },
-        ],
-      }),
+    // Call AI (with 1 retry on 429)
+    const aiRequestBody = JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...chatHistory,
+        { role: "user", content: processedMessage },
+      ],
     });
+    const aiHeaders = { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" };
+
+    let aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST", headers: aiHeaders, body: aiRequestBody,
+    });
+
+    // Retry once on 429 with 3s backoff
+    if (!aiResponse.ok && aiResponse.status === 429) {
+      console.log("Rate limited (429), retrying in 3s...");
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST", headers: aiHeaders, body: aiRequestBody,
+      });
+    }
 
     if (!aiResponse.ok) {
       const status = aiResponse.status;
@@ -471,9 +498,13 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
         input_message: processedMessage, output_message: `[ERROR ${status}] ${errText}`, tokens_used: 0, model,
       });
       return new Response(JSON.stringify({ error: "AI gateway error", status }), {
-        status: status === 429 || status === 402 ? status : 500,
+        status: status === 402 ? status : 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const aiData = await aiResponse.json();
@@ -534,21 +565,34 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
           const endAt = parts[2] || (startAt ? new Date(new Date(startAt).getTime() + 60 * 60 * 1000).toISOString() : undefined);
           const assigneeName = parts[3] || "";
           if (startAt) {
-            await adminClient.from("calendar_events").insert({
-              organization_id,
-              title: meetingTitle,
-              start_at: startAt,
-              end_at: endAt || startAt,
-              description: `Reunião agendada pela IA (${agent.name}) com ${contact.name || contact.phone}${assigneeName ? ` — Responsável: ${assigneeName}` : ""}`,
-              visibility: "private",
-            });
-            await adminClient.from("crm_activities").insert({
-              organization_id,
-              lead_id: leadData?.id || contact.crm_lead_id,
-              type: "note",
-              title: `IA agendou reunião: ${meetingTitle}`,
-              description: `${startAt} — ${assigneeName || "sem responsável definido"}. Agente: ${agent.name}`,
-            }).then(() => {}).catch(() => {});
+            // Check for overlap before inserting
+            const { data: conflicts } = await adminClient
+              .from("calendar_events")
+              .select("id, title")
+              .eq("organization_id", organization_id)
+              .lt("start_at", endAt || startAt)
+              .gt("end_at", startAt)
+              .limit(1);
+
+            if (conflicts && conflicts.length > 0) {
+              console.warn(`SCHEDULE_MEETING blocked: overlap with "${conflicts[0].title}" (${conflicts[0].id})`);
+            } else {
+              await adminClient.from("calendar_events").insert({
+                organization_id,
+                title: meetingTitle,
+                start_at: startAt,
+                end_at: endAt || startAt,
+                description: `Reunião agendada pela IA (${agent.name}) com ${contact.name || contact.phone}${assigneeName ? ` — Responsável: ${assigneeName}` : ""}`,
+                visibility: "private",
+              });
+              await adminClient.from("crm_activities").insert({
+                organization_id,
+                lead_id: leadData?.id || contact.crm_lead_id,
+                type: "note",
+                title: `IA agendou reunião: ${meetingTitle}`,
+                description: `${startAt} — ${assigneeName || "sem responsável definido"}. Agente: ${agent.name}`,
+              }).then(() => {}).catch(() => {});
+            }
           }
         }
       } catch (actionErr) {
