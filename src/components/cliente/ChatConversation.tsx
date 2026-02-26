@@ -281,28 +281,28 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Premium Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card shrink-0">
-        <Avatar className="h-10 w-10">
+      {/* WhatsApp-style Header */}
+      <div className="flex items-center gap-3 px-4 py-3 wa-header shrink-0">
+        <Avatar className="h-10 w-10 border-2 border-white/20">
           <AvatarImage src={contact.photo_url || undefined} />
-          <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+          <AvatarFallback className="bg-white/20 text-white text-xs font-semibold">
             {(contact.name || contact.phone).substring(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold truncate">{contact.name || contact.phone}</p>
+          <p className="text-sm font-bold truncate text-white">{contact.name || contact.phone}</p>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground">{contact.phone}</span>
+            <span className="text-[11px] text-white/70">{contact.phone}</span>
             {linkedLead && (
-              <Badge variant="outline" className="text-[8px] px-1 py-0">{linkedLead.stage}</Badge>
+              <Badge variant="outline" className="text-[8px] px-1 py-0 border-white/30 text-white/80">{linkedLead.stage}</Badge>
             )}
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
           {attendingMode && (
-            <Badge variant="outline" className={`text-[10px] gap-1 rounded-full ${
-              attendingMode === "ai" ? "text-purple-500 border-purple-500/30" : "text-emerald-500 border-emerald-500/30"
+            <Badge variant="outline" className={`text-[10px] gap-1 rounded-full border-white/30 ${
+              attendingMode === "ai" ? "text-purple-200" : "text-emerald-200"
             }`}>
               {attendingMode === "ai" ? <><Bot className="w-3 h-3" /> IA</> : <><User className="w-3 h-3" /> Humano</>}
             </Badge>
@@ -310,9 +310,9 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
 
           {attendingMode && (
             <Button
-              variant={attendingMode === "ai" ? "default" : "outline"}
+              variant="ghost"
               size="sm"
-              className={`h-7 text-[11px] gap-1 rounded-full ${attendingMode !== "ai" ? "border-emerald-500/30 text-emerald-600 hover:bg-emerald-50" : ""}`}
+              className={`h-7 text-[11px] gap-1 rounded-full text-white hover:bg-white/10 ${attendingMode !== "ai" ? "border border-white/30" : ""}`}
               onClick={handleToggleMode}
               disabled={updateMode.isPending}
             >
@@ -322,7 +322,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
 
           <Collapsible open={actionsOpen} onOpenChange={setActionsOpen}>
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full text-white hover:bg-white/10">
                 {actionsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </Button>
             </CollapsibleTrigger>
@@ -435,7 +435,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
       </div>
 
       {/* WhatsApp-style Input */}
-      <div className="px-3 py-2.5 border-t border-border bg-card shrink-0">
+      <div className="px-3 py-2.5 border-t border-border bg-card/95 shrink-0">
         <input
           ref={fileInputRef}
           type="file"
@@ -472,7 +472,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
           <Button
             type="submit"
             size="icon"
-            className="rounded-full h-9 w-9 shrink-0 shadow-md"
+            className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white"
             disabled={!text.trim() || sendMutation.isPending}
           >
             {sendMutation.isPending ? (

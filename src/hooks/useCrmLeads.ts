@@ -66,6 +66,42 @@ export function useCrmLeadMutations() {
         .select()
         .single();
       if (error) throw error;
+
+      // Round-robin roulette logic
+      try {
+        const { data: settings } = await supabase
+          .from("crm_settings")
+          .select("*")
+          .eq("organization_id", orgId!)
+          .maybeSingle();
+
+        if (settings) {
+          const rouletteEnabled = (settings as any).lead_roulette_enabled;
+          const members = (settings as any).roulette_members as string[] | null;
+          const lastIndex = ((settings as any).roulette_last_index as number) || 0;
+
+          if (rouletteEnabled && members && members.length > 0) {
+            const nextIndex = lastIndex % members.length;
+            const assignedTo = members[nextIndex];
+
+            await supabase
+              .from("crm_leads")
+              .update({ assigned_to: assignedTo })
+              .eq("id", data.id);
+
+            await supabase
+              .from("crm_settings")
+              .update({ roulette_last_index: nextIndex + 1 } as any)
+              .eq("id", settings.id);
+
+            data.assigned_to = assignedTo;
+          }
+        }
+      } catch (e) {
+        // Roulette is best-effort, don't fail lead creation
+        console.warn("Roulette assignment failed:", e);
+      }
+
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),

@@ -1,0 +1,1 @@
+ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS roulette_last_index integer DEFAULT 0;

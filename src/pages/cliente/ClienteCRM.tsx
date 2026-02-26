@@ -83,7 +83,7 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
   const colorStyle = getColorStyle(stageColor);
 
   return (
-    <div ref={setNodeRef} style={style} className="group">
+    <div ref={setNodeRef} style={style} className={`group ${isDragging ? "pointer-events-none" : ""}`}>
       <Card
         className={`cursor-pointer hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${colorStyle.border}`}
         onClick={() => { if (!isDragging) onClick(); }}
@@ -101,25 +101,27 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
                 </p>
               )}
             </div>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-              <Popover>
-                <PopoverTrigger asChild>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreHorizontal className="w-3.5 h-3.5" /></Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-36 p-1" align="end">
-                  <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2" onClick={onCopyPhone}>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-36" align="end">
+                  <DropdownMenuItem className="text-xs gap-2" onClick={onCopyPhone}>
                     <Copy className="w-3 h-3" /> Copiar telefone
-                  </button>
+                  </DropdownMenuItem>
                   {lead.phone && (
-                    <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2">
-                      <MessageCircle className="w-3 h-3" /> WhatsApp
-                    </a>
+                    <DropdownMenuItem className="text-xs gap-2" asChild>
+                      <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                        <MessageCircle className="w-3 h-3" /> WhatsApp
+                      </a>
+                    </DropdownMenuItem>
                   )}
-                  <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2 text-destructive" onClick={onMarkLost}>
+                  <DropdownMenuItem className="text-xs gap-2 text-destructive" onClick={onMarkLost}>
                     <XCircle className="w-3 h-3" /> Marcar perdido
-                  </button>
-                </PopoverContent>
-              </Popover>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -663,7 +665,7 @@ export default function ClienteCRM() {
                   );
                 })}
               </div>
-              <DragOverlay>
+              <DragOverlay dropAnimation={null} zIndex={100}>
                 {draggingLead && (
                   <Card className="shadow-xl border-primary/30 w-[260px]">
                     <CardContent className="p-3">

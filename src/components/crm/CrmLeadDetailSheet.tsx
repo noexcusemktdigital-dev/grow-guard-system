@@ -379,79 +379,47 @@ function ProposalsTab({ leadId }: { leadId: string }) {
   const { toast } = useToast();
   const { data: proposals, isLoading } = useCrmProposals(leadId);
   const { createProposal, updateProposal, deleteProposal, duplicateProposal } = useCrmProposalMutations();
-  const { data: products } = useCrmProducts();
-  const { data: partners } = useCrmPartners();
 
   const [showForm, setShowForm] = useState(false);
-  const [editingProposal, setEditingProposal] = useState<CrmProposal | null>(null);
-
-  // Form state
   const [title, setTitle] = useState("");
-  const [partnerId, setPartnerId] = useState<string>("");
-  const [items, setItems] = useState<ProposalItem[]>([]);
-  const [paymentTerms, setPaymentTerms] = useState("");
-  const [validUntil, setValidUntil] = useState("");
-  const [notes, setNotes] = useState("");
-  const [discountTotal, setDiscountTotal] = useState(0);
-
-  const subtotal = items.reduce((s, i) => s + i.total, 0);
-  const total = subtotal - discountTotal;
+  const [value, setValue] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const resetForm = () => {
-    setTitle(""); setPartnerId(""); setItems([]); setPaymentTerms("");
-    setValidUntil(""); setNotes(""); setDiscountTotal(0); setEditingProposal(null);
+    setTitle(""); setValue(""); setFile(null);
   };
 
-  const openNew = () => { resetForm(); setShowForm(true); };
-
-  const openEdit = (p: CrmProposal) => {
-    setEditingProposal(p);
-    setTitle(p.title);
-    setPartnerId(p.partner_company_id || "");
-    setItems(p.items || []);
-    setPaymentTerms(p.payment_terms || "");
-    setValidUntil(p.valid_until || "");
-    setNotes(p.notes || "");
-    setDiscountTotal(p.discount_total);
-    setShowForm(true);
-  };
-
-  const addItem = () => {
-    setItems([...items, { product_id: null, name: "", quantity: 1, unit_price: 0, discount: 0, total: 0 }]);
-  };
-
-  const updateItem = (idx: number, field: string, value: any) => {
-    const updated = [...items];
-    (updated[idx] as any)[field] = value;
-    if (field === "product_id" && products) {
-      const prod = products.find(p => p.id === value);
-      if (prod) {
-        updated[idx].name = prod.name;
-        updated[idx].unit_price = prod.price;
-      }
-    }
-    updated[idx].total = (updated[idx].quantity * updated[idx].unit_price) - updated[idx].discount;
-    setItems(updated);
-  };
-
-  const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
-
-  const handleSave = () => {
+  const handleAttach = async () => {
     if (!title.trim()) return;
-    const payload = {
-      title, lead_id: leadId, items, value: total,
-      partner_company_id: partnerId || null, payment_terms: paymentTerms || null,
-      valid_until: validUntil || null, notes: notes || null, discount_total: discountTotal,
-    };
-    if (editingProposal) {
-      updateProposal.mutate({ id: editingProposal.id, ...payload });
-      toast({ title: "Proposta atualizada" });
-    } else {
-      createProposal.mutate({ ...payload, status: "draft" });
-      toast({ title: "Proposta criada" });
+    setUploading(true);
+    try {
+      let fileUrl: string | null = null;
+      if (file) {
+        const ext = file.name.split(".").pop() || "pdf";
+        const path = `proposals/${leadId}/${Date.now()}.${ext}`;
+        const { error: uploadError } = await (await import("@/integrations/supabase/client")).supabase.storage.from("crm-files").upload(path, file);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = (await import("@/integrations/supabase/client")).supabase.storage.from("crm-files").getPublicUrl(path);
+        fileUrl = urlData.publicUrl;
+      }
+      createProposal.mutate({
+        title,
+        lead_id: leadId,
+        value: value ? parseFloat(value) : 0,
+        status: "draft",
+        items: [],
+        discount_total: 0,
+        notes: fileUrl ? `Arquivo: ${fileUrl}` : null,
+      });
+      toast({ title: "Proposta anexada" });
+      setShowForm(false);
+      resetForm();
+    } catch (err: any) {
+      toast({ title: "Erro ao anexar", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
     }
-    setShowForm(false);
-    resetForm();
   };
 
   const handleStatusChange = (id: string, status: string) => {
@@ -470,19 +438,20 @@ function ProposalsTab({ leadId }: { leadId: string }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold">Propostas ({proposals?.length || 0})</p>
-        <Button size="sm" className="h-7 text-xs gap-1" onClick={openNew}><Plus className="w-3 h-3" /> Nova Proposta</Button>
+        <Button size="sm" className="h-7 text-xs gap-1" onClick={() => { resetForm(); setShowForm(true); }}><Plus className="w-3 h-3" /> Anexar Proposta</Button>
       </div>
 
       {(!proposals || proposals.length === 0) && !showForm && (
         <div className="text-center py-8">
           <FileText className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">Nenhuma proposta</p>
-          <p className="text-xs text-muted-foreground mt-1">Crie propostas para negociar com este lead.</p>
+          <p className="text-xs text-muted-foreground mt-1">Anexe propostas em PDF ou imagem para este lead.</p>
         </div>
       )}
 
       {proposals?.map(p => {
         const st = STATUS_MAP[p.status] || STATUS_MAP.draft;
+        const fileUrl = p.notes?.startsWith("Arquivo:") ? p.notes.replace("Arquivo: ", "").trim() : null;
         return (
           <Card key={p.id} className="overflow-hidden">
             <CardContent className="p-3">
@@ -497,15 +466,18 @@ function ProposalsTab({ leadId }: { leadId: string }) {
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-1">
                     {new Date(p.created_at).toLocaleDateString("pt-BR")}
-                    {p.valid_until && ` · Validade: ${new Date(p.valid_until).toLocaleDateString("pt-BR")}`}
                   </p>
+                  {fileUrl && (
+                    <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-1 mt-1">
+                      <ExternalLink className="w-3 h-3" /> Ver arquivo
+                    </a>
+                  )}
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="text-xs">
-                    <DropdownMenuItem onClick={() => openEdit(p)}>Editar</DropdownMenuItem>
                     {p.status === "draft" && <DropdownMenuItem onClick={() => handleStatusChange(p.id, "sent")}>Marcar como Enviada</DropdownMenuItem>}
                     {(p.status === "sent" || p.status === "draft") && <DropdownMenuItem onClick={() => handleStatusChange(p.id, "accepted")}>Marcar como Aceita</DropdownMenuItem>}
                     {(p.status === "sent" || p.status === "draft") && <DropdownMenuItem onClick={() => handleStatusChange(p.id, "rejected")}>Marcar como Rejeitada</DropdownMenuItem>}
@@ -519,129 +491,40 @@ function ProposalsTab({ leadId }: { leadId: string }) {
         );
       })}
 
-      {/* Proposal Form Dialog */}
+      {/* Attach Form Dialog */}
       <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); resetForm(); } }}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingProposal ? "Editar Proposta" : "Nova Proposta"}</DialogTitle>
+            <DialogTitle>Anexar Proposta</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label className="text-xs">Título</Label>
+              <Label className="text-xs">Título *</Label>
               <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Proposta comercial..." className="h-8 text-sm" />
             </div>
 
             <div>
-              <Label className="text-xs">Empresa Parceira</Label>
-              <Select value={partnerId} onValueChange={setPartnerId}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione (opcional)" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none" className="text-sm">Nenhuma</SelectItem>
-                  {partners?.map(p => <SelectItem key={p.id} value={p.id} className="text-sm">{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Items table */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs">Itens</Label>
-                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={addItem}>
-                  <Plus className="w-3 h-3" /> Adicionar item
-                </Button>
-              </div>
-              {items.length > 0 && (
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs h-8">Produto</TableHead>
-                        <TableHead className="text-xs h-8 w-16">Qtd</TableHead>
-                        <TableHead className="text-xs h-8 w-24">Preço Un.</TableHead>
-                        <TableHead className="text-xs h-8 w-20">Desc.</TableHead>
-                        <TableHead className="text-xs h-8 w-24 text-right">Total</TableHead>
-                        <TableHead className="h-8 w-8" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell className="p-1">
-                            <Select value={item.product_id || "custom"} onValueChange={v => updateItem(idx, "product_id", v === "custom" ? null : v)}>
-                              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Produto" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="custom" className="text-xs">Personalizado</SelectItem>
-                                {products?.map(p => <SelectItem key={p.id} value={p.id} className="text-xs">{p.name} — R$ {p.price}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            {!item.product_id && (
-                              <Input value={item.name} onChange={e => updateItem(idx, "name", e.target.value)} placeholder="Nome..." className="h-7 text-xs mt-1" />
-                            )}
-                          </TableCell>
-                          <TableCell className="p-1">
-                            <Input type="number" min={1} value={item.quantity} onChange={e => updateItem(idx, "quantity", Number(e.target.value))} className="h-7 text-xs w-14" />
-                          </TableCell>
-                          <TableCell className="p-1">
-                            <Input type="number" step="0.01" value={item.unit_price} onChange={e => updateItem(idx, "unit_price", Number(e.target.value))} className="h-7 text-xs w-22" />
-                          </TableCell>
-                          <TableCell className="p-1">
-                            <Input type="number" step="0.01" value={item.discount} onChange={e => updateItem(idx, "discount", Number(e.target.value))} className="h-7 text-xs w-18" />
-                          </TableCell>
-                          <TableCell className="p-1 text-right text-xs font-medium">
-                            R$ {item.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell className="p-1">
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeItem(idx)}>
-                              <Trash2 className="w-3 h-3 text-muted-foreground" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </div>
-
-            {/* Summary */}
-            <div className="bg-muted/30 border rounded-lg p-3 space-y-1">
-              <div className="flex justify-between text-xs">
-                <span>Subtotal</span>
-                <span>R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between text-xs items-center gap-2">
-                <span>Desconto total</span>
-                <Input type="number" step="0.01" value={discountTotal} onChange={e => setDiscountTotal(Number(e.target.value))} className="h-7 text-xs w-28 text-right" />
-              </div>
-              <Separator />
-              <div className="flex justify-between text-sm font-bold">
-                <span>Valor final</span>
-                <span className="text-primary">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Condições de pagamento</Label>
-                <Input value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} placeholder="Ex: 30/60/90 dias" className="h-8 text-sm" />
-              </div>
-              <div>
-                <Label className="text-xs">Validade da proposta</Label>
-                <Input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="h-8 text-sm" />
-              </div>
+              <Label className="text-xs">Valor (R$)</Label>
+              <Input type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} placeholder="0,00" className="h-8 text-sm" />
             </div>
 
             <div>
-              <Label className="text-xs">Observações internas</Label>
-              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas internas..." className="text-xs min-h-[60px]" />
+              <Label className="text-xs">Arquivo (PDF, imagem)</Label>
+              <Input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                onChange={e => setFile(e.target.files?.[0] || null)}
+                className="h-8 text-xs"
+              />
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => { setShowForm(false); resetForm(); }}>Cancelar</Button>
-            <Button size="sm" onClick={handleSave} disabled={!title.trim()}>
-              {editingProposal ? "Salvar" : "Criar proposta"}
+            <Button size="sm" onClick={handleAttach} disabled={!title.trim() || uploading}>
+              {uploading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              Anexar
             </Button>
           </DialogFooter>
         </DialogContent>
