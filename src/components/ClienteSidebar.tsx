@@ -195,11 +195,19 @@ export function ClienteSidebar() {
 
       {/* Menu */}
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
-        <SidebarNavItems items={globalSection} collapsed={collapsed} />
+        <div data-tour="global">
+          <SidebarNavItems items={globalSection} collapsed={collapsed} />
+        </div>
         <div className="mx-3 border-t border-sidebar-border/60" />
-        <CollapsibleSection title="Vendas" items={vendasSection} collapsed={collapsed} defaultOpen />
-        <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
-        <CollapsibleSection title="Sistema" items={sistemaSection} collapsed={collapsed} />
+        <div data-tour="vendas">
+          <CollapsibleSection title="Vendas" items={vendasSection} collapsed={collapsed} defaultOpen />
+        </div>
+        <div data-tour="marketing">
+          <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
+        </div>
+        <div data-tour="sistema">
+          <CollapsibleSection title="Sistema" items={sistemaSection} collapsed={collapsed} />
+        </div>
       </div>
 
       {/* Trial Banner */}
@@ -244,7 +252,7 @@ export function ClienteSidebar() {
 
       {/* Footer — Credits */}
       {!collapsed ? (
-        <div className="px-3 py-3 border-t border-sidebar-border">
+        <div className="px-3 py-3 border-t border-sidebar-border" data-tour="creditos">
           {walletLoading || subLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-3 w-full bg-white/10" />

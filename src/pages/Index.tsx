@@ -32,7 +32,7 @@ const Index = () => {
           <div className="flex-1 flex items-center">
             <GlobalSearch />
           </div>
-          <div className="flex-1 flex items-center justify-end gap-1.5">
+          <div className="flex-1 flex items-center justify-end gap-1.5" data-tour="header-actions">
             <SupportButton />
             <NotificationBell />
             <UserMenu />
