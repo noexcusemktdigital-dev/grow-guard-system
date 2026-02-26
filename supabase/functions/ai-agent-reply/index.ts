@@ -385,6 +385,64 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     systemPrompt += leadContext;
+
+    // ─── Team & Calendar context for scheduling awareness ───
+    let teamContext = "";
+    try {
+      const { data: teamMembers } = await adminClient
+        .from("organization_memberships")
+        .select("user_id, profiles(full_name)")
+        .eq("organization_id", organization_id);
+
+      const memberNames = (teamMembers || []).map((m: any) => m.profiles?.full_name || "Sem nome").filter(Boolean);
+
+      let assignedName = "Nenhum atribuído";
+      if (leadData?.assigned_to) {
+        const assigned = (teamMembers || []).find((m: any) => m.user_id === leadData.assigned_to);
+        if (assigned) assignedName = assigned.profiles?.full_name || "Sem nome";
+      }
+
+      teamContext += `\n\nInformações da equipe:`;
+      teamContext += `\n- Responsável pelo lead: ${assignedName}`;
+      teamContext += `\n- Membros da equipe: ${memberNames.join(", ") || "nenhum"}`;
+
+      // Fetch calendar events for next 48h
+      const now = new Date();
+      const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+      const { data: upcomingEvents } = await adminClient
+        .from("calendar_events")
+        .select("title, start_at, end_at, created_by")
+        .eq("organization_id", organization_id)
+        .gte("start_at", now.toISOString())
+        .lte("start_at", in48h.toISOString())
+        .order("start_at", { ascending: true })
+        .limit(20);
+
+      if (upcomingEvents && upcomingEvents.length > 0) {
+        teamContext += `\n\nAgenda das próximas 48h (horários já ocupados):`;
+        for (const ev of upcomingEvents) {
+          const start = new Date(ev.start_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+          const end = new Date(ev.end_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+          const owner = (teamMembers || []).find((m: any) => m.user_id === ev.created_by);
+          const ownerName = owner?.profiles?.full_name || "—";
+          teamContext += `\n- ${start} a ${end} — ${ev.title} (responsável: ${ownerName})`;
+        }
+      } else {
+        teamContext += `\n\nAgenda das próximas 48h: Nenhum compromisso agendado.`;
+      }
+
+      teamContext += `\n\nREGRAS PARA AGENDAMENTO:
+1. Nunca marque reunião em horário que já esteja ocupado na agenda acima
+2. Sugira horários livres dentro do horário comercial (seg-sex, 9h-18h)
+3. Sempre confirme o horário com o lead antes de agendar
+4. Direcione a reunião para o responsável do lead. Se não houver, sugira um membro da equipe
+5. Ao confirmar uma reunião, use a ação [AI_ACTION:SCHEDULE_MEETING:titulo|data_hora_inicio_ISO|data_hora_fim_ISO|responsavel_nome]`;
+    } catch (e) {
+      console.error("Failed to fetch team/calendar context:", e);
+    }
+
+    systemPrompt += teamContext;
     systemPrompt += `\n\nVocê tem no máximo ${maxMessages} mensagens nesta conversa para cumprir seu objetivo. Seja direto, eficiente e conduza a conversa de forma objetiva. Se não conseguir cumprir o objetivo dentro desse limite, use [AI_ACTION:HANDOFF:Limite de mensagens atingido sem conclusão do objetivo].`;
     systemPrompt += "\n\nResponda de forma concisa e natural, como em uma conversa de WhatsApp. Use parágrafos curtos.";
 
@@ -466,6 +524,31 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
             if (!currentTags.includes(val)) {
               await adminClient.from("crm_leads").update({ tags: [...currentTags, val] }).eq("id", leadData.id);
             }
+          }
+        }
+
+        if (action.type === "SCHEDULE_MEETING") {
+          const parts = action.value.split("|");
+          const meetingTitle = parts[0] || "Reunião com lead";
+          const startAt = parts[1];
+          const endAt = parts[2] || (startAt ? new Date(new Date(startAt).getTime() + 60 * 60 * 1000).toISOString() : undefined);
+          const assigneeName = parts[3] || "";
+          if (startAt) {
+            await adminClient.from("calendar_events").insert({
+              organization_id,
+              title: meetingTitle,
+              start_at: startAt,
+              end_at: endAt || startAt,
+              description: `Reunião agendada pela IA (${agent.name}) com ${contact.name || contact.phone}${assigneeName ? ` — Responsável: ${assigneeName}` : ""}`,
+              visibility: "private",
+            });
+            await adminClient.from("crm_activities").insert({
+              organization_id,
+              lead_id: leadData?.id || contact.crm_lead_id,
+              type: "note",
+              title: `IA agendou reunião: ${meetingTitle}`,
+              description: `${startAt} — ${assigneeName || "sem responsável definido"}. Agente: ${agent.name}`,
+            }).then(() => {}).catch(() => {});
           }
         }
       } catch (actionErr) {
