@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
-  Globe, Sparkles, ArrowRight, ArrowLeft, Loader2,
+  Globe, Sparkles, ArrowLeft, Loader2,
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
 import { PageHeader } from "@/components/PageHeader";
 import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,14 +11,12 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getPlanBySlug } from "@/constants/plans";
-import { SiteWizardStep1 } from "@/components/sites/SiteWizardStep1";
-import { SiteWizardStep2 } from "@/components/sites/SiteWizardStep2";
-import { SiteWizardStep3 } from "@/components/sites/SiteWizardStep3";
 import { SitePreview } from "@/components/sites/SitePreview";
 import { SiteHistory, type SavedSite } from "@/components/sites/SiteHistory";
+import { ChatBriefing } from "@/components/cliente/ChatBriefing";
+import { AGENTS, ALEX_STEPS } from "@/components/cliente/briefingAgents";
 
 const STORAGE_KEY = "client-sites";
-const STEP_LABELS = ["Tipo de Site", "Objetivo e Estilo", "Briefing", "Gerar Site"];
 
 function loadSites(): SavedSite[] {
   try {
@@ -37,74 +34,19 @@ function loadStrategy(): Record<string, any> | null {
 export default function ClienteSites() {
   const { data: subscription } = useClienteSubscription();
   const plan = getPlanBySlug(subscription?.plan);
-  const allowedTypes = plan?.siteTypes || ["lp"];
   const maxSites = plan?.maxSites || 1;
 
-  const [step, setStep] = useState(0);
   const [creating, setCreating] = useState(false);
   const [sites, setSites] = useState<SavedSite[]>(loadSites);
   const [generating, setGenerating] = useState(false);
   const [generatedHtml, setGeneratedHtml] = useState("");
   const [genProgress, setGenProgress] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
 
-  // Step 1
-  const [siteType, setSiteType] = useState("");
-  // Step 2
-  const [objetivo, setObjetivo] = useState("");
-  const [estilo, setEstilo] = useState("");
-  const [cta, setCta] = useState("");
-  // Step 3 briefing
-  const [briefing, setBriefing] = useState({
-    nomeEmpresa: "",
-    slogan: "",
-    descricaoNegocio: "",
-    segmento: "",
-    servicos: "",
-    diferencial: "",
-    faixaPreco: "",
-    publicoAlvo: "",
-    faixaEtaria: "",
-    dores: "",
-    depoimentos: "",
-    numerosImpacto: "",
-    logosClientes: "",
-    coresPrincipais: "",
-    fontesPreferidas: "",
-    tomComunicacao: "",
-    referenciaVisual: "",
-    telefone: "",
-    email: "",
-    endereco: "",
-    redesSociais: "",
-    linkWhatsapp: "",
-    instrucoes: "",
-    estrategia: null as Record<string, any> | null,
-    persona: null as { nome: string; descricao: string } | null,
-    identidade: null as { paleta: string; fontes: string; estilo: string; tom_visual: string } | null,
-  });
+  // Store answers from ChatBriefing for regeneration
+  const [lastAnswers, setLastAnswers] = useState<Record<string, any>>({});
 
-  // Load auto data when entering step 3
-  useEffect(() => {
-    if (step === 2) {
-      const estrategia = loadStrategy();
-    setBriefing((prev) => ({
-        ...prev,
-        estrategia,
-        segmento: prev.segmento || (estrategia?.segmento as string) || "",
-        diferencial: prev.diferencial || (estrategia?.diferencial as string) || "",
-        publicoAlvo: prev.publicoAlvo || (estrategia?.cliente_ideal as string) || "",
-      }));
-    }
-  }, [step]);
-
-  const canProceed = useCallback(() => {
-    if (step === 0) return !!siteType;
-    if (step === 1) return !!objetivo && !!estilo;
-    if (step === 2) return true;
-    return false;
-  }, [step, siteType, objetivo, estilo]);
-
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async (answers: Record<string, any>) => {
     setGenerating(true);
     setGenProgress(10);
 
@@ -113,37 +55,38 @@ export default function ClienteSites() {
     }, 800);
 
     try {
+      const estrategia = loadStrategy();
       const body = {
-        tipo: siteType,
-        objetivo,
-        estilo,
-        cta_principal: cta,
-        nome_empresa: briefing.nomeEmpresa,
-        slogan: briefing.slogan,
-        descricao_negocio: briefing.descricaoNegocio,
-        segmento: briefing.segmento,
-        servicos: briefing.servicos,
-        diferencial: briefing.diferencial,
-        faixa_preco: briefing.faixaPreco,
-        publico_alvo: briefing.publicoAlvo,
-        faixa_etaria: briefing.faixaEtaria,
-        dores: briefing.dores,
-        depoimentos: briefing.depoimentos,
-        numeros_impacto: briefing.numerosImpacto,
-        logos_clientes: briefing.logosClientes,
-        cores_principais: briefing.coresPrincipais,
-        fontes_preferidas: briefing.fontesPreferidas,
-        tom_comunicacao: briefing.tomComunicacao,
-        referencia_visual: briefing.referenciaVisual,
-        telefone: briefing.telefone,
-        email_contato: briefing.email,
-        endereco: briefing.endereco,
-        redes_sociais: briefing.redesSociais,
-        link_whatsapp: briefing.linkWhatsapp,
-        instrucoes_adicionais: briefing.instrucoes,
-        persona: briefing.persona,
-        identidade_visual: briefing.identidade,
-        estrategia: briefing.estrategia,
+        tipo: answers.siteType || "lp",
+        objetivo: answers.objetivo || "",
+        estilo: answers.estilo || "",
+        cta_principal: answers.cta || "",
+        nome_empresa: answers.nomeEmpresa || "",
+        slogan: answers.slogan || "",
+        descricao_negocio: answers.descricaoNegocio || "",
+        segmento: answers.segmento || "",
+        servicos: answers.servicos || "",
+        diferencial: answers.diferencial || "",
+        faixa_preco: answers.faixaPreco || "",
+        publico_alvo: answers.publicoAlvo || "",
+        faixa_etaria: answers.faixaEtaria || "",
+        dores: answers.dores || "",
+        depoimentos: answers.depoimentos || "",
+        numeros_impacto: answers.numerosImpacto || "",
+        logos_clientes: "",
+        cores_principais: answers.coresPrincipais || "",
+        fontes_preferidas: answers.fontesPreferidas || "",
+        tom_comunicacao: answers.tomComunicacao || "",
+        referencia_visual: answers.referenciaVisual || "",
+        telefone: answers.telefone || "",
+        email_contato: answers.email || "",
+        endereco: answers.endereco || "",
+        redes_sociais: answers.redesSociais || "",
+        link_whatsapp: answers.linkWhatsapp || "",
+        instrucoes_adicionais: answers.instrucoes || "",
+        persona: null,
+        identidade_visual: null,
+        estrategia,
       };
 
       const { data, error } = await supabase.functions.invoke("generate-site", { body });
@@ -167,13 +110,13 @@ export default function ClienteSites() {
 
       setGenProgress(100);
       setGeneratedHtml(data.html);
-      setStep(3);
+      setShowPreview(true);
 
       // Save to history
       const newSite: SavedSite = {
         id: crypto.randomUUID(),
-        name: `Site ${objetivo} — ${new Date().toLocaleDateString("pt-BR")}`,
-        type: siteType,
+        name: `Site ${answers.objetivo || "Novo"} — ${new Date().toLocaleDateString("pt-BR")}`,
+        type: answers.siteType || "lp",
         status: "Rascunho",
         createdAt: new Date().toISOString().split("T")[0],
         html: data.html,
@@ -191,57 +134,30 @@ export default function ClienteSites() {
       setGenerating(false);
       setGenProgress(0);
     }
+  }, [sites]);
+
+  const handleChatComplete = (answers: Record<string, any>) => {
+    setLastAnswers(answers);
+    handleGenerate(answers);
   };
 
   const handlePreviewHistory = (site: SavedSite) => {
     if (site.html) {
       setGeneratedHtml(site.html);
-      setStep(3);
+      setShowPreview(true);
       setCreating(true);
     }
   };
 
   const resetWizard = () => {
-    setStep(0);
-    setSiteType("");
-    setObjetivo("");
-    setEstilo("");
-    setCta("");
+    setShowPreview(false);
     setGeneratedHtml("");
     setCreating(false);
+    setLastAnswers({});
   };
 
-  // ── MAIN VIEW (history + create button)
-  if (!creating && step !== 3) {
-    return (
-      <div className="w-full space-y-6">
-        <PageHeader
-          title="Sites & Landing Pages"
-          subtitle="Gere sites profissionais com IA e publique no seu domínio"
-          icon={<Globe className="w-5 h-5 text-primary" />}
-        />
-
-        <UsageQuotaBanner
-          used={sites.length}
-          limit={maxSites}
-          label="sites ativos"
-          planName={plan?.name ?? "Starter"}
-        />
-
-        <Button className="w-full gap-2" size="lg" onClick={() => setCreating(true)} disabled={sites.length >= maxSites}>
-          <Sparkles className="w-4 h-4" /> Criar Novo Site
-        </Button>
-
-        <div>
-          <p className="section-label mb-3">HISTÓRICO DE SITES</p>
-          <SiteHistory sites={sites} onPreview={handlePreviewHistory} />
-        </div>
-      </div>
-    );
-  }
-
-  // ── PREVIEW VIEW (step 3)
-  if (step === 3 && generatedHtml) {
+  // ── PREVIEW VIEW
+  if (showPreview && generatedHtml) {
     return (
       <div className="w-full space-y-6">
         <PageHeader
@@ -251,8 +167,8 @@ export default function ClienteSites() {
         />
         <SitePreview
           html={generatedHtml}
-          onRegenerate={handleGenerate}
-          onEditBriefing={() => setStep(2)}
+          onRegenerate={() => handleGenerate(lastAnswers)}
+          onEditBriefing={() => { setShowPreview(false); setCreating(true); }}
           generating={generating}
         />
         <Button variant="ghost" className="text-xs" onClick={resetWizard}>
@@ -262,94 +178,63 @@ export default function ClienteSites() {
     );
   }
 
-  // ── WIZARD VIEW (steps 0-2)
+  // ── CREATING VIEW (ChatBriefing)
+  if (creating) {
+    return (
+      <div className="w-full space-y-6">
+        <PageHeader
+          title="Criar Novo Site"
+          subtitle="Converse com Alex, seu arquiteto web"
+          icon={<Globe className="w-5 h-5 text-primary" />}
+        />
+
+        {/* Generating state overlay */}
+        {generating && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="py-5 text-center space-y-3">
+              <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+              <p className="text-sm font-bold">Gerando seu site com IA...</p>
+              <p className="text-[11px] text-muted-foreground">Isso pode levar até 30 segundos</p>
+              <Progress value={genProgress} className="h-2" />
+            </CardContent>
+          </Card>
+        )}
+
+        {!generating && (
+          <ChatBriefing
+            agent={AGENTS.alex}
+            steps={ALEX_STEPS}
+            onComplete={handleChatComplete}
+            onCancel={resetWizard}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ── MAIN VIEW (history + create button)
   return (
     <div className="w-full space-y-6">
       <PageHeader
-        title="Criar Novo Site"
-        subtitle={STEP_LABELS[step]}
+        title="Sites & Landing Pages"
+        subtitle="Gere sites profissionais com IA e publique no seu domínio"
         icon={<Globe className="w-5 h-5 text-primary" />}
       />
 
-      {/* Step indicator */}
-      <div className="flex items-center gap-2">
-        {STEP_LABELS.slice(0, 3).map((label, i) => (
-          <div key={i} className="flex-1">
-            <div className={`h-1.5 rounded-full transition-all ${i <= step ? "bg-primary" : "bg-muted"}`} />
-            <p className={`text-[9px] mt-1 ${i <= step ? "text-foreground font-medium" : "text-muted-foreground"}`}>{label}</p>
-          </div>
-        ))}
-      </div>
+      <UsageQuotaBanner
+        used={sites.length}
+        limit={maxSites}
+        label="sites ativos"
+        planName={plan?.name ?? "Starter"}
+      />
 
-      {/* Step content */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-        >
-          {step === 0 && (
-            <SiteWizardStep1
-              selected={siteType}
-              onSelect={setSiteType}
-              allowedTypes={allowedTypes}
-              activeSites={sites.length}
-              maxSites={maxSites}
-            />
-          )}
-          {step === 1 && (
-            <SiteWizardStep2
-              objetivo={objetivo}
-              estilo={estilo}
-              cta={cta}
-              onObjetivo={setObjetivo}
-              onEstilo={setEstilo}
-              onCta={setCta}
-            />
-          )}
-          {step === 2 && (
-            <SiteWizardStep3
-              data={briefing}
-              onChange={(field, value) => setBriefing((prev) => ({ ...prev, [field]: value }))}
-            />
-          )}
-        </motion.div>
-      </AnimatePresence>
+      <Button className="w-full gap-2" size="lg" onClick={() => setCreating(true)} disabled={sites.length >= maxSites}>
+        <Sparkles className="w-4 h-4" /> Criar Novo Site
+      </Button>
 
-      {/* Generating state */}
-      {generating && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="py-5 text-center space-y-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
-            <p className="text-sm font-bold">Gerando seu site com IA...</p>
-            <p className="text-[11px] text-muted-foreground">Isso pode levar até 30 segundos</p>
-            <Progress value={genProgress} className="h-2" />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between pt-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs gap-1"
-          onClick={() => step === 0 ? resetWizard() : setStep(step - 1)}
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> {step === 0 ? "Cancelar" : "Voltar"}
-        </Button>
-
-        {step < 2 ? (
-          <Button size="sm" className="gap-1 text-xs" onClick={() => setStep(step + 1)} disabled={!canProceed()}>
-            Próximo <ArrowRight className="w-3.5 h-3.5" />
-          </Button>
-        ) : (
-          <Button size="sm" className="gap-1 text-xs" onClick={handleGenerate} disabled={generating}>
-            <Sparkles className="w-3.5 h-3.5" /> Gerar Site com IA
-          </Button>
-        )}
+      <div>
+        <p className="section-label mb-3">HISTÓRICO DE SITES</p>
+        <SiteHistory sites={sites} onPreview={handlePreviewHistory} />
       </div>
     </div>
   );

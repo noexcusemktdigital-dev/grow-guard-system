@@ -20,6 +20,8 @@ import { DiagnosticoTermometro } from "@/components/diagnostico/DiagnosticoTermo
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { useActiveStrategy, useStrategyHistory, useSaveStrategy } from "@/hooks/useMarketingStrategy";
 import { toast } from "@/hooks/use-toast";
+import { ChatBriefing } from "@/components/cliente/ChatBriefing";
+import { AGENTS, SOFIA_STEPS } from "@/components/cliente/briefingAgents";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -652,7 +654,6 @@ const products: ProductCard[] = [
 
 export default function ClientePlanoMarketing() {
   const navigate = useNavigate();
-  const [currentSection, setCurrentSection] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [completed, setCompleted] = useState(false);
   const [activeTab, setActiveTab] = useState("estrategia");
@@ -670,15 +671,6 @@ export default function ClientePlanoMarketing() {
     }
   }, [activeStrategy]);
 
-  const section = strategySections[currentSection];
-  const totalSections = strategySections.length;
-  const progressPct = ((currentSection + 1) / totalSections) * 100;
-
-  const visibleQuestions = useMemo(() => {
-    if (!section) return [];
-    return section.questions.filter(q => !q.condition || q.condition(answers));
-  }, [section, answers]);
-
   const { scoreMap, maxMap, radarData, percentage } = useMemo(() => computeScores(answers), [answers]);
   const nivel = getNivel(percentage);
   const insights = useMemo(() => generateInsights(answers, scoreMap, maxMap), [answers, scoreMap, maxMap]);
@@ -686,51 +678,22 @@ export default function ClientePlanoMarketing() {
   const revenueProjection = useMemo(() => getRevenueProjection(answers, percentage), [answers, percentage]);
   const actionPlan = useMemo(() => generateActionPlan(scoreMap, maxMap, answers), [scoreMap, maxMap, answers]);
 
-  const canGoNext = () => {
-    return visibleQuestions.every(q => {
-      if (q.optional) return true;
-      const val = answers[q.id];
-      if (q.type === "text") return !!val && String(val).length > 0;
-      if (q.type === "multi-choice") return Array.isArray(val) && val.length > 0;
-      return !!val;
-    });
-  };
-
-  const handleNext = () => {
-    if (currentSection < totalSections - 1) setCurrentSection(currentSection + 1);
-    else {
-      setCompleted(true);
-      // Save to database
-      saveStrategy.mutate(
-        { answers, score_percentage: percentage, nivel: nivel.label },
-        {
-          onSuccess: () => toast({ title: "Estratégia salva!", description: "Seu diagnóstico foi salvo e pode ser consultado a qualquer momento." }),
-          onError: () => toast({ title: "Erro ao salvar", description: "Tente novamente.", variant: "destructive" }),
-        }
-      );
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentSection > 0) setCurrentSection(currentSection - 1);
-  };
-
-  const handleChoiceSelect = (qId: string, value: string) => {
-    setAnswers(prev => ({ ...prev, [qId]: value }));
-  };
-  const handleMultiChoiceToggle = (qId: string, value: string) => {
-    setAnswers(prev => {
-      const current = (prev[qId] as string[]) || [];
-      if (current.includes(value)) return { ...prev, [qId]: current.filter(v => v !== value) };
-      return { ...prev, [qId]: [...current, value] };
-    });
-  };
-  const handleTextChange = (qId: string, val: string) => {
-    setAnswers(prev => ({ ...prev, [qId]: val }));
+  const handleChatComplete = (chatAnswers: Record<string, any>) => {
+    setAnswers(chatAnswers as Answers);
+    setCompleted(true);
+    const result = computeScores(chatAnswers as Answers);
+    const nivelResult = getNivel(result.percentage);
+    saveStrategy.mutate(
+      { answers: chatAnswers, score_percentage: result.percentage, nivel: nivelResult.label },
+      {
+        onSuccess: () => toast({ title: "Estratégia salva!", description: "Seu diagnóstico foi salvo e pode ser consultado a qualquer momento." }),
+        onError: () => toast({ title: "Erro ao salvar", description: "Tente novamente.", variant: "destructive" }),
+      }
+    );
   };
 
   const handleRestart = () => {
-    setAnswers({}); setCurrentSection(0); setCompleted(false); setActiveTab("estrategia");
+    setAnswers({}); setCompleted(false); setActiveTab("estrategia");
   };
 
   const getPriorityBadge = (scoreKey: string) => {
@@ -739,82 +702,6 @@ export default function ClientePlanoMarketing() {
     if (pct < 75) return { label: "Recomendado", className: "bg-warning/10 text-warning border-warning/20" };
     return { label: "Otimizar", className: "bg-success/10 text-success border-success/20" };
   };
-
-  /* ── Render Question with HelpTooltip ── */
-  const renderQuestion = (q: StrategyQuestion) => (
-    <div key={q.id} className="space-y-3">
-      <div>
-        <p className="text-sm font-semibold flex items-center gap-1.5">
-          {q.question}
-          {q.helpText && <HelpTooltip text={q.helpText} />}
-        </p>
-        {q.subtitle && <p className="text-xs text-muted-foreground">{q.subtitle}</p>}
-        {q.optional && <span className="text-[10px] text-muted-foreground italic ml-1">(opcional)</span>}
-      </div>
-
-      {q.type === "choice" && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {q.options?.map(opt => {
-            const selected = answers[q.id] === opt.value;
-            const Icon = opt.icon;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => handleChoiceSelect(q.id, opt.value)}
-                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all duration-200
-                  ${selected ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
-              >
-                {Icon && <Icon className={`w-4 h-4 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />}
-                <span className={`text-xs font-medium ${selected ? "text-foreground" : "text-muted-foreground"}`}>{opt.label}</span>
-                {selected && <CheckCircle2 className="w-3.5 h-3.5 text-primary ml-auto shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {q.type === "multi-choice" && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {q.options?.map(opt => {
-            const arr = (answers[q.id] as string[]) || [];
-            const selected = arr.includes(opt.value);
-            return (
-              <button
-                key={opt.value}
-                onClick={() => handleMultiChoiceToggle(q.id, opt.value)}
-                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all duration-200
-                  ${selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
-              >
-                <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors
-                  ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
-                  {selected && <CheckCircle2 className="w-2.5 h-2.5 text-primary-foreground" />}
-                </div>
-                <span className={`text-xs ${selected ? "font-medium text-foreground" : "text-muted-foreground"}`}>{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {q.type === "text" && (
-        q.placeholder?.startsWith("http") || q.id.startsWith("url_") ? (
-          <Input
-            value={(answers[q.id] as string) || ""}
-            onChange={e => handleTextChange(q.id, e.target.value)}
-            placeholder={q.placeholder}
-            className="text-sm"
-          />
-        ) : (
-          <Textarea
-            value={(answers[q.id] as string) || ""}
-            onChange={e => handleTextChange(q.id, e.target.value)}
-            placeholder={q.placeholder}
-            className="min-h-[80px] resize-none text-sm"
-          />
-        )
-      )}
-    </div>
-  );
 
   /* ── Main Render ── */
   if (loadingStrategy) {
@@ -846,56 +733,12 @@ export default function ClientePlanoMarketing() {
         {/* ═══════ ESTRATÉGIA ═══════ */}
         <TabsContent value="estrategia" className="mt-4">
           {!completed ? (
-            <div className="space-y-6">
-              {/* Progress */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {section && <section.icon className="w-4 h-4 text-primary" />}
-                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                      {section?.title}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {currentSection + 1} de {totalSections}
-                  </span>
-                </div>
-                <Progress value={progressPct} className="h-1.5" />
-              </div>
-
-              {/* Section Card */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={section?.id}
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -30 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                >
-                  <Card className="glass-card overflow-hidden">
-                    <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
-                    <CardContent className="py-6 px-6 md:px-10 space-y-6">
-                      <div>
-                        <h2 className="text-lg font-black tracking-tight">{section?.title}</h2>
-                        <p className="text-sm text-muted-foreground">{section?.subtitle}</p>
-                      </div>
-                      {visibleQuestions.map(renderQuestion)}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Navigation */}
-              <div className="flex items-center justify-between">
-                <Button variant="ghost" onClick={handlePrev} disabled={currentSection === 0} className="gap-2">
-                  <ArrowLeft className="w-4 h-4" /> Voltar
-                </Button>
-                <Button onClick={handleNext} disabled={!canGoNext()} className="gap-2">
-                  {currentSection === totalSections - 1 ? "Ver Resultado" : "Próximo"}
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+            <ChatBriefing
+              agent={AGENTS.sofia}
+              steps={SOFIA_STEPS}
+              onComplete={handleChatComplete}
+              onCancel={() => navigate("/cliente/inicio")}
+            />
           ) : (
             /* ── RESULT ── */
             <div className="space-y-6">
