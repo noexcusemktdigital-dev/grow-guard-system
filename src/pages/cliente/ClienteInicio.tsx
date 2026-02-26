@@ -6,7 +6,7 @@ import {
   MessageCircle, BarChart3, ArrowUpRight, ArrowDownRight,
   CheckSquare, ChevronRight, Sparkles, Clock,
   Zap, ArrowRight, Bot, Link, FileText, Lightbulb,
-  Wifi, WifiOff,
+  Wifi, WifiOff, Sun, Moon, CloudSun, ListChecks,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useWhatsAppInstance, useWhatsAppContacts } from "@/hooks/useWhatsApp";
 import { useClienteAgents } from "@/hooks/useClienteAgents";
 import { useDailyMessages } from "@/hooks/useDailyMessages";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const kpiConfig = [
   { label: "Receita Estimada", icon: DollarSign, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500" },
@@ -47,6 +48,8 @@ function formatCurrency(value: number) {
 
 export default function ClienteInicio() {
   const navigate = useNavigate();
+  const { data: profile } = useUserProfile();
+  const firstName = profile?.full_name?.split(" ")[0] || "";
   const today = format(new Date(), "yyyy-MM-dd");
   const { data: checklistItems } = useClienteChecklist(today);
   const { data: leads, isLoading: leadsLoading } = useCrmLeads();
@@ -153,6 +156,8 @@ export default function ClienteInicio() {
   // Greeting
   const hora = now.getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  const greetingEmoji = hora < 12 ? <Sun className="w-6 h-6 text-amber-400" /> : hora < 18 ? <CloudSun className="w-6 h-6 text-orange-400" /> : <Moon className="w-6 h-6 text-indigo-400" />;
+  const greeting = firstName ? `${saudacao}, ${firstName}!` : `${saudacao}!`;
 
   const pendingTasks = checklist.filter(t => !t.is_completed);
   const completedTasks = checklist.filter(t => t.is_completed);
@@ -178,29 +183,52 @@ export default function ClienteInicio() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          {saudacao}!
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
-          <Clock className="w-3.5 h-3.5" />
-          {format(now, "EEEE, dd 'de' MMMM", { locale: ptBR }).replace(/^./, c => c.toUpperCase())} · <span className="font-medium text-foreground">{pendingTasks.length} tarefas pendentes</span>
-        </p>
-      </div>
-
-      {/* Daily Phrase */}
-      <Card className="border-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent overflow-hidden">
-        <CardContent className="p-4 flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-primary" />
+      {/* Hero Section */}
+      <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent shadow-md animate-fade-in">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/3 pointer-events-none" />
+        <CardContent className="relative p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                {greetingEmoji}
+                <h1 className="text-2xl font-bold tracking-tight text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {greeting}
+                </h1>
+              </div>
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5" />
+                {format(now, "EEEE, dd 'de' MMMM", { locale: ptBR }).replace(/^./, c => c.toUpperCase())}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Frase do Dia</p>
-            <p className="text-sm font-medium text-foreground/90 italic leading-relaxed">"{dailyPhrase}"</p>
-            {dailyMessage?.author && (
-              <p className="text-[10px] text-muted-foreground mt-1">— {dailyMessage.author}</p>
-            )}
+
+          {/* Integrated daily phrase */}
+          <div className="flex items-start gap-3 bg-background/40 rounded-xl p-3.5 backdrop-blur-sm">
+            <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground/90 italic leading-relaxed">"{dailyPhrase}"</p>
+              {dailyMessage?.author && (
+                <p className="text-[10px] text-muted-foreground mt-1">— {dailyMessage.author}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Inline stats */}
+          <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <ListChecks className="w-3.5 h-3.5 text-primary" />
+              <span><span className="text-foreground font-semibold">{pendingTasks.length}</span> tarefas pendentes</span>
+            </div>
+            <span className="text-muted-foreground/40">·</span>
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-primary" />
+              <span><span className="text-foreground font-semibold">{thisMonthLeads.length}</span> leads no mês</span>
+            </div>
+            <span className="text-muted-foreground/40">·</span>
+            <div className="flex items-center gap-1.5">
+              <Target className="w-3.5 h-3.5 text-primary" />
+              <span>Meta em <span className="text-foreground font-semibold">{Math.min(goalPercent, 100).toFixed(0)}%</span></span>
+            </div>
           </div>
         </CardContent>
       </Card>
