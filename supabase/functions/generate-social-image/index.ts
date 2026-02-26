@@ -127,7 +127,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, format, file_path, nivel, persona, identidade_visual, organization_id } = await req.json();
+    const { prompt, format, file_path, nivel, persona, identidade_visual, organization_id, reference_images } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -215,7 +215,20 @@ ${prompt}
 
 Generate this image now. Prioritize brand color accuracy and compositional excellence above all else.`;
 
-    console.log(`Generating ${format} image (nivel: ${nivel || "simples"}, style: ${estilo})...`);
+    console.log(`Generating ${format} image (nivel: ${nivel || "simples"}, style: ${estilo}, refs: ${reference_images?.length || 0})...`);
+
+    // Build message content — multimodal if references exist
+    const hasRefs = reference_images && reference_images.length > 0;
+    const messageContent: any = hasRefs
+      ? [
+          { type: "text", text: fullPrompt },
+          ...reference_images.slice(0, 3).map((url: string) => ({
+            type: "image_url",
+            image_url: { url },
+          })),
+          { type: "text", text: "Study the provided reference images above and match their visual style, color treatment, composition approach, and overall aesthetic quality. The generated image must feel like it belongs to the same visual family as these references." },
+        ]
+      : fullPrompt;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -225,7 +238,7 @@ Generate this image now. Prioritize brand color accuracy and compositional excel
       },
       body: JSON.stringify({
         model: "google/gemini-3-pro-image-preview",
-        messages: [{ role: "user", content: fullPrompt }],
+        messages: [{ role: "user", content: messageContent }],
         modalities: ["image", "text"],
       }),
     });

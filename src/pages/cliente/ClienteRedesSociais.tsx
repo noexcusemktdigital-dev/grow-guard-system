@@ -344,6 +344,14 @@ export default function ClienteRedesSociais() {
   const [personaDescricao, setPersonaDescricao] = useState("");
   const [referenciasTipo, setReferenciasTipo] = useState("");
 
+  // Visual References (briefing)
+  const [bReferenceImages, setBReferenceImages] = useState<{ url: string; isUpload: boolean }[]>([]);
+  const [uploadingRef, setUploadingRef] = useState(false);
+  const [refUrlInput, setRefUrlInput] = useState("");
+
+  // Image Bank (visual identity)
+  const [uploadingBank, setUploadingBank] = useState(false);
+
   // Calendar
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
   // Active tab
@@ -367,6 +375,64 @@ export default function ClienteRedesSociais() {
     fontes: viFonts,
     referencias: viRefLinks,
   });
+
+  /* ── Reference image helpers ── */
+  const handleRefUpload = async (files: FileList | null) => {
+    if (!files || !orgId) return;
+    setUploadingRef(true);
+    try {
+      for (let i = 0; i < Math.min(files.length, 5 - bReferenceImages.length); i++) {
+        const file = files[i];
+        const path = `references/${orgId}/${Date.now()}-${file.name}`;
+        const { error } = await supabase.storage.from("social-arts").upload(path, file, { contentType: file.type, upsert: true });
+        if (error) throw error;
+        const { data: urlData } = supabase.storage.from("social-arts").getPublicUrl(path);
+        setBReferenceImages(prev => [...prev, { url: urlData.publicUrl, isUpload: true }]);
+      }
+    } catch (err: any) {
+      toast({ title: "Erro no upload", description: err?.message, variant: "destructive" });
+    } finally {
+      setUploadingRef(false);
+    }
+  };
+
+  const addRefUrl = () => {
+    if (!refUrlInput.trim() || bReferenceImages.length >= 5) return;
+    setBReferenceImages(prev => [...prev, { url: refUrlInput.trim(), isUpload: false }]);
+    setRefUrlInput("");
+  };
+
+  const removeRef = (idx: number) => {
+    setBReferenceImages(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleBankUpload = async (files: FileList | null) => {
+    if (!files || !orgId) return;
+    setUploadingBank(true);
+    try {
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const path = `bank/${orgId}/${Date.now()}-${file.name}`;
+        const { error } = await supabase.storage.from("social-arts").upload(path, file, { contentType: file.type, upsert: true });
+        if (error) throw error;
+        const { data: urlData } = supabase.storage.from("social-arts").getPublicUrl(path);
+        newUrls.push(urlData.publicUrl);
+      }
+      const current = visualIdentity?.image_bank_urls || [];
+      await saveVI.mutateAsync({ image_bank_urls: [...current, ...newUrls] });
+      toast({ title: `${newUrls.length} imagem(ns) adicionada(s) ao banco!` });
+    } catch (err: any) {
+      toast({ title: "Erro no upload", description: err?.message, variant: "destructive" });
+    } finally {
+      setUploadingBank(false);
+    }
+  };
+
+  const removeBankImage = async (url: string) => {
+    const current = visualIdentity?.image_bank_urls || [];
+    await saveVI.mutateAsync({ image_bank_urls: current.filter(u => u !== url) });
+  };
 
   const loadContentCampaigns = () => {
     try {
@@ -445,6 +511,9 @@ export default function ClienteRedesSociais() {
           identidade_visual,
           referencias_tipo: referenciasTipo || undefined,
           organization_id: orgId,
+          reference_images: bReferenceImages.length > 0
+            ? bReferenceImages.map(r => r.url)
+            : (visualIdentity?.image_bank_urls?.length ? visualIdentity.image_bank_urls.slice(0, 3) : undefined),
         },
       });
 
@@ -469,6 +538,9 @@ export default function ClienteRedesSociais() {
               prompt: concept.visual_prompt_feed, format: "feed",
               file_path: `${timestamp}/${slug}-feed.png`, nivel: bNivel,
               persona: personaData, identidade_visual, organization_id: orgId,
+              reference_images: bReferenceImages.length > 0
+                ? bReferenceImages.slice(0, 3).map(r => r.url)
+                : (visualIdentity?.image_bank_urls?.slice(0, 3) || undefined),
             },
           });
           if (!feedError && feedData?.url) feedUrl = feedData.url;
@@ -484,6 +556,9 @@ export default function ClienteRedesSociais() {
               prompt: concept.visual_prompt_story, format: "story",
               file_path: `${timestamp}/${slug}-story.png`, nivel: bNivel,
               persona: personaData, identidade_visual, organization_id: orgId,
+              reference_images: bReferenceImages.length > 0
+                ? bReferenceImages.slice(0, 3).map(r => r.url)
+                : (visualIdentity?.image_bank_urls?.slice(0, 3) || undefined),
             },
           });
           if (!storyError && storyData?.url) storyUrl = storyData.url;
@@ -836,6 +911,78 @@ export default function ClienteRedesSociais() {
                           </div>
                         </div>
 
+                        {/* ── Referências Visuais ── */}
+                        <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                          <p className="text-xs font-semibold flex items-center gap-1.5">
+                            <Eye className="w-3.5 h-3.5 text-primary" /> Referências Visuais
+                            <HelpTooltip text="Envie exemplos de artes que você gosta. A IA analisa o estilo, cores e composição para criar algo similar." />
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">Até 5 imagens. A IA analisa o estilo e usa como guia visual.</p>
+
+                          {/* Preview thumbnails */}
+                          {bReferenceImages.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {bReferenceImages.map((ref, i) => (
+                                <div key={i} className="relative group w-16 h-16 rounded-lg overflow-hidden border">
+                                  <img src={ref.url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                                  <button
+                                    onClick={() => removeRef(i)}
+                                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                  >
+                                    <Minus className="w-4 h-4 text-white" />
+                                  </button>
+                                  {ref.isUpload && <Badge className="absolute bottom-0.5 left-0.5 text-[7px] px-1 py-0 bg-primary/80 border-0">Upload</Badge>}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {bReferenceImages.length < 5 && (
+                            <div className="space-y-2">
+                              {/* Upload */}
+                              <div>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  id="ref-upload"
+                                  className="hidden"
+                                  onChange={(e) => handleRefUpload(e.target.files)}
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs gap-1.5 w-full"
+                                  onClick={() => document.getElementById("ref-upload")?.click()}
+                                  disabled={uploadingRef}
+                                >
+                                  <Upload className="w-3.5 h-3.5" />
+                                  {uploadingRef ? "Enviando..." : "Upload de Imagens"}
+                                </Button>
+                              </div>
+                              {/* URL input */}
+                              <div className="flex gap-1.5">
+                                <Input
+                                  value={refUrlInput}
+                                  onChange={(e) => setRefUrlInput(e.target.value)}
+                                  placeholder="Cole URL de imagem de referência"
+                                  className="h-8 text-xs flex-1"
+                                  onKeyDown={(e) => e.key === "Enter" && addRefUrl()}
+                                />
+                                <Button variant="outline" size="sm" className="h-8 text-xs px-2" onClick={addRefUrl}>
+                                  <Plus className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {bReferenceImages.length === 0 && visualIdentity?.image_bank_urls?.length ? (
+                            <p className="text-[10px] text-muted-foreground/70 italic">
+                              Sem referências específicas? As {visualIdentity.image_bank_urls.length} imagens do seu Banco de Imagens serão usadas automaticamente.
+                            </p>
+                          ) : null}
+                        </div>
+
                         <div className="flex gap-2">
                           <Button variant="outline" className="flex-none" onClick={() => setWizardFlow("choose")}><ArrowLeft className="w-4 h-4" /></Button>
                           <Button className="flex-1 gap-2 h-11 font-semibold" onClick={handleGenerate}>
@@ -1112,7 +1259,7 @@ export default function ClienteRedesSociais() {
           <Card className="glass-card">
             <CardContent className="py-5 space-y-3">
               <p className="text-sm font-bold flex items-center gap-2">
-                <Eye className="w-4 h-4 text-primary" /> Referências Visuais
+                <Eye className="w-4 h-4 text-primary" /> Referências Visuais (Links)
                 <HelpTooltip text="Links de perfis ou sites que inspiram o visual da marca. A IA usa como contexto." />
               </p>
               {viEditing ? (
@@ -1121,6 +1268,65 @@ export default function ClienteRedesSociais() {
                 <div className="text-sm whitespace-pre-line">
                   {viRefLinks || <span className="text-muted-foreground italic">Nenhuma referência adicionada</span>}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Banco de Imagens */}
+          <Card className="glass-card">
+            <CardContent className="py-5 space-y-3">
+              <p className="text-sm font-bold flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-primary" /> Banco de Imagens
+                <HelpTooltip text="Upload de imagens permanentes da marca. Quando não houver referências específicas no briefing, a IA usará estas imagens como guia visual." />
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Imagens salvas aqui serão usadas automaticamente como referência visual quando nenhuma for enviada no briefing.
+              </p>
+
+              {/* Existing images */}
+              {(visualIdentity?.image_bank_urls?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {visualIdentity!.image_bank_urls.map((url, i) => (
+                    <div key={i} className="relative group w-20 h-20 rounded-lg overflow-hidden border">
+                      <img src={url} alt={`Banco ${i + 1}`} className="w-full h-full object-cover" />
+                      {viEditing && (
+                        <button
+                          onClick={() => removeBankImage(url)}
+                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        >
+                          <Minus className="w-4 h-4 text-white" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {viEditing && (
+                <div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    id="bank-upload"
+                    className="hidden"
+                    onChange={(e) => handleBankUpload(e.target.files)}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5"
+                    onClick={() => document.getElementById("bank-upload")?.click()}
+                    disabled={uploadingBank}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    {uploadingBank ? "Enviando..." : "Adicionar Imagens ao Banco"}
+                  </Button>
+                </div>
+              )}
+
+              {!viEditing && !(visualIdentity?.image_bank_urls?.length) && (
+                <p className="text-xs text-muted-foreground italic">Nenhuma imagem no banco. Edite para adicionar.</p>
               )}
             </CardContent>
           </Card>
