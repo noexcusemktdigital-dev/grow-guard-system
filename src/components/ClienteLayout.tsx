@@ -4,6 +4,8 @@ import { FeatureGateProvider } from "@/contexts/FeatureGateContext";
 import { FeatureGateOverlay } from "./FeatureGateOverlay";
 import { CreditAlertBanner } from "./cliente/CreditAlertBanner";
 import { ActionAlertsBanner } from "./cliente/ActionAlertsBanner";
+import { OnboardingTour } from "./cliente/OnboardingTour";
+import { CelebrationEffect } from "./CelebrationEffect";
 
 export function ClienteLayout() {
   const location = useLocation();
@@ -27,6 +29,8 @@ export function ClienteLayout() {
           <FeatureGateOverlay />
         </main>
       </div>
+      <OnboardingTour />
+      <CelebrationEffect />
     </FeatureGateProvider>
   );
 }

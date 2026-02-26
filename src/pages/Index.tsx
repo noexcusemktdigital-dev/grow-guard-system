@@ -3,6 +3,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationBell } from "@/components/NotificationBell";
 import { UserMenu } from "@/components/UserMenu";
+import { SupportButton } from "@/components/SupportButton";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -32,6 +33,7 @@ const Index = () => {
             <GlobalSearch />
           </div>
           <div className="flex-1 flex items-center justify-end gap-1.5">
+            <SupportButton />
             <NotificationBell />
             <UserMenu />
             <ThemeToggle />

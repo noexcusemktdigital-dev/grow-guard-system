@@ -29,6 +29,8 @@ import { useCrmPartners } from "@/hooks/useCrmPartners";
 import { useWhatsAppMessages, useSendWhatsAppMessage } from "@/hooks/useWhatsApp";
 import { ChatMessageBubble } from "@/components/cliente/ChatMessageBubble";
 import { useToast } from "@/hooks/use-toast";
+import { triggerCelebration } from "@/components/CelebrationEffect";
+import { playSound } from "@/lib/sounds";
 import type { FunnelStage } from "./CrmStageSystem";
 import { STAGE_ICONS, getColorStyle } from "./CrmStageSystem";
 
@@ -227,7 +229,7 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
 
           {!lead.won_at && !lead.lost_at && (
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="flex-1 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => { markAsWon.mutate(lead.id); toast({ title: "Lead marcado como vendido!" }); }}>
+              <Button size="sm" variant="outline" className="flex-1 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => { markAsWon.mutate(lead.id); triggerCelebration(); playSound("celebration"); toast({ title: "🎉 Lead marcado como vendido!" }); }}>
                 <CheckCircle className="w-3.5 h-3.5" /> Vendido
               </Button>
               <Button size="sm" variant="outline" className="flex-1 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setLostDialog(true)}>
