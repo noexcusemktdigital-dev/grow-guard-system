@@ -5,7 +5,7 @@ import {
   ChevronRight, BookOpen, Clock, FolderOpen, Folder,
   ArrowLeft, Hash, Layout, CheckCircle2, Circle, Star,
   Type, AlignCenter, AlignLeft, AlignRight, Minus,
-  ZoomIn, ArrowRight, Users, FileText, Lock, CreditCard, AlertTriangle,
+  ZoomIn, ArrowRight, Users, FileText, Lock, CreditCard, AlertTriangle, Video, Music, Film,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,6 +40,10 @@ interface SocialConcept {
   hashtags: string[];
   visual_prompt_feed: string;
   visual_prompt_story: string;
+  video_script?: string;
+  video_description?: string;
+  audio_suggestion?: string;
+  visual_prompt_thumbnail?: string;
 }
 
 interface GeneratedArt {
@@ -53,6 +57,10 @@ interface GeneratedArt {
   status: ApprovalStatus;
   changeNote?: string;
   createdAt?: string;
+  videoScript?: string;
+  videoDescription?: string;
+  audioSuggestion?: string;
+  thumbnailUrl?: string | null;
 }
 
 interface ArtCampaign {
@@ -345,9 +353,12 @@ export default function ClienteRedesSociais() {
   const [referenciasTipo, setReferenciasTipo] = useState("");
 
   // Visual References (briefing)
-  const [bReferenceImages, setBReferenceImages] = useState<{ url: string; isUpload: boolean }[]>([]);
+  const [bReferenceImages, setBReferenceImages] = useState<{ url: string; isUpload: boolean; fileName?: string; isFile?: boolean }[]>([]);
   const [uploadingRef, setUploadingRef] = useState(false);
   const [refUrlInput, setRefUrlInput] = useState("");
+
+  // Video
+  const [bIncluirVideo, setBIncluirVideo] = useState(false);
 
   // Image Bank (visual identity)
   const [uploadingBank, setUploadingBank] = useState(false);
@@ -387,7 +398,8 @@ export default function ClienteRedesSociais() {
         const { error } = await supabase.storage.from("social-arts").upload(path, file, { contentType: file.type, upsert: true });
         if (error) throw error;
         const { data: urlData } = supabase.storage.from("social-arts").getPublicUrl(path);
-        setBReferenceImages(prev => [...prev, { url: urlData.publicUrl, isUpload: true }]);
+        const isImageFile = file.type.startsWith("image/");
+        setBReferenceImages(prev => [...prev, { url: urlData.publicUrl, isUpload: true, fileName: file.name, isFile: !isImageFile }]);
       }
     } catch (err: any) {
       toast({ title: "Erro no upload", description: err?.message, variant: "destructive" });
@@ -510,7 +522,8 @@ export default function ClienteRedesSociais() {
           persona: personaData,
           identidade_visual,
           referencias_tipo: referenciasTipo || undefined,
-          organization_id: orgId,
+           organization_id: orgId,
+          incluir_video: bIncluirVideo || undefined,
           reference_images: bReferenceImages.length > 0
             ? bReferenceImages.map(r => r.url)
             : (visualIdentity?.image_bank_urls?.length ? visualIdentity.image_bank_urls.slice(0, 3) : undefined),
@@ -564,10 +577,27 @@ export default function ClienteRedesSociais() {
           if (!storyError && storyData?.url) storyUrl = storyData.url;
         } catch (e) { console.error("Story image error:", e); }
 
+        // Generate video thumbnail if video script exists
+        let thumbnailUrl: string | null = null;
+        if (concept.visual_prompt_thumbnail) {
+          try {
+            const { data: thumbData, error: thumbError } = await supabase.functions.invoke("generate-social-image", {
+              body: {
+                prompt: concept.visual_prompt_thumbnail, format: "feed",
+                file_path: `${timestamp}/${slug}-thumb.png`, nivel: bNivel,
+                persona: personaData, identidade_visual, organization_id: orgId,
+              },
+            });
+            if (!thumbError && thumbData?.url) thumbnailUrl = thumbData.url;
+          } catch (e) { console.error("Thumbnail error:", e); }
+        }
+
         arts.push({
           id: `art-${timestamp}-${i}`, titulo: concept.titulo, legenda: concept.legenda,
           cta: concept.cta, hashtags: concept.hashtags, feedUrl, storyUrl,
           status: "pending" as ApprovalStatus, createdAt: new Date().toISOString(),
+          videoScript: concept.video_script, videoDescription: concept.video_description,
+          audioSuggestion: concept.audio_suggestion, thumbnailUrl,
         });
       }
 
@@ -912,14 +942,21 @@ export default function ClienteRedesSociais() {
                             <Eye className="w-3.5 h-3.5 text-primary" /> Referências Visuais
                             <HelpTooltip text="Envie exemplos de artes que você gosta. A IA analisa o estilo, cores e composição para criar algo similar." />
                           </p>
-                          <p className="text-[10px] text-muted-foreground">Até 5 imagens. A IA analisa o estilo e usa como guia visual.</p>
+                          <p className="text-[10px] text-muted-foreground">Até 5 imagens ou arquivos de design (.pdf, .ai, .psd, .svg). A IA analisa o estilo e usa como guia visual.</p>
 
                           {/* Preview thumbnails */}
                           {bReferenceImages.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                               {bReferenceImages.map((ref, i) => (
                                 <div key={i} className="relative group w-16 h-16 rounded-lg overflow-hidden border">
-                                  <img src={ref.url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                                  {ref.isFile ? (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 p-1">
+                                      <FileText className="w-5 h-5 text-muted-foreground" />
+                                      <span className="text-[7px] text-muted-foreground truncate w-full text-center mt-0.5">{ref.fileName || "arquivo"}</span>
+                                    </div>
+                                  ) : (
+                                    <img src={ref.url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                                  )}
                                   <button
                                     onClick={() => removeRef(i)}
                                     className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
@@ -938,7 +975,7 @@ export default function ClienteRedesSociais() {
                               <div>
                                 <input
                                   type="file"
-                                  accept="image/*"
+                                  accept="image/*,.pdf,.ai,.psd,.svg,.fig"
                                   multiple
                                   id="ref-upload"
                                   className="hidden"
@@ -952,7 +989,7 @@ export default function ClienteRedesSociais() {
                                   disabled={uploadingRef}
                                 >
                                   <Upload className="w-3.5 h-3.5" />
-                                  {uploadingRef ? "Enviando..." : "Upload de Imagens"}
+                                  {uploadingRef ? "Enviando..." : "Upload de Imagens / Arquivos"}
                                 </Button>
                               </div>
                               {/* URL input */}
@@ -978,10 +1015,21 @@ export default function ClienteRedesSociais() {
                           ) : null}
                         </div>
 
+                        {/* Video checkbox */}
+                        <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
+                          <label className="flex items-center gap-2.5 cursor-pointer">
+                            <input type="checkbox" checked={bIncluirVideo} onChange={(e) => setBIncluirVideo(e.target.checked)} className="rounded" />
+                            <div className="flex-1">
+                              <p className="text-xs font-semibold flex items-center gap-1.5"><Video className="w-3.5 h-3.5 text-primary" /> Gerar roteiro de vídeo</p>
+                              <p className="text-[10px] text-muted-foreground">A IA cria roteiro com timecodes, storyboard e sugestão de áudio para cada post.</p>
+                            </div>
+                          </label>
+                        </div>
+
                         <div className="flex gap-2">
                           <Button variant="outline" className="flex-none" onClick={() => setWizardFlow("choose")}><ArrowLeft className="w-4 h-4" /></Button>
                           <Button className="flex-1 gap-2 h-11 font-semibold" onClick={handleGenerate}>
-                            <Sparkles className="w-4 h-4" /> Gerar {Number(bQtd) * 2 || 0} Artes com IA
+                            <Sparkles className="w-4 h-4" /> Gerar {Number(bQtd) * 2 || 0} Artes{bIncluirVideo ? " + Vídeos" : ""} com IA
                           </Button>
                         </div>
                       </div>
@@ -1001,7 +1049,46 @@ export default function ClienteRedesSociais() {
                       <div className="flex gap-2 mb-3">
                         <Button size="sm" variant={editorFormat === "feed" ? "default" : "outline"} className="text-xs" onClick={() => setEditorFormat("feed")}>Feed (1:1)</Button>
                         <Button size="sm" variant={editorFormat === "story" ? "default" : "outline"} className="text-xs" onClick={() => setEditorFormat("story")}>Story (9:16)</Button>
+                        {selectedArt.videoScript && (
+                          <Button size="sm" variant={editorFormat === "video" as any ? "default" : "outline"} className="text-xs gap-1" onClick={() => setEditorFormat("video" as any)}>
+                            <Video className="w-3 h-3" /> Vídeo
+                          </Button>
+                        )}
                       </div>
+                      {(editorFormat as string) === "video" && selectedArt.videoScript ? (
+                        <div className="space-y-4">
+                          {selectedArt.thumbnailUrl && (
+                            <div className="rounded-xl overflow-hidden border">
+                              <img src={selectedArt.thumbnailUrl} alt="Thumbnail" className="w-full max-h-64 object-cover" />
+                              <div className="p-2 bg-muted/30 flex justify-between items-center">
+                                <span className="text-[10px] text-muted-foreground">Thumbnail / Capa do Vídeo</span>
+                                <Button size="sm" variant="ghost" className="text-xs gap-1 h-6" onClick={() => { const a = document.createElement("a"); a.href = selectedArt.thumbnailUrl!; a.download = "thumbnail.png"; a.click(); }}>
+                                  <Download className="w-3 h-3" /> Baixar
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Film className="w-3.5 h-3.5" /> Roteiro com Timecodes</Label>
+                            <div className="mt-1 p-3 rounded-lg bg-muted/30 text-sm whitespace-pre-line max-h-60 overflow-y-auto font-mono text-xs">{selectedArt.videoScript}</div>
+                            <Button size="sm" variant="ghost" className="mt-1 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(selectedArt.videoScript!); toast({ title: "Roteiro copiado!" }); }}>
+                              <Copy className="w-3 h-3" /> Copiar Roteiro
+                            </Button>
+                          </div>
+                          {selectedArt.videoDescription && (
+                            <div>
+                              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" /> Descrição Visual (Frame-by-frame)</Label>
+                              <div className="mt-1 p-3 rounded-lg bg-muted/30 text-sm whitespace-pre-line max-h-48 overflow-y-auto">{selectedArt.videoDescription}</div>
+                            </div>
+                          )}
+                          {selectedArt.audioSuggestion && (
+                            <div>
+                              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Music className="w-3.5 h-3.5" /> Sugestão de Áudio</Label>
+                              <p className="mt-1 text-sm">{selectedArt.audioSuggestion}</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
                       <div className="grid md:grid-cols-2 gap-6">
                         <div>
                           {(editorFormat === "feed" ? selectedArt.feedUrl : selectedArt.storyUrl) ? (
@@ -1039,6 +1126,7 @@ export default function ClienteRedesSociais() {
                           />
                         </div>
                       </div>
+                      )}
                     </>
                   )}
                 </DialogContent>
