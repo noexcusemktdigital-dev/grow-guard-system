@@ -243,21 +243,47 @@ Deno.serve(async (req) => {
     const audioUrl = media_url || message_text;
     if (message_type === "audio" && audioUrl && audioUrl.startsWith("http")) {
       try {
-        const transcribeRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: "Transcreva o áudio a seguir. Retorne apenas o texto transcrito, sem formatação." },
-              { role: "user", content: `Transcreva este áudio: ${audioUrl}` },
-            ],
-          }),
-        });
-        if (transcribeRes.ok) {
-          const transcribeData = await transcribeRes.json();
-          const transcribed = transcribeData.choices?.[0]?.message?.content;
-          if (transcribed) processedMessage = transcribed;
+        console.log("Downloading audio from:", audioUrl);
+        const audioResponse = await fetch(audioUrl);
+        if (!audioResponse.ok) {
+          console.error("Failed to download audio:", audioResponse.status);
+        } else {
+          const audioBuffer = await audioResponse.arrayBuffer();
+          const audioBytes = new Uint8Array(audioBuffer);
+          console.log("Audio downloaded, size:", audioBytes.length, "bytes");
+
+          // Convert to base64
+          let binary = "";
+          for (let i = 0; i < audioBytes.length; i++) {
+            binary += String.fromCharCode(audioBytes[i]);
+          }
+          const audioBase64 = btoa(binary);
+          const contentType = audioResponse.headers.get("content-type") || "audio/ogg";
+          console.log("Audio content-type:", contentType);
+
+          // Send as multimodal content using data URI (Gemini supports audio via image_url)
+          const transcribeRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: "Transcreva o áudio a seguir. Retorne apenas o texto transcrito, sem formatação adicional." },
+                { role: "user", content: [
+                  { type: "image_url", image_url: { url: `data:${contentType};base64,${audioBase64}` } }
+                ]},
+              ],
+            }),
+          });
+
+          if (transcribeRes.ok) {
+            const transcribeData = await transcribeRes.json();
+            const transcribed = transcribeData.choices?.[0]?.message?.content;
+            console.log("Transcription result:", transcribed?.substring(0, 100));
+            if (transcribed) processedMessage = transcribed;
+          } else {
+            console.error("Transcription API error:", transcribeRes.status, await transcribeRes.text());
+          }
         }
       } catch (e) {
         console.error("Audio transcription failed:", e);
