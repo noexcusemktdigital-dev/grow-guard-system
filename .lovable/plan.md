@@ -1,84 +1,35 @@
 
-# Auditoria Financeira Asaas — Problemas Encontrados e Correcoes
+# Puxar Pagamentos do Asaas no Controle Financeiro
 
-## BUG CRITICO 1: Variavel duplicada no Webhook (quebra a funcao inteira)
+## O que sera feito
 
-No arquivo `supabase/functions/asaas-webhook/index.ts`, a variavel `externalRef` e declarada com `const` duas vezes no mesmo escopo (linhas 94 e 187):
+Adicionar uma nova aba **"Pagamentos Asaas"** no Controle Financeiro que busca os pagamentos reais do mes atual direto da API do Asaas, mostrando status, valor, data de vencimento e links de fatura.
 
-```text
-Linha 94:  const externalRef = payment.externalReference;  // 1a declaracao
-Linha 187: const externalRef = payment.externalReference;  // 2a declaracao (ERRO!)
-```
+## Mudancas
 
-Isso causa um **SyntaxError** no Deno, impedindo que o webhook funcione para **qualquer** evento. Nenhum pagamento confirmado esta sendo processado — nem SaaS, nem franqueado, nem cliente.
+### 1. Edge Function `asaas-list-payments/index.ts`
+- Adicionar suporte a filtros opcionais de data (`startDate`, `endDate`) na query para a API do Asaas
+- Aceitar `organization_id` como array ou buscar todas as orgs filhas quando receber `network: true`
+- Buscar as orgs filhas via `organizations.parent_org_id` para listar pagamentos de toda a rede
+- Aumentar o limite de 20 para 100 pagamentos
 
-**Correcao:** Remover a segunda declaracao na linha 187, pois a variavel `externalRef` ja existe no escopo desde a linha 94.
+### 2. Hook `src/hooks/useClientPayments.ts`
+- Adicionar um novo hook `useAsaasNetworkPayments()` que:
+  - Busca o `orgId` do usuario logado
+  - Chama `asaas-list-payments` com `network: true` e filtros do mes atual
+  - Retorna a lista de pagamentos formatada
 
----
+### 3. Pagina `src/pages/FinanceiroControle.tsx`
+- Adicionar nova aba **"Pagamentos Asaas"** ao lado das abas existentes
+- Tabela mostrando: Cliente, Valor, Vencimento, Data Pagamento, Metodo, Status, Link Fatura
+- Badges coloridos para status (CONFIRMED/RECEIVED = verde, PENDING = amarelo, OVERDUE = vermelho)
+- Botao para abrir fatura quando disponivel
+- Loading state enquanto busca da API
 
-## BUG 2: Metodo `getClaims()` inexistente no supabase-js v2
-
-Tres Edge Functions usam `userClient.auth.getClaims(token)`, que **nao existe** na versao 2 do supabase-js:
-
-- `asaas-charge-franchisee/index.ts` (linha 41)
-- `asaas-create-subscription/index.ts` (linha 40)
-- `asaas-list-payments/index.ts` (linha 35)
-
-Isso faz com que essas funcoes retornem **401 Unauthorized** para todas as requisicoes autenticadas.
-
-**Correcao:** Substituir `getClaims()` por `getUser()` em todas as tres funcoes:
-```typescript
-// DE:
-const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-if (claimsError || !claimsData?.claims) { ... }
-
-// PARA:
-const { data: userData, error: userError } = await userClient.auth.getUser();
-if (userError || !userData?.user) { ... }
-```
-
----
-
-## BUG 3: `asaas-charge-client` sem autenticacao
-
-A Edge Function `asaas-charge-client` nao valida o token JWT do usuario. Qualquer pessoa com a URL pode gerar cobrancas em nome de qualquer organizacao.
-
-**Correcao:** Adicionar validacao de autenticacao identica a das outras funcoes (via `getUser()`).
-
----
-
-## Resumo dos Fluxos e Status Atual
-
-| Fluxo | Funciona? | Problema |
-|-------|-----------|----------|
-| SaaS — Assinatura (create-subscription) | NAO | getClaims() quebra auth |
-| SaaS — Recarga creditos (create-charge) | SIM | Auth funciona com getClaims? Verificar — mas este usa getClaims tambem |
-| SaaS — Webhook (confirmacao pagamento) | NAO | Variavel duplicada causa SyntaxError |
-| Franqueado — Taxa sistema (charge-system-fee) | SIM | Auth usa getUser() corretamente |
-| Franqueado — Cobranca cliente (charge-client) | PARCIAL | Funciona mas sem auth |
-| Franqueadora — Cobranca franqueado (charge-franchisee) | NAO | getClaims() quebra auth |
-| Franqueadora — Listar pagamentos (list-payments) | NAO | getClaims() quebra auth |
-| UI — Controle Financeiro emitir cobranca | SIM | Codigo correto, depende do charge-client |
-
----
-
-## Plano de Correcao (4 arquivos)
-
-### 1. `supabase/functions/asaas-webhook/index.ts`
-- Remover a segunda declaracao `const externalRef` na linha 187
-- Substituir por reutilizacao da variavel ja existente (simplesmente remover o `const`)
-
-### 2. `supabase/functions/asaas-charge-franchisee/index.ts`
-- Substituir `getClaims()` por `getUser()` (linhas 38-45)
-
-### 3. `supabase/functions/asaas-create-subscription/index.ts`
-- Substituir `getClaims()` por `getUser()` (linhas 39-46)
-
-### 4. `supabase/functions/asaas-list-payments/index.ts`
-- Substituir `getClaims()` por `getUser()` (linhas 34-41)
-
-### 5. `supabase/functions/asaas-create-charge/index.ts`
-- Verificar se tambem usa `getClaims()` e corrigir se necessario
-
-### 6. `supabase/functions/asaas-charge-client/index.ts`
-- Adicionar bloco de autenticacao (auth header + getUser())
+### Fluxo tecnico
+1. Usuario abre aba "Pagamentos Asaas"
+2. Hook chama edge function com `network: true` + datas do mes atual
+3. Edge function busca todas orgs filhas, coleta `asaas_customer_id` de cada uma
+4. Faz requisicoes paralelas a API do Asaas para cada customer
+5. Retorna lista unificada com nome da org associada
+6. UI renderiza tabela com os pagamentos
