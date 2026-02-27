@@ -13,7 +13,7 @@ import {
   Palette, CalendarDays, Settings2, Share2, Megaphone, MonitorPlay,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { useMarketingFolders, useMarketingAssets } from "@/hooks/useMarketing";
+import { useMarketingFolders, useMarketingAssets, useContentSourceOrgId } from "@/hooks/useMarketing";
 import { format } from "date-fns";
 
 type FileType = "image" | "video" | "pdf" | "document" | "presentation" | "other";
@@ -53,8 +53,10 @@ type DbFolder = NonNullable<ReturnType<typeof useMarketingFolders>["data"]>[numb
 type DbAsset = NonNullable<ReturnType<typeof useMarketingAssets>["data"]>[number];
 
 export default function FranqueadoMateriais() {
-  const { data: folders, isLoading: foldersLoading } = useMarketingFolders();
-  const { data: assets, isLoading: assetsLoading } = useMarketingAssets();
+  // Resolve to parent org (franqueadora) for content
+  const { data: sourceOrgId, isLoading: loadingSource } = useContentSourceOrgId();
+  const { data: folders, isLoading: foldersLoading } = useMarketingFolders(sourceOrgId || undefined);
+  const { data: assets, isLoading: assetsLoading } = useMarketingAssets(undefined, sourceOrgId || undefined);
   const [activeCategory, setActiveCategory] = useState<MarketingCategory | null>(null);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -62,7 +64,7 @@ export default function FranqueadoMateriais() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [previewAsset, setPreviewAsset] = useState<DbAsset | null>(null);
 
-  const isLoading = foldersLoading || assetsLoading;
+  const isLoading = loadingSource || foldersLoading || assetsLoading;
 
   // Breadcrumb path within a category
   const breadcrumb = useMemo(() => {

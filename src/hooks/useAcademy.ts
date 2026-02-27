@@ -1,34 +1,40 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
+import { useContentSourceOrgId } from "./useMarketing";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Json } from "@/integrations/supabase/types";
 
+/**
+ * Modules & lessons use sourceOrgId (parent org for franchisees).
+ * Progress, certificates, quiz attempts use user's own identity.
+ */
+
 export function useAcademyModules() {
-  const { data: orgId } = useUserOrgId();
+  const { data: sourceOrgId } = useContentSourceOrgId();
   return useQuery({
-    queryKey: ["academy-modules", orgId],
+    queryKey: ["academy-modules", sourceOrgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("academy_modules").select("*").eq("organization_id", orgId!).order("sort_order");
+      const { data, error } = await supabase.from("academy_modules").select("*").eq("organization_id", sourceOrgId!).order("sort_order");
       if (error) throw error;
       return data;
     },
-    enabled: !!orgId,
+    enabled: !!sourceOrgId,
   });
 }
 
 export function useAcademyLessons(moduleId?: string) {
-  const { data: orgId } = useUserOrgId();
+  const { data: sourceOrgId } = useContentSourceOrgId();
   return useQuery({
-    queryKey: ["academy-lessons", orgId, moduleId],
+    queryKey: ["academy-lessons", sourceOrgId, moduleId],
     queryFn: async () => {
-      let q = supabase.from("academy_lessons").select("*").eq("organization_id", orgId!).order("sort_order");
+      let q = supabase.from("academy_lessons").select("*").eq("organization_id", sourceOrgId!).order("sort_order");
       if (moduleId) q = q.eq("module_id", moduleId);
       const { data, error } = await q;
       if (error) throw error;
       return data;
     },
-    enabled: !!orgId,
+    enabled: !!sourceOrgId,
   });
 }
 
@@ -59,17 +65,17 @@ export function useAcademyCertificates() {
 }
 
 export function useAcademyQuizzes(moduleId?: string) {
-  const { data: orgId } = useUserOrgId();
+  const { data: sourceOrgId } = useContentSourceOrgId();
   return useQuery({
-    queryKey: ["academy-quizzes", orgId, moduleId],
+    queryKey: ["academy-quizzes", sourceOrgId, moduleId],
     queryFn: async () => {
-      let q = supabase.from("academy_quizzes").select("*").eq("organization_id", orgId!);
+      let q = supabase.from("academy_quizzes").select("*").eq("organization_id", sourceOrgId!);
       if (moduleId) q = q.eq("module_id", moduleId);
       const { data, error } = await q;
       if (error) throw error;
       return data;
     },
-    enabled: !!orgId,
+    enabled: !!sourceOrgId,
   });
 }
 
@@ -134,7 +140,6 @@ export function useAcademyMutations() {
 
   const markLessonComplete = useMutation({
     mutationFn: async (lessonId: string) => {
-      // Check if progress exists
       const { data: existing } = await supabase
         .from("academy_progress")
         .select("id")
@@ -194,7 +199,7 @@ export function useAcademyMutations() {
   return { createModule, updateModule, createLesson, markLessonComplete, submitQuizAttempt, insertCertificate };
 }
 
-// ===== Computed helpers (work with data from hooks) =====
+// ===== Computed helpers =====
 
 export type DbModule = NonNullable<ReturnType<typeof useAcademyModules>["data"]>[number];
 export type DbLesson = NonNullable<ReturnType<typeof useAcademyLessons>["data"]>[number];
