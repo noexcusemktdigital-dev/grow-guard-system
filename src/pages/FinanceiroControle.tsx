@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { KpiCard } from "@/components/KpiCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -20,6 +21,40 @@ const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", 
 const revCategories = ["Assessoria", "SaaS", "Franquia", "Outros"];
 const expCategories = ["Pessoas", "Plataformas", "Estrutura", "Empréstimos", "Investimentos", "Eventos", "Treinamentos", "Impostos"];
 
+const ASAAS_PAID_STATUSES = ["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"];
+
+interface UnifiedEntry {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  status: string;
+  date: string;
+  source: "manual" | "asaas";
+  invoiceUrl?: string | null;
+  bankSlipUrl?: string | null;
+  billingType?: string;
+  asaasStatus?: string;
+  raw?: any;
+}
+
+function mapAsaasStatus(s: string): string {
+  if (ASAAS_PAID_STATUSES.includes(s)) return "paid";
+  return "pending";
+}
+
+function asaasStatusLabel(s: string): { label: string; cls: string } {
+  const map: Record<string, { label: string; cls: string }> = {
+    CONFIRMED: { label: "Confirmado", cls: "bg-emerald-500/15 text-emerald-600" },
+    RECEIVED: { label: "Recebido", cls: "bg-emerald-500/15 text-emerald-600" },
+    RECEIVED_IN_CASH: { label: "Recebido", cls: "bg-emerald-500/15 text-emerald-600" },
+    PENDING: { label: "Pendente", cls: "bg-yellow-500/15 text-yellow-600" },
+    OVERDUE: { label: "Vencido", cls: "bg-destructive/15 text-destructive" },
+    REFUNDED: { label: "Estornado", cls: "bg-muted text-muted-foreground" },
+  };
+  return map[s] || { label: s, cls: "bg-muted text-muted-foreground" };
+}
+
 export default function FinanceiroControle() {
   const { toast } = useToast();
   const { data: revenues, isLoading: lr } = useFinanceRevenues();
@@ -34,6 +69,9 @@ export default function FinanceiroControle() {
   const [revDialog, setRevDialog] = useState(false);
   const [editingRev, setEditingRev] = useState<any>(null);
   const [revForm, setRevForm] = useState({ description: "", amount: 0, category: "Assessoria", status: "pending", date: "" });
+  const [viaAsaas, setViaAsaas] = useState(false);
+  const [asaasContractId, setAsaasContractId] = useState("");
+  const [asaasBillingType, setAsaasBillingType] = useState("PIX");
   // Expense dialog
   const [expDialog, setExpDialog] = useState(false);
   const [editingExp, setEditingExp] = useState<any>(null);
@@ -41,7 +79,7 @@ export default function FinanceiroControle() {
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<{ type: "rev" | "exp"; id: string } | null>(null);
 
-  // Charge dialog state
+  // Charge dialog state (from contracts tab)
   const [chargeContract, setChargeContract] = useState<any>(null);
   const [chargeBillingType, setChargeBillingType] = useState("PIX");
   const [chargeResult, setChargeResult] = useState<any>(null);
@@ -50,11 +88,42 @@ export default function FinanceiroControle() {
 
   const activeContracts = useMemo(() => (contracts ?? []).filter((c: any) => c.status === "active" || c.status === "signed"), [contracts]);
 
-  const filteredRevenues = useMemo(() => {
-    if (!revenues) return [];
-    if (!search) return revenues;
-    return revenues.filter(r => r.description?.toLowerCase().includes(search.toLowerCase()));
-  }, [revenues, search]);
+  // Build unified entries list
+  const unifiedEntries: UnifiedEntry[] = useMemo(() => {
+    const manualEntries: UnifiedEntry[] = (revenues ?? []).map(r => ({
+      id: r.id,
+      description: r.description || "",
+      amount: Number(r.amount),
+      category: r.category || "Outros",
+      status: r.status || "pending",
+      date: r.date || "",
+      source: "manual" as const,
+      raw: r,
+    }));
+
+    const asaasEntries: UnifiedEntry[] = (asaasPayments ?? []).map(p => ({
+      id: p.id,
+      description: p.description || p.orgName,
+      amount: p.value,
+      category: "Asaas",
+      status: mapAsaasStatus(p.status),
+      date: p.paymentDate || p.dueDate || "",
+      source: "asaas" as const,
+      invoiceUrl: p.invoiceUrl,
+      bankSlipUrl: p.bankSlipUrl,
+      billingType: p.billingType,
+      asaasStatus: p.status,
+    }));
+
+    const all = [...manualEntries, ...asaasEntries];
+    all.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    return all;
+  }, [revenues, asaasPayments]);
+
+  const filteredEntries = useMemo(() => {
+    if (!search) return unifiedEntries;
+    return unifiedEntries.filter(e => e.description?.toLowerCase().includes(search.toLowerCase()));
+  }, [unifiedEntries, search]);
 
   const filteredExpenses = useMemo(() => {
     if (!expenses) return [];
@@ -62,14 +131,41 @@ export default function FinanceiroControle() {
     return expenses.filter(e => e.description?.toLowerCase().includes(search.toLowerCase()));
   }, [expenses, search]);
 
-  const totalRev = (revenues ?? []).reduce((s, r) => s + Number(r.amount), 0);
+  const totalManualRev = (revenues ?? []).reduce((s, r) => s + Number(r.amount), 0);
+  const totalAsaasPaid = (asaasPayments ?? []).filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0);
+  const totalRev = totalManualRev + totalAsaasPaid;
   const totalExp = (expenses ?? []).reduce((s, e) => s + Number(e.amount), 0);
   const networkMRR = activeContracts.reduce((s: number, c: any) => s + Number(c.monthly_value || 0), 0);
 
   // Revenue handlers
-  const openNewRev = () => { setEditingRev(null); setRevForm({ description: "", amount: 0, category: "Assessoria", status: "pending", date: "" }); setRevDialog(true); };
-  const openEditRev = (r: any) => { setEditingRev(r); setRevForm({ description: r.description, amount: Number(r.amount), category: r.category || "Assessoria", status: r.status || "pending", date: r.date || "" }); setRevDialog(true); };
+  const openNewRev = () => {
+    setEditingRev(null);
+    setRevForm({ description: "", amount: 0, category: "Assessoria", status: "pending", date: "" });
+    setViaAsaas(false);
+    setAsaasContractId("");
+    setAsaasBillingType("PIX");
+    setRevDialog(true);
+  };
+  const openEditRev = (r: any) => { setEditingRev(r); setRevForm({ description: r.description, amount: Number(r.amount), category: r.category || "Assessoria", status: r.status || "pending", date: r.date || "" }); setViaAsaas(false); setRevDialog(true); };
+
   const saveRev = () => {
+    if (viaAsaas && !editingRev) {
+      // Charge via Asaas
+      if (!asaasContractId) { toast({ title: "Selecione um contrato", variant: "destructive" }); return; }
+      const contract = activeContracts.find((c: any) => c.id === asaasContractId);
+      if (!contract) return;
+      chargeClient.mutate(
+        { contract_id: asaasContractId, billing_type: asaasBillingType, organization_id: contract.organization_id },
+        {
+          onSuccess: () => {
+            setRevDialog(false);
+            refetchAsaas();
+            toast({ title: "Cobrança Asaas gerada com sucesso" });
+          },
+        }
+      );
+      return;
+    }
     if (!revForm.description.trim()) { toast({ title: "Informe a descrição", variant: "destructive" }); return; }
     if (editingRev) {
       updateRevenue.mutate({ id: editingRev.id, ...revForm });
@@ -108,7 +204,7 @@ export default function FinanceiroControle() {
     setDeleteTarget(null);
   };
 
-  // Charge handlers
+  // Charge handlers (from contracts tab)
   const handleEmitCharge = (contract: any) => {
     setChargeContract(contract);
     setChargeBillingType("PIX");
@@ -126,10 +222,9 @@ export default function FinanceiroControle() {
       {
         onSuccess: (data) => {
           setChargeResult(data);
+          refetchAsaas();
         },
-        onError: () => {
-          // toast is handled by the hook
-        },
+        onError: () => {},
       }
     );
   };
@@ -140,6 +235,8 @@ export default function FinanceiroControle() {
   };
 
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>;
+
+  const totalEntries = (revenues ?? []).length + (asaasPayments ?? []).length;
 
   return (
     <div className="w-full space-y-6">
@@ -162,21 +259,30 @@ export default function FinanceiroControle() {
 
       <Tabs defaultValue="entradas">
         <TabsList>
-          <TabsTrigger value="entradas">Entradas ({(revenues ?? []).length})</TabsTrigger>
+          <TabsTrigger value="entradas">Entradas ({totalEntries})</TabsTrigger>
           <TabsTrigger value="saidas">Saídas ({(expenses ?? []).length})</TabsTrigger>
           <TabsTrigger value="contratos">Contratos Ativos ({activeContracts.length})</TabsTrigger>
-          <TabsTrigger value="asaas">Pagamentos Asaas</TabsTrigger>
         </TabsList>
 
-        {/* === ENTRADAS === */}
+        {/* === ENTRADAS UNIFICADAS === */}
         <TabsContent value="entradas" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => refetchAsaas()} disabled={la}>
+              <RefreshCw className={`w-4 h-4 ${la ? "animate-spin" : ""}`} />
+              Atualizar Asaas
+            </Button>
             <Button size="sm" onClick={openNewRev} className="gap-2"><Plus className="w-4 h-4" /> Nova Receita</Button>
           </div>
-          {filteredRevenues.length === 0 ? (
+
+          {la && !asaasPayments ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : filteredEntries.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-center">
               <Inbox className="w-10 h-10 text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhuma receita encontrada.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</p>
             </div>
           ) : (
             <div className="border rounded-lg overflow-x-auto">
@@ -185,30 +291,56 @@ export default function FinanceiroControle() {
                   <th className="text-left py-3 px-4 font-medium">Descrição</th>
                   <th className="text-left py-3 px-4 font-medium">Categoria</th>
                   <th className="text-right py-3 px-4 font-medium">Valor</th>
+                  <th className="text-center py-3 px-4 font-medium">Origem</th>
                   <th className="text-center py-3 px-4 font-medium">Status</th>
                   <th className="text-left py-3 px-4 font-medium">Data</th>
                   <th className="text-center py-3 px-4 font-medium">Ações</th>
                 </tr></thead>
                 <tbody>
-                  {filteredRevenues.map(r => (
-                    <tr key={r.id} className="border-b hover:bg-muted/30">
-                      <td className="py-3 px-4 font-medium">{r.description}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{r.category || "—"}</td>
-                      <td className="py-3 px-4 text-right text-emerald-500 font-medium">{formatBRL(Number(r.amount))}</td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded ${r.status === "paid" ? "bg-emerald-500/15 text-emerald-500" : "bg-yellow-500/15 text-yellow-500"}`}>
-                          {r.status === "paid" ? "Recebido" : "Pendente"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground">{r.date ? new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditRev(r)}><Pencil className="w-3.5 h-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "rev", id: r.id })}><Trash2 className="w-3.5 h-3.5" /></Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredEntries.map(entry => {
+                    const isAsaas = entry.source === "asaas";
+                    const st = isAsaas && entry.asaasStatus
+                      ? asaasStatusLabel(entry.asaasStatus)
+                      : { label: entry.status === "paid" ? "Recebido" : "Pendente", cls: entry.status === "paid" ? "bg-emerald-500/15 text-emerald-500" : "bg-yellow-500/15 text-yellow-500" };
+
+                    return (
+                      <tr key={`${entry.source}-${entry.id}`} className="border-b hover:bg-muted/30">
+                        <td className="py-3 px-4 font-medium">{entry.description}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant="secondary" className="text-[10px]">{entry.category}</Badge>
+                          {isAsaas && entry.billingType && (
+                            <Badge variant="outline" className="text-[10px] ml-1">{entry.billingType}</Badge>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right text-emerald-500 font-medium">{formatBRL(entry.amount)}</td>
+                        <td className="py-3 px-4 text-center">
+                          <Badge variant={isAsaas ? "default" : "secondary"} className="text-[10px]">
+                            {isAsaas ? "Asaas" : "Manual"}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`text-xs px-2 py-0.5 rounded ${st.cls}`}>{st.label}</span>
+                        </td>
+                        <td className="py-3 px-4 text-muted-foreground">
+                          {entry.date ? new Date(entry.date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {isAsaas ? (
+                            (entry.invoiceUrl || entry.bankSlipUrl) ? (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(entry.invoiceUrl || entry.bankSlipUrl!, "_blank")}>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </Button>
+                            ) : <span className="text-xs text-muted-foreground">—</span>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditRev(entry.raw)}><Pencil className="w-3.5 h-3.5" /></Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "rev", id: entry.id })}><Trash2 className="w-3.5 h-3.5" /></Button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -311,74 +443,9 @@ export default function FinanceiroControle() {
             </div>
           )}
         </TabsContent>
-        {/* === PAGAMENTOS ASAAS === */}
-        <TabsContent value="asaas" className="space-y-4">
-          <div className="flex justify-end">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => refetchAsaas()} disabled={la}>
-              <RefreshCw className={`w-4 h-4 ${la ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
-          </div>
-          {la ? (
-            <div className="space-y-3">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : !asaasPayments || asaasPayments.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-center">
-              <Inbox className="w-10 h-10 text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhum pagamento encontrado no Asaas este mês.</p>
-            </div>
-          ) : (
-            <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/50">
-                  <th className="text-left py-3 px-4 font-medium">Cliente</th>
-                  <th className="text-right py-3 px-4 font-medium">Valor</th>
-                  <th className="text-center py-3 px-4 font-medium">Vencimento</th>
-                  <th className="text-center py-3 px-4 font-medium">Pagamento</th>
-                  <th className="text-center py-3 px-4 font-medium">Método</th>
-                  <th className="text-center py-3 px-4 font-medium">Status</th>
-                  <th className="text-center py-3 px-4 font-medium">Fatura</th>
-                </tr></thead>
-                <tbody>
-                  {asaasPayments.map((p) => {
-                    const statusMap: Record<string, { label: string; cls: string }> = {
-                      CONFIRMED: { label: "Confirmado", cls: "bg-emerald-500/15 text-emerald-600" },
-                      RECEIVED: { label: "Recebido", cls: "bg-emerald-500/15 text-emerald-600" },
-                      PENDING: { label: "Pendente", cls: "bg-yellow-500/15 text-yellow-600" },
-                      OVERDUE: { label: "Vencido", cls: "bg-destructive/15 text-destructive" },
-                      REFUNDED: { label: "Estornado", cls: "bg-muted text-muted-foreground" },
-                      RECEIVED_IN_CASH: { label: "Recebido", cls: "bg-emerald-500/15 text-emerald-600" },
-                    };
-                    const st = statusMap[p.status] || { label: p.status, cls: "bg-muted text-muted-foreground" };
-                    return (
-                      <tr key={p.id} className="border-b hover:bg-muted/30">
-                        <td className="py-3 px-4 font-medium">{p.orgName}</td>
-                        <td className="py-3 px-4 text-right font-medium">{formatBRL(p.value)}</td>
-                        <td className="py-3 px-4 text-center text-muted-foreground">{p.dueDate ? new Date(p.dueDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
-                        <td className="py-3 px-4 text-center text-muted-foreground">{p.paymentDate ? new Date(p.paymentDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
-                        <td className="py-3 px-4 text-center"><Badge variant="outline" className="text-[10px]">{p.billingType}</Badge></td>
-                        <td className="py-3 px-4 text-center"><span className={`text-xs px-2 py-0.5 rounded ${st.cls}`}>{st.label}</span></td>
-                        <td className="py-3 px-4 text-center">
-                          {(p.invoiceUrl || p.bankSlipUrl) ? (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(p.invoiceUrl || p.bankSlipUrl!, "_blank")}>
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </Button>
-                          ) : <span className="text-xs text-muted-foreground">—</span>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </TabsContent>
       </Tabs>
 
-      {/* Charge Dialog */}
+      {/* Charge Dialog (from contracts tab) */}
       <Dialog open={!!chargeContract} onOpenChange={(open) => { if (!open) { setChargeContract(null); setChargeResult(null); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -454,33 +521,77 @@ export default function FinanceiroControle() {
         </DialogContent>
       </Dialog>
 
-      {/* Revenue Dialog */}
+      {/* Revenue Dialog with Asaas toggle */}
       <Dialog open={revDialog} onOpenChange={setRevDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>{editingRev ? "Editar Receita" : "Nova Receita"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Descrição *</Label><Input value={revForm.description} onChange={e => setRevForm(f => ({ ...f, description: e.target.value }))} /></div>
-            <div><Label>Valor (R$)</Label><Input type="number" value={revForm.amount} onChange={e => setRevForm(f => ({ ...f, amount: Number(e.target.value) }))} /></div>
-            <div><Label>Data</Label><Input type="date" value={revForm.date} onChange={e => setRevForm(f => ({ ...f, date: e.target.value }))} /></div>
-            <div><Label>Categoria</Label>
-              <Select value={revForm.category} onValueChange={v => setRevForm(f => ({ ...f, category: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{revCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Status</Label>
-              <Select value={revForm.status} onValueChange={v => setRevForm(f => ({ ...f, status: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="paid">Recebido</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {!editingRev && (
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <Label className="text-sm font-medium">Cobrar via Asaas?</Label>
+                  <p className="text-xs text-muted-foreground">Gera cobrança automática com acompanhamento</p>
+                </div>
+                <Switch checked={viaAsaas} onCheckedChange={setViaAsaas} />
+              </div>
+            )}
+
+            {viaAsaas && !editingRev ? (
+              <>
+                <div>
+                  <Label>Contrato Ativo *</Label>
+                  <Select value={asaasContractId} onValueChange={setAsaasContractId}>
+                    <SelectTrigger><SelectValue placeholder="Selecione um contrato" /></SelectTrigger>
+                    <SelectContent>
+                      {activeContracts.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.signer_name || c.title} — {c.monthly_value ? formatBRL(Number(c.monthly_value)) : "sem valor"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Método de Pagamento</Label>
+                  <Select value={asaasBillingType} onValueChange={setAsaasBillingType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PIX">PIX</SelectItem>
+                      <SelectItem value="BOLETO">Boleto</SelectItem>
+                      <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            ) : (
+              <>
+                <div><Label>Descrição *</Label><Input value={revForm.description} onChange={e => setRevForm(f => ({ ...f, description: e.target.value }))} /></div>
+                <div><Label>Valor (R$)</Label><Input type="number" value={revForm.amount} onChange={e => setRevForm(f => ({ ...f, amount: Number(e.target.value) }))} /></div>
+                <div><Label>Data</Label><Input type="date" value={revForm.date} onChange={e => setRevForm(f => ({ ...f, date: e.target.value }))} /></div>
+                <div><Label>Categoria</Label>
+                  <Select value={revForm.category} onValueChange={v => setRevForm(f => ({ ...f, category: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{revCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Status</Label>
+                  <Select value={revForm.status} onValueChange={v => setRevForm(f => ({ ...f, status: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="paid">Recebido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRevDialog(false)}>Cancelar</Button>
-            <Button onClick={saveRev}>{editingRev ? "Salvar" : "Criar"}</Button>
+            <Button onClick={saveRev} disabled={viaAsaas && chargeClient.isPending} className="gap-2">
+              {viaAsaas && chargeClient.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              {viaAsaas && !editingRev ? "Gerar Cobrança" : editingRev ? "Salvar" : "Criar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
