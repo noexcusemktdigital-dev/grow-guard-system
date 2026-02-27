@@ -7,11 +7,13 @@ export function useGoals(scope?: string, month?: string) {
   return useQuery({
     queryKey: ["goals", orgId, scope, month],
     queryFn: async () => {
-      let q = supabase.from("goals").select("*").eq("organization_id", orgId!).order("period_start", { ascending: false });
-      if (scope && scope !== "all") q = q.eq("scope", scope);
-      const { data, error } = await q;
+      const { data, error } = await supabase.rpc("get_goals_with_parent", {
+        _org_id: orgId!,
+      });
       if (error) throw error;
-      return data;
+      let results = data as any[];
+      if (scope && scope !== "all") results = results.filter((g: any) => g.scope === scope);
+      return results;
     },
     enabled: !!orgId,
   });
@@ -25,15 +27,17 @@ export function useActiveGoals(scope?: string) {
   return useQuery({
     queryKey: ["goals-active", orgId, scope],
     queryFn: async () => {
-      let q = supabase.from("goals").select("*")
-        .eq("organization_id", orgId!)
-        .in("status", ["active", "completed"])
-        .or(`period_end.gte.${firstOfMonth},period_end.is.null`)
-        .order("priority", { ascending: true });
-      if (scope && scope !== "all") q = q.eq("scope", scope);
-      const { data, error } = await q;
+      const { data, error } = await supabase.rpc("get_goals_with_parent", {
+        _org_id: orgId!,
+      });
       if (error) throw error;
-      return data;
+      let results = (data as any[]).filter((g: any) =>
+        ["active", "completed"].includes(g.status) &&
+        (!g.period_end || g.period_end >= firstOfMonth)
+      );
+      if (scope && scope !== "all") results = results.filter((g: any) => g.scope === scope);
+      results.sort((a: any, b: any) => (a.priority ?? 99) - (b.priority ?? 99));
+      return results;
     },
     enabled: !!orgId,
   });
@@ -47,12 +51,13 @@ export function useHistoricGoals() {
   return useQuery({
     queryKey: ["goals-historic", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("goals").select("*")
-        .eq("organization_id", orgId!)
-        .lt("period_end", firstOfMonth)
-        .order("period_end", { ascending: false });
+      const { data, error } = await supabase.rpc("get_goals_with_parent", {
+        _org_id: orgId!,
+      });
       if (error) throw error;
-      return data;
+      const results = (data as any[]).filter((g: any) => g.period_end && g.period_end < firstOfMonth);
+      results.sort((a: any, b: any) => (b.period_end ?? "").localeCompare(a.period_end ?? ""));
+      return results;
     },
     enabled: !!orgId,
   });

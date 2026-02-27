@@ -7,14 +7,11 @@ export function useDailyMessages() {
   return useQuery({
     queryKey: ["daily-messages", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("daily_messages")
-        .select("*")
-        .eq("organization_id", orgId!)
-        .order("date", { ascending: false })
-        .limit(1);
+      const { data, error } = await supabase.rpc("get_daily_message_with_parent", {
+        _org_id: orgId!,
+      });
       if (error) throw error;
-      return data?.[0] ?? null;
+      return (data as any[])?.[0] ?? null;
     },
     enabled: !!orgId,
   });

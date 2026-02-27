@@ -102,14 +102,11 @@ export function useFinanceClosings() {
   return useQuery({
     queryKey: ["finance-closings", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("finance_closings")
-        .select("*")
-        .eq("organization_id", orgId!)
-        .order("year", { ascending: false })
-        .order("month", { ascending: false });
+      const { data, error } = await supabase.rpc("get_closings_with_parent", {
+        _org_id: orgId!,
+      });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!orgId,
   });
