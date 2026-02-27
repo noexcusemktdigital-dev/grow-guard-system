@@ -4849,6 +4849,21 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_network_crm_data: {
+        Args: { _org_id: string }
+        Returns: {
+          activity_created_at: string
+          activity_id: string
+          activity_type: string
+          activity_user_id: string
+          lead_assigned_to: string
+          lead_created_at: string
+          lead_id: string
+          lead_stage: string
+          lead_value: number
+          lead_won_at: string
+        }[]
+      }
       get_network_tickets: {
         Args: { _parent_org_id: string }
         Returns: {
@@ -4869,6 +4884,26 @@ export type Database = {
         }[]
       }
       get_parent_org_id: { Args: { _org_id: string }; Returns: string }
+      get_rankings_with_parent: {
+        Args: { _org_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          metrics: Json | null
+          month: number
+          organization_id: string
+          position: number | null
+          score: number | null
+          unit_org_id: string | null
+          year: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "rankings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }

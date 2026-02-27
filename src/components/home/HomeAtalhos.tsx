@@ -3,8 +3,9 @@ import {
   Zap, GraduationCap, Trophy, MessageSquare,
   Calendar, FileText, DollarSign, Building2,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-const atalhos = [
+const franqueadoraAtalhos = [
   { label: "Marketing", icon: Zap, path: "/franqueadora/marketing" },
   { label: "Treinamentos", icon: GraduationCap, path: "/franqueadora/treinamentos" },
   { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
@@ -15,8 +16,21 @@ const atalhos = [
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
 ];
 
+const franqueadoAtalhos = [
+  { label: "CRM Vendas", icon: Zap, path: "/franqueado/crm" },
+  { label: "Treinamentos", icon: GraduationCap, path: "/franqueado/academy" },
+  { label: "Materiais", icon: FileText, path: "/franqueado/materiais" },
+  { label: "Suporte", icon: MessageSquare, path: "/franqueado/suporte" },
+  { label: "Agenda", icon: Calendar, path: "/franqueado/agenda" },
+  { label: "Contratos", icon: FileText, path: "/franqueado/contratos" },
+  { label: "Financeiro", icon: DollarSign, path: "/franqueado/financeiro" },
+  { label: "Comunicados", icon: Building2, path: "/franqueado/comunicados" },
+];
+
 export function HomeAtalhos() {
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const atalhos = role === "franqueado" ? franqueadoAtalhos : franqueadoraAtalhos;
 
   return (
     <div className="glass-card p-6">

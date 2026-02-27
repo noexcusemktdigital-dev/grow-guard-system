@@ -1,6 +1,7 @@
 import { useState } from "react";
 import logoWhite from "@/assets/logo-noexcuse-white.png";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, DollarSign, FileText, FolderOpen, Building2, TrendingUp,
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
@@ -252,6 +253,24 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
   );
 }
 
+function SidebarFooter() {
+  const { profile } = useAuth();
+  const userName = profile?.full_name?.split(" ")[0] || "Admin";
+  return (
+    <div className="px-3 py-3 border-t border-sidebar-border">
+      <div className="flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0">
+          <User className="w-4 h-4 text-sidebar-primary" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[12px] font-semibold text-white truncate">{userName}</p>
+          <p className="text-[10px] text-sidebar-muted truncate">Franqueadora</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function FranqueadoraSidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -277,17 +296,7 @@ export function FranqueadoraSidebar() {
 
       {/* Footer — User */}
       {!collapsed && (
-        <div className="px-3 py-3 border-t border-sidebar-border">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-sidebar-primary" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[12px] font-semibold text-white truncate">Admin</p>
-              <p className="text-[10px] text-sidebar-muted truncate">Franqueadora</p>
-            </div>
-          </div>
-        </div>
+        <SidebarFooter />
       )}
 
       <button
