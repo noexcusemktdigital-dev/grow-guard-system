@@ -99,22 +99,20 @@ export interface AsaasPayment {
 }
 
 export function useAsaasNetworkPayments() {
-  const { data: orgId } = useUserOrgId();
   const now = new Date();
   const start = format(startOfMonth(now), "yyyy-MM-dd");
   const end = format(endOfMonth(now), "yyyy-MM-dd");
 
   return useQuery({
-    queryKey: ["asaas-network-payments", orgId, start],
+    queryKey: ["asaas-network-payments", start],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("asaas-list-payments", {
-        body: { organization_id: orgId, network: true, startDate: start, endDate: end },
+        body: { all: true, startDate: start, endDate: end },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return (data?.payments || []) as AsaasPayment[];
     },
-    enabled: !!orgId,
     staleTime: 1000 * 60 * 2,
   });
 }

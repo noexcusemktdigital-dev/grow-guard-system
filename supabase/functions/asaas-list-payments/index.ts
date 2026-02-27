@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // Auth
     const authHeader = req.headers.get("Authorization");
@@ -40,7 +39,64 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { organization_id, network, startDate, endDate } = await req.json();
+    const { organization_id, network, all, startDate, endDate } = await req.json();
+
+    // ── MODE: all ── fetch ALL payments from the account (no customer filter)
+    if (all) {
+      let url = `${ASAAS_BASE}/payments?limit=100&offset=0`;
+      if (startDate) url += `&dateCreated[ge]=${startDate}`;
+      if (endDate) url += `&dateCreated[le]=${endDate}`;
+
+      const res = await fetch(url, {
+        headers: { access_token: asaasApiKey },
+      });
+      const data = await res.json();
+
+      const rawPayments = data.data ?? [];
+
+      // Collect unique customer IDs to fetch names
+      const uniqueCustomerIds = [...new Set(rawPayments.map((p: any) => p.customer).filter(Boolean))] as string[];
+
+      // Fetch customer names in parallel
+      const customerNameMap: Record<string, string> = {};
+      await Promise.all(
+        uniqueCustomerIds.map(async (custId) => {
+          try {
+            const custRes = await fetch(`${ASAAS_BASE}/customers/${custId}`, {
+              headers: { access_token: asaasApiKey },
+            });
+            const custData = await custRes.json();
+            customerNameMap[custId] = custData.name || custData.company || custId;
+          } catch {
+            customerNameMap[custId] = custId;
+          }
+        })
+      );
+
+      const allPayments = rawPayments.map((p: any) => ({
+        id: p.id,
+        value: p.value,
+        status: p.status,
+        dueDate: p.dueDate,
+        paymentDate: p.paymentDate,
+        billingType: p.billingType,
+        description: p.description,
+        invoiceUrl: p.invoiceUrl,
+        bankSlipUrl: p.bankSlipUrl,
+        pixQrCode: p.pixQrCodeUrl,
+        orgName: customerNameMap[p.customer] || "",
+        orgId: null,
+        customerAsaasId: p.customer,
+      }));
+
+      allPayments.sort((a: any, b: any) => (b.dueDate || "").localeCompare(a.dueDate || ""));
+
+      return new Response(JSON.stringify({ payments: allPayments }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── MODE: network (legacy) ── filter by customer per org
     if (!organization_id) {
       return new Response(JSON.stringify({ error: "organization_id required" }), {
         status: 400,
@@ -48,16 +104,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build list of orgs to query
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     let orgsToQuery: { id: string; name: string; asaas_customer_id: string }[] = [];
 
     if (network) {
-      // Get parent org + all child orgs
       const { data: allOrgs } = await adminClient
         .from("organizations")
         .select("id, name, asaas_customer_id")
         .or(`id.eq.${organization_id},parent_org_id.eq.${organization_id}`);
-
       orgsToQuery = (allOrgs || []).filter((o: any) => o.asaas_customer_id);
     } else {
       const { data: org } = await adminClient
@@ -65,7 +119,6 @@ Deno.serve(async (req) => {
         .select("id, name, asaas_customer_id")
         .eq("id", organization_id)
         .single();
-
       if (org?.asaas_customer_id) {
         orgsToQuery = [org];
       }
@@ -77,35 +130,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch payments from Asaas for each org in parallel
     const allPayments: any[] = [];
-
     await Promise.all(
       orgsToQuery.map(async (org) => {
         let url = `${ASAAS_BASE}/payments?customer=${org.asaas_customer_id}&limit=100&offset=0`;
         if (startDate) url += `&dateCreated[ge]=${startDate}`;
         if (endDate) url += `&dateCreated[le]=${endDate}`;
-
         try {
-          const res = await fetch(url, {
-            headers: { access_token: asaasApiKey },
-          });
+          const res = await fetch(url, { headers: { access_token: asaasApiKey } });
           const data = await res.json();
-
           for (const p of data.data ?? []) {
             allPayments.push({
-              id: p.id,
-              value: p.value,
-              status: p.status,
-              dueDate: p.dueDate,
-              paymentDate: p.paymentDate,
-              billingType: p.billingType,
-              description: p.description,
-              invoiceUrl: p.invoiceUrl,
-              bankSlipUrl: p.bankSlipUrl,
-              pixQrCode: p.pixQrCodeUrl,
-              orgName: org.name,
-              orgId: org.id,
+              id: p.id, value: p.value, status: p.status,
+              dueDate: p.dueDate, paymentDate: p.paymentDate,
+              billingType: p.billingType, description: p.description,
+              invoiceUrl: p.invoiceUrl, bankSlipUrl: p.bankSlipUrl,
+              pixQrCode: p.pixQrCodeUrl, orgName: org.name, orgId: org.id,
             });
           }
         } catch (e) {
@@ -114,7 +154,6 @@ Deno.serve(async (req) => {
       })
     );
 
-    // Sort by dueDate descending
     allPayments.sort((a, b) => (b.dueDate || "").localeCompare(a.dueDate || ""));
 
     return new Response(JSON.stringify({ payments: allPayments }), {
