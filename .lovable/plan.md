@@ -1,77 +1,54 @@
 
 
-## Plano: Criar Templates Padrao de Contrato (Franquia + Prestacao de Servico)
+## Plano: Padronizar Contrato do Franqueado com Template Fixo e Diagramacao Profissional
 
 ### Objetivo
 
-Inserir 2 templates padrao na tabela `contract_templates` com o conteudo completo dos PDFs enviados, usando variaveis (placeholders) para todas as informacoes editaveis do cliente/franqueado. Esses templates ficam disponiveis na pagina de Templates de Contratos para uso e edicao.
+Toda criacao de contrato pelo franqueado segue obrigatoriamente o modelo "Contrato de Prestacao de Servico" enviado. O formulario exibe apenas os campos editaveis (dados do contratante, servicos, valores, datas). O PDF gerado tem diagramacao profissional com logo NoExcuse.
 
 ---
 
-### Template 1: Contrato de Franquia Empresarial
+### Mudanca 1: Reescrever o formulario de criacao (ContractForm)
 
-**Tipo**: `franquia`
-**Placeholders editaveis**:
-- `{{numero_contrato}}` — Numero do contrato
-- `{{franqueada_nome}}` — Nome completo / Razao Social
-- `{{franqueada_nacionalidade}}` — Nacionalidade
-- `{{franqueada_estado_civil}}` — Estado civil
-- `{{franqueada_cpf}}` — CPF
-- `{{franqueada_rg}}` — RG
-- `{{franqueada_email}}` — Email
-- `{{franqueada_endereco}}` — Endereco completo
-- `{{franqueada_bairro}}` — Bairro
-- `{{franqueada_cep}}` — CEP
-- `{{franqueada_cidade}}` — Cidade
-- `{{franqueada_estado}}` — Estado
-- `{{franqueada_cnpj}}` — CNPJ (se PJ)
-- `{{franqueada_razao_social}}` — Razao Social (se PJ)
-- `{{operador_nome}}` — Nome do socio operador
-- `{{taxa_adesao_valor}}` — Valor da taxa de adesao
-- `{{taxa_adesao_forma}}` — Forma de pagamento da adesao
-- `{{taxa_manutencao_valor}}` — Valor taxa mensal manutencao
-- `{{data_assinatura}}` — Data (dia, mes, ano)
+**Arquivo**: `src/pages/franqueado/FranqueadoContratos.tsx`
 
-### Template 2: Contrato de Prestacao de Servico
+Substituir o formulario atual por um formulario baseado nos placeholders do template de servico:
 
-**Tipo**: `assessoria`
-**Placeholders editaveis**:
-- `{{contratante_razao_social}}` — Razao Social
-- `{{contratante_cnpj}}` — CNPJ
-- `{{contratante_endereco}}` — Endereco completo
-- `{{contratante_bairro}}` — Bairro
-- `{{contratante_cep}}` — CEP
-- `{{contratante_cidade}}` — Cidade
-- `{{contratante_estado}}` — Estado
-- `{{servicos_descricao}}` — Lista de servicos contratados
-- `{{prazo_meses}}` — Duracao em meses
-- `{{valor_setup}}` — Valor de setup
-- `{{valor_mensal}}` — Valor mensal
-- `{{valor_setup_extenso}}` — Valor setup por extenso
-- `{{valor_mensal_extenso}}` — Valor mensal por extenso
-- `{{dia_vencimento}}` — Dia de vencimento
-- `{{data_assinatura}}` — Data (dia, mes, ano)
+**Campos editaveis (agrupados em cards)**:
+- **Dados do Contratante**: Razao Social, CNPJ, Endereco, Bairro, CEP, Cidade, Estado
+- **Servicos e Prazo**: Descricao dos servicos (textarea), Prazo em meses
+- **Valores**: Valor Setup, Setup por extenso, Valor Mensal, Mensal por extenso, Dia de vencimento
+- **Data**: Data da assinatura
+
+Remover: selecao de lead obrigatorio, selecao de proposta obrigatoria (simplificar — o franqueado preenche direto os dados do cliente).
+
+**Preview em tempo real**: Abaixo do formulario, mostrar uma aba "Visualizar Contrato" que renderiza o template com os dados preenchidos (usando `renderPreview` adaptado).
+
+Ao salvar, o campo `content` do contrato armazena o texto completo com os placeholders substituidos pelos valores reais.
 
 ---
 
-### Implementacao
+### Mudanca 2: Reescrever a geracao de PDF com diagramacao profissional
 
-**1. Atualizar pagina ContratosTemplates.tsx**:
-- Adicionar botao "Carregar Templates Padrao" que insere os 2 templates se nao existirem
-- Melhorar o editor de conteudo com uma barra lateral de placeholders clicaveis (ao clicar, insere no cursor)
-- Adicionar preview do contrato renderizado (substituindo placeholders por dados de exemplo)
+**Arquivo**: `src/pages/franqueado/FranqueadoContratos.tsx` (funcao `downloadContractPdf`)
 
-**2. Criar arquivo de constantes com o conteudo dos templates**:
-- `src/constants/contractTemplates.ts` — conteudo completo dos 2 contratos com placeholders
-- Cada template tem: nome, tipo, descricao, conteudo, lista de placeholders
+Substituir o HTML inline generico por um layout profissional:
 
-**3. Atualizar hook useContracts.ts**:
-- Adicionar mutation `seedDefaultTemplates` que insere os templates padrao se nao existirem (verifica por nome antes de inserir)
+- **Cabecalho**: Logo NoExcuse (importar `logo-noexcuse.png` como base64 inline no HTML) + titulo "CONTRATO DE PRESTACAO DE SERVICO" centralizado
+- **Corpo**: Texto completo do contrato salvo no campo `content`, formatado com paragrafos, clausulas numeradas, margens adequadas
+- **Tipografia**: Font-family serif (Georgia/Times), tamanho 12px corpo, 14px titulos de clausulas
+- **Rodape**: Area de assinaturas com linhas, nomes das partes e testemunhas
+- **Marca d'agua sutil**: "NOEXCUSE" em cinza claro no fundo (opcional)
 
-**4. Melhorar editor de template**:
-- Sidebar com lista de placeholders disponiveis, agrupados por categoria (Dados do Cliente, Valores, Datas)
-- Clicar no placeholder insere no textarea na posicao do cursor
-- Preview tab que mostra o contrato com dados fictícios preenchidos
+Usar `html2pdf.js` com configuracao A4, margens de 20mm.
+
+---
+
+### Mudanca 3: Converter logo para uso inline no PDF
+
+Como `html2pdf.js` precisa de imagens inline (base64) para funcionar no PDF, criar uma funcao utilitaria que converte o logo para base64 via canvas, ou embutir a logo diretamente como constante base64 no arquivo.
+
+**Abordagem**: Importar `logo-noexcuse.png` e usar `fetch` + `FileReader` para converter em runtime antes de gerar o PDF.
 
 ---
 
@@ -79,7 +56,14 @@ Inserir 2 templates padrao na tabela `contract_templates` com o conteudo complet
 
 | Arquivo | Acao |
 |---|---|
-| `src/constants/contractTemplates.ts` | Criar: conteudo completo dos 2 contratos com placeholders |
-| `src/pages/ContratosTemplates.tsx` | Editar: botao seed + editor melhorado com placeholders clicaveis + preview |
-| `src/hooks/useContracts.ts` | Editar: adicionar mutation seedDefaultTemplates |
+| `src/pages/franqueado/FranqueadoContratos.tsx` | Reescrever: formulario com campos fixos do template de servico, preview em tempo real, PDF com diagramacao profissional e logo |
+
+### Detalhes Tecnicos
+
+- Importar `SERVICE_PLACEHOLDERS` e `SERVICE_CONTENT` de `contractTemplates.ts`
+- O formulario mapeia cada placeholder para um input editavel
+- Ao salvar, substituir todos os `{{placeholder}}` pelos valores do formulario e gravar no campo `content`
+- O PDF usa o `content` salvo (texto final) com formatacao HTML profissional
+- Campos como `monthly_value`, `duration_months`, `payment_day` continuam sendo gravados nas colunas dedicadas para KPIs
+- Remover dependencia de `useCrmLeads` e `useCrmProposals` do formulario (simplificar)
 
