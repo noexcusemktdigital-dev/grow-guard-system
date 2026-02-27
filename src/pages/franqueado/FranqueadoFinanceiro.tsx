@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   FileSignature, DollarSign, TrendingUp, Calendar, Inbox, FileDown,
   CheckCircle, Clock, AlertCircle, Receipt, Wallet, Percent, CreditCard,
@@ -16,9 +15,8 @@ import {
 import { SystemPaymentTab } from "@/components/franqueado/SystemPaymentTab";
 import { useContracts } from "@/hooks/useContracts";
 import { useFinanceClosings } from "@/hooks/useFinance";
-import { useClientPayments, useChargeClient } from "@/hooks/useClientPayments";
+import { useClientPayments } from "@/hooks/useClientPayments";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { toast } from "sonner";
 
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -33,10 +31,8 @@ export default function FranqueadoFinanceiro() {
 
   const [paymentMonth, setPaymentMonth] = useState(currentMonth);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
-  const [chargeDialog, setChargeDialog] = useState<{ contractId: string; title: string } | null>(null);
 
   const { data: clientPayments, isLoading: loadingPay } = useClientPayments(paymentMonth);
-  const chargeClient = useChargeClient();
 
   const isLoading = loadingCon || loadingCl;
   const activeContracts = useMemo(() => (contracts ?? []).filter(c => c.status === "active"), [contracts]);
@@ -119,17 +115,6 @@ export default function FranqueadoFinanceiro() {
     });
   }, []);
 
-  const handleGenerateCharge = (billingType: string) => {
-    if (!chargeDialog) return;
-    chargeClient.mutate({ contract_id: chargeDialog.contractId, billing_type: billingType }, {
-      onSuccess: (data) => {
-        setChargeDialog(null);
-        if (data?.pix_qr_code) {
-          toast.success("Cobrança PIX gerada! QR Code disponível.");
-        }
-      },
-    });
-  };
 
   if (isLoading) {
     return <div className="w-full space-y-6"><Skeleton className="h-10 w-64" /><div className="grid grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div></div>;
@@ -266,9 +251,7 @@ export default function FranqueadoFinanceiro() {
                         ) : p.hasCharge && p.invoiceUrl ? (
                           <Button size="sm" variant="outline" asChild><a href={p.invoiceUrl} target="_blank" rel="noreferrer">Ver Fatura</a></Button>
                         ) : (
-                          <Button size="sm" variant="default" className="gap-1" onClick={() => setChargeDialog({ contractId: p.contractId, title: p.title })}>
-                            <CreditCard className="w-3.5 h-3.5" /> Gerar Cobrança
-                          </Button>
+                          <span className="text-xs text-muted-foreground">Aguardando cobrança</span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -308,18 +291,6 @@ export default function FranqueadoFinanceiro() {
         <TabsContent value="sistema" className="space-y-4"><SystemPaymentTab /></TabsContent>
       </Tabs>
 
-      {/* Charge Dialog */}
-      <Dialog open={!!chargeDialog} onOpenChange={v => !v && setChargeDialog(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Gerar Cobrança — {chargeDialog?.title}</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground mb-4">Escolha a forma de pagamento para gerar a cobrança do cliente.</p>
-          <div className="flex flex-col gap-2">
-            <Button onClick={() => handleGenerateCharge("PIX")} disabled={chargeClient.isPending} className="gap-2">PIX (QR Code)</Button>
-            <Button variant="outline" onClick={() => handleGenerateCharge("BOLETO")} disabled={chargeClient.isPending}>Boleto</Button>
-            <Button variant="outline" onClick={() => handleGenerateCharge("CREDIT_CARD")} disabled={chargeClient.isPending}>Cartão de Crédito</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
