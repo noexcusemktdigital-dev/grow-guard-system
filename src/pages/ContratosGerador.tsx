@@ -305,61 +305,17 @@ function ServiceContractForm({ onSuccess, initialProposalId }: { onSuccess: () =
         </CardContent>
       </Card>
 
-      {!selectedProposal && (
-      <>
+      {/* Data da Assinatura - sempre visível */}
       <Card className="glass-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <FileSignature className="w-4 h-4" /> Serviços e Prazo
+            <CalendarDays className="w-4 h-4" /> Data da Assinatura
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Serviços Contratados</Label>
-            <Textarea value={form.servicos_descricao} onChange={e => set("servicos_descricao", e.target.value)}
-              placeholder={"Artes: 04 unidades;\nVídeos: 04 unidades;\nProgramação: Meta;\nGestão de Tráfego Pago: Meta e Google;"} rows={4} />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <Label>Prazo do Contrato</Label>
-              <Select value={form.prazo_meses} onValueChange={v => set("prazo_meses", v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{DURATION_OPTIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Data da Assinatura</Label><Input value={form.data_assinatura} onChange={e => set("data_assinatura", e.target.value)} placeholder="27 de fevereiro de 2026" /></div>
-          </div>
+        <CardContent>
+          <div><Label>Data da Assinatura</Label><Input value={form.data_assinatura} onChange={e => set("data_assinatura", e.target.value)} placeholder="27 de fevereiro de 2026" /></div>
         </CardContent>
       </Card>
-
-      <Card className="glass-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <DollarSign className="w-4 h-4" /> Valores e Pagamento
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div><Label>Valor Setup (R$)</Label><Input value={form.valor_setup} onChange={e => set("valor_setup", e.target.value)} placeholder="1.000,00" /></div>
-            <div><Label>Setup por Extenso</Label><Input value={form.valor_setup_extenso} onChange={e => set("valor_setup_extenso", e.target.value)} placeholder="mil reais" /></div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div><Label>Valor Mensal (R$)</Label><Input value={form.valor_mensal} onChange={e => set("valor_mensal", e.target.value)} placeholder="2.500,00" /></div>
-            <div><Label>Mensal por Extenso</Label><Input value={form.valor_mensal_extenso} onChange={e => set("valor_mensal_extenso", e.target.value)} placeholder="dois mil e quinhentos reais" /></div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <Label>Dia de Vencimento</Label>
-              <Select value={form.dia_vencimento} onValueChange={v => set("dia_vencimento", v)}>
-                <SelectTrigger><SelectValue placeholder="Dia" /></SelectTrigger>
-                <SelectContent>{Array.from({ length: 31 }, (_, i) => i + 1).map(d => <SelectItem key={d} value={String(d)}>Dia {d}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      </>
-      )}
 
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="gap-2">
