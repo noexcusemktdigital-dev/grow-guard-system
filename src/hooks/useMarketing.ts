@@ -3,31 +3,48 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function useMarketingFolders() {
+/** Resolves to parent_org_id if franchisee, otherwise own org_id */
+export function useContentSourceOrgId() {
   const { data: orgId } = useUserOrgId();
   return useQuery({
-    queryKey: ["marketing-folders", orgId],
+    queryKey: ["content-source-org", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("marketing_folders").select("*").eq("organization_id", orgId!).order("name");
+      const { data, error } = await supabase.rpc("get_parent_org_id", { _org_id: orgId! });
       if (error) throw error;
-      return data;
+      return data as string;
     },
     enabled: !!orgId,
+    staleTime: 1000 * 60 * 10,
   });
 }
 
-export function useMarketingAssets(folderId?: string) {
+export function useMarketingFolders(sourceOrgId?: string) {
   const { data: orgId } = useUserOrgId();
+  const effectiveOrgId = sourceOrgId || orgId;
   return useQuery({
-    queryKey: ["marketing-assets", orgId, folderId],
+    queryKey: ["marketing-folders", effectiveOrgId],
     queryFn: async () => {
-      let q = supabase.from("marketing_assets").select("*").eq("organization_id", orgId!).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("marketing_folders").select("*").eq("organization_id", effectiveOrgId!).order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!effectiveOrgId,
+  });
+}
+
+export function useMarketingAssets(folderId?: string, sourceOrgId?: string) {
+  const { data: orgId } = useUserOrgId();
+  const effectiveOrgId = sourceOrgId || orgId;
+  return useQuery({
+    queryKey: ["marketing-assets", effectiveOrgId, folderId],
+    queryFn: async () => {
+      let q = supabase.from("marketing_assets").select("*").eq("organization_id", effectiveOrgId!).order("created_at", { ascending: false });
       if (folderId) q = q.eq("folder_id", folderId);
       const { data, error } = await q;
       if (error) throw error;
       return data;
     },
-    enabled: !!orgId,
+    enabled: !!effectiveOrgId,
   });
 }
 
@@ -37,12 +54,23 @@ export function useMarketingMutations() {
   const { user } = useAuth();
 
   const createFolder = useMutation({
-    mutationFn: async (folder: { name: string; parent_id?: string }) => {
-      const { data, error } = await supabase.from("marketing_folders").insert({ ...folder, organization_id: orgId! }).select().single();
+    mutationFn: async (folder: { name: string; parent_id?: string; category?: string }) => {
+      const { data, error } = await supabase.from("marketing_folders").insert({ ...folder, organization_id: orgId! } as any).select().single();
       if (error) throw error;
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing-folders"] }),
+  });
+
+  const deleteFolder = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("marketing_folders").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["marketing-folders"] });
+      qc.invalidateQueries({ queryKey: ["marketing-assets"] });
+    },
   });
 
   const createAsset = useMutation({
@@ -54,5 +82,35 @@ export function useMarketingMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing-assets"] }),
   });
 
-  return { createFolder, createAsset };
+  const deleteAsset = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("marketing_assets").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing-assets"] }),
+  });
+
+  const uploadAsset = useMutation({
+    mutationFn: async ({ file, folderId, tags }: { file: File; folderId?: string; tags?: string[] }) => {
+      const ext = file.name.split(".").pop();
+      const path = `${orgId}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("marketing-assets").upload(path, file);
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("marketing-assets").getPublicUrl(path);
+      const { data, error } = await supabase.from("marketing_assets").insert({
+        name: file.name,
+        type: ext || "file",
+        url: urlData.publicUrl,
+        folder_id: folderId || null,
+        tags: tags || [],
+        organization_id: orgId!,
+        created_by: user?.id,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing-assets"] }),
+  });
+
+  return { createFolder, deleteFolder, createAsset, deleteAsset, uploadAsset };
 }

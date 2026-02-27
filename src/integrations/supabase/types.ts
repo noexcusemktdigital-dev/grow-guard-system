@@ -4641,6 +4641,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_parent_org_id: { Args: { _org_id: string }; Returns: string }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
