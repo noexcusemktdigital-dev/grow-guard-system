@@ -1,111 +1,101 @@
 
+## Plano: Propostas, Cobrancas Asaas de Clientes e Correcoes Financeiras
 
-## Plano: Melhorias no Sistema Franqueado
+### Resumo
 
-### Resumo das Mudancas
+4 grandes areas de trabalho:
 
-8 alteracoes solicitadas, organizadas por area.
+1. **Gerador de Proposta** — abrir proposta completa ao clicar, com download PDF e acoes (vincular lead, gerar contrato)
+2. **Cobrancas de clientes via Asaas** — criar edge function para cobrar clientes do franqueado, integrar no financeiro
+3. **Corrigir pagamento do sistema** — bug na edge function `asaas-charge-system-fee` (campo `document` nao existe, deveria ser `cnpj`)
+4. **Financeiro da franqueadora** — receitas devem mostrar pagamentos de sistema dos franqueados e clientes
 
 ---
 
-### 1. Agenda — Visualizacao Semana, Mes e Dia
+### 1. Proposta Completa — Visualizacao, Download e Acoes
 
-A agenda atual so tem visualizacao mensal. Adicionar toggle com 3 modos:
-- **Mes**: grid atual (ja funcional)
-- **Semana**: grid de 7 colunas com slots de hora (7h-22h), mostrando eventos posicionados no horario correto
-- **Dia**: coluna unica com slots de hora detalhados
+Ao clicar em uma proposta na lista (`PropostasListTab`), abrir um **Sheet/Dialog** com a proposta renderizada completa (reutilizando o layout do `ProposalGenerator`), com botoes:
+- **Baixar PDF** (html2pdf.js)
+- **Vincular a Lead** (select de leads do CRM, chama `updateProposal`)
+- **Marcar como Aceita** (muda status para "accepted")
+- **Gerar Contrato** (navega para `/franqueado/contratos?tab=novo&proposal_id=X&lead_id=Y`)
 
 Alteracoes:
-- `FranqueadoAgenda.tsx`: adicionar state `viewMode` ("month" | "week" | "day"), botoes de toggle no header, componentes `WeekView` e `DayView` internos com navegacao (anterior/proximo semana ou dia)
+- `FranqueadoPropostas.tsx`: adicionar state `viewingProposal`, Sheet com proposta renderizada inline (preview A4), botoes de acao. Reutilizar estilos do ProposalGenerator para preview.
 
 ---
 
-### 2. Suporte — Chamados direto ao Atendimento da Franqueadora
+### 2. Cobrancas de Clientes via Asaas — Edge Function + Financeiro
 
-O suporte do franqueado ja cria tickets na tabela `support_tickets` que a franqueadora le via `Atendimento.tsx`. Os chamados ja sao compartilhados pela `organization_id` pai. Preciso confirmar que o fluxo esta conectado — se necessario, garantir que ao criar ticket o franqueado envia para a org da franqueadora.
+**Sim, e possivel gerar cobrancas para clientes do franqueado pelo Asaas.** O sistema ja tem `asaas-create-charge` para creditos e usuarios extras. Vamos criar uma nova edge function `asaas-charge-client` especifica para cobrar clientes de contratos ativos.
 
-Alteracoes:
-- Verificar se `useSupportTickets` filtra corretamente para que a franqueadora veja os tickets criados pelas unidades
-- Se necessario, adicionar campo `parent_org_id` ou ajustar filtro no Atendimento da franqueadora para agregar tickets de todas as unidades da rede
+#### 2a. Nova Edge Function: `asaas-charge-client`
 
----
+Recebe: `organization_id`, `contract_id`, `billing_type` (PIX/BOLETO/CREDIT_CARD)
 
-### 3. CRM de Vendas — Mesma estrutura do ClienteCRM (SaaS)
+Logica:
+1. Busca o contrato e dados do cliente (nome, CPF/CNPJ, email)
+2. Cria/reutiliza customer no Asaas com os dados do cliente do contrato
+3. Gera cobranca com valor mensal do contrato
+4. Salva registro na tabela `client_payments` (nova tabela)
+5. Retorna invoice_url, pix_qr_code, etc.
 
-Substituir o CRM atual do franqueado pelo nivel completo do `ClienteCRM.tsx`:
-- Drag-and-drop com `@dnd-kit` (DragOverlay, useDraggable, useDroppable)
-- Selecao em massa com checkboxes e bulk actions (mover, tags, excluir, marcar perdido)
-- Filtros avancados em Popover (responsavel, tag, status, temperatura, valor, data)
-- Temperature cycling nos cards
-- Dropdown de acoes por card (copiar telefone, WhatsApp, marcar perdido, excluir)
-- Gestao de funis (CrmFunnelManager)
-- Import CSV
-- Aba Contatos integrada
+#### 2b. Nova tabela: `client_payments`
 
-Alteracoes:
-- `FranqueadoCRM.tsx`: reescrever baseado no `ClienteCRM.tsx`, adaptando imports para hooks do franqueado (`useCrmLeads` de `@/hooks/useCrmLeads`, `useCrmFunnels` de `@/hooks/useCrmFunnels`)
+```text
+client_payments
+- id (uuid PK)
+- organization_id (FK organizations)
+- contract_id (FK contracts)
+- month (text, ex: "2026-03")
+- amount (numeric)
+- franchisee_share (numeric, 20% do amount)
+- billing_type (text)
+- asaas_payment_id (text)
+- asaas_customer_id (text)
+- invoice_url (text)
+- status (text: pending/paid/overdue)
+- paid_at (timestamptz)
+- created_at (timestamptz)
+```
 
----
+#### 2c. Webhook — processar pagamentos de clientes
 
-### 4. Retirar aba Diagnostico
+Atualizar `asaas-webhook` para reconhecer pagamentos de clientes via `externalReference` formato `client_payment|{org_id}|{contract_id}|{month}`. Quando confirmado, marcar como pago e registrar como receita no `finance_revenues`.
 
-Remover o modulo Diagnostico como item separado da sidebar. A funcionalidade de diagnostico ja esta incorporada dentro do Criador de Estrategia (primeira aba "Novo Diagnostico").
+#### 2d. Financeiro do Franqueado — Integrar cobrancas reais
 
-Alteracoes:
-- `FranqueadoSidebar.tsx`: remover `{ label: "Diagnostico", ... }` do `comercialSection`
-- A rota pode ser mantida no App.tsx para retrocompatibilidade, mas nao aparece no menu
-
----
-
-### 5. Criador de Estrategia — Salvar historico completo
-
-O historico ja esta implementado! A aba "Historico" no `FranqueadoEstrategia.tsx` lista todas as estrategias salvas com busca, edicao de titulo, vinculacao a lead e regeneracao. As estrategias ja sao persistidas na tabela via `useStrategies/useCreateStrategy`.
-
-**Nao precisa de mudancas aqui** — ja funciona conforme solicitado.
-
----
-
-### 6. Estrategias e Propostas vinculadas aos Leads do CRM
-
-As estrategias ja tem campo `lead_id` e vinculacao no historico. As propostas tambem tem `lead_id` via `CrmProposals`.
-
-O que falta: garantir que no **CrmLeadDetailSheet** do franqueado (a sheet de detalhe do lead) exista abas mostrando estrategias e propostas vinculadas ao lead.
-
-Alteracoes:
-- `CrmLeadDetailSheet.tsx` (franqueado): adicionar abas/secoes para "Estrategias" e "Propostas" vinculadas ao lead, com links para visualizar e botoes para criar nova estrategia/proposta vinculada
+Renomear sidebar de "Financeiro Unidade" para "Financeiro". No `FranqueadoFinanceiro.tsx`:
+- Aba "Controle de Pagamentos": substituir o toggle local `receivedMap` por dados reais da tabela `client_payments`
+- Adicionar botao "Gerar Cobranca" por contrato/mes que chama a edge function
+- Mostrar status real (pago via webhook, pendente, atrasado)
+- PIX inline com QR code e copia-cola
 
 ---
 
-### 7. Contratos — Obrigatorio vincular Lead + Proposta Aceita
+### 3. Corrigir Pagamento do Sistema
 
-Ao criar novo contrato:
-- **Lead do CRM** e **Proposta aceita** sao **obrigatorios** (nao opcionais como hoje)
-- Ao selecionar proposta aceita, puxar automaticamente: valores, servicos, forma de pagamento
-- O unico campo que o franqueado precisa preencher manualmente alem disso: **dia de pagamento**
-- Contratos ativos devem mostrar: status de assinatura (assinado/nao), status de envio (enviado/nao), proximidade de vencimento (badge "Vence em X dias")
-- Gerar **arquivo PDF A4** profissional do contrato (usando html2pdf.js ja instalado), com layout formal de contrato
+**Bug encontrado:** A edge function `asaas-charge-system-fee` faz `select("id, name, asaas_customer_id, document, email")` mas a tabela `organizations` nao tem coluna `document` — tem `cnpj`. Isso causa erro silencioso.
 
-Alteracoes:
-- `FranqueadoContratos.tsx`: 
-  - Tornar lead_id e proposal_id obrigatorios no formulario
-  - Simplificar formulario: ao selecionar proposta, pre-preencher tudo, so pedir dia de pagamento + dados do cliente
-  - Na listagem, adicionar badges de status (Assinado/Nao assinado, Enviado, Vence em X dias)
-  - Melhorar funcao `downloadContractPdf` para gerar layout A4 profissional com secoes de contrato formais
+Correcao:
+- `asaas-charge-system-fee/index.ts`: trocar `.select("id, name, asaas_customer_id, document, email")` por `.select("id, name, asaas_customer_id, cnpj, email")` e `org.document` por `org.cnpj`
+- Adicionar alerta visual no dashboard do franqueado quando sistema nao esta pago (banner no topo)
 
 ---
 
-### 8. Financeiro — Vincular pagamentos dos clientes
+### 4. Franqueadora — Receitas com Pagamentos de Sistema e Clientes
 
-No financeiro do franqueado:
-- Mostrar pagamentos dos clientes vinculados aos contratos
-- Calcular automaticamente a participacao de 20% do franqueado
-- Quando o cliente paga (status "pago" no contrato/payment), atualizar o valor liquido do franqueado
+Na pagina `FinanceiroReceitas.tsx` da franqueadora:
+- Adicionar abas: "Todas", "Sistema Franqueados", "Clientes Franqueados"
+- Aba "Sistema Franqueados": listar `franchisee_system_payments` de todas as unidades (join com org name), mostrando status e valores
+- Aba "Clientes Franqueados": listar `client_payments` de todas as unidades com org name, contrato e status
+- Contratos ativos vao automaticamente para faturamento no financeiro
 
-Alteracoes:
-- `FranqueadoFinanceiro.tsx`:
-  - Na aba "Visao Geral", adicionar KPI "Participacao (20%)" calculada sobre o MRR
-  - Na aba "Controle de Pagamentos", adicionar coluna "Sua Participacao (20%)" e status de recebimento
-  - Adicionar toggle "Marcar como Recebido" nos pagamentos para controle do franqueado
+---
+
+### 5. Contratos Ativos no Financeiro
+
+Na sidebar do franqueado, os contratos ativos devem ser gerenciados pelo financeiro (cobrancas, faturamento). O modulo "Meus Contratos" continua para criacao/gestao, mas a aba de faturamento fica no financeiro.
 
 ---
 
@@ -113,19 +103,24 @@ Alteracoes:
 
 | Arquivo | Acao |
 |---|---|
-| `src/pages/franqueado/FranqueadoAgenda.tsx` | Reescrever — adicionar views Semana e Dia |
-| `src/pages/franqueado/FranqueadoCRM.tsx` | Reescrever — copiar estrutura do ClienteCRM |
-| `src/pages/franqueado/FranqueadoContratos.tsx` | Editar — obrigatoriedade Lead+Proposta, PDF A4, badges de status |
-| `src/pages/franqueado/FranqueadoFinanceiro.tsx` | Editar — participacao 20%, pagamentos vinculados |
-| `src/components/FranqueadoSidebar.tsx` | Editar — remover Diagnostico |
-| `src/components/franqueado/CrmLeadDetailSheet.tsx` | Editar — adicionar abas Estrategias e Propostas |
+| `supabase/functions/asaas-charge-system-fee/index.ts` | Fix: `document` -> `cnpj` |
+| `supabase/functions/asaas-charge-client/index.ts` | Criar: cobranca de clientes via Asaas |
+| `supabase/functions/asaas-webhook/index.ts` | Editar: processar `client_payment` events |
+| Migration SQL | Criar tabela `client_payments` |
+| `src/pages/franqueado/FranqueadoPropostas.tsx` | Editar: Sheet de visualizacao completa + acoes |
+| `src/pages/franqueado/FranqueadoFinanceiro.tsx` | Reescrever: cobrancas reais via `client_payments` + botao gerar cobranca |
+| `src/components/FranqueadoSidebar.tsx` | Editar: renomear "Financeiro Unidade" para "Financeiro" |
+| `src/pages/FinanceiroReceitas.tsx` | Editar: abas com sistema + clientes franqueados |
+| `src/hooks/useClientPayments.ts` | Criar: hook para client_payments |
 
-### Sequencia de Implementacao
+### Sequencia
 
-1. Sidebar (remover Diagnostico)
-2. Agenda (views semana/dia)
-3. CRM de Vendas (reescrever completo)
-4. Lead Detail Sheet (vincular estrategias/propostas)
-5. Contratos (obrigatoriedade + PDF A4 + badges)
-6. Financeiro (participacao 20%)
-
+1. Migration (tabela `client_payments`)
+2. Fix `asaas-charge-system-fee` (bug `document` -> `cnpj`)
+3. Edge function `asaas-charge-client`
+4. Atualizar webhook
+5. Hook `useClientPayments`
+6. Sidebar (renomear)
+7. Propostas (visualizacao completa)
+8. Financeiro franqueado (cobrancas reais)
+9. Receitas franqueadora (abas sistema/clientes)
