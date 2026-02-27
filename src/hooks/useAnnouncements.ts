@@ -8,7 +8,10 @@ export function useAnnouncements() {
   return useQuery({
     queryKey: ["announcements", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("announcements").select("*").eq("organization_id", orgId!).order("created_at", { ascending: false });
+      // Use the DB function that also returns parent org announcements
+      const { data, error } = await supabase.rpc("get_announcements_with_parent", {
+        _org_id: orgId!,
+      });
       if (error) throw error;
       return data;
     },

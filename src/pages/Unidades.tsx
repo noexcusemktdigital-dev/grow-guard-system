@@ -10,15 +10,86 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useUnits, useUnitMutations } from "@/hooks/useUnits";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useUnits } from "@/hooks/useUnits";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Unidades() {
   const { data: units, isLoading } = useUnits();
-  const { createUnit } = useUnitMutations();
+  const { data: orgId } = useUserOrgId();
+  const { toast } = useToast();
+  const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
 
+  // Wizard state
+  const [showWizard, setShowWizard] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardLoading, setWizardLoading] = useState(false);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+
+  // Step 1 — unit data
+  const [unitName, setUnitName] = useState("");
+  const [unitCity, setUnitCity] = useState("");
+  const [unitState, setUnitState] = useState("");
+  const [unitAddress, setUnitAddress] = useState("");
+  const [unitPhone, setUnitPhone] = useState("");
+
+  // Step 2 — manager data
+  const [managerName, setManagerName] = useState("");
+  const [managerEmail, setManagerEmail] = useState("");
+
+  // Step 3 — financial config
+  const [royaltyPercent, setRoyaltyPercent] = useState("5");
+  const [systemFee, setSystemFee] = useState("299");
+
   const selected = (units ?? []).find(u => u.id === selectedId);
+
+  const resetWizard = () => {
+    setWizardStep(1);
+    setUnitName(""); setUnitCity(""); setUnitState(""); setUnitAddress(""); setUnitPhone("");
+    setManagerName(""); setManagerEmail("");
+    setRoyaltyPercent("5"); setSystemFee("299");
+    setTempPassword(null);
+    setWizardLoading(false);
+  };
+
+  const handleProvision = async () => {
+    if (!orgId) return;
+    setWizardLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("provision-unit", {
+        body: {
+          unit_name: unitName,
+          city: unitCity,
+          state: unitState,
+          address: unitAddress,
+          phone: unitPhone,
+          manager_name: managerName,
+          manager_email: managerEmail,
+          royalty_percent: parseFloat(royaltyPercent),
+          system_fee: parseFloat(systemFee),
+          parent_org_id: orgId,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setTempPassword(data.temp_password);
+      setWizardStep(4); // success step
+      qc.invalidateQueries({ queryKey: ["units"] });
+      toast({ title: "Unidade provisionada com sucesso!" });
+    } catch (err: any) {
+      toast({ title: "Erro ao provisionar unidade", description: err.message, variant: "destructive" });
+    } finally {
+      setWizardLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -60,7 +131,7 @@ export default function Unidades() {
                 <List className="w-3.5 h-3.5" />
               </Button>
             </div>
-            <Button size="sm" onClick={() => createUnit.mutate({ name: "Nova Unidade" })}>
+            <Button size="sm" onClick={() => { resetWizard(); setShowWizard(true); }}>
               <Plus className="w-4 h-4 mr-1" /> Nova Unidade
             </Button>
           </div>
@@ -73,7 +144,7 @@ export default function Unidades() {
             <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-1">Nenhuma unidade cadastrada</h3>
             <p className="text-sm text-muted-foreground mb-4">Cadastre a primeira unidade da rede.</p>
-            <Button onClick={() => createUnit.mutate({ name: "Nova Unidade" })}>
+            <Button onClick={() => { resetWizard(); setShowWizard(true); }}>
               <Plus className="w-4 h-4 mr-1" /> Nova Unidade
             </Button>
           </div>
@@ -134,6 +205,89 @@ export default function Unidades() {
           </Tabs>
         </div>
       )}
+
+      {/* Wizard Dialog */}
+      <Dialog open={showWizard} onOpenChange={(open) => { if (!open) setShowWizard(false); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {wizardStep === 4 ? "Unidade Criada!" : `Nova Unidade — Passo ${wizardStep} de 3`}
+            </DialogTitle>
+          </DialogHeader>
+
+          {wizardStep === 1 && (
+            <div className="space-y-3">
+              <div><Label>Nome da Unidade *</Label><Input value={unitName} onChange={e => setUnitName(e.target.value)} placeholder="Ex: Unidade Centro SP" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Cidade</Label><Input value={unitCity} onChange={e => setUnitCity(e.target.value)} placeholder="São Paulo" /></div>
+                <div><Label>Estado</Label><Input value={unitState} onChange={e => setUnitState(e.target.value)} placeholder="SP" maxLength={2} /></div>
+              </div>
+              <div><Label>Endereço</Label><Input value={unitAddress} onChange={e => setUnitAddress(e.target.value)} placeholder="Rua, número, bairro" /></div>
+              <div><Label>Telefone</Label><Input value={unitPhone} onChange={e => setUnitPhone(e.target.value)} placeholder="(11) 99999-0000" /></div>
+            </div>
+          )}
+
+          {wizardStep === 2 && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Dados do responsável que será o administrador da unidade.</p>
+              <div><Label>Nome do Responsável *</Label><Input value={managerName} onChange={e => setManagerName(e.target.value)} placeholder="Nome completo" /></div>
+              <div><Label>E-mail do Responsável *</Label><Input type="email" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} placeholder="email@exemplo.com" /></div>
+            </div>
+          )}
+
+          {wizardStep === 3 && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Configurações financeiras da unidade.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>% Royalties</Label><Input type="number" value={royaltyPercent} onChange={e => setRoyaltyPercent(e.target.value)} min="0" max="100" /></div>
+                <div><Label>Mensalidade Sistema (R$)</Label><Input type="number" value={systemFee} onChange={e => setSystemFee(e.target.value)} min="0" /></div>
+              </div>
+            </div>
+          )}
+
+          {wizardStep === 4 && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                <p className="text-sm font-medium text-green-800 dark:text-green-200">✅ Unidade provisionada com sucesso!</p>
+                <p className="text-xs text-green-700 dark:text-green-300 mt-1">Organização, usuário e vinculação criados automaticamente.</p>
+              </div>
+              {tempPassword && (
+                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Credenciais temporárias</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">E-mail: <strong>{managerEmail}</strong></p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300">Senha: <strong className="font-mono">{tempPassword}</strong></p>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-2">⚠️ Compartilhe estas credenciais com o responsável. A senha deve ser alterada no primeiro acesso.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            {wizardStep === 4 ? (
+              <Button onClick={() => setShowWizard(false)}>Fechar</Button>
+            ) : (
+              <>
+                {wizardStep > 1 && <Button variant="outline" onClick={() => setWizardStep(s => s - 1)}>Voltar</Button>}
+                {wizardStep < 3 ? (
+                  <Button
+                    onClick={() => {
+                      if (wizardStep === 1 && !unitName.trim()) { toast({ title: "Informe o nome da unidade", variant: "destructive" }); return; }
+                      if (wizardStep === 2 && (!managerName.trim() || !managerEmail.trim())) { toast({ title: "Informe nome e email do responsável", variant: "destructive" }); return; }
+                      setWizardStep(s => s + 1);
+                    }}
+                  >
+                    Próximo
+                  </Button>
+                ) : (
+                  <Button onClick={handleProvision} disabled={wizardLoading}>
+                    {wizardLoading ? "Provisionando..." : "Criar Unidade"}
+                  </Button>
+                )}
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

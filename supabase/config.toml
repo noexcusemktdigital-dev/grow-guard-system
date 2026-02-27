@@ -93,5 +93,8 @@ verify_jwt = false
 [functions.asaas-charge-system-fee]
 verify_jwt = false
 
+[functions.provision-unit]
+verify_jwt = false
+
 [functions.generate-template-layout]
 verify_jwt = false

@@ -92,8 +92,9 @@ Deno.serve(async (req) => {
       organization_id,
     });
 
-    // Set role
-    const validRole = role === "cliente_admin" ? "cliente_admin" : "cliente_user";
+    // Set role — accept all valid app_role values
+    const allowedRoles = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
+    const validRole = allowedRoles.includes(role) ? role : "cliente_user";
     await adminClient.from("user_roles").insert({
       user_id: userId,
       role: validRole,
