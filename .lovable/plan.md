@@ -1,60 +1,84 @@
 
+# Auditoria Financeira Asaas — Problemas Encontrados e Correcoes
 
-# Migracao Asaas para Producao + Cobrancas no Controle Financeiro
+## BUG CRITICO 1: Variavel duplicada no Webhook (quebra a funcao inteira)
 
-## Fase 1 — Migrar 8 Edge Functions do Sandbox para Producao
+No arquivo `supabase/functions/asaas-webhook/index.ts`, a variavel `externalRef` e declarada com `const` duas vezes no mesmo escopo (linhas 94 e 187):
 
-Trocar o fallback hardcoded em cada arquivo de `https://api-sandbox.asaas.com/v3` para `https://api.asaas.com/v3`. Sao 8 arquivos (7 + webhook que nao tem fallback mas ja usa o secret):
-
-| Arquivo | Linha |
-|---------|-------|
-| `supabase/functions/asaas-charge-client/index.ts` | 9 |
-| `supabase/functions/asaas-create-charge/index.ts` | 11 |
-| `supabase/functions/asaas-charge-system-fee/index.ts` | 9 |
-| `supabase/functions/asaas-charge-franchisee/index.ts` | 9 |
-| `supabase/functions/asaas-test-connection/index.ts` | 7 |
-| `supabase/functions/asaas-list-payments/index.ts` | 9 |
-| `supabase/functions/asaas-create-subscription/index.ts` | 9 |
-
-Cada um tera a linha alterada de:
-```
-"https://api-sandbox.asaas.com/v3"
-```
-para:
-```
-"https://api.asaas.com/v3"
+```text
+Linha 94:  const externalRef = payment.externalReference;  // 1a declaracao
+Linha 187: const externalRef = payment.externalReference;  // 2a declaracao (ERRO!)
 ```
 
-O webhook (`asaas-webhook`) nao usa `ASAAS_BASE` entao nao precisa de alteracao.
+Isso causa um **SyntaxError** no Deno, impedindo que o webhook funcione para **qualquer** evento. Nenhum pagamento confirmado esta sendo processado — nem SaaS, nem franqueado, nem cliente.
+
+**Correcao:** Remover a segunda declaracao na linha 187, pois a variavel `externalRef` ja existe no escopo desde a linha 94.
 
 ---
 
-## Fase 2 — Solicitar API Key de Producao
+## BUG 2: Metodo `getClaims()` inexistente no supabase-js v2
 
-Usar a ferramenta `add_secret` para solicitar a API Key de producao do Asaas (`ASAAS_API_KEY`) e atualizar o `ASAAS_BASE_URL` para `https://api.asaas.com/v3`.
+Tres Edge Functions usam `userClient.auth.getClaims(token)`, que **nao existe** na versao 2 do supabase-js:
+
+- `asaas-charge-franchisee/index.ts` (linha 41)
+- `asaas-create-subscription/index.ts` (linha 40)
+- `asaas-list-payments/index.ts` (linha 35)
+
+Isso faz com que essas funcoes retornem **401 Unauthorized** para todas as requisicoes autenticadas.
+
+**Correcao:** Substituir `getClaims()` por `getUser()` em todas as tres funcoes:
+```typescript
+// DE:
+const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+if (claimsError || !claimsData?.claims) { ... }
+
+// PARA:
+const { data: userData, error: userError } = await userClient.auth.getUser();
+if (userError || !userData?.user) { ... }
+```
 
 ---
 
-## Fase 3 — Cobrancas na aba "Contratos Ativos" do Controle Financeiro
+## BUG 3: `asaas-charge-client` sem autenticacao
 
-### Mudancas em `src/hooks/useClientPayments.ts`
-- Alterar `useChargeClient` para aceitar `organization_id` como parametro opcional na mutacao
-- Se fornecido, usa o `organization_id` do parametro em vez do `orgId` do usuario logado
+A Edge Function `asaas-charge-client` nao valida o token JWT do usuario. Qualquer pessoa com a URL pode gerar cobrancas em nome de qualquer organizacao.
 
-### Mudancas em `src/pages/FinanceiroControle.tsx`
-Na aba "Contratos Ativos":
-- Adicionar coluna "Acoes" na tabela
-- Botao "Emitir Cobranca" em cada linha de contrato ativo
-- Dialog para selecionar metodo de pagamento (PIX, Boleto, Cartao de Credito)
-- Dialog de resultado mostrando:
-  - Se PIX: QR Code (imagem base64) + codigo copia-e-cola
-  - Se Boleto/Cartao: link da fatura (abre em nova aba)
-- Importar e usar o hook `useChargeClient` atualizado
+**Correcao:** Adicionar validacao de autenticacao identica a das outras funcoes (via `getUser()`).
 
-### Fluxo do usuario
-1. Abre Controle Financeiro → aba "Contratos Ativos"
-2. Clica "Emitir Cobranca" ao lado de um contrato
-3. Seleciona PIX, Boleto ou Cartao
-4. Sistema chama `asaas-charge-client` com o `organization_id` do contrato e o `contract_id`
-5. Resultado exibido na tela (QR Code ou link)
+---
 
+## Resumo dos Fluxos e Status Atual
+
+| Fluxo | Funciona? | Problema |
+|-------|-----------|----------|
+| SaaS — Assinatura (create-subscription) | NAO | getClaims() quebra auth |
+| SaaS — Recarga creditos (create-charge) | SIM | Auth funciona com getClaims? Verificar — mas este usa getClaims tambem |
+| SaaS — Webhook (confirmacao pagamento) | NAO | Variavel duplicada causa SyntaxError |
+| Franqueado — Taxa sistema (charge-system-fee) | SIM | Auth usa getUser() corretamente |
+| Franqueado — Cobranca cliente (charge-client) | PARCIAL | Funciona mas sem auth |
+| Franqueadora — Cobranca franqueado (charge-franchisee) | NAO | getClaims() quebra auth |
+| Franqueadora — Listar pagamentos (list-payments) | NAO | getClaims() quebra auth |
+| UI — Controle Financeiro emitir cobranca | SIM | Codigo correto, depende do charge-client |
+
+---
+
+## Plano de Correcao (4 arquivos)
+
+### 1. `supabase/functions/asaas-webhook/index.ts`
+- Remover a segunda declaracao `const externalRef` na linha 187
+- Substituir por reutilizacao da variavel ja existente (simplesmente remover o `const`)
+
+### 2. `supabase/functions/asaas-charge-franchisee/index.ts`
+- Substituir `getClaims()` por `getUser()` (linhas 38-45)
+
+### 3. `supabase/functions/asaas-create-subscription/index.ts`
+- Substituir `getClaims()` por `getUser()` (linhas 39-46)
+
+### 4. `supabase/functions/asaas-list-payments/index.ts`
+- Substituir `getClaims()` por `getUser()` (linhas 34-41)
+
+### 5. `supabase/functions/asaas-create-charge/index.ts`
+- Verificar se tambem usa `getClaims()` e corrigir se necessario
+
+### 6. `supabase/functions/asaas-charge-client/index.ts`
+- Adicionar bloco de autenticacao (auth header + getUser())
