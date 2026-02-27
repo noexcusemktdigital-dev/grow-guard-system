@@ -1,94 +1,72 @@
 
+## Plano: Corrigir Convites, Onboarding e Refazer Contratos + Financeiro
 
-## Plano: Vincular Marketing, Academy e Metas entre Franqueadora e Franqueados
+### Bug 1: Convite de usuarios da erro "Forbidden"
 
-### Problema Central
+**Causa raiz**: A edge function `invite-user` verifica se o chamador e membro da org **destino** (`is_member_of_org(caller, target_org)`). Quando a franqueadora convida alguem para a org de um franqueado, o admin da franqueadora nao e membro daquela org — e membro da org pai. O check falha com "Forbidden".
 
-Os hooks `useMarketingFolders`, `useMarketingAssets` e `useAcademyModules` filtram por `organization_id` do usuario logado. Como franqueadora e franqueado sao organizacoes diferentes (vinculadas via `parent_org_id`), o franqueado nao ve os materiais nem modulos criados pela franqueadora.
-
----
-
-### 1. Marketing da Franqueadora — Drive completo com upload
-
-A pagina `Marketing.tsx` da franqueadora esta basica (grid flat de assets). Precisa ter a **mesma estrutura de categorias** do `FranqueadoMateriais.tsx`:
-
-- **6 categorias**: Logos, Dia a Dia, Setup Inicial, Redes Sociais, Campanhas, Apresentacoes
-- **Navegacao por pastas** com breadcrumb
-- **Grid mensal** para Redes Sociais
-- **Filtros por tipo** (imagem, video, PDF, documento, apresentacao)
-- **Preview modal** de arquivos
-
-**Diferenca para o franqueado**: a franqueadora tem botoes de **criacao**:
-- "Nova Pasta" (com select de categoria)
-- "Upload de Arquivo" (upload para storage `marketing-assets` + insert na tabela)
-- "Excluir" / "Mover" assets e pastas
-
-Alteracoes em `src/pages/Marketing.tsx`: reescrever usando a mesma estrutura de categorias e navegacao do `FranqueadoMateriais.tsx`, adicionando funcionalidades de CRUD (criar pasta, upload de arquivo, excluir).
-
-Adicionar mutations no `src/hooks/useMarketing.ts`: `createFolder` (com `category`), `deleteFolder`, `deleteAsset`, `uploadAsset` (upload ao bucket `marketing-assets` + insert).
+**Correcao**: Criar uma database function `is_member_or_parent_of_org` que verifica se o usuario e membro da org OU membro da org pai (via `parent_org_id`). Atualizar `invite-user` para usar essa funcao.
 
 ---
 
-### 2. Franqueado ve materiais da Franqueadora — Hook com parent_org_id
+### Bug 2: Onboarding nao aparece apos criar
 
-Criar uma database function `get_parent_org_id` que retorna o `parent_org_id` da org do usuario:
+**Causa raiz**: O mutation `createUnit` no hook passa o campo `responsible` no insert, mas a tabela `onboarding_units` nao tem coluna `responsible`. O insert falha silenciosamente.
 
-```sql
-CREATE FUNCTION get_parent_org_id(_org_id uuid) RETURNS uuid
-```
-
-Criar hooks com logica de parent:
-- `useMarketingFoldersFromParent()` — busca pastas onde `organization_id` = parent_org_id da org do franqueado
-- `useMarketingAssetsFromParent()` — mesma logica para assets
-
-Alternativa mais simples: atualizar `useMarketingFolders` e `useMarketingAssets` para aceitar um parametro `sourceOrgId` opcional. No `FranqueadoMateriais.tsx`, buscar o `parent_org_id` e passar como source.
-
-**Implementacao escolhida**: criar RPC `get_marketing_data_org_id(_user_org_id uuid)` que retorna o `parent_org_id` se existir, senao retorna o proprio org_id. Usar isso nos hooks de marketing do franqueado.
+**Correcao**: Adicionar coluna `responsible` (text, nullable) na tabela `onboarding_units` via migration. Isso resolve o insert e os dados aparecerao.
 
 ---
 
-### 3. Academy — Franqueadora gerencia, Franqueado consome
+### Mudanca 3: Refazer modulo Contratos
 
-O mesmo problema existe na Academy: modulos criados pela franqueadora ficam na org da franqueadora, franqueado nao ve.
+O objetivo da franqueadora no modulo de contratos:
+1. **Templates**: criar/editar modelos de contrato que servem de base para franqueados
+2. **Contratos de franquia**: contratos proprios da franqueadora (nao sao templates)
+3. **Visao de rede**: ver todos os contratos ativos da rede, filtrando por tipo e dono
 
-**Solucao**: mesmo padrao do marketing. Criar RPC `get_academy_source_org_id(_user_org_id uuid)` ou reutilizar o mesmo `get_parent_org_id`. Os hooks `useAcademyModules` e `useAcademyLessons` do franqueado passam a buscar pela org pai.
+**Alteracoes no banco**:
+- Adicionar colunas na tabela `contracts`:
+  - `contract_type` (text): "assessoria", "saas", "sistema", "franquia"
+  - `owner_type` (text): "unidade", "matriz", "cliente_saas"
+  - `unit_org_id` (uuid, nullable): referencia a qual unidade pertence o contrato
+- Adicionar coluna na tabela `contract_templates`:
+  - `template_type` (text): "assessoria", "saas", "sistema", "franquia"
+  - `description` (text, nullable)
+- Criar database function `get_network_contracts` que retorna contratos de toda a rede (org propria + orgs filhas)
 
-A pagina `Academy.tsx` (franqueadora) ja tem abas de Gestao e Relatorios — manter. Adicionar na aba **Relatorios** visibilidade do progresso dos franqueados (buscar `academy_progress` de usuarios de orgs filhas).
+**Nova estrutura do sidebar Contratos**:
+- Templates (criar/editar modelos)
+- Contratos da Matriz (contratos de franquia, proprios)
+- Rede (todos os contratos de todas as unidades + matriz, com filtros por tipo e dono)
 
----
-
-### 4. Metas & Ranking — Plataforma funcional da Franqueadora
-
-A pagina `MetasRanking.tsx` esta vazia (so mostra empty state). Implementar conteudo real nas 5 abas:
-
-**Aba Dashboard**:
-- KPIs: total de metas ativas, % atingimento medio, unidades no target, campanhas ativas
-- Grafico de barras com atingimento por unidade (usando `rankings` table)
-
-**Aba Metas**:
-- Lista de metas existentes com status, periodo, valor alvo vs atual
-- Dialog "Nova Meta" com campos: titulo, tipo (faturamento/leads/contratos), valor alvo, periodo, escopo (rede/unidade), unidade (select de unidades se escopo = unidade)
-- Usar `useGoalMutations().createGoal` que ja existe
-
-**Aba Ranking**:
-- Tabela de ranking mensal por unidade (dados da tabela `rankings`)
-- Posicao, nome da unidade, pontuacao, variacao
-
-**Aba Campanhas**:
-- CRUD basico de campanhas (premiacoes) — pode usar a tabela `goals` com `scope = "campaign"`
-- Campos: nome, descricao, premio, periodo, meta
-
-**Aba Configuracao**:
-- Pesos das metricas para calculo do ranking (faturamento, leads, contratos)
-- Regras de premiacao
+**Alteracoes nos arquivos**:
+- `ContratosTemplates.tsx`: adicionar campos `template_type` e `description`, botao editar
+- `ContratosGerenciamento.tsx`: reescrever como visao de rede com filtros (tipo, dono, status, unidade), usando `get_network_contracts`
+- `ContratosGerador.tsx`: reescrever para criar contratos da matriz, com campos completos (tipo, valor, duracao, signatario, owner_type)
+- Remover `ContratosConfiguracoes.tsx` da sidebar (configuracoes sao estaticas sem persistencia real)
+- Atualizar `useContracts.ts` com novos hooks e mutations
 
 ---
 
-### 5. Vincular Metas com Unidades
+### Mudanca 4: Refazer modulo Financeiro
 
-As metas ja tem `unit_org_id` na tabela `goals`. No dialog de nova meta, ao selecionar escopo "Por Unidade", mostrar select com unidades cadastradas (usando `useUnits`). Ao criar meta por unidade, preencher `unit_org_id`.
+O financeiro tem 2 funcoes:
+1. **Repasses e Fechamentos**: consolidar o que cada franqueado deve pagar (royalties, sistema) e gerar fechamentos mensais
+2. **Financeiro da Matriz**: receitas e despesas proprias da franqueadora
 
-O franqueado deve ver suas proprias metas. Criar/atualizar hook para o franqueado buscar metas onde `unit_org_id` = sua org_id.
+**Nova estrutura do sidebar Financeiro**:
+- Dashboard (visao geral: MRR da rede, receitas vs despesas da matriz, repasses pendentes)
+- Repasse (cobracas de royalties/sistema aos franqueados — ja funciona)
+- Fechamentos (consolidacao mensal por unidade — receita gerada, royalty devido, taxa sistema)
+- Receitas da Matriz (receitas manuais + venda de franquia + contratos proprios)
+- Despesas da Matriz (despesas operacionais da franqueadora)
+
+**Alteracoes**:
+- `FinanceiroDashboard.tsx`: reescrever com KPIs de rede (MRR rede, repasses pendentes, receita matriz) + grafico mensal
+- `FinanceiroReceitas.tsx`: simplificar para receitas da MATRIZ apenas (remover abas de sistema/clientes que pertencem ao repasse)
+- `FinanceiroFechamentos.tsx`: implementar consolidacao mensal por unidade (cruzar contratos ativos x royalties x taxas)
+- Manter `FinanceiroRepasse.tsx` e `FinanceiroDespesas.tsx` como estao
+- Remover `FinanceiroConfiguracoes.tsx` do sidebar (configuracoes sem persistencia)
 
 ---
 
@@ -96,20 +74,22 @@ O franqueado deve ver suas proprias metas. Criar/atualizar hook para o franquead
 
 | Arquivo | Acao |
 |---|---|
-| Migration SQL | Criar functions `get_parent_org_id` e `get_marketing_source_org` |
-| `src/hooks/useMarketing.ts` | Editar: adicionar `sourceOrgId` nos hooks + mutations de upload/delete + `useParentOrgId` |
-| `src/pages/Marketing.tsx` | Reescrever: drive completo com categorias, pastas, upload, preview (mesmo layout do FranqueadoMateriais + CRUD) |
-| `src/pages/franqueado/FranqueadoMateriais.tsx` | Editar: buscar dados da org pai ao inves da propria org |
-| `src/hooks/useAcademy.ts` | Editar: modules e lessons buscam da org pai para franqueados |
-| `src/pages/MetasRanking.tsx` | Reescrever: implementar conteudo real nas 5 abas (dashboard, metas CRUD, ranking, campanhas, config) |
-| `src/hooks/useGoals.ts` | Editar: adicionar hook para metas por unidade |
+| Migration SQL | Adicionar `responsible` em `onboarding_units`, `contract_type`/`owner_type`/`unit_org_id` em `contracts`, `template_type`/`description` em `contract_templates`, function `is_member_or_parent_of_org`, function `get_network_contracts` |
+| `supabase/functions/invite-user/index.ts` | Corrigir: usar `is_member_or_parent_of_org` |
+| `src/pages/ContratosTemplates.tsx` | Editar: adicionar tipo e descricao |
+| `src/pages/ContratosGerenciamento.tsx` | Reescrever: visao de rede com filtros |
+| `src/pages/ContratosGerador.tsx` | Reescrever: criar contratos da matriz com campos completos |
+| `src/hooks/useContracts.ts` | Editar: adicionar hooks de rede e novos campos |
+| `src/pages/FinanceiroDashboard.tsx` | Reescrever: KPIs de rede + matriz |
+| `src/pages/FinanceiroReceitas.tsx` | Simplificar: apenas receitas da matriz |
+| `src/pages/FinanceiroFechamentos.tsx` | Implementar: consolidacao mensal por unidade |
+| `src/components/FranqueadoraSidebar.tsx` | Editar: ajustar subitens de Contratos e Financeiro |
 
 ### Sequencia
 
-1. Migration (function `get_parent_org_id`)
-2. Hook `useParentOrgId` + atualizar `useMarketing` com source org
-3. Reescrever `Marketing.tsx` (drive completo da franqueadora com CRUD)
-4. Atualizar `FranqueadoMateriais.tsx` (ler da org pai)
-5. Atualizar `useAcademy.ts` (modules/lessons da org pai para franqueados)
-6. Reescrever `MetasRanking.tsx` (5 abas funcionais com CRUD de metas)
-7. Vincular metas com unidades (select de unidade no dialog)
+1. Migration (colunas + functions)
+2. Corrigir `invite-user` (bug critico)
+3. Onboarding (coluna `responsible` resolve o bug)
+4. Contratos (templates, gerador, gerenciamento de rede)
+5. Financeiro (dashboard, receitas, fechamentos)
+6. Sidebar (ajustar menus)
