@@ -110,5 +110,25 @@ export function useContractMutations() {
     },
   });
 
-  return { createTemplate, updateTemplate, createContract, updateContract };
+  const seedDefaultTemplates = useMutation({
+    mutationFn: async (templates: { name: string; template_type: string; description: string; content: string }[]) => {
+      // Check which templates already exist
+      const { data: existing } = await supabase
+        .from("contract_templates")
+        .select("name")
+        .eq("organization_id", orgId!)
+        .in("name", templates.map(t => t.name));
+      const existingNames = new Set((existing ?? []).map(e => e.name));
+      const toInsert = templates
+        .filter(t => !existingNames.has(t.name))
+        .map(t => ({ ...t, organization_id: orgId! }));
+      if (toInsert.length === 0) return { inserted: 0 };
+      const { error } = await supabase.from("contract_templates").insert(toInsert);
+      if (error) throw error;
+      return { inserted: toInsert.length };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-templates"] }),
+  });
+
+  return { createTemplate, updateTemplate, createContract, updateContract, seedDefaultTemplates };
 }
