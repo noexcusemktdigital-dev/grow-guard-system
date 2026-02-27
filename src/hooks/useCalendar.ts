@@ -21,12 +21,13 @@ export function useCalendarEvents(startDate?: string, endDate?: string) {
   return useQuery({
     queryKey: ["calendar-events", orgId, startDate, endDate],
     queryFn: async () => {
-      let q = supabase.from("calendar_events").select("*").eq("organization_id", orgId!).order("start_at");
-      if (startDate) q = q.gte("start_at", startDate);
-      if (endDate) q = q.lte("end_at", endDate);
-      const { data, error } = await q;
+      const { data, error } = await supabase.rpc("get_calendar_events_with_parent", {
+        _org_id: orgId!,
+        _start: startDate ?? null,
+        _end: endDate ?? null,
+      });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!orgId,
   });

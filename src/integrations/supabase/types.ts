@@ -2965,6 +2965,7 @@ export type Database = {
           priority: string
           scope: string
           status: string
+          target_unit_ids: string[] | null
           target_value: number
           team_id: string | null
           title: string
@@ -2984,6 +2985,7 @@ export type Database = {
           priority?: string
           scope?: string
           status?: string
+          target_unit_ids?: string[] | null
           target_value?: number
           team_id?: string | null
           title: string
@@ -3003,6 +3005,7 @@ export type Database = {
           priority?: string
           scope?: string
           status?: string
+          target_unit_ids?: string[] | null
           target_value?: number
           team_id?: string | null
           title?: string
@@ -4658,6 +4661,161 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "announcements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_calendar_events_with_parent: {
+        Args: { _end?: string; _org_id: string; _start?: string }
+        Returns: {
+          all_day: boolean | null
+          calendar_id: string | null
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_at: string
+          google_event_id: string | null
+          id: string
+          location: string | null
+          organization_id: string
+          readonly: boolean | null
+          recurrence: string | null
+          start_at: string
+          title: string
+          unit_id: string | null
+          updated_at: string
+          visibility: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "calendar_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_closings_with_parent: {
+        Args: { _org_id: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          file_url: string | null
+          id: string
+          month: number
+          notes: string | null
+          organization_id: string
+          status: string
+          title: string
+          unit_id: string | null
+          year: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "finance_closings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_contract_templates_with_parent: {
+        Args: { _org_id: string }
+        Returns: {
+          content: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          template_type: string | null
+          updated_at: string
+          variables: Json | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contract_templates"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_contracts_for_unit: {
+        Args: { _org_id: string }
+        Returns: {
+          client_address: string | null
+          client_document: string | null
+          client_phone: string | null
+          content: string | null
+          contract_type: string | null
+          created_at: string
+          created_by: string | null
+          duration_months: number | null
+          end_date: string | null
+          id: string
+          lead_id: string | null
+          monthly_value: number | null
+          organization_id: string
+          owner_type: string | null
+          payment_day: number | null
+          service_description: string | null
+          signed_at: string | null
+          signer_email: string | null
+          signer_name: string | null
+          start_date: string | null
+          status: string
+          template_id: string | null
+          title: string
+          total_value: number | null
+          unit_org_id: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_daily_message_with_parent: {
+        Args: { _org_id: string }
+        Returns: {
+          author: string | null
+          created_at: string
+          date: string
+          id: string
+          message: string
+          organization_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "daily_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_goals_with_parent: {
+        Args: { _org_id: string }
+        Returns: {
+          assigned_to: string | null
+          created_at: string
+          current_value: number | null
+          id: string
+          metric: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          priority: string
+          scope: string
+          status: string
+          target_unit_ids: string[] | null
+          target_value: number
+          team_id: string | null
+          title: string
+          type: string
+          unit_org_id: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "goals"
           isOneToOne: false
           isSetofReturn: true
         }

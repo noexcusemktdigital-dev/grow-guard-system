@@ -8,9 +8,11 @@ export function useContractTemplates() {
   return useQuery({
     queryKey: ["contract-templates", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("contract_templates").select("*").eq("organization_id", orgId!).order("name");
+      const { data, error } = await supabase.rpc("get_contract_templates_with_parent", {
+        _org_id: orgId!,
+      });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!orgId,
   });
@@ -21,9 +23,11 @@ export function useContracts() {
   return useQuery({
     queryKey: ["contracts", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("contracts").select("*").eq("organization_id", orgId!).order("created_at", { ascending: false });
+      const { data, error } = await supabase.rpc("get_contracts_for_unit", {
+        _org_id: orgId!,
+      });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!orgId,
   });
