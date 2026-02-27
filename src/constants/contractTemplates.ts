@@ -8,7 +8,7 @@ export interface DefaultTemplate {
   placeholders: { key: string; label: string; category: string; example: string }[];
 }
 
-const FRANCHISE_PLACEHOLDERS = [
+export const FRANCHISE_PLACEHOLDERS = [
   { key: "{{numero_contrato}}", label: "Nº do Contrato", category: "Contrato", example: "001" },
   { key: "{{franqueada_nome}}", label: "Nome Completo", category: "Franqueada", example: "Maria Silva" },
   { key: "{{franqueada_nacionalidade}}", label: "Nacionalidade", category: "Franqueada", example: "brasileira" },
@@ -48,7 +48,7 @@ export const SERVICE_PLACEHOLDERS = [
   { key: "{{data_assinatura}}", label: "Data da Assinatura", category: "Datas", example: "27 de fevereiro de 2026" },
 ];
 
-const FRANCHISE_CONTENT = `CONTRATO DE FRANQUIA EMPRESARIAL NOEXCUSE MARKETING DIGITAL N° {{numero_contrato}}
+export const FRANCHISE_CONTENT = `CONTRATO DE FRANQUIA EMPRESARIAL NOEXCUSE MARKETING DIGITAL N° {{numero_contrato}}
 
 I - QUALIFICAÇÃO DAS PARTES
 
