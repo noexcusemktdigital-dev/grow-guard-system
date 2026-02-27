@@ -3682,14 +3682,19 @@ export type Database = {
           asaas_customer_id: string | null
           city: string | null
           cnpj: string | null
+          company_size: string | null
           created_at: string
           email: string | null
+          founded_at: string | null
           id: string
+          legal_name: string | null
+          legal_nature: string | null
           logo_url: string | null
           name: string
           parent_org_id: string | null
           phone: string | null
           state: string | null
+          trade_name: string | null
           type: Database["public"]["Enums"]["org_type"]
           updated_at: string
         }
@@ -3699,14 +3704,19 @@ export type Database = {
           asaas_customer_id?: string | null
           city?: string | null
           cnpj?: string | null
+          company_size?: string | null
           created_at?: string
           email?: string | null
+          founded_at?: string | null
           id?: string
+          legal_name?: string | null
+          legal_nature?: string | null
           logo_url?: string | null
           name: string
           parent_org_id?: string | null
           phone?: string | null
           state?: string | null
+          trade_name?: string | null
           type?: Database["public"]["Enums"]["org_type"]
           updated_at?: string
         }
@@ -3716,14 +3726,19 @@ export type Database = {
           asaas_customer_id?: string | null
           city?: string | null
           cnpj?: string | null
+          company_size?: string | null
           created_at?: string
           email?: string | null
+          founded_at?: string | null
           id?: string
+          legal_name?: string | null
+          legal_nature?: string | null
           logo_url?: string | null
           name?: string
           parent_org_id?: string | null
           phone?: string | null
           state?: string | null
+          trade_name?: string | null
           type?: Database["public"]["Enums"]["org_type"]
           updated_at?: string
         }
