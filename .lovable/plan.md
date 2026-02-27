@@ -1,50 +1,94 @@
 
 
-## Plano: Agenda Franqueadora, Usuarios em Unidades e Implantacao
+## Plano: Vincular Marketing, Academy e Metas entre Franqueadora e Franqueados
 
-### 1. Agenda da Franqueadora — Views Semana, Mes e Dia
+### Problema Central
 
-A agenda da franqueadora (`src/pages/Agenda.tsx`) atualmente so tem view de Mes. O franqueado (`FranqueadoAgenda.tsx`) ja tem as 3 views implementadas (Month, Week, Day) com componentes `WeekView` e `DayView`.
-
-Alteracoes em `src/pages/Agenda.tsx`:
-- Adicionar state `viewMode` ("month" | "week" | "day")
-- Adicionar toggle de views no header (botoes Mes/Semana/Dia)
-- Copiar os componentes `WeekView` e `DayView` do `FranqueadoAgenda.tsx` (mesma logica de slots de hora 7h-22h)
-- Ajustar calculo de `startDate/endDate` para variar conforme `viewMode`
-- Adicionar funcoes `navigatePrev/navigateNext` com logica por view (subMonths/addMonths, subWeeks/addWeeks, subDays/addDays)
-- Manter todas as features existentes: sidebar de calendarios, Google Calendar, formulario de evento, visibilidade por unidade
+Os hooks `useMarketingFolders`, `useMarketingAssets` e `useAcademyModules` filtram por `organization_id` do usuario logado. Como franqueadora e franqueado sao organizacoes diferentes (vinculadas via `parent_org_id`), o franqueado nao ve os materiais nem modulos criados pela franqueadora.
 
 ---
 
-### 2. Unidades — Criar usuarios pela franqueadora
+### 1. Marketing da Franqueadora — Drive completo com upload
 
-Atualmente `UnidadeUsuariosReal.tsx` so lista membros. Nao tem botao para convidar/criar usuarios.
+A pagina `Marketing.tsx` da franqueadora esta basica (grid flat de assets). Precisa ter a **mesma estrutura de categorias** do `FranqueadoMateriais.tsx`:
 
-Alteracoes em `src/components/unidades/UnidadeUsuariosReal.tsx`:
-- Adicionar botao "Convidar Membro" no topo da tabela
-- Abrir Dialog com campos: Nome, Email, Role (franqueado/cliente_admin/cliente_user)
-- Ao confirmar, chamar a edge function `invite-user` passando `organization_id` = `unitOrgId`, `role` e dados do usuario
-- Exibir senha temporaria retornada no callback de sucesso
-- Invalidar query `unit-members` apos sucesso
+- **6 categorias**: Logos, Dia a Dia, Setup Inicial, Redes Sociais, Campanhas, Apresentacoes
+- **Navegacao por pastas** com breadcrumb
+- **Grid mensal** para Redes Sociais
+- **Filtros por tipo** (imagem, video, PDF, documento, apresentacao)
+- **Preview modal** de arquivos
+
+**Diferenca para o franqueado**: a franqueadora tem botoes de **criacao**:
+- "Nova Pasta" (com select de categoria)
+- "Upload de Arquivo" (upload para storage `marketing-assets` + insert na tabela)
+- "Excluir" / "Mover" assets e pastas
+
+Alteracoes em `src/pages/Marketing.tsx`: reescrever usando a mesma estrutura de categorias e navegacao do `FranqueadoMateriais.tsx`, adicionando funcionalidades de CRUD (criar pasta, upload de arquivo, excluir).
+
+Adicionar mutations no `src/hooks/useMarketing.ts`: `createFolder` (com `category`), `deleteFolder`, `deleteAsset`, `uploadAsset` (upload ao bucket `marketing-assets` + insert).
 
 ---
 
-### 3. Implantacao — Vincular a unidade, data de inicio, sem nome separado
+### 2. Franqueado ve materiais da Franqueadora — Hook com parent_org_id
 
-O formulario atual de "Nova Implantacao" pede nome manual, responsavel manual e data alvo. O correto e:
-- **Obrigatorio vincular a uma unidade** (select de unidades cadastradas)
-- **Nome da implantacao = nome da unidade** (automatico, sem campo separado)
-- **Data e de inicio** (nao "data alvo")
-- O responsavel pode ser puxado automaticamente da unidade
+Criar uma database function `get_parent_org_id` que retorna o `parent_org_id` da org do usuario:
 
-Alteracoes em `src/pages/Onboarding.tsx`:
-- No dialog "Nova Implantacao": remover campo "Nome da implantacao"
-- Tornar select de unidade **obrigatorio** (nao opcional)
-- Ao selecionar unidade, auto-preencher nome da implantacao com nome da unidade e responsavel com `manager_name`
-- Renomear campo "Data alvo" para "Data de inicio"
-- Ao criar, passar `name` = nome da unidade, `start_date` = data informada, `unit_org_id` = id da unidade
-- Na listagem de cards, mostrar data de inicio ao inves de data alvo como info principal
-- Adicionar campo `start_date` no insert do `createUnit` mutation (ja aceito pelo hook)
+```sql
+CREATE FUNCTION get_parent_org_id(_org_id uuid) RETURNS uuid
+```
+
+Criar hooks com logica de parent:
+- `useMarketingFoldersFromParent()` — busca pastas onde `organization_id` = parent_org_id da org do franqueado
+- `useMarketingAssetsFromParent()` — mesma logica para assets
+
+Alternativa mais simples: atualizar `useMarketingFolders` e `useMarketingAssets` para aceitar um parametro `sourceOrgId` opcional. No `FranqueadoMateriais.tsx`, buscar o `parent_org_id` e passar como source.
+
+**Implementacao escolhida**: criar RPC `get_marketing_data_org_id(_user_org_id uuid)` que retorna o `parent_org_id` se existir, senao retorna o proprio org_id. Usar isso nos hooks de marketing do franqueado.
+
+---
+
+### 3. Academy — Franqueadora gerencia, Franqueado consome
+
+O mesmo problema existe na Academy: modulos criados pela franqueadora ficam na org da franqueadora, franqueado nao ve.
+
+**Solucao**: mesmo padrao do marketing. Criar RPC `get_academy_source_org_id(_user_org_id uuid)` ou reutilizar o mesmo `get_parent_org_id`. Os hooks `useAcademyModules` e `useAcademyLessons` do franqueado passam a buscar pela org pai.
+
+A pagina `Academy.tsx` (franqueadora) ja tem abas de Gestao e Relatorios — manter. Adicionar na aba **Relatorios** visibilidade do progresso dos franqueados (buscar `academy_progress` de usuarios de orgs filhas).
+
+---
+
+### 4. Metas & Ranking — Plataforma funcional da Franqueadora
+
+A pagina `MetasRanking.tsx` esta vazia (so mostra empty state). Implementar conteudo real nas 5 abas:
+
+**Aba Dashboard**:
+- KPIs: total de metas ativas, % atingimento medio, unidades no target, campanhas ativas
+- Grafico de barras com atingimento por unidade (usando `rankings` table)
+
+**Aba Metas**:
+- Lista de metas existentes com status, periodo, valor alvo vs atual
+- Dialog "Nova Meta" com campos: titulo, tipo (faturamento/leads/contratos), valor alvo, periodo, escopo (rede/unidade), unidade (select de unidades se escopo = unidade)
+- Usar `useGoalMutations().createGoal` que ja existe
+
+**Aba Ranking**:
+- Tabela de ranking mensal por unidade (dados da tabela `rankings`)
+- Posicao, nome da unidade, pontuacao, variacao
+
+**Aba Campanhas**:
+- CRUD basico de campanhas (premiacoes) — pode usar a tabela `goals` com `scope = "campaign"`
+- Campos: nome, descricao, premio, periodo, meta
+
+**Aba Configuracao**:
+- Pesos das metricas para calculo do ranking (faturamento, leads, contratos)
+- Regras de premiacao
+
+---
+
+### 5. Vincular Metas com Unidades
+
+As metas ja tem `unit_org_id` na tabela `goals`. No dialog de nova meta, ao selecionar escopo "Por Unidade", mostrar select com unidades cadastradas (usando `useUnits`). Ao criar meta por unidade, preencher `unit_org_id`.
+
+O franqueado deve ver suas proprias metas. Criar/atualizar hook para o franqueado buscar metas onde `unit_org_id` = sua org_id.
 
 ---
 
@@ -52,13 +96,20 @@ Alteracoes em `src/pages/Onboarding.tsx`:
 
 | Arquivo | Acao |
 |---|---|
-| `src/pages/Agenda.tsx` | Reescrever: adicionar views Semana e Dia (copiar padrao do FranqueadoAgenda) |
-| `src/components/unidades/UnidadeUsuariosReal.tsx` | Editar: adicionar botao + dialog para convidar membro |
-| `src/pages/Onboarding.tsx` | Editar: vincular unidade obrigatoria, nome automatico, data de inicio |
+| Migration SQL | Criar functions `get_parent_org_id` e `get_marketing_source_org` |
+| `src/hooks/useMarketing.ts` | Editar: adicionar `sourceOrgId` nos hooks + mutations de upload/delete + `useParentOrgId` |
+| `src/pages/Marketing.tsx` | Reescrever: drive completo com categorias, pastas, upload, preview (mesmo layout do FranqueadoMateriais + CRUD) |
+| `src/pages/franqueado/FranqueadoMateriais.tsx` | Editar: buscar dados da org pai ao inves da propria org |
+| `src/hooks/useAcademy.ts` | Editar: modules e lessons buscam da org pai para franqueados |
+| `src/pages/MetasRanking.tsx` | Reescrever: implementar conteudo real nas 5 abas (dashboard, metas CRUD, ranking, campanhas, config) |
+| `src/hooks/useGoals.ts` | Editar: adicionar hook para metas por unidade |
 
 ### Sequencia
 
-1. Agenda (views semana/dia)
-2. Unidades (criar usuarios)
-3. Implantacao (vincular unidade + data inicio)
-
+1. Migration (function `get_parent_org_id`)
+2. Hook `useParentOrgId` + atualizar `useMarketing` com source org
+3. Reescrever `Marketing.tsx` (drive completo da franqueadora com CRUD)
+4. Atualizar `FranqueadoMateriais.tsx` (ler da org pai)
+5. Atualizar `useAcademy.ts` (modules/lessons da org pai para franqueados)
+6. Reescrever `MetasRanking.tsx` (5 abas funcionais com CRUD de metas)
+7. Vincular metas com unidades (select de unidade no dialog)
