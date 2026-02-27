@@ -184,7 +184,6 @@ Deno.serve(async (req) => {
 
       // Check if this is a subscription payment — update subscription status
       // Format: "orgId|sub|planId|modules"
-      const externalRef = payment.externalReference;
       if (externalRef && typeof externalRef === "string") {
         const parts = externalRef.split("|");
         if (parts.length >= 3 && parts[1] === "sub") {
