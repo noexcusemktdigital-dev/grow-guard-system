@@ -1,64 +1,40 @@
 
 
-# Unificar Entradas com Pagamentos Asaas
+# Puxar Todos os Pagamentos do Asaas (sem filtro por cliente)
 
-## Conceito
+## Problema Atual
 
-Remover a aba "Pagamentos Asaas" separada e integrar os pagamentos reais do Asaas diretamente na aba **Entradas**, criando uma visao unificada de todas as receitas — manuais e automaticas.
+A funcao `asaas-list-payments` filtra pagamentos por `customer` (ID do cliente Asaas de cada organizacao). Como nenhuma organizacao tem `asaas_customer_id` preenchido, o resultado e sempre vazio (`payments: []`).
 
-## Mudancas
+O que voce precisa e puxar **todos os pagamentos** da conta Asaas da NoExcuse, independente de qual cliente e — ou seja, listar tudo que foi cobrado/recebido no mes.
 
-### 1. Aba "Entradas" unificada (`FinanceiroControle.tsx`)
+## Solucao
 
-- **Remover** a aba "Pagamentos Asaas" (TabsTrigger + TabsContent)
-- **Combinar** na aba Entradas os dados de `revenues` (manuais) + `asaasPayments` (do Asaas) em uma unica lista
-- Cada linha tera uma coluna **Origem** com badge "Manual" ou "Asaas"
-- Pagamentos Asaas mostram: descricao do Asaas, valor, data de pagamento/vencimento, status real (CONFIRMED, PENDING, OVERDUE), e link de fatura
-- Entradas manuais continuam editaveis/excluiveis; entradas Asaas sao read-only
-- Botao "Atualizar Asaas" ao lado do "Nova Receita" para refetch dos dados
-- KPI de Receitas passa a somar manuais + Asaas (pagos)
+### 1. Edge Function `asaas-list-payments/index.ts`
 
-### 2. Formulario de Nova Receita com opcao Asaas
-
-- Adicionar um toggle/switch no dialog de Nova Receita: "Cobrar via Asaas?"
-- Se ativado, mostra campos para selecionar contrato ativo e metodo de pagamento (PIX/Boleto/Cartao)
-- Ao confirmar, chama `asaas-charge-client` e a cobranca aparece automaticamente na listagem via API do Asaas
-- Se desativado, funciona como hoje (entrada manual no banco)
-
-### 3. Limpeza de codigo
-
-- Remover imports e estado relacionados a aba Asaas separada (`TabsTrigger value="asaas"`, etc.)
-- Manter o hook `useAsaasNetworkPayments` — apenas muda onde os dados sao exibidos
-
-## Detalhes tecnicos
-
-### Mesclagem de dados na tabela Entradas
+Adicionar um modo `all: true` que busca todos os pagamentos da conta sem filtrar por customer:
 
 ```text
-Lista unificada = [
-  ...revenues.map(r => ({ ...r, source: "manual" })),
-  ...asaasPayments.map(p => ({
-    id: p.id,
-    description: p.description || p.orgName,
-    amount: p.value,
-    date: p.paymentDate || p.dueDate,
-    status: mapAsaasStatus(p.status),  // CONFIRMED/RECEIVED -> "paid", PENDING -> "pending"
-    category: "Asaas",
-    source: "asaas",
-    invoiceUrl: p.invoiceUrl,
-    billingType: p.billingType,
-    asaasStatus: p.status,
-  }))
-]
-// Ordenado por data desc
+Se body.all == true:
+  GET /payments?limit=100&offset=0&dateCreated[ge]=startDate&dateCreated[le]=endDate
+  (sem parametro customer — retorna TUDO da conta)
+Senao:
+  comportamento atual (filtra por customer)
 ```
 
-### Colunas da tabela
+Tambem buscar o nome do cliente no Asaas para cada pagamento (via campo `customer` retornado pela API) para exibir na tabela.
 
-| Descricao | Categoria | Valor | Origem | Status | Data | Acoes |
-|-----------|-----------|-------|--------|--------|------|-------|
-| texto     | badge     | R$    | Manual/Asaas | Recebido/Pendente | data | editar/excluir ou link fatura |
+### 2. Hook `useAsaasNetworkPayments` em `useClientPayments.ts`
 
-- Linhas Asaas: acoes = botao "Ver Fatura" (se disponivel)
-- Linhas manuais: acoes = editar + excluir (como hoje)
+Alterar a chamada para enviar `all: true` ao inves de `network: true`, removendo a necessidade de `asaas_customer_id` nas organizacoes.
+
+### 3. Nenhuma mudanca na UI
+
+A tabela de Entradas ja esta pronta para exibir os dados do Asaas. Apenas os dados estavam vazios. Com a correcao, os pagamentos reais vao aparecer automaticamente.
+
+## Detalhes Tecnicos
+
+A API do Asaas no endpoint `GET /payments` sem o parametro `customer` retorna todos os pagamentos da conta. Os filtros de data (`dateCreated[ge]` e `dateCreated[le]`) continuam funcionando normalmente.
+
+Para exibir o nome do cliente, a resposta da API ja inclui o campo `customer` (ID) em cada pagamento. Faremos um segundo request para buscar os nomes dos clientes unicos (`GET /customers/{id}`) e associar ao pagamento.
 
