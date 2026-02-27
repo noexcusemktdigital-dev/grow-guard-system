@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Mail, Plus, Copy, Check } from "lucide-react";
+import { Users, Mail, Plus, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,8 +28,7 @@ export function UnidadeUsuariosReal({ unitOrgId }: Props) {
   const [invEmail, setInvEmail] = useState("");
   const [invRole, setInvRole] = useState("cliente_user");
   const [inviting, setInviting] = useState(false);
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
 
   async function handleInvite() {
     if (!invEmail.trim() || !invName.trim()) { toast.error("Preencha nome e email"); return; }
@@ -41,12 +40,8 @@ export function UnidadeUsuariosReal({ unitOrgId }: Props) {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setTempPassword(data?.temp_password || null);
       queryClient.invalidateQueries({ queryKey: ["unit-members", unitOrgId] });
-      toast.success("Membro convidado com sucesso!");
-      if (!data?.temp_password) {
-        resetForm();
-      }
+      setInviteSuccess(true);
     } catch (e: any) {
       toast.error(e.message || "Erro ao convidar membro");
     }
@@ -56,15 +51,7 @@ export function UnidadeUsuariosReal({ unitOrgId }: Props) {
   function resetForm() {
     setInviteOpen(false);
     setInvName(""); setInvEmail(""); setInvRole("cliente_user");
-    setTempPassword(null); setCopied(false);
-  }
-
-  function copyPassword() {
-    if (tempPassword) {
-      navigator.clipboard.writeText(tempPassword);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    setInviteSuccess(false);
   }
 
   if (isLoading) return <Skeleton className="h-48 w-full" />;
@@ -133,18 +120,12 @@ export function UnidadeUsuariosReal({ unitOrgId }: Props) {
             <DialogDescription>O membro receberá acesso à unidade com a função selecionada.</DialogDescription>
           </DialogHeader>
 
-          {tempPassword ? (
+          {inviteSuccess ? (
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center space-y-3">
                 <Check className="w-8 h-8 text-emerald-600 mx-auto" />
-                <p className="text-sm font-medium">Membro criado com sucesso!</p>
-                <p className="text-xs text-muted-foreground">Compartilhe a senha temporária abaixo:</p>
-                <div className="flex items-center gap-2 justify-center">
-                  <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono select-all">{tempPassword}</code>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={copyPassword}>
-                    {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
+                <p className="text-sm font-medium">Convite enviado com sucesso!</p>
+                <p className="text-xs text-muted-foreground">O membro receberá um e-mail para definir sua senha e acessar o sistema.</p>
               </div>
               <DialogFooter>
                 <Button onClick={resetForm}>Fechar</Button>

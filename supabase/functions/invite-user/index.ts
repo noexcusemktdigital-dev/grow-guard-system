@@ -56,16 +56,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create user in auth
-    const password = crypto.randomUUID().slice(0, 12) + "A1!";
-    const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name: full_name || email.split("@")[0] },
+    // Invite user via email (Supabase sends the email automatically)
+    const redirectTo = Deno.env.get("SITE_URL") || supabaseUrl.replace(".supabase.co", ".supabase.co");
+    const { data: newUser, error: createErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
+      data: { full_name: full_name || email.split("@")[0] },
+      redirectTo,
     });
     if (createErr) {
-      // User might already exist
       if (createErr.message?.includes("already been registered")) {
         return new Response(JSON.stringify({ error: "Este e-mail já está cadastrado" }), {
           status: 409,
@@ -100,7 +97,7 @@ Deno.serve(async (req) => {
     console.log(`User invited: ${email} -> org ${organization_id} as ${validRole}`);
 
     return new Response(
-      JSON.stringify({ success: true, user_id: userId, temp_password: password }),
+      JSON.stringify({ success: true, user_id: userId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {

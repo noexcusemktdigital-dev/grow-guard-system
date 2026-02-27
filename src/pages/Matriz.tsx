@@ -58,7 +58,7 @@ export default function Matriz() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast({ title: "Membro convidado com sucesso!" });
+      toast({ title: "Convite enviado! O membro receberá um e-mail para definir sua senha." });
       setShowInvite(false);
       setInviteName(""); setInviteEmail(""); setInviteRole("admin");
       qc.invalidateQueries({ queryKey: ["org-members"] });
