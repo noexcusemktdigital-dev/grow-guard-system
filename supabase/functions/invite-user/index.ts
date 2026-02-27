@@ -47,8 +47,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify caller is member of the org
-    const { data: isMember } = await adminClient.rpc("is_member_of_org", {
+    // Verify caller is member of the org (or parent org for franqueadora)
+    const { data: isMember } = await adminClient.rpc("is_member_or_parent_of_org", {
       _user_id: callerId,
       _org_id: organization_id,
     });

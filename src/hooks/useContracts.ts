@@ -29,14 +29,36 @@ export function useContracts() {
   });
 }
 
+export function useNetworkContracts() {
+  const { data: orgId } = useUserOrgId();
+  return useQuery({
+    queryKey: ["network-contracts", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_network_contracts", { _org_id: orgId! });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!orgId,
+  });
+}
+
 export function useContractMutations() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
   const { user } = useAuth();
 
   const createTemplate = useMutation({
-    mutationFn: async (t: { name: string; content?: string; variables?: any[] }) => {
+    mutationFn: async (t: { name: string; content?: string; variables?: any[]; template_type?: string; description?: string }) => {
       const { data, error } = await supabase.from("contract_templates").insert({ ...t, organization_id: orgId! }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-templates"] }),
+  });
+
+  const updateTemplate = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { data, error } = await supabase.from("contract_templates").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -62,12 +84,18 @@ export function useContractMutations() {
       start_date?: string;
       end_date?: string;
       payment_day?: number;
+      contract_type?: string;
+      owner_type?: string;
+      unit_org_id?: string;
     }) => {
       const { data, error } = await supabase.from("contracts").insert({ ...c, organization_id: orgId!, created_by: user?.id }).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["contracts"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      qc.invalidateQueries({ queryKey: ["network-contracts"] });
+    },
   });
 
   const updateContract = useMutation({
@@ -76,8 +104,11 @@ export function useContractMutations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["contracts"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      qc.invalidateQueries({ queryKey: ["network-contracts"] });
+    },
   });
 
-  return { createTemplate, createContract, updateContract };
+  return { createTemplate, updateTemplate, createContract, updateContract };
 }

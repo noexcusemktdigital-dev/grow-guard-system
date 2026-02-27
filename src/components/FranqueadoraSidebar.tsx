@@ -47,21 +47,19 @@ const adminSection: SidebarItem[] = [
   {
     label: "Contratos", icon: FileText, path: "/franqueadora/contratos",
     children: [
-      { label: "Criar Contratos", icon: FilePlus, path: "/franqueadora/contratos/criar" },
-      { label: "Gerenciamento", icon: FileText, path: "/franqueadora/contratos" },
       { label: "Templates", icon: Copy, path: "/franqueadora/contratos/templates" },
-      { label: "Configurações", icon: Settings, path: "/franqueadora/contratos/configuracoes" },
+      { label: "Criar Contrato", icon: FilePlus, path: "/franqueadora/contratos/criar" },
+      { label: "Rede", icon: Building2, path: "/franqueadora/contratos" },
     ],
   },
   {
     label: "Financeiro", icon: DollarSign, path: "/franqueadora/financeiro",
     children: [
       { label: "Dashboard", icon: BarChart3, path: "/franqueadora/financeiro" },
-      { label: "Despesas", icon: CreditCard, path: "/franqueadora/financeiro/despesas" },
       { label: "Receitas", icon: Receipt, path: "/franqueadora/financeiro/receitas" },
+      { label: "Despesas", icon: CreditCard, path: "/franqueadora/financeiro/despesas" },
       { label: "Repasse", icon: ArrowRightLeft, path: "/franqueadora/financeiro/repasse" },
       { label: "Fechamentos", icon: FileSpreadsheet, path: "/franqueadora/financeiro/fechamentos" },
-      { label: "Configurações", icon: Settings, path: "/franqueadora/financeiro/configuracoes" },
     ],
   },
   { label: "Matriz", icon: Shield, path: "/franqueadora/matriz" },

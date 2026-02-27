@@ -1290,30 +1290,36 @@ export type Database = {
         Row: {
           content: string | null
           created_at: string
+          description: string | null
           id: string
           is_active: boolean | null
           name: string
           organization_id: string
+          template_type: string | null
           updated_at: string
           variables: Json | null
         }
         Insert: {
           content?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           is_active?: boolean | null
           name: string
           organization_id: string
+          template_type?: string | null
           updated_at?: string
           variables?: Json | null
         }
         Update: {
           content?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           organization_id?: string
+          template_type?: string | null
           updated_at?: string
           variables?: Json | null
         }
@@ -1333,6 +1339,7 @@ export type Database = {
           client_document: string | null
           client_phone: string | null
           content: string | null
+          contract_type: string | null
           created_at: string
           created_by: string | null
           duration_months: number | null
@@ -1341,6 +1348,7 @@ export type Database = {
           lead_id: string | null
           monthly_value: number | null
           organization_id: string
+          owner_type: string | null
           payment_day: number | null
           service_description: string | null
           signed_at: string | null
@@ -1351,6 +1359,7 @@ export type Database = {
           template_id: string | null
           title: string
           total_value: number | null
+          unit_org_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1358,6 +1367,7 @@ export type Database = {
           client_document?: string | null
           client_phone?: string | null
           content?: string | null
+          contract_type?: string | null
           created_at?: string
           created_by?: string | null
           duration_months?: number | null
@@ -1366,6 +1376,7 @@ export type Database = {
           lead_id?: string | null
           monthly_value?: number | null
           organization_id: string
+          owner_type?: string | null
           payment_day?: number | null
           service_description?: string | null
           signed_at?: string | null
@@ -1376,6 +1387,7 @@ export type Database = {
           template_id?: string | null
           title: string
           total_value?: number | null
+          unit_org_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1383,6 +1395,7 @@ export type Database = {
           client_document?: string | null
           client_phone?: string | null
           content?: string | null
+          contract_type?: string | null
           created_at?: string
           created_by?: string | null
           duration_months?: number | null
@@ -1391,6 +1404,7 @@ export type Database = {
           lead_id?: string | null
           monthly_value?: number | null
           organization_id?: string
+          owner_type?: string | null
           payment_day?: number | null
           service_description?: string | null
           signed_at?: string | null
@@ -1401,6 +1415,7 @@ export type Database = {
           template_id?: string | null
           title?: string
           total_value?: number | null
+          unit_org_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1423,6 +1438,13 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_unit_org_id_fkey"
+            columns: ["unit_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -3530,6 +3552,7 @@ export type Database = {
           id: string
           name: string
           organization_id: string
+          responsible: string | null
           start_date: string | null
           status: string
           target_date: string | null
@@ -3542,6 +3565,7 @@ export type Database = {
           id?: string
           name: string
           organization_id: string
+          responsible?: string | null
           start_date?: string | null
           status?: string
           target_date?: string | null
@@ -3554,6 +3578,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string
+          responsible?: string | null
           start_date?: string | null
           status?: string
           target_date?: string | null
@@ -4622,6 +4647,35 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_network_contracts: {
+        Args: { _org_id: string }
+        Returns: {
+          client_address: string
+          client_document: string
+          client_phone: string
+          content: string
+          contract_type: string
+          created_at: string
+          duration_months: number
+          end_date: string
+          id: string
+          monthly_value: number
+          org_name: string
+          organization_id: string
+          owner_type: string
+          payment_day: number
+          service_description: string
+          signer_email: string
+          signer_name: string
+          start_date: string
+          status: string
+          template_id: string
+          title: string
+          total_value: number
+          unit_org_id: string
+          updated_at: string
+        }[]
+      }
       get_network_tickets: {
         Args: { _parent_org_id: string }
         Returns: {
@@ -4655,6 +4709,10 @@ export type Database = {
         Returns: boolean
       }
       is_member_of_org: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_member_or_parent_of_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
