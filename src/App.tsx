@@ -17,15 +17,12 @@ import { FranqueadoraLayout } from "./components/FranqueadoraLayout";
 import { FranqueadoLayout } from "./components/FranqueadoLayout";
 import { ClienteLayout } from "./components/ClienteLayout";
 import FinanceiroDashboard from "./pages/FinanceiroDashboard";
-import FinanceiroConfiguracoes from "./pages/FinanceiroConfiguracoes";
-import FinanceiroDespesas from "./pages/FinanceiroDespesas";
-import FinanceiroReceitas from "./pages/FinanceiroReceitas";
+import FinanceiroControle from "./pages/FinanceiroControle";
 import FinanceiroRepasse from "./pages/FinanceiroRepasse";
 import FinanceiroFechamentos from "./pages/FinanceiroFechamentos";
 import ContratosGerenciamento from "./pages/ContratosGerenciamento";
 import ContratosGerador from "./pages/ContratosGerador";
 import ContratosTemplates from "./pages/ContratosTemplates";
-import ContratosConfiguracoes from "./pages/ContratosConfiguracoes";
 import Marketing from "./pages/Marketing";
 import Academy from "./pages/Academy";
 import MetasRanking from "./pages/MetasRanking";
@@ -106,15 +103,12 @@ const App = () => (
                 <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
                 <Route path="dashboard" element={<Home />} />
                 <Route path="financeiro" element={<FinanceiroDashboard />} />
-                <Route path="financeiro/despesas" element={<FinanceiroDespesas />} />
-                <Route path="financeiro/receitas" element={<FinanceiroReceitas />} />
+                <Route path="financeiro/controle" element={<FinanceiroControle />} />
                 <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
                 <Route path="financeiro/fechamentos" element={<FinanceiroFechamentos />} />
-                <Route path="financeiro/configuracoes" element={<FinanceiroConfiguracoes />} />
                 <Route path="contratos" element={<ContratosGerenciamento />} />
                 <Route path="contratos/criar" element={<ContratosGerador />} />
                 <Route path="contratos/templates" element={<ContratosTemplates />} />
-                <Route path="contratos/configuracoes" element={<ContratosConfiguracoes />} />
                 <Route path="marketing" element={<Marketing />} />
                 <Route path="treinamentos" element={<Academy />} />
                 <Route path="metas" element={<MetasRanking />} />
