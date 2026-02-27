@@ -1126,6 +1126,72 @@ export type Database = {
           },
         ]
       }
+      client_payments: {
+        Row: {
+          amount: number
+          asaas_customer_id: string | null
+          asaas_payment_id: string | null
+          billing_type: string
+          contract_id: string
+          created_at: string
+          franchisee_share: number
+          id: string
+          invoice_url: string | null
+          month: string
+          organization_id: string
+          paid_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
+          billing_type?: string
+          contract_id: string
+          created_at?: string
+          franchisee_share?: number
+          id?: string
+          invoice_url?: string | null
+          month: string
+          organization_id: string
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
+          billing_type?: string
+          contract_id?: string
+          created_at?: string
+          franchisee_share?: number
+          id?: string
+          invoice_url?: string | null
+          month?: string
+          organization_id?: string
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_payments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_scripts: {
         Row: {
           category: string | null

@@ -87,5 +87,11 @@ verify_jwt = false
 [functions.generate-traffic-strategy]
 verify_jwt = false
 
+[functions.asaas-charge-client]
+verify_jwt = false
+
+[functions.asaas-charge-system-fee]
+verify_jwt = false
+
 [functions.generate-template-layout]
 verify_jwt = false

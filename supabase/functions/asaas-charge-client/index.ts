@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api-sandbox.asaas.com/v3";
-const SYSTEM_FEE = 250;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -18,59 +17,39 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Validate auth
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userError } = await userClient.auth.getUser();
-    if (userError || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { organization_id, contract_id, billing_type } = await req.json();
 
-    const { organization_id, billing_type } = await req.json();
-
-    if (!organization_id) {
-      return new Response(JSON.stringify({ error: "organization_id is required" }), {
+    if (!organization_id || !contract_id) {
+      return new Response(JSON.stringify({ error: "organization_id and contract_id are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const billingType = billing_type || "BOLETO";
+    const billingType = billing_type || "PIX";
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-    // Check if already paid/pending for this month
+    // Check if already exists for this month/contract
     const { data: existing } = await adminClient
-      .from("franchisee_system_payments")
+      .from("client_payments")
       .select("id, status, invoice_url, asaas_payment_id")
       .eq("organization_id", organization_id)
+      .eq("contract_id", contract_id)
       .eq("month", month)
       .maybeSingle();
 
     if (existing && existing.status === "paid") {
-      return new Response(JSON.stringify({ error: "already_paid", message: "Sistema já pago neste mês" }), {
+      return new Response(JSON.stringify({ error: "already_paid", message: "Já pago neste mês" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // If pending charge exists, return its data
+    // If pending, return existing data
     if (existing && existing.status === "pending" && existing.asaas_payment_id) {
-      // Fetch PIX data if needed
       let pixData = null;
       if (billingType === "PIX") {
         const pixRes = await fetch(`${ASAAS_BASE}/payments/${existing.asaas_payment_id}/pixQrCode`, {
@@ -78,55 +57,72 @@ Deno.serve(async (req) => {
         });
         if (pixRes.ok) pixData = await pixRes.json();
       }
-
       return new Response(JSON.stringify({
-        success: true,
-        reused: true,
+        success: true, reused: true,
         payment_id: existing.asaas_payment_id,
         invoice_url: existing.invoice_url,
         pix_qr_code: pixData?.encodedImage || null,
         pix_copy_paste: pixData?.payload || null,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Get org for Asaas customer
-    const { data: org } = await adminClient
-      .from("organizations")
-      .select("id, name, asaas_customer_id, cnpj, email")
-      .eq("id", organization_id)
+    // Get contract details
+    const { data: contract } = await adminClient
+      .from("contracts")
+      .select("id, title, signer_name, signer_email, client_document, monthly_value")
+      .eq("id", contract_id)
       .single();
 
-    if (!org) {
-      return new Response(JSON.stringify({ error: "Organization not found" }), {
+    if (!contract) {
+      return new Response(JSON.stringify({ error: "Contract not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Auto-provision Asaas customer if needed
-    let customerId = org.asaas_customer_id;
-    if (!customerId) {
-      const customerRes = await fetch(`${ASAAS_BASE}/customers`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", access_token: asaasApiKey },
-        body: JSON.stringify({
-          name: org.name,
-          cpfCnpj: org.cnpj || "00000000000",
-          email: org.email || undefined,
-        }),
+    const amount = Number(contract.monthly_value || 0);
+    if (amount <= 0) {
+      return new Response(JSON.stringify({ error: "Contract has no monthly value" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      const customerData = await customerRes.json();
-      if (!customerRes.ok) {
-        return new Response(JSON.stringify({ error: "Failed to create Asaas customer", details: customerData }), {
+    }
+
+    // Create or find Asaas customer for the client
+    const clientName = contract.signer_name || "Cliente";
+    const clientDoc = contract.client_document || "00000000000";
+    const clientEmail = contract.signer_email || undefined;
+
+    const customerRes = await fetch(`${ASAAS_BASE}/customers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", access_token: asaasApiKey },
+      body: JSON.stringify({
+        name: clientName,
+        cpfCnpj: clientDoc,
+        email: clientEmail,
+        externalReference: `client_of_${organization_id}`,
+      }),
+    });
+    const customerData = await customerRes.json();
+    // If customer already exists, Asaas returns the existing one
+    const customerId = customerData.id || customerData.errors?.[0]?.description?.match(/cus_\w+/)?.[0];
+
+    if (!customerId) {
+      // Try to find existing customer by document
+      const searchRes = await fetch(`${ASAAS_BASE}/customers?cpfCnpj=${clientDoc}`, {
+        headers: { access_token: asaasApiKey },
+      });
+      const searchData = await searchRes.json();
+      const foundCustomer = searchData?.data?.[0]?.id;
+      if (!foundCustomer) {
+        return new Response(JSON.stringify({ error: "Failed to create/find Asaas customer", details: customerData }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      customerId = customerData.id;
-      await adminClient.from("organizations").update({ asaas_customer_id: customerId }).eq("id", organization_id);
     }
+
+    const finalCustomerId = customerId || customerData.id;
 
     // Due date: 5 days from now
     const dueDate = new Date();
@@ -138,12 +134,12 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { "Content-Type": "application/json", access_token: asaasApiKey },
       body: JSON.stringify({
-        customer: customerId,
+        customer: finalCustomerId,
         billingType,
-        value: SYSTEM_FEE,
+        value: amount,
         dueDate: dueDateStr,
-        description: `Mensalidade Sistema NOE — ${month}`,
-        externalReference: `system_fee|${organization_id}|${month}`,
+        description: `Mensalidade ${contract.title} — ${month}`,
+        externalReference: `client_payment|${organization_id}|${contract_id}|${month}`,
       }),
     });
 
@@ -165,28 +161,34 @@ Deno.serve(async (req) => {
       if (pixRes.ok) pixData = await pixRes.json();
     }
 
+    const franchiseeShare = amount * 0.2;
+
     // Upsert payment record
     if (existing) {
-      await adminClient.from("franchisee_system_payments").update({
+      await adminClient.from("client_payments").update({
         asaas_payment_id: chargeData.id,
+        asaas_customer_id: finalCustomerId,
         invoice_url: chargeData.invoiceUrl || null,
         billing_type: billingType,
         status: "pending",
         updated_at: new Date().toISOString(),
       }).eq("id", existing.id);
     } else {
-      await adminClient.from("franchisee_system_payments").insert({
+      await adminClient.from("client_payments").insert({
         organization_id,
+        contract_id,
         month,
-        amount: SYSTEM_FEE,
+        amount,
+        franchisee_share: franchiseeShare,
         billing_type: billingType,
         asaas_payment_id: chargeData.id,
+        asaas_customer_id: finalCustomerId,
         invoice_url: chargeData.invoiceUrl || null,
         status: "pending",
       });
     }
 
-    console.log(`System fee charge created for org ${organization_id}: ${chargeData.id}`);
+    console.log(`Client charge created for contract ${contract_id}: ${chargeData.id}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -195,12 +197,11 @@ Deno.serve(async (req) => {
       pix_qr_code: pixData?.encodedImage || null,
       pix_copy_paste: pixData?.payload || null,
       month,
-      amount: SYSTEM_FEE,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      amount,
+      franchisee_share: franchiseeShare,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
-    console.error("asaas-charge-system-fee error:", err);
+    console.error("asaas-charge-client error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
