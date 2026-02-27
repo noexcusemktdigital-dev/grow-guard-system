@@ -38,6 +38,7 @@ import Agenda from "./pages/Agenda";
 import Home from "./pages/Home";
 import Matriz from "./pages/Matriz";
 import SaasDashboard from "./pages/franqueadora/SaasDashboard";
+import FranqueadoraPropostas from "./pages/franqueadora/FranqueadoraPropostas";
 // Franqueado pages
 import FranqueadoDashboard from "./pages/franqueado/FranqueadoDashboard";
 import FranqueadoAgenda from "./pages/franqueado/FranqueadoAgenda";
@@ -125,6 +126,7 @@ const App = () => (
                 <Route path="agenda" element={<Agenda />} />
                 <Route path="matriz" element={<Matriz />} />
                 <Route path="saas" element={<SaasDashboard />} />
+                <Route path="propostas" element={<FranqueadoraPropostas />} />
               </Route>
 
               {/* Franqueado */}
