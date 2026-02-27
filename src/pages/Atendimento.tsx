@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { useSupportTickets, useSupportTicketMutations } from "@/hooks/useSupportTickets";
+import { useSupportTicketMutations } from "@/hooks/useSupportTickets";
+import { useSupportTicketsNetwork, type NetworkTicket } from "@/hooks/useSupportTicketsNetwork";
 import { AtendimentoConfig } from "@/components/atendimento/AtendimentoConfig";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,7 +44,7 @@ export default function Atendimento() {
   const [newCategory, setNewCategory] = useState("");
   const [replyText, setReplyText] = useState("");
 
-  const { data: tickets, isLoading } = useSupportTickets();
+  const { data: tickets, isLoading } = useSupportTicketsNetwork();
   const { createTicket, updateTicket } = useSupportTicketMutations();
 
   const selected = (tickets ?? []).find(t => t.id === selectedId);
@@ -169,6 +170,9 @@ export default function Atendimento() {
                       {statusTickets.map(t => (
                         <Card key={t.id} className="p-3 cursor-pointer hover:shadow-sm" onClick={() => { setSelectedId(t.id); setView("detail"); }}>
                           <p className="text-sm font-medium">{t.title}</p>
+                          {"org_name" in t && (t as any).org_name && (
+                            <p className="text-[10px] text-primary font-medium mt-0.5">{(t as any).org_name}</p>
+                          )}
                           <div className="flex items-center justify-between mt-1">
                             <Badge variant="outline" className="text-[9px]">{PRIORITIES.find(p => p.key === t.priority)?.label || t.priority}</Badge>
                             <span className="text-[10px] text-muted-foreground">{new Date(t.created_at).toLocaleDateString("pt-BR")}</span>
@@ -186,6 +190,7 @@ export default function Atendimento() {
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-muted/50">
                   <th className="text-left py-3 px-4">Título</th>
+                  <th className="text-left py-3 px-4">Unidade</th>
                   <th className="text-left py-3 px-4">Status</th>
                   <th className="text-left py-3 px-4">Prioridade</th>
                   <th className="text-left py-3 px-4">Categoria</th>
@@ -195,6 +200,7 @@ export default function Atendimento() {
                   {tickets!.map(t => (
                     <tr key={t.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setSelectedId(t.id); setView("detail"); }}>
                       <td className="py-3 px-4 font-medium">{t.title}</td>
+                      <td className="py-3 px-4 text-xs text-primary">{"org_name" in t ? (t as any).org_name : "—"}</td>
                       <td className="py-3 px-4"><Badge className={`${STATUSES.find(s => s.key === t.status)?.color || ""} border-0 text-[10px]`}>{STATUSES.find(s => s.key === t.status)?.label || t.status}</Badge></td>
                       <td className="py-3 px-4">{PRIORITIES.find(p => p.key === t.priority)?.label || t.priority}</td>
                       <td className="py-3 px-4 text-muted-foreground">{t.category || "—"}</td>

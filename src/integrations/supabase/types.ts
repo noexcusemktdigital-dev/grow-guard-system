@@ -4597,6 +4597,50 @@ export type Database = {
         Returns: number
       }
       generate_org_api_key: { Args: { _org_id: string }; Returns: string }
+      get_announcements_with_parent: {
+        Args: { _org_id: string }
+        Returns: {
+          attachment_url: string | null
+          content: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          organization_id: string
+          priority: string
+          published_at: string | null
+          target_roles: string[] | null
+          target_unit_ids: string[] | null
+          title: string
+          type: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "announcements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_network_tickets: {
+        Args: { _parent_org_id: string }
+        Returns: {
+          assigned_to: string
+          category: string
+          closed_at: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          org_name: string
+          organization_id: string
+          priority: string
+          status: string
+          subcategory: string
+          title: string
+          updated_at: string
+        }[]
+      }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
