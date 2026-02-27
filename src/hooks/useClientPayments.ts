@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
 export interface ClientPayment {
   id: string;
@@ -79,5 +80,41 @@ export function useChargeClient() {
         toast.error(msg);
       }
     },
+  });
+}
+
+export interface AsaasPayment {
+  id: string;
+  value: number;
+  status: string;
+  dueDate: string | null;
+  paymentDate: string | null;
+  billingType: string;
+  description: string | null;
+  invoiceUrl: string | null;
+  bankSlipUrl: string | null;
+  pixQrCode: string | null;
+  orgName: string;
+  orgId: string;
+}
+
+export function useAsaasNetworkPayments() {
+  const { data: orgId } = useUserOrgId();
+  const now = new Date();
+  const start = format(startOfMonth(now), "yyyy-MM-dd");
+  const end = format(endOfMonth(now), "yyyy-MM-dd");
+
+  return useQuery({
+    queryKey: ["asaas-network-payments", orgId, start],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("asaas-list-payments", {
+        body: { organization_id: orgId, network: true, startDate: start, endDate: end },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return (data?.payments || []) as AsaasPayment[];
+    },
+    enabled: !!orgId,
+    staleTime: 1000 * 60 * 2,
   });
 }

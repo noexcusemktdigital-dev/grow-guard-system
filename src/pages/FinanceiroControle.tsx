@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Inbox, Search, CreditCard, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Inbox, Search, CreditCard, Copy, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinanceRevenues, useFinanceExpenses, useFinanceMutations } from "@/hooks/useFinance";
 import { useNetworkContracts } from "@/hooks/useContracts";
-import { useChargeClient } from "@/hooks/useClientPayments";
+import { useChargeClient, useAsaasNetworkPayments, type AsaasPayment } from "@/hooks/useClientPayments";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 
@@ -27,6 +27,7 @@ export default function FinanceiroControle() {
   const { data: contracts, isLoading: lc } = useNetworkContracts();
   const { createRevenue, updateRevenue, deleteRevenue, createExpense, updateExpense, deleteExpense } = useFinanceMutations();
   const chargeClient = useChargeClient();
+  const { data: asaasPayments, isLoading: la, refetch: refetchAsaas } = useAsaasNetworkPayments();
 
   const [search, setSearch] = useState("");
   // Revenue dialog
@@ -164,6 +165,7 @@ export default function FinanceiroControle() {
           <TabsTrigger value="entradas">Entradas ({(revenues ?? []).length})</TabsTrigger>
           <TabsTrigger value="saidas">Saídas ({(expenses ?? []).length})</TabsTrigger>
           <TabsTrigger value="contratos">Contratos Ativos ({activeContracts.length})</TabsTrigger>
+          <TabsTrigger value="asaas">Pagamentos Asaas</TabsTrigger>
         </TabsList>
 
         {/* === ENTRADAS === */}
@@ -304,6 +306,71 @@ export default function FinanceiroControle() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+        {/* === PAGAMENTOS ASAAS === */}
+        <TabsContent value="asaas" className="space-y-4">
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => refetchAsaas()} disabled={la}>
+              <RefreshCw className={`w-4 h-4 ${la ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
+          </div>
+          {la ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : !asaasPayments || asaasPayments.length === 0 ? (
+            <div className="flex flex-col items-center py-12 text-center">
+              <Inbox className="w-10 h-10 text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground">Nenhum pagamento encontrado no Asaas este mês.</p>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b bg-muted/50">
+                  <th className="text-left py-3 px-4 font-medium">Cliente</th>
+                  <th className="text-right py-3 px-4 font-medium">Valor</th>
+                  <th className="text-center py-3 px-4 font-medium">Vencimento</th>
+                  <th className="text-center py-3 px-4 font-medium">Pagamento</th>
+                  <th className="text-center py-3 px-4 font-medium">Método</th>
+                  <th className="text-center py-3 px-4 font-medium">Status</th>
+                  <th className="text-center py-3 px-4 font-medium">Fatura</th>
+                </tr></thead>
+                <tbody>
+                  {asaasPayments.map((p) => {
+                    const statusMap: Record<string, { label: string; cls: string }> = {
+                      CONFIRMED: { label: "Confirmado", cls: "bg-emerald-500/15 text-emerald-600" },
+                      RECEIVED: { label: "Recebido", cls: "bg-emerald-500/15 text-emerald-600" },
+                      PENDING: { label: "Pendente", cls: "bg-yellow-500/15 text-yellow-600" },
+                      OVERDUE: { label: "Vencido", cls: "bg-destructive/15 text-destructive" },
+                      REFUNDED: { label: "Estornado", cls: "bg-muted text-muted-foreground" },
+                      RECEIVED_IN_CASH: { label: "Recebido", cls: "bg-emerald-500/15 text-emerald-600" },
+                    };
+                    const st = statusMap[p.status] || { label: p.status, cls: "bg-muted text-muted-foreground" };
+                    return (
+                      <tr key={p.id} className="border-b hover:bg-muted/30">
+                        <td className="py-3 px-4 font-medium">{p.orgName}</td>
+                        <td className="py-3 px-4 text-right font-medium">{formatBRL(p.value)}</td>
+                        <td className="py-3 px-4 text-center text-muted-foreground">{p.dueDate ? new Date(p.dueDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                        <td className="py-3 px-4 text-center text-muted-foreground">{p.paymentDate ? new Date(p.paymentDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                        <td className="py-3 px-4 text-center"><Badge variant="outline" className="text-[10px]">{p.billingType}</Badge></td>
+                        <td className="py-3 px-4 text-center"><span className={`text-xs px-2 py-0.5 rounded ${st.cls}`}>{st.label}</span></td>
+                        <td className="py-3 px-4 text-center">
+                          {(p.invoiceUrl || p.bankSlipUrl) ? (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(p.invoiceUrl || p.bankSlipUrl!, "_blank")}>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </Button>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
