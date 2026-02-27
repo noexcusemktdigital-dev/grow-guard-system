@@ -133,9 +133,25 @@ async function downloadContractPdf(contract: any) {
 
 // ─── Service Contract Form ───
 
-function ServiceContractForm({ onSuccess }: { onSuccess: () => void }) {
+function ServiceContractForm({ onSuccess, initialProposalId }: { onSuccess: () => void; initialProposalId?: string }) {
   const { createContract } = useContractMutations();
+  const { data: proposals } = useCrmProposals();
   const [showPreview, setShowPreview] = useState(false);
+  const [selectedProposalId, setSelectedProposalId] = useState(initialProposalId || "");
+
+  const acceptedProposals = (proposals ?? []).filter(p => p.status === "accepted" || p.status === "draft" || p.status === "sent");
+  const selectedProposal = acceptedProposals.find(p => p.id === selectedProposalId);
+
+  // Derive services, values, and duration from the proposal
+  const proposalItems = selectedProposal ? (Array.isArray(selectedProposal.items) ? selectedProposal.items : []) : [];
+  const proposalContent = selectedProposal?.content || {};
+  const proposalServicos = proposalItems.map((it: any) => `${it.name}: ${it.quantity || 1} unidade(s)`).join(";\n") || "";
+  const proposalPrazo = proposalContent.duration ? String(proposalContent.duration) : "";
+  const proposalValorTotal = selectedProposal?.value ? Number(selectedProposal.value) : 0;
+  const proposalPayment = proposalContent.payment_option || selectedProposal?.payment_terms || "";
+
+  // Compute monthly value from proposal
+  const proposalMonthly = proposalPrazo && Number(proposalPrazo) > 0 ? proposalValorTotal / Number(proposalPrazo) : proposalValorTotal;
 
   const [form, setForm] = useState<Record<string, string>>({
     contratante_razao_social: "",
@@ -155,13 +171,28 @@ function ServiceContractForm({ onSuccess }: { onSuccess: () => void }) {
     data_assinatura: "",
   });
 
+  // Auto-fill from proposal
+  useEffect(() => {
+    if (selectedProposal) {
+      setForm(prev => ({
+        ...prev,
+        servicos_descricao: proposalServicos || prev.servicos_descricao,
+        prazo_meses: proposalPrazo || prev.prazo_meses,
+        valor_mensal: proposalMonthly ? proposalMonthly.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : prev.valor_mensal,
+        valor_setup: proposalContent.setup_value ? Number(proposalContent.setup_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : prev.valor_setup,
+        dia_vencimento: proposalContent.payment_day ? String(proposalContent.payment_day) : prev.dia_vencimento,
+      }));
+    }
+  }, [selectedProposalId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const set = (key: string, val: string) => setForm(prev => ({ ...prev, [key]: val }));
   const previewContent = useMemo(() => buildContent(form, "assessoria"), [form]);
+  const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const handleSave = (status: string) => {
+    if (!selectedProposalId) return toast.error("Selecione uma proposta para gerar o contrato de prestação de serviço");
     if (!form.contratante_razao_social) return toast.error("Informe a Razão Social do contratante");
     if (!form.contratante_cnpj) return toast.error("Informe o CNPJ do contratante");
-    if (!form.prazo_meses) return toast.error("Selecione o prazo do contrato");
 
     const content = buildContent(form, "assessoria");
     const monthlyValue = parseFloat(form.valor_mensal.replace(/\./g, "").replace(",", ".")) || 0;
@@ -182,6 +213,7 @@ function ServiceContractForm({ onSuccess }: { onSuccess: () => void }) {
         status,
         contract_type: "assessoria",
         owner_type: "matriz",
+        lead_id: selectedProposal?.lead_id || undefined,
       },
       {
         onSuccess: () => {
@@ -194,6 +226,64 @@ function ServiceContractForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="space-y-6">
+      {/* Proposta Vinculada (obrigatória) */}
+      <Card className="glass-card border-primary/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Link2 className="w-4 h-4" /> Proposta Vinculada *
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Selecione a Proposta *</Label>
+            <Select value={selectedProposalId} onValueChange={setSelectedProposalId}>
+              <SelectTrigger><SelectValue placeholder="Selecione uma proposta" /></SelectTrigger>
+              <SelectContent>
+                {acceptedProposals.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.title} — {formatBRL(Number(p.value || 0))} ({p.status === "accepted" ? "Aceita" : p.status === "sent" ? "Enviada" : "Rascunho"})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedProposal && (
+            <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dados da Proposta</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Valor Total</p>
+                  <p className="font-bold text-foreground">{formatBRL(proposalValorTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Duração</p>
+                  <p className="font-medium text-foreground">{proposalPrazo ? `${proposalPrazo} meses` : "Não definido"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pagamento</p>
+                  <p className="font-medium text-foreground">{proposalPayment || "A definir"}</p>
+                </div>
+              </div>
+              {proposalItems.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Serviços</p>
+                  <ul className="text-xs space-y-0.5 text-foreground">
+                    {proposalItems.map((it: any, i: number) => (
+                      <li key={i}>• {it.name} — {it.quantity || 1}x — {formatBRL(Number(it.total || 0))}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!selectedProposalId && (
+            <p className="text-xs text-destructive">É necessário vincular uma proposta para gerar contratos de prestação de serviço. Crie uma proposta em Comercial → Propostas.</p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="glass-card border-primary/20">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -219,17 +309,18 @@ function ServiceContractForm({ onSuccess }: { onSuccess: () => void }) {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <FileSignature className="w-4 h-4" /> Serviços e Prazo
+            {selectedProposal && <Badge variant="outline" className="text-[10px] ml-2">Da proposta</Badge>}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>Serviços Contratados *</Label>
+            <Label>Serviços Contratados</Label>
             <Textarea value={form.servicos_descricao} onChange={e => set("servicos_descricao", e.target.value)}
               placeholder={"Artes: 04 unidades;\nVídeos: 04 unidades;\nProgramação: Meta;\nGestão de Tráfego Pago: Meta e Google;"} rows={4} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <Label>Prazo do Contrato *</Label>
+              <Label>Prazo do Contrato</Label>
               <Select value={form.prazo_meses} onValueChange={v => set("prazo_meses", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>{DURATION_OPTIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
@@ -244,6 +335,7 @@ function ServiceContractForm({ onSuccess }: { onSuccess: () => void }) {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <DollarSign className="w-4 h-4" /> Valores e Pagamento
+            {selectedProposal && <Badge variant="outline" className="text-[10px] ml-2">Da proposta</Badge>}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -252,7 +344,7 @@ function ServiceContractForm({ onSuccess }: { onSuccess: () => void }) {
             <div><Label>Setup por Extenso</Label><Input value={form.valor_setup_extenso} onChange={e => set("valor_setup_extenso", e.target.value)} placeholder="mil reais" /></div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div><Label>Valor Mensal (R$) *</Label><Input value={form.valor_mensal} onChange={e => set("valor_mensal", e.target.value)} placeholder="2.500,00" /></div>
+            <div><Label>Valor Mensal (R$)</Label><Input value={form.valor_mensal} onChange={e => set("valor_mensal", e.target.value)} placeholder="2.500,00" /></div>
             <div><Label>Mensal por Extenso</Label><Input value={form.valor_mensal_extenso} onChange={e => set("valor_mensal_extenso", e.target.value)} placeholder="dois mil e quinhentos reais" /></div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -282,8 +374,8 @@ function ServiceContractForm({ onSuccess }: { onSuccess: () => void }) {
       )}
 
       <div className="flex gap-3 justify-end">
-        <Button variant="outline" onClick={() => handleSave("draft")} disabled={createContract.isPending}>Salvar como Rascunho</Button>
-        <Button onClick={() => handleSave("active")} disabled={createContract.isPending}>Gerar Contrato</Button>
+        <Button variant="outline" onClick={() => handleSave("draft")} disabled={createContract.isPending || !selectedProposalId}>Salvar como Rascunho</Button>
+        <Button onClick={() => handleSave("active")} disabled={createContract.isPending || !selectedProposalId}>Gerar Contrato</Button>
       </div>
     </div>
   );
@@ -537,7 +629,7 @@ export default function ContratosGerador() {
   const proposalIdFromUrl = searchParams.get("proposal_id");
   const tabFromUrl = searchParams.get("tab");
   const [tab, setTab] = useState(tabFromUrl === "novo" ? "novo" : "lista");
-  const [contractType, setContractType] = useState(proposalIdFromUrl ? "franquia" : "assessoria");
+  const [contractType, setContractType] = useState("assessoria");
   const [statusFilter, setStatusFilter] = useState("all");
 
   if (isLoading) {
@@ -651,9 +743,9 @@ export default function ContratosGerador() {
           </div>
 
           {contractType === "assessoria" ? (
-            <ServiceContractForm onSuccess={() => setTab("lista")} />
+            <ServiceContractForm onSuccess={() => setTab("lista")} initialProposalId={proposalIdFromUrl || undefined} />
           ) : (
-            <FranchiseContractForm onSuccess={() => setTab("lista")} initialProposalId={proposalIdFromUrl || undefined} />
+            <FranchiseContractForm onSuccess={() => setTab("lista")} />
           )}
         </TabsContent>
       </Tabs>
