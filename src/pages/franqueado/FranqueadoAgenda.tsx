@@ -24,8 +24,10 @@ import {
   useGoogleCalendarSaveCredentials,
 } from "@/hooks/useGoogleCalendar";
 import {
-  addMonths, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-  eachDayOfInterval, isSameMonth, isSameDay, isToday, parseISO,
+  addMonths, subMonths, addWeeks, subWeeks, addDays, subDays,
+  format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay,
+  eachDayOfInterval, eachHourOfInterval, isSameMonth, isSameDay, isToday, parseISO,
+  getHours, getMinutes, differenceInMinutes,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -33,63 +35,42 @@ import { useSearchParams } from "react-router-dom";
 
 const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899"];
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7h-22h
+
+type ViewMode = "month" | "week" | "day";
 
 /* ───────── Google Setup Wizard ───────── */
 function GoogleSetupWizard({
-  open,
-  onOpenChange,
-  onComplete,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  onComplete: () => void;
-}) {
+  open, onOpenChange, onComplete,
+}: { open: boolean; onOpenChange: (o: boolean) => void; onComplete: () => void; }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const saveCredentials = useGoogleCalendarSaveCredentials();
   const connectGoogle = useGoogleCalendarConnect();
-
   const redirectUri = `${window.location.origin}/franqueado/agenda`;
 
   async function handleSaveAndConnect() {
-    if (!clientId.trim() || !clientSecret.trim()) {
-      toast.error("Preencha o Client ID e Client Secret");
-      return;
-    }
+    if (!clientId.trim() || !clientSecret.trim()) { toast.error("Preencha o Client ID e Client Secret"); return; }
     try {
       await saveCredentials.mutateAsync({ clientId: clientId.trim(), clientSecret: clientSecret.trim() });
       const url = await connectGoogle.mutateAsync(redirectUri);
       window.location.href = url;
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao salvar credenciais");
-    }
+    } catch (e: any) { toast.error(e.message || "Erro ao salvar credenciais"); }
   }
 
-  // Reset when opened
-  useEffect(() => {
-    if (open) { setStep(1); setClientId(""); setClientSecret(""); }
-  }, [open]);
+  useEffect(() => { if (open) { setStep(1); setClientId(""); setClientSecret(""); } }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-primary" />
-            Conectar Google Agenda
-          </DialogTitle>
-          <DialogDescription>
-            Configure suas credenciais do Google para sincronizar eventos.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2"><Globe className="w-5 h-5 text-primary" />Conectar Google Agenda</DialogTitle>
+          <DialogDescription>Configure suas credenciais do Google para sincronizar eventos.</DialogDescription>
         </DialogHeader>
-
         {step === 1 && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Siga os passos abaixo para criar suas credenciais OAuth no Google:
-            </p>
-
+            <p className="text-sm text-muted-foreground">Siga os passos abaixo para criar suas credenciais OAuth no Google:</p>
             <div className="space-y-3">
               {[
                 { n: 1, text: "Acesse o Google Cloud Console", link: "https://console.cloud.google.com", linkText: "Abrir Console" },
@@ -101,23 +82,12 @@ function GoogleSetupWizard({
                 { n: 7, text: "Copie o Client ID e Client Secret gerados" },
               ].map((item) => (
                 <Card key={item.n} className="p-3 flex items-start gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                    {item.n}
-                  </div>
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{item.n}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm">{item.text}</p>
-                    {item.code && (
-                      <code className="mt-1 block text-xs bg-muted px-2 py-1 rounded break-all select-all">
-                        {item.code}
-                      </code>
-                    )}
+                    {item.code && <code className="mt-1 block text-xs bg-muted px-2 py-1 rounded break-all select-all">{item.code}</code>}
                     {item.link && (
-                      <a
-                        href={item.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
-                      >
+                      <a href={item.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1">
                         {item.linkText} <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
@@ -125,54 +95,24 @@ function GoogleSetupWizard({
                 </Card>
               ))}
             </div>
-
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button onClick={() => setStep(2)} className="gap-1">
-                Já tenho as credenciais <ArrowRight className="w-4 h-4" />
-              </Button>
+              <Button onClick={() => setStep(2)} className="gap-1">Já tenho as credenciais <ArrowRight className="w-4 h-4" /></Button>
             </DialogFooter>
           </div>
         )}
-
         {step === 2 && (
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-muted/50 border border-border flex items-start gap-2">
               <Shield className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-muted-foreground">
-                Suas credenciais são armazenadas de forma segura e usadas apenas para conectar sua agenda pessoal.
-              </p>
+              <p className="text-xs text-muted-foreground">Suas credenciais são armazenadas de forma segura e usadas apenas para conectar sua agenda pessoal.</p>
             </div>
-
-            <div>
-              <Label>Client ID *</Label>
-              <Input
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                placeholder="123456789-xxxxx.apps.googleusercontent.com"
-                className="font-mono text-xs"
-              />
-            </div>
-            <div>
-              <Label>Client Secret *</Label>
-              <Input
-                type="password"
-                value={clientSecret}
-                onChange={(e) => setClientSecret(e.target.value)}
-                placeholder="GOCSPX-xxxxxxxxxxxxxxxx"
-                className="font-mono text-xs"
-              />
-            </div>
-
+            <div><Label>Client ID *</Label><Input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="123456789-xxxxx.apps.googleusercontent.com" className="font-mono text-xs" /></div>
+            <div><Label>Client Secret *</Label><Input type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder="GOCSPX-xxxxxxxxxxxxxxxx" className="font-mono text-xs" /></div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep(1)}>Voltar</Button>
-              <Button
-                onClick={handleSaveAndConnect}
-                disabled={saveCredentials.isPending || connectGoogle.isPending}
-                className="gap-1"
-              >
-                <KeyRound className="w-4 h-4" />
-                {saveCredentials.isPending || connectGoogle.isPending ? "Conectando..." : "Salvar e Conectar"}
+              <Button onClick={handleSaveAndConnect} disabled={saveCredentials.isPending || connectGoogle.isPending} className="gap-1">
+                <KeyRound className="w-4 h-4" />{saveCredentials.isPending || connectGoogle.isPending ? "Conectando..." : "Salvar e Conectar"}
               </Button>
             </DialogFooter>
           </div>
@@ -182,14 +122,140 @@ function GoogleSetupWizard({
   );
 }
 
+/* ───────── Week View ───────── */
+function WeekView({ currentDate, events, onEventClick, onNewEvent }: {
+  currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onNewEvent: (day: Date) => void;
+}) {
+  const weekStart = startOfWeek(currentDate, { locale: ptBR });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: endOfWeek(currentDate, { locale: ptBR }) });
+
+  const eventsByDay = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (events ?? []).forEach(ev => {
+      const key = format(parseISO(ev.start_at), "yyyy-MM-dd");
+      if (!map[key]) map[key] = [];
+      map[key].push(ev);
+    });
+    return map;
+  }, [events]);
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="grid grid-cols-[60px_repeat(7,1fr)]">
+        <div className="bg-muted/30 border-b border-r border-border py-2" />
+        {weekDays.map(day => (
+          <div key={day.toISOString()} className={`text-center py-2 border-b border-r border-border text-[11px] font-semibold ${isToday(day) ? "bg-primary/5 text-primary" : "bg-muted/30 text-muted-foreground"}`}>
+            {format(day, "EEE", { locale: ptBR })} <span className="font-bold">{format(day, "d")}</span>
+          </div>
+        ))}
+      </div>
+      {/* Time slots */}
+      <div className="max-h-[600px] overflow-y-auto">
+        {HOURS.map(hour => (
+          <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] min-h-[50px]">
+            <div className="text-[10px] text-muted-foreground text-right pr-2 pt-1 border-r border-border">{`${hour}:00`}</div>
+            {weekDays.map(day => {
+              const key = format(day, "yyyy-MM-dd");
+              const dayEvs = (eventsByDay[key] || []).filter(ev => {
+                const h = getHours(parseISO(ev.start_at));
+                return h === hour;
+              });
+              return (
+                <div key={`${key}-${hour}`} className="border-r border-b border-border/40 relative cursor-pointer hover:bg-muted/10" onClick={() => {
+                  const d = new Date(day); d.setHours(hour, 0, 0, 0); onNewEvent(d);
+                }}>
+                  {dayEvs.map(ev => (
+                    <div key={ev.id} className="absolute inset-x-0.5 rounded px-1 py-0.5 text-[10px] truncate cursor-pointer z-10"
+                      style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6", top: `${(getMinutes(parseISO(ev.start_at)) / 60) * 100}%` }}
+                      onClick={e => { e.stopPropagation(); onEventClick(ev); }}>
+                      {format(parseISO(ev.start_at), "HH:mm")} {ev.title}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Day View ───────── */
+function DayView({ currentDate, events, onEventClick, onNewEvent }: {
+  currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onNewEvent: (day: Date) => void;
+}) {
+  const dayEvents = useMemo(() => {
+    const key = format(currentDate, "yyyy-MM-dd");
+    return (events ?? []).filter(ev => format(parseISO(ev.start_at), "yyyy-MM-dd") === key);
+  }, [events, currentDate]);
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <div className="bg-muted/30 border-b border-border py-2 px-4 text-sm font-semibold capitalize">
+        {format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+      </div>
+      <div className="max-h-[600px] overflow-y-auto">
+        {HOURS.map(hour => {
+          const hourEvs = dayEvents.filter(ev => getHours(parseISO(ev.start_at)) === hour);
+          return (
+            <div key={hour} className="grid grid-cols-[60px_1fr] min-h-[60px]">
+              <div className="text-[11px] text-muted-foreground text-right pr-3 pt-1 border-r border-border">{`${hour}:00`}</div>
+              <div className="border-b border-border/40 relative cursor-pointer hover:bg-muted/10 px-2" onClick={() => {
+                const d = new Date(currentDate); d.setHours(hour, 0, 0, 0); onNewEvent(d);
+              }}>
+                {hourEvs.map(ev => {
+                  const start = parseISO(ev.start_at);
+                  const end = parseISO(ev.end_at);
+                  const duration = Math.max(differenceInMinutes(end, start), 30);
+                  return (
+                    <div key={ev.id} className="rounded px-2 py-1 text-xs mb-1 cursor-pointer"
+                      style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6", minHeight: `${Math.max(duration / 60 * 50, 24)}px` }}
+                      onClick={e => { e.stopPropagation(); onEventClick(ev); }}>
+                      <span className="font-medium">{ev.title}</span>
+                      <span className="ml-2 opacity-70">{format(start, "HH:mm")} — {format(end, "HH:mm")}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ───────── Main Component ───────── */
 export default function FranqueadoAgenda() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const startDate = format(startOfWeek(monthStart, { locale: ptBR }), "yyyy-MM-dd'T'00:00:00");
-  const endDate = format(endOfWeek(monthEnd, { locale: ptBR }), "yyyy-MM-dd'T'23:59:59");
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+
+  // Compute date range based on view
+  const { startDate, endDate } = useMemo(() => {
+    if (viewMode === "month") {
+      const ms = startOfMonth(currentDate);
+      const me = endOfMonth(currentDate);
+      return {
+        startDate: format(startOfWeek(ms, { locale: ptBR }), "yyyy-MM-dd'T'00:00:00"),
+        endDate: format(endOfWeek(me, { locale: ptBR }), "yyyy-MM-dd'T'23:59:59"),
+      };
+    } else if (viewMode === "week") {
+      const ws = startOfWeek(currentDate, { locale: ptBR });
+      const we = endOfWeek(currentDate, { locale: ptBR });
+      return {
+        startDate: format(ws, "yyyy-MM-dd'T'00:00:00"),
+        endDate: format(we, "yyyy-MM-dd'T'23:59:59"),
+      };
+    } else {
+      return {
+        startDate: format(startOfDay(currentDate), "yyyy-MM-dd'T'00:00:00"),
+        endDate: format(endOfDay(currentDate), "yyyy-MM-dd'T'23:59:59"),
+      };
+    }
+  }, [currentDate, viewMode]);
 
   const { data: events, isLoading } = useCalendarEvents(startDate, endDate);
   const { data: calendars } = useCalendars();
@@ -203,19 +269,14 @@ export default function FranqueadoAgenda() {
   const syncGoogle = useGoogleCalendarSync();
   const [syncing, setSyncing] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
-
   const isGoogleConnected = googleConnection && !!(googleConnection as any).access_token && !(googleConnection as any).pending_oauth;
 
-  // Handle OAuth callback
   useEffect(() => {
     const code = searchParams.get("code");
     if (code) {
       const redirectUri = `${window.location.origin}/franqueado/agenda`;
       exchangeCode.mutate({ code, redirectUri }, {
-        onSuccess: () => {
-          setSearchParams({});
-          handleGooglePull();
-        },
+        onSuccess: () => { setSearchParams({}); handleGooglePull(); },
         onError: (e: any) => toast.error(e.message || "Erro ao conectar Google"),
       });
     }
@@ -226,17 +287,13 @@ export default function FranqueadoAgenda() {
     try {
       const result = await syncGoogle.mutateAsync("pull" as any);
       toast.success(`Sincronizado! ${(result as any)?.imported || 0} novos eventos importados.`);
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao sincronizar");
-    }
+    } catch (e: any) { toast.error(e.message || "Erro ao sincronizar"); }
     setSyncing(false);
   }
 
   const [formOpen, setFormOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<any>(null);
   const [editingEvent, setEditingEvent] = useState<any>(null);
-
-  // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startAt, setStartAt] = useState("");
@@ -246,6 +303,9 @@ export default function FranqueadoAgenda() {
   const [color, setColor] = useState(COLORS[4]);
   const [calendarId, setCalendarId] = useState<string>("");
 
+  // Month view data
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
   const days = useMemo(() => {
     const s = startOfWeek(monthStart, { locale: ptBR });
     const e = endOfWeek(monthEnd, { locale: ptBR });
@@ -266,8 +326,8 @@ export default function FranqueadoAgenda() {
     setEditingEvent(null);
     setTitle(""); setDescription(""); setLocation(""); setAllDay(false); setColor(COLORS[4]); setCalendarId("");
     if (day) {
-      setStartAt(format(day, "yyyy-MM-dd'T'09:00"));
-      setEndAt(format(day, "yyyy-MM-dd'T'10:00"));
+      setStartAt(format(day, "yyyy-MM-dd'T'HH:mm"));
+      setEndAt(format(new Date(day.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"));
     } else {
       const now = new Date();
       setStartAt(format(now, "yyyy-MM-dd'T'HH:mm"));
@@ -296,35 +356,46 @@ export default function FranqueadoAgenda() {
       calendar_id: calendarId || undefined,
     };
     if (editingEvent) {
-      updateEvent.mutate({ id: editingEvent.id, ...payload }, {
-        onSuccess: () => { setFormOpen(false); toast.success("Evento atualizado!"); },
-      });
+      updateEvent.mutate({ id: editingEvent.id, ...payload }, { onSuccess: () => { setFormOpen(false); toast.success("Evento atualizado!"); } });
     } else {
-      createEvent.mutate(payload, {
-        onSuccess: () => { setFormOpen(false); toast.success("Evento criado!"); },
-      });
+      createEvent.mutate(payload, { onSuccess: () => { setFormOpen(false); toast.success("Evento criado!"); } });
     }
   }
 
   function handleDelete(id: string) {
-    deleteEvent.mutate(id, {
-      onSuccess: () => { setDetailEvent(null); toast.success("Evento excluído!"); },
-    });
+    deleteEvent.mutate(id, { onSuccess: () => { setDetailEvent(null); toast.success("Evento excluído!"); } });
+  }
+
+  function navigatePrev() {
+    if (viewMode === "month") setCurrentDate(d => subMonths(d, 1));
+    else if (viewMode === "week") setCurrentDate(d => subWeeks(d, 1));
+    else setCurrentDate(d => subDays(d, 1));
+  }
+
+  function navigateNext() {
+    if (viewMode === "month") setCurrentDate(d => addMonths(d, 1));
+    else if (viewMode === "week") setCurrentDate(d => addWeeks(d, 1));
+    else setCurrentDate(d => addDays(d, 1));
+  }
+
+  function getDateLabel() {
+    if (viewMode === "month") return format(currentDate, "MMMM 'de' yyyy", { locale: ptBR });
+    if (viewMode === "week") {
+      const ws = startOfWeek(currentDate, { locale: ptBR });
+      const we = endOfWeek(currentDate, { locale: ptBR });
+      return `${format(ws, "d MMM", { locale: ptBR })} — ${format(we, "d MMM yyyy", { locale: ptBR })}`;
+    }
+    return format(currentDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
   }
 
   if (isLoading) {
-    return (
-      <div className="w-full space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-[600px]" />
-      </div>
-    );
+    return <div className="w-full space-y-6"><Skeleton className="h-10 w-64" /><Skeleton className="h-[600px]" /></div>;
   }
 
   return (
     <div className="w-full space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Calendar className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-bold">Agenda</h1>
@@ -348,9 +419,7 @@ export default function FranqueadoAgenda() {
               <ExternalLink className="w-3.5 h-3.5" /> Conectar Google Agenda
             </Button>
           )}
-          <Button size="sm" onClick={() => openNewEvent()}>
-            <Plus className="w-4 h-4 mr-1" /> Novo Evento
-          </Button>
+          <Button size="sm" onClick={() => openNewEvent()}><Plus className="w-4 h-4 mr-1" /> Novo Evento</Button>
         </div>
       </div>
 
@@ -379,60 +448,64 @@ export default function FranqueadoAgenda() {
           </Card>
         </div>
 
-        {/* Calendar Grid */}
+        {/* Calendar Area */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-4">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setCurrentDate(d => subMonths(d, 1))}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setCurrentDate(d => addMonths(d, 1))}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-semibold capitalize ml-1">
-              {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
-            </span>
+          {/* Navigation + View Toggle */}
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={navigatePrev}><ChevronLeft className="w-4 h-4" /></Button>
+              <Button size="sm" variant="ghost" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={navigateNext}><ChevronRight className="w-4 h-4" /></Button>
+              <span className="text-sm font-semibold capitalize ml-1">{getDateLabel()}</span>
+            </div>
+            <div className="flex gap-0.5 p-0.5 rounded-lg bg-muted/50 border">
+              {([
+                { key: "month" as ViewMode, label: "Mês" },
+                { key: "week" as ViewMode, label: "Semana" },
+                { key: "day" as ViewMode, label: "Dia" },
+              ]).map(v => (
+                <Button key={v.key} variant={viewMode === v.key ? "default" : "ghost"} size="sm" className="h-7 px-3 text-xs" onClick={() => setViewMode(v.key)}>
+                  {v.label}
+                </Button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 border border-border rounded-xl overflow-hidden">
-            {WEEKDAYS.map(d => (
-              <div key={d} className="text-center text-[11px] font-semibold text-muted-foreground py-2 bg-muted/30 border-b border-border">
-                {d}
-              </div>
-            ))}
-            {days.map(day => {
-              const key = format(day, "yyyy-MM-dd");
-              const dayEvents = eventsByDay[key] || [];
-              const inMonth = isSameMonth(day, currentDate);
-              return (
-                <div
-                  key={key}
-                  className={`min-h-[90px] border-b border-r border-border p-1 cursor-pointer transition-colors hover:bg-muted/20
-                    ${!inMonth ? "bg-muted/10 opacity-40" : ""}
-                    ${isToday(day) ? "bg-primary/5" : ""}
-                  `}
-                  onClick={() => openNewEvent(day)}
-                >
-                  <span className={`text-[11px] font-medium block mb-0.5 ${isToday(day) ? "text-primary font-bold" : "text-foreground"}`}>
-                    {format(day, "d")}
-                  </span>
-                  {dayEvents.slice(0, 3).map(ev => (
-                    <div
-                      key={ev.id}
-                      className="text-[10px] truncate rounded px-1 py-0.5 mb-0.5 cursor-pointer"
-                      style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6" }}
-                      onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
-                    >
-                      {ev.title}
-                    </div>
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <span className="text-[10px] text-muted-foreground">+{dayEvents.length - 3}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          {/* Month View */}
+          {viewMode === "month" && (
+            <div className="grid grid-cols-7 border border-border rounded-xl overflow-hidden">
+              {WEEKDAYS.map(d => (
+                <div key={d} className="text-center text-[11px] font-semibold text-muted-foreground py-2 bg-muted/30 border-b border-border">{d}</div>
+              ))}
+              {days.map(day => {
+                const key = format(day, "yyyy-MM-dd");
+                const dayEvents = eventsByDay[key] || [];
+                const inMonth = isSameMonth(day, currentDate);
+                return (
+                  <div key={key} className={`min-h-[90px] border-b border-r border-border p-1 cursor-pointer transition-colors hover:bg-muted/20 ${!inMonth ? "bg-muted/10 opacity-40" : ""} ${isToday(day) ? "bg-primary/5" : ""}`}
+                    onClick={() => openNewEvent(day)}>
+                    <span className={`text-[11px] font-medium block mb-0.5 ${isToday(day) ? "text-primary font-bold" : "text-foreground"}`}>{format(day, "d")}</span>
+                    {dayEvents.slice(0, 3).map(ev => (
+                      <div key={ev.id} className="text-[10px] truncate rounded px-1 py-0.5 mb-0.5 cursor-pointer"
+                        style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6" }}
+                        onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}>{ev.title}</div>
+                    ))}
+                    {dayEvents.length > 3 && <span className="text-[10px] text-muted-foreground">+{dayEvents.length - 3}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Week View */}
+          {viewMode === "week" && (
+            <WeekView currentDate={currentDate} events={events ?? []} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
+          )}
+
+          {/* Day View */}
+          {viewMode === "day" && (
+            <DayView currentDate={currentDate} events={events ?? []} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
+          )}
         </div>
       </div>
 
@@ -442,19 +515,14 @@ export default function FranqueadoAgenda() {
       {/* Event Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingEvent ? "Editar Evento" : "Novo Evento"}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editingEvent ? "Editar Evento" : "Novo Evento"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Título *</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Nome do evento" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Início</Label><Input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} /></div>
               <div><Label>Fim</Label><Input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} /></div>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={allDay} onCheckedChange={setAllDay} id="allday" />
-              <Label htmlFor="allday">Dia todo</Label>
-            </div>
+            <div className="flex items-center gap-2"><Switch checked={allDay} onCheckedChange={setAllDay} id="allday" /><Label htmlFor="allday">Dia todo</Label></div>
             <div><Label>Local</Label><Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Endereço ou link" /></div>
             <div><Label>Descrição</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} /></div>
             {(calendars ?? []).length > 0 && (
@@ -462,9 +530,7 @@ export default function FranqueadoAgenda() {
                 <Label>Calendário</Label>
                 <Select value={calendarId} onValueChange={setCalendarId}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {(calendars ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{(calendars ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             )}
@@ -472,21 +538,14 @@ export default function FranqueadoAgenda() {
               <Label>Cor</Label>
               <div className="flex gap-2 mt-1">
                 {COLORS.map(c => (
-                  <button
-                    key={c}
-                    className={`w-6 h-6 rounded-full border-2 transition-transform ${color === c ? "border-foreground scale-110" : "border-transparent"}`}
-                    style={{ background: c }}
-                    onClick={() => setColor(c)}
-                  />
+                  <button key={c} className={`w-6 h-6 rounded-full border-2 transition-transform ${color === c ? "border-foreground scale-110" : "border-transparent"}`} style={{ background: c }} onClick={() => setColor(c)} />
                 ))}
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={createEvent.isPending || updateEvent.isPending}>
-              {editingEvent ? "Salvar" : "Criar"}
-            </Button>
+            <Button onClick={handleSave} disabled={createEvent.isPending || updateEvent.isPending}>{editingEvent ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -510,25 +569,15 @@ export default function FranqueadoAgenda() {
                     : `${format(parseISO(detailEvent.start_at), "dd/MM/yyyy HH:mm")} — ${format(parseISO(detailEvent.end_at), "HH:mm")}`}
                 </div>
                 {detailEvent.location && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="w-4 h-4" /> {detailEvent.location}
-                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="w-4 h-4" /> {detailEvent.location}</div>
                 )}
-                {detailEvent.description && (
-                  <p className="text-foreground/80 whitespace-pre-wrap">{detailEvent.description}</p>
-                )}
-                {(detailEvent as any).readonly && (
-                  <Badge variant="secondary" className="text-[10px]">Somente leitura (Franqueadora)</Badge>
-                )}
+                {detailEvent.description && <p className="text-foreground/80 whitespace-pre-wrap">{detailEvent.description}</p>}
+                {(detailEvent as any).readonly && <Badge variant="secondary" className="text-[10px]">Somente leitura (Franqueadora)</Badge>}
               </div>
               {!(detailEvent as any).readonly && (
                 <div className="flex gap-2 pt-2">
-                  <Button size="sm" variant="outline" onClick={() => openEditEvent(detailEvent)}>
-                    <Edit2 className="w-3.5 h-3.5 mr-1" /> Editar
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(detailEvent.id)}>
-                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Excluir
-                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openEditEvent(detailEvent)}><Edit2 className="w-3.5 h-3.5 mr-1" /> Editar</Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleDelete(detailEvent.id)}><Trash2 className="w-3.5 h-3.5 mr-1" /> Excluir</Button>
                 </div>
               )}
             </div>

@@ -28,7 +28,6 @@ const principalSection: SidebarItem[] = [
 const comercialSection: SidebarItem[] = [
   { label: "CRM de Vendas", icon: Target, path: "/franqueado/crm" },
   { label: "Prospecção", icon: Sparkles, path: "/franqueado/prospeccao" },
-  { label: "Diagnóstico", icon: ClipboardCheck, path: "/franqueado/diagnostico" },
   { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueado/estrategia" },
   { label: "Gerador de Proposta", icon: FileText, path: "/franqueado/propostas" },
 ];
