@@ -1,69 +1,37 @@
 
 
-## Plano: Padronizar Contrato do Franqueado com Template Fixo e Diagramacao Profissional
+## Corrigir: Proposta obrigatoria para Prestacao de Servico, nao Franquia
 
-### Objetivo
+### Problema atual
+A proposta vinculada esta obrigatoria no formulario de **Franquia**, mas deveria ser obrigatoria no formulario de **Prestacao de Servico (Assessoria)** — pois e nesse tipo que os campos de Servicos, Prazo e Valores vem da proposta.
 
-Toda criacao de contrato pelo franqueado segue obrigatoriamente o modelo "Contrato de Prestacao de Servico" enviado. O formulario exibe apenas os campos editaveis (dados do contratante, servicos, valores, datas). O PDF gerado tem diagramacao profissional com logo NoExcuse.
+### Mudancas
 
----
+**Arquivo**: `src/pages/ContratosGerador.tsx`
 
-### Mudanca 1: Reescrever o formulario de criacao (ContractForm)
+1. **ServiceContractForm** — Adicionar selecao obrigatoria de proposta vinculada
+   - Adicionar select de propostas (igual ao que existe hoje no FranchiseContractForm)
+   - Exibir resumo da proposta selecionada (valor, duracao, itens/servicos, pagamento)
+   - Auto-preencher campos: `servicos_descricao`, `prazo_meses`, `valor_setup`, `valor_mensal`, `dia_vencimento` a partir da proposta
+   - Tornar esses campos somente-leitura ou pre-preenchidos (editaveis para ajustes finos)
+   - Bloquear botoes "Salvar" e "Gerar" sem proposta selecionada
+   - Remover os inputs manuais de servicos/valores que agora vem da proposta (ou mante-los como readonly com badge "Da proposta")
 
-**Arquivo**: `src/pages/franqueado/FranqueadoContratos.tsx`
+2. **FranchiseContractForm** — Remover obrigatoriedade da proposta
+   - Remover a validacao que exige `selectedProposalId`
+   - Tornar a proposta opcional (util mas nao obrigatoria)
+   - Habilitar botoes de salvar/gerar independentemente de proposta
+   - Manter os campos de taxas (adesao, manutencao) como inputs livres, pois franquia nao depende de proposta
 
-Substituir o formulario atual por um formulario baseado nos placeholders do template de servico:
+3. **Logica de inicializacao** — Corrigir o default do tipo de contrato
+   - Quando vem `proposal_id` pela URL, o tipo default deve ser `"assessoria"` (nao `"franquia"`)
 
-**Campos editaveis (agrupados em cards)**:
-- **Dados do Contratante**: Razao Social, CNPJ, Endereco, Bairro, CEP, Cidade, Estado
-- **Servicos e Prazo**: Descricao dos servicos (textarea), Prazo em meses
-- **Valores**: Valor Setup, Setup por extenso, Valor Mensal, Mensal por extenso, Dia de vencimento
-- **Data**: Data da assinatura
+### Resumo de impacto
 
-Remover: selecao de lead obrigatorio, selecao de proposta obrigatoria (simplificar — o franqueado preenche direto os dados do cliente).
-
-**Preview em tempo real**: Abaixo do formulario, mostrar uma aba "Visualizar Contrato" que renderiza o template com os dados preenchidos (usando `renderPreview` adaptado).
-
-Ao salvar, o campo `content` do contrato armazena o texto completo com os placeholders substituidos pelos valores reais.
-
----
-
-### Mudanca 2: Reescrever a geracao de PDF com diagramacao profissional
-
-**Arquivo**: `src/pages/franqueado/FranqueadoContratos.tsx` (funcao `downloadContractPdf`)
-
-Substituir o HTML inline generico por um layout profissional:
-
-- **Cabecalho**: Logo NoExcuse (importar `logo-noexcuse.png` como base64 inline no HTML) + titulo "CONTRATO DE PRESTACAO DE SERVICO" centralizado
-- **Corpo**: Texto completo do contrato salvo no campo `content`, formatado com paragrafos, clausulas numeradas, margens adequadas
-- **Tipografia**: Font-family serif (Georgia/Times), tamanho 12px corpo, 14px titulos de clausulas
-- **Rodape**: Area de assinaturas com linhas, nomes das partes e testemunhas
-- **Marca d'agua sutil**: "NOEXCUSE" em cinza claro no fundo (opcional)
-
-Usar `html2pdf.js` com configuracao A4, margens de 20mm.
-
----
-
-### Mudanca 3: Converter logo para uso inline no PDF
-
-Como `html2pdf.js` precisa de imagens inline (base64) para funcionar no PDF, criar uma funcao utilitaria que converte o logo para base64 via canvas, ou embutir a logo diretamente como constante base64 no arquivo.
-
-**Abordagem**: Importar `logo-noexcuse.png` e usar `fetch` + `FileReader` para converter em runtime antes de gerar o PDF.
-
----
-
-### Resumo de Arquivos
-
-| Arquivo | Acao |
-|---|---|
-| `src/pages/franqueado/FranqueadoContratos.tsx` | Reescrever: formulario com campos fixos do template de servico, preview em tempo real, PDF com diagramacao profissional e logo |
-
-### Detalhes Tecnicos
-
-- Importar `SERVICE_PLACEHOLDERS` e `SERVICE_CONTENT` de `contractTemplates.ts`
-- O formulario mapeia cada placeholder para um input editavel
-- Ao salvar, substituir todos os `{{placeholder}}` pelos valores do formulario e gravar no campo `content`
-- O PDF usa o `content` salvo (texto final) com formatacao HTML profissional
-- Campos como `monthly_value`, `duration_months`, `payment_day` continuam sendo gravados nas colunas dedicadas para KPIs
-- Remover dependencia de `useCrmLeads` e `useCrmProposals` do formulario (simplificar)
+| Item | Antes | Depois |
+|---|---|---|
+| Proposta obrigatoria em | Franquia | Prestacao de Servico |
+| Franquia sem proposta | Bloqueado | Permitido |
+| Assessoria sem proposta | Permitido | Bloqueado |
+| URL com proposal_id abre | Franquia | Prestacao de Servico |
 
