@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import {
   CheckCircle, AlertTriangle, Clock, Eye, Link2,
 } from "lucide-react";
 import { useContracts, useContractMutations } from "@/hooks/useContracts";
+import { useCrmProposals } from "@/hooks/useCrmProposals";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { differenceInDays } from "date-fns";
 import {
@@ -289,9 +291,22 @@ function ServiceContractForm({ onSuccess }: { onSuccess: () => void }) {
 
 // ─── Franchise Contract Form ───
 
-function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
+function FranchiseContractForm({ onSuccess, initialProposalId }: { onSuccess: () => void; initialProposalId?: string }) {
   const { createContract } = useContractMutations();
+  const { data: proposals } = useCrmProposals();
   const [showPreview, setShowPreview] = useState(false);
+  const [selectedProposalId, setSelectedProposalId] = useState(initialProposalId || "");
+
+  const acceptedProposals = (proposals ?? []).filter(p => p.status === "accepted" || p.status === "draft" || p.status === "sent");
+  const selectedProposal = acceptedProposals.find(p => p.id === selectedProposalId);
+
+  // Derive services, values, and duration from the proposal
+  const proposalItems = selectedProposal ? (Array.isArray(selectedProposal.items) ? selectedProposal.items : []) : [];
+  const proposalContent = selectedProposal?.content || {};
+  const proposalServicos = proposalItems.map((it: any) => `${it.name}: ${it.quantity || 1} unidade(s)`).join(";\n") || "";
+  const proposalPrazo = proposalContent.duration ? String(proposalContent.duration) : "";
+  const proposalValorTotal = selectedProposal?.value ? Number(selectedProposal.value) : 0;
+  const proposalPayment = proposalContent.payment_option || selectedProposal?.payment_terms || "";
 
   const [form, setForm] = useState<Record<string, string>>({
     numero_contrato: "",
@@ -315,10 +330,22 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
     data_assinatura: "",
   });
 
+  // Auto-fill values from proposal when it changes
+  useEffect(() => {
+    if (selectedProposal) {
+      setForm(prev => ({
+        ...prev,
+        taxa_adesao_valor: proposalValorTotal ? proposalValorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : prev.taxa_adesao_valor,
+        taxa_adesao_forma: proposalPayment || prev.taxa_adesao_forma,
+      }));
+    }
+  }, [selectedProposalId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const set = (key: string, val: string) => setForm(prev => ({ ...prev, [key]: val }));
   const previewContent = useMemo(() => buildContent(form, "franquia"), [form]);
 
   const handleSave = (status: string) => {
+    if (!selectedProposalId) return toast.error("Selecione uma proposta para gerar o contrato de franquia");
     if (!form.franqueada_nome && !form.franqueada_razao_social) return toast.error("Informe o nome ou razão social da franqueada");
     if (!form.franqueada_cpf && !form.franqueada_cnpj) return toast.error("Informe o CPF ou CNPJ da franqueada");
 
@@ -332,11 +359,14 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
         signer_name: form.franqueada_razao_social || form.franqueada_nome,
         client_document: form.franqueada_cnpj || form.franqueada_cpf,
         client_address: `${form.franqueada_endereco}, ${form.franqueada_bairro}, ${form.franqueada_cidade}/${form.franqueada_estado} - CEP ${form.franqueada_cep}`,
+        service_description: proposalServicos,
         monthly_value: monthlyValue,
-        duration_months: 36,
+        total_value: proposalValorTotal,
+        duration_months: Number(proposalPrazo) || 36,
         status,
         contract_type: "franquia",
         owner_type: "matriz",
+        lead_id: selectedProposal?.lead_id || undefined,
       },
       {
         onSuccess: () => {
@@ -347,8 +377,68 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
     );
   };
 
+  const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
   return (
     <div className="space-y-6">
+      {/* Proposta Vinculada (obrigatória) */}
+      <Card className="glass-card border-primary/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Link2 className="w-4 h-4" /> Proposta Vinculada *
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Selecione a Proposta *</Label>
+            <Select value={selectedProposalId} onValueChange={setSelectedProposalId}>
+              <SelectTrigger><SelectValue placeholder="Selecione uma proposta aceita" /></SelectTrigger>
+              <SelectContent>
+                {acceptedProposals.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.title} — {formatBRL(Number(p.value || 0))} ({p.status === "accepted" ? "Aceita" : p.status === "sent" ? "Enviada" : "Rascunho"})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedProposal && (
+            <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dados da Proposta</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Valor Total</p>
+                  <p className="font-bold text-foreground">{formatBRL(proposalValorTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Duração</p>
+                  <p className="font-medium text-foreground">{proposalPrazo ? `${proposalPrazo} meses` : "Não definido"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pagamento</p>
+                  <p className="font-medium text-foreground">{proposalPayment || "A definir"}</p>
+                </div>
+              </div>
+              {proposalItems.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Serviços</p>
+                  <ul className="text-xs space-y-0.5 text-foreground">
+                    {proposalItems.map((it: any, i: number) => (
+                      <li key={i}>• {it.name} — {it.quantity || 1}x — {formatBRL(Number(it.total || 0))}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!selectedProposalId && (
+            <p className="text-xs text-destructive">É necessário vincular uma proposta para gerar contratos de franquia. Crie uma proposta em Comercial → Propostas.</p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Dados Pessoais / PF */}
       <Card className="glass-card border-primary/20">
         <CardHeader className="pb-3">
@@ -393,11 +483,12 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
         </CardContent>
       </Card>
 
-      {/* Valores e Contrato */}
+      {/* Taxas e Contrato - valores vêm da proposta mas podem ser ajustados */}
       <Card className="glass-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <DollarSign className="w-4 h-4" /> Taxas e Pagamento
+            {selectedProposal && <Badge variant="outline" className="text-[10px] ml-2">Preenchido pela proposta</Badge>}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -431,8 +522,8 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
       )}
 
       <div className="flex gap-3 justify-end">
-        <Button variant="outline" onClick={() => handleSave("draft")} disabled={createContract.isPending}>Salvar como Rascunho</Button>
-        <Button onClick={() => handleSave("active")} disabled={createContract.isPending}>Gerar Contrato</Button>
+        <Button variant="outline" onClick={() => handleSave("draft")} disabled={createContract.isPending || !selectedProposalId}>Salvar como Rascunho</Button>
+        <Button onClick={() => handleSave("active")} disabled={createContract.isPending || !selectedProposalId}>Gerar Contrato</Button>
       </div>
     </div>
   );
@@ -442,8 +533,11 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
 
 export default function ContratosGerador() {
   const { data: contracts, isLoading } = useContracts();
-  const [tab, setTab] = useState("lista");
-  const [contractType, setContractType] = useState("assessoria");
+  const [searchParams] = useSearchParams();
+  const proposalIdFromUrl = searchParams.get("proposal_id");
+  const tabFromUrl = searchParams.get("tab");
+  const [tab, setTab] = useState(tabFromUrl === "novo" ? "novo" : "lista");
+  const [contractType, setContractType] = useState(proposalIdFromUrl ? "franquia" : "assessoria");
   const [statusFilter, setStatusFilter] = useState("all");
 
   if (isLoading) {
@@ -559,7 +653,7 @@ export default function ContratosGerador() {
           {contractType === "assessoria" ? (
             <ServiceContractForm onSuccess={() => setTab("lista")} />
           ) : (
-            <FranchiseContractForm onSuccess={() => setTab("lista")} />
+            <FranchiseContractForm onSuccess={() => setTab("lista")} initialProposalId={proposalIdFromUrl || undefined} />
           )}
         </TabsContent>
       </Tabs>
