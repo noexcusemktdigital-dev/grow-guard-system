@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { asaasFetch } from "../_shared/asaas-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -132,7 +133,7 @@ Deno.serve(async (req) => {
 
       // Create charge in Asaas
       const monthLabel = `${String(monthNum).padStart(2, "0")}/${year}`;
-      const chargeRes = await fetch(`${ASAAS_BASE}/payments`, {
+      const chargeRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { asaasFetch } from "../_shared/asaas-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
     let asaasCustomerId = org.asaas_customer_id;
 
     if (!asaasCustomerId) {
-      const customerRes = await fetch(`${ASAAS_BASE}/customers`, {
+      const customerRes = await asaasFetch(`${ASAAS_BASE}/customers`, {
         method: "POST",
         headers: { "Content-Type": "application/json", access_token: asaasApiKey },
         body: JSON.stringify({
@@ -128,7 +129,7 @@ Deno.serve(async (req) => {
     const today = new Date().toISOString().split("T")[0];
 
     // Create payment in Asaas
-    const paymentRes = await fetch(`${ASAAS_BASE}/payments`, {
+    const paymentRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
     let pixCopyPaste = null;
     if (billing_type === "PIX" && paymentData.id) {
       try {
-        const pixRes = await fetch(`${ASAAS_BASE}/payments/${paymentData.id}/pixQrCode`, {
+        const pixRes = await asaasFetch(`${ASAAS_BASE}/payments/${paymentData.id}/pixQrCode`, {
           headers: { access_token: asaasApiKey },
         });
         if (pixRes.ok) {
