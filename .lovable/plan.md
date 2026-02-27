@@ -1,40 +1,34 @@
 
 
-# Convite com e-mail automático via `inviteUserByEmail`
+# Configurar E-mail Personalizado para Convites
 
-## Resumo
-Trocar o método de criação de usuários de `createUser` (senha temporária manual) para `inviteUserByEmail` (e-mail automático com link para definir senha). Isso vale para todos os convites: Matriz, Franquias e Unidades.
+## O que sera feito
 
-## O que muda
+Configurar um dominio de e-mail personalizado para que todos os e-mails de autenticacao (convites, reset de senha, verificacao) sejam enviados com o remetente da sua marca.
 
-### 1. Edge Function `invite-user/index.ts`
-- Substituir `adminClient.auth.admin.createUser(...)` por `adminClient.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo })`
-- O Supabase envia automaticamente um e-mail com link para o usuário definir sua senha
-- A resposta não retorna mais `temp_password` -- apenas `success` e `user_id`
-- O `redirectTo` apontará para a URL do app (usando `SUPABASE_URL` ou uma variável de redirect configurável)
+## Etapas
 
-### 2. Frontend -- `UnidadeUsuariosReal.tsx` (convite em Unidades)
-- Remover toda a lógica de exibição de senha temporária (`tempPassword`, `copyPassword`, bloco de sucesso com código)
-- Após sucesso, exibir apenas uma mensagem: "Convite enviado! O membro receberá um e-mail para definir sua senha."
-- Simplificar o dialog (remover estados `tempPassword`, `copied`)
+### 1. Configurar dominio remetente
+- Abrir o painel de configuracao de e-mail do Lovable Cloud
+- Voce informara o dominio desejado (ex: `noexcuse.com.br`)
+- O sistema vai gerar registros DNS (SPF, DKIM, DMARC) que precisam ser adicionados no painel do seu provedor de dominio
 
-### 3. Frontend -- `Matriz.tsx` (convite na Matriz)
-- Já não exibe senha temporária, mas ajustar a mensagem de sucesso para mencionar o e-mail enviado
+### 2. Verificacao DNS
+- Apos adicionar os registros DNS, o sistema verifica automaticamente
+- A propagacao pode levar de alguns minutos ate 48 horas
 
-### 4. Qualquer outro local que chame `invite-user`
-- Verificar se há outros chamadores e ajustar se necessário
+### 3. Criar templates de e-mail personalizados
+- Gerar templates com a identidade visual do app (cores, logo, linguagem)
+- Templates para: convite, reset de senha, verificacao de e-mail, magic link, troca de e-mail
+- Os e-mails serao enviados em portugues, com o tom e estilo do app
 
-## Detalhes técnicos
+### 4. Deploy automatico
+- A funcao de envio sera implantada automaticamente
+- Assim que o DNS for verificado, os e-mails passam a sair com o remetente personalizado
 
-**Edge Function -- trecho principal:**
-```typescript
-const { data: newUser, error: createErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
-  data: { full_name: full_name || email.split("@")[0] },
-  redirectTo: `${supabaseUrl.replace('.supabase.co', '')}/auth/v1/callback`,
-});
-```
+## Requisito
+- Voce precisa ter acesso ao painel DNS do seu dominio (ex: Registro.br, Cloudflare, GoDaddy) para adicionar os registros de verificacao
 
-O `inviteUserByEmail` cria o usuário E envia o e-mail de convite automaticamente. O usuário clica no link e define sua própria senha.
-
-**Nota:** O profile, membership e role continuam sendo criados da mesma forma após o invite.
+## Resultado
+- E-mails de convite e autenticacao saindo de algo como `noreply@noexcuse.com.br` em vez do remetente padrao
 
