@@ -16,20 +16,36 @@ interface GoalProgressResult {
 
 export function useGoalProgress(goals: any[] | undefined) {
   const { data: orgId } = useUserOrgId();
+  const hasNetworkGoals = goals?.some(g => g.scope === "network" || g.scope === "global");
 
   return useQuery({
     queryKey: ["goal-progress", orgId, goals?.map(g => g.id).join(",")],
     queryFn: async (): Promise<Record<string, GoalProgressResult>> => {
       if (!goals?.length || !orgId) return {};
 
-      // Fetch all leads and activities for the org in batch
-      const [leadsRes, activitiesRes] = await Promise.all([
-        supabase.from("crm_leads").select("id, value, won_at, created_at, assigned_to").eq("organization_id", orgId),
-        supabase.from("crm_activities").select("id, type, created_at, lead_id, user_id").eq("organization_id", orgId),
-      ]);
+      // If there are network/global goals, fetch aggregated data via RPC
+      let allLeads: any[] = [];
+      let allActivities: any[] = [];
 
-      const allLeads = leadsRes.data || [];
-      const allActivities = activitiesRes.data || [];
+      if (hasNetworkGoals) {
+        const { data: networkData } = await supabase.rpc("get_network_crm_data", { _org_id: orgId });
+        const rows = networkData || [];
+        allLeads = rows.filter((r: any) => r.lead_id).map((r: any) => ({
+          id: r.lead_id, value: r.lead_value, won_at: r.lead_won_at,
+          created_at: r.lead_created_at, assigned_to: r.lead_assigned_to, stage: r.lead_stage,
+        }));
+        allActivities = rows.filter((r: any) => r.activity_id).map((r: any) => ({
+          id: r.activity_id, type: r.activity_type, created_at: r.activity_created_at, user_id: r.activity_user_id,
+        }));
+      } else {
+        const [leadsRes, activitiesRes] = await Promise.all([
+          supabase.from("crm_leads").select("id, value, won_at, created_at, assigned_to").eq("organization_id", orgId),
+          supabase.from("crm_activities").select("id, type, created_at, lead_id, user_id").eq("organization_id", orgId),
+        ]);
+        allLeads = leadsRes.data || [];
+        allActivities = activitiesRes.data || [];
+      }
+
       const today = startOfDay(new Date());
       const results: Record<string, GoalProgressResult> = {};
 

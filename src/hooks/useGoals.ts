@@ -68,12 +68,12 @@ export function useRankings(month?: number, year?: number) {
   return useQuery({
     queryKey: ["rankings", orgId, month, year],
     queryFn: async () => {
-      let q = supabase.from("rankings").select("*").eq("organization_id", orgId!).order("position");
-      if (month) q = q.eq("month", month);
-      if (year) q = q.eq("year", year);
-      const { data, error } = await q;
+      const { data, error } = await supabase.rpc("get_rankings_with_parent", { _org_id: orgId! });
       if (error) throw error;
-      return data;
+      let results = data as any[];
+      if (month) results = results.filter((r: any) => r.month === month);
+      if (year) results = results.filter((r: any) => r.year === year);
+      return results;
     },
     enabled: !!orgId,
   });
