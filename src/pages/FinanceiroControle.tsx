@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Inbox, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Inbox, Search, CreditCard, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard } from "@/components/KpiCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinanceRevenues, useFinanceExpenses, useFinanceMutations } from "@/hooks/useFinance";
 import { useNetworkContracts } from "@/hooks/useContracts";
+import { useChargeClient } from "@/hooks/useClientPayments";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const revCategories = ["Assessoria", "SaaS", "Franquia", "Outros"];
@@ -24,6 +26,7 @@ export default function FinanceiroControle() {
   const { data: expenses, isLoading: le } = useFinanceExpenses();
   const { data: contracts, isLoading: lc } = useNetworkContracts();
   const { createRevenue, updateRevenue, deleteRevenue, createExpense, updateExpense, deleteExpense } = useFinanceMutations();
+  const chargeClient = useChargeClient();
 
   const [search, setSearch] = useState("");
   // Revenue dialog
@@ -36,6 +39,11 @@ export default function FinanceiroControle() {
   const [expForm, setExpForm] = useState({ description: "", amount: 0, category: "Plataformas", status: "pending", is_recurring: false, date: "" });
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<{ type: "rev" | "exp"; id: string } | null>(null);
+
+  // Charge dialog state
+  const [chargeContract, setChargeContract] = useState<any>(null);
+  const [chargeBillingType, setChargeBillingType] = useState("PIX");
+  const [chargeResult, setChargeResult] = useState<any>(null);
 
   const isLoading = lr || le || lc;
 
@@ -97,6 +105,37 @@ export default function FinanceiroControle() {
       toast({ title: "Despesa excluída" });
     }
     setDeleteTarget(null);
+  };
+
+  // Charge handlers
+  const handleEmitCharge = (contract: any) => {
+    setChargeContract(contract);
+    setChargeBillingType("PIX");
+    setChargeResult(null);
+  };
+
+  const submitCharge = () => {
+    if (!chargeContract) return;
+    chargeClient.mutate(
+      {
+        contract_id: chargeContract.id,
+        billing_type: chargeBillingType,
+        organization_id: chargeContract.organization_id,
+      },
+      {
+        onSuccess: (data) => {
+          setChargeResult(data);
+        },
+        onError: () => {
+          // toast is handled by the hook
+        },
+      }
+    );
+  };
+
+  const copyPixCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    sonnerToast.success("Código PIX copiado!");
   };
 
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>;
@@ -238,6 +277,7 @@ export default function FinanceiroControle() {
                   <th className="text-right py-3 px-4 font-medium">Valor Mensal</th>
                   <th className="text-center py-3 px-4 font-medium">Tipo</th>
                   <th className="text-center py-3 px-4 font-medium">Repasse</th>
+                  <th className="text-center py-3 px-4 font-medium">Ações</th>
                 </tr></thead>
                 <tbody>
                   {activeContracts.map((c: any) => (
@@ -250,6 +290,18 @@ export default function FinanceiroControle() {
                       <td className="py-3 px-4 text-center">
                         {c.owner_type === "unidade" ? <Badge className="text-[10px] bg-blue-500/15 text-blue-500">Sim</Badge> : <span className="text-xs text-muted-foreground">—</span>}
                       </td>
+                      <td className="py-3 px-4 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs"
+                          onClick={() => handleEmitCharge(c)}
+                          disabled={!c.monthly_value || Number(c.monthly_value) <= 0}
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          Emitir Cobrança
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -258,6 +310,82 @@ export default function FinanceiroControle() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Charge Dialog */}
+      <Dialog open={!!chargeContract} onOpenChange={(open) => { if (!open) { setChargeContract(null); setChargeResult(null); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{chargeResult ? "Cobrança Gerada" : "Emitir Cobrança"}</DialogTitle>
+            <DialogDescription>
+              {chargeResult
+                ? `Cobrança para ${chargeContract?.signer_name || "cliente"} gerada com sucesso.`
+                : `Gerar cobrança para o contrato "${chargeContract?.title}" — ${chargeContract?.signer_name || "cliente"}`
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          {!chargeResult ? (
+            <div className="space-y-4">
+              <div>
+                <Label>Valor</Label>
+                <p className="text-lg font-semibold text-emerald-500">{chargeContract?.monthly_value ? formatBRL(Number(chargeContract.monthly_value)) : "—"}</p>
+              </div>
+              <div>
+                <Label>Método de Pagamento</Label>
+                <Select value={chargeBillingType} onValueChange={setChargeBillingType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PIX">PIX</SelectItem>
+                    <SelectItem value="BOLETO">Boleto</SelectItem>
+                    <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setChargeContract(null); setChargeResult(null); }}>Cancelar</Button>
+                <Button onClick={submitCharge} disabled={chargeClient.isPending} className="gap-2">
+                  {chargeClient.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Gerar Cobrança
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {chargeBillingType === "PIX" && chargeResult.pix_qr_code ? (
+                <div className="flex flex-col items-center gap-3">
+                  <img src={`data:image/png;base64,${chargeResult.pix_qr_code}`} alt="QR Code PIX" className="w-48 h-48 rounded-lg border" />
+                  {chargeResult.pix_copy_paste && (
+                    <div className="w-full">
+                      <Label className="text-xs text-muted-foreground">Código Copia e Cola</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input readOnly value={chargeResult.pix_copy_paste} className="text-xs font-mono" />
+                        <Button variant="outline" size="icon" onClick={() => copyPixCode(chargeResult.pix_copy_paste)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    {chargeBillingType === "BOLETO" ? "Boleto gerado com sucesso." : "Link de pagamento gerado."}
+                  </p>
+                  {chargeResult.invoice_url && (
+                    <Button variant="outline" className="gap-2" onClick={() => window.open(chargeResult.invoice_url, "_blank")}>
+                      <ExternalLink className="w-4 h-4" />
+                      Abrir Fatura
+                    </Button>
+                  )}
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setChargeContract(null); setChargeResult(null); }}>Fechar</Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Revenue Dialog */}
       <Dialog open={revDialog} onOpenChange={setRevDialog}>

@@ -59,9 +59,9 @@ export function useChargeClient() {
   const { data: orgId } = useUserOrgId();
 
   return useMutation({
-    mutationFn: async ({ contract_id, billing_type }: { contract_id: string; billing_type: string }) => {
+    mutationFn: async ({ contract_id, billing_type, organization_id }: { contract_id: string; billing_type: string; organization_id?: string }) => {
       const { data, error } = await supabase.functions.invoke("asaas-charge-client", {
-        body: { organization_id: orgId, contract_id, billing_type },
+        body: { organization_id: organization_id || orgId, contract_id, billing_type },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
