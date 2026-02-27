@@ -114,9 +114,19 @@ export function useContractMutations() {
     },
   });
 
+  const deleteContract = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("contracts").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      qc.invalidateQueries({ queryKey: ["network-contracts"] });
+    },
+  });
+
   const seedDefaultTemplates = useMutation({
     mutationFn: async (templates: { name: string; template_type: string; description: string; content: string }[]) => {
-      // Check which templates already exist
       const { data: existing } = await supabase
         .from("contract_templates")
         .select("name")
@@ -134,5 +144,5 @@ export function useContractMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-templates"] }),
   });
 
-  return { createTemplate, updateTemplate, createContract, updateContract, seedDefaultTemplates };
+  return { createTemplate, updateTemplate, createContract, updateContract, deleteContract, seedDefaultTemplates };
 }

@@ -125,6 +125,23 @@ export function useFinanceMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["finance-revenues"] }),
   });
 
+  const updateRevenue = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { data, error } = await supabase.from("finance_revenues").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["finance-revenues"] }),
+  });
+
+  const deleteRevenue = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("finance_revenues").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["finance-revenues"] }),
+  });
+
   const createExpense = useMutation({
     mutationFn: async (exp: { description: string; amount: number; date?: string; category?: string; status?: string; finance_month_id?: string; is_recurring?: boolean }) => {
       const { data, error } = await supabase.from("finance_expenses").insert({ ...exp, organization_id: orgId! }).select().single();
@@ -134,5 +151,22 @@ export function useFinanceMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["finance-expenses"] }),
   });
 
-  return { createRevenue, createExpense };
+  const updateExpense = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { data, error } = await supabase.from("finance_expenses").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["finance-expenses"] }),
+  });
+
+  const deleteExpense = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("finance_expenses").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["finance-expenses"] }),
+  });
+
+  return { createRevenue, updateRevenue, deleteRevenue, createExpense, updateExpense, deleteExpense };
 }
