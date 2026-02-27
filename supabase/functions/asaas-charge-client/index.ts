@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { asaasFetch } from "../_shared/asaas-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
     if (existing && existing.status === "pending" && existing.asaas_payment_id) {
       let pixData = null;
       if (billingType === "PIX") {
-        const pixRes = await fetch(`${ASAAS_BASE}/payments/${existing.asaas_payment_id}/pixQrCode`, {
+        const pixRes = await asaasFetch(`${ASAAS_BASE}/payments/${existing.asaas_payment_id}/pixQrCode`, {
           headers: { access_token: asaasApiKey },
         });
         if (pixRes.ok) pixData = await pixRes.json();
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
     const clientDoc = contract.client_document || "00000000000";
     const clientEmail = contract.signer_email || undefined;
 
-    const customerRes = await fetch(`${ASAAS_BASE}/customers`, {
+    const customerRes = await asaasFetch(`${ASAAS_BASE}/customers`, {
       method: "POST",
       headers: { "Content-Type": "application/json", access_token: asaasApiKey },
       body: JSON.stringify({
@@ -125,12 +126,11 @@ Deno.serve(async (req) => {
       }),
     });
     const customerData = await customerRes.json();
-    // If customer already exists, Asaas returns the existing one
     const customerId = customerData.id || customerData.errors?.[0]?.description?.match(/cus_\w+/)?.[0];
 
     if (!customerId) {
       // Try to find existing customer by document
-      const searchRes = await fetch(`${ASAAS_BASE}/customers?cpfCnpj=${clientDoc}`, {
+      const searchRes = await asaasFetch(`${ASAAS_BASE}/customers?cpfCnpj=${clientDoc}`, {
         headers: { access_token: asaasApiKey },
       });
       const searchData = await searchRes.json();
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
     const dueDateStr = dueDate.toISOString().split("T")[0];
 
     // Create charge
-    const chargeRes = await fetch(`${ASAAS_BASE}/payments`, {
+    const chargeRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
       method: "POST",
       headers: { "Content-Type": "application/json", access_token: asaasApiKey },
       body: JSON.stringify({
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
     // Get PIX QR code if applicable
     let pixData = null;
     if (billingType === "PIX") {
-      const pixRes = await fetch(`${ASAAS_BASE}/payments/${chargeData.id}/pixQrCode`, {
+      const pixRes = await asaasFetch(`${ASAAS_BASE}/payments/${chargeData.id}/pixQrCode`, {
         headers: { access_token: asaasApiKey },
       });
       if (pixRes.ok) pixData = await pixRes.json();

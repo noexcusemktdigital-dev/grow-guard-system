@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { asaasFetch } from "../_shared/asaas-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
     let asaasCustomerId = org.asaas_customer_id;
 
     if (!asaasCustomerId) {
-      const customerRes = await fetch(`${ASAAS_BASE}/customers`, {
+      const customerRes = await asaasFetch(`${ASAAS_BASE}/customers`, {
         method: "POST",
         headers: { "Content-Type": "application/json", access_token: asaasApiKey },
         body: JSON.stringify({
@@ -121,7 +122,7 @@ Deno.serve(async (req) => {
     const nextDueDate = today.toISOString().split("T")[0];
     const moduleLabel = moduleChoice === "combo" ? "Combo" : moduleChoice === "marketing" ? "Marketing" : "Comercial";
 
-    const subscriptionRes = await fetch(`${ASAAS_BASE}/subscriptions`, {
+    const subscriptionRes = await asaasFetch(`${ASAAS_BASE}/subscriptions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", access_token: asaasApiKey },
       body: JSON.stringify({

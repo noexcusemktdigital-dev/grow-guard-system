@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { asaasFetch } from "../_shared/asaas-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
       if (startDate) url += `&dateCreated[ge]=${startDate}`;
       if (endDate) url += `&dateCreated[le]=${endDate}`;
 
-      const res = await fetch(url, {
+      const res = await asaasFetch(url, {
         headers: { access_token: asaasApiKey },
       });
       const data = await res.json();
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
       await Promise.all(
         uniqueCustomerIds.map(async (custId) => {
           try {
-            const custRes = await fetch(`${ASAAS_BASE}/customers/${custId}`, {
+            const custRes = await asaasFetch(`${ASAAS_BASE}/customers/${custId}`, {
               headers: { access_token: asaasApiKey },
             });
             const custData = await custRes.json();
@@ -137,7 +138,7 @@ Deno.serve(async (req) => {
         if (startDate) url += `&dateCreated[ge]=${startDate}`;
         if (endDate) url += `&dateCreated[le]=${endDate}`;
         try {
-          const res = await fetch(url, { headers: { access_token: asaasApiKey } });
+          const res = await asaasFetch(url, { headers: { access_token: asaasApiKey } });
           const data = await res.json();
           for (const p of data.data ?? []) {
             allPayments.push({

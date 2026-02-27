@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { asaasFetch } from "../_shared/asaas-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,10 +71,9 @@ Deno.serve(async (req) => {
 
     // If pending charge exists, return its data
     if (existing && existing.status === "pending" && existing.asaas_payment_id) {
-      // Fetch PIX data if needed
       let pixData = null;
       if (billingType === "PIX") {
-        const pixRes = await fetch(`${ASAAS_BASE}/payments/${existing.asaas_payment_id}/pixQrCode`, {
+        const pixRes = await asaasFetch(`${ASAAS_BASE}/payments/${existing.asaas_payment_id}/pixQrCode`, {
           headers: { access_token: asaasApiKey },
         });
         if (pixRes.ok) pixData = await pixRes.json();
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     // Auto-provision Asaas customer if needed
     let customerId = org.asaas_customer_id;
     if (!customerId) {
-      const customerRes = await fetch(`${ASAAS_BASE}/customers`, {
+      const customerRes = await asaasFetch(`${ASAAS_BASE}/customers`, {
         method: "POST",
         headers: { "Content-Type": "application/json", access_token: asaasApiKey },
         body: JSON.stringify({
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     const dueDateStr = dueDate.toISOString().split("T")[0];
 
     // Create charge
-    const chargeRes = await fetch(`${ASAAS_BASE}/payments`, {
+    const chargeRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
       method: "POST",
       headers: { "Content-Type": "application/json", access_token: asaasApiKey },
       body: JSON.stringify({
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
     // Get PIX QR code if applicable
     let pixData = null;
     if (billingType === "PIX") {
-      const pixRes = await fetch(`${ASAAS_BASE}/payments/${chargeData.id}/pixQrCode`, {
+      const pixRes = await asaasFetch(`${ASAAS_BASE}/payments/${chargeData.id}/pixQrCode`, {
         headers: { access_token: asaasApiKey },
       });
       if (pixRes.ok) pixData = await pixRes.json();

@@ -1,3 +1,5 @@
+import { asaasFetch } from "../_shared/asaas-fetch.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -14,7 +16,7 @@ Deno.serve(async (req) => {
   try {
     const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
 
-    const res = await fetch(`${ASAAS_BASE}/customers?limit=1`, {
+    const res = await asaasFetch(`${ASAAS_BASE}/customers?limit=1`, {
       headers: { access_token: asaasApiKey },
     });
 
