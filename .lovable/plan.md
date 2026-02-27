@@ -1,139 +1,197 @@
 
-# Auditoria Completa: Vinculo Franqueadora-Franqueado
+# Auditoria Completa: Franqueadora + Franqueado
 
-## Resumo da Analise
+## Modulos da Franqueadora -- Status Individual
 
-Revisei em profundidade todos os modulos compartilhados entre Franqueadora e Franqueado. Abaixo esta o diagnostico completo, separando o que **funciona corretamente**, o que tem **problemas** e as **otimizacoes recomendadas**.
+### 1. Dashboard (Home.tsx) -- OK com ressalva
+- Saudacao, KPIs de leads, comunicados e agenda funcionam
+- **PROBLEMA**: Usa `HomeAtalhos` que tem links hardcoded para `/franqueadora/*` -- funciona porque so e usado no contexto correto, mas o Franqueado tambem usa o mesmo componente `HomeAtalhos` e os links apontam para `/franqueadora/*` em vez de `/franqueado/*`
+- **Gravidade: MEDIA** -- Os atalhos no dashboard do Franqueado levam para rotas da Franqueadora (acesso negado)
+
+### 2. Agenda -- OK
+- Hook `useCalendarEvents` usa RPC `get_calendar_events_with_parent` corretamente
+- Suporta filtro por datas, visibilidade cruzada
+- Criacao de eventos salva na org do usuario
+
+### 3. Comunicados -- OK
+- Hook `useAnnouncements` usa RPC `get_announcements_with_parent`
+- Segmentacao por unidade e prioridade funcionam
+
+### 4. CRM Expansao -- OK
+- Leads isolados por `organization_id` -- correto para franqueadora
+- Bulk actions, drag-and-drop, filtros avancados
+
+### 5. Propostas -- OK
+- Propostas isoladas por `organization_id`
+- Gerador integrado com calculadora
+
+### 6. Unidades -- OK
+- Provisionamento via `provision-unit`
+- Dados, usuarios, documentos, financeiro
+
+### 7. Onboarding -- OK
+- Checklists, reunioes e tarefas isolados por org
+
+### 8. Atendimento/Suporte -- OK
+- Franqueadora ve tickets da rede via `get_network_tickets`
+- Mensagens bidirecionais
+
+### 9. Marketing Drive -- OK
+- Assets e pastas geridos pela Franqueadora
+- Franqueado consome via `useContentSourceOrgId`
+
+### 10. Academy/Treinamentos -- OK
+- Modulos e aulas da org pai, progresso por usuario
+
+### 11. Metas & Ranking -- OK com ressalva
+- RPC `get_goals_with_parent` funciona
+- `useGoalProgress` calcula progresso baseado em leads/atividades do CRM da org
+- **PROBLEMA**: O calculo de progresso de metas usa `crm_leads` e `crm_activities` filtrados por `organization_id` do usuario. Para metas da franqueadora com scope `network`, o progresso deveria agregar dados de TODAS as unidades, mas so ve dados da propria org
+- **Gravidade: MEDIA** -- Franqueadora ve progresso da rede como zero (nao agrega)
+
+### 12. Financeiro -- OK
+- Dashboard, receitas, despesas, repasse, fechamentos
+- Fechamentos com visibilidade cruzada via `get_closings_with_parent`
+
+### 13. Contratos -- OK
+- Templates com heranca via `get_contract_templates_with_parent`
+- Rede via `get_network_contracts`
+- Unidade ve contratos proprios + onde e `unit_org_id` via `get_contracts_for_unit`
+
+### 14. Matriz -- OK
+- Gestao de usuarios da franqueadora
+- Convites via `invite-user`
+
+### 15. SaaS Dashboard -- OK
+- Gestao de clientes, custos, erros e suporte
 
 ---
 
-## Modulos que FUNCIONAM corretamente (vinculo ativo)
+## Modulos do Franqueado -- Status Individual
 
-### 1. Comunicados
-- **Status: OK**
-- Franqueadora cria comunicados com `organization_id` da matriz
-- Franqueado consome via RPC `get_announcements_with_parent`, que busca comunicados da propria org + org pai
-- Confirmacao de leitura (criticos) funciona independente por usuario
-- Segmentacao por unidade (`target_unit_ids`) funciona
+### 1. Dashboard (FranqueadoDashboard.tsx) -- PROBLEMA
+- Mostra KPIs de leads, contratos, eventos e metas
+- Mensagem do dia e comunicados funcionam via RPCs with_parent
+- **ERRO CRITICO**: Usa `HomeAtalhos` que tem links hardcoded para `/franqueadora/*`
+- O franqueado clica em "Marketing" e vai para `/franqueadora/marketing` (acesso negado)
 
-### 2. Marketing / Drive de Materiais
-- **Status: OK**
-- Franqueado usa `useContentSourceOrgId()` que resolve para `parent_org_id` via RPC `get_parent_org_id`
-- Pastas e assets sao lidos da org da franqueadora
-- Franqueado so visualiza e baixa, nao edita — correto
+### 2. CRM de Vendas -- OK
+- Leads isolados por org do franqueado
+- Kanban, filtros, bulk actions
 
-### 3. Academy / Treinamentos
-- **Status: OK**
-- Modulos e aulas vem da org pai (via `sourceOrgId`)
-- Progresso, certificados e quiz attempts sao salvos por `user_id` — isolamento correto
-- Ranking e evolucao funcionam por usuario individual
+### 3. Prospeccao IA -- OK
+- Isolado por org, chama edge function `generate-prospection`
 
-### 4. Suporte / Atendimento
-- **Status: OK**
-- Franqueado cria tickets na propria `organization_id`
-- Franqueadora ve todos os tickets da rede via RPC `get_network_tickets` (busca por `parent_org_id`)
-- Mensagens bidirecionais funcionam
+### 4. Criador de Estrategia -- OK
+- Isolado por org, chama edge function `generate-strategy`
 
-### 5. Unidades (gestao pela franqueadora)
-- **Status: OK**
-- Provisionamento via Edge Function `provision-unit` cria org filha com `parent_org_id`
-- Dados, usuarios, documentos e financeiro da unidade funcionam
+### 5. Diagnostico NOE -- OK
+- Avaliacao por categorias com radar chart
+- Integrado com leads do CRM
+
+### 6. Gerador de Propostas -- OK
+- Isolado por org, gera PDF
+
+### 7. Agenda (FranqueadoAgenda) -- OK
+- Usa `get_calendar_events_with_parent` para ver eventos da rede
+
+### 8. Comunicados Matriz -- OK
+- Usa `get_announcements_with_parent`
+
+### 9. Suporte -- OK
+- Cria tickets na propria org, franqueadora ve tudo
+
+### 10. Marketing/Materiais -- OK
+- Consome assets da org pai via `useContentSourceOrgId`
+- Somente visualizacao/download
+
+### 11. NOE Academy -- OK
+- Modulos da org pai, progresso individual
+
+### 12. Financeiro -- OK com melhorias possiveis
+- KPIs baseados em contratos ativos
+- Controle de pagamentos via Asaas
+- Fechamentos da franqueadora visiveis
+- Pagamento de sistema (R$ 250)
+
+### 13. Meus Contratos -- OK
+- Usa `get_contracts_for_unit` para ver proprios + franquia
+- Formulario de criacao de contrato
+
+### 14. Configuracoes -- OK
+- Dados da unidade, equipe, contrato de franquia
+- Convite de funcionarios via `invite-user`
 
 ---
 
-## Problemas e Falhas Encontradas
+## Integracao Franqueadora-Franqueado -- Diagnostico
 
-### PROBLEMA 1: Mensagem do Dia NAO chega ao Franqueado
+### FUNCIONANDO CORRETAMENTE
+1. Comunicados (get_announcements_with_parent)
+2. Marketing/Drive (useContentSourceOrgId -> get_parent_org_id)
+3. Academy/Treinamentos (sourceOrgId da org pai)
+4. Suporte/Atendimento (get_network_tickets)
+5. Unidades (parent_org_id via provision-unit)
+6. Mensagem do Dia (get_daily_message_with_parent)
+7. Metas e Ranking (get_goals_with_parent)
+8. Fechamentos Financeiros (get_closings_with_parent)
+9. Contratos de Franquia (get_contracts_for_unit)
+10. Templates de Contrato (get_contract_templates_with_parent)
+11. Agenda (get_calendar_events_with_parent)
+
+### PROBLEMAS ENCONTRADOS
+
+#### ERRO 1: HomeAtalhos hardcoded para Franqueadora
 - **Gravidade: ALTA**
-- `useDailyMessages()` filtra por `organization_id = orgId` (org do franqueado)
-- A franqueadora cria a mensagem na org DELA
-- O franqueado nunca ve a mensagem porque o `organization_id` nao bate
-- **Correcao**: Criar uma RPC similar a `get_announcements_with_parent` ou usar `get_parent_org_id` para buscar mensagens da org pai tambem
+- O componente `HomeAtalhos` tem links fixos para `/franqueadora/*`
+- O franqueado usa o mesmo componente no seu dashboard
+- Resultado: franqueado clica nos atalhos e recebe acesso negado
+- **Correcao**: Criar uma versao que detecta o role do usuario ou recebe os atalhos como prop, mapeando para `/franqueado/*`
 
-### PROBLEMA 2: Metas e Ranking NAO sao compartilhados
-- **Gravidade: ALTA**
-- `useGoals()` filtra por `organization_id = orgId` (org do franqueado)
-- Quando a franqueadora cria metas globais ou por unidade, ela salva na org DELA
-- O franqueado nao ve essas metas — o modulo fica vazio
-- **Correcao**: Metas globais da franqueadora precisam ser visiveis para unidades filhas. Criar uma query que busque metas da org pai (metas globais) + metas especificas da unidade
-
-### PROBLEMA 3: Agenda NAO tem visibilidade cruzada
+#### ERRO 2: Progresso de metas nao agrega dados da rede
 - **Gravidade: MEDIA**
-- `useCalendarEvents()` filtra por `organization_id = orgId`
-- Eventos criados pela franqueadora com visibilidade "Rede" ou "Unidade especifica" nao aparecem para o franqueado
-- **Correcao**: Criar uma RPC que retorne eventos da org propria + eventos da org pai que tenham visibilidade de rede (similar ao padrao de comunicados)
+- `useGoalProgress` filtra leads e atividades por `organization_id` do usuario
+- Para metas `network` ou `global` criadas pela franqueadora, o progresso deveria agregar dados de todas as unidades filhas
+- Resultado: franqueadora ve progresso = 0 para metas de rede
+- **Correcao**: Criar uma query que busca dados de todas as orgs filhas quando o scope e `network`/`global`
 
-### PROBLEMA 4: Fechamentos financeiros NAO chegam ao Franqueado
-- **Gravidade: ALTA**
-- `useFinanceClosings()` filtra por `organization_id = orgId`
-- Fechamentos (DRE) sao gerados pela franqueadora na org dela
-- O franqueado ve "Nenhum fechamento disponivel" — nunca recebe os arquivos
-- **Correcao**: Buscar fechamentos da org pai que sejam publicados (`status = 'published'`) e destinados a unidade especifica ou a toda a rede
-
-### PROBLEMA 5: Contratos de Franquia na aba Configuracoes do Franqueado
-- **Gravidade: MEDIA**
-- `useContracts()` filtra por `organization_id = orgId` (org do franqueado)
-- Contratos de franquia sao criados pela franqueadora na org DELA, com `unit_org_id` apontando para a unidade
-- O franqueado nao ve esses contratos na aba "Contrato de Franquia"
-- **Correcao**: Adicionar busca por contratos onde `unit_org_id = orgId` (contratos que a franqueadora fez para aquela unidade)
-
-### PROBLEMA 6: Templates de Contrato nao compartilhados
+#### ERRO 3: Rankings isolados por org
 - **Gravidade: BAIXA**
-- Se o franqueado precisa gerar contratos para seus clientes, ele so ve templates da propria org
-- Templates criados pela franqueadora nao sao herdados
-- **Correcao**: Buscar templates da org pai tambem (como no Marketing)
+- `useRankings` filtra por `organization_id = orgId`
+- Rankings deveriam ser visiveis entre unidades para funcionar como ranking de rede
+- **Correcao**: Criar RPC `get_rankings_with_parent` ou ajustar para buscar da org pai
 
----
-
-## Otimizacoes Recomendadas
-
-### OTIMIZACAO 1: Criar RPC `get_data_with_parent` generica
-Em vez de criar RPCs separadas para cada tabela, criar uma funcao reutilizavel ou aplicar o mesmo padrao (buscar da org propria + org pai) nos hooks que precisam de visibilidade cruzada.
-
-### OTIMIZACAO 2: Padronizar campo `visibility` nos eventos de agenda
-Adicionar um campo `visibility` ('own', 'network', 'specific_units') na tabela `calendar_events` para que a franqueadora possa controlar quais eventos aparecem para a rede.
-
-### OTIMIZACAO 3: Campo `target_unit_ids` nas metas
-Permitir que metas da franqueadora sejam direcionadas a unidades especificas (como ja funciona em comunicados), com filtro no lado do franqueado.
+#### ERRO 4: Franqueadora Sidebar nao mostra dados do usuario logado
+- **Gravidade: BAIXA**
+- A sidebar da franqueadora exibe "Admin" e "Franqueadora" fixos no footer
+- A sidebar do franqueado usa `profile.full_name` dinamico
+- **Correcao**: Usar `useAuth` na sidebar da franqueadora tambem
 
 ---
 
 ## Plano de Implementacao
 
-### Fase 1 — Correcoes Criticas (Problemas 1, 2, 4, 5)
+### Fase 1 -- Correcoes Criticas
 
-1. **Mensagem do Dia**: Alterar `useDailyMessages()` para buscar tambem da org pai via `get_parent_org_id`
-2. **Metas**: Criar RPC `get_goals_with_parent` ou alterar `useGoals()` para buscar metas da org pai (scope global) + metas da propria org
-3. **Fechamentos**: Criar RPC ou alterar `useFinanceClosings()` para incluir fechamentos da org pai com status `published`
-4. **Contratos de Franquia**: Alterar a query na aba Contrato do Franqueado para buscar contratos onde `unit_org_id = orgId`
+1. **HomeAtalhos dinamico**: Refatorar o componente para aceitar uma prop de atalhos ou detectar automaticamente o role, mapeando para as rotas corretas (`/franqueado/*` ou `/franqueadora/*`)
 
-### Fase 2 — Agenda Cruzada (Problema 3)
+2. **GoalProgress para metas de rede**: Alterar `useGoalProgress` para, quando o scope da meta e `network` ou `global`, buscar leads/atividades de todas as orgs filhas (via uma nova RPC ou query)
 
-5. **Migrar tabela**: Adicionar coluna `visibility` em `calendar_events` (default 'own')
-6. **RPC de eventos**: Criar funcao que retorna eventos proprios + eventos da org pai com visibilidade 'network'
-7. **UI da franqueadora**: Adicionar seletor de visibilidade ao criar eventos
+### Fase 2 -- Polimento
 
-### Fase 3 — Polimento (Problema 6 e Otimizacoes)
+3. **Rankings cruzados**: Criar RPC `get_rankings_with_parent` para que franqueado veja o ranking da rede
 
-8. **Templates de contrato**: Buscar templates da org pai
-9. **Padronizacao**: Revisar todos os hooks para garantir consistencia no padrao parent_org
+4. **Sidebar da Franqueadora**: Usar dados do usuario logado no footer
 
----
+### Detalhes Tecnicos
 
-## Detalhes Tecnicos
+**Arquivos a modificar:**
+- `src/components/home/HomeAtalhos.tsx` -- aceitar prop de atalhos com rotas dinamicas
+- `src/pages/Home.tsx` -- passar atalhos da franqueadora
+- `src/pages/franqueado/FranqueadoDashboard.tsx` -- passar atalhos do franqueado
+- `src/hooks/useGoalProgress.ts` -- criar logica de agregacao cross-org para metas de rede
+- `src/hooks/useGoals.ts` (useRankings) -- usar RPC com parent
+- `src/components/FranqueadoraSidebar.tsx` -- usar useAuth
 
-**Hooks a modificar:**
-- `src/hooks/useDailyMessages.ts` — adicionar busca na org pai
-- `src/hooks/useGoals.ts` — adicionar busca na org pai para metas globais
-- `src/hooks/useFinance.ts` (`useFinanceClosings`) — buscar fechamentos da org pai
-- `src/hooks/useContracts.ts` (`useContracts`) — adicionar filtro por `unit_org_id`
-- `src/hooks/useCalendar.ts` — implementar visibilidade cruzada
-
-**Novas RPCs SQL a criar:**
-- `get_daily_message_with_parent(_org_id)` — retorna msg do dia da org ou da org pai
-- `get_goals_with_parent(_org_id)` — retorna metas globais da org pai + metas locais
-- `get_closings_with_parent(_org_id)` — retorna fechamentos publicados da org pai
-
-**Migracao de banco:**
-- Adicionar coluna `visibility text default 'own'` em `calendar_events`
-- Adicionar coluna `target_unit_ids uuid[]` em `goals` (se nao existir)
+**Nova RPC (se necessario):**
+- `get_network_crm_leads(_parent_org_id)` -- retorna leads de todas as orgs filhas para calculo de metas de rede
