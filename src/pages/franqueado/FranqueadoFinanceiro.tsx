@@ -8,12 +8,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { FileSignature, DollarSign, TrendingUp, Calendar, Inbox, FileDown, CheckCircle, Clock, AlertCircle, Receipt, Wallet, Percent } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  FileSignature, DollarSign, TrendingUp, Calendar, Inbox, FileDown,
+  CheckCircle, Clock, AlertCircle, Receipt, Wallet, Percent, CreditCard,
+} from "lucide-react";
 import { SystemPaymentTab } from "@/components/franqueado/SystemPaymentTab";
 import { useContracts } from "@/hooks/useContracts";
 import { useFinanceClosings } from "@/hooks/useFinance";
+import { useClientPayments, useChargeClient } from "@/hooks/useClientPayments";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { toast } from "sonner";
 
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -21,12 +26,17 @@ export default function FranqueadoFinanceiro() {
   const { data: contracts, isLoading: loadingCon } = useContracts();
   const { data: closings, isLoading: loadingCl } = useFinanceClosings();
 
-  const [paymentMonth, setPaymentMonth] = useState(() => {
+  const currentMonth = useMemo(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
+  }, []);
+
+  const [paymentMonth, setPaymentMonth] = useState(currentMonth);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
-  const [receivedMap, setReceivedMap] = useState<Record<string, boolean>>({});
+  const [chargeDialog, setChargeDialog] = useState<{ contractId: string; title: string } | null>(null);
+
+  const { data: clientPayments, isLoading: loadingPay } = useClientPayments(paymentMonth);
+  const chargeClient = useChargeClient();
 
   const isLoading = loadingCon || loadingCl;
   const activeContracts = useMemo(() => (contracts ?? []).filter(c => c.status === "active"), [contracts]);
@@ -37,7 +47,7 @@ export default function FranqueadoFinanceiro() {
   const ticketMedio = activeContracts.length > 0 ? mrr / activeContracts.length : 0;
   const previsao3m = mrr * 3;
 
-  // Chart
+  // Chart data
   const chartData = useMemo(() => {
     const now = new Date();
     return Array.from({ length: 6 }).map((_, i) => {
@@ -53,25 +63,51 @@ export default function FranqueadoFinanceiro() {
     });
   }, [activeContracts]);
 
-  // Payment control
+  // Payment control — merge active contracts with real payment data
   const payments = useMemo(() => {
     const [year, month] = paymentMonth.split("-").map(Number);
+    const paymentsMap = new Map((clientPayments ?? []).map(p => [p.contract_id, p]));
+
     return activeContracts.map(c => {
       const payDay = (c as any).payment_day || 10;
       const startDate = (c as any).start_date ? new Date((c as any).start_date) : null;
       const endDate = (c as any).end_date ? new Date((c as any).end_date) : null;
-      const paymentDate = new Date(year, month - 1, payDay);
       if (startDate && startDate > new Date(year, month, 0)) return null;
       if (endDate && endDate < new Date(year, month - 1, 1)) return null;
+
+      const realPayment = paymentsMap.get(c.id);
       const today = new Date();
+      const paymentDate = new Date(year, month - 1, payDay);
       const isPast = paymentDate < today;
-      const key = `${c.id}-${paymentMonth}`;
-      const isReceived = receivedMap[key] || false;
-      const status = isReceived ? "pago" : isPast ? "atrasado" : "pendente";
+
+      let status = "pendente";
+      let invoiceUrl: string | null = null;
+      let asaasPaymentId: string | null = null;
+
+      if (realPayment) {
+        status = realPayment.status === "paid" ? "pago" : realPayment.status === "overdue" ? "atrasado" : "pendente";
+        invoiceUrl = realPayment.invoice_url;
+        asaasPaymentId = realPayment.asaas_payment_id;
+      } else if (isPast) {
+        status = "sem_cobranca";
+      }
+
       const value = Number((c as any).monthly_value || 0);
-      return { id: key, contractId: c.id, title: c.title, client: c.signer_name || "—", value, participacao: value * 0.2, payDay, paymentDate, status, isReceived };
+      return {
+        id: `${c.id}-${paymentMonth}`,
+        contractId: c.id,
+        title: c.title,
+        client: c.signer_name || "—",
+        value,
+        participacao: value * 0.2,
+        payDay,
+        status,
+        invoiceUrl,
+        asaasPaymentId,
+        hasCharge: !!realPayment,
+      };
     }).filter(Boolean) as any[];
-  }, [activeContracts, paymentMonth, receivedMap]);
+  }, [activeContracts, paymentMonth, clientPayments]);
 
   const filteredPayments = paymentStatusFilter === "all" ? payments : payments.filter(p => p.status === paymentStatusFilter);
 
@@ -83,8 +119,16 @@ export default function FranqueadoFinanceiro() {
     });
   }, []);
 
-  const toggleReceived = (id: string) => {
-    setReceivedMap(prev => ({ ...prev, [id]: !prev[id] }));
+  const handleGenerateCharge = (billingType: string) => {
+    if (!chargeDialog) return;
+    chargeClient.mutate({ contract_id: chargeDialog.contractId, billing_type: billingType }, {
+      onSuccess: (data) => {
+        setChargeDialog(null);
+        if (data?.pix_qr_code) {
+          toast.success("Cobrança PIX gerada! QR Code disponível.");
+        }
+      },
+    });
   };
 
   if (isLoading) {
@@ -93,7 +137,7 @@ export default function FranqueadoFinanceiro() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Financeiro Comercial" subtitle="Visão financeira baseada nos contratos e vendas da unidade" />
+      <PageHeader title="Financeiro" subtitle="Visão financeira, cobranças de clientes e pagamento do sistema" />
 
       <Tabs defaultValue="visao" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
@@ -146,10 +190,7 @@ export default function FranqueadoFinanceiro() {
               </CardContent>
             </Card>
           ) : (
-            <div className="text-center py-16">
-              <Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhum contrato ativo.</p>
-            </div>
+            <div className="text-center py-16"><Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-sm text-muted-foreground">Nenhum contrato ativo.</p></div>
           )}
 
           <Card className="glass-card">
@@ -179,21 +220,18 @@ export default function FranqueadoFinanceiro() {
               <SelectContent>{monthOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
             </Select>
             <div className="flex gap-1.5">
-              {[{ value: "all", label: "Todos" }, { value: "pendente", label: "Pendente" }, { value: "atrasado", label: "Atrasado" }, { value: "pago", label: "Pago" }].map(s => (
+              {[{ value: "all", label: "Todos" }, { value: "pendente", label: "Pendente" }, { value: "atrasado", label: "Atrasado" }, { value: "pago", label: "Pago" }, { value: "sem_cobranca", label: "Sem Cobrança" }].map(s => (
                 <Button key={s.value} size="sm" variant={paymentStatusFilter === s.value ? "default" : "outline"} onClick={() => setPaymentStatusFilter(s.value)}>{s.label}</Button>
               ))}
             </div>
             <div className="ml-auto flex gap-4 text-sm font-semibold">
-              <span className="text-primary">Total: R$ {filteredPayments.reduce((s, p) => s + p.value, 0).toLocaleString("pt-BR")}</span>
-              <span className="text-emerald-600">Part.: R$ {filteredPayments.reduce((s, p) => s + p.participacao, 0).toLocaleString("pt-BR")}</span>
+              <span className="text-primary">Total: R$ {filteredPayments.reduce((s: number, p: any) => s + p.value, 0).toLocaleString("pt-BR")}</span>
+              <span className="text-emerald-600">Part.: R$ {filteredPayments.reduce((s: number, p: any) => s + p.participacao, 0).toLocaleString("pt-BR")}</span>
             </div>
           </div>
 
           {filteredPayments.length === 0 ? (
-            <div className="text-center py-16">
-              <Receipt className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhum pagamento esperado neste período.</p>
-            </div>
+            <div className="text-center py-16"><Receipt className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-sm text-muted-foreground">Nenhum pagamento esperado neste período.</p></div>
           ) : (
             <Card className="glass-card">
               <Table>
@@ -205,11 +243,11 @@ export default function FranqueadoFinanceiro() {
                     <TableHead>Sua Part. (20%)</TableHead>
                     <TableHead>Dia Pgto</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Recebido</TableHead>
+                    <TableHead>Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.map(p => (
+                  {filteredPayments.map((p: any) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.client}</TableCell>
                       <TableCell>{p.title}</TableCell>
@@ -220,9 +258,18 @@ export default function FranqueadoFinanceiro() {
                         {p.status === "pago" && <Badge className="gap-1 bg-emerald-500/15 text-emerald-700 border-emerald-500/30"><CheckCircle className="w-3 h-3" />Pago</Badge>}
                         {p.status === "pendente" && <Badge variant="secondary" className="gap-1"><Clock className="w-3 h-3" />Pendente</Badge>}
                         {p.status === "atrasado" && <Badge variant="destructive" className="gap-1"><AlertCircle className="w-3 h-3" />Atrasado</Badge>}
+                        {p.status === "sem_cobranca" && <Badge variant="outline" className="gap-1 text-muted-foreground"><CreditCard className="w-3 h-3" />Sem Cobrança</Badge>}
                       </TableCell>
                       <TableCell>
-                        <Switch checked={p.isReceived} onCheckedChange={() => toggleReceived(p.id)} />
+                        {p.status === "pago" ? (
+                          <span className="text-xs text-emerald-600">✓ Recebido</span>
+                        ) : p.hasCharge && p.invoiceUrl ? (
+                          <Button size="sm" variant="outline" asChild><a href={p.invoiceUrl} target="_blank" rel="noreferrer">Ver Fatura</a></Button>
+                        ) : (
+                          <Button size="sm" variant="default" className="gap-1" onClick={() => setChargeDialog({ contractId: p.contractId, title: p.title })}>
+                            <CreditCard className="w-3.5 h-3.5" /> Gerar Cobrança
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -236,10 +283,7 @@ export default function FranqueadoFinanceiro() {
         <TabsContent value="fechamentos" className="space-y-4">
           <p className="text-sm text-muted-foreground">Arquivos de fechamento (DRE) enviados pela franqueadora.</p>
           {(closings ?? []).length === 0 ? (
-            <div className="text-center py-16">
-              <Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground font-medium">Nenhum fechamento disponível</p>
-            </div>
+            <div className="text-center py-16"><Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-sm text-muted-foreground font-medium">Nenhum fechamento disponível</p></div>
           ) : (
             <div className="grid gap-3">
               {(closings ?? []).map(cl => (
@@ -247,10 +291,7 @@ export default function FranqueadoFinanceiro() {
                   <CardContent className="flex items-center justify-between py-4">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><FileDown className="w-5 h-5 text-primary" /></div>
-                      <div>
-                        <p className="font-medium text-sm">{cl.title}</p>
-                        <p className="text-xs text-muted-foreground">{monthNames[(cl.month || 1) - 1]} / {cl.year}</p>
-                      </div>
+                      <div><p className="font-medium text-sm">{cl.title}</p><p className="text-xs text-muted-foreground">{monthNames[(cl.month || 1) - 1]} / {cl.year}</p></div>
                     </div>
                     <div className="flex items-center gap-3">
                       <Badge variant={cl.status === "published" ? "default" : "secondary"}>{cl.status === "published" ? "Disponível" : "Pendente"}</Badge>
@@ -266,6 +307,19 @@ export default function FranqueadoFinanceiro() {
         {/* SISTEMA */}
         <TabsContent value="sistema" className="space-y-4"><SystemPaymentTab /></TabsContent>
       </Tabs>
+
+      {/* Charge Dialog */}
+      <Dialog open={!!chargeDialog} onOpenChange={v => !v && setChargeDialog(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Gerar Cobrança — {chargeDialog?.title}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground mb-4">Escolha a forma de pagamento para gerar a cobrança do cliente.</p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => handleGenerateCharge("PIX")} disabled={chargeClient.isPending} className="gap-2">PIX (QR Code)</Button>
+            <Button variant="outline" onClick={() => handleGenerateCharge("BOLETO")} disabled={chargeClient.isPending}>Boleto</Button>
+            <Button variant="outline" onClick={() => handleGenerateCharge("CREDIT_CARD")} disabled={chargeClient.isPending}>Cartão de Crédito</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

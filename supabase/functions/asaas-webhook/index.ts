@@ -106,6 +106,48 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Check if this is a client payment
+      if (externalRef && typeof externalRef === "string" && externalRef.startsWith("client_payment|")) {
+        const parts = externalRef.split("|");
+        const cpOrgId = parts[1];
+        const cpContractId = parts[2];
+        const cpMonth = parts[3];
+        if (cpOrgId && cpContractId && cpMonth) {
+          await adminClient
+            .from("client_payments")
+            .update({ status: "paid", paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+            .eq("organization_id", cpOrgId)
+            .eq("contract_id", cpContractId)
+            .eq("month", cpMonth);
+
+          // Register as revenue for the franchisee
+          const cpPayment = await adminClient
+            .from("client_payments")
+            .select("amount, franchisee_share")
+            .eq("organization_id", cpOrgId)
+            .eq("contract_id", cpContractId)
+            .eq("month", cpMonth)
+            .maybeSingle();
+
+          if (cpPayment?.data) {
+            await adminClient.from("finance_revenues").insert({
+              organization_id: cpOrgId,
+              description: `Pagamento cliente — Ref. ${cpMonth}`,
+              amount: cpPayment.data.franchisee_share,
+              date: new Date().toISOString().split("T")[0],
+              category: "cliente",
+              status: "received",
+              payment_method: "asaas",
+            });
+          }
+
+          console.log(`Client payment confirmed: org=${cpOrgId}, contract=${cpContractId}, month=${cpMonth}`);
+          return new Response(JSON.stringify({ success: true, event, type: "client_payment" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
       // Check if this is a franchisee charge
       const asaasPaymentId = payment.id;
       if (asaasPaymentId) {
