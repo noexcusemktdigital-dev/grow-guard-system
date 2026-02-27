@@ -26,8 +26,9 @@ import {
 } from "@/hooks/useGoogleCalendar";
 import { useUnits } from "@/hooks/useUnits";
 import {
-  addMonths, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-  eachDayOfInterval, isSameMonth, isToday, parseISO,
+  addMonths, subMonths, addWeeks, subWeeks, addDays, subDays,
+  format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay,
+  eachDayOfInterval, isSameMonth, isToday, parseISO, getHours, getMinutes, differenceInMinutes,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -35,6 +36,9 @@ import { useSearchParams } from "react-router-dom";
 
 const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899"];
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7h-22h
+
+type ViewMode = "month" | "week" | "day";
 
 /* ───────── Google Setup Wizard ───────── */
 function GoogleSetupWizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -116,16 +120,137 @@ function GoogleSetupWizard({ open, onOpenChange }: { open: boolean; onOpenChange
   );
 }
 
+/* ───────── Week View ───────── */
+function WeekView({ currentDate, events, onEventClick, onNewEvent }: {
+  currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onNewEvent: (day: Date) => void;
+}) {
+  const weekStart = startOfWeek(currentDate, { locale: ptBR });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: endOfWeek(currentDate, { locale: ptBR }) });
+
+  const eventsByDay = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (events ?? []).forEach(ev => {
+      const key = format(parseISO(ev.start_at), "yyyy-MM-dd");
+      if (!map[key]) map[key] = [];
+      map[key].push(ev);
+    });
+    return map;
+  }, [events]);
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <div className="grid grid-cols-[60px_repeat(7,1fr)]">
+        <div className="bg-muted/30 border-b border-r border-border py-2" />
+        {weekDays.map(day => (
+          <div key={day.toISOString()} className={`text-center py-2 border-b border-r border-border text-[11px] font-semibold ${isToday(day) ? "bg-primary/5 text-primary" : "bg-muted/30 text-muted-foreground"}`}>
+            {format(day, "EEE", { locale: ptBR })} <span className="font-bold">{format(day, "d")}</span>
+          </div>
+        ))}
+      </div>
+      <div className="max-h-[600px] overflow-y-auto">
+        {HOURS.map(hour => (
+          <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] min-h-[50px]">
+            <div className="text-[10px] text-muted-foreground text-right pr-2 pt-1 border-r border-border">{`${hour}:00`}</div>
+            {weekDays.map(day => {
+              const key = format(day, "yyyy-MM-dd");
+              const dayEvs = (eventsByDay[key] || []).filter(ev => getHours(parseISO(ev.start_at)) === hour);
+              return (
+                <div key={`${key}-${hour}`} className="border-r border-b border-border/40 relative cursor-pointer hover:bg-muted/10" onClick={() => {
+                  const d = new Date(day); d.setHours(hour, 0, 0, 0); onNewEvent(d);
+                }}>
+                  {dayEvs.map(ev => (
+                    <div key={ev.id} className="absolute inset-x-0.5 rounded px-1 py-0.5 text-[10px] truncate cursor-pointer z-10"
+                      style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6", top: `${(getMinutes(parseISO(ev.start_at)) / 60) * 100}%` }}
+                      onClick={e => { e.stopPropagation(); onEventClick(ev); }}>
+                      {format(parseISO(ev.start_at), "HH:mm")} {ev.title}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Day View ───────── */
+function DayView({ currentDate, events, onEventClick, onNewEvent }: {
+  currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onNewEvent: (day: Date) => void;
+}) {
+  const dayEvents = useMemo(() => {
+    const key = format(currentDate, "yyyy-MM-dd");
+    return (events ?? []).filter(ev => format(parseISO(ev.start_at), "yyyy-MM-dd") === key);
+  }, [events, currentDate]);
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <div className="bg-muted/30 border-b border-border py-2 px-4 text-sm font-semibold capitalize">
+        {format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+      </div>
+      <div className="max-h-[600px] overflow-y-auto">
+        {HOURS.map(hour => {
+          const hourEvs = dayEvents.filter(ev => getHours(parseISO(ev.start_at)) === hour);
+          return (
+            <div key={hour} className="grid grid-cols-[60px_1fr] min-h-[60px]">
+              <div className="text-[11px] text-muted-foreground text-right pr-3 pt-1 border-r border-border">{`${hour}:00`}</div>
+              <div className="border-b border-border/40 relative cursor-pointer hover:bg-muted/10 px-2" onClick={() => {
+                const d = new Date(currentDate); d.setHours(hour, 0, 0, 0); onNewEvent(d);
+              }}>
+                {hourEvs.map(ev => {
+                  const start = parseISO(ev.start_at);
+                  const end = parseISO(ev.end_at);
+                  const duration = Math.max(differenceInMinutes(end, start), 30);
+                  return (
+                    <div key={ev.id} className="rounded px-2 py-1 text-xs mb-1 cursor-pointer"
+                      style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6", minHeight: `${Math.max(duration / 60 * 50, 24)}px` }}
+                      onClick={e => { e.stopPropagation(); onEventClick(ev); }}>
+                      <span className="font-medium">{ev.title}</span>
+                      <span className="ml-2 opacity-70">{format(start, "HH:mm")} — {format(end, "HH:mm")}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ───────── Main Component ───────── */
 export default function Agenda() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const startDate = format(startOfWeek(monthStart, { locale: ptBR }), "yyyy-MM-dd'T'00:00:00");
-  const endDate = format(endOfWeek(monthEnd, { locale: ptBR }), "yyyy-MM-dd'T'23:59:59");
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
 
-  const { data: events, isLoading } = useCalendarEvents(startDate, endDate);
+  // Compute date range based on view
+  const { computedStartDate, computedEndDate } = useMemo(() => {
+    if (viewMode === "month") {
+      const ms = startOfMonth(currentDate);
+      const me = endOfMonth(currentDate);
+      return {
+        computedStartDate: format(startOfWeek(ms, { locale: ptBR }), "yyyy-MM-dd'T'00:00:00"),
+        computedEndDate: format(endOfWeek(me, { locale: ptBR }), "yyyy-MM-dd'T'23:59:59"),
+      };
+    } else if (viewMode === "week") {
+      const ws = startOfWeek(currentDate, { locale: ptBR });
+      const we = endOfWeek(currentDate, { locale: ptBR });
+      return {
+        computedStartDate: format(ws, "yyyy-MM-dd'T'00:00:00"),
+        computedEndDate: format(we, "yyyy-MM-dd'T'23:59:59"),
+      };
+    } else {
+      return {
+        computedStartDate: format(startOfDay(currentDate), "yyyy-MM-dd'T'00:00:00"),
+        computedEndDate: format(endOfDay(currentDate), "yyyy-MM-dd'T'23:59:59"),
+      };
+    }
+  }, [currentDate, viewMode]);
+
+  const { data: events, isLoading } = useCalendarEvents(computedStartDate, computedEndDate);
   const { data: calendars } = useCalendars();
   const { createEvent, updateEvent, deleteEvent } = useCalendarEventMutations();
   const { data: units } = useUnits();
@@ -177,6 +302,9 @@ export default function Agenda() {
   const [visibility, setVisibility] = useState("rede");
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
 
+  // Month view data
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
   const days = useMemo(() => {
     const s = startOfWeek(monthStart, { locale: ptBR });
     const e = endOfWeek(monthEnd, { locale: ptBR });
@@ -198,8 +326,8 @@ export default function Agenda() {
     setTitle(""); setDescription(""); setLocation(""); setAllDay(false); setColor(COLORS[4]); setCalendarId("");
     setVisibility("rede"); setSelectedUnitIds([]);
     if (day) {
-      setStartAt(format(day, "yyyy-MM-dd'T'09:00"));
-      setEndAt(format(day, "yyyy-MM-dd'T'10:00"));
+      setStartAt(format(day, "yyyy-MM-dd'T'HH:mm"));
+      setEndAt(format(new Date(day.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"));
     } else {
       const now = new Date();
       setStartAt(format(now, "yyyy-MM-dd'T'HH:mm"));
@@ -250,6 +378,28 @@ export default function Agenda() {
     setSelectedUnitIds(prev => prev.includes(unitId) ? prev.filter(u => u !== unitId) : [...prev, unitId]);
   }
 
+  function navigatePrev() {
+    if (viewMode === "month") setCurrentDate(d => subMonths(d, 1));
+    else if (viewMode === "week") setCurrentDate(d => subWeeks(d, 1));
+    else setCurrentDate(d => subDays(d, 1));
+  }
+
+  function navigateNext() {
+    if (viewMode === "month") setCurrentDate(d => addMonths(d, 1));
+    else if (viewMode === "week") setCurrentDate(d => addWeeks(d, 1));
+    else setCurrentDate(d => addDays(d, 1));
+  }
+
+  function getDateLabel() {
+    if (viewMode === "month") return format(currentDate, "MMMM 'de' yyyy", { locale: ptBR });
+    if (viewMode === "week") {
+      const ws = startOfWeek(currentDate, { locale: ptBR });
+      const we = endOfWeek(currentDate, { locale: ptBR });
+      return `${format(ws, "d MMM", { locale: ptBR })} — ${format(we, "d MMM yyyy", { locale: ptBR })}`;
+    }
+    return format(currentDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
+  }
+
   if (isLoading) {
     return <div className="w-full space-y-6"><Skeleton className="h-10 w-64" /><Skeleton className="h-[600px]" /></div>;
   }
@@ -257,7 +407,7 @@ export default function Agenda() {
   return (
     <div className="w-full space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Calendar className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-bold">Agenda</h1>
@@ -312,53 +462,78 @@ export default function Agenda() {
           </Card>
         </div>
 
-        {/* Calendar Grid */}
+        {/* Calendar Area */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-4">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setCurrentDate(d => subMonths(d, 1))}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setCurrentDate(d => addMonths(d, 1))}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-semibold capitalize ml-1">
-              {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
-            </span>
+          {/* Navigation + View Toggle */}
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={navigatePrev}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={navigateNext}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <span className="text-sm font-semibold capitalize ml-1">{getDateLabel()}</span>
+            </div>
+            <div className="flex gap-0.5 p-0.5 rounded-lg bg-muted/50 border">
+              {([
+                { key: "month" as ViewMode, label: "Mês" },
+                { key: "week" as ViewMode, label: "Semana" },
+                { key: "day" as ViewMode, label: "Dia" },
+              ]).map(v => (
+                <Button key={v.key} variant={viewMode === v.key ? "default" : "ghost"} size="sm" className="h-7 px-3 text-xs" onClick={() => setViewMode(v.key)}>
+                  {v.label}
+                </Button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 border border-border rounded-xl overflow-hidden">
-            {WEEKDAYS.map(d => (
-              <div key={d} className="text-center text-[11px] font-semibold text-muted-foreground py-2 bg-muted/30 border-b border-border">{d}</div>
-            ))}
-            {days.map(day => {
-              const key = format(day, "yyyy-MM-dd");
-              const dayEvents = eventsByDay[key] || [];
-              const inMonth = isSameMonth(day, currentDate);
-              return (
-                <div
-                  key={key}
-                  className={`min-h-[90px] border-b border-r border-border p-1 cursor-pointer transition-colors hover:bg-muted/20 ${!inMonth ? "bg-muted/10 opacity-40" : ""} ${isToday(day) ? "bg-primary/5" : ""}`}
-                  onClick={() => openNewEvent(day)}
-                >
-                  <span className={`text-[11px] font-medium block mb-0.5 ${isToday(day) ? "text-primary font-bold" : "text-foreground"}`}>
-                    {format(day, "d")}
-                  </span>
-                  {dayEvents.slice(0, 3).map(ev => (
-                    <div
-                      key={ev.id}
-                      className="text-[10px] truncate rounded px-1 py-0.5 mb-0.5 cursor-pointer"
-                      style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6" }}
-                      onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
-                    >
-                      {ev.title}
-                    </div>
-                  ))}
-                  {dayEvents.length > 3 && <span className="text-[10px] text-muted-foreground">+{dayEvents.length - 3}</span>}
-                </div>
-              );
-            })}
-          </div>
+          {/* Month View */}
+          {viewMode === "month" && (
+            <div className="grid grid-cols-7 border border-border rounded-xl overflow-hidden">
+              {WEEKDAYS.map(d => (
+                <div key={d} className="text-center text-[11px] font-semibold text-muted-foreground py-2 bg-muted/30 border-b border-border">{d}</div>
+              ))}
+              {days.map(day => {
+                const key = format(day, "yyyy-MM-dd");
+                const dayEvents = eventsByDay[key] || [];
+                const inMonth = isSameMonth(day, currentDate);
+                return (
+                  <div
+                    key={key}
+                    className={`min-h-[90px] border-b border-r border-border p-1 cursor-pointer transition-colors hover:bg-muted/20 ${!inMonth ? "bg-muted/10 opacity-40" : ""} ${isToday(day) ? "bg-primary/5" : ""}`}
+                    onClick={() => openNewEvent(day)}
+                  >
+                    <span className={`text-[11px] font-medium block mb-0.5 ${isToday(day) ? "text-primary font-bold" : "text-foreground"}`}>
+                      {format(day, "d")}
+                    </span>
+                    {dayEvents.slice(0, 3).map(ev => (
+                      <div
+                        key={ev.id}
+                        className="text-[10px] truncate rounded px-1 py-0.5 mb-0.5 cursor-pointer"
+                        style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6" }}
+                        onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
+                      >
+                        {ev.title}
+                      </div>
+                    ))}
+                    {dayEvents.length > 3 && <span className="text-[10px] text-muted-foreground">+{dayEvents.length - 3}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Week View */}
+          {viewMode === "week" && (
+            <WeekView currentDate={currentDate} events={events ?? []} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
+          )}
+
+          {/* Day View */}
+          {viewMode === "day" && (
+            <DayView currentDate={currentDate} events={events ?? []} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
+          )}
         </div>
       </div>
 

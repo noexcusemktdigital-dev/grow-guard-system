@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useOnboardingUnits, useOnboardingChecklist, useOnboardingMeetings, useOnboardingTasks, useOnboardingIndicators, useOnboardingMutations } from "@/hooks/useOnboarding";
 import { useUnits } from "@/hooks/useUnits";
 import { toast } from "sonner";
@@ -40,11 +40,12 @@ export default function Onboarding() {
   const { data: dbUnits } = useUnits();
   const { createUnit, updateUnit, toggleChecklistItem, createChecklistItem, createMeeting, updateMeeting, createTask, toggleTask } = useOnboardingMutations();
 
-  // New unit form
-  const [newName, setNewName] = useState("");
+  // New unit form — unit selection drives name & responsible
   const [newUnitId, setNewUnitId] = useState("");
-  const [newResponsible, setNewResponsible] = useState("");
-  const [newTargetDate, setNewTargetDate] = useState("");
+  const [newStartDate, setNewStartDate] = useState("");
+
+  // Derived from selected unit
+  const selectedDbUnit = (dbUnits ?? []).find(u => u.id === newUnitId);
 
   // New step form
   const [stepTitle, setStepTitle] = useState("");
@@ -70,10 +71,17 @@ export default function Onboarding() {
   };
 
   const handleCreateUnit = () => {
-    if (!newName.trim()) { toast.error("Nome obrigatório"); return; }
-    createUnit.mutate({ name: newName, unit_org_id: newUnitId || undefined, target_date: newTargetDate || undefined, responsible: newResponsible || undefined });
+    if (!newUnitId) { toast.error("Selecione uma unidade"); return; }
+    const unitName = selectedDbUnit?.name || "Implantação";
+    const responsible = (selectedDbUnit as any)?.manager_name || undefined;
+    createUnit.mutate({
+      name: unitName,
+      unit_org_id: newUnitId,
+      start_date: newStartDate || undefined,
+      responsible,
+    });
     setShowNewDialog(false);
-    setNewName(""); setNewUnitId(""); setNewResponsible(""); setNewTargetDate("");
+    setNewUnitId(""); setNewStartDate("");
     toast.success("Implantação criada");
   };
 
@@ -144,7 +152,6 @@ export default function Onboarding() {
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     {u.start_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Início: {new Date(u.start_date).toLocaleDateString("pt-BR")}</span>}
-                    {u.target_date && <span>Meta: {new Date(u.target_date).toLocaleDateString("pt-BR")}</span>}
                     {(u as any).responsible && <span>Resp: {(u as any).responsible}</span>}
                   </div>
                 </Card>
@@ -174,6 +181,11 @@ export default function Onboarding() {
               <Progress value={getUnitProgress()} className="h-2.5 flex-1" />
               <span className="text-sm font-medium">{getUnitProgress()}%</span>
             </div>
+            {selected.start_date && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Início: {new Date(selected.start_date).toLocaleDateString("pt-BR")}
+              </p>
+            )}
           </div>
 
           <Tabs defaultValue="etapas">
@@ -272,26 +284,43 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* New Unit Dialog */}
+      {/* New Unit Dialog — unit-driven */}
       <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nova Implantação</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Nova Implantação</DialogTitle>
+            <DialogDescription>Selecione a unidade para iniciar o processo de implantação.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
-            <div><Label>Nome da implantação *</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Franquia São Paulo Centro" /></div>
-            {(dbUnits ?? []).length > 0 && (
-              <div><Label>Vincular unidade</Label>
-                <Select value={newUnitId} onValueChange={setNewUnitId}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar unidade" /></SelectTrigger>
-                  <SelectContent>{(dbUnits ?? []).map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
-                </Select>
+            <div>
+              <Label>Unidade *</Label>
+              <Select value={newUnitId} onValueChange={setNewUnitId}>
+                <SelectTrigger><SelectValue placeholder="Selecionar unidade" /></SelectTrigger>
+                <SelectContent>
+                  {(dbUnits ?? []).map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedDbUnit && (
+              <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-1">
+                <p className="text-xs text-muted-foreground">Nome da implantação:</p>
+                <p className="text-sm font-medium">{selectedDbUnit.name}</p>
+                {(selectedDbUnit as any)?.manager_name && (
+                  <>
+                    <p className="text-xs text-muted-foreground mt-1">Responsável:</p>
+                    <p className="text-sm">{(selectedDbUnit as any).manager_name}</p>
+                  </>
+                )}
               </div>
             )}
-            <div><Label>Responsável</Label><Input value={newResponsible} onChange={e => setNewResponsible(e.target.value)} placeholder="Nome do responsável" /></div>
-            <div><Label>Data alvo</Label><Input type="date" value={newTargetDate} onChange={e => setNewTargetDate(e.target.value)} /></div>
+            <div>
+              <Label>Data de início</Label>
+              <Input type="date" value={newStartDate} onChange={e => setNewStartDate(e.target.value)} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewDialog(false)}>Cancelar</Button>
-            <Button onClick={handleCreateUnit}>Criar Implantação</Button>
+            <Button onClick={handleCreateUnit} disabled={!newUnitId}>Criar Implantação</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
