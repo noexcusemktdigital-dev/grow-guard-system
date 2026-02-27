@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.generate-template-layout]
 verify_jwt = false
+
+[functions.get-outbound-ip]
+verify_jwt = false
