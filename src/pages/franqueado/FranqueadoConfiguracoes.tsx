@@ -129,7 +129,7 @@ function TeamTab() {
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`Funcionário convidado! Senha temporária: ${data.temp_password}`, { duration: 15000 });
+      toast.success("Convite enviado! O funcionário receberá um e-mail para definir sua senha.");
       setInviteOpen(false);
       setInviteForm({ email: "", full_name: "", role: "cliente_user" });
       qc.invalidateQueries({ queryKey: ["org-members"] });

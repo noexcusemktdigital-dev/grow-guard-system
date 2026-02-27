@@ -208,7 +208,7 @@ function UsersTab() {
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`Usuário convidado! Senha temporária: ${data.temp_password}`, { duration: 15000 });
+      toast.success("Convite enviado! O usuário receberá um e-mail para definir sua senha.");
       setInviteOpen(false);
       setInviteForm({ email: "", full_name: "", role: "cliente_user" });
       qc.invalidateQueries({ queryKey: ["org-members"] });
