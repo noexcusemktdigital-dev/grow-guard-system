@@ -38,6 +38,7 @@ const redeSection: SidebarItem[] = [
 ];
 
 const comercialSection: SidebarItem[] = [
+  { label: "Propostas", icon: FileText, path: "/franqueadora/propostas" },
   { label: "Marketing", icon: Zap, path: "/franqueadora/marketing" },
   { label: "Treinamentos", icon: GraduationCap, path: "/franqueadora/treinamentos" },
   { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
