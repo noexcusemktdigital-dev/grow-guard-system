@@ -30,7 +30,7 @@ const FRANCHISE_PLACEHOLDERS = [
   { key: "{{data_assinatura}}", label: "Data da Assinatura", category: "Datas", example: "27 de fevereiro de 2026" },
 ];
 
-const SERVICE_PLACEHOLDERS = [
+export const SERVICE_PLACEHOLDERS = [
   { key: "{{contratante_razao_social}}", label: "Razão Social", category: "Contratante", example: "Empresa Exemplo LTDA" },
   { key: "{{contratante_cnpj}}", label: "CNPJ", category: "Contratante", example: "00.000.000/0001-00" },
   { key: "{{contratante_endereco}}", label: "Endereço", category: "Contratante", example: "Avenida Exemplo, nº 100" },
@@ -235,7 +235,7 @@ CNPJ: 34.638.745/0001-00           CPF/CNPJ: {{franqueada_cpf}}
 _________________________          _________________________
 Testemunha 1                       Testemunha 2`;
 
-const SERVICE_CONTENT = `CONTRATO PRESTAÇÃO DE SERVIÇO
+export const SERVICE_CONTENT = `CONTRATO PRESTAÇÃO DE SERVIÇO
 
 Pelo presente instrumento as partes abaixo nomeadas e qualificadas, a saber:
 

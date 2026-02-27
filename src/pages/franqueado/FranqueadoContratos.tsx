@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,16 +9,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   FileSignature, DollarSign, Inbox, Download, Link2, Plus, Users, CalendarDays,
-  CheckCircle, AlertTriangle, Send, Clock,
+  CheckCircle, AlertTriangle, Clock, Eye,
 } from "lucide-react";
-import { useContracts, useContractTemplates, useContractMutations } from "@/hooks/useContracts";
+import { useContracts, useContractMutations } from "@/hooks/useContracts";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
-import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { toast } from "sonner";
-import { addMonths, format, differenceInDays } from "date-fns";
+import { format, differenceInDays } from "date-fns";
+import { SERVICE_CONTENT, SERVICE_PLACEHOLDERS } from "@/constants/contractTemplates";
+import logoNoExcuse from "@/assets/logo-noexcuse.png";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
@@ -29,173 +31,253 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 
 const DURATION_OPTIONS = [
   { value: "1", label: "1 mês" },
+  { value: "3", label: "3 meses" },
   { value: "6", label: "6 meses" },
   { value: "12", label: "12 meses" },
+  { value: "24", label: "24 meses" },
 ];
+
+function buildContractContent(form: Record<string, string>) {
+  let content = SERVICE_CONTENT;
+  for (const p of SERVICE_PLACEHOLDERS) {
+    const key = p.key.replace(/\{\{|\}\}/g, "");
+    content = content.split(p.key).join(form[key] || p.key);
+  }
+  return content;
+}
+
+async function getLogoBase64(): Promise<string> {
+  try {
+    const resp = await fetch(logoNoExcuse);
+    const blob = await resp.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return "";
+  }
+}
+
+function formatContractHtml(content: string, logoBase64: string): string {
+  const paragraphs = content.split("\n").map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return "";
+    // Clause headers
+    if (/^CLÁUSULA\s/i.test(trimmed) || /^CONTRATO\s/i.test(trimmed)) {
+      return `<h2 style="font-size:13px;font-weight:bold;text-transform:uppercase;margin:28px 0 10px;letter-spacing:0.5px;color:#1a1a1a;">${trimmed}</h2>`;
+    }
+    // Signature lines
+    if (trimmed.startsWith("____")) {
+      return `<p style="font-size:12px;margin:4px 0;color:#333;">${trimmed}</p>`;
+    }
+    // Sub-items
+    if (/^[a-z]\)/.test(trimmed) || /^\d+\./.test(trimmed)) {
+      return `<p style="font-size:11.5px;margin:4px 0 4px 16px;text-align:justify;line-height:1.7;color:#222;">${trimmed}</p>`;
+    }
+    return `<p style="font-size:11.5px;margin:6px 0;text-align:justify;line-height:1.7;color:#222;">${trimmed}</p>`;
+  }).join("\n");
+
+  return `
+    <div style="font-family:Georgia,'Times New Roman',serif;max-width:700px;margin:0 auto;padding:50px 40px;color:#1a1a1a;">
+      <div style="text-align:center;margin-bottom:30px;">
+        ${logoBase64 ? `<img src="${logoBase64}" style="height:60px;margin-bottom:16px;" />` : ""}
+        <h1 style="font-size:16px;font-weight:bold;text-transform:uppercase;letter-spacing:3px;margin:0;color:#111;">CONTRATO DE PRESTAÇÃO DE SERVIÇO</h1>
+        <div style="width:60px;height:2px;background:#333;margin:10px auto 0;"></div>
+      </div>
+      ${paragraphs}
+      <p style="text-align:center;font-size:9px;color:#aaa;margin-top:40px;border-top:1px solid #eee;padding-top:10px;">
+        Documento gerado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")} — NOEXCUSE Marketing Digital
+      </p>
+    </div>
+  `;
+}
+
+async function downloadContractPdf(contract: any) {
+  const { default: html2pdf } = await import("html2pdf.js");
+  const logoBase64 = await getLogoBase64();
+  const content = contract.content || "Conteúdo do contrato não disponível.";
+  const html = formatContractHtml(content, logoBase64);
+
+  const el = document.createElement("div");
+  el.innerHTML = html;
+
+  html2pdf()
+    .set({
+      margin: [15, 15, 15, 15],
+      filename: `${contract.title || "Contrato"}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    })
+    .from(el)
+    .save();
+}
+
+// ─── Contract Form ───
 
 function ContractForm({ onSuccess }: { onSuccess: () => void }) {
   const { createContract } = useContractMutations();
-  const { data: leads } = useCrmLeads();
-  const { data: proposals } = useCrmProposals();
+  const [showPreview, setShowPreview] = useState(false);
 
-  const acceptedProposals = useMemo(() => (proposals ?? []).filter(p => p.status === "accepted"), [proposals]);
-
-  const [form, setForm] = useState({
-    title: "", signer_name: "", signer_email: "", client_document: "", client_phone: "",
-    client_address: "", service_description: "", monthly_value: "", duration_months: "",
-    start_date: "", payment_day: "", lead_id: "", proposal_id: "", status: "draft",
+  const [form, setForm] = useState<Record<string, string>>({
+    contratante_razao_social: "",
+    contratante_cnpj: "",
+    contratante_endereco: "",
+    contratante_bairro: "",
+    contratante_cep: "",
+    contratante_cidade: "",
+    contratante_estado: "",
+    servicos_descricao: "",
+    prazo_meses: "",
+    valor_setup: "",
+    valor_setup_extenso: "",
+    valor_mensal: "",
+    valor_mensal_extenso: "",
+    dia_vencimento: "",
+    data_assinatura: "",
   });
-
-  const totalValue = useMemo(() => (Number(form.monthly_value) || 0) * (Number(form.duration_months) || 0), [form.monthly_value, form.duration_months]);
-  const endDate = useMemo(() => {
-    if (!form.start_date || !form.duration_months) return "";
-    return format(addMonths(new Date(form.start_date), Number(form.duration_months)), "yyyy-MM-dd");
-  }, [form.start_date, form.duration_months]);
 
   const set = (key: string, val: string) => setForm(prev => ({ ...prev, [key]: val }));
 
-  // Filter proposals by selected lead
-  const filteredProposals = useMemo(() => {
-    if (!form.lead_id) return acceptedProposals;
-    return acceptedProposals.filter(p => p.lead_id === form.lead_id);
-  }, [acceptedProposals, form.lead_id]);
-
-  const handleLeadSelect = (leadId: string) => {
-    const lead = (leads ?? []).find(l => l.id === leadId);
-    setForm(prev => ({
-      ...prev, lead_id: leadId, proposal_id: "",
-      signer_name: lead?.name || prev.signer_name,
-      signer_email: lead?.email || prev.signer_email,
-      client_phone: lead?.phone || prev.client_phone,
-    }));
-  };
-
-  const handleProposalSelect = (proposalId: string) => {
-    const proposal = acceptedProposals.find(p => p.id === proposalId);
-    if (!proposal) return;
-    const serviceDesc = (proposal.items ?? []).map((item: any) => `• ${item.name} (${item.quantity}x)`).join("\n");
-    const monthlyVal = (proposal.content as any)?.monthly_value || proposal.value || 0;
-    setForm(prev => ({
-      ...prev, proposal_id: proposalId,
-      title: `Contrato - ${proposal.title}`,
-      service_description: serviceDesc,
-      monthly_value: String(monthlyVal),
-      lead_id: proposal.lead_id || prev.lead_id,
-    }));
-    if (proposal.lead_id) {
-      const lead = (leads ?? []).find(l => l.id === proposal.lead_id);
-      if (lead) setForm(prev => ({ ...prev, signer_name: lead.name || prev.signer_name, signer_email: lead.email || prev.signer_email, client_phone: lead.phone || prev.client_phone }));
-    }
-  };
+  const previewContent = useMemo(() => buildContractContent(form), [form]);
 
   const handleSave = (status: string) => {
-    if (!form.lead_id) return toast.error("Selecione um lead do CRM");
-    if (!form.proposal_id) return toast.error("Selecione uma proposta aceita");
-    if (!form.payment_day) return toast.error("Informe o dia de pagamento");
-    if (!form.duration_months) return toast.error("Selecione a duração");
-    createContract.mutate({
-      title: form.title || `Contrato - ${form.signer_name}`,
-      signer_name: form.signer_name, signer_email: form.signer_email || undefined,
-      client_document: form.client_document || undefined, client_phone: form.client_phone || undefined,
-      client_address: form.client_address || undefined, service_description: form.service_description || undefined,
-      monthly_value: Number(form.monthly_value) || 0, total_value: totalValue,
-      duration_months: Number(form.duration_months) || undefined,
-      start_date: form.start_date || undefined, end_date: endDate || undefined,
-      lead_id: form.lead_id, payment_day: Number(form.payment_day) || undefined, status,
-    }, {
-      onSuccess: () => {
-        toast.success(status === "draft" ? "Rascunho salvo!" : "Contrato gerado!");
-        setForm({ title: "", signer_name: "", signer_email: "", client_document: "", client_phone: "", client_address: "", service_description: "", monthly_value: "", duration_months: "", start_date: "", payment_day: "", lead_id: "", proposal_id: "", status: "draft" });
-        onSuccess();
+    if (!form.contratante_razao_social) return toast.error("Informe a Razão Social do contratante");
+    if (!form.contratante_cnpj) return toast.error("Informe o CNPJ do contratante");
+    if (!form.prazo_meses) return toast.error("Selecione o prazo do contrato");
+    if (!form.dia_vencimento) return toast.error("Informe o dia de vencimento");
+
+    const content = buildContractContent(form);
+    const monthlyValue = parseFloat(form.valor_mensal.replace(/\./g, "").replace(",", ".")) || 0;
+    const durationMonths = Number(form.prazo_meses) || 0;
+
+    createContract.mutate(
+      {
+        title: `Contrato - ${form.contratante_razao_social}`,
+        content,
+        signer_name: form.contratante_razao_social,
+        client_document: form.contratante_cnpj,
+        client_address: `${form.contratante_endereco}, ${form.contratante_bairro}, ${form.contratante_cidade}/${form.contratante_estado} - CEP ${form.contratante_cep}`,
+        service_description: form.servicos_descricao,
+        monthly_value: monthlyValue,
+        total_value: monthlyValue * durationMonths,
+        duration_months: durationMonths,
+        payment_day: Number(form.dia_vencimento) || undefined,
+        status,
+        contract_type: "assessoria",
       },
-    });
+      {
+        onSuccess: () => {
+          toast.success(status === "draft" ? "Rascunho salvo!" : "Contrato gerado com sucesso!");
+          onSuccess();
+        },
+      }
+    );
   };
 
   return (
     <div className="space-y-6">
-      {/* 1. Lead (obrigatório) */}
+      {/* Dados do Contratante */}
       <Card className="glass-card border-primary/20">
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Link2 className="w-4 h-4" />Lead do CRM *</CardTitle></CardHeader>
-        <CardContent>
-          <Select value={form.lead_id} onValueChange={handleLeadSelect}>
-            <SelectTrigger><SelectValue placeholder="Selecionar lead..." /></SelectTrigger>
-            <SelectContent>{(leads ?? []).map(l => <SelectItem key={l.id} value={l.id}>{l.name} {l.email ? `— ${l.email}` : ""}</SelectItem>)}</SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      {/* 2. Proposta Aceita (obrigatório) */}
-      <Card className="glass-card border-primary/20">
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold flex items-center gap-2"><FileSignature className="w-4 h-4" />Proposta Aceita *</CardTitle></CardHeader>
-        <CardContent>
-          {filteredProposals.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nenhuma proposta aceita {form.lead_id ? "para este lead" : "encontrada"}. Gere e aceite uma proposta primeiro.</p>
-          ) : (
-            <Select value={form.proposal_id} onValueChange={handleProposalSelect}>
-              <SelectTrigger><SelectValue placeholder="Selecionar proposta aceita..." /></SelectTrigger>
-              <SelectContent>{filteredProposals.map(p => <SelectItem key={p.id} value={p.id}>{p.title} — R$ {Number(p.value || 0).toLocaleString("pt-BR")}</SelectItem>)}</SelectContent>
-            </Select>
-          )}
-          {form.proposal_id && <p className="text-xs text-emerald-600 mt-2">✓ Dados da proposta preenchidos automaticamente.</p>}
-        </CardContent>
-      </Card>
-
-      {/* 3. Dados do Cliente (auto-preenchidos) */}
-      <Card className="glass-card">
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Users className="w-4 h-4" />Dados do Cliente</CardTitle></CardHeader>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Users className="w-4 h-4" /> Dados do Contratante
+          </CardTitle>
+        </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Nome</Label><Input value={form.signer_name} onChange={e => set("signer_name", e.target.value)} placeholder="Nome completo" /></div>
-            <div><Label>Email</Label><Input type="email" value={form.signer_email} onChange={e => set("signer_email", e.target.value)} /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><Label>Razão Social *</Label><Input value={form.contratante_razao_social} onChange={e => set("contratante_razao_social", e.target.value)} placeholder="Empresa Exemplo LTDA" /></div>
+            <div><Label>CNPJ *</Label><Input value={form.contratante_cnpj} onChange={e => set("contratante_cnpj", e.target.value)} placeholder="00.000.000/0001-00" /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>CPF/CNPJ</Label><Input value={form.client_document} onChange={e => set("client_document", e.target.value)} /></div>
-            <div><Label>Telefone</Label><Input value={form.client_phone} onChange={e => set("client_phone", e.target.value)} /></div>
+          <div><Label>Endereço</Label><Input value={form.contratante_endereco} onChange={e => set("contratante_endereco", e.target.value)} placeholder="Avenida Exemplo, nº 100" /></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div><Label>Bairro</Label><Input value={form.contratante_bairro} onChange={e => set("contratante_bairro", e.target.value)} /></div>
+            <div><Label>CEP</Label><Input value={form.contratante_cep} onChange={e => set("contratante_cep", e.target.value)} placeholder="00000-000" /></div>
+            <div><Label>Cidade</Label><Input value={form.contratante_cidade} onChange={e => set("contratante_cidade", e.target.value)} /></div>
+            <div><Label>Estado</Label><Input value={form.contratante_estado} onChange={e => set("contratante_estado", e.target.value)} /></div>
           </div>
-          <div><Label>Endereço</Label><Input value={form.client_address} onChange={e => set("client_address", e.target.value)} /></div>
         </CardContent>
       </Card>
 
-      {/* 4. Pagamento e Vigência */}
+      {/* Serviços e Prazo */}
       <Card className="glass-card">
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4" />Pagamento e Vigência</CardTitle></CardHeader>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <FileSignature className="w-4 h-4" /> Serviços e Prazo
+          </CardTitle>
+        </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <Label>Serviços Contratados *</Label>
+            <Textarea
+              value={form.servicos_descricao}
+              onChange={e => set("servicos_descricao", e.target.value)}
+              placeholder={"Artes: 04 unidades;\nVídeos: 04 unidades;\nProgramação: Meta;\nGestão de Tráfego Pago: Meta e Google;"}
+              rows={4}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <Label>Valor Mensal</Label>
-              <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm font-semibold">R$ {Number(form.monthly_value || 0).toLocaleString("pt-BR")}</div>
-            </div>
-            <div>
-              <Label>Duração *</Label>
-              <Select value={form.duration_months} onValueChange={v => set("duration_months", v)}>
+              <Label>Prazo do Contrato *</Label>
+              <Select value={form.prazo_meses} onValueChange={v => set("prazo_meses", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>{DURATION_OPTIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Dia de Pagamento *</Label>
-              <Select value={form.payment_day} onValueChange={v => set("payment_day", v)}>
-                <SelectTrigger><SelectValue placeholder="Dia" /></SelectTrigger>
-                <SelectContent>{Array.from({ length: 31 }, (_, i) => i + 1).map(d => <SelectItem key={d} value={String(d)}>Dia {d}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Valor Total</Label>
-              <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm font-semibold">R$ {totalValue.toLocaleString("pt-BR")}</div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Data Início</Label><Input type="date" value={form.start_date} onChange={e => set("start_date", e.target.value)} /></div>
-            <div>
-              <Label>Data Fim (automática)</Label>
-              <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm text-muted-foreground">
-                {endDate ? new Date(endDate).toLocaleDateString("pt-BR") : "Selecione início e duração"}
-              </div>
+              <Label>Data da Assinatura</Label>
+              <Input value={form.data_assinatura} onChange={e => set("data_assinatura", e.target.value)} placeholder="27 de fevereiro de 2026" />
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Valores */}
+      <Card className="glass-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <DollarSign className="w-4 h-4" /> Valores e Pagamento
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><Label>Valor Setup (R$)</Label><Input value={form.valor_setup} onChange={e => set("valor_setup", e.target.value)} placeholder="1.000,00" /></div>
+            <div><Label>Setup por Extenso</Label><Input value={form.valor_setup_extenso} onChange={e => set("valor_setup_extenso", e.target.value)} placeholder="mil reais" /></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><Label>Valor Mensal (R$) *</Label><Input value={form.valor_mensal} onChange={e => set("valor_mensal", e.target.value)} placeholder="2.500,00" /></div>
+            <div><Label>Mensal por Extenso</Label><Input value={form.valor_mensal_extenso} onChange={e => set("valor_mensal_extenso", e.target.value)} placeholder="dois mil e quinhentos reais" /></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label>Dia de Vencimento *</Label>
+              <Select value={form.dia_vencimento} onValueChange={v => set("dia_vencimento", v)}>
+                <SelectTrigger><SelectValue placeholder="Dia" /></SelectTrigger>
+                <SelectContent>{Array.from({ length: 31 }, (_, i) => i + 1).map(d => <SelectItem key={d} value={String(d)}>Dia {d}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview Toggle */}
+      <div className="flex items-center gap-3">
+        <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="gap-2">
+          <Eye className="w-4 h-4" />{showPreview ? "Ocultar Preview" : "Visualizar Contrato"}
+        </Button>
+      </div>
+
+      {showPreview && (
+        <Card className="glass-card">
+          <CardContent className="p-6">
+            <pre className="whitespace-pre-wrap text-xs leading-relaxed font-serif text-foreground/80">{previewContent}</pre>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Actions */}
       <div className="flex gap-3 justify-end">
         <Button variant="outline" onClick={() => handleSave("draft")} disabled={createContract.isPending}>Salvar como Rascunho</Button>
         <Button onClick={() => handleSave("active")} disabled={createContract.isPending}>Gerar Contrato</Button>
@@ -204,59 +286,7 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-function downloadContractPdf(contract: any) {
-  import("html2pdf.js").then(({ default: html2pdf }) => {
-    const el = document.createElement("div");
-    el.innerHTML = `
-      <div style="font-family:'Times New Roman',serif;padding:60px 50px;max-width:750px;color:#1a1a1a;line-height:1.6;">
-        <div style="text-align:center;margin-bottom:40px;">
-          <h1 style="font-size:22px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h1>
-          <p style="font-size:12px;color:#666;">Nº ${contract.id?.slice(0,8).toUpperCase()} — ${new Date(contract.created_at).toLocaleDateString("pt-BR")}</p>
-        </div>
-        <hr style="border:none;border-top:2px solid #333;margin:20px 0;"/>
-
-        <h3 style="font-size:14px;font-weight:bold;text-transform:uppercase;margin:24px 0 12px;">1. DAS PARTES</h3>
-        <p style="font-size:13px;"><strong>CONTRATANTE:</strong> ${contract.signer_name || "—"}</p>
-        <p style="font-size:13px;">CPF/CNPJ: ${contract.client_document || "—"} | Email: ${contract.signer_email || "—"} | Tel: ${contract.client_phone || "—"}</p>
-        <p style="font-size:13px;">Endereço: ${contract.client_address || "—"}</p>
-
-        <h3 style="font-size:14px;font-weight:bold;text-transform:uppercase;margin:24px 0 12px;">2. DO OBJETO</h3>
-        <p style="font-size:13px;white-space:pre-wrap;">${contract.service_description || "Serviços conforme proposta comercial aceita."}</p>
-
-        <h3 style="font-size:14px;font-weight:bold;text-transform:uppercase;margin:24px 0 12px;">3. DO VALOR E PAGAMENTO</h3>
-        <table style="width:100%;font-size:13px;border-collapse:collapse;">
-          <tr><td style="padding:6px 0;border-bottom:1px solid #eee;">Valor Mensal:</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;font-weight:bold;">R$ ${Number(contract.monthly_value || 0).toLocaleString("pt-BR")}</td></tr>
-          <tr><td style="padding:6px 0;border-bottom:1px solid #eee;">Duração:</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">${contract.duration_months || "—"} meses</td></tr>
-          <tr><td style="padding:6px 0;border-bottom:1px solid #eee;">Dia de Pagamento:</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">Dia ${contract.payment_day || "—"}</td></tr>
-          <tr><td style="padding:6px 0;font-weight:bold;">Valor Total:</td><td style="text-align:right;padding:6px 0;font-weight:bold;font-size:15px;">R$ ${Number(contract.total_value || 0).toLocaleString("pt-BR")}</td></tr>
-        </table>
-
-        <h3 style="font-size:14px;font-weight:bold;text-transform:uppercase;margin:24px 0 12px;">4. DA VIGÊNCIA</h3>
-        <p style="font-size:13px;">Início: ${contract.start_date ? new Date(contract.start_date).toLocaleDateString("pt-BR") : "—"} | Término: ${contract.end_date ? new Date(contract.end_date).toLocaleDateString("pt-BR") : "—"}</p>
-
-        <h3 style="font-size:14px;font-weight:bold;text-transform:uppercase;margin:24px 0 12px;">5. DAS DISPOSIÇÕES GERAIS</h3>
-        <p style="font-size:12px;color:#444;">O presente contrato é regido pelas leis brasileiras. Fica eleito o foro da comarca da sede do CONTRATADO para dirimir quaisquer questões oriundas do presente instrumento.</p>
-
-        <div style="margin-top:80px;display:flex;justify-content:space-between;">
-          <div style="text-align:center;width:42%;">
-            <div style="border-top:1px solid #333;padding-top:8px;">
-              <p style="font-size:12px;font-weight:bold;">CONTRATANTE</p>
-              <p style="font-size:11px;color:#666;">${contract.signer_name || "—"}</p>
-            </div>
-          </div>
-          <div style="text-align:center;width:42%;">
-            <div style="border-top:1px solid #333;padding-top:8px;">
-              <p style="font-size:12px;font-weight:bold;">CONTRATADO</p>
-              <p style="font-size:11px;color:#666;">Franquia</p>
-            </div>
-          </div>
-        </div>
-        <p style="text-align:center;font-size:10px;color:#999;margin-top:40px;">Documento gerado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}</p>
-      </div>
-    `;
-    html2pdf().set({ margin: [10, 10, 10, 10], filename: `${contract.title || "Contrato"}.pdf`, jsPDF: { format: "a4" } }).from(el).save();
-  });
-}
+// ─── Main Page ───
 
 export default function FranqueadoContratos() {
   const { data: contracts, isLoading } = useContracts();
@@ -276,7 +306,7 @@ export default function FranqueadoContratos() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Meus Contratos" subtitle="Crie, gerencie e vincule contratos ao CRM" />
+      <PageHeader title="Meus Contratos" subtitle="Crie e gerencie contratos de prestação de serviço" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Contratos Ativos" value={String(ativos)} icon={FileSignature} delay={0} variant="accent" />
