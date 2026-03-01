@@ -1,36 +1,35 @@
 
 
-# Inserir dados de teste para o cliente SaaS "Empresa Teste"
+# Corrigir integração Asaas em produção
 
-## Objetivo
-Popular o CRM do cliente "Empresa Teste" (org: `adb09618`) com dados que reflitam os KPIs solicitados no dashboard.
+## Problema
+O segredo `ASAAS_PROXY_URL` contém um valor invalido. Quando `asaasFetch` tenta criar um cliente HTTP com proxy, o Deno rejeita a URL e todas as Edge Functions financeiras quebram com erro 500.
 
-## Dados a inserir
+No sandbox funcionava porque o segredo provavelmente nao estava definido, fazendo o codigo usar `fetch` direto (fallback).
 
-### 1. Criar 243 leads adicionais no CRM (ja existem 2)
-Total: 245 leads no mes atual (marco/2026), distribuidos assim:
-- **110 leads ganhos** (won_at preenchido) — valor total = R$ 450.000 (~R$ 4.090 de ticket medio)
-- **25 leads perdidos** (lost_at preenchido) — para compor taxa de perda
-- **110 leads ativos** em etapas variadas (novo, contato, qualificacao, proposta, negociacao)
+## Solucao (2 partes)
 
-Isso gera:
-- Taxa de conversao: 110/245 = **~45%**
-- Receita total: **R$ 450.000**
+### 1. Tornar o `asaasFetch` resiliente (codigo)
+Atualizar `supabase/functions/_shared/asaas-fetch.ts` para:
+- Validar se a URL do proxy e valida antes de usá-la (verificar se começa com `http://` ou `https://`)
+- Se o proxy falhar, fazer fallback automatico para fetch direto em vez de crashar
+- Adicionar log de warning quando o proxy falha
 
-### 2. Criar meta de receita
-Inserir um registro na tabela `goals` com:
-- organization_id = Empresa Teste
-- metric = "revenue"
-- target_value = R$ 529.412 (para que 450k represente **85%** da meta)
-- period_start = 2026-03-01
-- period_end = 2026-03-31
-- scope = "global"
-- status = "active"
+```text
+asaasFetch(url, options)
+  |
+  +-- ASAAS_PROXY_URL definida e valida?
+  |     SIM -> tenta fetch com proxy
+  |             falhou? -> log warning + fallback fetch direto
+  |     NAO -> fetch direto
+```
 
-### Detalhes tecnicos
-- Os leads serao inseridos via ferramenta de dados (insert tool) usando o funnel "Funil Principal"
-- Serao usadas datas de criacao variadas ao longo de marco/2026
-- Valores dos leads ganhos distribuidos entre R$ 1.500 e R$ 15.000 para parecer realista
-- Origens variadas: site, indicacao, instagram, google_ads, whatsapp
-- Nenhuma alteracao de schema necessaria — apenas insercao de dados nas tabelas existentes
+### 2. Corrigir o valor do segredo `ASAAS_PROXY_URL`
+- Se voce tem um proxy com IP estatico configurado, o valor deve ser uma URL completa como `http://usuario:senha@ip:porta` ou `http://ip:porta`
+- Se voce **nao** tem um proxy configurado ainda, o segredo deve ser removido (definido como vazio) para que o sistema use fetch direto
+
+## Impacto
+- Todas as 8+ Edge Functions que usam `asaasFetch` serao beneficiadas automaticamente
+- Nenhuma alteracao de schema ou migracao necessaria
+- Apenas 1 arquivo de codigo alterado: `supabase/functions/_shared/asaas-fetch.ts`
 
