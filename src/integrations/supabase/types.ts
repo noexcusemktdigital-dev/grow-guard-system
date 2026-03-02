@@ -3930,6 +3930,44 @@ export type Database = {
           },
         ]
       }
+      sales_plans: {
+        Row: {
+          answers: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          score: number | null
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_art_feedback: {
         Row: {
           art_id: string

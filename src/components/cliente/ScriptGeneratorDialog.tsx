@@ -80,9 +80,9 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
 
   const autoContext = {
     products: products?.map(p => ({ name: p.name, price: p.price })) || [],
-    segment: localStorage.getItem("salesPlan_segment") || "",
-    channels: JSON.parse(localStorage.getItem("salesPlan_channels") || "[]"),
-    teamSize: localStorage.getItem("salesPlan_teamSize") || "",
+    segment: "",
+    channels: [] as string[],
+    teamSize: "",
   };
 
   const hasContext = autoContext.products.length > 0 || autoContext.segment || autoContext.channels.length > 0;

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, ReactNode } from "react";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useHasActiveStrategy } from "@/hooks/useMarketingStrategy";
+import { useSalesPlanCompleted } from "@/hooks/useSalesPlan";
 
 type GateReason = "trial_expired" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | null;
 
@@ -79,15 +80,7 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const hasNoCredits =
     simulateNoCredits || (wallet ? wallet.balance <= 0 : false);
 
-  const salesPlanCompleted = (() => {
-    try {
-      const saved = localStorage.getItem("plano_vendas_data");
-      if (!saved) return false;
-      return Object.keys(JSON.parse(saved)).length > 5;
-    } catch {
-      return false;
-    }
-  })();
+  const { completed: salesPlanCompleted } = useSalesPlanCompleted();
 
   const getGateReason = (feature: string): GateReason => {
     if (ALWAYS_ACCESSIBLE.some((r) => feature.startsWith(r))) return null;

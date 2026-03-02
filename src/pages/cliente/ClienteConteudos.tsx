@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useClienteCampaignsDB, useCreateClientCampaign, useUpdateClientCampaign } from "@/hooks/useClienteCampaignsDB";
 import { motion, AnimatePresence } from "framer-motion";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
@@ -167,22 +168,6 @@ const tutorialData = [
   },
 ];
 
-/* ── Mock initial campaigns ── */
-const initialCampaigns: Campaign[] = [
-  {
-    id: "feb-2026",
-    mes: "2026-02",
-    label: "Fevereiro 2026",
-    createdAt: "05/02/2026",
-    briefing: { objetivo: "Gerar leads", tema: "Marketing para Franquias", tom: "Educativo" },
-    conteudos: [
-      { id: "1", titulo: "5 Erros que Todo Franqueado Comete no Marketing", formato: "Carrossel", rede: "Instagram", funil: "Topo", roteiro: "ABERTURA: Você sabia que 78% dos franqueados cometem pelo menos um desses erros no marketing?\n\nERRO 1 — Não ter persona definida\nA maioria investe em anúncios sem saber exatamente quem quer atingir.\n\nERRO 2 — Ignorar o marketing local\nFranquias precisam de estratégia nacional E local.\n\nERRO 3 — Não medir resultados\nSe você não sabe seu CAC, CPL e taxa de conversão, está voando às cegas.\n\nERRO 4 — Conteúdo genérico demais\nPostar frases motivacionais não gera leads.\n\nERRO 5 — Não usar automação\nResponder leads manualmente em 2026?\n\nCTA: Quer corrigir esses erros? Acesse o link na bio.", hashtags: ["#marketing", "#franquias", "#erros", "#marketingdigital", "#leads"], embasamento: "Carrosséis educativos no Instagram têm 3x mais salvamentos, ideal para topo de funil com público que está na fase de descoberta.", status: "approved" },
-      { id: "2", titulo: "Como Definir Metas de Vendas para Sua Franquia", formato: "Feed", rede: "LinkedIn", funil: "Meio", roteiro: "Título: Como Definir Metas de Vendas que Realmente Funcionam\n\nMetas vagas geram resultados vagos. Se sua meta é 'vender mais', você já começou errado.\n\nUse o método SMART:\n- Específica: 'Aumentar vendas da unidade Centro em 20%'\n- Mensurável: Acompanhe semanalmente no CRM\n- Atingível: Baseie-se no histórico dos últimos 3 meses\n- Relevante: Alinhada com o objetivo da rede\n- Temporal: Prazo de 90 dias\n\nCTA: Baixe nosso template gratuito de metas no link da bio.", hashtags: ["#vendas", "#metas", "#crm", "#franquias", "#gestao"], embasamento: "Posts educativos no LinkedIn geram 2x mais engajamento entre decisores B2B, ideal para meio de funil com conteúdo de valor.", status: "approved" },
-      { id: "3", titulo: "Case - Franquia que Triplicou Leads com IA", formato: "Reels", rede: "Instagram", funil: "Fundo", roteiro: "[0-5s] HOOK: 'Essa franquia triplicou seus leads em 90 dias.'\n\n[5-15s] CONTEXTO: A Rede FastFood tinha 3 unidades e gerava em média 50 leads/mês.\n\n[15-30s] PROBLEMA: Time respondia leads manualmente, perdia oportunidades.\n\n[30-45s] SOLUÇÃO: Implementaram plataforma com IA para qualificação automática.\n\n[45-55s] RESULTADO: 150 leads/mês por unidade, 40% de conversão, ROI de 8x.\n\n[55-60s] CTA: 'Quer o mesmo resultado? Link na bio.'", hashtags: ["#case", "#ia", "#leads", "#franquias", "#resultados"], embasamento: "Reels com cases de sucesso e dados concretos convertem 5x mais no fundo de funil, pois oferecem prova social.", status: "pending" },
-    ],
-  },
-];
-
 export default function ClienteConteudos() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -192,13 +177,37 @@ export default function ClienteConteudos() {
   const planName = plan?.name ?? "Starter";
   const { data: activeStrategy } = useActiveStrategy();
 
+  // DB hooks
+  const { data: dbCampaigns } = useClienteCampaignsDB();
+  const createCampaignMutation = useCreateClientCampaign();
+  const updateCampaignMutation = useUpdateClientCampaign();
+
+  // Map DB campaigns to local Campaign format
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [dbSynced, setDbSynced] = useState(false);
+
+  useEffect(() => {
+    if (dbCampaigns && !dbSynced) {
+      const mapped: Campaign[] = dbCampaigns.map((c: any) => {
+        const content = c.content || {};
+        return {
+          id: c.id,
+          mes: content.mes || "",
+          label: content.label || c.name,
+          createdAt: new Date(c.created_at).toLocaleDateString("pt-BR"),
+          briefing: content.briefing || { objetivo: "", tema: "", tom: "" },
+          conteudos: (content.conteudos || []).map(migrateContentStatus),
+        };
+      });
+      setCampaigns(mapped);
+      setDbSynced(true);
+    }
+  }, [dbCampaigns, dbSynced]);
+
   // Tab from URL (for "Gravar" redirect)
   const initialTab = searchParams.get("tab") || "campanhas";
   const initialFormat = searchParams.get("formato") || null;
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() =>
-    initialCampaigns.map(c => ({ ...c, conteudos: c.conteudos.map(migrateContentStatus) }))
-  );
   const [openCampaign, setOpenCampaign] = useState<string | null>(null);
   const [openContent, setOpenContent] = useState<GeneratedContent | null>(null);
   const [formatFilter, setFormatFilter] = useState<string>("all");
@@ -294,9 +303,12 @@ export default function ClienteConteudos() {
         briefing: { objetivo: objetivos.join(", "), tema, tom },
         conteudos,
       };
-      const updatedCampaigns = [newCampaign, ...campaigns];
-      setCampaigns(updatedCampaigns);
-      try { localStorage.setItem("content-campaigns", JSON.stringify(updatedCampaigns)); } catch {}
+      setCampaigns(prev => [newCampaign, ...prev]);
+      createCampaignMutation.mutate({
+        name: mes,
+        type: "content",
+        content: { mes, label: mes, briefing: newCampaign.briefing, conteudos },
+      });
       setWizardOpen(false);
       setOpenCampaign(newCampaign.id);
       toast({ title: "Campanha gerada com sucesso!", description: `${conteudos.length} conteúdos criados para ${mes}.` });
@@ -352,12 +364,12 @@ export default function ClienteConteudos() {
         conteudos,
       };
 
-      const updatedCampaigns = [newCampaign, ...campaigns];
-      setCampaigns(updatedCampaigns);
-
-      try {
-        localStorage.setItem("content-campaigns", JSON.stringify(updatedCampaigns));
-      } catch {}
+      setCampaigns(prev => [newCampaign, ...prev]);
+      createCampaignMutation.mutate({
+        name: bMes,
+        type: "content",
+        content: { mes: bMes, label: bMes, briefing: newCampaign.briefing, conteudos },
+      });
 
       setWizardOpen(false);
       setWizardStep(1);
