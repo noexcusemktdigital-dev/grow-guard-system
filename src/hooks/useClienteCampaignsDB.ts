@@ -1,0 +1,71 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useAuth } from "@/contexts/AuthContext";
+
+export function useClienteCampaignsDB() {
+  const { data: orgId } = useUserOrgId();
+
+  return useQuery({
+    queryKey: ["client-campaigns-db", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_campaigns")
+        .select("*")
+        .eq("organization_id", orgId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!orgId,
+  });
+}
+
+export function useCreateClientCampaign() {
+  const { data: orgId } = useUserOrgId();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ name, type, content }: { name: string; type?: string; content: any }) => {
+      if (!orgId) throw new Error("No org");
+      const { data, error } = await supabase
+        .from("client_campaigns")
+        .insert({
+          organization_id: orgId,
+          name,
+          type: type || "content",
+          status: "active",
+          content: content as any,
+          created_by: user?.id,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-campaigns-db"] });
+    },
+  });
+}
+
+export function useUpdateClientCampaign() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, content }: { id: string; content: any }) => {
+      const { data, error } = await supabase
+        .from("client_campaigns")
+        .update({ content: content as any })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-campaigns-db"] });
+    },
+  });
+}

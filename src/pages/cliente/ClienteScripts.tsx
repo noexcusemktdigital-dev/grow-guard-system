@@ -48,16 +48,15 @@ export default function ClienteScripts() {
   const handleImproveWithAI = async (scriptId: string, currentContent: string, category: string) => {
     setImprovingId(scriptId);
     try {
-      const products = JSON.parse(localStorage.getItem("salesPlan_products") || "[]");
       const { data, error } = await supabase.functions.invoke("generate-script", {
         body: {
           stage: category || "prospeccao",
           briefing: {},
           context: {
-            products,
-            segment: localStorage.getItem("salesPlan_segment") || "",
-            channels: JSON.parse(localStorage.getItem("salesPlan_channels") || "[]"),
-            teamSize: localStorage.getItem("salesPlan_teamSize") || "",
+            products: [],
+            segment: "",
+            channels: [],
+            teamSize: "",
           },
           mode: "improve",
           existingScript: currentContent,

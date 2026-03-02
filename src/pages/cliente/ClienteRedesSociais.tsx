@@ -560,10 +560,8 @@ export default function ClienteRedesSociais() {
   };
 
   const loadContentCampaigns = () => {
-    try {
-      const stored = localStorage.getItem("content-campaigns");
-      if (stored) { const parsed = JSON.parse(stored); setContentCampaigns(Array.isArray(parsed) ? parsed : []); }
-    } catch {}
+    // Content campaigns are now loaded from DB via useClienteCampaignsDB
+    // This function is kept for compatibility but campaigns are loaded through the wizard flow
   };
 
   /* ── Save Visual Identity ── */

@@ -15,29 +15,30 @@ import { SitePreview } from "@/components/sites/SitePreview";
 import { SiteHistory, type SavedSite } from "@/components/sites/SiteHistory";
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
 import { AGENTS, ALEX_STEPS } from "@/components/cliente/briefingAgents";
+import { useClienteSitesDB, useCreateClientSite } from "@/hooks/useClienteSitesDB";
+import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 
-const STORAGE_KEY = "client-sites";
-
-function loadSites(): SavedSite[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch { return []; }
-}
-
-function loadStrategy(): Record<string, any> | null {
-  try {
-    const raw = localStorage.getItem("estrategia_data");
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
 
 export default function ClienteSites() {
   const { data: subscription } = useClienteSubscription();
   const plan = getPlanBySlug(subscription?.plan);
   const maxSites = plan?.maxSites || 1;
 
+  const { data: dbSites } = useClienteSitesDB();
+  const createSiteMutation = useCreateClientSite();
+  const { data: activeStrategy } = useActiveStrategy();
+
+  // Map DB sites to SavedSite format for SiteHistory
+  const sites: SavedSite[] = (dbSites || []).map(s => ({
+    id: s.id,
+    name: s.name,
+    type: s.type || "lp",
+    status: (s.status === "Publicado" ? "Publicado" : "Rascunho") as "Publicado" | "Rascunho",
+    createdAt: s.created_at.split("T")[0],
+    html: (s.content as any)?.html || "",
+  }));
+
   const [creating, setCreating] = useState(false);
-  const [sites, setSites] = useState<SavedSite[]>(loadSites);
   const [generating, setGenerating] = useState(false);
   const [generatedHtml, setGeneratedHtml] = useState("");
   const [genProgress, setGenProgress] = useState(0);
@@ -55,7 +56,7 @@ export default function ClienteSites() {
     }, 800);
 
     try {
-      const estrategia = loadStrategy();
+      const estrategia = activeStrategy?.answers || null;
       const body = {
         tipo: answers.siteType || "lp",
         objetivo: answers.objetivo || "",
@@ -112,18 +113,12 @@ export default function ClienteSites() {
       setGeneratedHtml(data.html);
       setShowPreview(true);
 
-      // Save to history
-      const newSite: SavedSite = {
-        id: crypto.randomUUID(),
+      // Save to DB
+      createSiteMutation.mutate({
         name: `Site ${answers.objetivo || "Novo"} — ${new Date().toLocaleDateString("pt-BR")}`,
         type: answers.siteType || "lp",
-        status: "Rascunho",
-        createdAt: new Date().toISOString().split("T")[0],
         html: data.html,
-      };
-      const updated = [newSite, ...sites];
-      setSites(updated);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      });
 
       toast({ title: "Site gerado com sucesso!", description: "Revise o preview e baixe quando estiver pronto." });
     } catch (err) {
@@ -134,7 +129,7 @@ export default function ClienteSites() {
       setGenerating(false);
       setGenProgress(0);
     }
-  }, [sites]);
+  }, [createSiteMutation, activeStrategy]);
 
   const handleChatComplete = (answers: Record<string, any>) => {
     setLastAnswers(answers);

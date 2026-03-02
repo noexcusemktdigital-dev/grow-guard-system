@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 // ChatBriefing integration
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
 import { AGENTS, RAFAEL_STEPS } from "@/components/cliente/briefingAgents";
@@ -29,6 +29,7 @@ import { DiagnosticoTermometro } from "@/components/diagnostico/DiagnosticoTermo
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sounds";
+import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
 import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
@@ -606,20 +607,25 @@ export default function ClientePlanoVendas() {
   const navigate = useNavigate();
   const anoAtual = new Date().getFullYear();
 
-  // ── Diagnostic state ──
-  const [answers, setAnswers] = useState<Answers>(() => {
-    const saved = localStorage.getItem("plano_vendas_data");
-    return saved ? JSON.parse(saved) : {};
-  });
-  const [completed, setCompleted] = useState(() => {
-    return !!localStorage.getItem("plano_vendas_data") && Object.keys(JSON.parse(localStorage.getItem("plano_vendas_data") || "{}")).length > 5;
-  });
+  // ── Sales Plan from DB ──
+  const { data: salesPlanData, isLoading: spLoading } = useSalesPlan();
+  const saveSalesPlan = useSaveSalesPlan();
 
-  // ── Welcome popup for first-time users ──
-  const [showWelcome, setShowWelcome] = useState(() => {
-    const saved = localStorage.getItem("plano_vendas_data");
-    return !saved || Object.keys(JSON.parse(saved || "{}")).length <= 5;
-  });
+  const [answers, setAnswers] = useState<Answers>({});
+  const [completed, setCompleted] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+
+  // Sync from DB once loaded
+  useEffect(() => {
+    if (spLoading) return;
+    if (salesPlanData) {
+      const dbAnswers = (salesPlanData.answers || {}) as Answers;
+      setAnswers(dbAnswers);
+      const isComplete = Object.keys(dbAnswers).length > 5;
+      setCompleted(isComplete);
+      setShowWelcome(!isComplete);
+    }
+  }, [salesPlanData, spLoading]);
 
   // ── History state ──
   const [history] = useState([
@@ -719,14 +725,16 @@ export default function ClientePlanoVendas() {
 
   // ── ChatBriefing handler ──
   const handleChatComplete = (chatAnswers: Record<string, any>) => {
-    setAnswers(chatAnswers as Answers);
+    const ans = chatAnswers as Answers;
+    setAnswers(ans);
     setCompleted(true);
-    localStorage.setItem("plano_vendas_data", JSON.stringify(chatAnswers));
+    const { percentage: pct } = computeScores(ans);
+    saveSalesPlan.mutate({ answers: ans, score: Math.round(pct) });
   };
 
   const handleRestart = () => {
     setAnswers({}); setCompleted(false);
-    localStorage.removeItem("plano_vendas_data");
+    saveSalesPlan.mutate({ answers: {}, score: 0 });
   };
 
   // ── Metas handler ──

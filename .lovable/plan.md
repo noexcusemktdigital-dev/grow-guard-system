@@ -1,21 +1,25 @@
 
+# Auditoria: Status de Migração
 
-# Corrigir erro de build no UserMenu.tsx
+## ✅ Prioridade 1 — Concluída
+- UserMenu roteando para páginas reais
+- Mocks deletados (pasta src/mocks/)
+- Tipos limpos (sem dados mock exportados)
+- Comunicados e Mensagens do Dia usando hooks reais
 
-## Problema
-O arquivo `src/components/UserMenu.tsx` usa `toast.success()` na linha 39 mas nunca importa `toast` de nenhum lugar.
+## ✅ Prioridade 2 — Concluída
+- **Plano de Vendas**: Tabela `sales_plans` criada, hook `useSalesPlan` implementado
+- **Sites**: `ClienteSites.tsx` migrado para tabela `client_sites`
+- **Conteúdos**: `ClienteConteudos.tsx` migrado para tabela `client_campaigns`
+- **FeatureGateContext**: Agora usa `useSalesPlanCompleted()` do banco
+- **Scripts**: Removidas referências a localStorage mortas
 
-## Solucao
-Adicionar o import do `toast` do pacote `sonner` no topo do arquivo:
+## Pendente — Prioridade 3
+- Metas e Ranking: Criar tabelas goals/campaigns e hooks (parcialmente feito)
+- Onboarding: Migrar dados para tabelas reais
+- Comunicados (ComunicadosList): Usar hook useAnnouncements
+- Unidades (OnboardingList): Usar hook useUnits
 
-```typescript
-import { toast } from "sonner";
-```
-
-## Arquivo alterado
-
-| Arquivo | Acao |
-|---------|------|
-| `src/components/UserMenu.tsx` | Adicionar `import { toast } from "sonner"` |
-
-Apos essa correcao, a **Prioridade 1 estara 100% concluida** e podemos avancar para a Prioridade 2 (migrar localStorage para banco).
+## Pendente — Prioridade 4
+- Deletar referências localStorage restantes (OnboardingTour, CreditAlertBanner — esses são ok como localStorage)
+- Limpar tipos restantes
