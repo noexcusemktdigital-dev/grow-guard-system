@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export function useUserProfile() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
 
   const query = useQuery({
     queryKey: ["user-profile", user?.id],
@@ -32,6 +32,7 @@ export function useUserProfile() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["user-profile", user?.id] });
+      refreshProfile();
       toast.success("Perfil salvo com sucesso!");
     },
     onError: (err: any) => toast.error(err.message),
