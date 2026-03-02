@@ -1,5 +1,5 @@
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +45,7 @@ export function UserMenu() {
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-secondary transition-colors">
           <Avatar className="h-7 w-7">
+            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
             <AvatarFallback className="text-xs bg-primary text-primary-foreground">{initials}</AvatarFallback>
           </Avatar>
           <span className="hidden sm:inline text-sm font-medium text-foreground">{displayName}</span>

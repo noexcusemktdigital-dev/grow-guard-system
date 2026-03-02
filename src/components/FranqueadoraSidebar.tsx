@@ -255,14 +255,24 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
 function SidebarFooter() {
   const { profile } = useAuth();
   const userName = profile?.full_name?.split(" ")[0] || "Admin";
+  const initials = (profile?.full_name || "A")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
   return (
     <div className="px-3 py-3 border-t border-sidebar-border">
       <RouterNavLink
         to="/franqueadora/perfil"
         className="flex items-center gap-2.5 rounded-lg px-1 py-1 hover:bg-white/[0.06] transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0">
-          <User className="w-4 h-4 text-sidebar-primary" />
+        <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt={userName} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-[11px] font-semibold text-sidebar-primary">{initials}</span>
+          )}
         </div>
         <div className="min-w-0">
           <p className="text-[12px] font-semibold text-white truncate">{userName}</p>
