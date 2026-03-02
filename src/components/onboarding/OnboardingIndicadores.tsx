@@ -52,7 +52,7 @@ export function OnboardingIndicadoresView({ indicators }: OnboardingIndicadoresP
       </div>
 
       <p className="text-xs text-muted-foreground text-center italic">
-        Dados referentes aos primeiros 90 dias da unidade. Valores simulados — integração automática em desenvolvimento.
+        Dados referentes aos primeiros 90 dias da unidade.
       </p>
     </div>
   );
