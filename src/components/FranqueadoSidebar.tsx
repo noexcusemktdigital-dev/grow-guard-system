@@ -142,18 +142,20 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
   );
 }
 
-export function FranqueadoSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+export function FranqueadoSidebarContent({ collapsed, setCollapsed, onNavigate }: { collapsed: boolean; setCollapsed: (v: boolean) => void; onNavigate?: () => void }) {
   const navigate = useNavigate();
   const { profile } = useAuth();
 
   const userName = profile?.full_name || "Usuário";
   const userInitials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
+  const handleNav = (path: string) => {
+    navigate(path);
+    onNavigate?.();
+  };
+
   return (
-    <aside
-      className={`h-[calc(100vh-56px)] bg-sidebar flex flex-col transition-all duration-300 ease-out sticky top-14 ${collapsed ? "w-[60px]" : "w-[240px]"}`}
-    >
+    <>
       {/* Logo */}
       <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
         <div className="flex items-center gap-2.5">
@@ -195,14 +197,14 @@ export function FranqueadoSidebar() {
           </PopoverTrigger>
           <PopoverContent side={collapsed ? "right" : "top"} align="start" className="w-48 p-1 bg-popover border border-border shadow-lg z-50">
             <button
-              onClick={() => navigate("/franqueado/perfil")}
+              onClick={() => handleNav("/franqueado/perfil")}
               className="w-full flex items-center gap-2 px-3 py-2 text-[13px] rounded-md hover:bg-muted transition-colors text-foreground"
             >
               <User className="w-4 h-4" />
               Meu Perfil
             </button>
             <button
-              onClick={() => navigate("/franqueado/configuracoes")}
+              onClick={() => handleNav("/franqueado/configuracoes")}
               className="w-full flex items-center gap-2 px-3 py-2 text-[13px] rounded-md hover:bg-muted transition-colors text-foreground"
             >
               <Settings className="w-4 h-4" />
@@ -218,6 +220,18 @@ export function FranqueadoSidebar() {
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>
+    </>
+  );
+}
+
+export function FranqueadoSidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <aside
+      className={`h-[calc(100vh-56px)] bg-sidebar flex-col transition-all duration-300 ease-out sticky top-14 hidden md:flex ${collapsed ? "w-[60px]" : "w-[240px]"}`}
+    >
+      <FranqueadoSidebarContent collapsed={collapsed} setCollapsed={setCollapsed} />
     </aside>
   );
 }

@@ -162,8 +162,7 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
   );
 }
 
-export function ClienteSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed: (v: boolean) => void }) {
   const navigate = useNavigate();
   const { simulateTrialExpired, setSimulateTrialExpired, simulateNoCredits, setSimulateNoCredits } = useFeatureGate();
 
@@ -183,9 +182,7 @@ export function ClienteSidebar() {
   const planName = subscription?.plan ?? "—";
 
   return (
-    <aside
-      className={`h-[calc(100vh-56px)] bg-sidebar flex flex-col transition-all duration-300 ease-out sticky top-14 ${collapsed ? "w-[60px]" : "w-[240px]"}`}
-    >
+    <>
       {/* Logo */}
       <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
         <div className="flex items-center gap-2.5">
@@ -249,7 +246,6 @@ export function ClienteSidebar() {
         </Tooltip>
       )}
 
-
       {/* Footer — Credits */}
       {!collapsed ? (
         <div className="px-3 py-3 border-t border-sidebar-border" data-tour="creditos">
@@ -306,6 +302,18 @@ export function ClienteSidebar() {
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>
+    </>
+  );
+}
+
+export function ClienteSidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <aside
+      className={`h-[calc(100vh-56px)] bg-sidebar flex-col transition-all duration-300 ease-out sticky top-14 hidden md:flex ${collapsed ? "w-[60px]" : "w-[240px]"}`}
+    >
+      <ClienteSidebarContent collapsed={collapsed} setCollapsed={setCollapsed} />
     </aside>
   );
 }

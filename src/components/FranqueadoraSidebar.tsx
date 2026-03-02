@@ -3,7 +3,7 @@ import logoWhite from "@/assets/logo-noexcuse-white.png";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, DollarSign, FileText, FolderOpen, Building2, TrendingUp,
+  LayoutDashboard, DollarSign, FileText, Building2, TrendingUp,
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
   Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt,
   ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, Cloud,
@@ -65,7 +65,7 @@ const adminSection: SidebarItem[] = [
   },
   { label: "Matriz", icon: Shield, path: "/franqueadora/matriz" },
   { label: "SaaS", icon: Cloud, path: "/franqueadora/saas" },
-  { label: "Drive Corporativo", icon: FolderOpen, path: "/franqueadora/drive", disabled: true },
+  
 ];
 
 function NavItem({ item, collapsed }: { item: SidebarItem; collapsed: boolean }) {
@@ -270,13 +270,9 @@ function SidebarFooter() {
   );
 }
 
-export function FranqueadoraSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
-
+export function FranqueadoraSidebarContent({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed: (v: boolean) => void }) {
   return (
-    <aside
-      className={`h-[calc(100vh-56px)] bg-sidebar flex flex-col transition-all duration-300 ease-out sticky top-14 ${collapsed ? "w-[60px]" : "w-[240px]"}`}
-    >
+    <>
       {/* Logo */}
       <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
         <div className="flex items-center gap-2.5">
@@ -304,6 +300,18 @@ export function FranqueadoraSidebar() {
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>
+    </>
+  );
+}
+
+export function FranqueadoraSidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <aside
+      className={`h-[calc(100vh-56px)] bg-sidebar flex-col transition-all duration-300 ease-out sticky top-14 hidden md:flex ${collapsed ? "w-[60px]" : "w-[240px]"}`}
+    >
+      <FranqueadoraSidebarContent collapsed={collapsed} setCollapsed={setCollapsed} />
     </aside>
   );
 }
