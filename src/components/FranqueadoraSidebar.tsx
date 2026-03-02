@@ -257,7 +257,10 @@ function SidebarFooter() {
   const userName = profile?.full_name?.split(" ")[0] || "Admin";
   return (
     <div className="px-3 py-3 border-t border-sidebar-border">
-      <div className="flex items-center gap-2.5">
+      <RouterNavLink
+        to="/franqueadora/perfil"
+        className="flex items-center gap-2.5 rounded-lg px-1 py-1 hover:bg-white/[0.06] transition-colors"
+      >
         <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0">
           <User className="w-4 h-4 text-sidebar-primary" />
         </div>
@@ -265,7 +268,7 @@ function SidebarFooter() {
           <p className="text-[12px] font-semibold text-white truncate">{userName}</p>
           <p className="text-[10px] text-sidebar-muted truncate">Franqueadora</p>
         </div>
-      </div>
+      </RouterNavLink>
     </div>
   );
 }
