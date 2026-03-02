@@ -1,4 +1,4 @@
-// Comunicados types and constants (extracted from comunicadosData.ts)
+// Comunicados types and constants
 
 export type ComunicadoStatus = "Ativo" | "Programado" | "Expirado" | "Rascunho" | "Arquivado";
 export type ComunicadoTipo = "Informativo" | "Atualização de sistema" | "Alerta operacional" | "Campanha" | "Institucional" | "Urgente";
@@ -26,6 +26,7 @@ export interface Comunicado {
   autorNome: string;
   criadoEm: string;
   atualizadoEm: string;
+  attachmentUrl?: string;
 }
 
 export interface ComunicadoVisualizacao {
@@ -69,24 +70,4 @@ export function getTipoColor(tipo: ComunicadoTipo): string {
     Urgente: "bg-red-500/15 text-red-700 dark:text-red-400",
   };
   return map[tipo];
-}
-
-// Mock data (placeholder for UI display until fully backed by database)
-export const mockComunicados: Comunicado[] = [
-  { id: "com-1", titulo: "Alteração na Taxa de Royalties — Vigência Março 2026", conteudo: "<p>Informamos que a partir de <strong>01/03/2026</strong>, a taxa de royalties será reajustada.</p>", publico: ["Franqueados"], unidadesEspecificas: [], tipo: "Urgente", prioridade: "Crítica", mostrarDashboard: true, mostrarPopup: true, exigirConfirmacao: true, status: "Ativo", autorId: "u1", autorNome: "Davi", criadoEm: "2026-02-10T09:00:00", atualizadoEm: "2026-02-10T09:00:00" },
-  { id: "com-2", titulo: "Campanha de Verão 2026 — Kit de Materiais", conteudo: "<p>A campanha de verão já está no ar!</p>", publico: ["Franqueados", "Clientes finais"], unidadesEspecificas: [], tipo: "Campanha", prioridade: "Alta", mostrarDashboard: true, mostrarPopup: false, exigirConfirmacao: false, status: "Ativo", autorId: "u3", autorNome: "Amanda", criadoEm: "2026-02-05T14:30:00", atualizadoEm: "2026-02-05T14:30:00" },
-  { id: "com-3", titulo: "Atualização do Sistema v3.2", conteudo: "<p>O sistema foi atualizado para a versão 3.2.</p>", publico: ["Todos"], unidadesEspecificas: [], tipo: "Atualização de sistema", prioridade: "Normal", mostrarDashboard: true, mostrarPopup: false, exigirConfirmacao: false, status: "Ativo", autorId: "u2", autorNome: "Lucas", criadoEm: "2026-02-18T10:00:00", atualizadoEm: "2026-02-18T10:00:00" },
-  { id: "com-7", titulo: "Boas-vindas aos Novos Colaboradores", conteudo: "<p>Damos as boas-vindas a todos os novos colaboradores!</p>", publico: ["Todos"], unidadesEspecificas: [], tipo: "Institucional", prioridade: "Normal", mostrarDashboard: true, mostrarPopup: false, exigirConfirmacao: false, status: "Ativo", autorId: "u1", autorNome: "Davi", criadoEm: "2026-02-01T08:00:00", atualizadoEm: "2026-02-01T08:00:00" },
-  { id: "com-8", titulo: "Manutenção Programada — Servidor dia 25/02", conteudo: "<p>O sistema ficará indisponível das 02:00 às 06:00.</p>", publico: ["Franqueadora", "Franqueados"], unidadesEspecificas: [], tipo: "Alerta operacional", prioridade: "Alta", mostrarDashboard: true, mostrarPopup: true, exigirConfirmacao: false, status: "Ativo", autorId: "u2", autorNome: "Lucas", criadoEm: "2026-02-20T15:00:00", atualizadoEm: "2026-02-20T15:00:00" },
-];
-
-export const mockVisualizacoes: ComunicadoVisualizacao[] = [
-  { id: "v1", comunicadoId: "com-1", usuarioId: "f1", usuarioNome: "Carlos Mendes", unidadeNome: "Unidade Centro", visualizadoEm: "2026-02-10T10:15:00", confirmadoEm: "2026-02-10T10:16:00" },
-  { id: "v2", comunicadoId: "com-1", usuarioId: "f2", usuarioNome: "Ana Costa", unidadeNome: "Unidade Norte", visualizadoEm: "2026-02-10T11:30:00", confirmadoEm: "2026-02-10T11:32:00" },
-  { id: "v5", comunicadoId: "com-2", usuarioId: "f1", usuarioNome: "Carlos Mendes", unidadeNome: "Unidade Centro", visualizadoEm: "2026-02-06T08:00:00" },
-  { id: "v8", comunicadoId: "com-3", usuarioId: "f1", usuarioNome: "Carlos Mendes", unidadeNome: "Unidade Centro", visualizadoEm: "2026-02-18T12:00:00" },
-];
-
-export function getVisualizacoes(comunicadoId: string): ComunicadoVisualizacao[] {
-  return mockVisualizacoes.filter((v) => v.comunicadoId === comunicadoId);
 }

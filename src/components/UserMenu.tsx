@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 const roleLabels: Record<string, string> = {
   super_admin: "Super Admin",
@@ -64,7 +63,7 @@ export function UserMenu() {
         <DropdownMenuItem onClick={() => {
           if (role === "franqueado") navigate("/franqueado/perfil");
           else if (role === "cliente_admin" || role === "cliente_user") navigate("/cliente/configuracoes");
-          else toast.info("Perfil em desenvolvimento");
+          else navigate("/franqueadora/perfil");
         }}>
           <User className="mr-2 h-4 w-4" />
           Meu Perfil
@@ -72,7 +71,7 @@ export function UserMenu() {
         <DropdownMenuItem onClick={() => {
           if (role === "franqueado") navigate("/franqueado/configuracoes");
           else if (role === "cliente_admin" || role === "cliente_user") navigate("/cliente/configuracoes");
-          else toast.info("Configurações em desenvolvimento");
+          else navigate("/franqueadora/perfil");
         }}>
           <Settings className="mr-2 h-4 w-4" />
           Configurações

@@ -20,8 +20,8 @@ import {
   getStatusColor,
   getPrioridadeColor,
   getTipoColor,
-  getVisualizacoes,
 } from "@/types/comunicados";
+import { useAnnouncementViews } from "@/hooks/useAnnouncementViews";
 import {
   Edit,
   Copy,
@@ -47,7 +47,18 @@ interface ComunicadoDetailProps {
 }
 
 export default function ComunicadoDetail({ comunicado, onEdit, onDuplicate, onArchive, onDelete }: ComunicadoDetailProps) {
-  const visualizacoes = getVisualizacoes(comunicado.id);
+  const { data: allViews } = useAnnouncementViews();
+  const visualizacoes: ComunicadoVisualizacao[] = (allViews ?? [])
+    .filter(v => v.announcement_id === comunicado.id)
+    .map(v => ({
+      id: v.id,
+      comunicadoId: v.announcement_id,
+      usuarioId: v.user_id,
+      usuarioNome: v.user_id.slice(0, 8),
+      unidadeNome: "",
+      visualizadoEm: v.viewed_at,
+      confirmadoEm: v.confirmed_at ?? undefined,
+    }));
   const confirmadas = visualizacoes.filter((v) => v.confirmadoEm).length;
 
   return (

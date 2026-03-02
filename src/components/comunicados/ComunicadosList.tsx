@@ -14,8 +14,6 @@ import {
   getStatusColor,
   getPrioridadeColor,
   getTipoColor,
-  mockComunicados,
-  mockVisualizacoes,
 } from "@/types/comunicados";
 import {
   Eye,
@@ -32,6 +30,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAnnouncementViews } from "@/hooks/useAnnouncementViews";
 
 interface ComunicadosListProps {
   comunicados: Comunicado[];
@@ -47,6 +46,7 @@ export default function ComunicadosList({ comunicados, onView, onEdit, onDuplica
   const [filterTipo, setFilterTipo] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPrioridade, setFilterPrioridade] = useState<string>("all");
+  const { data: allViews } = useAnnouncementViews();
 
   const ativos = comunicados.filter((c) => c.status === "Ativo").length;
   const programados = comunicados.filter((c) => c.status === "Programado").length;
@@ -66,7 +66,7 @@ export default function ComunicadosList({ comunicados, onView, onEdit, onDuplica
     return true;
   });
 
-  const getViewCount = (id: string) => mockVisualizacoes.filter((v) => v.comunicadoId === id).length;
+  const getViewCount = (id: string) => (allViews ?? []).filter((v) => v.announcement_id === id).length;
 
   const summaryCards = [
     { label: "Ativos", value: ativos, icon: Bell, color: "text-emerald-600" },
