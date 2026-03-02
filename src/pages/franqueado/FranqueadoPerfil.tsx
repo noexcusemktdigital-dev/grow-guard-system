@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { User, Mail, Phone, Briefcase, Calendar, Target, FileText, Users, Edit2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Mail, Phone, Briefcase, Calendar, Target, FileText, Users, Edit2, Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useContracts } from "@/hooks/useContracts";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
+import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays } from "date-fns";
+import { toast } from "sonner";
 
 function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number }) {
   return (
@@ -33,6 +35,7 @@ export default function FranqueadoPerfil() {
   const { data: profile, isLoading, update } = useUserProfile();
   const { data: contracts } = useContracts();
   const { data: leads } = useCrmLeads();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: "", phone: "", job_title: "" });
@@ -62,18 +65,56 @@ export default function FranqueadoPerfil() {
     setEditing(false);
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 2MB");
+      return;
+    }
+
+    const ext = file.name.split(".").pop() || "png";
+    const path = `${user.id}/avatar.${ext}`;
+
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) {
+      toast.error("Erro ao enviar imagem");
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+    const avatar_url = `${urlData.publicUrl}?t=${Date.now()}`;
+    update.mutate({ avatar_url });
+  };
+
   return (
     <div className="w-full space-y-6">
       {/* Banner + Avatar */}
       <div className="relative">
         <div className="h-48 bg-gradient-to-br from-sidebar via-sidebar/90 to-primary/30 rounded-2xl overflow-hidden" />
         <div className="absolute -bottom-12 left-8 flex items-end gap-5 z-10">
-          <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
-            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
-            <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <div
+            className="relative group cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
+              <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Camera className="w-6 h-6 text-white" />
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+          </div>
         </div>
         <div className="absolute top-4 right-4">
           <Button

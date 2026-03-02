@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { User, Mail, Phone, Briefcase, Calendar, Building2, Users, Edit2, Target } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Mail, Phone, Briefcase, Calendar, Building2, Users, Edit2, Target, Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useUnits } from "@/hooks/useUnits";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
+import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays } from "date-fns";
+import { toast } from "sonner";
 
 function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number }) {
   return (
@@ -33,15 +34,13 @@ function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label
 export default function FranqueadoraPerfil() {
   const { user } = useAuth();
   const { data: profile, isLoading, update } = useUserProfile();
-  const { data: org, isLoading: orgLoading, update: updateOrg } = useOrgProfile();
   const { data: units } = useUnits();
   const { data: members } = useOrgMembers();
   const { data: leads } = useCrmLeads();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editing, setEditing] = useState(false);
-  const [editingOrg, setEditingOrg] = useState(false);
   const [form, setForm] = useState({ full_name: "", phone: "", job_title: "" });
-  const [orgForm, setOrgForm] = useState({ name: "", cnpj: "", email: "", phone: "", address: "", city: "", state: "" });
 
   useEffect(() => {
     if (profile) {
@@ -53,21 +52,7 @@ export default function FranqueadoraPerfil() {
     }
   }, [profile]);
 
-  useEffect(() => {
-    if (org) {
-      setOrgForm({
-        name: org.name || "",
-        cnpj: org.cnpj || "",
-        email: org.email || "",
-        phone: org.phone || "",
-        address: org.address || "",
-        city: org.city || "",
-        state: org.state || "",
-      });
-    }
-  }, [org]);
-
-  if (isLoading || orgLoading) return <Skeleton className="h-96 rounded-xl" />;
+  if (isLoading) return <Skeleton className="h-96 rounded-xl" />;
 
   const displayName = form.full_name || "Usuário";
   const initials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -82,9 +67,27 @@ export default function FranqueadoraPerfil() {
     setEditing(false);
   };
 
-  const handleSaveOrg = () => {
-    updateOrg.mutate(orgForm);
-    setEditingOrg(false);
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 2MB");
+      return;
+    }
+
+    const ext = file.name.split(".").pop() || "png";
+    const path = `${user.id}/avatar.${ext}`;
+
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) {
+      toast.error("Erro ao enviar imagem");
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+    const avatar_url = `${urlData.publicUrl}?t=${Date.now()}`;
+    update.mutate({ avatar_url });
   };
 
   return (
@@ -93,12 +96,27 @@ export default function FranqueadoraPerfil() {
       <div className="relative">
         <div className="h-48 bg-gradient-to-br from-sidebar via-sidebar/90 to-primary/30 rounded-2xl overflow-hidden" />
         <div className="absolute -bottom-12 left-8 flex items-end gap-5 z-10">
-          <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
-            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
-            <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <div
+            className="relative group cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
+              <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Camera className="w-6 h-6 text-white" />
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+          </div>
         </div>
         <div className="absolute top-4 right-4">
           <Button
@@ -174,86 +192,6 @@ export default function FranqueadoraPerfil() {
           </CardContent>
         </Card>
       )}
-
-      {/* Organization Data */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Dados da Organização</CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setEditingOrg(!editingOrg)}
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-            {editingOrg ? "Cancelar" : "Editar"}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {editingOrg ? (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome Fantasia</Label>
-                  <Input value={orgForm.name} onChange={(e) => setOrgForm({ ...orgForm, name: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>CNPJ</Label>
-                  <Input value={orgForm.cnpj} onChange={(e) => setOrgForm({ ...orgForm, cnpj: e.target.value })} placeholder="00.000.000/0000-00" />
-                </div>
-                <div className="space-y-2">
-                  <Label>E-mail</Label>
-                  <Input value={orgForm.email} onChange={(e) => setOrgForm({ ...orgForm, email: e.target.value })} placeholder="contato@empresa.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input value={orgForm.phone} onChange={(e) => setOrgForm({ ...orgForm, phone: e.target.value })} placeholder="(41) 3333-0000" />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Endereço</Label>
-                  <Input value={orgForm.address} onChange={(e) => setOrgForm({ ...orgForm, address: e.target.value })} placeholder="Rua, número, bairro" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Cidade</Label>
-                  <Input value={orgForm.city} onChange={(e) => setOrgForm({ ...orgForm, city: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Estado</Label>
-                  <Input value={orgForm.state} onChange={(e) => setOrgForm({ ...orgForm, state: e.target.value })} placeholder="PR" />
-                </div>
-              </div>
-              <Button onClick={handleSaveOrg} disabled={updateOrg.isPending}>
-                {updateOrg.isPending ? "Salvando..." : "Salvar Dados da Organização"}
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground text-xs">Nome Fantasia</p>
-                <p className="font-medium text-foreground">{orgForm.name || "—"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">CNPJ</p>
-                <p className="font-medium text-foreground">{orgForm.cnpj || "—"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">E-mail</p>
-                <p className="font-medium text-foreground">{orgForm.email || "—"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Telefone</p>
-                <p className="font-medium text-foreground">{orgForm.phone || "—"}</p>
-              </div>
-              <div className="md:col-span-2">
-                <p className="text-muted-foreground text-xs">Endereço</p>
-                <p className="font-medium text-foreground">
-                  {[orgForm.address, orgForm.city, orgForm.state].filter(Boolean).join(", ") || "—"}
-                </p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
