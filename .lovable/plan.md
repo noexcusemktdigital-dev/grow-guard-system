@@ -1,67 +1,47 @@
 
-# Adicionar Aba "Empresa" na Pagina Matriz
+# Sincronizar Foto de Perfil em Todos os Componentes
 
-## Contexto
-A pagina Matriz (`/franqueadora/matriz`) atualmente so tem duas abas: **Equipe** e **Perfis de Permissao**. Falta a aba de **cadastro da empresa** (franqueadora) onde o admin pode ver e editar os dados da organizacao (CNPJ, razao social, endereco, logo, etc.).
-
-O Franqueado ja tem isso na aba "Unidade" dentro de Configuracoes. O SaaS tem na aba "Organizacao" dentro de Configuracoes. A Franqueadora precisa do mesmo, dentro da Matriz.
+## Problema
+Quando o usuario troca a foto no perfil, ela nao aparece na sidebar nem no menu do header porque:
+1. O `AuthContext` busca o perfil uma unica vez no login e nunca atualiza
+2. O `UserMenu` (header) so mostra iniciais, nunca usa `avatar_url`
+3. O footer da `FranqueadoraSidebar` mostra um icone generico, nunca usa `avatar_url`
 
 ## Solucao
 
-### Editar `src/pages/Matriz.tsx`
+### 1. Adicionar `refreshProfile` ao AuthContext (`src/contexts/AuthContext.tsx`)
+- Expor uma funcao `refreshProfile()` no contexto que re-busca os dados do perfil no banco
+- Componentes que atualizam o perfil podem chamar essa funcao para forcar a atualizacao global
 
-Adicionar uma terceira aba **"Empresa"** com icone `Building2`, posicionada como primeira aba (antes de Equipe e Perfis).
+### 2. Chamar `refreshProfile` apos upload de avatar (`src/hooks/useUserProfile.ts`)
+- No `onSuccess` da mutation de update, alem de invalidar o query cache, chamar `refreshProfile()` do AuthContext
+- Isso garante que sidebar e header recebam o novo `avatar_url` imediatamente
 
-**Conteudo da aba Empresa:**
-- Card com formulario editavel contendo todos os campos da tabela `organizations`:
-  - Nome Fantasia (`name`)
-  - Razao Social (`legal_name`)
-  - Nome Comercial (`trade_name`)
-  - CNPJ (`cnpj`)
-  - E-mail (`email`)
-  - Telefone (`phone`)
-  - Endereco (`address`)
-  - Cidade (`city`)
-  - Estado (`state`)
-  - Natureza Juridica (`legal_nature`)
-  - Porte da Empresa (`company_size`)
-  - Data de Fundacao (`founded_at`)
-- Upload de logo da empresa (`logo_url`) com preview -- usando o bucket `avatars` ou `marketing-assets`
-- Botao "Salvar Dados" usando `useOrgProfile().update`
+### 3. Mostrar avatar no UserMenu (`src/components/UserMenu.tsx`)
+- Importar `AvatarImage` alem de `AvatarFallback`
+- Quando `profile?.avatar_url` existir, renderizar `<AvatarImage>` com a foto
+- Manter fallback com iniciais quando nao houver foto
 
-**Hooks utilizados:**
-- `useOrgProfile` (ja existe) -- busca e atualiza dados da organizacao
-- Logica de upload de logo similar ao avatar do perfil
+### 4. Mostrar avatar no footer da FranqueadoraSidebar (`src/components/FranqueadoraSidebar.tsx`)
+- No `SidebarFooter`, usar `profile?.avatar_url` para exibir a foto (mesmo padrao ja usado no FranqueadoSidebar)
+- Quando houver foto: `<img src={profile.avatar_url}>` dentro do circulo
+- Quando nao houver: manter iniciais ou icone atual
 
-**Layout do formulario:**
-- Grid 2 colunas em desktop, 1 em mobile
-- Secao superior: Logo + Nome Fantasia + Razao Social
-- Secao cadastral: CNPJ, Natureza Juridica, Porte, Data de Fundacao
-- Secao contato: E-mail, Telefone
-- Secao endereco: Endereco, Cidade, Estado
+### 5. Garantir consistencia no FranqueadoSidebar (ja OK)
+- O FranqueadoSidebar ja usa `profile?.avatar_url` no footer -- nenhuma alteracao necessaria
+- Apenas precisa chamar `refreshProfile` para atualizar em tempo real
 
-## Detalhes Tecnicos
-
-**Nova aba no TabsList:**
-```text
-<TabsTrigger value="empresa"><Building2 /> Empresa</TabsTrigger>
-<TabsTrigger value="membros"><Users /> Equipe</TabsTrigger>
-<TabsTrigger value="perfis"><Shield /> Perfis</TabsTrigger>
-```
-
-**Upload de logo:**
-- Input file hidden com ref
-- Preview da logo atual (ou placeholder com icone Building2)
-- Upload para `avatars/{orgId}/logo.{ext}` com upsert
-- Atualiza `logo_url` via `useOrgProfile().update`
-
-**Estado do formulario:**
-- useState com todos os campos, populado via useEffect quando `org` carrega
-- Botao "Salvar" chama `update.mutate(form)`
-- Feedback visual de loading no botao
-
-## Arquivo Alterado
+## Arquivos Alterados
 
 | Arquivo | Acao |
 |---------|------|
-| `src/pages/Matriz.tsx` | Adicionar aba "Empresa" com formulario completo de dados da organizacao e upload de logo |
+| `src/contexts/AuthContext.tsx` | Adicionar funcao `refreshProfile` ao contexto |
+| `src/hooks/useUserProfile.ts` | Chamar `refreshProfile` no `onSuccess` da mutation |
+| `src/components/UserMenu.tsx` | Exibir `AvatarImage` com `avatar_url` |
+| `src/components/FranqueadoraSidebar.tsx` | Exibir foto no footer usando `avatar_url` |
+
+## Resultado
+Ao trocar a foto no perfil, ela aparecera instantaneamente em:
+- Header (menu do usuario ao lado das notificacoes)
+- Footer da sidebar (todas as plataformas)
+- Pagina de perfil (ja funciona)
