@@ -7,17 +7,45 @@ import { playSound } from "@/lib/sounds";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function NotificationBell() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isCliente = role === "cliente_admin" || role === "cliente_user";
   const { data: notifications } = useClienteNotifications();
   const { markNotificationRead } = useClienteContentMutations();
   const navigate = useNavigate();
   const prevCountRef = useRef(0);
+  const queryClient = useQueryClient();
 
   const unread = notifications?.filter(n => !n.is_read) || [];
   const displayList = notifications?.slice(0, 10) || [];
+
+  // Subscribe to realtime notifications
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`notifications-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'client_notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["client-notifications"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
 
   // Play sound when new unread notifications arrive
   useEffect(() => {
@@ -42,7 +70,7 @@ export function NotificationBell() {
         <button className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
           <Bell className="h-4 w-4" />
           {unread.length > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground animate-pulse">
               {unread.length > 9 ? "9+" : unread.length}
             </span>
           )}
