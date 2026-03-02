@@ -232,5 +232,17 @@ export function useClienteContentMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-notifications"] }),
   });
 
-  return { createContent, createCampaign, createScript, createDispatch, createSite, createChecklistItem, toggleChecklistItem, markNotificationRead };
+  const markAllNotificationsRead = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("client_notifications")
+        .update({ is_read: true })
+        .eq("user_id", user!.id)
+        .eq("is_read", false);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["client-notifications"] }),
+  });
+
+  return { createContent, createCampaign, createScript, createDispatch, createSite, createChecklistItem, toggleChecklistItem, markNotificationRead, markAllNotificationsRead };
 }
