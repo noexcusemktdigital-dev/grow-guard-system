@@ -138,22 +138,23 @@ export function AgendaConfig({ onBack, calendars, timeBlocks }: Props) {
         </CardContent>
       </Card>
 
-      <Card className="bg-muted/30">
+      <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2"><Cloud className="w-4 h-4" /> Google Calendar</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">Em breve: sincronize sua agenda com o Google Calendar.</p>
-          <Button disabled className="gap-2"><Cloud className="w-4 h-4" /> Conectar Google Calendar</Button>
+          <p className="text-sm text-muted-foreground">Sincronize sua agenda com o Google Calendar. Configure suas credenciais do Google Cloud para ativar.</p>
+          <Button className="gap-2" onClick={() => toast({ title: "Acesse Configurações > Integrações para conectar seu Google Calendar." })}>
+            <Cloud className="w-4 h-4" /> Conectar Google Calendar
+          </Button>
           <Separator />
-          <div className="space-y-2 opacity-50">
+          <div className="space-y-2">
             <div className="text-xs font-medium">Modo de sincronização</div>
             <div className="flex gap-3 text-xs">
-              <label className="flex items-center gap-1.5"><input type="radio" disabled /> Exportar</label>
-              <label className="flex items-center gap-1.5"><input type="radio" disabled /> Importar</label>
-              <label className="flex items-center gap-1.5"><input type="radio" disabled checked /> 2 vias</label>
+              <label className="flex items-center gap-1.5"><input type="radio" name="sync-mode" /> Exportar</label>
+              <label className="flex items-center gap-1.5"><input type="radio" name="sync-mode" /> Importar</label>
+              <label className="flex items-center gap-1.5"><input type="radio" name="sync-mode" defaultChecked /> 2 vias</label>
             </div>
-            <div className="text-xs text-muted-foreground mt-2">Último sync: nunca</div>
           </div>
         </CardContent>
       </Card>

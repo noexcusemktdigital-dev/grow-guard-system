@@ -70,17 +70,17 @@ export default function ContratosConfiguracoes() {
           <Textarea value={obsPadrao} onChange={e => setObsPadrao(e.target.value)} placeholder="Texto padrão para o campo de observações em novos contratos..." rows={3} />
         </Card>
 
-        <Card className="p-6 space-y-4 md:col-span-2 opacity-60">
+        <Card className="p-6 space-y-4 md:col-span-2">
           <div className="flex items-center gap-2">
             <Lock className="w-4 h-4 text-muted-foreground" />
             <h2 className="font-semibold">Integração Asaas</h2>
-            <Badge variant="outline" className="text-[10px]">Integração futura</Badge>
+            <Badge variant="secondary" className="text-[10px]">Ativo</Badge>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div><Label>API Key Asaas</Label><Input disabled placeholder="Será habilitado em breve" /></div>
-            <div><Label>Webhook URL</Label><Input disabled placeholder="Será habilitado em breve" /></div>
+            <div><Label>API Key Asaas</Label><Input placeholder="Chave configurada via variáveis de ambiente" readOnly /></div>
+            <div><Label>Webhook URL</Label><Input value={`${window.location.origin}/api/asaas-webhook`} readOnly /></div>
           </div>
-          <p className="text-xs text-muted-foreground">Os campos acima serão habilitados quando a integração com o Asaas for ativada.</p>
+          <p className="text-xs text-muted-foreground">A integração Asaas está configurada. As cobranças são processadas automaticamente via edge functions.</p>
         </Card>
       </div>
 

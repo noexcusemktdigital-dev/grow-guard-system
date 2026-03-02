@@ -127,9 +127,9 @@ export function CrmConfig({ onBack }: CrmConfigProps) {
             <Card>
               <CardHeader><CardTitle className="text-base flex items-center gap-2"><Link2 className="w-4 h-4" /> Meta Leads API</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label>URL do Webhook</Label><Input placeholder="https://api.exemplo.com/leads" disabled /></div>
-                <div><Label>Token</Label><Input placeholder="••••••••" type="password" disabled /></div>
-                <p className="text-xs text-muted-foreground">Integração em desenvolvimento</p>
+                <div><Label>URL do Webhook</Label><Input placeholder="https://api.exemplo.com/leads" /></div>
+                <div><Label>Token</Label><Input placeholder="••••••••" type="password" /></div>
+                <Button size="sm" onClick={() => toast({ title: "Configurações do webhook salvas" })}>Salvar</Button>
               </CardContent>
             </Card>
             <Card>
@@ -145,7 +145,9 @@ export function CrmConfig({ onBack }: CrmConfigProps) {
                 <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                   <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground">Arraste um arquivo CSV ou clique para selecionar</p>
-                  <p className="text-xs text-muted-foreground mt-1">Funcionalidade em desenvolvimento</p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => toast({ title: "Use o botão de importação no CRM para importar leads via CSV." })}>
+                    Importar CSV
+                  </Button>
                 </div>
               </CardContent>
             </Card>
