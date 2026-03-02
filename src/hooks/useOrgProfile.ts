@@ -23,7 +23,7 @@ export function useOrgProfile() {
   const qc = useQueryClient();
 
   const update = useMutation({
-    mutationFn: async (updates: { name?: string; cnpj?: string; email?: string; phone?: string; address?: string; city?: string; state?: string }) => {
+    mutationFn: async (updates: { name?: string; legal_name?: string; trade_name?: string; cnpj?: string; email?: string; phone?: string; address?: string; city?: string; state?: string; legal_nature?: string; company_size?: string; founded_at?: string; logo_url?: string }) => {
       const { error } = await supabase
         .from("organizations")
         .update(updates)

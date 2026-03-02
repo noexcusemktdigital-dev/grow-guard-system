@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Shield, Plus, Inbox, Users, UserPlus } from "lucide-react";
+import { Shield, Plus, Inbox, Users, UserPlus, Building2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { usePermissionProfiles, usePermissionMutations } from "@/hooks/usePermissions";
+import MatrizEmpresa from "@/components/matriz/MatrizEmpresa";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,11 +96,17 @@ export default function Matriz() {
         </div>
       </div>
 
-      <Tabs defaultValue="membros">
+      <Tabs defaultValue="empresa">
         <TabsList>
+          <TabsTrigger value="empresa" className="gap-1.5"><Building2 className="w-3.5 h-3.5" /> Empresa</TabsTrigger>
           <TabsTrigger value="membros" className="gap-1.5"><Users className="w-3.5 h-3.5" /> Equipe</TabsTrigger>
           <TabsTrigger value="perfis" className="gap-1.5"><Shield className="w-3.5 h-3.5" /> Perfis de Permissão</TabsTrigger>
         </TabsList>
+
+        {/* Empresa Tab */}
+        <TabsContent value="empresa" className="mt-4">
+          <MatrizEmpresa />
+        </TabsContent>
 
         {/* Members Tab */}
         <TabsContent value="membros" className="mt-4">
