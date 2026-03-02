@@ -17,6 +17,24 @@ export function useDailyMessages() {
   });
 }
 
+export function useAllDailyMessages() {
+  const { data: orgId } = useUserOrgId();
+  return useQuery({
+    queryKey: ["daily-messages-all", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("daily_messages")
+        .select("*")
+        .eq("organization_id", orgId!)
+        .order("date", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orgId,
+  });
+}
+
 export function useDailyMessageMutations() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
@@ -27,8 +45,23 @@ export function useDailyMessageMutations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["daily-messages"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["daily-messages"] });
+      qc.invalidateQueries({ queryKey: ["daily-messages-all"] });
+    },
   });
 
-  return { createMessage };
+  const archiveMessage = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.from("daily_messages").delete().eq("id", id);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["daily-messages"] });
+      qc.invalidateQueries({ queryKey: ["daily-messages-all"] });
+    },
+  });
+
+  return { createMessage, archiveMessage };
 }

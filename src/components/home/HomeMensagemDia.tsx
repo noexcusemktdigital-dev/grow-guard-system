@@ -3,8 +3,9 @@ import { Quote, History, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { type MensagemDoDia, mockMensagens } from "@/types/home";
+import { type MensagemDoDia } from "@/types/home";
 import { HomeMensagemAdmin } from "./HomeMensagemAdmin";
+import { useAllDailyMessages } from "@/hooks/useDailyMessages";
 
 const categoriaColors: Record<string, string> = {
   Mentalidade: "bg-purple-500/15 text-purple-700 dark:text-purple-400",
@@ -22,10 +23,10 @@ interface Props {
 export function HomeMensagemDia({ mensagem, isAdmin = true }: Props) {
   const [showHistory, setShowHistory] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const { data: allMessages } = useAllDailyMessages();
 
-  const historico = mockMensagens
-    .filter(m => m.status === "Arquivado")
-    .sort((a, b) => b.dataPublicacao.localeCompare(a.dataPublicacao))
+  const historico = (allMessages ?? [])
+    .filter(m => m.id !== mensagem.id)
     .slice(0, 7);
 
   return (
@@ -61,12 +62,14 @@ export function HomeMensagemDia({ mensagem, isAdmin = true }: Props) {
             <DialogTitle>Mensagens Anteriores</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {historico.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma mensagem anterior.</p>
+            )}
             {historico.map(m => (
               <div key={m.id} className="p-3 rounded-lg bg-muted/50">
-                <p className="text-sm italic">"{m.texto}"</p>
+                <p className="text-sm italic">"{m.message}"</p>
                 <div className="flex items-center gap-2 mt-2">
-                  <Badge variant="outline" className="text-[10px]">{m.categoria}</Badge>
-                  <span className="text-[10px] text-muted-foreground">— {m.autor} · {m.dataPublicacao}</span>
+                  <span className="text-[10px] text-muted-foreground">— {m.author || "Admin"} · {m.date}</span>
                 </div>
               </div>
             ))}
