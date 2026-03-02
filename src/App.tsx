@@ -36,6 +36,7 @@ import Home from "./pages/Home";
 import Matriz from "./pages/Matriz";
 import SaasDashboard from "./pages/franqueadora/SaasDashboard";
 import FranqueadoraPropostas from "./pages/franqueadora/FranqueadoraPropostas";
+import NotificacoesPage from "./pages/NotificacoesPage";
 // Franqueado pages
 import FranqueadoDashboard from "./pages/franqueado/FranqueadoDashboard";
 import FranqueadoAgenda from "./pages/franqueado/FranqueadoAgenda";
@@ -121,6 +122,7 @@ const App = () => (
                 <Route path="matriz" element={<Matriz />} />
                 <Route path="saas" element={<SaasDashboard />} />
                 <Route path="propostas" element={<FranqueadoraPropostas />} />
+                <Route path="notificacoes" element={<NotificacoesPage />} />
               </Route>
 
               {/* Franqueado */}
@@ -141,6 +143,7 @@ const App = () => (
                 <Route path="diagnostico" element={<FranqueadoDiagnostico />} />
                 <Route path="perfil" element={<FranqueadoPerfil />} />
                 <Route path="configuracoes" element={<FranqueadoConfiguracoes />} />
+                <Route path="notificacoes" element={<NotificacoesPage />} />
               </Route>
 
               {/* Cliente Final */}
