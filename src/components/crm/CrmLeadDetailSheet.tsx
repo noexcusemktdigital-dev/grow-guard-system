@@ -156,7 +156,7 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
   return (
     <div className="space-y-4 mt-4">
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="w-full grid grid-cols-5">
+        <TabsList className="w-full grid grid-cols-3 sm:grid-cols-5">
           <TabsTrigger value="info" className="text-xs">Dados</TabsTrigger>
           <TabsTrigger value="activities" className="text-xs">Atividades</TabsTrigger>
           <TabsTrigger value="tasks" className="text-xs">Tarefas</TabsTrigger>

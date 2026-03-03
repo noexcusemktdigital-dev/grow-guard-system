@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Bell, Users, MessageCircle, Rocket, Target, CheckCheck } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useClienteNotifications, useClienteContentMutations } from "@/hooks/useClienteContent";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+function getPortalPrefix(pathname: string) {
+  if (pathname.startsWith("/franqueadora")) return "/franqueadora";
+  if (pathname.startsWith("/franqueado")) return "/franqueado";
+  return "/cliente";
+}
 
 const typeIcons: Record<string, React.ElementType> = { Leads: Users, Chat: MessageCircle, Campanhas: Rocket, Metas: Target, CRM: Users };
 const typeColors: Record<string, string> = {
@@ -22,6 +29,8 @@ export default function NotificacoesPage() {
   const { data: notifs, isLoading } = useClienteNotifications();
   const { markNotificationRead, markAllNotificationsRead } = useClienteContentMutations();
   const [filter, setFilter] = useState<string>("Todos");
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const allNotifs = notifs ?? [];
   const unreadCount = allNotifs.filter(n => !n.is_read).length;
@@ -32,6 +41,19 @@ export default function NotificacoesPage() {
     if (filter === "Não lidas") return !n.is_read;
     return n.type === filter;
   });
+
+  const handleClick = (n: any) => {
+    if (!n.is_read) {
+      markNotificationRead.mutate(n.id);
+    }
+    if (n.action_url) {
+      const prefix = getPortalPrefix(location.pathname);
+      const url = n.action_url.startsWith('/cliente') || n.action_url.startsWith('/franqueado') || n.action_url.startsWith('/franqueadora')
+        ? n.action_url
+        : prefix + n.action_url;
+      navigate(url);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -93,7 +115,7 @@ export default function NotificacoesPage() {
                 className={`transition-all duration-300 cursor-pointer hover:shadow-md ${
                   !n.is_read ? "border-primary/20 bg-primary/5" : "opacity-60"
                 }`}
-                onClick={() => !n.is_read && markNotificationRead.mutate(n.id)}
+                onClick={() => handleClick(n)}
               >
                 <CardContent className="py-3 flex items-center gap-4">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${typeColors[n.type || "info"]}`}>
