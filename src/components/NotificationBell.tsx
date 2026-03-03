@@ -11,10 +11,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 
+function getPortalPrefix(pathname: string) {
+  if (pathname.startsWith("/franqueadora")) return "/franqueadora";
+  if (pathname.startsWith("/franqueado")) return "/franqueado";
+  return "/cliente";
+}
+
 function getNotificacoesPath(pathname: string) {
-  if (pathname.startsWith("/franqueadora")) return "/franqueadora/notificacoes";
-  if (pathname.startsWith("/franqueado")) return "/franqueado/notificacoes";
-  return "/cliente/notificacoes";
+  return getPortalPrefix(pathname) + "/notificacoes";
 }
 
 export function NotificationBell() {
@@ -69,7 +73,12 @@ export function NotificationBell() {
     }
     if (n.action_url) {
       setOpen(false);
-      navigate(n.action_url);
+      // Resolve portal prefix based on current path
+      const prefix = getPortalPrefix(location.pathname);
+      const url = n.action_url.startsWith('/cliente') || n.action_url.startsWith('/franqueado') || n.action_url.startsWith('/franqueadora')
+        ? n.action_url
+        : prefix + n.action_url;
+      navigate(url);
     }
   };
 
