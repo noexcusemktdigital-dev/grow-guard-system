@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import type { AcademyModuleCategory } from "@/types/academy";
 import {
@@ -21,7 +22,7 @@ export function AcademyAdmin() {
   const { data: modules = [] } = useAcademyModules();
   const { data: allLessons = [] } = useAcademyLessons();
   const { data: quizzes = [] } = useAcademyQuizzes();
-  const { createModule, updateModule, createLesson } = useAcademyMutations();
+  const { createModule, updateModule, createLesson, createQuizQuestion } = useAcademyMutations();
 
   const [adminTab, setAdminTab] = useState("modulos");
   const [moduleDialog, setModuleDialog] = useState(false);
@@ -66,6 +67,7 @@ export function AcademyAdmin() {
       createModule={createModule}
       updateModule={updateModule}
       createLesson={createLesson}
+      createQuizQuestion={createQuizQuestion}
     />
   );
 }
@@ -79,9 +81,11 @@ function AcademyAdminInner({
   moduleForm, setModuleForm,
   lessonForm, setLessonForm,
   filteredLessons, filteredQuiz, activeQuizId,
-  createModule, updateModule, createLesson,
+  createModule, updateModule, createLesson, createQuizQuestion,
 }: any) {
   const { data: questions = [] } = useAcademyQuizQuestions(activeQuizId);
+  const [questionDialog, setQuestionDialog] = useState(false);
+  const [questionForm, setQuestionForm] = useState({ question: "", options: ["", "", "", ""], correctAnswer: 0 });
 
   const extractYoutubeId = (url: string) => {
     const match = url.match(/embed\/([^?]+)/);
@@ -246,7 +250,11 @@ function AcademyAdminInner({
 
           <div className="flex justify-between items-center">
             <h4 className="font-semibold text-sm">Questões ({questions.length})</h4>
-            <Button size="sm" className="gap-1" onClick={() => toast({ title: "Nova questão", description: "Em breve" })}>
+            <Button size="sm" className="gap-1" onClick={() => {
+              if (!activeQuizId) { toast({ title: "Selecione um módulo com prova", variant: "destructive" }); return; }
+              setQuestionForm({ question: "", options: ["", "", "", ""], correctAnswer: 0 });
+              setQuestionDialog(true);
+            }}>
               <Plus className="w-3.5 h-3.5" /> Nova Questão
             </Button>
           </div>
@@ -325,6 +333,62 @@ function AcademyAdminInner({
             <Button variant="outline" onClick={() => setLessonDialog(false)}>Cancelar</Button>
             <Button onClick={handleCreateLesson} disabled={createLesson.isPending}>
               {createLesson.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Question Dialog */}
+      <Dialog open={questionDialog} onOpenChange={setQuestionDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Nova Questão</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Pergunta</Label>
+              <Textarea value={questionForm.question} onChange={(e: any) => setQuestionForm({ ...questionForm, question: e.target.value })} className="mt-1" placeholder="Digite a pergunta..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Opções (marque a correta)</Label>
+              <RadioGroup value={String(questionForm.correctAnswer)} onValueChange={(v) => setQuestionForm({ ...questionForm, correctAnswer: Number(v) })}>
+                {questionForm.options.map((opt: string, i: number) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <RadioGroupItem value={String(i)} id={`opt-${i}`} />
+                    <Input
+                      value={opt}
+                      onChange={(e: any) => {
+                        const newOpts = [...questionForm.options];
+                        newOpts[i] = e.target.value;
+                        setQuestionForm({ ...questionForm, options: newOpts });
+                      }}
+                      placeholder={`Opção ${i + 1}`}
+                      className="flex-1"
+                    />
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuestionDialog(false)}>Cancelar</Button>
+            <Button
+              disabled={createQuizQuestion.isPending || !questionForm.question.trim() || questionForm.options.filter((o: string) => o.trim()).length < 2}
+              onClick={() => {
+                const validOptions = questionForm.options.filter((o: string) => o.trim());
+                createQuizQuestion.mutate(
+                  {
+                    quiz_id: activeQuizId!,
+                    question: questionForm.question,
+                    options: validOptions,
+                    correct_answer: questionForm.correctAnswer,
+                    sort_order: questions.length + 1,
+                  },
+                  {
+                    onSuccess: () => { toast({ title: "Questão criada!" }); setQuestionDialog(false); },
+                    onError: () => toast({ title: "Erro ao criar questão", variant: "destructive" }),
+                  }
+                );
+              }}
+            >
+              {createQuizQuestion.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
