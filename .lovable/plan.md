@@ -1,20 +1,27 @@
 
-# Prioridade 3: CONCLUÍDA ✅
 
-Todos os itens da Prioridade 3 foram implementados:
+# Prioridade 4: Limpeza final
 
-1. ✅ `OnboardingIndicadores.tsx` — Removido texto "valores simulados"
-2. ✅ `Home.tsx` — Integrado `HomeAlertas` com dados reais (tickets, comunicados críticos, leads inativos) e `HomeComercial` com dados reais do CRM
-3. ✅ `AgendaConfig.tsx` — Habilitado Google Calendar (removido "Em breve" e disabled)
-4. ✅ `CrmConfig.tsx` — Habilitado webhook Meta Leads e importação CSV (removido "em desenvolvimento")
-5. ✅ `ContratosConfiguracoes.tsx` — Habilitado integração Asaas (removido "integração futura")
-6. ✅ `HomeHojePreciso.tsx` — Deletado (órfão)
-7. ✅ `MetasConfig.tsx` — Deletado (órfão, não importado em nenhuma página)
-8. ✅ `GoalCard.tsx` e `GoalProgressRing.tsx` — Mantidos (usados em ClientePlanoVendas.tsx)
+## Situacao
 
-Itens mantidos com "Em breve" (funcionalidade realmente não implementada):
-- `AcademyCertificates.tsx` — PDF generation
-- `AcademyAdmin.tsx` — Formulário de nova questão
-- `MarketingDrive.tsx` — ZIP download
-- `ClienteRedesSociais.tsx` — Upload de logo
-- `ClienteChecklist.tsx` — Texto informacional
+A pasta `src/mocks/` ja foi deletada. Os tipos `home.ts`, `metas.ts`, `comunicados.ts`, `unidades.ts` ja foram limpos de dados mock.
+
+O unico resquicio encontrado esta em **`src/types/marketing.ts`**, que ainda exporta `mockFolders`, `mockAssets` e funcoes que dependem desses arrays mock (`getCategoryAssetCount`, `getAssetsByCategory`, `getFoldersByCategory`, `getChildFolders`, `getAssetsInFolder`). Esses sao consumidos por `MarketingDrive.tsx`.
+
+## Plano
+
+### 1. Limpar `src/types/marketing.ts`
+- Remover `mockFolders` e `mockAssets` (arrays hardcoded)
+- Remover as 5 funcoes que dependem deles (`getCategoryAssetCount`, `getAssetsByCategory`, `getFoldersByCategory`, `getChildFolders`, `getAssetsInFolder`)
+- Manter todos os tipos/interfaces e helpers puros (labels, colors, etc.)
+
+### 2. Atualizar `src/components/MarketingDrive.tsx`
+- Remover imports das funcoes deletadas
+- Usar o hook `useMarketing()` (ja existe em `src/hooks/useMarketing.ts`) para buscar assets e folders reais do banco
+- Adaptar a logica de navegacao de pastas e filtragem para usar dados do hook
+
+| Arquivo | Acao |
+|---------|------|
+| `src/types/marketing.ts` | Remover mock data e funcoes dependentes |
+| `src/components/MarketingDrive.tsx` | Migrar para `useMarketing()` com dados reais |
+
