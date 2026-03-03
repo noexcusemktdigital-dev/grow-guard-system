@@ -4678,6 +4678,17 @@ export type Database = {
         Returns: number
       }
       generate_org_api_key: { Args: { _org_id: string }; Returns: string }
+      get_academy_reports: {
+        Args: { _org_id: string }
+        Returns: {
+          avg_completion: number
+          certificates_count: number
+          quizzes_passed: number
+          unit_id: string
+          unit_name: string
+          users_count: number
+        }[]
+      }
       get_announcements_with_parent: {
         Args: { _org_id: string }
         Returns: {
