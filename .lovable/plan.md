@@ -1,26 +1,33 @@
 
 
-# Prioridade 5: Seguranca, Performance, Warnings e Novas Funcionalidades
+# Prioridade 6: Correções restantes e funcionalidade pendente
 
-## Status: ✅ CONCLUÍDO
+## Diagnóstico
 
-### Bloco A — Segurança ✅
-- **A1** ✅ Policies "always true" corrigidas (website_chat_sessions e website_chat_messages agora validam NOT NULL)
-- **A2** ⚠️ Leaked Password Protection: configure-auth não expõe essa opção — requer habilitação manual no painel
-- **A3** ✅ RLS hardening aplicado: finance_employees, organization_integrations, whatsapp_instances, crm_settings agora restritos a admins para escrita
-- **A4** ✅ Rate limiting (30 req/min por IP) + sanitização de conteúdo (max 2000 chars) adicionados ao website-chat
+1. **Console warning ativo**: `Skeleton` em `skeleton.tsx` não usa `forwardRef` — causa warnings na página Unidades (visível nos logs agora)
+2. **"Em breve" pendente**: Botão "Nova Questão" no `AcademyAdmin.tsx` ainda exibe toast placeholder — é a única funcionalidade marcada como "Em breve" que pode ser implementada
+3. Os outros "Em breve" encontrados são textos de UX legítimos (opção de select e empty state), não funcionalidades faltantes
 
-### Bloco B — Console Warnings ✅
-- **B1** ✅ Badge atualizado com React.forwardRef
+## Plano
 
-### Bloco C — Performance & UX
-- Skeletons e loading states já existem nas páginas principais (Home, CRM, Financeiro, Unidades)
-- Nenhuma ação adicional necessária
+### 1. Corrigir Skeleton com forwardRef
+- **Arquivo**: `src/components/ui/skeleton.tsx`
+- Converter para `React.forwardRef` (mesmo padrão aplicado ao Badge na P5)
+- Elimina os warnings no console da página Unidades
 
-### Bloco D — Novas Funcionalidades ✅
-- **D1** ✅ Upload de logo implementado em ClienteRedesSociais (bucket avatars)
-- **D2** ✅ Download PDF de certificados implementado com html2pdf.js
+### 2. Implementar criação de questões no AcademyAdmin
+- **Arquivo**: `src/components/academy/AcademyAdmin.tsx`
+- Adicionar dialog para criar nova questão de quiz com: pergunta, opções (2-4), resposta correta
+- Usar mutation `createQuizQuestion` do hook `useAcademy` (verificar se já existe, senão criar)
+- **Arquivo**: `src/hooks/useAcademy.ts` — adicionar mutation para `academy_quiz_questions` se necessário
 
----
+### 3. Atualizar plano
+- **Arquivo**: `.lovable/plan.md` — registrar Prioridade 6 como concluída
 
-## Todas as prioridades concluídas (1-5) ✅
+| Arquivo | Ação |
+|---------|------|
+| `src/components/ui/skeleton.tsx` | Adicionar forwardRef |
+| `src/components/academy/AcademyAdmin.tsx` | Implementar dialog de nova questão |
+| `src/hooks/useAcademy.ts` | Adicionar mutation createQuizQuestion se necessário |
+| `.lovable/plan.md` | Atualizar status |
+
