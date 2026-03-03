@@ -196,7 +196,16 @@ export function useAcademyMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["academy-certificates"] }),
   });
 
-  return { createModule, updateModule, createLesson, markLessonComplete, submitQuizAttempt, insertCertificate };
+  const createQuizQuestion = useMutation({
+    mutationFn: async (q: { quiz_id: string; question: string; options: Json; correct_answer: number; sort_order?: number }) => {
+      const { data, error } = await supabase.from("academy_quiz_questions").insert(q).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["academy-quiz-questions"] }),
+  });
+
+  return { createModule, updateModule, createLesson, markLessonComplete, submitQuizAttempt, insertCertificate, createQuizQuestion };
 }
 
 // ===== Computed helpers =====
