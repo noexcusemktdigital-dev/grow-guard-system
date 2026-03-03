@@ -52,7 +52,25 @@ export function AcademyCertificates() {
                 <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setViewCert(cert)}>
                   <Eye className="w-3.5 h-3.5" /> Visualizar
                 </Button>
-                <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => toast({ title: "Em breve", description: "Download de PDF será implementado." })}>
+                <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => {
+                  setViewCert(cert);
+                  setTimeout(() => {
+                    const el = document.getElementById("cert-print-area");
+                    if (!el) return;
+                    import("html2pdf.js").then((mod) => {
+                      const html2pdf = mod.default;
+                      html2pdf().set({
+                        margin: 0,
+                        filename: `certificado-${cert.id.slice(0, 8)}.pdf`,
+                        image: { type: "jpeg", quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true },
+                        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                      }).from(el).save().then(() => {
+                        toast({ title: "PDF gerado com sucesso!" });
+                      });
+                    });
+                  }, 500);
+                }}>
                   <Download className="w-3.5 h-3.5" /> Baixar PDF
                 </Button>
               </div>
@@ -67,7 +85,7 @@ export function AcademyCertificates() {
             <DialogTitle>Certificado</DialogTitle>
           </DialogHeader>
           {viewCert && (
-            <div className="relative bg-gradient-to-b from-yellow-500/5 via-amber-500/3 to-white dark:to-card">
+            <div id="cert-print-area" className="relative bg-gradient-to-b from-yellow-500/5 via-amber-500/3 to-white dark:to-card">
               <div className="absolute inset-0 opacity-[0.03]" style={{
                 backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--foreground)) 1px, transparent 0)`,
                 backgroundSize: '24px 24px'

@@ -1778,10 +1778,29 @@ export default function ClienteRedesSociais() {
                   {viEditing && <Button variant="ghost" size="sm" className="text-xs" onClick={() => setViLogoUrl("")}>Remover</Button>}
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-border rounded-xl p-6 text-center">
+                <label className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary/50 transition-colors block">
                   <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground">Upload de logo (em breve)</p>
-                </div>
+                  <p className="text-xs text-muted-foreground">Clique para enviar o logo</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !orgId) return;
+                      try {
+                        const path = `logos/${orgId}/${Date.now()}-${file.name}`;
+                        const { error } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type, upsert: true });
+                        if (error) throw error;
+                        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+                        setViLogoUrl(urlData.publicUrl);
+                        toast({ title: "Logo enviado com sucesso!" });
+                      } catch (err: any) {
+                        toast({ title: "Erro no upload", description: err?.message, variant: "destructive" });
+                      }
+                    }}
+                  />
+                </label>
               )}
             </CardContent>
           </Card>

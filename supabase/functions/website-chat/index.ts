@@ -6,9 +6,34 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
+// Simple in-memory rate limiter (per isolate lifetime)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 30; // max requests per window per IP
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limit by IP
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (isRateLimited(clientIp)) {
+    return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -36,10 +61,12 @@ Deno.serve(async (req) => {
 
     const orgId = org.id;
 
+    // Sanitize content length
+    const sanitizedContent = typeof content === "string" ? content.slice(0, 2000) : content;
+
     // ACTION: start — create session + whatsapp_contact
     if (action === "start") {
-      // Create whatsapp_contact with contact_type=website
-      const contactName = visitor_name || "Visitante do site";
+      const contactName = visitor_name ? String(visitor_name).slice(0, 200) : "Visitante do site";
       const { data: contact, error: contactErr } = await adminClient
         .from("whatsapp_contacts")
         .insert({
@@ -58,8 +85,8 @@ Deno.serve(async (req) => {
         .from("website_chat_sessions")
         .insert({
           organization_id: orgId,
-          visitor_name: visitor_name || null,
-          visitor_email: visitor_email || null,
+          visitor_name: visitor_name ? String(visitor_name).slice(0, 200) : null,
+          visitor_email: visitor_email ? String(visitor_email).slice(0, 200) : null,
           visitor_metadata: { page_url: page_url || null, user_agent: req.headers.get("user-agent") },
           whatsapp_contact_id: contact.id,
         })
@@ -75,11 +102,10 @@ Deno.serve(async (req) => {
 
     // ACTION: send — visitor sends a message
     if (action === "send") {
-      if (!session_id || !content) {
+      if (!session_id || !sanitizedContent) {
         return new Response(JSON.stringify({ error: "session_id and content required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Get session to find contact
       const { data: session } = await adminClient
         .from("website_chat_sessions")
         .select("whatsapp_contact_id, organization_id")
@@ -90,31 +116,23 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Session not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Insert into website_chat_messages
       await adminClient.from("website_chat_messages").insert({
         session_id,
         organization_id: orgId,
         direction: "inbound",
-        content,
+        content: sanitizedContent,
       });
 
-      // Also insert into whatsapp_messages so it shows in the conversation
       await adminClient.from("whatsapp_messages").insert({
         contact_id: session.whatsapp_contact_id,
         organization_id: orgId,
         direction: "inbound",
-        content,
+        content: sanitizedContent,
         type: "text",
         status: "received",
       });
 
-      // Update contact unread count and last_message_at
-      await adminClient
-        .from("whatsapp_contacts")
-        .update({ unread_count: adminClient.rpc ? 1 : 1, last_message_at: new Date().toISOString() })
-        .eq("id", session.whatsapp_contact_id);
-
-      // Actually increment unread_count properly
+      // Increment unread_count
       const { data: currentContact } = await adminClient
         .from("whatsapp_contacts")
         .select("unread_count")
