@@ -369,7 +369,7 @@ export default function SaasDashboard() {
       />
 
       <Tabs defaultValue="clientes" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
           <TabsTrigger value="clientes" className="gap-1.5 text-xs"><Users className="w-3.5 h-3.5" /> Clientes</TabsTrigger>
           <TabsTrigger value="custos" className="gap-1.5 text-xs"><DollarSign className="w-3.5 h-3.5" /> Custos</TabsTrigger>
           <TabsTrigger value="gerenciamento" className="gap-1.5 text-xs"><Settings className="w-3.5 h-3.5" /> Gerenciamento</TabsTrigger>

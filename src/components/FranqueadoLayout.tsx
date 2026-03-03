@@ -13,7 +13,7 @@ export function FranqueadoLayout() {
       <FranqueadoSidebar />
 
       {/* Mobile header */}
-      <div className="md:hidden fixed top-14 left-0 right-0 z-30 bg-sidebar h-12 flex items-center px-4 border-b border-sidebar-border">
+      <div className="md:hidden sticky top-0 z-30 bg-sidebar h-12 flex items-center px-4 border-b border-sidebar-border">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <button className="p-2 text-sidebar-foreground hover:text-white transition-colors">
@@ -32,7 +32,7 @@ export function FranqueadoLayout() {
       </div>
 
       <main className="flex-1 overflow-x-hidden">
-        <div key={location.pathname} className="animate-slide-up p-6 lg:p-8 md:mt-0 mt-12">
+        <div key={location.pathname} className="page-enter p-6 lg:p-8">
           <Outlet />
         </div>
       </main>

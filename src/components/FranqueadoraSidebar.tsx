@@ -1,15 +1,16 @@
 import { useState } from "react";
 import logoWhite from "@/assets/logo-noexcuse-white.png";
-import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, DollarSign, FileText, Building2, TrendingUp,
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
   Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt,
-  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, Cloud,
+  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, Cloud, LogOut,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface SidebarChild {
   label: string;
@@ -253,7 +254,8 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
 }
 
 function SidebarFooter() {
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const userName = profile?.full_name?.split(" ")[0] || "Admin";
   const initials = (profile?.full_name || "A")
     .split(" ")
@@ -263,22 +265,37 @@ function SidebarFooter() {
     .slice(0, 2);
   return (
     <div className="px-3 py-3 border-t border-sidebar-border">
-      <RouterNavLink
-        to="/franqueadora/perfil"
-        className="flex items-center gap-2.5 rounded-lg px-1 py-1 hover:bg-white/[0.06] transition-colors"
-      >
-        <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt={userName} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-[11px] font-semibold text-sidebar-primary">{initials}</span>
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-white truncate">{userName}</p>
-          <p className="text-[10px] text-sidebar-muted truncate">Franqueadora</p>
-        </div>
-      </RouterNavLink>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button className="flex items-center gap-2.5 rounded-lg px-1 py-1 hover:bg-white/[0.06] transition-colors w-full text-left">
+            <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt={userName} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[11px] font-semibold text-sidebar-primary">{initials}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[12px] font-semibold text-white truncate">{userName}</p>
+              <p className="text-[10px] text-sidebar-muted truncate">Franqueadora</p>
+            </div>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="start" className="w-48 p-1">
+          <button
+            onClick={() => navigate("/franqueadora/perfil")}
+            className="flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
+          >
+            <User className="w-4 h-4" /> Meu Perfil
+          </button>
+          <button
+            onClick={() => signOut()}
+            className="flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors"
+          >
+            <LogOut className="w-4 h-4" /> Sair
+          </button>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
