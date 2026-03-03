@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
-import { useAuth } from "@/contexts/AuthContext";
 import { playSound } from "@/lib/sounds";
 
 export function useCrmLeads(funnelId?: string, stage?: string) {
@@ -49,7 +48,6 @@ export function useCrmLeadById(id: string | undefined) {
 export function useCrmLeadMutations() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
-  const { user } = useAuth();
 
   const createLead = useMutation({
     mutationFn: async (lead: {
@@ -107,20 +105,10 @@ export function useCrmLeadMutations() {
 
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       playSound("success");
-      // Create notification
-      if (user && orgId) {
-        supabase.from("client_notifications").insert({
-          user_id: user.id,
-          organization_id: orgId,
-          title: "Novo lead criado",
-          message: `Lead "${data.name}" foi adicionado ao CRM.`,
-          type: "CRM",
-          action_url: "/cliente/crm",
-        }).then(() => qc.invalidateQueries({ queryKey: ["client-notifications"] }));
-      }
+      // Notification is now created automatically by DB trigger
     },
   });
 
@@ -152,20 +140,9 @@ export function useCrmLeadMutations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
-      // Create notification for sale
-      if (user && orgId) {
-        supabase.from("client_notifications").insert({
-          user_id: user.id,
-          organization_id: orgId,
-          title: "🎉 Venda realizada!",
-          message: `Lead "${data.name}" foi convertido em venda.`,
-          type: "Metas",
-          action_url: "/cliente/crm",
-        }).then(() => qc.invalidateQueries({ queryKey: ["client-notifications"] }));
-      }
     },
   });
 

@@ -8,12 +8,13 @@ import { useClienteNotifications, useClienteContentMutations } from "@/hooks/use
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const typeIcons: Record<string, React.ElementType> = { Leads: Users, Chat: MessageCircle, Campanhas: Rocket, Metas: Target };
+const typeIcons: Record<string, React.ElementType> = { Leads: Users, Chat: MessageCircle, Campanhas: Rocket, Metas: Target, CRM: Users };
 const typeColors: Record<string, string> = {
   Leads: "bg-blue-500/10 text-blue-500",
   Chat: "bg-emerald-500/10 text-emerald-500",
   Campanhas: "bg-purple-500/10 text-purple-500",
   Metas: "bg-yellow-500/10 text-yellow-500",
+  CRM: "bg-indigo-500/10 text-indigo-500",
   info: "bg-blue-500/10 text-blue-500",
 };
 
@@ -24,7 +25,7 @@ export default function NotificacoesPage() {
 
   const allNotifs = notifs ?? [];
   const unreadCount = allNotifs.filter(n => !n.is_read).length;
-  const filters = ["Todos", "Não lidas", "Leads", "Chat", "Campanhas", "Metas"];
+  const filters = ["Todos", "Não lidas", "CRM", "Chat", "Campanhas", "Metas"];
 
   const filtered = allNotifs.filter(n => {
     if (filter === "Todos") return true;
