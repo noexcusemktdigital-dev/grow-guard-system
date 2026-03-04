@@ -61,14 +61,37 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get Z-API instance
-    const { data: instance, error: instErr } = await adminClient
-      .from("whatsapp_instances")
-      .select("*")
-      .eq("organization_id", orgId)
-      .single();
+    // Get Z-API instance — try contact's instance first, fallback to first connected
+    let instance: any = null;
 
-    if (instErr || !instance) {
+    if (contactId) {
+      const { data: contact } = await adminClient
+        .from("whatsapp_contacts")
+        .select("instance_id")
+        .eq("id", contactId)
+        .maybeSingle();
+      if (contact?.instance_id) {
+        const { data: inst } = await adminClient
+          .from("whatsapp_instances")
+          .select("*")
+          .eq("id", contact.instance_id)
+          .maybeSingle();
+        if (inst && inst.status === "connected") instance = inst;
+      }
+    }
+
+    if (!instance) {
+      const { data: instances } = await adminClient
+        .from("whatsapp_instances")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("status", "connected")
+        .order("created_at", { ascending: true })
+        .limit(1);
+      instance = instances && instances.length > 0 ? instances[0] : null;
+    }
+
+    if (!instance) {
       return new Response(JSON.stringify({ error: "No WhatsApp instance configured" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

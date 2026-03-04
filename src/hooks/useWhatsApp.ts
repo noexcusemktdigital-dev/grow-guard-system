@@ -72,18 +72,25 @@ export function useWhatsAppInstance() {
   };
 }
 
-export function useWhatsAppContacts() {
+export function useWhatsAppContacts(filterInstanceId?: string | null) {
   const { data: orgId } = useUserOrgId();
 
   return useQuery({
-    queryKey: ["whatsapp-contacts", orgId],
+    queryKey: ["whatsapp-contacts", orgId, filterInstanceId],
     queryFn: async () => {
       if (!orgId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("whatsapp_contacts" as any)
         .select("*")
         .eq("organization_id", orgId)
         .order("last_message_at", { ascending: false, nullsFirst: false });
+
+      // Filter by instance if provided
+      if (filterInstanceId) {
+        query = query.eq("instance_id", filterInstanceId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       const enriched = (data || []).map((c: any) => {
         const phone = c.phone || "";
@@ -95,7 +102,6 @@ export function useWhatsAppContacts() {
         }
         return { ...c, contact_type };
       });
-      // Filter out broadcasts only
       const filtered = enriched.filter((c: any) => {
         const phone = c.phone || "";
         return !phone.endsWith("-group") && !phone.includes("@broadcast");
@@ -123,7 +129,6 @@ export function useWhatsAppMessages(contactId: string | null) {
       if (error) throw error;
       // Reverse to show oldest first
       return ((data || []) as unknown as WhatsAppMessage[]).reverse();
-      return (data || []) as unknown as WhatsAppMessage[];
     },
     enabled: !!orgId && !!contactId,
   });

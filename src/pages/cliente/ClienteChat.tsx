@@ -28,7 +28,7 @@ export default function ClienteChat() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: instance, isLoading: loadingInstance } = useWhatsAppInstance();
-  const { data: contacts = [], isLoading: loadingContacts } = useWhatsAppContacts();
+  const { data: contacts = [], isLoading: loadingContacts } = useWhatsAppContacts(instance?.id ?? null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const selectedContact = useMemo(
@@ -154,7 +154,11 @@ export default function ClienteChat() {
   if (loadingInstance) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Conversas" subtitle="Central de atendimento WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
+        <PageHeader title="Conversas" subtitle="Central de atendimento WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} actions={instance?.phone_number ? (
+          <Badge variant="outline" className="gap-1.5 text-xs">
+            📱 {instance.phone_number.replace(/^(\d{2})(\d{2})(\d{5})(\d{4})$/, '+$1 ($2) $3-$4')}
+          </Badge>
+        ) : undefined} />
         <Skeleton className="h-[500px] rounded-xl" />
       </div>
     );

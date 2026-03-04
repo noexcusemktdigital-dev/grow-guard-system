@@ -161,7 +161,7 @@ export default function ClienteIntegracoes() {
 
   const handleCheckStatus = async (instanceId: string, token: string, clientToken: string) => {
     try {
-      await setupMutation.mutateAsync({ instanceId, instanceToken: token, clientToken, action: "status" });
+      await setupMutation.mutateAsync({ instanceId, instanceToken: token, clientToken, action: "check-status" });
       refetch();
       toast.success("Status atualizado");
     } catch (err: any) {

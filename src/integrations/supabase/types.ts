@@ -4533,6 +4533,7 @@ export type Database = {
           created_at: string
           crm_lead_id: string | null
           id: string
+          instance_id: string | null
           last_message_at: string | null
           name: string | null
           organization_id: string
@@ -4547,6 +4548,7 @@ export type Database = {
           created_at?: string
           crm_lead_id?: string | null
           id?: string
+          instance_id?: string | null
           last_message_at?: string | null
           name?: string | null
           organization_id: string
@@ -4561,6 +4563,7 @@ export type Database = {
           created_at?: string
           crm_lead_id?: string | null
           id?: string
+          instance_id?: string | null
           last_message_at?: string | null
           name?: string | null
           organization_id?: string
@@ -4575,6 +4578,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "client_ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_contacts_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
             referencedColumns: ["id"]
           },
           {
