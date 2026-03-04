@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, User, Bot, Clock, MessageCircle, Wifi, Users, Globe } from "lucide-react";
+import { Search, User, Bot, Clock, MessageCircle, Wifi, Users, Globe, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,11 +17,13 @@ interface Props {
   isConnected?: boolean;
   lastMessages?: Map<string, string>;
   connectedPhone?: string;
+  onSync?: () => void;
+  isSyncing?: boolean;
 }
 
 type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups" | "website";
 
-export function ChatContactList({ contacts, selectedId, onSelect, agents = [], leadStages, isConnected, lastMessages, connectedPhone }: Props) {
+export function ChatContactList({ contacts, selectedId, onSelect, agents = [], leadStages, isConnected, lastMessages, connectedPhone, onSync, isSyncing }: Props) {
   const [search, setSearch] = useState("");
   const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
   const [agentFilter, setAgentFilter] = useState("");
@@ -86,6 +88,18 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
             <Badge variant="secondary" className="text-[10px] h-5 px-1.5 rounded-full">{contacts.length}</Badge>
           </div>
           <div className="flex items-center gap-1.5">
+            {onSync && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full"
+                onClick={onSync}
+                disabled={isSyncing}
+                title="Sincronizar conversas do WhatsApp"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              </Button>
+            )}
             {totalUnread > 0 && (
               <Badge className="h-5 min-w-5 px-1.5 text-[10px] bg-primary text-primary-foreground rounded-full">{totalUnread}</Badge>
             )}
