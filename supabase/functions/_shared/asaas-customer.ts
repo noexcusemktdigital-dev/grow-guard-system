@@ -116,3 +116,48 @@ export async function fetchPixQrCode(
   }
   return { encodedImage: null, payload: null };
 }
+
+/**
+ * Build split array for Asaas payment.
+ * Looks up the parent org's walletId and returns a split config
+ * that sends the franqueadora's share to their wallet.
+ */
+export async function buildSplitConfig(
+  adminClient: any,
+  orgId: string,
+  franchiseeSharePercent: number = 20
+): Promise<{ walletId: string; percentualValue: number }[] | null> {
+  // Get org and parent
+  const { data: org } = await adminClient
+    .from("organizations")
+    .select("id, parent_org_id, asaas_wallet_id")
+    .eq("id", orgId)
+    .single();
+
+  if (!org?.parent_org_id) {
+    // This is the matriz itself, no split needed
+    return null;
+  }
+
+  // Get parent org's wallet ID
+  const { data: parentOrg } = await adminClient
+    .from("organizations")
+    .select("asaas_wallet_id")
+    .eq("id", org.parent_org_id)
+    .single();
+
+  if (!parentOrg?.asaas_wallet_id) {
+    console.warn(`Parent org ${org.parent_org_id} has no asaas_wallet_id configured. Split skipped.`);
+    return null;
+  }
+
+  // Franqueadora receives (100 - franchiseeSharePercent)% 
+  const franqueadoraPercent = 100 - franchiseeSharePercent;
+
+  return [
+    {
+      walletId: parentOrg.asaas_wallet_id,
+      percentualValue: franqueadoraPercent,
+    },
+  ];
+}

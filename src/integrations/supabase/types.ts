@@ -3683,6 +3683,7 @@ export type Database = {
           address: string | null
           api_key: string | null
           asaas_customer_id: string | null
+          asaas_wallet_id: string | null
           city: string | null
           cnpj: string | null
           company_size: string | null
@@ -3705,6 +3706,7 @@ export type Database = {
           address?: string | null
           api_key?: string | null
           asaas_customer_id?: string | null
+          asaas_wallet_id?: string | null
           city?: string | null
           cnpj?: string | null
           company_size?: string | null
@@ -3727,6 +3729,7 @@ export type Database = {
           address?: string | null
           api_key?: string | null
           asaas_customer_id?: string | null
+          asaas_wallet_id?: string | null
           city?: string | null
           cnpj?: string | null
           company_size?: string | null
