@@ -1,59 +1,42 @@
 
 
-# Fix: Conversas vinculadas à instância Z-API correta
+# Espelho Total do WhatsApp + Definição de Agente IA
 
-## Problema
+## Problema Identificado
 
-Existem 3 problemas interligados:
+Existem **~20+ contatos** no banco com `instance_id = NULL` (criados antes da migração). A UI filtra por `instance_id = eq.{id}`, excluindo todos esses contatos. Além disso, grupos e broadcasts estão vazando para a tabela de contatos (ex: `120363402954928750-group`, `status@broadcast`).
 
-1. **Contatos e mensagens não estão vinculados a uma instância específica** -- as tabelas `whatsapp_contacts` e `whatsapp_messages` só têm `organization_id`, sem referência à instância. Quando o usuário troca de número no Z-API, os contatos antigos continuam aparecendo.
-
-2. **Bug no check-status** -- em `ClienteIntegracoes.tsx` linha 164, a ação é passada como `"status"` mas a edge function espera `"check-status"`. O botão "Verificar" não atualiza o status real.
-
-3. **Webhook pega apenas a primeira instância** -- `whatsapp-webhook` faz `.single()` na query de instâncias (linha 38), o que falha quando há múltiplas instâncias.
+O campo `attending_mode` não tem valor padrão — contatos novos precisam receber `ai` por padrão.
 
 ## Solução
 
-### 1. Database Migration -- Vincular contatos a instâncias
+### 1. Database Migration
+- Adicionar `DEFAULT 'ai'` na coluna `attending_mode` de `whatsapp_contacts`
+- Atualizar contatos com `instance_id = NULL` para a instância atual da org
 
-Adicionar coluna `instance_id` (uuid, nullable para compatibilidade) em `whatsapp_contacts`, com FK para `whatsapp_instances`.
+### 2. Data Fix (via insert tool)
+- Atualizar todos os contatos existentes com `instance_id = NULL` para a instância `9c722007-5c54-4a1c-8dde-56f39c6c8edf`
 
-```sql
-ALTER TABLE public.whatsapp_contacts 
-  ADD COLUMN instance_id uuid REFERENCES public.whatsapp_instances(id) ON DELETE SET NULL;
-```
+### 3. UI — Remover filtro estrito de instance_id
+Em `ClienteChat.tsx`, passar `null` em vez de `instance?.id` para `useWhatsAppContacts`, mostrando TODOS os contatos da org (espelho total).
 
-### 2. Fix check-status action name
+### 4. Melhorar filtro de grupos/broadcasts
+Em `useWhatsApp.ts`, reforçar o filtro para excluir padrões de grupo (`-group`, `@g.us`, `@broadcast`, números no formato `XXXXXXX-XXXXXXXXXX`).
 
-Em `ClienteIntegracoes.tsx`, corrigir `action: "status"` para `action: "check-status"`.
+### 5. Webhook — Definir attending_mode padrão
+Em `whatsapp-webhook/index.ts`, adicionar `attending_mode: 'ai'` ao criar novos contatos, garantindo que a IA responda por padrão.
 
-### 3. Atualizar webhook para suportar múltiplas instâncias
-
-Em `whatsapp-webhook/index.ts`:
-- Remover `.single()` e buscar instância que corresponda ao webhook
-- Salvar `instance_id` no contato ao criar/atualizar
-
-### 4. Atualizar whatsapp-send para usar instância correta
-
-Em `whatsapp-send/index.ts`:
-- Buscar a instância correta do contato via `instance_id`, ou fallback para a primeira conectada.
-
-### 5. Filtrar contatos por instância conectada na UI
-
-Em `useWhatsApp.ts` (`useWhatsAppContacts`):
-- Opcionalmente filtrar contatos pela instância ativa, ou mostrar todos com indicador de qual número.
-
-### 6. ClienteChat -- Mostrar número conectado
-
-Exibir o número do WhatsApp conectado no header da página de conversas.
+### 6. ai-agent-reply — Tratar NULL como "ai"
+Em `ai-agent-reply/index.ts`, alterar o check de `contact.attending_mode !== "ai"` para `contact.attending_mode === "human"`, tratando `null` como modo IA ativo.
 
 ## Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| Database migration | ADD COLUMN `instance_id` em `whatsapp_contacts` |
-| `src/pages/cliente/ClienteIntegracoes.tsx` | Fix `action: "status"` → `"check-status"` |
-| `supabase/functions/whatsapp-webhook/index.ts` | Suportar múltiplas instâncias, salvar `instance_id` |
-| `src/hooks/useWhatsApp.ts` | Filtrar contatos pela instância conectada |
-| `src/pages/cliente/ClienteChat.tsx` | Exibir número conectado no header |
+| Database migration | DEFAULT 'ai' em attending_mode |
+| Data update | Migrar instance_id NULL → instância atual |
+| `src/pages/cliente/ClienteChat.tsx` | Remover filtro de instance_id |
+| `src/hooks/useWhatsApp.ts` | Melhorar filtro de grupos/broadcasts |
+| `supabase/functions/whatsapp-webhook/index.ts` | Definir attending_mode: 'ai' no insert |
+| `supabase/functions/ai-agent-reply/index.ts` | Tratar NULL como modo IA |
 
