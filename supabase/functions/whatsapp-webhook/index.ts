@@ -61,6 +61,9 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log("Webhook payload:", JSON.stringify(body).slice(0, 500));
 
+    // Detect if message was sent by us (from phone or platform)
+    const isFromMe = body.fromMe === true;
+
     // Status update detection
     const isStatus = body.status !== undefined && !body.text && !body.image && !body.audio && !body.ptt && !body.video && !body.document && !body.sticker;
 
@@ -122,14 +125,18 @@ Deno.serve(async (req) => {
 
     if (existingContact) {
       contactId = existingContact.id;
+      const updateData: any = {
+        name: senderName || undefined,
+        last_message_at: new Date().toISOString(),
+        instance_id: instance.id,
+      };
+      // Only increment unread for inbound messages
+      if (!isFromMe) {
+        updateData.unread_count = (existingContact.unread_count || 0) + 1;
+      }
       await adminClient
         .from("whatsapp_contacts")
-        .update({
-          name: senderName || undefined,
-          last_message_at: new Date().toISOString(),
-          unread_count: (existingContact.unread_count || 0) + 1,
-          instance_id: instance.id,
-        })
+        .update(updateData)
         .eq("id", contactId);
     } else {
       const { data: newContact } = await adminClient
@@ -139,7 +146,7 @@ Deno.serve(async (req) => {
           phone,
           name: senderName,
           last_message_at: new Date().toISOString(),
-          unread_count: 1,
+          unread_count: isFromMe ? 0 : 1,
           instance_id: instance.id,
           attending_mode: "ai",
         })
@@ -171,21 +178,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Insert message
+    // Insert message with correct direction
+    const direction = isFromMe ? "outbound" : "inbound";
+    const msgStatus = isFromMe ? "sent" : "received";
+
     await adminClient.from("whatsapp_messages").insert({
       organization_id: orgId,
       contact_id: contactId,
       message_id_zapi: body.messageId || null,
-      direction: "inbound",
+      direction,
       type: messageType,
       content: messageText,
       media_url: mediaUrl,
-      status: "received",
+      status: msgStatus,
       metadata: body,
     });
 
-    // Trigger AI agent reply
-    if (messageText || mediaUrl) {
+    // Trigger AI agent reply only for inbound messages
+    if (!isFromMe && (messageText || mediaUrl)) {
       try {
         const aiReplyUrl = `${supabaseUrl}/functions/v1/ai-agent-reply`;
         fetch(aiReplyUrl, {
