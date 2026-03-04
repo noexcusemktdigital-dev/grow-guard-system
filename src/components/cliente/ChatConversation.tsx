@@ -180,8 +180,15 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     // Mark read locally (unread_count = 0)
     markContactRead.mutate(contact.id);
 
-    // Mark read on WhatsApp via Z-API
-    markWhatsAppRead.mutate({ contactId: contact.id, contactPhone: contact.phone });
+    // Mark read on WhatsApp via Z-API (fire-and-forget, don't crash on error)
+    try {
+      markWhatsAppRead.mutate(
+        { contactId: contact.id, contactPhone: contact.phone },
+        { onError: (err) => console.warn("[chat] Mark read error (ignored):", err) }
+      );
+    } catch (e) {
+      console.warn("[chat] Mark read exception (ignored):", e);
+    }
   }, [contact?.id]);
 
   // Subscribe to typing broadcast from webhook
