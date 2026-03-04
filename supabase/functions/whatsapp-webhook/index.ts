@@ -92,8 +92,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (isGroup || isBroadcast || /^\d+-\d{10,}$/.test(phone)) {
-      return new Response(JSON.stringify({ ok: true, skipped: "group_or_broadcast" }), {
+    // Filter out groups, broadcasts, status updates and group-pattern phones
+    if (
+      isGroup || isBroadcast ||
+      /^\d+-\d{10,}$/.test(phone) ||
+      phone === "status" ||
+      phone.includes("broadcast") ||
+      phone.endsWith("-group") ||
+      rawChatId.includes("status@broadcast")
+    ) {
+      return new Response(JSON.stringify({ ok: true, skipped: "group_or_broadcast_or_status" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

@@ -711,9 +711,17 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
       }
     }
 
-    // Send via Z-API
-    const { data: instance } = await adminClient.from("whatsapp_instances").select("*").eq("organization_id", organization_id).single();
-    if (!instance || instance.status !== "connected") {
+    // Send via Z-API — prefer the contact's instance, fallback to any connected instance
+    let instance: any = null;
+    if (contact.instance_id) {
+      const { data: contactInstance } = await adminClient.from("whatsapp_instances").select("*").eq("id", contact.instance_id).eq("status", "connected").maybeSingle();
+      if (contactInstance) instance = contactInstance;
+    }
+    if (!instance) {
+      const { data: fallbackInstance } = await adminClient.from("whatsapp_instances").select("*").eq("organization_id", organization_id).eq("status", "connected").limit(1).maybeSingle();
+      instance = fallbackInstance;
+    }
+    if (!instance) {
       return new Response(JSON.stringify({ error: "WhatsApp not connected" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
