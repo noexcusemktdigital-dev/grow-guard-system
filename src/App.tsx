@@ -76,6 +76,7 @@ import ClienteIntegracoes from "./pages/cliente/ClienteIntegracoes";
 import ClientePlanoCreditos from "./pages/cliente/ClientePlanoCreditos";
 import ClienteConfiguracoes from "./pages/cliente/ClienteConfiguracoes";
 import ClienteAvaliacoes from "./pages/cliente/ClienteAvaliacoes";
+import ClienteOnboardingCompany from "./pages/cliente/ClienteOnboardingCompany";
 
 
 const queryClient = new QueryClient();
@@ -147,6 +148,9 @@ const App = () => (
                 <Route path="configuracoes" element={<FranqueadoConfiguracoes />} />
                 <Route path="notificacoes" element={<NotificacoesPage />} />
               </Route>
+
+              {/* Cliente onboarding (full-screen, no sidebar) */}
+              <Route path="cliente/onboarding" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteOnboardingCompany /></ProtectedRoute>} />
 
               {/* Cliente Final */}
               <Route path="cliente" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteLayout /></ProtectedRoute>}>

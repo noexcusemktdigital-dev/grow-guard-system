@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { format, startOfMonth, subMonths, isAfter, subHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -24,6 +24,7 @@ import { useWhatsAppInstance, useWhatsAppContacts } from "@/hooks/useWhatsApp";
 import { useClienteAgents } from "@/hooks/useClienteAgents";
 import { useDailyMessages } from "@/hooks/useDailyMessages";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useOrgProfile } from "@/hooks/useOrgProfile";
 
 const kpiConfig = [
   { label: "Receita Estimada", icon: DollarSign, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500" },
@@ -49,6 +50,15 @@ function formatCurrency(value: number) {
 export default function ClienteInicio() {
   const navigate = useNavigate();
   const { data: profile } = useUserProfile();
+  const { data: orgData, isLoading: orgLoading } = useOrgProfile();
+
+  // Redirect to company onboarding if not completed
+  useEffect(() => {
+    if (!orgLoading && orgData && !(orgData as any).onboarding_completed) {
+      navigate("/cliente/onboarding", { replace: true });
+    }
+  }, [orgData, orgLoading, navigate]);
+
   const firstName = profile?.full_name?.split(" ")[0] || "";
   const today = format(new Date(), "yyyy-MM-dd");
   const { data: checklistItems } = useClienteChecklist(today);

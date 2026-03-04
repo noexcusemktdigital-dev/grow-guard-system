@@ -31,7 +31,6 @@ const SaasAuth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [companyName, setCompanyName] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -81,7 +80,7 @@ const SaasAuth = () => {
       email,
       password,
       options: {
-        data: { full_name: fullName, company_name: companyName, signup_source: "saas" },
+        data: { full_name: fullName, signup_source: "saas" },
         emailRedirectTo: window.location.origin + "/app",
       },
     });
@@ -98,7 +97,7 @@ const SaasAuth = () => {
       // Provision org, subscription, wallet
       try {
         await supabase.functions.invoke("signup-saas", {
-          body: { user_id: data.user.id, company_name: companyName || fullName + "'s Company" },
+          body: { user_id: data.user.id, company_name: fullName + "'s Company" },
         });
       } catch (err) {
         console.error("Provisioning error:", err);
@@ -283,10 +282,6 @@ const SaasAuth = () => {
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                       <Input id="signup-name" type="text" placeholder="Seu nome" value={fullName} onChange={(e) => setFullName(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-company" className="text-white/70">Nome da empresa</Label>
-                    <Input id="signup-company" type="text" placeholder="Sua empresa" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email" className="text-white/70">Email</Label>

@@ -109,21 +109,14 @@ const salesSections: StrategySection[] = [
         ],
       },
       {
-        id: "tempo_mercado", question: "Há quanto tempo está no mercado?", type: "choice",
-        helpText: "Empresas mais novas precisam priorizar aquisição, enquanto maduras focam em retenção.",
-        options: [
-          { label: "Menos de 1 ano", value: "0-1" }, { label: "1 a 3 anos", value: "1-3" },
-          { label: "3 a 5 anos", value: "3-5" }, { label: "Mais de 5 anos", value: "5+" },
-        ],
+        id: "produtos_servicos", question: "Principais produtos ou serviços", type: "text",
+        helpText: "Liste seus principais produtos ou serviços para personalizar o plano.",
+        placeholder: "Ex: Consultoria em gestão, treinamentos corporativos...",
       },
       {
-        id: "num_funcionarios", question: "Quantos funcionários na empresa?", type: "choice",
-        helpText: "O tamanho da empresa determina o nível de complexidade e automação necessária.",
-        options: [
-          { label: "Só eu", value: "1" }, { label: "2 a 5", value: "2-5" },
-          { label: "6 a 20", value: "6-20" }, { label: "21 a 50", value: "21-50" },
-          { label: "51+", value: "51+" },
-        ],
+        id: "diferenciais", question: "Diferenciais competitivos", type: "text",
+        helpText: "O que te diferencia da concorrência.",
+        placeholder: "Ex: Atendimento 24h, entrega em 2h...",
       },
     ],
   },
