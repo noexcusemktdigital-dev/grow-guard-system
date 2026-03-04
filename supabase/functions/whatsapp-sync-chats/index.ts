@@ -6,46 +6,94 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function parseLastMessageTime(raw: any, debugIndex?: number): string | null {
-  if (!raw) return null;
+function parseLastMessageTime(raw: any): string | null {
+  if (raw == null || typeof raw === "boolean") return null;
 
-  if (debugIndex !== undefined && debugIndex < 5) {
-    console.log(`[sync] Contact #${debugIndex} lastMessageTime raw:`, JSON.stringify(raw), typeof raw);
-  }
-
-  // Handle object with _seconds (Firestore-style)
+  // Object with _seconds / seconds (Firestore-style)
   if (typeof raw === "object" && raw !== null) {
     const secs = raw._seconds || raw.seconds;
     if (secs) {
       const d = new Date(Number(secs) * 1000);
-      if (d.getFullYear() >= 2020 && d.getFullYear() <= 2030) return d.toISOString();
+      if (d.getFullYear() >= 2019 && d.getFullYear() <= 2030) return d.toISOString();
     }
     return null;
   }
 
-  // Handle number directly
+  // Number directly
   if (typeof raw === "number" && raw > 0) {
     const ms = raw > 9999999999 ? raw : raw * 1000;
     const d = new Date(ms);
-    if (d.getFullYear() >= 2020 && d.getFullYear() <= 2030) return d.toISOString();
+    if (d.getFullYear() >= 2019 && d.getFullYear() <= 2030) return d.toISOString();
   }
 
-  // Handle string
+  // String
   if (typeof raw === "string") {
-    // Try as numeric string FIRST (most common from Z-API)
+    // Numeric string
     const num = Number(raw);
     if (!isNaN(num) && num > 0) {
       const ms = num > 9999999999 ? num : num * 1000;
       const d = new Date(ms);
-      if (d.getFullYear() >= 2020 && d.getFullYear() <= 2030) return d.toISOString();
+      if (d.getFullYear() >= 2019 && d.getFullYear() <= 2030) return d.toISOString();
     }
-    // Try ISO parse
+    // BR format DD/MM/YYYY HH:mm or DD/MM/YYYY
+    const brMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (brMatch) {
+      const [, dd, mm, yyyy, hh, mi, ss] = brMatch;
+      const d = new Date(`${yyyy}-${mm}-${dd}T${hh || "00"}:${mi || "00"}:${ss || "00"}`);
+      if (!isNaN(d.getTime()) && d.getFullYear() >= 2019 && d.getFullYear() <= 2030) return d.toISOString();
+    }
+    // ISO parse
     const isoDate = new Date(raw);
-    if (!isNaN(isoDate.getTime()) && isoDate.getFullYear() >= 2020 && isoDate.getFullYear() <= 2030) {
+    if (!isNaN(isoDate.getTime()) && isoDate.getFullYear() >= 2019 && isoDate.getFullYear() <= 2030) {
       return isoDate.toISOString();
     }
   }
 
+  return null;
+}
+
+function extractTimestamp(chat: any): string | null {
+  // Chain of fallback fields
+  const candidates = [
+    chat.lastMessageTime,
+    chat.lastMessageTimestamp,
+    chat.timestamp,
+    chat.t,
+    chat.lastInteraction,
+    chat.lastActivity,
+  ];
+
+  for (const c of candidates) {
+    const parsed = parseLastMessageTime(c);
+    if (parsed) return parsed;
+  }
+
+  // Nested lastMessage object
+  if (chat.lastMessage && typeof chat.lastMessage === "object") {
+    const nested = [
+      chat.lastMessage.timestamp,
+      chat.lastMessage.t,
+      chat.lastMessage.time,
+      chat.lastMessage.messageTimestamp,
+    ];
+    for (const c of nested) {
+      const parsed = parseLastMessageTime(c);
+      if (parsed) return parsed;
+    }
+  }
+
+  return null;
+}
+
+function extractLastMessagePreview(chat: any): string | null {
+  if (chat.lastMessageText && typeof chat.lastMessageText === "string") return chat.lastMessageText.slice(0, 200);
+  if (chat.lastMessage) {
+    if (typeof chat.lastMessage === "string") return chat.lastMessage.slice(0, 200);
+    if (typeof chat.lastMessage === "object") {
+      const body = chat.lastMessage.body || chat.lastMessage.content || chat.lastMessage.text;
+      if (body && typeof body === "string") return body.slice(0, 200);
+    }
+  }
   return null;
 }
 
@@ -79,11 +127,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = user.id;
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-
-    const { data: orgId } = await adminClient.rpc("get_user_org_id", { _user_id: userId });
+    const { data: orgId } = await adminClient.rpc("get_user_org_id", { _user_id: user.id });
     if (!orgId) {
       return new Response(JSON.stringify({ error: "User has no organization" }), {
         status: 400,
@@ -134,15 +180,12 @@ Deno.serve(async (req) => {
       const chatsRes = await fetch(`${zapiBase}/chats?page=${page}&pageSize=${pageSize}`, {
         headers: zapiHeaders,
       });
-
       if (!chatsRes.ok) {
         console.error(`Z-API /chats error (page ${page}):`, await chatsRes.text());
         break;
       }
-
       const chatsData = await chatsRes.json();
       const chats = Array.isArray(chatsData) ? chatsData : [];
-
       if (chats.length === 0) break;
       allChats = allChats.concat(chats);
       if (chats.length < pageSize) break;
@@ -151,12 +194,6 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[sync] Fetched ${allChats.length} chats from Z-API`);
-
-    // Log raw data from first 3 chats for debugging
-    for (let i = 0; i < Math.min(3, allChats.length); i++) {
-      const c = allChats[i];
-      console.log(`[sync] Chat #${i} raw keys:`, Object.keys(c).join(", "));
-    }
 
     // Filter out groups, broadcasts, status
     let individualChats = allChats.filter((chat: any) => {
@@ -176,7 +213,22 @@ Deno.serve(async (req) => {
 
     console.log(`[sync] ${individualChats.length} individual chats after filtering`);
 
-    // Get existing contacts in ONE query (avoid N+1)
+    // DEBUG: Log full objects of first 5 individual chats
+    for (let i = 0; i < Math.min(5, individualChats.length); i++) {
+      const c = individualChats[i];
+      console.log(`[sync] DEBUG Chat #${i} FULL:`, JSON.stringify(c).slice(0, 2000));
+      console.log(`[sync] DEBUG Chat #${i} timestamp fields:`, JSON.stringify({
+        lastMessageTime: c.lastMessageTime,
+        lastMessageTimestamp: c.lastMessageTimestamp,
+        timestamp: c.timestamp,
+        t: c.t,
+        lastInteraction: c.lastInteraction,
+        lastActivity: c.lastActivity,
+        lastMessage: c.lastMessage,
+      }));
+    }
+
+    // Get existing contacts in ONE query
     const { data: existingContacts } = await adminClient
       .from("whatsapp_contacts")
       .select("id, phone, attending_mode")
@@ -189,30 +241,28 @@ Deno.serve(async (req) => {
 
     let contactsCreated = 0;
     let contactsUpdated = 0;
+    let timestampsFound = 0;
 
-    // Process in batches of 50 using individual upserts but NO separate SELECT per contact
     const BATCH_SIZE = 100;
     for (let batchStart = 0; batchStart < individualChats.length; batchStart += BATCH_SIZE) {
       const batch = individualChats.slice(batchStart, batchStart + BATCH_SIZE);
-
       const inserts: any[] = [];
       const updates: { id: string; data: any }[] = [];
 
       for (let i = 0; i < batch.length; i++) {
         const chat = batch[i];
-        const globalIdx = batchStart + i;
         const phone = chat.phone;
         const name = chat.name || null;
         const photoUrl = chat.imgUrl || chat.profileThumbnail || null;
         const unreadCount = parseInt(chat.unread) || 0;
 
-        const rawTime = chat.lastMessageTime || chat.lastMessageTimestamp || chat.timestamp || chat.t;
-        const lastMsgTime = parseLastMessageTime(rawTime, globalIdx);
+        const lastMsgTime = extractTimestamp(chat);
+        if (lastMsgTime) timestampsFound++;
 
+        const preview = extractLastMessagePreview(chat);
         const existing = existingMap.get(phone);
 
         if (existing) {
-          // Update — DO NOT overwrite attending_mode
           const upd: any = {
             instance_id: instance.id,
             unread_count: unreadCount,
@@ -220,7 +270,7 @@ Deno.serve(async (req) => {
           if (lastMsgTime) upd.last_message_at = lastMsgTime;
           if (name) upd.name = name;
           if (photoUrl) upd.photo_url = photoUrl;
-
+          if (preview) upd.last_message_preview = preview;
           updates.push({ id: existing.id, data: upd });
           contactsUpdated++;
         } else {
@@ -233,30 +283,24 @@ Deno.serve(async (req) => {
             instance_id: instance.id,
             attending_mode: "human",
             photo_url: photoUrl,
+            last_message_preview: preview,
           });
           existingMap.set(phone, { id: "pending", attending_mode: "human" });
           contactsCreated++;
         }
       }
 
-      // Batch insert new contacts
       if (inserts.length > 0) {
-        const { error: insertError } = await adminClient
-          .from("whatsapp_contacts")
-          .insert(inserts);
+        const { error: insertError } = await adminClient.from("whatsapp_contacts").insert(inserts);
         if (insertError) console.error("[sync] Batch insert error:", insertError.message);
       }
 
-      // Batch updates (Supabase doesn't support batch UPDATE, but we can do them quickly)
       for (const upd of updates) {
-        await adminClient
-          .from("whatsapp_contacts")
-          .update(upd.data)
-          .eq("id", upd.id);
+        await adminClient.from("whatsapp_contacts").update(upd.data).eq("id", upd.id);
       }
     }
 
-    console.log(`[sync] Done: ${contactsCreated} created, ${contactsUpdated} updated`);
+    console.log(`[sync] Done: ${contactsCreated} created, ${contactsUpdated} updated, ${timestampsFound}/${individualChats.length} timestamps found`);
 
     return new Response(
       JSON.stringify({
@@ -264,6 +308,7 @@ Deno.serve(async (req) => {
         contacts_created: contactsCreated,
         contacts_updated: contactsUpdated,
         total_chats_found: individualChats.length,
+        timestamps_found: timestampsFound,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
