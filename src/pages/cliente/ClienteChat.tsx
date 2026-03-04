@@ -72,6 +72,16 @@ export default function ClienteChat() {
       } catch (err) {
         console.error("Auto sync-chats failed:", err);
       }
+      // Auto sync photos (separate call, non-blocking)
+      try {
+        supabase.functions.invoke("whatsapp-sync-photos", {
+          body: { limit: 30 },
+        }).then(() => {
+          if (!cancelled) {
+            queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+          }
+        }).catch(() => {});
+      } catch {}
     };
     sync();
     return () => { cancelled = true; };
@@ -97,39 +107,15 @@ export default function ClienteChat() {
     return map;
   }, [contacts, leadsData]);
 
-  // Fetch last message preview for each contact
-  const [lastMessages, setLastMessages] = useState<Map<string, string>>(new Map());
-
-  useEffect(() => {
-    if (!instance?.organization_id || contacts.length === 0) return;
-    const orgId = instance.organization_id;
-
-    const fetchPreviews = async () => {
-      const contactIds = contacts.map(c => c.id);
-      const { data } = await supabase
-        .from("whatsapp_messages" as any)
-        .select("contact_id, content, direction, type, created_at")
-        .eq("organization_id", orgId)
-        .in("contact_id", contactIds)
-        .order("created_at", { ascending: false })
-        .limit(Math.max(contacts.length * 3, 500));
-
-      if (data) {
-        const map = new Map<string, string>();
-        const seen = new Set<string>();
-        for (const msg of data as any[]) {
-          if (seen.has(msg.contact_id)) continue;
-          seen.add(msg.contact_id);
-          const prefix = msg.direction === "outbound" ? "Você: " : "";
-          const text = msg.type === "audio" ? "🎵 Áudio" : msg.type === "image" ? "📷 Imagem" : (msg.content || "");
-          map.set(msg.contact_id, prefix + (text.length > 60 ? text.slice(0, 57) + "..." : text));
-        }
-        setLastMessages(map);
-      }
-    };
-
-    fetchPreviews();
-  }, [instance?.organization_id, contacts]);
+  // Use last_message_preview from contacts directly (no separate DB fetch needed)
+  const lastMessages = useMemo(() => {
+    const map = new Map<string, string>();
+    contacts.forEach((c) => {
+      const preview = (c as any).last_message_preview;
+      if (preview) map.set(c.id, preview);
+    });
+    return map;
+  }, [contacts]);
 
   const handleSelectContact = (contact: WhatsAppContact) => {
     setSelectedContactId(contact.id);
@@ -151,6 +137,11 @@ export default function ClienteChat() {
         description: `${data.contacts_created} novos contatos, ${data.contacts_updated} atualizados de ${data.total_chats_found} conversas encontradas.`,
       });
       queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+      
+      // Trigger photo sync in background
+      supabase.functions.invoke("whatsapp-sync-photos", { body: { limit: 30 } })
+        .then(() => queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] }))
+        .catch(() => {});
     } catch (err: any) {
       toast({ title: "Erro na sincronização", description: err.message, variant: "destructive" });
     } finally {

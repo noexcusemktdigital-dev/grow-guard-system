@@ -6,159 +6,65 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function parseLastMessageTime(raw: any): string {
+function parseLastMessageTime(raw: any, debugIndex?: number): string {
   if (!raw) return new Date().toISOString();
-  const num = typeof raw === "string" ? parseInt(raw, 10) : Number(raw);
-  if (isNaN(num) || num <= 0) return new Date().toISOString();
-  const ms = num > 9999999999 ? num : num * 1000;
-  const d = new Date(ms);
-  if (d.getFullYear() < 2020 || d.getFullYear() > 2030) return new Date().toISOString();
-  return d.toISOString();
+
+  // Log raw value for first 5 contacts for debugging
+  if (debugIndex !== undefined && debugIndex < 5) {
+    console.log(`[sync] Contact #${debugIndex} lastMessageTime raw:`, JSON.stringify(raw), typeof raw);
+  }
+
+  // Handle object with _seconds (Firestore-style)
+  if (typeof raw === "object" && raw !== null) {
+    if (raw._seconds) return new Date(raw._seconds * 1000).toISOString();
+    if (raw.seconds) return new Date(raw.seconds * 1000).toISOString();
+    // Try valueOf
+    return new Date().toISOString();
+  }
+
+  // Handle string ISO format directly
+  if (typeof raw === "string") {
+    // Try ISO parse first
+    const isoDate = new Date(raw);
+    if (!isNaN(isoDate.getTime()) && isoDate.getFullYear() >= 2020 && isoDate.getFullYear() <= 2030) {
+      return isoDate.toISOString();
+    }
+    // Try as numeric string
+    const num = parseInt(raw, 10);
+    if (!isNaN(num) && num > 0) {
+      const ms = num > 9999999999 ? num : num * 1000;
+      const d = new Date(ms);
+      if (d.getFullYear() >= 2020 && d.getFullYear() <= 2030) return d.toISOString();
+    }
+  }
+
+  // Handle number directly
+  if (typeof raw === "number" && raw > 0) {
+    const ms = raw > 9999999999 ? raw : raw * 1000;
+    const d = new Date(ms);
+    if (d.getFullYear() >= 2020 && d.getFullYear() <= 2030) return d.toISOString();
+  }
+
+  return new Date().toISOString();
 }
 
-async function fetchProfilePicture(zapiBase: string, zapiHeaders: Record<string, string>, phone: string): Promise<string | null> {
-  try {
-    const res = await fetch(`${zapiBase}/profile-picture?phone=${phone}`, { headers: zapiHeaders });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.link || data?.imgUrl || data?.profilePictureUrl || null;
-  } catch {
+function extractPreview(chat: any): string | null {
+  // Z-API may return lastMessage as an object or string
+  const lm = chat.lastMessage || chat.lastMessageText || chat.lastMsg;
+  if (!lm) return null;
+  if (typeof lm === "string") return lm.length > 100 ? lm.slice(0, 97) + "..." : lm;
+  // Object format
+  const text = lm.text?.message || lm.text || lm.body || lm.caption || null;
+  if (!text) {
+    // Media types
+    if (lm.image) return "📷 Imagem";
+    if (lm.audio || lm.ptt) return "🎵 Áudio";
+    if (lm.video) return "🎬 Vídeo";
+    if (lm.document) return "📄 Documento";
+    if (lm.sticker) return "🏷️ Figurinha";
     return null;
   }
-}
-
-async function fetchLastMessage(
-  zapiBase: string,
-  zapiHeaders: Record<string, string>,
-  phone: string,
-  orgId: string,
-  contactId: string,
-  adminClient: any
-): Promise<boolean> {
-  try {
-    // Try chat-messages endpoint first (1 message)
-    const res = await fetch(`${zapiBase}/chat-messages/${phone}?amount=1`, { headers: zapiHeaders });
-    if (!res.ok) {
-      const text = await res.text();
-      // If multi-device error, try alternative endpoint
-      if (text.includes("multi device") || text.includes("multidevice")) {
-        return await fetchLastMessageAlt(zapiBase, zapiHeaders, phone, orgId, contactId, adminClient);
-      }
-      return false;
-    }
-    const data = await res.json();
-    const msgs = Array.isArray(data) ? data : (data?.messages || []);
-    if (msgs.length === 0) return false;
-
-    const msg = msgs[0];
-    const messageIdZapi = msg.messageId || msg.id?.id || msg.id || null;
-    if (!messageIdZapi) return false;
-
-    // Check if already exists
-    const { data: existing } = await adminClient
-      .from("whatsapp_messages")
-      .select("id")
-      .eq("organization_id", orgId)
-      .eq("message_id_zapi", messageIdZapi)
-      .maybeSingle();
-    if (existing) return false;
-
-    const isFromMe = msg.fromMe === true;
-    const content = msg.text?.message || msg.text || msg.body || msg.caption || null;
-    const msgType = msg.image ? "image"
-      : (msg.audio || msg.ptt) ? "audio"
-      : msg.video ? "video"
-      : msg.document ? "document"
-      : msg.sticker ? "sticker"
-      : "text";
-    const mediaUrl = msg.image?.imageUrl || msg.image?.url
-      || msg.audio?.audioUrl || msg.ptt?.audioUrl || msg.ptt?.pttUrl
-      || msg.video?.videoUrl
-      || msg.document?.documentUrl
-      || null;
-
-    let createdAt: string;
-    if (msg.momment || msg.timestamp || msg.messageTimestamp) {
-      const ts = msg.momment || msg.timestamp || msg.messageTimestamp;
-      const tsNum = typeof ts === "number" ? (ts > 1e12 ? ts : ts * 1000) : parseInt(ts) * 1000;
-      createdAt = new Date(tsNum).toISOString();
-    } else {
-      createdAt = new Date().toISOString();
-    }
-
-    await adminClient.from("whatsapp_messages").insert({
-      organization_id: orgId,
-      contact_id: contactId,
-      message_id_zapi: messageIdZapi,
-      direction: isFromMe ? "outbound" : "inbound",
-      type: msgType,
-      content,
-      media_url: mediaUrl,
-      status: isFromMe ? "sent" : "received",
-      metadata: msg,
-      created_at: createdAt,
-    });
-    return true;
-  } catch (err) {
-    console.error(`[sync] fetchLastMessage error for ${phone}:`, err);
-    return false;
-  }
-}
-
-async function fetchLastMessageAlt(
-  zapiBase: string,
-  zapiHeaders: Record<string, string>,
-  phone: string,
-  orgId: string,
-  contactId: string,
-  adminClient: any
-): Promise<boolean> {
-  try {
-    const res = await fetch(`${zapiBase}/get-messages-phone/${phone}?amount=1`, { headers: zapiHeaders });
-    if (!res.ok) return false;
-    const data = await res.json();
-    const msgs = Array.isArray(data) ? data : (data?.messages || []);
-    if (msgs.length === 0) return false;
-
-    const msg = msgs[0];
-    const messageIdZapi = msg.messageId || msg.id?.id || msg.id || null;
-    if (!messageIdZapi) return false;
-
-    const { data: existing } = await adminClient
-      .from("whatsapp_messages")
-      .select("id")
-      .eq("organization_id", orgId)
-      .eq("message_id_zapi", messageIdZapi)
-      .maybeSingle();
-    if (existing) return false;
-
-    const isFromMe = msg.fromMe === true;
-    const content = msg.text?.message || msg.text || msg.body || msg.caption || null;
-
-    let createdAt: string;
-    if (msg.momment || msg.timestamp || msg.messageTimestamp) {
-      const ts = msg.momment || msg.timestamp || msg.messageTimestamp;
-      const tsNum = typeof ts === "number" ? (ts > 1e12 ? ts : ts * 1000) : parseInt(ts) * 1000;
-      createdAt = new Date(tsNum).toISOString();
-    } else {
-      createdAt = new Date().toISOString();
-    }
-
-    await adminClient.from("whatsapp_messages").insert({
-      organization_id: orgId,
-      contact_id: contactId,
-      message_id_zapi: messageIdZapi,
-      direction: isFromMe ? "outbound" : "inbound",
-      type: "text",
-      content,
-      status: isFromMe ? "sent" : "received",
-      metadata: msg,
-      created_at: createdAt,
-    });
-    return true;
-  } catch {
-    return false;
-  }
+  return text.length > 100 ? text.slice(0, 97) + "..." : text;
 }
 
 Deno.serve(async (req) => {
@@ -265,6 +171,14 @@ Deno.serve(async (req) => {
 
     console.log(`[sync] Fetched ${allChats.length} chats from Z-API`);
 
+    // Log raw data from first 3 chats for debugging timestamp format
+    for (let i = 0; i < Math.min(3, allChats.length); i++) {
+      const c = allChats[i];
+      console.log(`[sync] Chat #${i} raw keys:`, Object.keys(c).join(", "));
+      console.log(`[sync] Chat #${i} lastMessageTime:`, JSON.stringify(c.lastMessageTime), `| lastMessageTimestamp:`, JSON.stringify(c.lastMessageTimestamp), `| timestamp:`, JSON.stringify(c.timestamp));
+      console.log(`[sync] Chat #${i} lastMessage:`, JSON.stringify(c.lastMessage)?.slice(0, 200));
+    }
+
     // Filter out groups, broadcasts, status
     let individualChats = allChats.filter((chat: any) => {
       if (chat.isGroup) return false;
@@ -286,118 +200,74 @@ Deno.serve(async (req) => {
 
     let contactsCreated = 0;
     let contactsUpdated = 0;
-    let photosUpdated = 0;
-    let messagesImported = 0;
 
-    // Upsert contacts
-    for (const chat of individualChats) {
-      const phone = chat.phone;
-      const name = chat.name || null;
-      // Use profileThumbnail as fallback for photo
-      const photoUrl = chat.imgUrl || chat.profileThumbnail || null;
-      const unreadCount = parseInt(chat.unread) || 0;
-      const lastMsgTime = parseLastMessageTime(chat.lastMessageTime);
+    // Batch upsert contacts (process in batches of 50 for efficiency)
+    const BATCH_SIZE = 50;
+    for (let batchStart = 0; batchStart < individualChats.length; batchStart += BATCH_SIZE) {
+      const batch = individualChats.slice(batchStart, batchStart + BATCH_SIZE);
+      
+      for (let i = 0; i < batch.length; i++) {
+        const chat = batch[i];
+        const globalIdx = batchStart + i;
+        const phone = chat.phone;
+        const name = chat.name || null;
+        const photoUrl = chat.imgUrl || chat.profileThumbnail || null;
+        const unreadCount = parseInt(chat.unread) || 0;
+        
+        // Try multiple timestamp fields
+        const rawTime = chat.lastMessageTime || chat.lastMessageTimestamp || chat.timestamp || chat.t;
+        const lastMsgTime = parseLastMessageTime(rawTime, globalIdx);
+        const preview = extractPreview(chat);
 
-      const { data: existing } = await adminClient
-        .from("whatsapp_contacts")
-        .select("id")
-        .eq("organization_id", orgId)
-        .eq("phone", phone)
-        .maybeSingle();
-
-      if (existing) {
-        const updates: any = {
-          instance_id: instance.id,
-          attending_mode: "human",
-          last_message_at: lastMsgTime,
-          unread_count: unreadCount,
-        };
-        if (name) updates.name = name;
-        if (photoUrl) updates.photo_url = photoUrl;
-
-        await adminClient
+        const { data: existing } = await adminClient
           .from("whatsapp_contacts")
-          .update(updates)
-          .eq("id", existing.id);
-        contactsUpdated++;
-      } else {
-        await adminClient
-          .from("whatsapp_contacts")
-          .insert({
-            organization_id: orgId,
-            phone,
-            name,
-            last_message_at: lastMsgTime,
-            unread_count: unreadCount,
+          .select("id")
+          .eq("organization_id", orgId)
+          .eq("phone", phone)
+          .maybeSingle();
+
+        if (existing) {
+          const updates: any = {
             instance_id: instance.id,
             attending_mode: "human",
-            photo_url: photoUrl,
-          });
-        contactsCreated++;
+            last_message_at: lastMsgTime,
+            unread_count: unreadCount,
+          };
+          if (name) updates.name = name;
+          if (photoUrl) updates.photo_url = photoUrl;
+          if (preview) updates.last_message_preview = preview;
+
+          await adminClient
+            .from("whatsapp_contacts")
+            .update(updates)
+            .eq("id", existing.id);
+          contactsUpdated++;
+        } else {
+          await adminClient
+            .from("whatsapp_contacts")
+            .insert({
+              organization_id: orgId,
+              phone,
+              name,
+              last_message_at: lastMsgTime,
+              unread_count: unreadCount,
+              instance_id: instance.id,
+              attending_mode: "human",
+              photo_url: photoUrl,
+              last_message_preview: preview,
+            });
+          contactsCreated++;
+        }
       }
     }
 
-    // Phase 2: Fetch profile pictures for the 50 most recent contacts
-    const recentChats = individualChats.slice(0, 50);
-    console.log(`[sync] Fetching profile pictures for ${recentChats.length} recent contacts`);
-
-    for (const chat of recentChats) {
-      const phone = chat.phone;
-      const picUrl = await fetchProfilePicture(zapiBase, zapiHeaders, phone);
-      if (picUrl) {
-        await adminClient
-          .from("whatsapp_contacts")
-          .update({ photo_url: picUrl })
-          .eq("organization_id", orgId)
-          .eq("phone", phone);
-        photosUpdated++;
-      }
-      // Small delay to avoid rate-limiting
-      await new Promise(r => setTimeout(r, 100));
-    }
-
-    // Phase 3: Fetch last message for the 50 most recent contacts (as preview)
-    console.log(`[sync] Fetching last message for ${recentChats.length} recent contacts`);
-
-    for (const chat of recentChats) {
-      const phone = chat.phone;
-      // Get the contact ID
-      const { data: contactRow } = await adminClient
-        .from("whatsapp_contacts")
-        .select("id")
-        .eq("organization_id", orgId)
-        .eq("phone", phone)
-        .maybeSingle();
-
-      if (!contactRow) continue;
-
-      // Check if contact already has messages
-      const { data: existingMsg } = await adminClient
-        .from("whatsapp_messages")
-        .select("id")
-        .eq("organization_id", orgId)
-        .eq("contact_id", contactRow.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (existingMsg) continue; // Already has messages, skip
-
-      const imported = await fetchLastMessage(zapiBase, zapiHeaders, phone, orgId, contactRow.id, adminClient);
-      if (imported) messagesImported++;
-
-      // Small delay to avoid rate-limiting
-      await new Promise(r => setTimeout(r, 150));
-    }
-
-    console.log(`[sync] Done: ${contactsCreated} created, ${contactsUpdated} updated, ${photosUpdated} photos, ${messagesImported} messages`);
+    console.log(`[sync] Done: ${contactsCreated} created, ${contactsUpdated} updated`);
 
     return new Response(
       JSON.stringify({
         success: true,
         contacts_created: contactsCreated,
         contacts_updated: contactsUpdated,
-        photos_updated: photosUpdated,
-        messages_imported: messagesImported,
         total_chats_found: individualChats.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
