@@ -62,6 +62,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const [uploading, setUploading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState<Set<string>>(new Set());
+  const [historyFallback, setHistoryFallback] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const sendMutation = useSendWhatsAppMessage();
   const updateMode = useUpdateAttendingMode();
@@ -116,6 +117,9 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           body: { contactPhone: contact.phone, contactId: contact.id, instanceId, amount: 50 },
         });
         if (error) console.error("Load history error:", error);
+        if (data?.fallback) {
+          setHistoryFallback(prev => new Set(prev).add(contact.id));
+        }
         if (data?.imported > 0) {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         }
@@ -136,8 +140,10 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
       const { data, error } = await supabase.functions.invoke("whatsapp-load-history", {
         body: { contactPhone: contact.phone, contactId: contact.id, instanceId, amount: 100 },
       });
-      if (error) console.error("Load more error:", error);
-      if (data?.imported > 0) {
+      if (data?.fallback) {
+        setHistoryFallback(prev => new Set(prev).add(contact!.id));
+        toast({ title: "Histórico não disponível", description: "Mensagens anteriores à conexão não podem ser recuperadas nesta conta." });
+      } else if (data?.imported > 0) {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         toast({ title: `${data.imported} mensagens carregadas` });
       } else {
@@ -488,7 +494,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                 Carregar anteriores
               </Button>
             )}
-            {instanceId && contact && (
+            {instanceId && contact && !historyFallback.has(contact.id) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -501,6 +507,14 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
               </Button>
             )}
           </div>
+          {/* Fallback notice for multi-device limitation */}
+          {contact && historyFallback.has(contact.id) && messages.length === 0 && (
+            <div className="text-center py-4 mb-2">
+              <p className="text-xs text-muted-foreground bg-muted/60 inline-block px-4 py-2 rounded-xl max-w-xs">
+                📱 Mensagens anteriores à conexão não estão disponíveis. Novas mensagens aparecerão em tempo real.
+              </p>
+            </div>
+          )}
           {isLoading || loadingHistory ? (
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-2">

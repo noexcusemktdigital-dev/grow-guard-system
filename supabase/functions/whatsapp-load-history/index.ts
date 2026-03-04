@@ -106,31 +106,51 @@ Deno.serve(async (req) => {
     }
 
     const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
-    const zapiHeaders = { "Client-Token": instance.client_token };
+    const zapiHeaders: Record<string, string> = { "Client-Token": instance.client_token };
 
-    // Try loading messages from Z-API
-    const messagesUrl = `${zapiBase}/chat-messages/${contactPhone}?amount=${amount}`;
-    console.log(`[load-history] Fetching ${amount} messages for ${contactPhone}`);
+    // Try primary endpoint: chat-messages
+    let rawMessages: any[] = [];
+    let usedFallback = false;
 
-    const res = await fetch(messagesUrl, { headers: zapiHeaders });
+    const primaryUrl = `${zapiBase}/chat-messages/${contactPhone}?amount=${amount}`;
+    console.log(`[load-history] Trying primary endpoint for ${contactPhone}`);
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error(`[load-history] Z-API error: ${res.status} ${errText}`);
-      // Graceful fallback
-      return new Response(JSON.stringify({ 
-        fallback: true, 
-        imported: 0, 
-        error: errText,
+    const primaryRes = await fetch(primaryUrl, { headers: zapiHeaders });
+
+    if (primaryRes.ok) {
+      const data = await primaryRes.json();
+      rawMessages = Array.isArray(data) ? data : (data?.messages || []);
+      console.log(`[load-history] Primary OK: ${rawMessages.length} messages`);
+    } else {
+      const errText = await primaryRes.text();
+      console.log(`[load-history] Primary failed: ${primaryRes.status} — trying alternative`);
+
+      // Try alternative endpoint for multi-device
+      const altUrl = `${zapiBase}/get-messages-phone/${contactPhone}?amount=${amount}`;
+      const altRes = await fetch(altUrl, { headers: zapiHeaders });
+
+      if (altRes.ok) {
+        const altData = await altRes.json();
+        rawMessages = Array.isArray(altData) ? altData : (altData?.messages || []);
+        console.log(`[load-history] Alternative OK: ${rawMessages.length} messages`);
+      } else {
+        console.log(`[load-history] Both endpoints failed — returning fallback`);
+        usedFallback = true;
+      }
+    }
+
+    if (usedFallback || rawMessages.length === 0) {
+      return new Response(JSON.stringify({
+        success: true,
+        fallback: true,
+        imported: 0,
+        skipped: 0,
+        total: 0,
+        message: "Mensagens anteriores à conexão não estão disponíveis nesta conta multi-device.",
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const messagesData = await res.json();
-    const rawMessages = Array.isArray(messagesData) ? messagesData : (messagesData?.messages || []);
-
-    console.log(`[load-history] Got ${rawMessages.length} messages from Z-API`);
 
     let imported = 0;
     let skipped = 0;
@@ -152,7 +172,6 @@ Deno.serve(async (req) => {
       const isFromMe = msg.fromMe === true;
       const direction = isFromMe ? "outbound" : "inbound";
 
-      // Parse content
       const content = msg.text?.message || msg.text || msg.body || msg.caption || null;
       const msgType = msg.image ? "image"
         : (msg.audio || msg.ptt) ? "audio"
@@ -166,7 +185,6 @@ Deno.serve(async (req) => {
         || msg.document?.documentUrl
         || null;
 
-      // Parse timestamp
       let createdAt: string;
       if (msg.momment || msg.timestamp || msg.messageTimestamp) {
         const ts = msg.momment || msg.timestamp || msg.messageTimestamp;
