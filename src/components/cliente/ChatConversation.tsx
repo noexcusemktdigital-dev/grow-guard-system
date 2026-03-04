@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Send, Loader2, MessageCircle, Bot, User, UserPlus, ExternalLink,
   ArrowRight, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Paperclip, Smile,
@@ -37,20 +37,21 @@ interface Props {
 
 const DISPLAY_STEP = 100;
 
-function DateSeparator({ date }: { date: Date }) {
+const DateSeparator = React.forwardRef<HTMLDivElement, { date: Date }>(({ date }, ref) => {
   let label: string;
   if (isToday(date)) label = "Hoje";
   else if (isYesterday(date)) label = "Ontem";
   else label = format(date, "dd 'de' MMM", { locale: ptBR });
 
   return (
-    <div className="flex justify-center my-3">
+    <div ref={ref} className="flex justify-center my-3">
       <span className="text-[10px] font-medium text-muted-foreground bg-muted/80 px-3 py-0.5 rounded-full shadow-sm">
         {label}
       </span>
     </div>
   );
-}
+});
+DateSeparator.displayName = "DateSeparator";
 
 export function ChatConversation({ contact, messages, isLoading, agents = [] }: Props) {
   const [text, setText] = useState("");
