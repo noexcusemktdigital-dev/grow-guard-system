@@ -10,12 +10,155 @@ function parseLastMessageTime(raw: any): string {
   if (!raw) return new Date().toISOString();
   const num = typeof raw === "string" ? parseInt(raw, 10) : Number(raw);
   if (isNaN(num) || num <= 0) return new Date().toISOString();
-  // If > 10 digits it's milliseconds, otherwise seconds
   const ms = num > 9999999999 ? num : num * 1000;
   const d = new Date(ms);
-  // Sanity check: if date is before 2020 or after 2030, use now
   if (d.getFullYear() < 2020 || d.getFullYear() > 2030) return new Date().toISOString();
   return d.toISOString();
+}
+
+async function fetchProfilePicture(zapiBase: string, zapiHeaders: Record<string, string>, phone: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${zapiBase}/profile-picture?phone=${phone}`, { headers: zapiHeaders });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.link || data?.imgUrl || data?.profilePictureUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchLastMessage(
+  zapiBase: string,
+  zapiHeaders: Record<string, string>,
+  phone: string,
+  orgId: string,
+  contactId: string,
+  adminClient: any
+): Promise<boolean> {
+  try {
+    // Try chat-messages endpoint first (1 message)
+    const res = await fetch(`${zapiBase}/chat-messages/${phone}?amount=1`, { headers: zapiHeaders });
+    if (!res.ok) {
+      const text = await res.text();
+      // If multi-device error, try alternative endpoint
+      if (text.includes("multi device") || text.includes("multidevice")) {
+        return await fetchLastMessageAlt(zapiBase, zapiHeaders, phone, orgId, contactId, adminClient);
+      }
+      return false;
+    }
+    const data = await res.json();
+    const msgs = Array.isArray(data) ? data : (data?.messages || []);
+    if (msgs.length === 0) return false;
+
+    const msg = msgs[0];
+    const messageIdZapi = msg.messageId || msg.id?.id || msg.id || null;
+    if (!messageIdZapi) return false;
+
+    // Check if already exists
+    const { data: existing } = await adminClient
+      .from("whatsapp_messages")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("message_id_zapi", messageIdZapi)
+      .maybeSingle();
+    if (existing) return false;
+
+    const isFromMe = msg.fromMe === true;
+    const content = msg.text?.message || msg.text || msg.body || msg.caption || null;
+    const msgType = msg.image ? "image"
+      : (msg.audio || msg.ptt) ? "audio"
+      : msg.video ? "video"
+      : msg.document ? "document"
+      : msg.sticker ? "sticker"
+      : "text";
+    const mediaUrl = msg.image?.imageUrl || msg.image?.url
+      || msg.audio?.audioUrl || msg.ptt?.audioUrl || msg.ptt?.pttUrl
+      || msg.video?.videoUrl
+      || msg.document?.documentUrl
+      || null;
+
+    let createdAt: string;
+    if (msg.momment || msg.timestamp || msg.messageTimestamp) {
+      const ts = msg.momment || msg.timestamp || msg.messageTimestamp;
+      const tsNum = typeof ts === "number" ? (ts > 1e12 ? ts : ts * 1000) : parseInt(ts) * 1000;
+      createdAt = new Date(tsNum).toISOString();
+    } else {
+      createdAt = new Date().toISOString();
+    }
+
+    await adminClient.from("whatsapp_messages").insert({
+      organization_id: orgId,
+      contact_id: contactId,
+      message_id_zapi: messageIdZapi,
+      direction: isFromMe ? "outbound" : "inbound",
+      type: msgType,
+      content,
+      media_url: mediaUrl,
+      status: isFromMe ? "sent" : "received",
+      metadata: msg,
+      created_at: createdAt,
+    });
+    return true;
+  } catch (err) {
+    console.error(`[sync] fetchLastMessage error for ${phone}:`, err);
+    return false;
+  }
+}
+
+async function fetchLastMessageAlt(
+  zapiBase: string,
+  zapiHeaders: Record<string, string>,
+  phone: string,
+  orgId: string,
+  contactId: string,
+  adminClient: any
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${zapiBase}/get-messages-phone/${phone}?amount=1`, { headers: zapiHeaders });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const msgs = Array.isArray(data) ? data : (data?.messages || []);
+    if (msgs.length === 0) return false;
+
+    const msg = msgs[0];
+    const messageIdZapi = msg.messageId || msg.id?.id || msg.id || null;
+    if (!messageIdZapi) return false;
+
+    const { data: existing } = await adminClient
+      .from("whatsapp_messages")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("message_id_zapi", messageIdZapi)
+      .maybeSingle();
+    if (existing) return false;
+
+    const isFromMe = msg.fromMe === true;
+    const content = msg.text?.message || msg.text || msg.body || msg.caption || null;
+
+    let createdAt: string;
+    if (msg.momment || msg.timestamp || msg.messageTimestamp) {
+      const ts = msg.momment || msg.timestamp || msg.messageTimestamp;
+      const tsNum = typeof ts === "number" ? (ts > 1e12 ? ts : ts * 1000) : parseInt(ts) * 1000;
+      createdAt = new Date(tsNum).toISOString();
+    } else {
+      createdAt = new Date().toISOString();
+    }
+
+    await adminClient.from("whatsapp_messages").insert({
+      organization_id: orgId,
+      contact_id: contactId,
+      message_id_zapi: messageIdZapi,
+      direction: isFromMe ? "outbound" : "inbound",
+      type: "text",
+      content,
+      status: isFromMe ? "sent" : "received",
+      metadata: msg,
+      created_at: createdAt,
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -92,7 +235,7 @@ Deno.serve(async (req) => {
     }
 
     const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
-    const zapiHeaders = { "Client-Token": instance.client_token };
+    const zapiHeaders: Record<string, string> = { "Client-Token": instance.client_token };
 
     // Fetch all chats from Z-API (paginated)
     let allChats: any[] = [];
@@ -143,12 +286,15 @@ Deno.serve(async (req) => {
 
     let contactsCreated = 0;
     let contactsUpdated = 0;
+    let photosUpdated = 0;
+    let messagesImported = 0;
 
-    // Batch upsert contacts from chat data
+    // Upsert contacts
     for (const chat of individualChats) {
       const phone = chat.phone;
       const name = chat.name || null;
-      const photoUrl = chat.imgUrl || null;
+      // Use profileThumbnail as fallback for photo
+      const photoUrl = chat.imgUrl || chat.profileThumbnail || null;
       const unreadCount = parseInt(chat.unread) || 0;
       const lastMsgTime = parseLastMessageTime(chat.lastMessageTime);
 
@@ -191,13 +337,67 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[sync] Done: ${contactsCreated} created, ${contactsUpdated} updated`);
+    // Phase 2: Fetch profile pictures for the 50 most recent contacts
+    const recentChats = individualChats.slice(0, 50);
+    console.log(`[sync] Fetching profile pictures for ${recentChats.length} recent contacts`);
+
+    for (const chat of recentChats) {
+      const phone = chat.phone;
+      const picUrl = await fetchProfilePicture(zapiBase, zapiHeaders, phone);
+      if (picUrl) {
+        await adminClient
+          .from("whatsapp_contacts")
+          .update({ photo_url: picUrl })
+          .eq("organization_id", orgId)
+          .eq("phone", phone);
+        photosUpdated++;
+      }
+      // Small delay to avoid rate-limiting
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    // Phase 3: Fetch last message for the 50 most recent contacts (as preview)
+    console.log(`[sync] Fetching last message for ${recentChats.length} recent contacts`);
+
+    for (const chat of recentChats) {
+      const phone = chat.phone;
+      // Get the contact ID
+      const { data: contactRow } = await adminClient
+        .from("whatsapp_contacts")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("phone", phone)
+        .maybeSingle();
+
+      if (!contactRow) continue;
+
+      // Check if contact already has messages
+      const { data: existingMsg } = await adminClient
+        .from("whatsapp_messages")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("contact_id", contactRow.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingMsg) continue; // Already has messages, skip
+
+      const imported = await fetchLastMessage(zapiBase, zapiHeaders, phone, orgId, contactRow.id, adminClient);
+      if (imported) messagesImported++;
+
+      // Small delay to avoid rate-limiting
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+    console.log(`[sync] Done: ${contactsCreated} created, ${contactsUpdated} updated, ${photosUpdated} photos, ${messagesImported} messages`);
 
     return new Response(
       JSON.stringify({
         success: true,
         contacts_created: contactsCreated,
         contacts_updated: contactsUpdated,
+        photos_updated: photosUpdated,
+        messages_imported: messagesImported,
         total_chats_found: individualChats.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
