@@ -45,6 +45,26 @@ export default function ClienteChat() {
 
   const isConnected = instance?.status === "connected";
 
+  // Auto check-status on mount to sync phone number from Z-API
+  useEffect(() => {
+    if (!instance?.instance_id) return;
+    let cancelled = false;
+    const sync = async () => {
+      try {
+        await supabase.functions.invoke("whatsapp-setup", {
+          body: { action: "check-status", instanceId: instance.instance_id },
+        });
+        if (!cancelled) {
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
+        }
+      } catch (err) {
+        console.error("Auto check-status failed:", err);
+      }
+    };
+    sync();
+    return () => { cancelled = true; };
+  }, [instance?.instance_id, queryClient]);
+
   const agents = useMemo(() =>
     (agentsData || [])
       .filter((a) => a.status === "active")
