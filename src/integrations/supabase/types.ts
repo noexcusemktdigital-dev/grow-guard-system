@@ -4535,6 +4535,7 @@ export type Database = {
           id: string
           instance_id: string | null
           last_message_at: string | null
+          last_message_preview: string | null
           name: string | null
           organization_id: string
           phone: string
@@ -4550,6 +4551,7 @@ export type Database = {
           id?: string
           instance_id?: string | null
           last_message_at?: string | null
+          last_message_preview?: string | null
           name?: string | null
           organization_id: string
           phone: string
@@ -4565,6 +4567,7 @@ export type Database = {
           id?: string
           instance_id?: string | null
           last_message_at?: string | null
+          last_message_preview?: string | null
           name?: string | null
           organization_id?: string
           phone?: string

@@ -2,15 +2,18 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import {
   Send, Loader2, MessageCircle, Bot, User, UserPlus, ExternalLink,
   ArrowRight, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Paperclip, Smile,
+  ArrowDown, Search, X,
 } from "lucide-react";
 import { ChatQuickReplies } from "./ChatQuickReplies";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import {
   useSendWhatsAppMessage,
@@ -39,6 +42,13 @@ interface Props {
 
 const DISPLAY_STEP = 100;
 
+const COMMON_EMOJIS = [
+  "😀","😂","😍","🥰","😎","🤔","😅","🙏","👍","👋",
+  "❤️","🔥","✅","⭐","💪","🎉","📌","💡","🚀","✨",
+  "😊","🤝","👏","💯","🙌","😢","😭","🤣","😘","😁",
+  "👀","💬","📱","📞","⏰","📅","💰","🏠","🎯","⚡",
+];
+
 const DateSeparator = React.forwardRef<HTMLDivElement, { date: Date }>(({ date }, ref) => {
   let label: string;
   if (isToday(date)) label = "Hoje";
@@ -63,6 +73,9 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState<Set<string>>(new Set());
   const [historyFallback, setHistoryFallback] = useState<Set<string>>(new Set());
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const queryClient = useQueryClient();
   const sendMutation = useSendWhatsAppMessage();
   const updateMode = useUpdateAttendingMode();
@@ -101,6 +114,8 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     setDisplayCount(DISPLAY_STEP);
     lastSeenIdRef.current = null;
     isNearBottomRef.current = true;
+    setSearchOpen(false);
+    setSearchQuery("");
   }, [contact?.id]);
 
   // Auto-load message history when conversation is empty
@@ -160,7 +175,18 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const handleScroll = useCallback(() => {
     const el = scrollAreaRef.current;
     if (!el) return;
-    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    isNearBottomRef.current = distanceFromBottom < 100;
+    setShowScrollBtn(distanceFromBottom > 300);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    const el = scrollAreaRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+      isNearBottomRef.current = true;
+      setShowScrollBtn(false);
+    }
   }, []);
 
   // Auto-scroll only when near bottom
@@ -182,12 +208,24 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     lastSeenIdRef.current = lastMsg.id;
   }, [messages]);
 
+  // Auto-resize textarea
+  const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value);
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }, []);
+
   const handleSend = () => {
     if (!text.trim() || !contact) return;
     sendMutation.mutate(
       { contactId: contact.id, contactPhone: contact.phone, message: text.trim() },
       {
-        onSuccess: () => { setText(""); isNearBottomRef.current = true; },
+        onSuccess: () => {
+          setText("");
+          isNearBottomRef.current = true;
+          if (inputRef.current) inputRef.current.style.height = "auto";
+        },
         onError: (err: any) =>
           toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" }),
       }
@@ -296,6 +334,11 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     }
   };
 
+  const handleInsertEmoji = (emoji: string) => {
+    setText(prev => prev + emoji);
+    inputRef.current?.focus();
+  };
+
   const linkedLead = crmLeadId ? matchedLead : null;
   const isHandoffAlert = attendingMode === "human" && (contact?.unread_count ?? 0) > 0;
 
@@ -306,6 +349,13 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   }, [messages, displayCount]);
 
   const hasMore = messages.length > displayCount;
+
+  // Search filtering
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const q = searchQuery.toLowerCase();
+    return displayedMessages.filter(m => m.content?.toLowerCase().includes(q));
+  }, [displayedMessages, searchQuery]);
 
   // Group messages by date
   const messagesWithSeparators = useMemo(() => {
@@ -361,6 +411,16 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Search button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 rounded-full text-white hover:bg-white/10"
+            onClick={() => { setSearchOpen(!searchOpen); setSearchQuery(""); }}
+          >
+            <Search className="w-3.5 h-3.5" />
+          </Button>
+
           {attendingMode && (
             <Badge variant="outline" className={`text-[10px] gap-1 rounded-full border-white/30 ${
               attendingMode === "ai" ? "text-purple-200" : "text-emerald-200"
@@ -381,7 +441,6 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
             </Button>
           )}
 
-          {/* Criar Lead button - always visible in header */}
           {!linkedLead && (
             <Button
               size="sm"
@@ -393,7 +452,6 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
             </Button>
           )}
 
-          {/* Lead stage badge in header */}
           {linkedLead && (
             <Badge className="text-[10px] gap-1 rounded-full bg-emerald-600/80 text-white border-0">
               {linkedLead.stage}
@@ -409,6 +467,28 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           </Collapsible>
         </div>
       </div>
+
+      {/* Search bar */}
+      {searchOpen && (
+        <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center gap-2">
+          <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+          <Input
+            autoFocus
+            placeholder="Buscar na conversa..."
+            className="h-7 text-xs border-0 bg-transparent focus-visible:ring-0"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchResults && (
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+              {searchResults.length} resultado{searchResults.length !== 1 ? "s" : ""}
+            </span>
+          )}
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setSearchOpen(false); setSearchQuery(""); }}>
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
 
       {/* Collapsible Actions Panel */}
       <Collapsible open={actionsOpen} onOpenChange={setActionsOpen}>
@@ -480,7 +560,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
       </Collapsible>
 
       {/* Messages area with WhatsApp background */}
-      <div className="flex-1 min-h-0 overflow-y-auto whatsapp-bg" ref={scrollAreaRef} onScroll={handleScroll}>
+      <div className="flex-1 min-h-0 overflow-y-auto whatsapp-bg relative" ref={scrollAreaRef} onScroll={handleScroll}>
         <div className="px-4 py-3">
           {/* Load history from Z-API button */}
           <div className="flex justify-center mb-3 gap-2">
@@ -532,7 +612,12 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
             <>
               {messagesWithSeparators.map((item, i) => {
                 if (item.type === "date") return <DateSeparator key={`date-${i}`} date={item.date!} />;
-                return <ChatMessageBubble key={item.message!.id} message={item.message!} isGrouped={item.isGrouped} />;
+                const isHighlighted = searchQuery && item.message?.content?.toLowerCase().includes(searchQuery.toLowerCase());
+                return (
+                  <div key={item.message!.id} className={isHighlighted ? "ring-2 ring-primary/50 rounded-xl" : ""}>
+                    <ChatMessageBubble message={item.message!} isGrouped={item.isGrouped} />
+                  </div>
+                );
               })}
               {/* AI typing indicator */}
               {attendingMode === "ai" && messages.length > 0 && messages[messages.length - 1]?.direction === "inbound" && (
@@ -553,6 +638,18 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           )}
           <div ref={bottomRef} />
         </div>
+
+        {/* Scroll to bottom button */}
+        {showScrollBtn && (
+          <Button
+            variant="secondary"
+            size="icon"
+            className="absolute bottom-4 right-4 h-9 w-9 rounded-full shadow-lg z-10 bg-card border border-border"
+            onClick={scrollToBottom}
+          >
+            <ArrowDown className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {/* WhatsApp-style Input */}
@@ -569,6 +666,35 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           className="flex items-end gap-2"
         >
           <ChatQuickReplies onSelect={(t) => setText(t)} />
+
+          {/* Emoji Picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
+              >
+                <Smile className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[280px] p-2" align="start" side="top">
+              <div className="grid grid-cols-8 gap-1">
+                {COMMON_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="h-8 w-8 flex items-center justify-center text-lg hover:bg-muted rounded transition-colors"
+                    onClick={() => handleInsertEmoji(emoji)}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Button
             type="button"
             variant="ghost"
@@ -586,7 +712,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
               className="w-full resize-none rounded-2xl bg-muted/50 border-0 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground min-h-[36px] max-h-[120px]"
               rows={1}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={handleTextChange}
               onKeyDown={handleKeyDown}
               disabled={sendMutation.isPending}
             />

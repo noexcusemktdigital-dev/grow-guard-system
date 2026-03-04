@@ -1,0 +1,1 @@
+ALTER TABLE public.whatsapp_contacts ADD COLUMN IF NOT EXISTS last_message_preview text;

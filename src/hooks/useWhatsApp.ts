@@ -27,6 +27,7 @@ export interface WhatsAppContact {
   created_at: string;
   updated_at: string;
   contact_type?: "individual" | "group" | "lid";
+  last_message_preview?: string | null;
 }
 
 export interface WhatsAppMessage {
