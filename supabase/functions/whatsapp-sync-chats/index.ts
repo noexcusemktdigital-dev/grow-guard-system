@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
         const phone = chat.phone;
         const name = chat.name || null;
         const photoUrl = chat.imgUrl || chat.profileThumbnail || null;
-        const unreadCount = parseInt(chat.unread) || 0;
+        const unreadCount = parseInt(chat.unreadCount ?? chat.unreadMessages ?? chat.unread ?? chat.unreadQtd ?? "0") || 0;
 
         const lastMsgTime = extractTimestamp(chat);
         if (lastMsgTime) timestampsFound++;

@@ -48,7 +48,67 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { contactPhone, contactId, message, type = "text", mediaUrl, quotedMessageId } = await req.json();
+    const { contactPhone, contactId, message, type = "text", mediaUrl, quotedMessageId, action } = await req.json();
+
+    // Action: mark messages as read on WhatsApp
+    if (action === "read") {
+      if (!contactPhone && !contactId) {
+        return new Response(JSON.stringify({ error: "contactPhone or contactId required for read action" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Resolve phone
+      let readPhone = contactPhone;
+      if (contactId && !readPhone) {
+        const { data: ct } = await adminClient.from("whatsapp_contacts").select("phone").eq("id", contactId).single();
+        if (ct) readPhone = ct.phone;
+      }
+
+      if (!readPhone) {
+        return new Response(JSON.stringify({ error: "Could not resolve phone" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get connected instance
+      let readInstance: any = null;
+      if (contactId) {
+        const { data: ct } = await adminClient.from("whatsapp_contacts").select("instance_id").eq("id", contactId).maybeSingle();
+        if (ct?.instance_id) {
+          const { data: inst } = await adminClient.from("whatsapp_instances").select("*").eq("id", ct.instance_id).eq("status", "connected").maybeSingle();
+          if (inst) readInstance = inst;
+        }
+      }
+      if (!readInstance) {
+        const { data: insts } = await adminClient.from("whatsapp_instances").select("*").eq("organization_id", orgId).eq("status", "connected").order("created_at", { ascending: true }).limit(1);
+        readInstance = insts && insts.length > 0 ? insts[0] : null;
+      }
+
+      if (!readInstance) {
+        return new Response(JSON.stringify({ error: "No connected instance" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const cleanReadPhone = readPhone.replace(/[\s\-\+\(\)]/g, "");
+      const zapiReadBase = `https://api.z-api.io/instances/${readInstance.instance_id}/token/${readInstance.token}`;
+
+      const readRes = await fetch(`${zapiReadBase}/read-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Client-Token": readInstance.client_token },
+        body: JSON.stringify({ phone: cleanReadPhone }),
+      });
+
+      const readData = await readRes.json().catch(() => ({}));
+
+      return new Response(JSON.stringify({ success: true, zapi: readData }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if ((!message && !mediaUrl) || (!contactPhone && !contactId)) {
       return new Response(JSON.stringify({ error: "message or mediaUrl, and contactPhone or contactId required" }), {

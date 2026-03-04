@@ -61,6 +61,40 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log("Webhook payload:", JSON.stringify(body).slice(0, 500));
 
+    // Typing indicator detection — broadcast via Realtime, don't save
+    const chatState = body.chatstate || body.type;
+    if (chatState === "typing" || chatState === "composing" || chatState === "recording") {
+      const typingPhone = body.phone || (body.chatId || "").replace("@c.us", "");
+      if (typingPhone) {
+        const channel = adminClient.channel(`whatsapp-typing-${orgId}`);
+        await channel.send({
+          type: "broadcast",
+          event: "typing",
+          payload: { phone: typingPhone, isTyping: true },
+        });
+        adminClient.removeChannel(channel);
+      }
+      return new Response(JSON.stringify({ ok: true, typing: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (chatState === "paused" || chatState === "available") {
+      const typingPhone = body.phone || (body.chatId || "").replace("@c.us", "");
+      if (typingPhone) {
+        const channel = adminClient.channel(`whatsapp-typing-${orgId}`);
+        await channel.send({
+          type: "broadcast",
+          event: "typing",
+          payload: { phone: typingPhone, isTyping: false },
+        });
+        adminClient.removeChannel(channel);
+      }
+      return new Response(JSON.stringify({ ok: true, typing: false }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Detect if message was sent by us (from phone or platform)
     const isFromMe = body.fromMe === true;
 
