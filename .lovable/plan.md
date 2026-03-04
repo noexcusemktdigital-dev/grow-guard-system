@@ -1,114 +1,78 @@
 
 
-# Bloco 2: CRM + Conversas
+# Bloco 4: Redesign Artes para Redes Sociais
 
-## Escopo
-Quatro melhorias interligadas: (A) valores agregados por etapa no Kanban, (B) tutorial pop-up passo a passo com recomendacoes do plano de vendas, (C) automacoes mais dinamicas e fluidas, (D) chat espelhando WhatsApp com organizacao por grupos, leads e responsaveis.
+## Visao Geral
 
----
-
-## A. Valores por Etapa no CRM Kanban
-
-### Situacao Atual
-O header de cada coluna Kanban mostra apenas o nome da etapa e a contagem de leads. O valor (`lead.value`) aparece no card individual mas nao ha soma por coluna.
-
-### Alteracoes
-- Adicionar soma de valores por etapa no header de cada coluna Kanban (`ClienteCRM.tsx`)
-- Mostrar `R$ X.XXX` abaixo do badge de contagem
-- Adicionar barra de progresso visual por etapa (% do total do funil)
-- No topo do pipeline, mostrar um resumo: total de leads, valor total, valor medio, taxa de conversao
-
-### Arquivos
-| Arquivo | Acao |
-|---------|------|
-| `src/pages/cliente/ClienteCRM.tsx` | Adicionar sumario de pipeline + valores por coluna |
+Transformar a pagina `ClienteRedesSociais.tsx` de um wizard em dialog para uma **experiencia full-page em 3 etapas** (Formato → Modo → Criar), com templates selecionaveis, mockup Instagram para aprovacao, e identidade visual integrada. Baseado nas referencias enviadas pelo usuario.
 
 ---
 
-## B. Tutorial Pop-up Passo a Passo
+## A. Wizard Full-Page em 3 Steps
 
 ### Situacao Atual
-Nao existe tutorial. O CRM abre direto sem orientacao.
+O wizard roda dentro de um `Dialog` com 4 sub-steps. O fluxo e: choose → content/briefing → steps 1-4 dentro do dialog.
 
 ### Alteracoes
-- Criar componente `CrmTutorial.tsx` — modal/overlay multi-step que guia o usuario
-- Steps: (1) Entenda seu funil, (2) Crie seu primeiro lead, (3) Configure automacoes, (4) Use a Roleta, (5) Acompanhe metricas
-- Cada step tem titulo, descricao, e **recomendacoes personalizadas** baseadas no `sales_plans.answers`:
-  - Segmento da empresa → sugere automacoes especificas
-  - Ticket medio → sugere configuracao de valor por lead
-  - Diferenciais → sugere tags e qualificacao
-- Flag `crm_tutorial_seen` em `localStorage` para nao repetir (com botao para reabrir)
-- Trigger automatico na primeira visita ao CRM
+- Substituir o `Dialog` do wizard por uma **pagina full-screen** com stepper visual no topo (circulo numerado + label + linha conectora, como na referencia)
+- **Step 1 — Formato**: Grid de cards visuais com preview do formato (Feed 1:1, Story 9:16, Carrossel, Post Portrait, etc). Filtro por rede social (Instagram, Facebook, LinkedIn). Cards com gradiente roxo/rosa como na referencia.
+- **Step 2 — Modo**: 3 opcoes grandes — "Criar do Zero" (IA gera tudo), "A partir de Link" (cola URL e IA extrai conteudo), "A partir de Template" (selecionar template base). Abaixo, chips de objetivo (Alcance, Vender, Engajar, Educar, Autoridade).
+- **Step 3 — Criar**: Briefing contextualizado + geracao + preview com mockup Instagram
 
-### Arquivos
-| Arquivo | Acao |
-|---------|------|
-| `src/components/crm/CrmTutorial.tsx` | CRIAR — tutorial multi-step com recomendacoes |
-| `src/pages/cliente/ClienteCRM.tsx` | Integrar tutorial na primeira visita |
+### Nova Rota
+- `/cliente/redes-sociais/criar` — pagina standalone do wizard (nao dialog)
+- O botao "Nova Criacao" redireciona para essa rota ao inves de abrir dialog
 
 ---
 
-## C. Automacoes Mais Dinamicas
-
-### Situacao Atual
-Automacoes funcionam mas sao estaticas — o usuario cria regras manualmente sem orientacao. A UI e funcional mas nao explica o impacto.
+## B. Templates Selecionaveis (6 Padroes)
 
 ### Alteracoes
-- Adicionar secao "Automacoes Recomendadas" no topo de `CrmAutomations.tsx`
-  - Baseadas no `sales_plans.answers` (segmento, ticket, ciclo de venda)
-  - Cada recomendacao tem botao "Ativar" que pre-preenche a automacao
-  - Exemplos: "Follow-up 24h para leads de Ads", "Notificar quando lead quente parado 3 dias"
-- Adicionar descricao visual ao criar/editar automacao:
-  - Preview em linguagem natural: "Quando um lead e criado via Ads → Criar tarefa de follow-up em 1 dia"
-  - Animacao de fluxo simples (trigger → acao) com icones
-- Adicionar contadores de execucao por automacao (quantas vezes disparou)
-
-### Arquivos
-| Arquivo | Acao |
-|---------|------|
-| `src/components/crm/CrmAutomations.tsx` | Recomendacoes + preview visual + contadores |
+- Adicionar opcao "A partir de Template" no Step 2
+- Criar **6 templates base** como constantes (JSON com layout, cores, posicoes de texto):
+  1. **Impacto Bold** — fundo escuro, texto grande uppercase, faixas diagonais
+  2. **Clean Moderno** — fundo claro, tipografia fina, muito espaco branco
+  3. **Elegante Premium** — fundo escuro, acentos dourados, serifa
+  4. **Colorido Vibrante** — gradientes, formas organicas, sans-serif bold
+  5. **Foto Destaque** — foto full-bleed com overlay e texto sobre
+  6. **Corporativo Pro** — grid limpo, cores neutras, logo no topo
+- Cada template e um `TemplateConfig` do `canvasTemplateEngine.ts` que ja existe
+- O usuario seleciona o template → a IA ajusta textos/cores baseado no briefing e identidade visual
+- Preview do template com miniatura visual antes de selecionar
 
 ---
 
-## D. Chat Espelhando WhatsApp
+## C. Mockup Instagram para Aprovacao
 
 ### Situacao Atual
-O chat ja tem visual WhatsApp (bubbles verdes, header escuro, date separators). Porem falta:
-- Organizacao por responsavel/atribuido
-- Filtro por lead vinculado mais visivel
-- Status de digitando/online
-- Reacoes ou resposta rapida
-- Busca dentro de mensagens
+As artes geradas aparecem como cards simples com img + legenda. Nao ha preview tipo Instagram.
 
 ### Alteracoes
+- Criar componente `InstagramMockup` que renderiza a arte dentro de um frame de celular/Instagram:
+  - Header com foto de perfil + nome da conta + "..."
+  - Imagem da arte no centro
+  - Barra de acoes (coracao, comentario, enviar, salvar)
+  - Contagem de curtidas ficticia
+  - Legenda com @handle + texto + hashtags
+  - Indicador de slides para carrossel (1/5)
+- Painel lateral com:
+  - Legenda final editavel
+  - Contagem de caracteres + hashtags
+  - Botao "Refinar com IA"
+  - Botao "Publicar no Instagram" (placeholder, mostra aviso de conexao)
+  - Botoes: Agendar, Baixar, Salvar
+  - Copiar Legenda, Criar Novo Post
+- Substituir o editor modal atual por essa view de mockup
 
-**1. Sidebar de contatos melhorada**
-- Adicionar filtro por responsavel (quem esta atendendo)
-- Secao "Meus contatos" vs "Todos" baseado no usuario logado
-- Preview de ultima mensagem ja existe — melhorar com indicador de "digitando..."
-- Adicionar busca de mensagens (busca dentro do historico, nao so pelo nome)
+---
 
-**2. Area de conversa aprimorada**
-- Adicionar campo de resposta rapida (templates salvos)
-- Adicionar botao de emoji picker basico
-- Melhorar header: foto maior, status online/offline, info do lead em destaque
-- Adicionar area de informacoes do lead no painel lateral direito (mini-CRM sidebar)
-- Responder mensagem especifica (quote/reply)
+## D. Fluxo de Geracao Atualizado
 
-**3. Organizacao**
-- Separar contatos por: "Leads", "Grupos", "Site", "Sem vinculo"
-- Mostrar responsavel atribuido em cada contato na lista
-- Permitir transferir conversa para outro membro da equipe
-
-### Arquivos
-| Arquivo | Acao |
-|---------|------|
-| `src/pages/cliente/ClienteChat.tsx` | Layout com painel lateral de info do lead |
-| `src/components/cliente/ChatContactList.tsx` | Filtro por responsavel, secao Meus/Todos, busca em mensagens |
-| `src/components/cliente/ChatConversation.tsx` | Reply, emoji, templates rapidos, painel lead |
-| `src/components/cliente/ChatContactItem.tsx` | Mostrar responsavel, melhorar visual |
-| `src/components/cliente/ChatLeadPanel.tsx` | CRIAR — painel lateral com info do lead (mini-CRM) |
-| `src/components/cliente/ChatQuickReplies.tsx` | CRIAR — templates de resposta rapida |
+### Alteracoes no Step 3 (Criar)
+- Quando modo = "template": enviar o `TemplateConfig` do template selecionado para o `generate-template-layout` que ja existe. A IA ajusta elementos baseado no briefing.
+- Quando modo = "link": campo de URL + botao para IA extrair headline/copy do link
+- Quando modo = "zero": briefing simplificado (titulo, subtitulo, CTA, estilo — sem o formulario extenso atual)
+- Apos geracao, mostrar resultado no `InstagramMockup`
 
 ---
 
@@ -116,15 +80,11 @@ O chat ja tem visual WhatsApp (bubbles verdes, header escuro, date separators). 
 
 | Arquivo | Acao |
 |---------|------|
-| `src/pages/cliente/ClienteCRM.tsx` | Valores por etapa + sumario + tutorial trigger |
-| `src/components/crm/CrmTutorial.tsx` | CRIAR — tutorial pop-up multi-step |
-| `src/components/crm/CrmAutomations.tsx` | Recomendacoes + preview visual |
-| `src/pages/cliente/ClienteChat.tsx` | Layout 3 colunas com painel lead |
-| `src/components/cliente/ChatContactList.tsx` | Filtros avancados + secoes |
-| `src/components/cliente/ChatConversation.tsx` | Reply + emoji + templates |
-| `src/components/cliente/ChatContactItem.tsx` | Visual melhorado |
-| `src/components/cliente/ChatLeadPanel.tsx` | CRIAR — painel lateral mini-CRM |
-| `src/components/cliente/ChatQuickReplies.tsx` | CRIAR — templates rapidos |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Refatorar — remover wizard dialog, manter campanhas/calendario/identidade visual |
+| `src/pages/cliente/ClienteRedesSociaisCriar.tsx` | CRIAR — wizard full-page 3 steps |
+| `src/components/cliente/InstagramMockup.tsx` | CRIAR — preview mockup Instagram + painel lateral |
+| `src/components/cliente/ArtTemplates.tsx` | CRIAR — 6 templates base + seletor visual |
+| `src/App.tsx` | Nova rota `/cliente/redes-sociais/criar` |
 
-Nenhuma migracao de banco necessaria — todos os dados ja existem nas tabelas atuais.
+Nenhuma migracao de banco necessaria.
 
