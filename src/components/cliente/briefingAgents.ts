@@ -273,11 +273,15 @@ export const SOFIA_STEPS: BriefingStep[] = [
 
 /* ══════════════════════════════════════════════
    RAFAEL — Plano de Vendas (~25 questions, 8 sections)
-   100% fechado, sem mudanças
+   Com intro conversacional + perguntas abertas estratégicas
    ══════════════════════════════════════════════ */
 
 export const RAFAEL_STEPS: BriefingStep[] = [
-  { id: "_intro_rafael", agentMessage: "Oi! 👋 Sou o Rafael, seu consultor comercial. Vou analisar sua operação de vendas e criar um plano de ação personalizado. Bora?", inputType: "info" },
+  // ── Intro conversacional (info steps — user just clicks "Continuar")
+  { id: "_intro_rafael_1", agentMessage: "Oi! 👋 Eu sou o Rafael, seu consultor comercial aqui na NoExcuse. Prazer em te conhecer!", inputType: "info" },
+  { id: "_intro_rafael_2", agentMessage: "Meu trabalho é entender a fundo a sua operação de vendas e criar um plano comercial 100% personalizado para o seu negócio. Nada genérico — tudo baseado na SUA realidade.", inputType: "info" },
+  { id: "_intro_rafael_3", agentMessage: "Em poucos minutos, você vai ter um diagnóstico completo com score por área, insights acionáveis e um plano de ação pronto para executar. Tudo isso vai alimentar as ferramentas da plataforma: CRM, Scripts, Marketing e mais. 🚀", inputType: "info" },
+  { id: "_intro_rafael_4", agentMessage: "Bora começar? Vou te fazer algumas perguntas rápidas sobre seu negócio. Relaxa que é tranquilo! 😎", inputType: "info" },
 
   // ── 1. Sobre o Negócio
   { id: "segmento", section: "Sobre o Negócio", agentMessage: "Qual é o segmento da sua empresa?", inputType: "select", helpText: "Identifique o setor principal de atuação para personalizar as recomendações.",
@@ -289,18 +293,13 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "ambos", label: "Ambos" },
     ],
   },
-  { id: "tempo_mercado", section: "Sobre o Negócio", agentMessage: "Há quanto tempo no mercado?", inputType: "select", helpText: "Empresas mais novas priorizam aquisição, maduras focam em retenção.",
-    options: [
-      { value: "0-1", label: "Menos de 1 ano" }, { value: "1-3", label: "1 a 3 anos" },
-      { value: "3-5", label: "3 a 5 anos" }, { value: "5+", label: "Mais de 5 anos" },
-    ],
+  // Open-ended: produtos/serviços (replaces tempo_mercado closed question)
+  { id: "produtos_servicos", section: "Sobre o Negócio", agentMessage: "Me conta quais são seus principais produtos ou serviços? Pode listar à vontade! 📝", inputType: "textarea", helpText: "Quanto mais detalhes, melhor personalizamos seu plano comercial e scripts de vendas.",
+    placeholder: "Ex: Consultoria em gestão, treinamentos corporativos, mentoria individual...",
   },
-  { id: "num_funcionarios", section: "Sobre o Negócio", agentMessage: "Quantos funcionários na empresa?", inputType: "select", helpText: "O tamanho determina o nível de complexidade e automação.",
-    options: [
-      { value: "1", label: "Só eu" }, { value: "2-5", label: "2 a 5" },
-      { value: "6-20", label: "6 a 20" }, { value: "21-50", label: "21 a 50" },
-      { value: "51+", label: "51+" },
-    ],
+  // Open-ended: diferenciais (replaces num_funcionarios closed question)
+  { id: "diferenciais", section: "Sobre o Negócio", agentMessage: "E o que te diferencia da concorrência? O que faz o cliente escolher VOCÊ? 💪", inputType: "textarea", helpText: "Seu diferencial será usado nos scripts de vendas, conteúdos e abordagem comercial.",
+    placeholder: "Ex: Atendimento 24h, entrega em 2h, garantia vitalícia, 15 anos de experiência...",
   },
 
   // ── 2. Financeiro Comercial
@@ -374,11 +373,9 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "cadencia", label: "Sim, com cadência definida" }, { value: "auto", label: "Sim, automatizado" },
     ],
   },
-  { id: "cadencia_followup", section: "Gestão de Leads", agentMessage: "Qual a cadência de follow-up?", inputType: "select", helpText: "Quanto mais rápido o follow-up, maior a conversão.",
-    options: [
-      { value: "nenhuma", label: "Não tenho cadência" }, { value: "7d", label: "A cada 7+ dias" },
-      { value: "2-3d", label: "A cada 2-3 dias" }, { value: "diario", label: "Diário" },
-    ],
+  // Open-ended: dor do cliente (replaces cadencia_followup)
+  { id: "dor_principal", section: "Gestão de Leads", agentMessage: "Qual a maior dor ou necessidade do seu cliente ideal? O que faz ele procurar uma solução como a sua? 🎯", inputType: "textarea", helpText: "Entender a dor do cliente é essencial para criar scripts e conteúdos que convertem.",
+    placeholder: "Ex: Perdem muito tempo com processos manuais, não conseguem escalar vendas, gastam muito com equipe sem resultado...",
   },
   { id: "qtd_leads_mes", section: "Gestão de Leads", agentMessage: "Quantos leads recebe por mês?", inputType: "select", helpText: "Volume de leads determina a necessidade de automação.",
     options: [
@@ -474,6 +471,22 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "nunca", label: "Nunca" }, { value: "mensal", label: "Mensal" },
       { value: "semanal", label: "Semanal" }, { value: "diario", label: "Diário" },
     ],
+  },
+
+  // Segment-specific conditional questions
+  { id: "saude_convenios", section: "Metas e Performance", agentMessage: "Trabalha com convênios ou planos de saúde?", inputType: "select", helpText: "Convênios impactam o ticket médio e o ciclo de pagamento.",
+    options: [
+      { value: "nao", label: "Não" }, { value: "alguns", label: "Alguns convênios" },
+      { value: "principal", label: "Sim, é a principal receita" },
+    ],
+    skipIf: (ans) => ans.segmento !== "saude",
+  },
+  { id: "varejo_ecommerce", section: "Metas e Performance", agentMessage: "Vende online (e-commerce) além da loja física?", inputType: "select", helpText: "O canal online abre novas oportunidades de escala.",
+    options: [
+      { value: "nao", label: "Apenas físico" }, { value: "marketplace", label: "Sim, marketplace" },
+      { value: "loja_propria", label: "Sim, loja própria online" }, { value: "ambos", label: "Marketplace + loja própria" },
+    ],
+    skipIf: (ans) => ans.segmento !== "varejo",
   },
 ];
 
