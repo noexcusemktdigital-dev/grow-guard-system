@@ -112,7 +112,7 @@ export default function ClienteChat() {
         .eq("organization_id", orgId)
         .in("contact_id", contactIds)
         .order("created_at", { ascending: false })
-        .limit(contacts.length * 2);
+        .limit(Math.max(contacts.length * 3, 500));
 
       if (data) {
         const map = new Map<string, string>();
