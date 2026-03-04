@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Palette, Edit3, Check, Plus, Sparkles, Copy, Download,
   Eye, Image, Upload, Calendar as CalendarIcon, ChevronLeft,
@@ -339,6 +340,7 @@ function VisualIdentityGate({ onGoToIdentity }: { onGoToIdentity: () => void }) 
 
 /* ── Main Page ── */
 export default function ClienteRedesSociais() {
+  const navigate = useNavigate();
   const { data: subscription } = useClienteSubscription();
   const plan = getPlanBySlug(subscription?.plan);
   const maxArts = plan?.maxSocialArts ?? 4;
@@ -995,7 +997,7 @@ export default function ClienteRedesSociais() {
                     toast({ title: "Limite atingido", description: "Faça upgrade ou recarregue artes.", variant: "destructive" });
                     return;
                   }
-                  setWizardOpen(true); setWizardFlow("choose"); loadContentCampaigns(); setSelectedContents([]);
+                  navigate("/cliente/redes-sociais/criar");
                 }}
                 disabled={maxArts !== -1 && artsThisMonth >= maxArts}
               >
