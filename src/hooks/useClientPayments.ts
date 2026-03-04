@@ -11,6 +11,8 @@ export interface ClientPayment {
   month: string;
   amount: number;
   franchisee_share: number;
+  franqueadora_share: number | null;
+  surplus_amount: number | null;
   billing_type: string;
   asaas_payment_id: string | null;
   asaas_customer_id: string | null;
@@ -18,6 +20,7 @@ export interface ClientPayment {
   status: string;
   paid_at: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export function useClientPayments(month?: string) {

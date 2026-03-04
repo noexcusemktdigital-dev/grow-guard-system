@@ -1,0 +1,99 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { asaasFetch } from "../_shared/asaas-fetch.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Auth
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { organization_id } = await req.json();
+    if (!organization_id) {
+      return new Response(JSON.stringify({ error: "organization_id is required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get subscription
+    const { data: sub, error: subError } = await adminClient
+      .from("subscriptions")
+      .select("id, asaas_subscription_id, status")
+      .eq("organization_id", organization_id)
+      .maybeSingle();
+
+    if (subError || !sub) {
+      return new Response(JSON.stringify({ error: "Subscription not found" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Cancel on Asaas if there's an active subscription
+    if (sub.asaas_subscription_id) {
+      const cancelRes = await asaasFetch(`${ASAAS_BASE}/subscriptions/${sub.asaas_subscription_id}`, {
+        method: "DELETE",
+        headers: { access_token: asaasApiKey },
+      });
+
+      if (!cancelRes.ok) {
+        const errData = await cancelRes.json();
+        console.error("Asaas cancel failed:", errData);
+        // If 404 it's already deleted, proceed
+        if (cancelRes.status !== 404) {
+          return new Response(JSON.stringify({ error: "Failed to cancel on Asaas", details: errData }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+      console.log(`Asaas subscription ${sub.asaas_subscription_id} cancelled`);
+    }
+
+    // Update local status
+    await adminClient
+      .from("subscriptions")
+      .update({ status: "cancelled", asaas_subscription_id: null })
+      .eq("id", sub.id);
+
+    console.log(`Subscription cancelled for org ${organization_id}`);
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err: any) {
+    console.error("asaas-cancel-subscription error:", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
