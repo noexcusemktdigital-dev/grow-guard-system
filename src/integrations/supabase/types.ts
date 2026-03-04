@@ -1135,12 +1135,14 @@ export type Database = {
           contract_id: string
           created_at: string
           franchisee_share: number
+          franqueadora_share: number | null
           id: string
           invoice_url: string | null
           month: string
           organization_id: string
           paid_at: string | null
           status: string
+          surplus_amount: number | null
           updated_at: string
         }
         Insert: {
@@ -1151,12 +1153,14 @@ export type Database = {
           contract_id: string
           created_at?: string
           franchisee_share?: number
+          franqueadora_share?: number | null
           id?: string
           invoice_url?: string | null
           month: string
           organization_id: string
           paid_at?: string | null
           status?: string
+          surplus_amount?: number | null
           updated_at?: string
         }
         Update: {
@@ -1167,12 +1171,14 @@ export type Database = {
           contract_id?: string
           created_at?: string
           franchisee_share?: number
+          franqueadora_share?: number | null
           id?: string
           invoice_url?: string | null
           month?: string
           organization_id?: string
           paid_at?: string | null
           status?: string
+          surplus_amount?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1356,6 +1362,8 @@ export type Database = {
           signer_name: string | null
           start_date: string | null
           status: string
+          surplus_issuer: string | null
+          surplus_value: number | null
           template_id: string | null
           title: string
           total_value: number | null
@@ -1384,6 +1392,8 @@ export type Database = {
           signer_name?: string | null
           start_date?: string | null
           status?: string
+          surplus_issuer?: string | null
+          surplus_value?: number | null
           template_id?: string | null
           title: string
           total_value?: number | null
@@ -1412,6 +1422,8 @@ export type Database = {
           signer_name?: string | null
           start_date?: string | null
           status?: string
+          surplus_issuer?: string | null
+          surplus_value?: number | null
           template_id?: string | null
           title?: string
           total_value?: number | null
@@ -4813,6 +4825,8 @@ export type Database = {
           signer_name: string | null
           start_date: string | null
           status: string
+          surplus_issuer: string | null
+          surplus_value: number | null
           template_id: string | null
           title: string
           total_value: number | null
@@ -4894,6 +4908,8 @@ export type Database = {
           signer_name: string
           start_date: string
           status: string
+          surplus_issuer: string
+          surplus_value: number
           template_id: string
           title: string
           total_value: number

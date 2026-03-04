@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     // Get contract details
     const { data: contract } = await adminClient
       .from("contracts")
-      .select("id, title, signer_name, signer_email, client_document, monthly_value, unit_org_id")
+      .select("id, title, signer_name, signer_email, client_document, monthly_value, surplus_value, surplus_issuer, unit_org_id")
       .eq("id", contract_id)
       .single();
 
@@ -95,7 +95,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const amount = Number(contract.monthly_value || 0);
+    const baseValue = Number(contract.monthly_value || 0);
+    const surplusValue = Number(contract.surplus_value || 0);
+    const amount = baseValue + surplusValue;
     if (amount <= 0) {
       return new Response(JSON.stringify({ error: "Contract has no monthly value" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -153,8 +155,8 @@ Deno.serve(async (req) => {
     dueDate.setDate(dueDate.getDate() + 5);
     const dueDateStr = dueDate.toISOString().split("T")[0];
 
-    // Build split config if this org is a franqueado
-    const splitConfig = await buildSplitConfig(adminClient, organization_id, 20);
+    // Build split config if this org is a franqueado (weighted base vs surplus)
+    const splitConfig = await buildSplitConfig(adminClient, organization_id, baseValue, surplusValue);
 
     // Create charge
     const chargePayload: Record<string, any> = {
@@ -191,7 +193,11 @@ Deno.serve(async (req) => {
       pixData = await fetchPixQrCode(asaasApiKey, chargeData.id);
     }
 
-    const franchiseeShare = amount * 0.2;
+    // Calculate shares: base 80/20 franqueadora/franqueado, surplus 20/80
+    const franqueadoraFromBase = baseValue * 0.80;
+    const franqueadoraFromSurplus = surplusValue * 0.20;
+    const franqueadoraShare = franqueadoraFromBase + franqueadoraFromSurplus;
+    const franchiseeShare = amount - franqueadoraShare;
 
     // Upsert payment record
     if (existing) {
@@ -200,6 +206,10 @@ Deno.serve(async (req) => {
         asaas_customer_id: clientCustomerId,
         invoice_url: chargeData.invoiceUrl || null,
         billing_type: billingType,
+        amount,
+        surplus_amount: surplusValue,
+        franqueadora_share: franqueadoraShare,
+        franchisee_share: franchiseeShare,
         status: "pending",
         updated_at: new Date().toISOString(),
       }).eq("id", existing.id);
@@ -209,6 +219,8 @@ Deno.serve(async (req) => {
         contract_id,
         month,
         amount,
+        surplus_amount: surplusValue,
+        franqueadora_share: franqueadoraShare,
         franchisee_share: franchiseeShare,
         billing_type: billingType,
         asaas_payment_id: chargeData.id,
@@ -228,6 +240,8 @@ Deno.serve(async (req) => {
       pix_copy_paste: pixData.payload,
       month,
       amount,
+      surplus_amount: surplusValue,
+      franqueadora_share: franqueadoraShare,
       franchisee_share: franchiseeShare,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
