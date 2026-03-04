@@ -6,6 +6,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function parseLastMessageTime(raw: any): string {
+  if (!raw) return new Date().toISOString();
+  const num = typeof raw === "string" ? parseInt(raw, 10) : Number(raw);
+  if (isNaN(num) || num <= 0) return new Date().toISOString();
+  // If > 10 digits it's milliseconds, otherwise seconds
+  const ms = num > 9999999999 ? num : num * 1000;
+  const d = new Date(ms);
+  // Sanity check: if date is before 2020 or after 2030, use now
+  if (d.getFullYear() < 2020 || d.getFullYear() > 2030) return new Date().toISOString();
+  return d.toISOString();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -138,9 +150,7 @@ Deno.serve(async (req) => {
       const name = chat.name || null;
       const photoUrl = chat.imgUrl || null;
       const unreadCount = parseInt(chat.unread) || 0;
-      const lastMsgTime = chat.lastMessageTime
-        ? new Date(parseInt(chat.lastMessageTime) * 1000).toISOString()
-        : null;
+      const lastMsgTime = parseLastMessageTime(chat.lastMessageTime);
 
       const { data: existing } = await adminClient
         .from("whatsapp_contacts")
@@ -150,11 +160,14 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (existing) {
-        // Update with latest info from Z-API — force human mode
-        const updates: any = { instance_id: instance.id, attending_mode: "human" };
+        const updates: any = {
+          instance_id: instance.id,
+          attending_mode: "human",
+          last_message_at: lastMsgTime,
+          unread_count: unreadCount,
+        };
         if (name) updates.name = name;
         if (photoUrl) updates.photo_url = photoUrl;
-        if (lastMsgTime) updates.last_message_at = lastMsgTime;
 
         await adminClient
           .from("whatsapp_contacts")
@@ -168,7 +181,7 @@ Deno.serve(async (req) => {
             organization_id: orgId,
             phone,
             name,
-            last_message_at: lastMsgTime || new Date().toISOString(),
+            last_message_at: lastMsgTime,
             unread_count: unreadCount,
             instance_id: instance.id,
             attending_mode: "human",
