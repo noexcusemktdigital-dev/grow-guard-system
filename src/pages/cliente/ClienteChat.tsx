@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { MessageCircle, Settings2 } from "lucide-react";
+import { MessageCircle, Settings2, PanelRightOpen, PanelRightClose } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChatContactList } from "@/components/cliente/ChatContactList";
 import { ChatConversation } from "@/components/cliente/ChatConversation";
+import { ChatLeadPanel } from "@/components/cliente/ChatLeadPanel";
 import {
   useWhatsAppInstance,
   useWhatsAppContacts,
@@ -16,9 +17,12 @@ import {
 } from "@/hooks/useWhatsApp";
 import { useClienteAgents } from "@/hooks/useClienteAgents";
 import { useCrmLeads } from "@/hooks/useClienteCrm";
+import { useCrmLeadMutations, useCrmFunnels } from "@/hooks/useClienteCrm";
+import { useLinkContactToCrmLead } from "@/hooks/useWhatsApp";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 export default function ClienteChat() {
   const navigate = useNavigate();
@@ -26,6 +30,7 @@ export default function ClienteChat() {
   const { data: instance, isLoading: loadingInstance } = useWhatsAppInstance();
   const { data: contacts = [], isLoading: loadingContacts } = useWhatsAppContacts();
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const selectedContact = useMemo(
     () => contacts.find((c) => c.id === selectedContactId) ?? null,
     [contacts, selectedContactId]
@@ -34,6 +39,9 @@ export default function ClienteChat() {
   const markRead = useMarkContactRead();
   const { data: agentsData } = useClienteAgents();
   const { data: leadsData } = useCrmLeads();
+  const { data: funnelsData } = useCrmFunnels();
+  const { createLead } = useCrmLeadMutations();
+  const linkMutation = useLinkContactToCrmLead();
 
   const isConnected = instance?.status === "connected";
 
@@ -64,17 +72,15 @@ export default function ClienteChat() {
     if (!instance?.organization_id || contacts.length === 0) return;
     const orgId = instance.organization_id;
 
-    // Fetch last message for all contacts in one query using distinct on
     const fetchPreviews = async () => {
       const contactIds = contacts.map(c => c.id);
-      // Batch fetch: get recent messages for all contacts, then pick last per contact
       const { data } = await supabase
         .from("whatsapp_messages" as any)
         .select("contact_id, content, direction, type, created_at")
         .eq("organization_id", orgId)
         .in("contact_id", contactIds)
         .order("created_at", { ascending: false })
-        .limit(contacts.length * 2); // rough: 2 msgs per contact max
+        .limit(contacts.length * 2);
 
       if (data) {
         const map = new Map<string, string>();
@@ -100,18 +106,42 @@ export default function ClienteChat() {
     }
   };
 
-  // Realtime subscriptions — optimized: only invalidate selected contact's messages
+  const handleCreateLeadFromChat = async () => {
+    if (!selectedContact) return;
+    try {
+      const defaultFunnel = funnelsData?.find(f => f.is_default) || funnelsData?.[0];
+      const dbStages = defaultFunnel?.stages as any[] | undefined;
+      const firstStage = Array.isArray(dbStages) && dbStages.length > 0
+        ? (dbStages[0].key || "novo")
+        : "novo";
+
+      const lead = await createLead.mutateAsync({
+        name: selectedContact.name || selectedContact.phone,
+        phone: selectedContact.phone,
+        source: "whatsapp",
+        tags: ["whatsapp"],
+        funnel_id: defaultFunnel?.id,
+        stage: firstStage,
+      });
+      if (lead?.id) {
+        await linkMutation.mutateAsync({ contactId: selectedContact.id, leadId: lead.id });
+        toast({ title: "Lead criado e vinculado!" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao criar lead", description: err.message, variant: "destructive" });
+    }
+  };
+
+  // Realtime subscriptions
   useEffect(() => {
     if (!instance?.organization_id) return;
     const channel = supabase
       .channel("whatsapp-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, (payload: any) => {
         const changedContactId = payload.new?.contact_id || payload.old?.contact_id;
-        // Only invalidate messages for the currently selected contact
         if (changedContactId && changedContactId === selectedContactId) {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         }
-        // Always update contacts list (for unread badges & last_message_at)
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
@@ -157,6 +187,7 @@ export default function ClienteChat() {
 
   return (
     <div className="flex overflow-hidden h-[calc(100vh-3.5rem)]">
+      {/* Contact List */}
       <div className="w-[340px] shrink-0 h-full overflow-hidden">
         {loadingContacts ? (
           <div className="p-4 space-y-3 border-r border-border">
@@ -174,14 +205,36 @@ export default function ClienteChat() {
           />
         )}
       </div>
-      <div className="flex-1 min-w-0 h-full overflow-hidden">
+
+      {/* Conversation */}
+      <div className="flex-1 min-w-0 h-full overflow-hidden relative">
         <ChatConversation
           contact={selectedContact}
           messages={messages}
           isLoading={loadingMessages}
           agents={agents}
         />
+        {/* Toggle lead panel button */}
+        {selectedContact && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-3 right-3 h-8 w-8 rounded-full bg-card/80 backdrop-blur-sm border border-border shadow-sm z-10"
+            onClick={() => setLeadPanelOpen(!leadPanelOpen)}
+          >
+            {leadPanelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+          </Button>
+        )}
       </div>
+
+      {/* Lead Info Panel */}
+      {leadPanelOpen && selectedContact && (
+        <ChatLeadPanel
+          contact={selectedContact}
+          onClose={() => setLeadPanelOpen(false)}
+          onCreateLead={handleCreateLeadFromChat}
+        />
+      )}
     </div>
   );
 }

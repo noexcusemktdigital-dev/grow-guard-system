@@ -5,7 +5,8 @@ import {
   GripVertical, Settings2, Filter, X, Copy, MoreHorizontal,
   MessageCircle, CircleDot, XCircle, ChevronDown,
   Calendar, DollarSign, UserCircle, FileSpreadsheet, BookUser,
-  Tag, Trash2, ArrowRightLeft, Thermometer, Snowflake, Sun, Flame
+  Tag, Trash2, ArrowRightLeft, Thermometer, Snowflake, Sun, Flame,
+  TrendingUp, HelpCircle,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useClienteCrm";
 import { useCrmFunnels } from "@/hooks/useClienteCrm";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
@@ -32,6 +34,7 @@ import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
 import { CrmFunnelManager } from "@/components/crm/CrmFunnelManager";
 import { CrmContactsView } from "@/components/crm/CrmContactsView";
 import { CrmCsvImportDialog } from "@/components/crm/CrmCsvImportDialog";
+import { CrmTutorial } from "@/components/crm/CrmTutorial";
 import { DEFAULT_STAGES, STAGE_ICONS, getColorStyle, type FunnelStage } from "@/components/crm/CrmStageSystem";
 import { Shuffle } from "lucide-react";
 
@@ -223,6 +226,7 @@ export default function ClienteCRM() {
   const [bulkMoveStage, setBulkMoveStage] = useState("");
   const [bulkTagInput, setBulkTagInput] = useState("");
   const [bulkAssigned, setBulkAssigned] = useState("");
+  const [tutorialOpen, setTutorialOpen] = useState(() => !localStorage.getItem("crm_tutorial_seen"));
 
   // All filters
   const [filterSource, setFilterSource] = useState("");
@@ -375,6 +379,28 @@ export default function ClienteCRM() {
     toast({ title: "Leads excluídos" });
   };
 
+  // Pipeline summary (hooks must be before early returns)
+  const pipelineSummary = useMemo(() => {
+    const activeLeads = filteredLeads.filter(l => !l.won_at && !l.lost_at);
+    const totalValue = activeLeads.reduce((s, l) => s + (l.value || 0), 0);
+    const wonLeads = filteredLeads.filter(l => l.won_at);
+    const wonValue = wonLeads.reduce((s, l) => s + (l.value || 0), 0);
+    const convRate = filteredLeads.length > 0 ? Math.round((wonLeads.length / filteredLeads.length) * 100) : 0;
+    const avgValue = activeLeads.length > 0 ? Math.round(totalValue / activeLeads.length) : 0;
+    return { totalLeads: activeLeads.length, totalValue, wonLeads: wonLeads.length, wonValue, convRate, avgValue };
+  }, [filteredLeads]);
+
+  const stageValues = useMemo(() => {
+    const map: Record<string, number> = {};
+    stages.forEach(s => {
+      const stageLeads = leadsByStage[s.key] || [];
+      map[s.key] = stageLeads.reduce((sum, l) => sum + (l.value || 0), 0);
+    });
+    return map;
+  }, [leadsByStage, stages]);
+
+  const totalPipelineValue = useMemo(() => Object.values(stageValues).reduce((a, b) => a + b, 0), [stageValues]);
+
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -391,11 +417,11 @@ export default function ClienteCRM() {
   const handleCreateLeadFromContact = (contact: any) => {
     setActiveTab("pipeline");
     setNewLeadOpen(true);
-    // The CrmNewLeadDialog handles contact selection internally
   };
 
   return (
     <div className="w-full space-y-5">
+      <CrmTutorial open={tutorialOpen} onOpenChange={setTutorialOpen} />
       <PageHeader
         title="CRM de Vendas"
         subtitle={activeTab === "pipeline"
@@ -408,6 +434,17 @@ export default function ClienteCRM() {
             {crmSettings?.lead_roulette_enabled && activeTab === "pipeline" && (
               <Badge variant="outline" className="text-[10px] gap-1"><Shuffle className="w-3 h-3" /> Roleta ativa</Badge>
             )}
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setTutorialOpen(true)}>
+                    <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Tutorial do CRM</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             {/* Contacts toggle button */}
             <Button
@@ -473,6 +510,28 @@ export default function ClienteCRM() {
       {/* ===== PIPELINE TAB ===== */}
       {activeTab === "pipeline" && (
         <>
+          {/* Pipeline Summary */}
+          {allLeads.length > 0 && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Card><CardContent className="p-3">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Leads ativos</p>
+                <p className="text-xl font-bold mt-1">{pipelineSummary.totalLeads}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-3">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Valor no pipeline</p>
+                <p className="text-xl font-bold text-primary mt-1">R$ {pipelineSummary.totalValue.toLocaleString()}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-3">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Ticket médio</p>
+                <p className="text-xl font-bold mt-1">R$ {pipelineSummary.avgValue.toLocaleString()}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-3">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Conversão</p>
+                <p className="text-xl font-bold mt-1">{pipelineSummary.convRate}%</p>
+                <p className="text-[10px] text-muted-foreground">{pipelineSummary.wonLeads} vendidos</p>
+              </CardContent></Card>
+            </div>
+          )}
           {/* Funnel selector + Search + Unified Filter */}
           <div className="flex flex-wrap items-center gap-2">
             {accessibleFunnels.length > 1 && (
@@ -665,12 +724,27 @@ export default function ClienteCRM() {
                   const colorStyle = getColorStyle(stage.color);
                   return (
                     <div key={stage.key} className="min-w-[260px] max-w-[280px] flex-shrink-0">
-                      <div className={`flex items-center gap-2 px-3 py-2 rounded-t-xl border-b-2 ${colorStyle.border} bg-gradient-to-r ${colorStyle.gradient}`}>
-                        <div className={`w-6 h-6 rounded-md ${colorStyle.light} flex items-center justify-center ${colorStyle.text}`}>
-                          {STAGE_ICONS[stage.icon] || <CircleDot className="w-3.5 h-3.5" />}
+                      <div className={`px-3 py-2 rounded-t-xl border-b-2 ${colorStyle.border} bg-gradient-to-r ${colorStyle.gradient}`}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-6 h-6 rounded-md ${colorStyle.light} flex items-center justify-center ${colorStyle.text}`}>
+                            {STAGE_ICONS[stage.icon] || <CircleDot className="w-3.5 h-3.5" />}
+                          </div>
+                          <span className="text-xs font-semibold flex-1">{stage.label}</span>
+                          <Badge variant="outline" className="text-[9px] h-5">{stageLeads.length}</Badge>
                         </div>
-                        <span className="text-xs font-semibold flex-1">{stage.label}</span>
-                        <Badge variant="outline" className="text-[9px] h-5">{stageLeads.length}</Badge>
+                        {(stageValues[stage.key] > 0 || totalPipelineValue > 0) && (
+                          <div className="mt-1.5 space-y-1">
+                            <span className="text-[10px] font-bold text-primary">
+                              R$ {stageValues[stage.key].toLocaleString()}
+                            </span>
+                            {totalPipelineValue > 0 && (
+                              <Progress
+                                value={(stageValues[stage.key] / totalPipelineValue) * 100}
+                                className="h-1"
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
                       <DroppableColumn stageKey={stage.key}>
                         {stageLeads.map(lead => (

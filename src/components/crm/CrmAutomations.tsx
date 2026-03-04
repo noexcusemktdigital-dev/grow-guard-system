@@ -10,11 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Plus, Trash2, Bot, Edit2, Layers } from "lucide-react";
+import { Zap, Plus, Trash2, Bot, Edit2, Layers, ArrowRight, Sparkles, CheckCircle2 } from "lucide-react";
 import { useCrmAutomations, useCrmAutomationMutations } from "@/hooks/useCrmAutomations";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
+import { useSalesPlan } from "@/hooks/useSalesPlan";
 import { useToast } from "@/hooks/use-toast";
 
 const TRIGGERS = [
@@ -43,6 +44,79 @@ const ACTIONS = [
   { value: "ai_followup", label: "IA: Follow-up automático", ai: true },
 ];
 
+interface RecommendedAutomation {
+  name: string;
+  description: string;
+  trigger_type: string;
+  action_type: string;
+  trigger_config?: Record<string, any>;
+  action_config?: Record<string, any>;
+}
+
+function getRecommendedAutomations(answers: Record<string, any> | null): RecommendedAutomation[] {
+  const recs: RecommendedAutomation[] = [];
+
+  // Always recommend follow-up
+  recs.push({
+    name: "Follow-up 24h para novos leads",
+    description: "Cria tarefa de follow-up quando um lead é criado",
+    trigger_type: "lead_created",
+    action_type: "create_task",
+    action_config: { task_title: "Follow-up com o lead", due_days: 1, priority: "high" },
+  });
+
+  recs.push({
+    name: "Alerta de lead quente parado",
+    description: "Notifica quando lead quente fica parado 3 dias",
+    trigger_type: "lead_stuck",
+    action_type: "notify",
+    trigger_config: { days: 3 },
+  });
+
+  if (answers) {
+    const ciclo = answers.ciclo_venda || "";
+    if (ciclo === "mesmo_dia" || ciclo === "1_semana") {
+      recs.push({
+        name: "Primeiro contato IA rápido",
+        description: "IA faz primeiro contato automático para ciclo de venda curto",
+        trigger_type: "lead_created",
+        action_type: "ai_first_contact",
+        trigger_config: { source_filter: "Ads" },
+      });
+    }
+
+    const equipe = answers.equipe_vendas || "";
+    if (equipe !== "sozinho") {
+      recs.push({
+        name: "Notificar quando lead vendido",
+        description: "Celebre as vendas notificando a equipe",
+        trigger_type: "lead_won",
+        action_type: "notify",
+      });
+    }
+  }
+
+  return recs;
+}
+
+function AutomationFlowPreview({ triggerType, actionType }: { triggerType: string; actionType: string }) {
+  const trigger = TRIGGERS.find(t => t.value === triggerType);
+  const action = ACTIONS.find(a => a.value === actionType);
+  if (!trigger || !action) return null;
+
+  return (
+    <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-500/5 border-amber-500/20 text-amber-600">
+        {trigger.label}
+      </Badge>
+      <ArrowRight className="w-3 h-3 text-muted-foreground/50" />
+      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-emerald-500/5 border-emerald-500/20 text-emerald-600">
+        {action.label}
+      </Badge>
+    </div>
+  );
+}
+
 export function CrmAutomations() {
   const { toast } = useToast();
   const { data: automations, isLoading } = useCrmAutomations();
@@ -50,6 +124,7 @@ export function CrmAutomations() {
   const { data: funnels } = useCrmFunnels();
   const { data: teams } = useCrmTeams();
   const { data: members } = useCrmTeam();
+  const { data: salesPlan } = useSalesPlan();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,6 +137,9 @@ export function CrmAutomations() {
   const [selectedFunnels, setSelectedFunnels] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [filterFunnel, setFilterFunnel] = useState("");
+
+  const recommended = getRecommendedAutomations(salesPlan?.answers || null);
+  const existingNames = new Set((automations || []).map(a => a.name));
 
   const reset = () => {
     setEditingId(null); setName(""); setDescription(""); setTriggerType("lead_created"); setActionType("create_task");
@@ -101,6 +179,18 @@ export function CrmAutomations() {
     setDialogOpen(false);
   };
 
+  const handleActivateRecommended = (rec: RecommendedAutomation) => {
+    createAutomation.mutate({
+      name: rec.name,
+      trigger_type: rec.trigger_type,
+      action_type: rec.action_type,
+      trigger_config: rec.trigger_config || {},
+      action_config: rec.action_config || {},
+      is_active: true,
+    });
+    toast({ title: `"${rec.name}" ativada!` });
+  };
+
   const toggleActive = (id: string, isActive: boolean) => {
     updateAutomation.mutate({ id, is_active: !isActive });
   };
@@ -115,8 +205,37 @@ export function CrmAutomations() {
 
   if (isLoading) return <Skeleton className="h-48 mt-4" />;
 
+  const pendingRecs = recommended.filter(r => !existingNames.has(r.name));
+
   return (
     <div className="space-y-4 mt-4">
+      {/* Recommended Automations */}
+      {pendingRecs.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-xs font-semibold">Automações Recomendadas</span>
+            <Badge variant="secondary" className="text-[9px]">Baseado no seu plano</Badge>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {pendingRecs.map((rec, i) => (
+              <Card key={i} className="border-primary/10 bg-primary/[0.02]">
+                <CardContent className="p-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium">{rec.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{rec.description}</p>
+                    <AutomationFlowPreview triggerType={rec.trigger_type} actionType={rec.action_type} />
+                  </div>
+                  <Button size="sm" variant="outline" className="shrink-0 h-7 text-[10px] gap-1" onClick={() => handleActivateRecommended(rec)}>
+                    <Zap className="w-3 h-3" /> Ativar
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold flex items-center gap-2"><Zap className="w-4 h-4" /> Automações</h3>
@@ -148,8 +267,9 @@ export function CrmAutomations() {
         <div className="space-y-2">
           {filteredAutomations.map(auto => {
             const fids = Array.isArray((auto as any).funnel_ids) ? (auto as any).funnel_ids as string[] : [];
+            const execCount = (auto as any).execution_count || 0;
             return (
-              <Card key={auto.id}>
+              <Card key={auto.id} className={auto.is_active ? "" : "opacity-60"}>
                 <CardContent className="p-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Switch checked={auto.is_active} onCheckedChange={() => toggleActive(auto.id, auto.is_active)} />
@@ -159,17 +279,18 @@ export function CrmAutomations() {
                         {isAiAction(auto.action_type) && <Badge className="text-[8px] bg-violet-500/10 text-violet-600 border-violet-200"><Bot className="w-2.5 h-2.5 mr-0.5" />IA</Badge>}
                       </p>
                       {(auto as any).description && <p className="text-[10px] text-muted-foreground">{(auto as any).description}</p>}
-                      <p className="text-[10px] text-muted-foreground">
-                        Quando: {TRIGGERS.find(t => t.value === auto.trigger_type)?.label} → Então: {ACTIONS.find(a => a.value === auto.action_type)?.label}
-                      </p>
-                      {fids.length > 0 && (
-                        <div className="flex gap-1 mt-0.5">
-                          {fids.map(fid => {
-                            const f = funnels?.find(fu => fu.id === fid);
-                            return f ? <Badge key={fid} variant="outline" className="text-[8px]">{f.name}</Badge> : null;
-                          })}
-                        </div>
-                      )}
+                      <AutomationFlowPreview triggerType={auto.trigger_type} actionType={auto.action_type} />
+                      <div className="flex items-center gap-2 mt-1">
+                        {fids.length > 0 && fids.map(fid => {
+                          const f = funnels?.find(fu => fu.id === fid);
+                          return f ? <Badge key={fid} variant="outline" className="text-[8px]">{f.name}</Badge> : null;
+                        })}
+                        {execCount > 0 && (
+                          <Badge variant="secondary" className="text-[8px] gap-0.5">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> {execCount}x executada
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-1">
@@ -187,6 +308,22 @@ export function CrmAutomations() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingId ? "Editar Automação" : "Nova Automação"}</DialogTitle></DialogHeader>
+
+          {/* Visual preview */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border">
+            <div className="flex-1 text-center">
+              <Badge variant="outline" className="text-[10px] bg-amber-500/5 border-amber-500/20 text-amber-600">
+                {TRIGGERS.find(t => t.value === triggerType)?.label || "Trigger"}
+              </Badge>
+            </div>
+            <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
+            <div className="flex-1 text-center">
+              <Badge variant="outline" className="text-[10px] bg-emerald-500/5 border-emerald-500/20 text-emerald-600">
+                {ACTIONS.find(a => a.value === actionType)?.label || "Ação"}
+              </Badge>
+            </div>
+          </div>
+
           <div className="space-y-4">
             {/* Name & Description */}
             <div className="space-y-2">

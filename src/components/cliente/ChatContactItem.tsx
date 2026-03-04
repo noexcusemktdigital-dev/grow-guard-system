@@ -26,6 +26,7 @@ export function ChatContactItem({ contact, isSelected, onSelect, stageLabel, pre
   const contactAny = contact as any;
   const mode = contactAny.attending_mode || null;
   const contactType = contactAny.contact_type || "individual";
+  const assignedName = contactAny.assigned_name || null;
   const isGroup = contactType === "group";
   const isLid = contactType === "lid";
   const isWebsite = contactType === "website";
@@ -94,6 +95,12 @@ export function ChatContactItem({ contact, isSelected, onSelect, stageLabel, pre
         </div>
         {stageLabel && (
           <Badge variant="outline" className="text-[8px] px-1 py-0 font-normal mt-1">{stageLabel}</Badge>
+        )}
+        {assignedName && (
+          <div className="flex items-center gap-1 mt-0.5">
+            <User className="w-2.5 h-2.5 text-muted-foreground" />
+            <span className="text-[9px] text-muted-foreground">{assignedName}</span>
+          </div>
         )}
       </div>
     </button>

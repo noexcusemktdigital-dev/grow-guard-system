@@ -3,6 +3,7 @@ import {
   Send, Loader2, MessageCircle, Bot, User, UserPlus, ExternalLink,
   ArrowRight, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Paperclip, Smile,
 } from "lucide-react";
+import { ChatQuickReplies } from "./ChatQuickReplies";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -483,6 +484,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
           onSubmit={(e) => { e.preventDefault(); handleSend(); }}
           className="flex items-end gap-2"
         >
+          <ChatQuickReplies onSelect={(t) => setText(t)} />
           <Button
             type="button"
             variant="ghost"
