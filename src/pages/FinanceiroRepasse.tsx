@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Inbox, Send, Loader2, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { Inbox, Send, Loader2, CheckCircle, Clock, AlertTriangle, QrCode, Copy, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,11 +18,16 @@ const statusConfig: Record<string, { label: string; icon: React.ReactNode; varia
   pending: { label: "Pendente", icon: <Clock className="w-3 h-3" />, variant: "outline" },
   paid: { label: "Pago", icon: <CheckCircle className="w-3 h-3" />, variant: "default" },
   overdue: { label: "Vencido", icon: <AlertTriangle className="w-3 h-3" />, variant: "destructive" },
+  chargeback: { label: "Chargeback", icon: <AlertTriangle className="w-3 h-3" />, variant: "destructive" },
+  refunded: { label: "Estornado", icon: <AlertTriangle className="w-3 h-3" />, variant: "secondary" },
 };
 
 export default function FinanceiroRepasse() {
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
+  const [billingType, setBillingType] = useState<string>("BOLETO");
+  const [pixDialog, setPixDialog] = useState<{ open: boolean; paymentId: string | null }>({ open: false, paymentId: null });
+  const [copied, setCopied] = useState(false);
 
   const { data: charges, isLoading } = useQuery({
     queryKey: ["franchisee-charges", orgId],
@@ -42,7 +49,7 @@ export default function FinanceiroRepasse() {
   const generateCharges = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("asaas-charge-franchisee", {
-        body: { organization_id: orgId, month: currentMonth, billing_type: "BOLETO" },
+        body: { organization_id: orgId, month: currentMonth, billing_type: billingType },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -59,6 +66,26 @@ export default function FinanceiroRepasse() {
     },
   });
 
+  const fetchPix = useQuery({
+    queryKey: ["pix-qr", pixDialog.paymentId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("asaas-get-pix", {
+        body: { payment_id: pixDialog.paymentId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { encoded_image: string | null; copy_paste: string | null };
+    },
+    enabled: !!pixDialog.paymentId && pixDialog.open,
+  });
+
+  const handleCopy = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Código PIX copiado!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
   const totalPending = charges?.filter(c => c.status === "pending").reduce((s, c) => s + Number(c.total_amount), 0) ?? 0;
@@ -66,19 +93,30 @@ export default function FinanceiroRepasse() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="page-header-title">Repasse</h1>
           <p className="text-sm text-muted-foreground mt-1">Cobranças automáticas de royalties e sistema para franqueados</p>
         </div>
-        <Button
-          onClick={() => generateCharges.mutate()}
-          disabled={generateCharges.isPending}
-          className="gap-2"
-        >
-          {generateCharges.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          Gerar Cobranças do Mês
-        </Button>
+        <div className="flex items-center gap-3">
+          <Select value={billingType} onValueChange={setBillingType}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="BOLETO">Boleto</SelectItem>
+              <SelectItem value="PIX">PIX</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={() => generateCharges.mutate()}
+            disabled={generateCharges.isPending}
+            className="gap-2"
+          >
+            {generateCharges.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Gerar Cobranças do Mês
+          </Button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -129,12 +167,14 @@ export default function FinanceiroRepasse() {
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Pago em</TableHead>
+                  <TableHead className="text-center">PIX</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {charges.map((charge) => {
                   const st = statusConfig[charge.status] || statusConfig.pending;
                   const franchiseeName = (charge as any).franchisee_org?.name || "—";
+                  const canShowPix = charge.asaas_payment_id && charge.status === "pending";
                   return (
                     <TableRow key={charge.id}>
                       <TableCell className="font-medium">{franchiseeName}</TableCell>
@@ -150,6 +190,24 @@ export default function FinanceiroRepasse() {
                       <TableCell className="text-muted-foreground text-sm">
                         {charge.paid_at ? new Date(charge.paid_at).toLocaleDateString("pt-BR") : "—"}
                       </TableCell>
+                      <TableCell className="text-center">
+                        {canShowPix ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => {
+                              setCopied(false);
+                              setPixDialog({ open: true, paymentId: charge.asaas_payment_id });
+                            }}
+                          >
+                            <QrCode className="w-4 h-4" />
+                            Ver PIX
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -158,6 +216,42 @@ export default function FinanceiroRepasse() {
           </CardContent>
         </Card>
       )}
+
+      {/* PIX QR Code Dialog */}
+      <Dialog open={pixDialog.open} onOpenChange={(open) => setPixDialog({ open, paymentId: open ? pixDialog.paymentId : null })}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><QrCode className="w-5 h-5" /> QR Code PIX</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {fetchPix.isLoading ? (
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            ) : fetchPix.data?.encoded_image ? (
+              <>
+                <img
+                  src={`data:image/png;base64,${fetchPix.data.encoded_image}`}
+                  alt="QR Code PIX"
+                  className="w-56 h-56 rounded-lg border"
+                />
+                {fetchPix.data.copy_paste && (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => handleCopy(fetchPix.data!.copy_paste!)}
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? "Copiado!" : "Copiar código PIX"}
+                  </Button>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center">
+                QR Code não disponível para esta cobrança. Verifique se o método de pagamento é PIX.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
