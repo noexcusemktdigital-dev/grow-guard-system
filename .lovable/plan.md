@@ -1,24 +1,39 @@
 
 
-# Fix: Atualizar número do WhatsApp automaticamente ao abrir Conversas
+# Espelho Total WhatsApp + Fix Número Z-API
 
-## Problema
+## Problemas Identificados
 
-Quando o usuário troca o número no Z-API, o banco de dados mantém o `phone_number` antigo porque a atualização só acontece quando o botão "Verificar" é clicado manualmente em Integrações. A página de Conversas apenas lê o valor do banco sem verificar o status real na Z-API.
+### 1. Número antigo persiste
+O auto check-status usa as credenciais do banco para chamar `/device` no Z-API. Se você trocou a instância Z-API (novo instance_id/token), precisa reconectar em Integrações primeiro — o check-status só consulta com as credenciais já salvas. Porém, se você trocou o **número** dentro da mesma instância Z-API, o problema é que o endpoint `/device` do Z-API pode estar cacheado. Vou adicionar um fallback usando o endpoint `/phone` do Z-API e também garantir que o auto-sync force uma atualização real.
+
+### 2. Mensagens enviadas pelo celular não aparecem
+O webhook Z-API recebe notificações de mensagens enviadas pelo celular (outbound), mas o código trata TUDO como `direction: "inbound"`. O campo `body.fromMe` indica se a mensagem foi enviada por você. Além disso, o webhook `update-webhook-send` precisa estar configurado no Z-API para receber notificações de mensagens enviadas.
 
 ## Solução
 
-### 1. Auto check-status ao abrir a página de Conversas
+### 1. Webhook — Capturar mensagens outbound (`fromMe`)
+Em `whatsapp-webhook/index.ts`:
+- Detectar `body.fromMe === true` e salvar com `direction: "outbound"` e `status: "sent"`
+- Não incrementar `unread_count` para mensagens outbound
+- Não disparar `ai-agent-reply` para mensagens outbound
 
-Em `ClienteChat.tsx`, adicionar um `useEffect` que chama a edge function `whatsapp-setup` com `action: "check-status"` quando a página carrega e a instância existe. Isso atualiza o `phone_number` e `status` no banco automaticamente, refletindo o número real conectado no Z-API.
+### 2. Setup — Configurar webhook de mensagens enviadas
+Em `whatsapp-setup/index.ts`, na ação "connect":
+- Adicionar chamada para `update-webhook-send` do Z-API (igual ao `update-webhook-received`), para que o Z-API envie notificações quando mensagens são enviadas pelo celular
 
-### 2. Invalidar cache após check-status
+### 3. Setup — Melhorar detecção do número (fallback)
+Em `whatsapp-setup/index.ts`, no check-status:
+- Adicionar fallback para endpoint `/phone/{phone}` ou usar `statusData.smartphoneConnected` + número do QR scan
+- Logar mais detalhes para debug
 
-Após o check-status retornar, invalidar a query `whatsapp-instances` para que a UI reflita o número atualizado imediatamente.
+### 4. UI — Exibir mensagens outbound no chat
+O `ChatConversation` já renderiza baseado em `direction`, então mensagens outbound enviadas pelo celular aparecerão automaticamente como bolhas verdes (enviadas).
 
 ## Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/cliente/ClienteChat.tsx` | Adicionar auto check-status no mount da página |
+| `supabase/functions/whatsapp-webhook/index.ts` | Detectar `fromMe` e salvar como outbound |
+| `supabase/functions/whatsapp-setup/index.ts` | Configurar `update-webhook-send` + melhorar detecção de número |
 
