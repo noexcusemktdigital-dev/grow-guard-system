@@ -44,6 +44,8 @@ Deno.serve(async (req) => {
       "PAYMENT_REFUNDED",
       "PAYMENT_DELETED",
       "PAYMENT_CHARGEBACK_REQUESTED",
+      "PAYMENT_SPLIT_DIVERGENCE_BLOCK",
+      "PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED",
     ];
 
     if (!handledEvents.includes(event)) {
@@ -371,6 +373,48 @@ Deno.serve(async (req) => {
       });
       console.log(`Payment deleted logged for org ${org.id}`);
       return jsonOk({ success: true, event });
+    }
+
+    // ── PAYMENT_SPLIT_DIVERGENCE_BLOCK ──
+    if (event === "PAYMENT_SPLIT_DIVERGENCE_BLOCK") {
+      const { data: members } = await adminClient
+        .from("organization_memberships")
+        .select("user_id")
+        .eq("organization_id", org.id);
+
+      if (members && members.length > 0) {
+        const notifications = members.map((m: any) => ({
+          organization_id: org.id,
+          user_id: m.user_id,
+          title: "⚠️ Split bloqueado",
+          message: `O split de pagamento R$ ${paymentValue.toFixed(2)} foi bloqueado por divergência. Verifique as configurações de conta.`,
+          type: "warning",
+        }));
+        await adminClient.from("client_notifications").insert(notifications);
+      }
+      console.log(`Split divergence block notified for org ${org.id}`);
+      return jsonOk({ success: true, event, notified: members?.length || 0 });
+    }
+
+    // ── PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED ──
+    if (event === "PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED") {
+      const { data: members } = await adminClient
+        .from("organization_memberships")
+        .select("user_id")
+        .eq("organization_id", org.id);
+
+      if (members && members.length > 0) {
+        const notifications = members.map((m: any) => ({
+          organization_id: org.id,
+          user_id: m.user_id,
+          title: "✅ Split desbloqueado",
+          message: `O bloqueio de split de R$ ${paymentValue.toFixed(2)} foi resolvido.`,
+          type: "info",
+        }));
+        await adminClient.from("client_notifications").insert(notifications);
+      }
+      console.log(`Split divergence resolved for org ${org.id}`);
+      return jsonOk({ success: true, event, notified: members?.length || 0 });
     }
 
     return jsonOk({ ok: true });

@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getOrCreateAsaasCustomer, fetchPixQrCode } from "../_shared/asaas-customer.ts";
+import { getOrCreateAsaasCustomer, fetchPixQrCode, buildSplitConfig } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 
 const corsHeaders = {
@@ -153,18 +153,28 @@ Deno.serve(async (req) => {
     dueDate.setDate(dueDate.getDate() + 5);
     const dueDateStr = dueDate.toISOString().split("T")[0];
 
+    // Build split config if this org is a franqueado
+    const splitConfig = await buildSplitConfig(adminClient, organization_id, 20);
+
     // Create charge
+    const chargePayload: Record<string, any> = {
+      customer: clientCustomerId,
+      billingType,
+      value: amount,
+      dueDate: dueDateStr,
+      description: `Mensalidade ${contract.title} — ${month}`,
+      externalReference: `client_payment|${organization_id}|${contract_id}|${month}`,
+    };
+
+    if (splitConfig) {
+      chargePayload.split = splitConfig;
+      console.log(`Split configured: ${JSON.stringify(splitConfig)}`);
+    }
+
     const chargeRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
       method: "POST",
       headers: { "Content-Type": "application/json", access_token: asaasApiKey },
-      body: JSON.stringify({
-        customer: clientCustomerId,
-        billingType,
-        value: amount,
-        dueDate: dueDateStr,
-        description: `Mensalidade ${contract.title} — ${month}`,
-        externalReference: `client_payment|${organization_id}|${contract_id}|${month}`,
-      }),
+      body: JSON.stringify(chargePayload),
     });
 
     const chargeData = await chargeRes.json();

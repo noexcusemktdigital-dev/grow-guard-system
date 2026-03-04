@@ -5,6 +5,7 @@ import { ReactNode } from "react";
 
 // Re-export for convenience
 export * from "@testing-library/react";
+export { screen, fireEvent, waitFor } from "@testing-library/dom";
 
 
 // Auth context mock type

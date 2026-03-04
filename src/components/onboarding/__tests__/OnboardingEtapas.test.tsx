@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/dom";
 import { OnboardingEtapas } from "../OnboardingEtapas";
 import type { ChecklistItem } from "@/types/onboarding";
 
