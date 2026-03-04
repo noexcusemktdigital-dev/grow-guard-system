@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Check, CheckCheck, Bot, User, Image as ImageIcon, FileText, Mic, Video } from "lucide-react";
 import type { WhatsAppMessage } from "@/hooks/useWhatsApp";
 
@@ -18,7 +18,7 @@ function isImageUrl(url: string, type?: string): boolean {
   return /\.(jpe?g|png|gif|webp|bmp|svg)(\?|$)/i.test(url);
 }
 
-export function ChatMessageBubble({ message, isGrouped = false }: Props) {
+export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(function ChatMessageBubble({ message, isGrouped = false }, ref) {
   const [imgError, setImgError] = useState(false);
   const isOutbound = message.direction === "outbound";
   const time = new Date(message.created_at).toLocaleTimeString("pt-BR", {
@@ -81,7 +81,7 @@ export function ChatMessageBubble({ message, isGrouped = false }: Props) {
   };
 
   return (
-    <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} ${isGrouped ? "mb-[2px]" : "mb-2"}`}>
+    <div ref={ref} className={`flex ${isOutbound ? "justify-end" : "justify-start"} ${isGrouped ? "mb-[2px]" : "mb-2"}`}>
       <div className={`relative max-w-[75%] lg:max-w-[520px] ${isGrouped ? "" : isOutbound ? "chat-bubble-out" : "chat-bubble-in"}`}>
         <div
           className={`rounded-lg px-3 py-1.5 text-[13px] leading-relaxed shadow-sm ${
@@ -115,4 +115,4 @@ export function ChatMessageBubble({ message, isGrouped = false }: Props) {
       </div>
     </div>
   );
-}
+});
