@@ -1,3 +1,4 @@
+import React from "react";
 import { Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ interface ProgressCtaCardProps {
   onCtaClick?: () => void;
 }
 
-export function ProgressCtaCard({
+export const ProgressCtaCard = React.forwardRef<HTMLDivElement, ProgressCtaCardProps>(function ProgressCtaCard({
   title = "MEU PROGRESSO DE VENDAS",
   level = "NÍVEL PRO",
   metaLabel = "META MENSAL",
@@ -26,9 +27,9 @@ export function ProgressCtaCard({
   ctaDescription = "Prepare 3 stories com o novo roteiro até as 14h de amanhã.",
   ctaButtonLabel = "VER ROTEIRO",
   onCtaClick,
-}: ProgressCtaCardProps) {
+}, ref) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div ref={ref} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Progress Card */}
       <div className="lg:col-span-2 glass-card p-6 lg:p-8 relative overflow-hidden">
         {/* Decorative shape */}
@@ -85,4 +86,4 @@ export function ProgressCtaCard({
       </div>
     </div>
   );
-}
+});
