@@ -1,35 +1,63 @@
 
 
-# Fix timestamps no whatsapp-sync-chats
+# Fase 3: Integração Avançada WhatsApp
 
-## Diagnóstico
-O código atual já tem `parseLastMessageTime` com suporte a número, string numérica, ISO e objeto `{_seconds}`. Porém o debug só loga as keys dos 3 primeiros chats — não loga o valor real dos campos de timestamp. O fallback `new Date().toISOString()` está sendo usado para todos os contatos, indicando que o campo `lastMessageTime` pode não existir ou vir em formato não tratado.
+## Escopo
 
-## Mudanças em `supabase/functions/whatsapp-sync-chats/index.ts`
+Três funcionalidades avançadas para completar a experiência de espelhamento WhatsApp:
 
-### 1. Debug intensivo nos 5 primeiros chats
-- Logar o **objeto completo** (JSON.stringify) dos 5 primeiros chats individuais (não só as keys)
-- Logar explicitamente todos os campos candidatos: `lastMessageTime`, `lastMessageTimestamp`, `timestamp`, `t`, `lastMessage`, `lastInteraction`
+1. **Typing indicator** — mostrar "digitando..." do contato e enviar typing quando o usuario digita
+2. **Marcar como lido no WhatsApp** — ao abrir conversa, chamar Z-API para sincronizar status de leitura
+3. **Contagem real de nao lidas** — preservar unread_count do Z-API durante sync
 
-### 2. Expandir detecção de campos de timestamp
-- Adicionar campos: `chat.lastInteraction`, `chat.lastMessage?.timestamp`, `chat.lastActivity`
-- Se `chat.lastMessage` for objeto, extrair `.timestamp` ou `.t` dele
-- Cadeia de fallback completa: `lastMessageTime → lastMessageTimestamp → timestamp → t → lastInteraction → lastMessage.timestamp → lastActivity`
+---
 
-### 3. Expandir `parseLastMessageTime`
-- Tratar booleano/null/undefined explicitamente (return null)
-- Tratar string com formato `"DD/MM/YYYY HH:mm"` (comum em APIs BR)
-- Ampliar range de validação para 2019-2030
+## Mudancas
 
-### 4. Confirmar que NÃO há fases de fotos/mensagens
-- O código atual já não tem essas fases (estão em `whatsapp-sync-photos` e `whatsapp-load-history`)
-- Nenhuma remoção necessária
+### 3.1 Typing Indicator
 
-### 5. Adicionar preview da última mensagem
-- Extrair `chat.lastMessage?.body` ou `chat.lastMessage?.content` ou `chat.lastMessageText` se existir
-- Salvar em `last_message_preview` (coluna já existe na tabela)
+**Webhook (`whatsapp-webhook/index.ts`)**:
+- Detectar evento de typing do Z-API (campo `type: "typing"` ou `chatstate`)
+- Em vez de salvar no banco, inserir em um canal Realtime (broadcast) com `{ phone, isTyping: true/false }`
+- Nao salvar como mensagem — apenas broadcast efemero
 
-| Arquivo | Mudança |
+**Frontend (`ChatConversation.tsx`)**:
+- Subscribir ao canal `whatsapp-typing-{orgId}` via Realtime broadcast
+- Quando receber typing do contato atualmente aberto, mostrar indicador "digitando..."
+- Auto-dismiss apos 5 segundos sem update
+- Ao usuario digitar, chamar debounced (1.5s) o endpoint Z-API `POST /typing` via nova edge function
+
+**Nova edge function `whatsapp-typing/index.ts`**:
+- Recebe `{ contactPhone }`, busca instancia conectada, chama `POST /typing` na Z-API
+- Lightweight, sem persistencia
+
+### 3.2 Marcar como lido no WhatsApp
+
+**Frontend (`ChatConversation.tsx`)**:
+- Quando usuario abre conversa (no useEffect de contact change), chamar `whatsapp-send` com nova action `read` ou criar endpoint dedicado
+- Usar endpoint Z-API `POST /read-message` com o messageId da ultima mensagem inbound
+
+**Edge function `whatsapp-send/index.ts`** (ou nova `whatsapp-read`):
+- Adicionar action type `read` que chama `POST /read-message` da Z-API
+- Sem salvar mensagem no banco — apenas sincroniza o status de leitura
+
+### 3.3 Contagem real de nao lidas no sync
+
+**`whatsapp-sync-chats/index.ts`**:
+- Extrair `chat.unreadCount` ou `chat.unreadMessages` da resposta Z-API
+- Usar esse valor no upsert em vez de `0`
+- Apenas atualizar se o contato nao tem `unread_count` ja maior (para nao sobrescrever incrementos do webhook)
+
+---
+
+## Arquivos
+
+| Arquivo | Mudanca |
 |---------|---------|
-| `supabase/functions/whatsapp-sync-chats/index.ts` | Debug completo, mais campos de timestamp, salvar preview |
+| `supabase/functions/whatsapp-webhook/index.ts` | Detectar typing events, broadcast via Realtime |
+| `supabase/functions/whatsapp-typing/index.ts` | **NOVO** — envia typing para Z-API |
+| `supabase/functions/whatsapp-send/index.ts` | Adicionar action `read` para marcar lido |
+| `supabase/functions/whatsapp-sync-chats/index.ts` | Preservar unread_count do Z-API |
+| `src/components/cliente/ChatConversation.tsx` | Subscribe typing broadcast, debounced send typing, chamar read on open |
+| `src/hooks/useWhatsApp.ts` | Hook para send typing (debounced) |
 
