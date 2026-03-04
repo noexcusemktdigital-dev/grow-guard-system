@@ -20,7 +20,6 @@ Deno.serve(async (req) => {
     if (asaasToken) {
       const headerToken = req.headers.get("asaas-access-token");
       if (headerToken !== asaasToken) {
-        // Consume body to prevent leak
         await req.text();
         return new Response(JSON.stringify({ error: "Invalid token" }), {
           status: 401,
@@ -42,6 +41,7 @@ Deno.serve(async (req) => {
       "PAYMENT_RECEIVED",
       "PAYMENT_OVERDUE",
       "PAYMENT_REFUNDED",
+      "PAYMENT_REFUND_IN_PROGRESS",
       "PAYMENT_DELETED",
       "PAYMENT_CHARGEBACK_REQUESTED",
       "PAYMENT_SPLIT_DIVERGENCE_BLOCK",
@@ -83,36 +83,47 @@ Deno.serve(async (req) => {
 
     // ── PAYMENT_CHARGEBACK_REQUESTED ──
     if (event === "PAYMENT_CHARGEBACK_REQUESTED") {
-      // Notify all org members
-      const { data: members } = await adminClient
-        .from("organization_memberships")
-        .select("user_id")
-        .eq("organization_id", org.id);
+      // 1. Notify all org members (existing)
+      await notifyOrgMembers(adminClient, org.id, {
+        title: "⚠️ Chargeback solicitado",
+        message: `Um chargeback de R$ ${paymentValue.toFixed(2)} foi solicitado. Verifique imediatamente.`,
+        type: "warning",
+      });
 
-      if (members && members.length > 0) {
-        const notifications = members.map((m: any) => ({
-          organization_id: org.id,
-          user_id: m.user_id,
-          title: "⚠️ Chargeback solicitado",
-          message: `Um chargeback de R$ ${paymentValue.toFixed(2)} foi solicitado. Verifique imediatamente.`,
-          type: "warning",
-        }));
-        await adminClient.from("client_notifications").insert(notifications);
+      // 2. Reverse credits (NEW)
+      let creditsToRemove = 0;
+      if (refParts.length >= 3 && refParts[1] === "credits") {
+        const packCreditsMap: Record<string, number> = { "pack-5000": 5000, "pack-20000": 20000, "pack-50000": 50000 };
+        creditsToRemove = packCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
+      } else if (refParts.length >= 3 && refParts[1] === "sub") {
+        const planCreditsMap: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
+        creditsToRemove = planCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
+      } else {
+        creditsToRemove = valueToCreditAmount(paymentValue);
       }
 
+      const wallet = await getOrCreateWallet(adminClient, org.id);
+      let newBalance = 0;
+      if (wallet && creditsToRemove > 0) {
+        newBalance = Math.max(0, wallet.balance - creditsToRemove);
+        await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
+      }
+
+      // 3. Update payment status to "chargeback" based on externalReference (NEW)
+      await updatePaymentStatus(adminClient, externalRef, refParts, payment.id, "chargeback");
+
+      // 4. Register credit_transaction (existing, improved)
       await adminClient.from("credit_transactions").insert({
         organization_id: org.id,
-        type: "alert",
-        amount: 0,
-        balance_after: 0,
-        description: `Chargeback solicitado — R$ ${paymentValue.toFixed(2)}`,
+        type: "chargeback",
+        amount: -creditsToRemove,
+        balance_after: newBalance,
+        description: `Chargeback — R$ ${paymentValue.toFixed(2)} (−${creditsToRemove} créditos)`,
         metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, event },
       });
 
-      console.log(`Chargeback notification sent for org ${org.id}: R$${paymentValue}`);
-      return new Response(JSON.stringify({ success: true, event, notified: members?.length || 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log(`Chargeback processed for org ${org.id}: -${creditsToRemove} credits, balance=${newBalance}`);
+      return jsonOk({ success: true, event, credits_removed: creditsToRemove, new_balance: newBalance });
     }
 
     // ── PAYMENT_CONFIRMED / PAYMENT_RECEIVED ──
@@ -239,7 +250,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // {orgId}|credits|{packId} → credit pack purchase (NEW: parse by packId)
+      // {orgId}|credits|{packId} → credit pack purchase
       if (refParts.length >= 3 && refParts[1] === "credits") {
         const packId = refParts[2];
         const packCreditsMap: Record<string, number> = {
@@ -267,14 +278,13 @@ Deno.serve(async (req) => {
         }
       }
 
-      // {orgId}|extra_user| → extra user charge (no credits, just confirmation)
+      // {orgId}|extra_user| → extra user charge
       if (refParts.length >= 2 && refParts[1] === "extra_user") {
         console.log(`Extra user charge confirmed for org ${org.id}`);
         return jsonOk({ success: true, event, type: "extra_user" });
       }
 
       // Fallback: legacy payments without structured externalReference
-      // Use value-based mapping as last resort
       const creditsAmount = valueToCreditAmount(paymentValue);
       if (creditsAmount <= 0) {
         return jsonOk({ ok: true, credits: 0 });
@@ -304,50 +314,104 @@ Deno.serve(async (req) => {
 
     // ── PAYMENT_REFUNDED ──
     if (event === "PAYMENT_REFUNDED") {
-      // Try to reverse credit pack by externalReference
+      // 1. Determine credits to reverse
       let creditsToRemove = 0;
       if (refParts.length >= 3 && refParts[1] === "credits") {
         const packCreditsMap: Record<string, number> = { "pack-5000": 5000, "pack-20000": 20000, "pack-50000": 50000 };
         creditsToRemove = packCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
+      } else if (refParts.length >= 3 && refParts[1] === "sub") {
+        const planCreditsMap: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
+        creditsToRemove = planCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
       } else {
         creditsToRemove = valueToCreditAmount(paymentValue);
       }
 
+      // 2. Reverse credits from wallet
+      let newBalance = 0;
       const wallet = await getOrCreateWallet(adminClient, org.id);
       if (wallet) {
-        const newBalance = Math.max(0, wallet.balance - creditsToRemove);
+        newBalance = Math.max(0, wallet.balance - creditsToRemove);
         await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
         await adminClient.from("credit_transactions").insert({
           organization_id: org.id,
           type: "refund",
           amount: -creditsToRemove,
           balance_after: newBalance,
-          description: `Estorno Asaas — R$ ${paymentValue.toFixed(2)}`,
+          description: `Estorno Asaas — R$ ${paymentValue.toFixed(2)} (−${creditsToRemove} créditos)`,
           metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, event },
         });
         console.log(`Refunded ${creditsToRemove} from org ${org.id}. Balance: ${newBalance}`);
-        return jsonOk({ success: true, event, credits_removed: creditsToRemove, new_balance: newBalance });
       }
+
+      // 3. Notify all org members (NEW)
+      await notifyOrgMembers(adminClient, org.id, {
+        title: "💸 Estorno processado",
+        message: `Um estorno de R$ ${paymentValue.toFixed(2)} foi confirmado. ${creditsToRemove > 0 ? `${creditsToRemove} créditos foram removidos.` : ""}`,
+        type: "warning",
+      });
+
+      // 4. Update payment status to "refunded" (NEW)
+      await updatePaymentStatus(adminClient, externalRef, refParts, payment.id, "refunded");
+
+      // 5. For client_payment: insert negative finance_revenue (NEW)
+      if (externalRef.startsWith("client_payment|")) {
+        const cpOrgId = refParts[1];
+        const cpContractId = refParts[2];
+        const cpMonth = refParts[3];
+        if (cpOrgId && cpMonth) {
+          const cpPayment = await adminClient
+            .from("client_payments")
+            .select("franchisee_share")
+            .eq("organization_id", cpOrgId)
+            .eq("contract_id", cpContractId)
+            .eq("month", cpMonth)
+            .maybeSingle();
+
+          if (cpPayment?.data) {
+            await adminClient.from("finance_revenues").insert({
+              organization_id: cpOrgId,
+              description: `Estorno pagamento cliente — Ref. ${cpMonth}`,
+              amount: -(cpPayment.data.franchisee_share || paymentValue),
+              date: new Date().toISOString().split("T")[0],
+              category: "cliente",
+              status: "refunded",
+              payment_method: "asaas",
+            });
+          }
+        }
+      }
+
+      return jsonOk({ success: true, event, credits_removed: creditsToRemove, new_balance: newBalance });
+    }
+
+    // ── PAYMENT_REFUND_IN_PROGRESS (NEW) ──
+    if (event === "PAYMENT_REFUND_IN_PROGRESS") {
+      await notifyOrgMembers(adminClient, org.id, {
+        title: "🔄 Estorno em andamento",
+        message: `O estorno de R$ ${paymentValue.toFixed(2)} está sendo processado pelo Asaas.`,
+        type: "info",
+      });
+
+      await adminClient.from("credit_transactions").insert({
+        organization_id: org.id,
+        type: "info",
+        amount: 0,
+        balance_after: 0,
+        description: `Estorno em processamento — R$ ${paymentValue.toFixed(2)}`,
+        metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, event },
+      });
+
+      console.log(`Refund in progress notified for org ${org.id}`);
       return jsonOk({ success: true, event });
     }
 
     // ── PAYMENT_OVERDUE ──
     if (event === "PAYMENT_OVERDUE") {
-      const { data: members } = await adminClient
-        .from("organization_memberships")
-        .select("user_id")
-        .eq("organization_id", org.id);
-
-      if (members && members.length > 0) {
-        const notifications = members.map((m: any) => ({
-          organization_id: org.id,
-          user_id: m.user_id,
-          title: "Pagamento em atraso",
-          message: `A cobrança de R$ ${paymentValue.toFixed(2)} está vencida. Regularize para manter seus créditos.`,
-          type: "warning",
-        }));
-        await adminClient.from("client_notifications").insert(notifications);
-      }
+      await notifyOrgMembers(adminClient, org.id, {
+        title: "Pagamento em atraso",
+        message: `A cobrança de R$ ${paymentValue.toFixed(2)} está vencida. Regularize para manter seus créditos.`,
+        type: "warning",
+      });
 
       // Update system fee if applicable
       if (externalRef.startsWith("system_fee|") && payment.id) {
@@ -358,7 +422,7 @@ Deno.serve(async (req) => {
       }
 
       console.log(`Overdue notification sent for org ${org.id}`);
-      return jsonOk({ success: true, event, notified: members?.length || 0 });
+      return jsonOk({ success: true, event });
     }
 
     // ── PAYMENT_DELETED ──
@@ -377,44 +441,24 @@ Deno.serve(async (req) => {
 
     // ── PAYMENT_SPLIT_DIVERGENCE_BLOCK ──
     if (event === "PAYMENT_SPLIT_DIVERGENCE_BLOCK") {
-      const { data: members } = await adminClient
-        .from("organization_memberships")
-        .select("user_id")
-        .eq("organization_id", org.id);
-
-      if (members && members.length > 0) {
-        const notifications = members.map((m: any) => ({
-          organization_id: org.id,
-          user_id: m.user_id,
-          title: "⚠️ Split bloqueado",
-          message: `O split de pagamento R$ ${paymentValue.toFixed(2)} foi bloqueado por divergência. Verifique as configurações de conta.`,
-          type: "warning",
-        }));
-        await adminClient.from("client_notifications").insert(notifications);
-      }
+      await notifyOrgMembers(adminClient, org.id, {
+        title: "⚠️ Split bloqueado",
+        message: `O split de pagamento R$ ${paymentValue.toFixed(2)} foi bloqueado por divergência. Verifique as configurações de conta.`,
+        type: "warning",
+      });
       console.log(`Split divergence block notified for org ${org.id}`);
-      return jsonOk({ success: true, event, notified: members?.length || 0 });
+      return jsonOk({ success: true, event });
     }
 
     // ── PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED ──
     if (event === "PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED") {
-      const { data: members } = await adminClient
-        .from("organization_memberships")
-        .select("user_id")
-        .eq("organization_id", org.id);
-
-      if (members && members.length > 0) {
-        const notifications = members.map((m: any) => ({
-          organization_id: org.id,
-          user_id: m.user_id,
-          title: "✅ Split desbloqueado",
-          message: `O bloqueio de split de R$ ${paymentValue.toFixed(2)} foi resolvido.`,
-          type: "info",
-        }));
-        await adminClient.from("client_notifications").insert(notifications);
-      }
+      await notifyOrgMembers(adminClient, org.id, {
+        title: "✅ Split desbloqueado",
+        message: `O bloqueio de split de R$ ${paymentValue.toFixed(2)} foi resolvido.`,
+        type: "info",
+      });
       console.log(`Split divergence resolved for org ${org.id}`);
-      return jsonOk({ success: true, event, notified: members?.length || 0 });
+      return jsonOk({ success: true, event });
     }
 
     return jsonOk({ ok: true });
@@ -426,6 +470,8 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+// ── Helper functions ──
 
 function jsonOk(data: any) {
   return new Response(JSON.stringify(data), {
@@ -461,4 +507,61 @@ async function getOrCreateWallet(adminClient: any, orgId: string) {
   }
 
   return wallet;
+}
+
+/** Notify all members of an organization */
+async function notifyOrgMembers(
+  adminClient: any,
+  orgId: string,
+  notification: { title: string; message: string; type: string }
+) {
+  const { data: members } = await adminClient
+    .from("organization_memberships")
+    .select("user_id")
+    .eq("organization_id", orgId);
+
+  if (members && members.length > 0) {
+    const notifications = members.map((m: any) => ({
+      organization_id: orgId,
+      user_id: m.user_id,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type,
+    }));
+    await adminClient.from("client_notifications").insert(notifications);
+  }
+  return members?.length || 0;
+}
+
+/** Update payment status based on externalReference routing */
+async function updatePaymentStatus(
+  adminClient: any,
+  externalRef: string,
+  refParts: string[],
+  asaasPaymentId: string,
+  newStatus: string
+) {
+  if (externalRef.startsWith("system_fee|") && asaasPaymentId) {
+    await adminClient
+      .from("franchisee_system_payments")
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq("asaas_payment_id", asaasPaymentId);
+  } else if (externalRef.startsWith("client_payment|")) {
+    const cpOrgId = refParts[1];
+    const cpContractId = refParts[2];
+    const cpMonth = refParts[3];
+    if (cpOrgId && cpContractId && cpMonth) {
+      await adminClient
+        .from("client_payments")
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq("organization_id", cpOrgId)
+        .eq("contract_id", cpContractId)
+        .eq("month", cpMonth);
+    }
+  } else if (externalRef.startsWith("franchisee_charge|") && asaasPaymentId) {
+    await adminClient
+      .from("franchisee_charges")
+      .update({ status: newStatus })
+      .eq("asaas_payment_id", asaasPaymentId);
+  }
 }
