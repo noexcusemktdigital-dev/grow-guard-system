@@ -46,7 +46,7 @@ export default function ClienteChat() {
 
   const isConnected = instance?.status === "connected";
 
-  // Auto check-status on mount to sync phone number from Z-API
+  // Auto check-status + sync chats on mount
   useEffect(() => {
     if (!instance?.instance_id) return;
     let cancelled = false;
@@ -60,6 +60,17 @@ export default function ClienteChat() {
         }
       } catch (err) {
         console.error("Auto check-status failed:", err);
+      }
+      // Auto sync chats
+      try {
+        await supabase.functions.invoke("whatsapp-sync-chats", {
+          body: { instanceId: instance.instance_id },
+        });
+        if (!cancelled) {
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+        }
+      } catch (err) {
+        console.error("Auto sync-chats failed:", err);
       }
     };
     sync();

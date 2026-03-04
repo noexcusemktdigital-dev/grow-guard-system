@@ -48,8 +48,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    const { instanceId } = body;
+    const body = await req.json().catch(() => ({}));
+    const { instanceId, phone: filterPhone } = body;
 
     // Find the instance
     let instance: any = null;
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
     console.log(`[sync] Fetched ${allChats.length} chats from Z-API`);
 
     // Filter out groups, broadcasts, status
-    const individualChats = allChats.filter((chat: any) => {
+    let individualChats = allChats.filter((chat: any) => {
       if (chat.isGroup) return false;
       const phone = chat.phone || "";
       if (!phone) return false;
@@ -121,6 +121,11 @@ Deno.serve(async (req) => {
       if (phone.endsWith("-group")) return false;
       return true;
     });
+
+    // Optional: filter by specific phone
+    if (filterPhone) {
+      individualChats = individualChats.filter((c: any) => c.phone === filterPhone);
+    }
 
     console.log(`[sync] ${individualChats.length} individual chats after filtering`);
 
@@ -145,8 +150,8 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (existing) {
-        // Update with latest info from Z-API
-        const updates: any = { instance_id: instance.id };
+        // Update with latest info from Z-API — force human mode
+        const updates: any = { instance_id: instance.id, attending_mode: "human" };
         if (name) updates.name = name;
         if (photoUrl) updates.photo_url = photoUrl;
         if (lastMsgTime) updates.last_message_at = lastMsgTime;
@@ -166,7 +171,7 @@ Deno.serve(async (req) => {
             last_message_at: lastMsgTime || new Date().toISOString(),
             unread_count: unreadCount,
             instance_id: instance.id,
-            attending_mode: "ai",
+            attending_mode: "human",
             photo_url: photoUrl,
           });
         contactsCreated++;
