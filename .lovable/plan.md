@@ -1,44 +1,59 @@
 
 
-# Fix: Onboarding Data Not Persisting
+# Fix: Conversas vinculadas à instância Z-API correta
 
-## Root Cause
+## Problema
 
-The `organizations` table has an RLS policy that only allows `super_admin` to update rows. When a `cliente_admin` user completes the onboarding form, the update to `onboarding_completed = true` silently fails due to RLS, so every time they navigate to `/cliente/inicio`, they get redirected back to onboarding.
+Existem 3 problemas interligados:
 
-## Solution
+1. **Contatos e mensagens não estão vinculados a uma instância específica** -- as tabelas `whatsapp_contacts` e `whatsapp_messages` só têm `organization_id`, sem referência à instância. Quando o usuário troca de número no Z-API, os contatos antigos continuam aparecendo.
 
-### 1. Database Migration — Add RLS policy for org members to update their own org
+2. **Bug no check-status** -- em `ClienteIntegracoes.tsx` linha 164, a ação é passada como `"status"` mas a edge function espera `"check-status"`. O botão "Verificar" não atualiza o status real.
+
+3. **Webhook pega apenas a primeira instância** -- `whatsapp-webhook` faz `.single()` na query de instâncias (linha 38), o que falha quando há múltiplas instâncias.
+
+## Solução
+
+### 1. Database Migration -- Vincular contatos a instâncias
+
+Adicionar coluna `instance_id` (uuid, nullable para compatibilidade) em `whatsapp_contacts`, com FK para `whatsapp_instances`.
 
 ```sql
-CREATE POLICY "Members can update own org"
-ON public.organizations
-FOR UPDATE
-TO authenticated
-USING (is_member_of_org(auth.uid(), id))
-WITH CHECK (is_member_of_org(auth.uid(), id));
+ALTER TABLE public.whatsapp_contacts 
+  ADD COLUMN instance_id uuid REFERENCES public.whatsapp_instances(id) ON DELETE SET NULL;
 ```
 
-This allows any authenticated member of an organization to update it (for onboarding, settings, etc.).
+### 2. Fix check-status action name
 
-### 2. `ClienteOnboardingCompany.tsx` — Skip if already completed
+Em `ClienteIntegracoes.tsx`, corrigir `action: "status"` para `action: "check-status"`.
 
-Add a redirect at the top: if `orgData.onboarding_completed === true`, navigate to `/cliente/inicio` immediately. This prevents showing the form again after successful completion.
+### 3. Atualizar webhook para suportar múltiplas instâncias
 
-### 3. `ClienteInicio.tsx` — Handle null gracefully
+Em `whatsapp-webhook/index.ts`:
+- Remover `.single()` e buscar instância que corresponda ao webhook
+- Salvar `instance_id` no contato ao criar/atualizar
 
-Change the check from `!(orgData as any).onboarding_completed` to `orgData.onboarding_completed === false` — treating `null` as "not required" to avoid redirect loops for orgs that don't need onboarding (like franqueadora orgs).
+### 4. Atualizar whatsapp-send para usar instância correta
 
-### 4. Fix remaining ref warnings
+Em `whatsapp-send/index.ts`:
+- Buscar a instância correta do contato via `instance_id`, ou fallback para a primeira conectada.
 
-Console shows ref warnings for `ClienteInicio` and `ProgressCtaCard`. Will wrap `ProgressCtaCard` with `forwardRef` to resolve.
+### 5. Filtrar contatos por instância conectada na UI
 
-## Files
+Em `useWhatsApp.ts` (`useWhatsAppContacts`):
+- Opcionalmente filtrar contatos pela instância ativa, ou mostrar todos com indicador de qual número.
 
-| File | Action |
-|------|--------|
-| Database migration | Add UPDATE RLS policy on `organizations` |
-| `src/pages/cliente/ClienteOnboardingCompany.tsx` | Add redirect when already completed |
-| `src/pages/cliente/ClienteInicio.tsx` | Fix null check for `onboarding_completed` |
-| `src/components/premium/ProgressCtaCard.tsx` | Wrap with `forwardRef` |
+### 6. ClienteChat -- Mostrar número conectado
+
+Exibir o número do WhatsApp conectado no header da página de conversas.
+
+## Arquivos
+
+| Arquivo | Ação |
+|---------|------|
+| Database migration | ADD COLUMN `instance_id` em `whatsapp_contacts` |
+| `src/pages/cliente/ClienteIntegracoes.tsx` | Fix `action: "status"` → `"check-status"` |
+| `supabase/functions/whatsapp-webhook/index.ts` | Suportar múltiplas instâncias, salvar `instance_id` |
+| `src/hooks/useWhatsApp.ts` | Filtrar contatos pela instância conectada |
+| `src/pages/cliente/ClienteChat.tsx` | Exibir número conectado no header |
 
