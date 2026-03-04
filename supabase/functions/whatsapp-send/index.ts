@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
       } else {
         const { data: newContact } = await adminClient
           .from("whatsapp_contacts")
-          .insert({ organization_id: orgId, phone, last_message_at: new Date().toISOString() })
+          .insert({ organization_id: orgId, phone, last_message_at: new Date().toISOString(), instance_id: instance.id })
           .select("id")
           .single();
         if (newContact) resolvedContactId = newContact.id;
