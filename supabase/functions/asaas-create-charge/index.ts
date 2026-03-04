@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getOrCreateAsaasCustomer, fetchPixQrCode } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 
 const corsHeaders = {
@@ -21,12 +22,11 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Auth
+    // Auth via getClaims
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -36,8 +36,7 @@ Deno.serve(async (req) => {
     const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -45,8 +44,7 @@ Deno.serve(async (req) => {
 
     if (!organization_id || !charge_type || !billing_type) {
       return new Response(JSON.stringify({ error: "organization_id, charge_type and billing_type required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -64,8 +62,7 @@ Deno.serve(async (req) => {
       const pack = packs[pack_id];
       if (!pack) {
         return new Response(JSON.stringify({ error: "Invalid pack_id" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       amount = pack.price;
@@ -76,65 +73,38 @@ Deno.serve(async (req) => {
       description = "Usuário adicional — NOE";
     } else {
       return new Response(JSON.stringify({ error: "Invalid charge_type" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get org
+    // Get org info
     const { data: org, error: orgError } = await adminClient
       .from("organizations")
-      .select("id, name, cnpj, email, phone, asaas_customer_id")
+      .select("id, name, cnpj, email, phone")
       .eq("id", organization_id)
       .single();
 
     if (orgError || !org) {
       return new Response(JSON.stringify({ error: "Organization not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    let asaasCustomerId = org.asaas_customer_id;
-
-    if (!asaasCustomerId) {
-      const customerRes = await asaasFetch(`${ASAAS_BASE}/customers`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", access_token: asaasApiKey },
-        body: JSON.stringify({
-          name: org.name,
-          email: org.email || undefined,
-          phone: org.phone || undefined,
-          cpfCnpj: org.cnpj || undefined,
-          externalReference: org.id,
-        }),
-      });
-
-      const customerData = await customerRes.json();
-      if (!customerRes.ok) {
-        console.error("Asaas customer creation failed:", customerData);
-        return new Response(JSON.stringify({ error: "Failed to create Asaas customer", details: customerData }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      asaasCustomerId = customerData.id;
-      await adminClient
-        .from("organizations")
-        .update({ asaas_customer_id: asaasCustomerId })
-        .eq("id", org.id);
-    }
+    // Get or create Asaas customer (deduplicated)
+    const asaasCustomerId = await getOrCreateAsaasCustomer(adminClient, asaasApiKey, {
+      orgId: org.id,
+      name: org.name,
+      cpfCnpj: org.cnpj,
+      email: org.email,
+      phone: org.phone,
+    });
 
     const today = new Date().toISOString().split("T")[0];
 
     // Create payment in Asaas
     const paymentRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: asaasApiKey,
-      },
+      headers: { "Content-Type": "application/json", access_token: asaasApiKey },
       body: JSON.stringify({
         customer: asaasCustomerId,
         billingType: billing_type,
@@ -149,29 +119,19 @@ Deno.serve(async (req) => {
     if (!paymentRes.ok) {
       console.error("Asaas charge creation failed:", paymentData);
       return new Response(JSON.stringify({ error: "Failed to create charge", details: paymentData }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     console.log(`Charge created for org ${org.id}: type=${charge_type}, amount=${amount}`);
 
-    // For PIX, fetch QR code base64 and copy-paste code
+    // For PIX, fetch QR code with retry
     let pixQrCodeBase64 = null;
     let pixCopyPaste = null;
     if (billing_type === "PIX" && paymentData.id) {
-      try {
-        const pixRes = await asaasFetch(`${ASAAS_BASE}/payments/${paymentData.id}/pixQrCode`, {
-          headers: { access_token: asaasApiKey },
-        });
-        if (pixRes.ok) {
-          const pixData = await pixRes.json();
-          pixQrCodeBase64 = pixData.encodedImage;
-          pixCopyPaste = pixData.payload;
-        }
-      } catch (e) {
-        console.error("Failed to fetch PIX QR code:", e);
-      }
+      const pix = await fetchPixQrCode(asaasApiKey, paymentData.id);
+      pixQrCodeBase64 = pix.encodedImage;
+      pixCopyPaste = pix.payload;
     }
 
     return new Response(
@@ -192,8 +152,7 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     console.error("asaas-create-charge error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

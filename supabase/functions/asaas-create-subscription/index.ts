@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getOrCreateAsaasCustomer } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 
 const corsHeaders = {
@@ -30,8 +31,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -41,8 +41,7 @@ Deno.serve(async (req) => {
     const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -50,16 +49,14 @@ Deno.serve(async (req) => {
 
     if (!organization_id || !plan_id || !billing_type) {
       return new Response(JSON.stringify({ error: "organization_id, plan_id and billing_type are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const planPricing = PLAN_PRICES[plan_id];
     if (!planPricing) {
       return new Response(JSON.stringify({ error: "Invalid plan_id" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -69,54 +66,30 @@ Deno.serve(async (req) => {
     const validBillingTypes = ["CREDIT_CARD", "BOLETO", "PIX"];
     if (!validBillingTypes.includes(billing_type)) {
       return new Response(JSON.stringify({ error: "Invalid billing_type" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { data: org, error: orgError } = await adminClient
       .from("organizations")
-      .select("id, name, cnpj, email, phone, asaas_customer_id")
+      .select("id, name, cnpj, email, phone")
       .eq("id", organization_id)
       .single();
 
     if (orgError || !org) {
       return new Response(JSON.stringify({ error: "Organization not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    let asaasCustomerId = org.asaas_customer_id;
-
-    if (!asaasCustomerId) {
-      const customerRes = await asaasFetch(`${ASAAS_BASE}/customers`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", access_token: asaasApiKey },
-        body: JSON.stringify({
-          name: org.name,
-          email: org.email || undefined,
-          phone: org.phone || undefined,
-          cpfCnpj: org.cnpj || undefined,
-          externalReference: org.id,
-        }),
-      });
-
-      const customerData = await customerRes.json();
-      if (!customerRes.ok) {
-        console.error("Asaas customer creation failed:", customerData);
-        return new Response(JSON.stringify({ error: "Failed to create Asaas customer", details: customerData }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      asaasCustomerId = customerData.id;
-      await adminClient
-        .from("organizations")
-        .update({ asaas_customer_id: asaasCustomerId })
-        .eq("id", org.id);
-    }
+    // Get or create Asaas customer (deduplicated)
+    const asaasCustomerId = await getOrCreateAsaasCustomer(adminClient, asaasApiKey, {
+      orgId: org.id,
+      name: org.name,
+      cpfCnpj: org.cnpj,
+      email: org.email,
+      phone: org.phone,
+    });
 
     const today = new Date();
     const nextDueDate = today.toISOString().split("T")[0];
@@ -140,8 +113,7 @@ Deno.serve(async (req) => {
     if (!subscriptionRes.ok) {
       console.error("Asaas subscription creation failed:", subscriptionData);
       return new Response(JSON.stringify({ error: "Failed to create Asaas subscription", details: subscriptionData }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -194,8 +166,7 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     console.error("asaas-create-subscription error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
