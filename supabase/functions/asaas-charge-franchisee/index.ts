@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
+import { fetchPixQrCode } from "../_shared/asaas-customer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -156,6 +157,16 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Fetch PIX QR code if billing type is PIX
+      let pixQrCode: string | null = null;
+      let pixCopyPaste: string | null = null;
+
+      if (billingType === "PIX") {
+        const pixData = await fetchPixQrCode(asaasApiKey, chargeData.id);
+        pixQrCode = pixData.encodedImage;
+        pixCopyPaste = pixData.payload;
+      }
+
       // Insert charge record
       await adminClient.from("franchisee_charges").insert({
         organization_id,
@@ -175,6 +186,8 @@ Deno.serve(async (req) => {
         royalty: royaltyAmount,
         system_fee: SYSTEM_FEE,
         total: totalAmount,
+        pix_qr_code: pixQrCode,
+        pix_copy_paste: pixCopyPaste,
       });
 
       console.log(`Charge created for ${franchisee.name}: R$${totalAmount} (Asaas: ${chargeData.id})`);
