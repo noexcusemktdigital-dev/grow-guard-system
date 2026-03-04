@@ -1,48 +1,34 @@
 
 
-# Sincronização inicial de conversas do WhatsApp
+# Sync completo do WhatsApp — Correção do endpoint multi-device
 
-## Problema identificado
+## Problema
 
-O sistema só captura conversas que passam pelo webhook **após** a configuração. Conversas que já existiam no WhatsApp (como "EcoAlternativa | Noexcuse", "Implante ingá", "Marcela Requena | Klir Imobiliária", "+55 44 9937-0965", "Titânia | Noexcuse marketing") **nunca foram importadas** para o banco de dados.
-
-Atualmente existem **45 contatos** no sistema, mas o WhatsApp tem muito mais. O webhook funciona corretamente para novas mensagens, mas não faz retroativo.
+Os logs mostram que a sincronização encontrou **637 chats** e filtrou para **556 conversas individuais**, mas falha ao buscar mensagens históricas:
+```
+"Does not work in multi device version"
+```
+O endpoint `GET /chat-messages/{phone}` da Z-API **não é compatível** com a versão multi-device do WhatsApp. Isso significa que os contatos estão sendo criados, mas sem mensagens históricas — e o processo trava/demora demais tentando buscar mensagens de 556 contatos.
 
 ## Solução
 
-Criar uma edge function `whatsapp-sync-chats` que puxa todas as conversas existentes da Z-API e importa para o banco de dados — contatos + últimas mensagens.
+### 1. Corrigir `whatsapp-sync-chats` (edge function)
+- **Remover** a tentativa de buscar mensagens históricas via `/chat-messages/{phone}` (não funciona em multi-device)
+- **Focar** na sincronização de contatos via `/chats` (que funciona perfeitamente)
+- Usar os dados do `/chats` (nome, foto, última mensagem, unread count) para criar/atualizar contatos
+- Extrair o `lastMessage` que já vem no payload do `/chats` como preview da última mensagem
+- Resultado: sincronização rápida (segundos ao invés de minutos) e contatos aparecem imediatamente
 
-### Funcionamento
+### 2. O que muda no fluxo
+- **Antes**: Tentava buscar 20 mensagens por contato × 556 contatos = 11.120 requests (falhando)
+- **Depois**: 1 request paginado ao `/chats` → cria todos os contatos → webhook captura mensagens novas a partir daqui
+- As conversas históricas de cada contato não estarão no sistema (limitação da Z-API multi-device), mas todas as novas mensagens serão capturadas em tempo real pelo webhook
 
-1. Chamar `GET /chats` da Z-API para obter todas as conversas ativas
-2. Para cada conversa individual (excluindo grupos/broadcasts):
-   - Criar ou atualizar o contato no banco (upsert por phone + org_id)
-   - Buscar as últimas mensagens via `GET /chat-messages/{phone}`
-   - Inserir mensagens que ainda não existem (verificar por `message_id_zapi`)
-3. Adicionar um botão "Sincronizar conversas" na interface do chat
+### 3. Melhorar feedback na UI
+- Mostrar progresso durante a sincronização (contatos encontrados/processados)
+- Toast com resultado detalhado
 
-### Detalhes técnicos
-
-**Nova edge function**: `supabase/functions/whatsapp-sync-chats/index.ts`
-- Recebe `instanceId` no body
-- Busca a instância no banco e usa credenciais para chamar Z-API
-- Chama `GET /chats` → filtra grupos/broadcasts → upsert contatos
-- Para cada contato, chama `GET /chat/{phone}` com limite de 20 mensagens
-- Insere mensagens com `ON CONFLICT DO NOTHING` baseado em `message_id_zapi`
-- Retorna contagem de contatos e mensagens sincronizados
-
-**Arquivo modificado**: `src/pages/cliente/ClienteChat.tsx`
-- Adicionar botão "Sincronizar" no header do chat
-- Chamar a edge function e invalidar queries ao concluir
-
-**Arquivo modificado**: `src/components/cliente/ChatContactList.tsx`
-- Adicionar botão de sync no topo da lista de contatos
-
-### Fluxo do usuário
-
-1. Usuário clica em "Sincronizar conversas" no chat
-2. Sistema puxa todos os chats da Z-API
-3. Contatos e mensagens são importados
-4. Lista de contatos é atualizada automaticamente
-5. Resultado: chat do sistema = espelho do WhatsApp
+### Arquivos modificados
+- `supabase/functions/whatsapp-sync-chats/index.ts` — remover loop de `/chat-messages`, focar em upsert de contatos
+- `src/pages/cliente/ClienteChat.tsx` — sem mudanças significativas (já tem o botão de sync)
 
