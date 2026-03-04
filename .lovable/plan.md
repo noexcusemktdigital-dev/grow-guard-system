@@ -1,48 +1,35 @@
 
 
-# Fase 2: UX WhatsApp — Emoji Picker, Auto-resize, Audio, Busca, Scroll-to-bottom, Reply/Quote
+# Fix timestamps no whatsapp-sync-chats
 
-## Estado Atual
-O `ChatConversation.tsx` (737 linhas) **já tem implementado**:
-- Emoji picker com popover e 40 emojis comuns
-- Auto-resize do textarea (até 120px)
-- Scroll-to-bottom button (aparece quando > 300px do fundo)
-- Busca dentro da conversa com highlight
-- Upload de arquivos (imagens, vídeos, PDFs)
+## Diagnóstico
+O código atual já tem `parseLastMessageTime` com suporte a número, string numérica, ISO e objeto `{_seconds}`. Porém o debug só loga as keys dos 3 primeiros chats — não loga o valor real dos campos de timestamp. O fallback `new Date().toISOString()` está sendo usado para todos os contatos, indicando que o campo `lastMessageTime` pode não existir ou vir em formato não tratado.
 
-**Falta implementar**:
-1. **Gravação de áudio** — botão de microfone quando texto vazio, usando `MediaRecorder` API
-2. **Mensagens de resposta/quote** — swipe ou botão para responder, preview acima do input, envio com `quotedMessageId`
+## Mudanças em `supabase/functions/whatsapp-sync-chats/index.ts`
 
-## Mudanças
+### 1. Debug intensivo nos 5 primeiros chats
+- Logar o **objeto completo** (JSON.stringify) dos 5 primeiros chats individuais (não só as keys)
+- Logar explicitamente todos os campos candidatos: `lastMessageTime`, `lastMessageTimestamp`, `timestamp`, `t`, `lastMessage`, `lastInteraction`
 
-### 1. Gravação de Áudio (`ChatConversation.tsx`)
-- Quando `text` estiver vazio, trocar o botão **Send** por um botão **Mic**
-- Ao pressionar Mic, iniciar gravação via `navigator.mediaDevices.getUserMedia({ audio: true })` + `MediaRecorder`
-- Mostrar indicador de gravação (tempo + botão cancelar + botão enviar)
-- Ao finalizar: upload do blob para `chat-media` bucket, enviar via `sendMutation` com `type: "audio"` e `mediaUrl`
+### 2. Expandir detecção de campos de timestamp
+- Adicionar campos: `chat.lastInteraction`, `chat.lastMessage?.timestamp`, `chat.lastActivity`
+- Se `chat.lastMessage` for objeto, extrair `.timestamp` ou `.t` dele
+- Cadeia de fallback completa: `lastMessageTime → lastMessageTimestamp → timestamp → t → lastInteraction → lastMessage.timestamp → lastActivity`
 
-### 2. Suporte a Reply/Quote (`ChatMessageBubble.tsx` + `ChatConversation.tsx`)
-- Adicionar botão "Responder" (reply arrow) que aparece no hover de cada mensagem
-- Ao clicar, setar `replyingTo` state no `ChatConversation` com a mensagem selecionada
-- Mostrar preview da mensagem citada acima do input (nome + trecho do conteúdo)
-- Ao enviar, incluir `metadata.quotedMessageId` no body do `whatsapp-send`
-- No `ChatMessageBubble`, se `metadata.quotedMsg` ou `metadata.quotedMessageId` existir, renderizar bloco de citação acima do conteúdo
+### 3. Expandir `parseLastMessageTime`
+- Tratar booleano/null/undefined explicitamente (return null)
+- Tratar string com formato `"DD/MM/YYYY HH:mm"` (comum em APIs BR)
+- Ampliar range de validação para 2019-2030
 
-### 3. Atualizar `whatsapp-send/index.ts`
-- Aceitar campo `mediaUrl` e `quotedMessageId` opcionais
-- Se `mediaUrl` presente e tipo `audio`, usar endpoint Z-API `send-audio` ao invés de `send-text`
-- Se `quotedMessageId` presente, incluir no body da Z-API como `messageId` para quote
+### 4. Confirmar que NÃO há fases de fotos/mensagens
+- O código atual já não tem essas fases (estão em `whatsapp-sync-photos` e `whatsapp-load-history`)
+- Nenhuma remoção necessária
 
-### 4. Melhorias Extras no Emoji Picker
-- Expandir de 40 para ~80 emojis organizados por categoria (carinhas, mãos, objetos)
-- Adicionar abas simples no popover
+### 5. Adicionar preview da última mensagem
+- Extrair `chat.lastMessage?.body` ou `chat.lastMessage?.content` ou `chat.lastMessageText` se existir
+- Salvar em `last_message_preview` (coluna já existe na tabela)
 
-### Arquivos
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/cliente/ChatConversation.tsx` | Gravação de áudio, reply state, preview de citação no input |
-| `src/components/cliente/ChatMessageBubble.tsx` | Botão responder no hover, renderizar bloco de citação |
-| `supabase/functions/whatsapp-send/index.ts` | Suporte a `mediaUrl`, `quotedMessageId`, endpoint `send-audio` |
-| `src/hooks/useWhatsApp.ts` | Adicionar `quotedMessageId` ao tipo do mutation |
+| `supabase/functions/whatsapp-sync-chats/index.ts` | Debug completo, mais campos de timestamp, salvar preview |
 
