@@ -1,4 +1,6 @@
+## ✅ Prioridade 10 — CONCLUÍDA
 
+30 testes passando: ProtectedRoute (7), Auth (6), SaasAuth (7), CrmNewLeadDialog (4), OnboardingEtapas (5), example (1).
 
 # Prioridade 10: Testes Automatizados — Login, Leads, Onboarding
 
