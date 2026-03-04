@@ -20,45 +20,37 @@ Deno.serve(async (req) => {
     const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Auth
+    // Auth via getClaims (standardized)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await userClient.auth.getUser(token);
-    if (userError || !userData?.user) {
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { organization_id, network, all, startDate, endDate } = await req.json();
 
-    // ── MODE: all ── fetch ALL payments from the account (no customer filter)
+    // ── MODE: all ── fetch ALL payments from the account
     if (all) {
       let url = `${ASAAS_BASE}/payments?limit=100&offset=0`;
       if (startDate) url += `&dateCreated[ge]=${startDate}`;
       if (endDate) url += `&dateCreated[le]=${endDate}`;
 
-      const res = await asaasFetch(url, {
-        headers: { access_token: asaasApiKey },
-      });
+      const res = await asaasFetch(url, { headers: { access_token: asaasApiKey } });
       const data = await res.json();
-
       const rawPayments = data.data ?? [];
 
-      // Collect unique customer IDs to fetch names
       const uniqueCustomerIds = [...new Set(rawPayments.map((p: any) => p.customer).filter(Boolean))] as string[];
-
-      // Fetch customer names in parallel
       const customerNameMap: Record<string, string> = {};
       await Promise.all(
         uniqueCustomerIds.map(async (custId) => {
@@ -75,19 +67,13 @@ Deno.serve(async (req) => {
       );
 
       const allPayments = rawPayments.map((p: any) => ({
-        id: p.id,
-        value: p.value,
-        status: p.status,
-        dueDate: p.dueDate,
-        paymentDate: p.paymentDate,
-        billingType: p.billingType,
-        description: p.description,
-        invoiceUrl: p.invoiceUrl,
-        bankSlipUrl: p.bankSlipUrl,
+        id: p.id, value: p.value, status: p.status,
+        dueDate: p.dueDate, paymentDate: p.paymentDate,
+        billingType: p.billingType, description: p.description,
+        invoiceUrl: p.invoiceUrl, bankSlipUrl: p.bankSlipUrl,
         pixQrCode: p.pixQrCodeUrl,
         orgName: customerNameMap[p.customer] || "",
-        orgId: null,
-        customerAsaasId: p.customer,
+        orgId: null, customerAsaasId: p.customer,
       }));
 
       allPayments.sort((a: any, b: any) => (b.dueDate || "").localeCompare(a.dueDate || ""));
@@ -97,11 +83,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── MODE: network (legacy) ── filter by customer per org
+    // ── MODE: network ──
     if (!organization_id) {
       return new Response(JSON.stringify({ error: "organization_id required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -120,9 +105,7 @@ Deno.serve(async (req) => {
         .select("id, name, asaas_customer_id")
         .eq("id", organization_id)
         .single();
-      if (org?.asaas_customer_id) {
-        orgsToQuery = [org];
-      }
+      if (org?.asaas_customer_id) orgsToQuery = [org];
     }
 
     if (orgsToQuery.length === 0) {
@@ -149,7 +132,7 @@ Deno.serve(async (req) => {
               pixQrCode: p.pixQrCodeUrl, orgName: org.name, orgId: org.id,
             });
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error(`Error fetching payments for org ${org.id}:`, e);
         }
       })
@@ -163,8 +146,7 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     console.error("asaas-list-payments error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
