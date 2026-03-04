@@ -118,16 +118,16 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     setSearchQuery("");
   }, [contact?.id]);
 
-  // Auto-load message history when conversation is empty
+  // Auto-load message history on first open of a contact (backfill)
   useEffect(() => {
     if (!contact?.phone || !instanceId) return;
     if (isLoading) return;
-    if (messages.length > 0) return;
     if (historyLoaded.has(contact.id)) return;
 
     const loadHistory = async () => {
       setLoadingHistory(true);
       try {
+        console.log(`[chat] Auto-loading history for ${contact.phone}`);
         const { data, error } = await supabase.functions.invoke("whatsapp-load-history", {
           body: { contactPhone: contact.phone, contactId: contact.id, instanceId, amount: 50 },
         });
@@ -137,6 +137,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         }
         if (data?.imported > 0) {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
         }
       } catch (err) {
         console.error("Load history failed:", err);
@@ -146,7 +147,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
       }
     };
     loadHistory();
-  }, [contact?.id, contact?.phone, instanceId, isLoading, messages.length, historyLoaded, queryClient]);
+  }, [contact?.id, contact?.phone, instanceId, isLoading, historyLoaded, queryClient]);
 
   const handleLoadMoreHistory = async () => {
     if (!contact?.phone || !instanceId || loadingHistory) return;
