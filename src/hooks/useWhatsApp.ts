@@ -104,7 +104,13 @@ export function useWhatsAppContacts(filterInstanceId?: string | null) {
       });
       const filtered = enriched.filter((c: any) => {
         const phone = c.phone || "";
-        return !phone.endsWith("-group") && !phone.includes("@broadcast");
+        // Exclude groups, broadcasts, and group-like patterns
+        if (phone.endsWith("-group")) return false;
+        if (phone.includes("@g.us")) return false;
+        if (phone.includes("@broadcast")) return false;
+        if (/^\d{12,}-\d{10,}$/.test(phone)) return false;
+        if (phone === "status") return false;
+        return true;
       });
       return filtered as unknown as WhatsAppContact[];
     },
