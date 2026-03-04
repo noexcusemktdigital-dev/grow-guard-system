@@ -107,11 +107,13 @@ Deno.serve(async (req) => {
             { headers: { "Client-Token": instance.client_token } }
           );
           const statusData = await statusRes.json();
+          console.log("[check-status] /status response for", instance.instance_id, ":", JSON.stringify(statusData));
           const connected = statusData.connected === true;
           let phoneNumber = instance.phone_number || null;
 
           if (connected) {
             try {
+              // Try /device first
               const deviceRes = await fetch(
                 `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/device`,
                 { headers: { "Client-Token": instance.client_token } }
@@ -123,6 +125,23 @@ Deno.serve(async (req) => {
               }
             } catch (err) {
               console.error("Failed to fetch device info:", err);
+            }
+
+            // Fallback: try /phone endpoint if device didn't return a phone
+            if (!phoneNumber) {
+              try {
+                const phoneRes = await fetch(
+                  `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/phone`,
+                  { headers: { "Client-Token": instance.client_token } }
+                );
+                const phoneData = await phoneRes.json();
+                console.log("[check-status] /phone fallback for", instance.instance_id, ":", JSON.stringify(phoneData));
+                if (phoneData.phone) {
+                  phoneNumber = phoneData.phone;
+                }
+              } catch (err) {
+                console.error("Failed to fetch phone fallback:", err);
+              }
             }
           }
 
@@ -171,24 +190,24 @@ Deno.serve(async (req) => {
 
     const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook/${orgId}`;
 
-    // Configure webhook on Z-API
+    // Configure webhooks on Z-API (received + status + send)
     try {
-      await fetch(
-        `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/update-webhook-received`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "Client-Token": clientToken },
-          body: JSON.stringify({ value: webhookUrl }),
-        }
-      );
-
-      await fetch(
-        `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/update-webhook-status`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "Client-Token": clientToken },
-          body: JSON.stringify({ value: webhookUrl }),
-        }
+      const webhookEndpoints = [
+        "update-webhook-received",
+        "update-webhook-status",
+        "update-webhook-send",
+      ];
+      await Promise.all(
+        webhookEndpoints.map((ep) =>
+          fetch(
+            `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/${ep}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json", "Client-Token": clientToken },
+              body: JSON.stringify({ value: webhookUrl }),
+            }
+          )
+        )
       );
     } catch (err) {
       console.error("Failed to configure Z-API webhooks:", err);
