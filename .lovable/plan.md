@@ -1,36 +1,32 @@
 
 
-# Problema: Filtro por instância não está funcionando
+# Limpar contatos antigos e começar do zero
 
-## Diagnóstico
+## O que será feito
 
-O código em `ClienteChat.tsx` já passa `instance?.id ?? null` para `useWhatsAppContacts`, mas o hook executa a query **antes** da instância carregar. Na primeira renderização, `instance` ainda é `undefined`, então `filterInstanceId` é `null` e a query roda sem filtro de `instance_id` -- buscando **todos** os contatos da organização (incluindo os do número antigo).
+Remover da base de dados todos os contatos e mensagens que **não** pertencem à instância ativa (`2f5c0892-1076-45ea-b126-ec4b47518b97`). Isso inclui os 68 contatos órfãos (sem `instance_id`) que foram migrados anteriormente, além de quaisquer mensagens associadas a eles.
 
-As requests de rede confirmam: a URL não contém `instance_id=eq.xxx`, mostrando que o filtro nunca é aplicado.
+## Passos técnicos
 
-## Solução
+1. **Deletar mensagens órfãs** — remover todas as mensagens cujo `contact_id` aponta para contatos sem `instance_id` ou com `instance_id` diferente da instância ativa
+2. **Deletar contatos antigos** — remover contatos da organização que não pertencem à instância ativa (`instance_id != '2f5c0892-...'` ou `instance_id IS NULL`)
 
-Duas alterações simples:
+### SQL a executar (via insert tool, pois são operações de dados):
 
-### 1. Hook `useWhatsAppContacts` -- impedir execução sem filtro
+```sql
+-- 1. Deletar mensagens dos contatos antigos
+DELETE FROM whatsapp_messages
+WHERE contact_id IN (
+  SELECT id FROM whatsapp_contacts
+  WHERE organization_id = 'adb09618-e9f3-4dbd-a89c-29e3eb1bec9f'
+    AND (instance_id IS NULL OR instance_id != '2f5c0892-1076-45ea-b126-ec4b47518b97')
+);
 
-Adicionar `filterInstanceId` à condição `enabled` para que a query só execute quando o ID da instância estiver disponível:
-
-```typescript
-enabled: !!orgId && !!filterInstanceId,
+-- 2. Deletar contatos antigos
+DELETE FROM whatsapp_contacts
+WHERE organization_id = 'adb09618-e9f3-4dbd-a89c-29e3eb1bec9f'
+  AND (instance_id IS NULL OR instance_id != '2f5c0892-1076-45ea-b126-ec4b47518b97');
 ```
 
-Isso garante que a query nunca rode sem o filtro, evitando buscar contatos do número antigo.
-
-### 2. Garantir que `filterInstanceId` undefined vira null corretamente
-
-No `ClienteChat.tsx`, a linha já está correta (`instance?.id ?? null`), mas o hook precisa tratar o caso onde `filterInstanceId` é `null` como "não pronto" ao invés de "sem filtro".
-
-### Detalhes técnicos
-
-**Arquivo**: `src/hooks/useWhatsApp.ts`, função `useWhatsAppContacts`
-- Linha 80: mudar `enabled: !!orgId` para `enabled: !!orgId && !!filterInstanceId`
-- Isso resolve o problema na raiz: contatos só são buscados quando sabemos qual instância filtrar
-
-Resultado: apenas conversas do número **554491129613** (instância ativa) aparecerão na lista de conversas.
+**Resultado**: A tela de Conversas mostrará apenas os contatos e mensagens do número **554491129613** (instância atual). Nenhuma alteração de código é necessária — o filtro por `instance_id` já está implementado.
 
