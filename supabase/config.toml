@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.asaas-get-pix]
 verify_jwt = false
+
+[functions.asaas-cancel-subscription]
+verify_jwt = false

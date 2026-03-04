@@ -40,10 +40,12 @@ Deno.serve(async (req) => {
       "PAYMENT_CONFIRMED",
       "PAYMENT_RECEIVED",
       "PAYMENT_OVERDUE",
+      "PAYMENT_UPDATED",
       "PAYMENT_REFUNDED",
       "PAYMENT_REFUND_IN_PROGRESS",
       "PAYMENT_DELETED",
       "PAYMENT_CHARGEBACK_REQUESTED",
+      "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED",
       "PAYMENT_SPLIT_DIVERGENCE_BLOCK",
       "PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED",
     ];
@@ -458,6 +460,61 @@ Deno.serve(async (req) => {
         type: "info",
       });
       console.log(`Split divergence resolved for org ${org.id}`);
+      return jsonOk({ success: true, event });
+    }
+
+    // ── PAYMENT_UPDATED ──
+    if (event === "PAYMENT_UPDATED") {
+      const asaasStatus = payment.status;
+      // Map Asaas status to local status
+      const statusMap: Record<string, string> = {
+        PENDING: "pending",
+        RECEIVED: "paid",
+        CONFIRMED: "paid",
+        OVERDUE: "overdue",
+        REFUNDED: "refunded",
+        RECEIVED_IN_CASH: "paid",
+        REFUND_REQUESTED: "refund_requested",
+        REFUND_IN_PROGRESS: "refund_in_progress",
+        CHARGEBACK_REQUESTED: "chargeback",
+        CHARGEBACK_DISPUTE: "chargeback",
+        AWAITING_CHARGEBACK_REVERSAL: "chargeback",
+        DUNNING_REQUESTED: "overdue",
+        DUNNING_RECEIVED: "paid",
+        AWAITING_RISK_ANALYSIS: "pending",
+      };
+
+      const mappedStatus = statusMap[asaasStatus];
+      if (mappedStatus) {
+        await updatePaymentStatus(adminClient, externalRef, refParts, payment.id, mappedStatus);
+        console.log(`Payment ${payment.id} updated: ${asaasStatus} → ${mappedStatus}`);
+      } else {
+        console.log(`Payment ${payment.id} updated with unmapped status: ${asaasStatus}`);
+      }
+
+      return jsonOk({ success: true, event, asaas_status: asaasStatus, mapped_status: mappedStatus || "unmapped" });
+    }
+
+    // ── PAYMENT_CREDIT_CARD_CAPTURE_REFUSED ──
+    if (event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED") {
+      await notifyOrgMembers(adminClient, org.id, {
+        title: "❌ Cobrança recusada",
+        message: `A cobrança de R$ ${paymentValue.toFixed(2)} no cartão de crédito foi recusada. Atualize o método de pagamento.`,
+        type: "warning",
+      });
+
+      await updatePaymentStatus(adminClient, externalRef, refParts, payment.id, "refused");
+
+      await adminClient.from("credit_transactions").insert({
+        organization_id: org.id,
+        type: "info",
+        amount: 0,
+        balance_after: 0,
+        description: `Cartão recusado — R$ ${paymentValue.toFixed(2)}`,
+        metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, event },
+      });
+
+      console.log(`Credit card capture refused for org ${org.id}, payment ${payment.id}`);
       return jsonOk({ success: true, event });
     }
 
