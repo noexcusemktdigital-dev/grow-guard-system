@@ -83,9 +83,22 @@ export function useClienteAgentMutations() {
         .select()
         .single();
       if (error) throw error;
+
+      // When agent is paused/disabled, unlock all its contacts to human mode
+      if (updates.status && updates.status !== "active" && orgId) {
+        await supabase
+          .from("whatsapp_contacts" as any)
+          .update({ attending_mode: "human" } as any)
+          .eq("agent_id", id)
+          .eq("organization_id", orgId);
+      }
+
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ai-agents"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-ai-agents"] });
+      qc.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    },
   });
 
   const deleteAgent = useMutation({
