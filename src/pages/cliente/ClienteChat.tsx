@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { MessageCircle, Settings2, PanelRightOpen, PanelRightClose } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { playSound } from "@/lib/sounds";
 
 export default function ClienteChat() {
   const navigate = useNavigate();
@@ -175,24 +176,32 @@ export default function ClienteChat() {
     }
   };
 
-  // Realtime subscriptions
+  // Stable ref for selectedContactId to avoid recreating Realtime channel
+  const selectedContactIdRef = useRef<string | null>(null);
+  useEffect(() => { selectedContactIdRef.current = selectedContactId; }, [selectedContactId]);
+
+  // Realtime subscriptions (stable — no selectedContactId in deps)
   useEffect(() => {
     if (!instance?.organization_id) return;
     const channel = supabase
       .channel("whatsapp-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, (payload: any) => {
         const changedContactId = payload.new?.contact_id || payload.old?.contact_id;
-        if (changedContactId && changedContactId === selectedContactId) {
+        if (changedContactId && changedContactId === selectedContactIdRef.current) {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         }
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+        // Play notification sound for new inbound messages
+        if (payload.eventType === "INSERT" && payload.new?.direction === "inbound") {
+          try { playSound("notification"); } catch {}
+        }
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [instance?.organization_id, queryClient, selectedContactId]);
+  }, [instance?.organization_id, queryClient]);
 
   const formattedPhone = instance?.phone_number
     ? instance.phone_number.replace(/^(\d{2})(\d{2})(\d{5})(\d{4})$/, '+$1 ($2) $3-$4')
