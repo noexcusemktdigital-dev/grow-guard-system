@@ -28,7 +28,7 @@ export default function ClienteChat() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: instance, isLoading: loadingInstance } = useWhatsAppInstance();
-  const { data: contacts = [], isLoading: loadingContacts } = useWhatsAppContacts(instance?.id ?? null);
+  const { data: contacts = [], isLoading: loadingContacts } = useWhatsAppContacts(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const selectedContact = useMemo(

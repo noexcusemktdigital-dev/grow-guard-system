@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
       .eq("organization_id", organization_id)
       .single();
 
-    if (!contact || contact.attending_mode !== "ai") {
+    if (!contact || contact.attending_mode === "human") {
       return new Response(JSON.stringify({ skipped: true, reason: "not in ai mode" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
