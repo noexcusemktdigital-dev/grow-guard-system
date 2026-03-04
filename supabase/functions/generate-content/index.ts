@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { briefing, formatos, estrategia, persona, organization_id, objetivos, materiais } = await req.json();
+    const { briefing, formatos, estrategia, persona, organization_id, objetivos, materiais, salesPlanContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -58,6 +58,17 @@ Nível de maturidade: ${estrategia.nivel || "N/A"} (score: ${estrategia.score_pe
 \nUse estes dados para alinhar 100% dos conteúdos com a estratégia.`
       : "";
 
+    const salesPlanBlock = salesPlanContext
+      ? `\n\nDADOS DO PLANO DE VENDAS (personalize ao negócio real):
+- Segmento: ${salesPlanContext.segmento || "N/A"}
+- Modelo: ${salesPlanContext.modeloNegocio || "N/A"}  
+- Produtos/Serviços: ${salesPlanContext.produtos || "N/A"}
+- Diferenciais: ${salesPlanContext.diferenciais || "N/A"}
+- Dor do Cliente: ${salesPlanContext.dorCliente || "N/A"}
+- Ticket Médio: ${salesPlanContext.ticketMedio || "N/A"}
+\nMencione produtos reais, use diferenciais como argumentos e aborde as dores do cliente ideal.`
+      : "";
+
     const objetivosText = Array.isArray(objetivos) && objetivos.length > 0
       ? `Objetivos selecionados: ${objetivos.join(", ")}`
       : `Objetivo: ${briefing.objetivo}`;
@@ -91,7 +102,7 @@ REGRAS OBRIGATÓRIAS:
 - Inclua hashtags relevantes (5-10 por conteúdo)
 - IMPORTANTE: Para cada conteúdo, inclua um "embasamento" de 2-3 linhas explicando POR QUE esse formato e conteúdo foram escolhidos, com dados ou lógica de marketing
 - Sugira a rede social mais adequada (Instagram, LinkedIn, TikTok)
-${estrategiaContext}${materiaisContext}`;
+${estrategiaContext}${salesPlanBlock}${materiaisContext}`;
 
     const userPrompt = `Gere a campanha de conteúdo para o mês de ${briefing.mes} com as seguintes informações:
 

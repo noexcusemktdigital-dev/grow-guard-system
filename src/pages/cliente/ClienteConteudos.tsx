@@ -34,6 +34,8 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getPlanBySlug, recommendContentDistribution } from "@/constants/plans";
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
 import { AGENTS, LUNA_STEPS } from "@/components/cliente/briefingAgents";
+import { useSalesPlan } from "@/hooks/useSalesPlan";
+import { useOrgProfile } from "@/hooks/useOrgProfile";
 
 /* ── Types ── */
 interface GeneratedContent {
@@ -176,6 +178,7 @@ export default function ClienteConteudos() {
   const maxContents = plan?.maxContents ?? 8;
   const planName = plan?.name ?? "Starter";
   const { data: activeStrategy } = useActiveStrategy();
+  const { data: salesPlan } = useSalesPlan();
 
   // DB hooks
   const { data: dbCampaigns } = useClienteCampaignsDB();
@@ -284,12 +287,22 @@ export default function ClienteConteudos() {
         ? { nome: answers.persona_nome, descricao: answers.persona_descricao }
         : undefined;
 
+      const salesPlanContext = salesPlan?.answers ? {
+        segmento: salesPlan.answers.segmento,
+        produtos: salesPlan.answers.produtos_servicos,
+        diferenciais: salesPlan.answers.diferenciais,
+        dorCliente: salesPlan.answers.dor_principal,
+        modeloNegocio: salesPlan.answers.modelo_negocio,
+        ticketMedio: salesPlan.answers.ticket_medio,
+      } : undefined;
+
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
           briefing: { mes, objetivo: objetivos.join(", "), tema, promocoes: answers.promocoes || "", datas: answers.datas || "", destaques: answers.destaques || "", tom },
           formatos: { feed, carrossel, reels, story },
           estrategia,
           persona: personaData,
+          salesPlanContext,
         },
       });
       if (error) throw error;
