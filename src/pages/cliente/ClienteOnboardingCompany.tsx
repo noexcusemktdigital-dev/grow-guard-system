@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Building2, Phone, MapPin, Users, Globe, Briefcase, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
@@ -131,6 +131,13 @@ export default function ClienteOnboardingCompany() {
 
   const progress = ((step + 1) / STEPS.length) * 100;
   const StepIcon = STEPS[step].icon;
+
+  // Redirect if onboarding already completed
+  useEffect(() => {
+    if (!isLoading && org && (org as any).onboarding_completed === true) {
+      navigate("/cliente/inicio", { replace: true });
+    }
+  }, [org, isLoading, navigate]);
 
   if (isLoading) {
     return (

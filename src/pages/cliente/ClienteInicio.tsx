@@ -54,7 +54,7 @@ export default function ClienteInicio() {
 
   // Redirect to company onboarding if not completed
   useEffect(() => {
-    if (!orgLoading && orgData && !(orgData as any).onboarding_completed) {
+    if (!orgLoading && orgData && (orgData as any).onboarding_completed === false) {
       navigate("/cliente/onboarding", { replace: true });
     }
   }, [orgData, orgLoading, navigate]);
