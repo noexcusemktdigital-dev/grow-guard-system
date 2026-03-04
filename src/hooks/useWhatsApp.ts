@@ -174,6 +174,7 @@ export function useSendWhatsAppMessage() {
       message: string;
       type?: string;
       mediaUrl?: string;
+      quotedMessageId?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("whatsapp-send", {
         body: params,

@@ -12,7 +12,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -25,7 +24,6 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // User client for auth
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -40,10 +38,8 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    // Admin client for DB operations
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get user's org
     const { data: orgId } = await adminClient.rpc("get_user_org_id", { _user_id: userId });
     if (!orgId) {
       return new Response(JSON.stringify({ error: "User has no organization" }), {
@@ -52,16 +48,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { contactPhone, contactId, message, type = "text" } = await req.json();
+    const { contactPhone, contactId, message, type = "text", mediaUrl, quotedMessageId } = await req.json();
 
-    if (!message || (!contactPhone && !contactId)) {
-      return new Response(JSON.stringify({ error: "message and contactPhone or contactId required" }), {
+    if ((!message && !mediaUrl) || (!contactPhone && !contactId)) {
+      return new Response(JSON.stringify({ error: "message or mediaUrl, and contactPhone or contactId required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get Z-API instance — try contact's instance first, fallback to first connected
+    // Get Z-API instance
     let instance: any = null;
 
     if (contactId) {
@@ -74,9 +70,19 @@ Deno.serve(async (req) => {
         const { data: inst } = await adminClient
           .from("whatsapp_instances")
           .select("*")
-          .eq("id", contact.instance_id)
+          .eq("id", inst?.id || contact.instance_id)
           .maybeSingle();
-        if (inst && inst.status === "connected") instance = inst;
+        // Fix: query by the correct instance_id from contact
+        if (!inst) {
+          const { data: inst2 } = await adminClient
+            .from("whatsapp_instances")
+            .select("*")
+            .eq("id", contact.instance_id)
+            .maybeSingle();
+          if (inst2 && inst2.status === "connected") instance = inst2;
+        } else if (inst && inst.status === "connected") {
+          instance = inst;
+        }
       }
     }
 
@@ -91,15 +97,8 @@ Deno.serve(async (req) => {
       instance = instances && instances.length > 0 ? instances[0] : null;
     }
 
-    if (!instance) {
-      return new Response(JSON.stringify({ error: "No WhatsApp instance configured" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (instance.status !== "connected") {
-      return new Response(JSON.stringify({ error: "WhatsApp instance not connected" }), {
+    if (!instance || instance.status !== "connected") {
+      return new Response(JSON.stringify({ error: "No connected WhatsApp instance" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -139,45 +138,78 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Format phone for Z-API (remove +, spaces, dashes)
     const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, "");
+    const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
+    const zapiHeaders = {
+      "Content-Type": "application/json",
+      "Client-Token": instance.client_token,
+    };
 
-    // Send via Z-API
-    const zapiUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/send-text`;
+    let zapiUrl: string;
+    let zapiBody: Record<string, unknown>;
+    let resolvedType = type;
+
+    if (mediaUrl && (type === "audio" || mediaUrl.match(/\.(webm|ogg|mp3|m4a|mp4)(\?|$)/i))) {
+      // Send audio via Z-API
+      zapiUrl = `${zapiBase}/send-audio`;
+      zapiBody = { phone: cleanPhone, audio: mediaUrl };
+      resolvedType = "audio";
+    } else if (mediaUrl) {
+      // Send image/document via Z-API
+      zapiUrl = `${zapiBase}/send-image`;
+      zapiBody = { phone: cleanPhone, image: mediaUrl, caption: message || "" };
+      resolvedType = type || "image";
+    } else {
+      // Send text
+      zapiUrl = `${zapiBase}/send-text`;
+      zapiBody = { phone: cleanPhone, message };
+    }
+
+    // Add quoted message if present
+    if (quotedMessageId) {
+      zapiBody.messageId = quotedMessageId;
+    }
+
     const zapiRes = await fetch(zapiUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Client-Token": instance.client_token,
-      },
-      body: JSON.stringify({ phone: cleanPhone, message }),
+      headers: zapiHeaders,
+      body: JSON.stringify(zapiBody),
     });
 
     const zapiData = await zapiRes.json();
-
     const messageStatus = zapiRes.ok ? "sent" : "failed";
 
+    // Build metadata
+    const msgMetadata: Record<string, unknown> = { ...(zapiData || {}) };
+    if (quotedMessageId) {
+      msgMetadata.quotedMessageId = quotedMessageId;
+    }
+
     // Save message
-    const { data: savedMsg, error: msgErr } = await adminClient
+    const { data: savedMsg } = await adminClient
       .from("whatsapp_messages")
       .insert({
         organization_id: orgId,
         contact_id: resolvedContactId,
         message_id_zapi: zapiData?.messageId || null,
         direction: "outbound",
-        type,
-        content: message,
+        type: resolvedType,
+        content: message || null,
+        media_url: mediaUrl || null,
         status: messageStatus,
-        metadata: zapiData || {},
+        metadata: msgMetadata,
       })
       .select()
       .single();
 
-    // Update contact last_message_at
+    // Update contact
     if (resolvedContactId) {
+      const updateData: Record<string, unknown> = { last_message_at: new Date().toISOString() };
+      const preview = message ? message.substring(0, 100) : (resolvedType === "audio" ? "🎤 Áudio" : "📎 Mídia");
+      updateData.last_message_preview = preview;
       await adminClient
         .from("whatsapp_contacts")
-        .update({ last_message_at: new Date().toISOString() })
+        .update(updateData)
         .eq("id", resolvedContactId);
     }
 

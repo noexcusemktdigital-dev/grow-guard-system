@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import {
   Send, Loader2, MessageCircle, Bot, User, UserPlus, ExternalLink,
   ArrowRight, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Paperclip, Smile,
-  ArrowDown, Search, X,
+  ArrowDown, Search, X, Mic, Square, Trash2,
 } from "lucide-react";
 import { ChatQuickReplies } from "./ChatQuickReplies";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import {
   useSendWhatsAppMessage,
@@ -42,11 +43,34 @@ interface Props {
 
 const DISPLAY_STEP = 100;
 
-const COMMON_EMOJIS = [
-  "😀","😂","😍","🥰","😎","🤔","😅","🙏","👍","👋",
-  "❤️","🔥","✅","⭐","💪","🎉","📌","💡","🚀","✨",
-  "😊","🤝","👏","💯","🙌","😢","😭","🤣","😘","😁",
-  "👀","💬","📱","📞","⏰","📅","💰","🏠","🎯","⚡",
+// Emoji categories
+const EMOJI_CATEGORIES: { label: string; icon: string; emojis: string[] }[] = [
+  {
+    label: "Carinhas",
+    icon: "😀",
+    emojis: [
+      "😀","😂","😅","🤣","😊","😍","🥰","😘","😁","😎",
+      "🤔","🤗","🤩","😏","😢","😭","😤","🤯","🥳","😴",
+      "🙄","😬","🤐","😇","🫡","🥹","😮‍💨","🫠",
+    ],
+  },
+  {
+    label: "Mãos",
+    icon: "👍",
+    emojis: [
+      "👍","👎","👏","🙌","🤝","✌️","🤞","💪","👋","🙏",
+      "👀","👆","👇","👉","👈","✋","🤙","🫶","🫰","✊",
+    ],
+  },
+  {
+    label: "Símbolos",
+    icon: "❤️",
+    emojis: [
+      "❤️","🔥","✅","⭐","💯","✨","⚡","🚀","🎯","💡",
+      "📌","💬","📱","📞","⏰","📅","💰","🏠","🎉","🎊",
+      "⚠️","❌","🔗","📎","🏷️","📊","🔔","💎","🌟","♻️",
+    ],
+  },
 ];
 
 const DateSeparator = React.forwardRef<HTMLDivElement, { date: Date }>(({ date }, ref) => {
@@ -76,6 +100,19 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Audio recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [sendingAudio, setSendingAudio] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Reply/quote state
+  const [replyingTo, setReplyingTo] = useState<WhatsAppMessage | null>(null);
+
   const queryClient = useQueryClient();
   const sendMutation = useSendWhatsAppMessage();
   const updateMode = useUpdateAttendingMode();
@@ -109,13 +146,15 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     }));
   }, [funnelsData]);
 
-  // Reset display count when contact changes
+  // Reset state when contact changes
   useEffect(() => {
     setDisplayCount(DISPLAY_STEP);
     lastSeenIdRef.current = null;
     isNearBottomRef.current = true;
     setSearchOpen(false);
     setSearchQuery("");
+    setReplyingTo(null);
+    stopRecording(true);
   }, [contact?.id]);
 
   // Auto-load message history on first open of a contact (backfill)
@@ -217,13 +256,114 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   }, []);
 
+  // === Audio Recording ===
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4" });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.start(100);
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(t => t + 1);
+      }, 1000);
+    } catch (err: any) {
+      toast({ title: "Microfone não disponível", description: "Permita o acesso ao microfone.", variant: "destructive" });
+    }
+  };
+
+  const stopRecording = (cancel = false) => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") {
+      setIsRecording(false);
+      return;
+    }
+
+    if (cancel) {
+      recorder.stop();
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
+      setIsRecording(false);
+      setRecordingTime(0);
+      return;
+    }
+
+    // Send the audio
+    recorder.onstop = async () => {
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+
+      const mimeType = recorder.mimeType || "audio/webm";
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = null;
+
+      if (blob.size < 500 || !contact) {
+        setIsRecording(false);
+        setRecordingTime(0);
+        return;
+      }
+
+      setSendingAudio(true);
+      try {
+        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+        const path = `${contact.organization_id}/${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("chat-media").upload(path, blob, { contentType: mimeType });
+        if (uploadErr) throw uploadErr;
+
+        const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(path);
+
+        sendMutation.mutate(
+          { contactId: contact.id, contactPhone: contact.phone, message: "", mediaUrl: urlData.publicUrl, type: "audio" },
+          {
+            onSuccess: () => { isNearBottomRef.current = true; },
+            onError: (err: any) => toast({ title: "Erro ao enviar áudio", description: err.message, variant: "destructive" }),
+          }
+        );
+      } catch (err: any) {
+        toast({ title: "Erro no upload do áudio", description: err.message, variant: "destructive" });
+      } finally {
+        setSendingAudio(false);
+      }
+
+      setIsRecording(false);
+      setRecordingTime(0);
+    };
+
+    recorder.stop();
+  };
+
+  const formatRecordingTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  // === Send with quote support ===
   const handleSend = () => {
     if (!text.trim() || !contact) return;
+    const quotedMessageId = replyingTo?.message_id_zapi || undefined;
     sendMutation.mutate(
-      { contactId: contact.id, contactPhone: contact.phone, message: text.trim() },
+      { contactId: contact.id, contactPhone: contact.phone, message: text.trim(), quotedMessageId },
       {
         onSuccess: () => {
           setText("");
+          setReplyingTo(null);
           isNearBottomRef.current = true;
           if (inputRef.current) inputRef.current.style.height = "auto";
         },
@@ -339,6 +479,11 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     setText(prev => prev + emoji);
     inputRef.current?.focus();
   };
+
+  const handleReply = useCallback((message: WhatsAppMessage) => {
+    setReplyingTo(message);
+    inputRef.current?.focus();
+  }, []);
 
   const linkedLead = crmLeadId ? matchedLead : null;
   const isHandoffAlert = attendingMode === "human" && (contact?.unread_count ?? 0) > 0;
@@ -616,7 +761,12 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                 const isHighlighted = searchQuery && item.message?.content?.toLowerCase().includes(searchQuery.toLowerCase());
                 return (
                   <div key={item.message!.id} className={isHighlighted ? "ring-2 ring-primary/50 rounded-xl" : ""}>
-                    <ChatMessageBubble message={item.message!} isGrouped={item.isGrouped} />
+                    <ChatMessageBubble
+                      message={item.message!}
+                      isGrouped={item.isGrouped}
+                      onReply={handleReply}
+                      allMessages={messages}
+                    />
                   </div>
                 );
               })}
@@ -653,8 +803,27 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         )}
       </div>
 
+      {/* Reply preview */}
+      {replyingTo && (
+        <div className="px-3 pt-2 pb-0 border-t border-border bg-card/95 shrink-0">
+          <div className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 border-l-4 border-primary">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-primary">
+                {replyingTo.direction === "outbound" ? "Você" : (contact?.name || contact?.phone || "Contato")}
+              </p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {replyingTo.type === "audio" ? "🎤 Áudio" : replyingTo.type === "image" ? "📷 Imagem" : (replyingTo.content || "Mídia")}
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0" onClick={() => setReplyingTo(null)}>
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* WhatsApp-style Input */}
-      <div className="px-3 py-2.5 border-t border-border bg-card/95 shrink-0">
+      <div className={`px-3 py-2.5 border-t border-border bg-card/95 shrink-0 ${replyingTo ? "border-t-0 pt-1.5" : ""}`}>
         <input
           ref={fileInputRef}
           type="file"
@@ -662,75 +831,137 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           className="hidden"
           onChange={handleFileUpload}
         />
-        <form
-          onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-          className="flex items-end gap-2"
-        >
-          <ChatQuickReplies onSelect={(t) => setText(t)} />
 
-          {/* Emoji Picker */}
-          <Popover>
-            <PopoverTrigger asChild>
+        {/* Recording UI */}
+        {isRecording ? (
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 shrink-0 rounded-full text-destructive hover:bg-destructive/10"
+              onClick={() => stopRecording(true)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+
+            <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-2xl px-4 py-2">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-sm font-mono text-foreground">{formatRecordingTime(recordingTime)}</span>
+              <span className="text-xs text-muted-foreground">Gravando...</span>
+            </div>
+
+            <Button
+              type="button"
+              size="icon"
+              className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => stopRecording(false)}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+            className="flex items-end gap-2"
+          >
+            <ChatQuickReplies onSelect={(t) => setText(t)} />
+
+            {/* Emoji Picker with categories */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
+                >
+                  <Smile className="w-4 h-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start" side="top">
+                <Tabs defaultValue="Carinhas" className="w-full">
+                  <TabsList className="w-full h-8 rounded-none border-b border-border bg-muted/30">
+                    {EMOJI_CATEGORIES.map((cat) => (
+                      <TabsTrigger key={cat.label} value={cat.label} className="text-sm px-3 py-1 data-[state=active]:bg-background">
+                        {cat.icon}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  {EMOJI_CATEGORIES.map((cat) => (
+                    <TabsContent key={cat.label} value={cat.label} className="p-2 mt-0">
+                      <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">
+                        {cat.emojis.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            className="h-8 w-8 flex items-center justify-center text-lg hover:bg-muted rounded transition-colors"
+                            onClick={() => handleInsertEmoji(emoji)}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </PopoverContent>
+            </Popover>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+            </Button>
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                placeholder="Digite uma mensagem..."
+                className="w-full resize-none rounded-2xl bg-muted/50 border-0 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground min-h-[36px] max-h-[120px]"
+                rows={1}
+                value={text}
+                onChange={handleTextChange}
+                onKeyDown={handleKeyDown}
+                disabled={sendMutation.isPending}
+              />
+            </div>
+
+            {/* Send or Mic button */}
+            {text.trim() ? (
+              <Button
+                type="submit"
+                size="icon"
+                className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={sendMutation.isPending}
+              >
+                {sendMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            ) : (
               <Button
                 type="button"
-                variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
+                className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={startRecording}
+                disabled={sendingAudio}
               >
-                <Smile className="w-4 h-4" />
+                {sendingAudio ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Mic className="w-4 h-4" />
+                )}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[280px] p-2" align="start" side="top">
-              <div className="grid grid-cols-8 gap-1">
-                {COMMON_EMOJIS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className="h-8 w-8 flex items-center justify-center text-lg hover:bg-muted rounded transition-colors"
-                    onClick={() => handleInsertEmoji(emoji)}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-          </Button>
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              placeholder="Digite uma mensagem..."
-              className="w-full resize-none rounded-2xl bg-muted/50 border-0 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground min-h-[36px] max-h-[120px]"
-              rows={1}
-              value={text}
-              onChange={handleTextChange}
-              onKeyDown={handleKeyDown}
-              disabled={sendMutation.isPending}
-            />
-          </div>
-          <Button
-            type="submit"
-            size="icon"
-            className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white"
-            disabled={!text.trim() || sendMutation.isPending}
-          >
-            {sendMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
             )}
-          </Button>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );
