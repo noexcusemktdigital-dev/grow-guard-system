@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { Check, CheckCheck, Bot, User, Image as ImageIcon, FileText, Mic, Video } from "lucide-react";
+import { Check, CheckCheck, Bot, User, Image as ImageIcon, FileText, Mic, Video, Reply } from "lucide-react";
 import type { WhatsAppMessage } from "@/hooks/useWhatsApp";
 
 interface Props {
   message: WhatsAppMessage;
   isGrouped?: boolean;
+  onReply?: (message: WhatsAppMessage) => void;
+  allMessages?: WhatsAppMessage[];
 }
 
 const statusIcon: Record<string, React.ReactNode> = {
@@ -18,7 +20,7 @@ function isImageUrl(url: string, type?: string): boolean {
   return /\.(jpe?g|png|gif|webp|bmp|svg)(\?|$)/i.test(url);
 }
 
-export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(function ChatMessageBubble({ message, isGrouped = false }, ref) {
+export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(function ChatMessageBubble({ message, isGrouped = false, onReply, allMessages = [] }, ref) {
   const [imgError, setImgError] = useState(false);
   const isOutbound = message.direction === "outbound";
   const time = new Date(message.created_at).toLocaleTimeString("pt-BR", {
@@ -28,6 +30,12 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
 
   const metadata = (message.metadata || {}) as Record<string, unknown>;
   const isAiGenerated = !!metadata.ai_generated;
+
+  // Quote support
+  const quotedMessageId = (metadata.quotedMessageId || metadata.quotedMsg) as string | undefined;
+  const quotedMessage = quotedMessageId
+    ? allMessages.find(m => m.message_id_zapi === quotedMessageId || m.id === quotedMessageId)
+    : null;
 
   // Fallback: try to get audio URL from metadata for old messages saved without media_url
   const resolvedMediaUrl = message.media_url 
@@ -81,7 +89,18 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
   };
 
   return (
-    <div ref={ref} className={`flex ${isOutbound ? "justify-end" : "justify-start"} ${isGrouped ? "mb-[2px]" : "mb-2"}`}>
+    <div ref={ref} className={`group flex ${isOutbound ? "justify-end" : "justify-start"} ${isGrouped ? "mb-[2px]" : "mb-2"}`}>
+      {/* Reply button — appears on hover, opposite side of bubble */}
+      {!isOutbound && onReply && (
+        <button
+          className="self-center opacity-0 group-hover:opacity-100 transition-opacity mr-1 p-1 rounded-full hover:bg-muted/80"
+          onClick={() => onReply(message)}
+          title="Responder"
+        >
+          <Reply className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+      )}
+
       <div className={`relative max-w-[75%] lg:max-w-[520px] ${isGrouped ? "" : isOutbound ? "chat-bubble-out" : "chat-bubble-in"}`}>
         <div
           className={`rounded-lg px-3 py-1.5 text-[13px] leading-relaxed shadow-sm ${
@@ -90,6 +109,20 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
               : "wa-bubble-in"
           } ${!isGrouped && isOutbound ? "rounded-tr-none" : ""} ${!isGrouped && !isOutbound ? "rounded-tl-none" : ""}`}
         >
+          {/* Quoted message block */}
+          {quotedMessage && (
+            <div className={`rounded-md px-2.5 py-1.5 mb-1.5 border-l-3 ${
+              isOutbound ? "bg-emerald-800/10 border-emerald-600/50" : "bg-muted/50 border-primary/50"
+            }`}>
+              <p className={`text-[10px] font-semibold ${isOutbound ? "text-emerald-700/70" : "text-primary/70"}`}>
+                {quotedMessage.direction === "outbound" ? "Você" : "Contato"}
+              </p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {quotedMessage.type === "audio" ? "🎤 Áudio" : quotedMessage.type === "image" ? "📷 Imagem" : (quotedMessage.content?.substring(0, 80) || "Mídia")}
+              </p>
+            </div>
+          )}
+
           {renderMedia()}
 
           {message.content && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
@@ -113,6 +146,17 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
           </div>
         </div>
       </div>
+
+      {/* Reply button for outbound messages */}
+      {isOutbound && onReply && (
+        <button
+          className="self-center opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-1 rounded-full hover:bg-muted/80"
+          onClick={() => onReply(message)}
+          title="Responder"
+        >
+          <Reply className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+      )}
     </div>
   );
 });
