@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
     const zapiHeaders = { "Client-Token": instance.client_token };
 
-    // 1. Fetch all chats from Z-API (paginated)
+    // Fetch all chats from Z-API (paginated)
     let allChats: any[] = [];
     let page = 1;
     const pageSize = 50;
@@ -102,18 +102,15 @@ Deno.serve(async (req) => {
       const chats = Array.isArray(chatsData) ? chatsData : [];
 
       if (chats.length === 0) break;
-
       allChats = allChats.concat(chats);
       if (chats.length < pageSize) break;
       page++;
-
-      // Safety limit
       if (page > 20) break;
     }
 
     console.log(`[sync] Fetched ${allChats.length} chats from Z-API`);
 
-    // 2. Filter out groups, broadcasts, status
+    // Filter out groups, broadcasts, status
     const individualChats = allChats.filter((chat: any) => {
       if (chat.isGroup) return false;
       const phone = chat.phone || "";
@@ -127,143 +124,62 @@ Deno.serve(async (req) => {
 
     console.log(`[sync] ${individualChats.length} individual chats after filtering`);
 
-    let contactsSynced = 0;
-    let messagesSynced = 0;
+    let contactsCreated = 0;
+    let contactsUpdated = 0;
 
-    // 3. Process each chat
+    // Batch upsert contacts from chat data
     for (const chat of individualChats) {
       const phone = chat.phone;
       const name = chat.name || null;
+      const photoUrl = chat.imgUrl || null;
+      const unreadCount = parseInt(chat.unread) || 0;
+      const lastMsgTime = chat.lastMessageTime
+        ? new Date(parseInt(chat.lastMessageTime) * 1000).toISOString()
+        : null;
 
-      // Upsert contact
-      const { data: existingContact } = await adminClient
+      const { data: existing } = await adminClient
         .from("whatsapp_contacts")
         .select("id")
         .eq("organization_id", orgId)
         .eq("phone", phone)
         .maybeSingle();
 
-      let contactId: string;
+      if (existing) {
+        // Update with latest info from Z-API
+        const updates: any = { instance_id: instance.id };
+        if (name) updates.name = name;
+        if (photoUrl) updates.photo_url = photoUrl;
+        if (lastMsgTime) updates.last_message_at = lastMsgTime;
 
-      if (existingContact) {
-        contactId = existingContact.id;
-        // Update name if we have a better one
-        if (name) {
-          await adminClient
-            .from("whatsapp_contacts")
-            .update({ name, instance_id: instance.id })
-            .eq("id", contactId);
-        }
+        await adminClient
+          .from("whatsapp_contacts")
+          .update(updates)
+          .eq("id", existing.id);
+        contactsUpdated++;
       } else {
-        const lastMsgTime = chat.lastMessageTime
-          ? new Date(parseInt(chat.lastMessageTime) * 1000).toISOString()
-          : new Date().toISOString();
-
-        const { data: newContact } = await adminClient
+        await adminClient
           .from("whatsapp_contacts")
           .insert({
             organization_id: orgId,
             phone,
             name,
-            last_message_at: lastMsgTime,
-            unread_count: parseInt(chat.unread) || 0,
+            last_message_at: lastMsgTime || new Date().toISOString(),
+            unread_count: unreadCount,
             instance_id: instance.id,
             attending_mode: "ai",
-            photo_url: chat.imgUrl || null,
-          })
-          .select("id")
-          .single();
-
-        if (!newContact) continue;
-        contactId = newContact.id;
-        contactsSynced++;
-      }
-
-      // 4. Fetch last 20 messages for this chat
-      try {
-        const msgsRes = await fetch(`${zapiBase}/chat-messages/${phone}?amount=20`, {
-          headers: zapiHeaders,
-        });
-
-        if (!msgsRes.ok) {
-          console.error(`[sync] Failed to fetch messages for ${phone}:`, await msgsRes.text());
-          continue;
-        }
-
-        const msgsData = await msgsRes.json();
-        const messages = Array.isArray(msgsData) ? msgsData : [];
-
-        for (const msg of messages) {
-          const messageIdZapi = msg.messageId;
-          if (!messageIdZapi) continue;
-
-          // Determine content and type
-          const isFromMe = msg.fromMe === true;
-          const messageText = msg.text?.message || msg.text || msg.caption || null;
-          const messageType = msg.image ? "image"
-            : (msg.audio || msg.ptt) ? "audio"
-            : msg.video ? "video"
-            : msg.document ? "document"
-            : msg.sticker ? "sticker"
-            : "text";
-          const mediaUrl = msg.image?.imageUrl
-            || msg.audio?.audioUrl
-            || msg.ptt?.audioUrl || msg.ptt?.pttUrl
-            || msg.video?.videoUrl
-            || msg.document?.documentUrl
-            || null;
-
-          const direction = isFromMe ? "outbound" : "inbound";
-          const msgTimestamp = msg.momment
-            ? new Date(msg.momment * 1000).toISOString()
-            : new Date().toISOString();
-
-          // Insert with ON CONFLICT DO NOTHING via upsert trick
-          const { error } = await adminClient.from("whatsapp_messages").insert({
-            organization_id: orgId,
-            contact_id: contactId,
-            message_id_zapi: messageIdZapi,
-            direction,
-            type: messageType,
-            content: messageText,
-            media_url: mediaUrl,
-            status: isFromMe ? "sent" : "received",
-            created_at: msgTimestamp,
-            metadata: msg,
+            photo_url: photoUrl,
           });
-
-          if (!error) {
-            messagesSynced++;
-          }
-          // Duplicate key errors are expected - skip silently
-        }
-
-        // Update last_message_at from actual messages
-        if (messages.length > 0) {
-          const latestMsg = messages[0]; // Z-API returns newest first
-          if (latestMsg.momment) {
-            const latestTime = new Date(latestMsg.momment * 1000).toISOString();
-            await adminClient
-              .from("whatsapp_contacts")
-              .update({ last_message_at: latestTime })
-              .eq("id", contactId);
-          }
-        }
-      } catch (err) {
-        console.error(`[sync] Error fetching messages for ${phone}:`, err);
+        contactsCreated++;
       }
-
-      // Small delay to avoid rate limiting
-      await new Promise((r) => setTimeout(r, 200));
     }
 
-    console.log(`[sync] Done: ${contactsSynced} new contacts, ${messagesSynced} new messages`);
+    console.log(`[sync] Done: ${contactsCreated} created, ${contactsUpdated} updated`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        contacts_synced: contactsSynced,
-        messages_synced: messagesSynced,
+        contacts_created: contactsCreated,
+        contacts_updated: contactsUpdated,
         total_chats_found: individualChats.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

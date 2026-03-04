@@ -137,7 +137,7 @@ export default function ClienteChat() {
       if (error) throw error;
       toast({
         title: "Sincronização concluída!",
-        description: `${data.contacts_synced} novos contatos, ${data.messages_synced} novas mensagens importadas de ${data.total_chats_found} conversas.`,
+        description: `${data.contacts_created} novos contatos, ${data.contacts_updated} atualizados de ${data.total_chats_found} conversas encontradas.`,
       });
       queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
     } catch (err: any) {
