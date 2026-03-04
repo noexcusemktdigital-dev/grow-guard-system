@@ -119,13 +119,20 @@ export async function fetchPixQrCode(
 
 /**
  * Build split array for Asaas payment.
- * Looks up the parent org's walletId and returns a split config
- * that sends the franqueadora's share to their wallet.
+ * Calculates a weighted split percentage based on base value vs surplus.
+ *
+ * Rules:
+ *   Base value  → 80% franqueadora, 20% franqueado
+ *   Surplus     → 20% franqueadora, 80% franqueado
+ *
+ * The Asaas split sends the franqueadora's weighted % to her wallet;
+ * the remainder stays with the franchisee (charge emitter).
  */
 export async function buildSplitConfig(
   adminClient: any,
   orgId: string,
-  franchiseeSharePercent: number = 20
+  baseValue: number,
+  surplusValue: number = 0
 ): Promise<{ walletId: string; percentualValue: number }[] | null> {
   // Get org and parent
   const { data: org } = await adminClient
@@ -151,13 +158,21 @@ export async function buildSplitConfig(
     return null;
   }
 
-  // Franqueadora receives (100 - franchiseeSharePercent)% 
-  const franqueadoraPercent = 100 - franchiseeSharePercent;
+  const totalCharge = baseValue + surplusValue;
+  if (totalCharge <= 0) return null;
+
+  // Weighted calculation
+  const franqueadoraFromBase = baseValue * 0.80;
+  const franqueadoraFromSurplus = surplusValue * 0.20;
+  const totalFranqueadora = franqueadoraFromBase + franqueadoraFromSurplus;
+  const splitPercent = Math.round((totalFranqueadora / totalCharge) * 10000) / 100; // 2 decimal places
+
+  console.log(`Split calc: base=${baseValue}, surplus=${surplusValue}, franqueadora%=${splitPercent}`);
 
   return [
     {
       walletId: parentOrg.asaas_wallet_id,
-      percentualValue: franqueadoraPercent,
+      percentualValue: splitPercent,
     },
   ];
 }
