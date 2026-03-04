@@ -151,14 +151,14 @@ export default function ClienteChat() {
     return () => { supabase.removeChannel(channel); };
   }, [instance?.organization_id, queryClient, selectedContactId]);
 
+  const formattedPhone = instance?.phone_number
+    ? instance.phone_number.replace(/^(\d{2})(\d{2})(\d{5})(\d{4})$/, '+$1 ($2) $3-$4')
+    : null;
+
   if (loadingInstance) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Conversas" subtitle="Central de atendimento WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} actions={instance?.phone_number ? (
-          <Badge variant="outline" className="gap-1.5 text-xs">
-            📱 {instance.phone_number.replace(/^(\d{2})(\d{2})(\d{5})(\d{4})$/, '+$1 ($2) $3-$4')}
-          </Badge>
-        ) : undefined} />
+        <PageHeader title="Conversas" subtitle="Central de atendimento WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
         <Skeleton className="h-[500px] rounded-xl" />
       </div>
     );
@@ -206,6 +206,7 @@ export default function ClienteChat() {
             leadStages={leadStages}
             isConnected={isConnected}
             lastMessages={lastMessages}
+            connectedPhone={formattedPhone ?? undefined}
           />
         )}
       </div>

@@ -219,7 +219,32 @@ Deno.serve(async (req) => {
     }
 
     if (!agent) {
-      return new Response(JSON.stringify({ skipped: true, reason: "no active agent" }), {
+      // No active agent — auto-unlock contact to human mode
+      if (contact.attending_mode !== "human") {
+        await adminClient
+          .from("whatsapp_contacts")
+          .update({ attending_mode: "human" })
+          .eq("id", contact_id);
+
+        // Notify org members
+        const { data: members } = await adminClient
+          .from("organization_memberships")
+          .select("user_id")
+          .eq("organization_id", organization_id);
+
+        if (members && members.length > 0) {
+          const notifications = members.map((m: any) => ({
+            user_id: m.user_id,
+            organization_id,
+            title: "Atendimento transferido para humano",
+            message: `Nenhum agente IA ativo. Contato ${contact.phone || contact_id} aguardando resposta humana.`,
+            type: "Chat",
+            action_url: "/cliente/chat",
+          }));
+          await adminClient.from("client_notifications").insert(notifications);
+        }
+      }
+      return new Response(JSON.stringify({ skipped: true, reason: "no active agent, contact moved to human" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

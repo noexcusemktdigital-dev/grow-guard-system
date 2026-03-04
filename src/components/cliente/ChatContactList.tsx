@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChatContactItem } from "@/components/cliente/ChatContactItem";
 import type { WhatsAppContact } from "@/hooks/useWhatsApp";
-import { isToday, isYesterday } from "date-fns";
 
 interface Props {
   contacts: WhatsAppContact[];
@@ -17,19 +16,12 @@ interface Props {
   leadStages?: Map<string, string>;
   isConnected?: boolean;
   lastMessages?: Map<string, string>;
+  connectedPhone?: string;
 }
 
 type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups" | "website";
 
-function getDateGroup(dateStr: string | null): string {
-  if (!dateStr) return "older";
-  const d = new Date(dateStr);
-  if (isToday(d)) return "today";
-  if (isYesterday(d)) return "yesterday";
-  return "older";
-}
-
-export function ChatContactList({ contacts, selectedId, onSelect, agents = [], leadStages, isConnected, lastMessages }: Props) {
+export function ChatContactList({ contacts, selectedId, onSelect, agents = [], leadStages, isConnected, lastMessages, connectedPhone }: Props) {
   const [search, setSearch] = useState("");
   const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
   const [agentFilter, setAgentFilter] = useState("");
@@ -39,7 +31,7 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
     const q = search.toLowerCase();
     const matchSearch = !q || (c.name?.toLowerCase().includes(q) || c.phone.includes(q));
     const contactAny = c as any;
-    const mode = contactAny.attending_mode || null;
+    const mode = contactAny.attending_mode || "ai";
     const contactType = contactAny.contact_type || "individual";
     let matchMode = true;
     if (modeFilter === "ai") matchMode = mode === "ai";
@@ -53,39 +45,22 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
     return matchSearch && matchMode && matchAgent && matchStage;
   });
 
-  // Split into unread and read
-  const { unread, read } = useMemo(() => {
-    const unread: WhatsAppContact[] = [];
-    const read: WhatsAppContact[] = [];
+  // Separate into human and AI sections
+  const { humanContacts, aiContacts } = useMemo(() => {
+    const human: WhatsAppContact[] = [];
+    const ai: WhatsAppContact[] = [];
     const sorted = [...filtered].sort((a, b) => {
       const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
       const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
       return db - da;
     });
     sorted.forEach((c) => {
-      if (c.unread_count > 0) unread.push(c);
-      else read.push(c);
+      const mode = (c as any).attending_mode || "ai";
+      if (mode === "human") human.push(c);
+      else ai.push(c);
     });
-    return { unread, read };
+    return { humanContacts: human, aiContacts: ai };
   }, [filtered]);
-
-  // Group read contacts by date
-  const readGroups = useMemo(() => {
-    const groups: { key: string; label: string; contacts: WhatsAppContact[] }[] = [];
-    const map = new Map<string, WhatsAppContact[]>();
-    read.forEach((c) => {
-      const g = getDateGroup(c.last_message_at);
-      if (!map.has(g)) map.set(g, []);
-      map.get(g)!.push(c);
-    });
-    const order = ["today", "yesterday", "older"];
-    const labels: Record<string, string> = { today: "Hoje", yesterday: "Ontem", older: "Anteriores" };
-    order.forEach((k) => {
-      const items = map.get(k);
-      if (items && items.length > 0) groups.push({ key: k, label: labels[k], contacts: items });
-    });
-    return groups;
-  }, [read]);
 
   const uniqueStages = leadStages ? Array.from(new Set(leadStages.values())).filter(Boolean).sort() : [];
 
@@ -99,6 +74,7 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
   ];
 
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
+  const humanUnread = humanContacts.reduce((s, c) => s + c.unread_count, 0);
 
   return (
     <div className="flex flex-col h-full border-r border-border bg-card/50">
@@ -119,6 +95,15 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
             </div>
           </div>
         </div>
+
+        {/* Connected phone */}
+        {connectedPhone && (
+          <div className="mb-2">
+            <Badge variant="outline" className="text-[10px] gap-1 font-normal">
+              📱 {connectedPhone}
+            </Badge>
+          </div>
+        )}
 
         {/* Mode pills */}
         <div className="flex gap-1 mb-2 flex-wrap">
@@ -181,21 +166,25 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
       </div>
 
       <ScrollArea className="flex-1">
-        {unread.length === 0 && read.length === 0 ? (
+        {humanContacts.length === 0 && aiContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4">
             <MessageCircle className="w-8 h-8 text-muted-foreground/20 mb-2" />
             <p className="text-xs text-muted-foreground">Nenhum contato encontrado</p>
           </div>
         ) : (
           <>
-            {/* Unread section */}
-            {unread.length > 0 && (
-              <div className="bg-primary/[0.04]">
-                <div className="px-4 py-2 flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Novas</span>
-                  <Badge className="h-4 min-w-4 px-1 text-[9px] bg-primary text-primary-foreground rounded-full">{unread.length}</Badge>
+            {/* Human section */}
+            {humanContacts.length > 0 && (
+              <div>
+                <div className="px-4 py-2 flex items-center gap-2 bg-orange-500/5 border-b border-orange-500/10">
+                  <User className="w-3.5 h-3.5 text-orange-500" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400">Atendimento Humano</span>
+                  <Badge className="h-4 min-w-4 px-1 text-[9px] bg-orange-500 text-white rounded-full">{humanContacts.length}</Badge>
+                  {humanUnread > 0 && (
+                    <Badge className="h-4 min-w-4 px-1 text-[9px] bg-destructive text-destructive-foreground rounded-full ml-auto">{humanUnread} nova{humanUnread > 1 ? "s" : ""}</Badge>
+                  )}
                 </div>
-                {unread.map((contact) => (
+                {humanContacts.map((contact) => (
                   <ChatContactItem
                     key={contact.id}
                     contact={contact}
@@ -205,19 +194,18 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
                     preview={lastMessages?.get(contact.id)}
                   />
                 ))}
-                <div className="h-px bg-border mx-4" />
               </div>
             )}
 
-            {/* Read section grouped by date */}
-            {readGroups.map((group) => (
-              <div key={group.key}>
-                <div className="px-4 py-1.5">
-                  <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    {group.label}
-                  </span>
+            {/* AI section */}
+            {aiContacts.length > 0 && (
+              <div>
+                <div className="px-4 py-2 flex items-center gap-2 bg-primary/[0.04] border-b border-primary/10">
+                  <Bot className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Agente IA</span>
+                  <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[9px] rounded-full">{aiContacts.length}</Badge>
                 </div>
-                {group.contacts.map((contact) => (
+                {aiContacts.map((contact) => (
                   <ChatContactItem
                     key={contact.id}
                     contact={contact}
@@ -228,7 +216,7 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
                   />
                 ))}
               </div>
-            ))}
+            )}
           </>
         )}
       </ScrollArea>
