@@ -31,37 +31,40 @@ Deno.serve(async (req) => {
     // Validate client-token
     const clientToken = req.headers.get("client-token") || req.headers.get("Client-Token");
 
-    const { data: instance } = await adminClient
+    // Fetch ALL instances for this org (supports multiple)
+    const { data: instances } = await adminClient
       .from("whatsapp_instances")
       .select("*")
-      .eq("organization_id", orgId)
-      .single();
+      .eq("organization_id", orgId);
 
-    if (!instance) {
-      return new Response(JSON.stringify({ error: "Instance not found" }), {
+    if (!instances || instances.length === 0) {
+      return new Response(JSON.stringify({ error: "No instances found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Validate client token if provided
-    if (clientToken && clientToken !== instance.client_token) {
-      return new Response(JSON.stringify({ error: "Invalid client token" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Match instance by client_token, or fallback to first
+    let instance = instances[0];
+    if (clientToken) {
+      const matched = instances.find((i: any) => i.client_token === clientToken);
+      if (matched) {
+        instance = matched;
+      } else {
+        return new Response(JSON.stringify({ error: "Invalid client token" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const body = await req.json();
-
     console.log("Webhook payload:", JSON.stringify(body).slice(0, 500));
 
-    // Z-API webhook payload for received messages
-    // Common fields: phone, senderName, messageId, text, type
+    // Status update detection
     const isStatus = body.status !== undefined && !body.text && !body.image && !body.audio && !body.ptt && !body.video && !body.document && !body.sticker;
 
     if (isStatus) {
-      // Status update (delivered, read, etc.)
       if (body.messageId) {
         await adminClient
           .from("whatsapp_messages")
@@ -74,12 +77,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Detect group/broadcast from raw chatId BEFORE cleaning
+    // Detect group/broadcast
     const rawChatId = body.chatId || "";
     const isGroup = rawChatId.includes("@g.us");
     const isBroadcast = rawChatId.includes("@broadcast");
 
-    // Incoming message
     const phone = body.phone || rawChatId.replace("@c.us", "").replace("@g.us", "");
     if (!phone) {
       return new Response(JSON.stringify({ ok: true, skipped: "no phone" }), {
@@ -87,7 +89,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Skip groups, broadcast lists, and group-like phone formats
     if (isGroup || isBroadcast || /^\d+-\d{10,}$/.test(phone)) {
       return new Response(JSON.stringify({ ok: true, skipped: "group_or_broadcast" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -96,20 +97,20 @@ Deno.serve(async (req) => {
 
     const senderName = body.senderName || body.pushName || null;
     const messageText = body.text?.message || body.text || body.caption || null;
-    const messageType = body.image ? "image" 
-      : (body.audio || body.ptt) ? "audio" 
-      : body.video ? "video" 
-      : body.document ? "document" 
+    const messageType = body.image ? "image"
+      : (body.audio || body.ptt) ? "audio"
+      : body.video ? "video"
+      : body.document ? "document"
       : body.sticker ? "sticker"
       : "text";
-    const mediaUrl = body.image?.imageUrl 
-      || body.audio?.audioUrl 
+    const mediaUrl = body.image?.imageUrl
+      || body.audio?.audioUrl
       || body.ptt?.audioUrl || body.ptt?.pttUrl
-      || body.video?.videoUrl 
-      || body.document?.documentUrl 
+      || body.video?.videoUrl
+      || body.document?.documentUrl
       || null;
 
-    // Upsert contact
+    // Upsert contact — now scoped to instance_id
     const { data: existingContact } = await adminClient
       .from("whatsapp_contacts")
       .select("id, unread_count, photo_url")
@@ -127,6 +128,7 @@ Deno.serve(async (req) => {
           name: senderName || undefined,
           last_message_at: new Date().toISOString(),
           unread_count: (existingContact.unread_count || 0) + 1,
+          instance_id: instance.id,
         })
         .eq("id", contactId);
     } else {
@@ -138,6 +140,7 @@ Deno.serve(async (req) => {
           name: senderName,
           last_message_at: new Date().toISOString(),
           unread_count: 1,
+          instance_id: instance.id,
         })
         .select("id")
         .single();
@@ -180,14 +183,10 @@ Deno.serve(async (req) => {
       metadata: body,
     });
 
-    // Trigger AI agent reply if contact is in AI mode and message has text or media
+    // Trigger AI agent reply
     if (messageText || mediaUrl) {
       try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const aiReplyUrl = `${supabaseUrl}/functions/v1/ai-agent-reply`;
-        
-        // Fire and forget — don't block webhook response
         fetch(aiReplyUrl, {
           method: "POST",
           headers: {
