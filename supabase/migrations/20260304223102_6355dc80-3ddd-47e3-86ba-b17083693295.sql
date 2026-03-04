@@ -1,0 +1,1 @@
+UPDATE whatsapp_contacts SET attending_mode = 'human' WHERE organization_id = 'adb09618-e9f3-4dbd-a89c-29e3eb1bec9f' AND attending_mode = 'ai'
