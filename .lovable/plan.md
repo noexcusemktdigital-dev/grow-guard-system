@@ -1,42 +1,58 @@
 
 
-# Espelho Total do WhatsApp + Definição de Agente IA
+# Engenharia de Atendimento WhatsApp — Espelho Completo + Agente IA
 
-## Problema Identificado
+## Diagnóstico
 
-Existem **~20+ contatos** no banco com `instance_id = NULL` (criados antes da migração). A UI filtra por `instance_id = eq.{id}`, excluindo todos esses contatos. Além disso, grupos e broadcasts estão vazando para a tabela de contatos (ex: `120363402954928750-group`, `status@broadcast`).
+1. **Agente IA não funciona**: O único agente ("Davi Tesch") tem `status: paused`. O `ai-agent-reply` só processa agentes com `status: active`. Quando pausado, nenhuma mensagem recebe resposta automática, mas os contatos ficam em `attending_mode: ai` — criando um limbo onde ninguém atende.
 
-O campo `attending_mode` não tem valor padrão — contatos novos precisam receber `ai` por padrão.
+2. **Falta de lógica quando agente está pausado**: Quando o agente está pausado/desabilitado, todos os contatos que estavam atribuídos a ele deveriam automaticamente ter `attending_mode` alterado para `human` (desbloqueados para o humano). Atualmente isso não acontece.
+
+3. **Número incorreto no header**: O `phone_number` no banco está correto (`554491129613`), mas o header da página de Conversas só mostra o número no estado de loading. No estado normal (conectado), o número não aparece no header principal.
+
+4. **Divisão visual IA vs Humano inexistente na lista**: A lista de contatos tem filtros mas não tem uma separação visual clara entre conversas atendidas pela IA e conversas humanas.
 
 ## Solução
 
-### 1. Database Migration
-- Adicionar `DEFAULT 'ai'` na coluna `attending_mode` de `whatsapp_contacts`
-- Atualizar contatos com `instance_id = NULL` para a instância atual da org
+### 1. Webhook + ai-agent-reply — Lógica quando agente está pausado
 
-### 2. Data Fix (via insert tool)
-- Atualizar todos os contatos existentes com `instance_id = NULL` para a instância `9c722007-5c54-4a1c-8dde-56f39c6c8edf`
+**`whatsapp-webhook/index.ts`**: Após o trigger do `ai-agent-reply`, nada muda.
 
-### 3. UI — Remover filtro estrito de instance_id
-Em `ClienteChat.tsx`, passar `null` em vez de `instance?.id` para `useWhatsAppContacts`, mostrando TODOS os contatos da org (espelho total).
+**`ai-agent-reply/index.ts`**: Quando não encontra agente ativo (linha 221), em vez de simplesmente retornar `skipped`, deve:
+- Verificar se o contato está em `attending_mode: ai`
+- Se sim, mudar para `attending_mode: human` (desbloquear para humano)
+- Criar notificação informando que não há agente ativo
 
-### 4. Melhorar filtro de grupos/broadcasts
-Em `useWhatsApp.ts`, reforçar o filtro para excluir padrões de grupo (`-group`, `@g.us`, `@broadcast`, números no formato `XXXXXXX-XXXXXXXXXX`).
+### 2. Sincronizar status do agente com contatos
 
-### 5. Webhook — Definir attending_mode padrão
-Em `whatsapp-webhook/index.ts`, adicionar `attending_mode: 'ai'` ao criar novos contatos, garantindo que a IA responda por padrão.
+Quando um agente muda de `active` → `paused`, todos os contatos atribuídos a ele devem ter `attending_mode` alterado para `human`. Implementar via:
+- Uma verificação no `ai-agent-reply` (já coberto acima)
+- Um hook na UI que, ao pausar um agente, faz UPDATE em batch nos contatos
 
-### 6. ai-agent-reply — Tratar NULL como "ai"
-Em `ai-agent-reply/index.ts`, alterar o check de `contact.attending_mode !== "ai"` para `contact.attending_mode === "human"`, tratando `null` como modo IA ativo.
+**`src/hooks/useClienteAgents.ts`**: Na mutation de update do agente, quando status muda para `paused`, executar UPDATE em `whatsapp_contacts` onde `agent_id = agentId` para setar `attending_mode = 'human'`.
+
+### 3. UI — Divisão clara IA vs Humano na lista de contatos
+
+**`src/components/cliente/ChatContactList.tsx`**: Reorganizar a lista em duas seções visuais:
+- **"Atendimento Humano"** — contatos com `attending_mode = 'human'` (com badge de unread count destacado)
+- **"Agente IA"** — contatos com `attending_mode = 'ai'` (com ícone de bot e nome do agente)
+
+Manter os filtros existentes mas adicionar separadores visuais entre as seções.
+
+### 4. Header — Mostrar número conectado
+
+**`src/pages/cliente/ClienteChat.tsx`**: Adicionar o badge com o número conectado no header principal (não apenas no loading state). Usar `instance?.phone_number` formatado.
+
+### 5. Fix whatsapp-send — Usar instância correta do contato
+
+**`supabase/functions/whatsapp-send/index.ts`**: Verificar que está buscando a instância com `instance_id` do contato, não apenas a primeira da org.
 
 ## Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| Database migration | DEFAULT 'ai' em attending_mode |
-| Data update | Migrar instance_id NULL → instância atual |
-| `src/pages/cliente/ClienteChat.tsx` | Remover filtro de instance_id |
-| `src/hooks/useWhatsApp.ts` | Melhorar filtro de grupos/broadcasts |
-| `supabase/functions/whatsapp-webhook/index.ts` | Definir attending_mode: 'ai' no insert |
-| `supabase/functions/ai-agent-reply/index.ts` | Tratar NULL como modo IA |
+| `supabase/functions/ai-agent-reply/index.ts` | Quando sem agente ativo, mudar contato para `human` |
+| `src/hooks/useClienteAgents.ts` | Ao pausar agente, desbloquear contatos para humano |
+| `src/components/cliente/ChatContactList.tsx` | Separar visualmente seções IA vs Humano |
+| `src/pages/cliente/ClienteChat.tsx` | Mostrar número conectado no header |
 
