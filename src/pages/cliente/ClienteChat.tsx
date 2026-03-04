@@ -272,6 +272,7 @@ export default function ClienteChat() {
           messages={messages}
           isLoading={loadingMessages}
           agents={agents}
+          instanceId={instance?.instance_id ?? null}
         />
         {/* Toggle lead panel button */}
         {selectedContact && (

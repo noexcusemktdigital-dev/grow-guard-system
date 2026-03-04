@@ -27,12 +27,14 @@ import { useNavigate } from "react-router-dom";
 import { isToday, isYesterday, format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   contact: WhatsAppContact | null;
   messages: WhatsAppMessage[];
   isLoading: boolean;
   agents?: { id: string; name: string }[];
+  instanceId?: string | null;
 }
 
 const DISPLAY_STEP = 100;
@@ -53,11 +55,14 @@ const DateSeparator = React.forwardRef<HTMLDivElement, { date: Date }>(({ date }
 });
 DateSeparator.displayName = "DateSeparator";
 
-export function ChatConversation({ contact, messages, isLoading, agents = [] }: Props) {
+export function ChatConversation({ contact, messages, isLoading, agents = [], instanceId }: Props) {
   const [text, setText] = useState("");
   const [actionsOpen, setActionsOpen] = useState(false);
   const [displayCount, setDisplayCount] = useState(DISPLAY_STEP);
   const [uploading, setUploading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
   const sendMutation = useSendWhatsAppMessage();
   const updateMode = useUpdateAttendingMode();
   const updateAgent = useUpdateContactAgent();
@@ -96,6 +101,54 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
     lastSeenIdRef.current = null;
     isNearBottomRef.current = true;
   }, [contact?.id]);
+
+  // Auto-load message history when conversation is empty
+  useEffect(() => {
+    if (!contact?.phone || !instanceId) return;
+    if (isLoading) return;
+    if (messages.length > 0) return;
+    if (historyLoaded.has(contact.id)) return;
+
+    const loadHistory = async () => {
+      setLoadingHistory(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("whatsapp-load-history", {
+          body: { contactPhone: contact.phone, contactId: contact.id, instanceId, amount: 50 },
+        });
+        if (error) console.error("Load history error:", error);
+        if (data?.imported > 0) {
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+        }
+      } catch (err) {
+        console.error("Load history failed:", err);
+      } finally {
+        setLoadingHistory(false);
+        setHistoryLoaded(prev => new Set(prev).add(contact.id));
+      }
+    };
+    loadHistory();
+  }, [contact?.id, contact?.phone, instanceId, isLoading, messages.length, historyLoaded, queryClient]);
+
+  const handleLoadMoreHistory = async () => {
+    if (!contact?.phone || !instanceId || loadingHistory) return;
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-load-history", {
+        body: { contactPhone: contact.phone, contactId: contact.id, instanceId, amount: 100 },
+      });
+      if (error) console.error("Load more error:", error);
+      if (data?.imported > 0) {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+        toast({ title: `${data.imported} mensagens carregadas` });
+      } else {
+        toast({ title: "Nenhuma mensagem nova encontrada" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao carregar histórico", description: err.message, variant: "destructive" });
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   // Smart scroll: track if user is near bottom
   const handleScroll = useCallback(() => {
@@ -423,8 +476,9 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
       {/* Messages area with WhatsApp background */}
       <div className="flex-1 min-h-0 overflow-y-auto whatsapp-bg" ref={scrollAreaRef} onScroll={handleScroll}>
         <div className="px-4 py-3">
-          {hasMore && (
-            <div className="flex justify-center mb-3">
+          {/* Load history from Z-API button */}
+          <div className="flex justify-center mb-3 gap-2">
+            {hasMore && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -433,11 +487,26 @@ export function ChatConversation({ contact, messages, isLoading, agents = [] }: 
               >
                 Carregar anteriores
               </Button>
-            </div>
-          )}
-          {isLoading ? (
+            )}
+            {instanceId && contact && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[11px] text-muted-foreground rounded-full bg-muted/60 hover:bg-muted gap-1"
+                onClick={handleLoadMoreHistory}
+                disabled={loadingHistory}
+              >
+                {loadingHistory ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                Buscar histórico WhatsApp
+              </Button>
+            )}
+          </div>
+          {isLoading || loadingHistory ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                {loadingHistory && <span className="text-[11px] text-muted-foreground">Carregando histórico...</span>}
+              </div>
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-12">
