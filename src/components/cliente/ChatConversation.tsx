@@ -22,6 +22,9 @@ import {
   useFindLeadByPhone,
   useLinkContactToCrmLead,
   useUpdateContactAgent,
+  useSendTypingIndicator,
+  useMarkWhatsAppRead,
+  useMarkContactRead,
 } from "@/hooks/useWhatsApp";
 import { useCrmLeadMutations, useCrmFunnels } from "@/hooks/useClienteCrm";
 import type { WhatsAppContact, WhatsAppMessage } from "@/hooks/useWhatsApp";
@@ -32,6 +35,7 @@ import { isToday, isYesterday, format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
 
 interface Props {
   contact: WhatsAppContact | null;
@@ -100,6 +104,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [contactTyping, setContactTyping] = useState(false);
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -114,12 +119,16 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const [replyingTo, setReplyingTo] = useState<WhatsAppMessage | null>(null);
 
   const queryClient = useQueryClient();
+  const { data: orgId } = useUserOrgId();
   const sendMutation = useSendWhatsAppMessage();
   const updateMode = useUpdateAttendingMode();
   const updateAgent = useUpdateContactAgent();
   const linkMutation = useLinkContactToCrmLead();
   const { createLead, updateLead } = useCrmLeadMutations();
   const { data: funnelsData } = useCrmFunnels();
+  const sendTyping = useSendTypingIndicator();
+  const markWhatsAppRead = useMarkWhatsAppRead();
+  const markContactRead = useMarkContactRead();
   const navigate = useNavigate();
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -127,6 +136,9 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastSeenIdRef = useRef<string | null>(null);
   const isNearBottomRef = useRef(true);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const readSentRef = useRef<string | null>(null);
 
   const contactAny = contact as any;
   const attendingMode = contactAny?.attending_mode || null;
@@ -154,8 +166,46 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     setSearchOpen(false);
     setSearchQuery("");
     setReplyingTo(null);
+    setContactTyping(false);
+    readSentRef.current = null;
     stopRecording(true);
   }, [contact?.id]);
+
+  // Mark as read on WhatsApp when opening a conversation
+  useEffect(() => {
+    if (!contact?.id || !contact?.phone) return;
+    if (readSentRef.current === contact.id) return;
+    readSentRef.current = contact.id;
+
+    // Mark read locally (unread_count = 0)
+    markContactRead.mutate(contact.id);
+
+    // Mark read on WhatsApp via Z-API
+    markWhatsAppRead.mutate({ contactId: contact.id, contactPhone: contact.phone });
+  }, [contact?.id]);
+
+  // Subscribe to typing broadcast from webhook
+  useEffect(() => {
+    if (!orgId || !contact?.phone) return;
+
+    const channel = supabase.channel(`whatsapp-typing-${orgId}`);
+    channel.on("broadcast", { event: "typing" }, (payload: any) => {
+      const data = payload.payload;
+      if (data?.phone === contact.phone) {
+        setContactTyping(data.isTyping);
+        // Auto-dismiss after 5s
+        if (typingDismissRef.current) clearTimeout(typingDismissRef.current);
+        if (data.isTyping) {
+          typingDismissRef.current = setTimeout(() => setContactTyping(false), 5000);
+        }
+      }
+    }).subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (typingDismissRef.current) clearTimeout(typingDismissRef.current);
+    };
+  }, [orgId, contact?.phone]);
 
   // Auto-load message history on first open of a contact (backfill)
   useEffect(() => {
@@ -248,13 +298,21 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     lastSeenIdRef.current = lastMsg.id;
   }, [messages]);
 
-  // Auto-resize textarea
+  // Auto-resize textarea + debounced typing indicator
   const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
     const el = e.target;
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
-  }, []);
+
+    // Debounced typing indicator
+    if (contact?.phone && e.target.value.trim()) {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTyping.mutate(contact.phone);
+      }, 1500);
+    }
+  }, [contact?.phone, sendTyping]);
 
   // === Audio Recording ===
   const startRecording = async () => {
@@ -776,6 +834,21 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                   <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
                     <div className="flex items-center gap-1.5">
                       <Bot className="w-3.5 h-3.5 text-purple-400" />
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Contact typing indicator */}
+              {contactTyping && (
+                <div className="flex justify-start mb-2">
+                  <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground font-medium">digitando</span>
                       <div className="flex gap-1">
                         <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                         <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />

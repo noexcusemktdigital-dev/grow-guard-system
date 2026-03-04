@@ -294,3 +294,29 @@ export function useFindLeadByPhone(phone: string | null) {
     enabled: !!orgId && !!phone,
   });
 }
+
+// Send typing indicator to Z-API (debounced by caller)
+export function useSendTypingIndicator() {
+  return useMutation({
+    mutationFn: async (contactPhone: string) => {
+      const { data, error } = await supabase.functions.invoke("whatsapp-typing", {
+        body: { contactPhone },
+      });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// Mark messages as read on WhatsApp via Z-API
+export function useMarkWhatsAppRead() {
+  return useMutation({
+    mutationFn: async (params: { contactPhone?: string; contactId?: string }) => {
+      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+        body: { ...params, action: "read", message: "" },
+      });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
