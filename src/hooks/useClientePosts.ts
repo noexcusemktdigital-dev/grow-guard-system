@@ -156,6 +156,34 @@ export function useGeneratePost() {
   });
 }
 
+export function useGenerateBriefing() {
+  return useMutation({
+    mutationFn: async (payload: {
+      briefing_text?: string;
+      content_data?: any;
+      identidade_visual?: any;
+      persona?: any;
+    }) => {
+      const resp = await supabase.functions.invoke("generate-social-briefing", {
+        body: payload,
+      });
+      if (resp.error) throw new Error(resp.error.message || "Erro ao gerar briefing");
+      if (resp.data?.error) throw new Error(resp.data.error);
+      return resp.data as {
+        headline: string;
+        subheadline: string;
+        cta: string;
+        cena: string;
+        elementos_visuais: string;
+        supporting_text: string;
+        bullet_points: string;
+        suggested_format: string;
+        suggested_tipo: string;
+      };
+    },
+  });
+}
+
 export function useApprovePost() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,14 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { usePostHistory, useGeneratePost, useApprovePost, PostItem } from "@/hooks/useClientePosts";
+import { usePostHistory, useGeneratePost, useApprovePost, useGenerateBriefing, PostItem } from "@/hooks/useClientePosts";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useSearchParams } from "react-router-dom";
 import {
   Share2, Plus, ArrowLeft, Image, Video, Check, RefreshCw, Download,
   Sparkles, Loader2, Upload, X, Clock, Eye, Type, Film, Smartphone,
-  Monitor, LayoutGrid, Square, RectangleVertical, Palette, Box
+  Monitor, LayoutGrid, Square, RectangleVertical, Palette, Box,
+  FileText, Wand2, AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -70,10 +72,17 @@ const LOADING_PHRASES = [
 ];
 
 export default function ClienteRedesSociais() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<MainView>("history");
   const [postType, setPostType] = useState<PostType>("art");
   const [artStep, setArtStep] = useState(1); // 1-7
   const [videoStep, setVideoStep] = useState(1); // 1-6
+
+  // Step 1: Briefing
+  const [briefingText, setBriefingText] = useState("");
+  const [contentId, setContentId] = useState<string | null>(null);
+  const [contentData, setContentData] = useState<any>(null);
+  const [briefingFilled, setBriefingFilled] = useState(false);
 
   // Art state
   const [artFormat, setArtFormat] = useState("portrait");
@@ -110,15 +119,66 @@ export default function ClienteRedesSociais() {
   const { data: visualIdentity } = useVisualIdentity();
   const generatePost = useGeneratePost();
   const approvePost = useApprovePost();
+  const generateBriefing = useGenerateBriefing();
 
   const totalArtSteps = 7;
   const totalVideoSteps = 6;
+
+  // Handle content_id from query params
+  useEffect(() => {
+    const cid = searchParams.get("content_id");
+    if (cid) {
+      setContentId(cid);
+      setView("wizard");
+      // Load content data
+      loadContentData(cid);
+      // Clear query param
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
+
+  // Auto-load image_bank_urls from visual identity
+  useEffect(() => {
+    if (visualIdentity?.image_bank_urls?.length && referenceUrls.length === 0 && view === "wizard") {
+      setReferenceUrls(visualIdentity.image_bank_urls.slice(0, 5));
+    }
+  }, [visualIdentity, view]);
+
+  const loadContentData = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("client_content" as any)
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (!error && data) {
+        setContentData(data);
+        // Pre-fill briefing from content
+        const r = (data as any).result as any;
+        const title = (data as any).title || "";
+        const body = (data as any).body || "";
+        setBriefingText(`${title}${body ? ` — ${body}` : ""}`);
+        // Pre-fill fields from content result
+        if (r) {
+          if (r.conteudo_principal?.headline) setHeadline(r.conteudo_principal.headline);
+          if (r.conteudo_principal?.cta) setCta(r.conteudo_principal.cta);
+          if (r.legenda) setSupportingText(r.legenda.slice(0, 200));
+        }
+      }
+    } catch {
+      // silently fail
+    }
+  };
 
   const resetWizard = () => {
     setView("history");
     setPostType("art");
     setArtStep(1);
     setVideoStep(1);
+    setBriefingText("");
+    setContentId(null);
+    setContentData(null);
+    setBriefingFilled(false);
     setArtFormat("portrait");
     setTipoPostagem("post_unico");
     setHeadline("");
@@ -161,6 +221,41 @@ export default function ClienteRedesSociais() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleFillWithAI = async () => {
+    if (!briefingText.trim() && !contentData) {
+      toast({ title: "Escreva um briefing ou selecione um conteúdo", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const iv = visualIdentity
+        ? { palette: visualIdentity.palette, fonts: visualIdentity.fonts, style: visualIdentity.style, tone: visualIdentity.tone }
+        : undefined;
+
+      const result = await generateBriefing.mutateAsync({
+        briefing_text: briefingText || undefined,
+        content_data: contentData || undefined,
+        identidade_visual: iv,
+      });
+
+      // Apply results
+      setHeadline(result.headline || "");
+      setSubheadline(result.subheadline || "");
+      setCta(result.cta || "");
+      setCena(result.cena || "");
+      setElementosVisuais(result.elementos_visuais || "");
+      setSupportingText(result.supporting_text || "");
+      setBulletPoints(result.bullet_points || "");
+      if (result.suggested_format) setArtFormat(result.suggested_format);
+      if (result.suggested_tipo) setTipoPostagem(result.suggested_tipo);
+
+      setBriefingFilled(true);
+      toast({ title: "Campos preenchidos com IA!", description: "Revise e ajuste antes de gerar." });
+    } catch (err: any) {
+      toast({ title: "Erro ao preencher com IA", description: err.message, variant: "destructive" });
+    }
+  };
+
   const handleGenerate = async () => {
     if (postType === "art") {
       if (!headline.trim()) {
@@ -196,7 +291,7 @@ export default function ClienteRedesSociais() {
         input_text: postType === "art" ? headline : videoCena,
         reference_image_urls: referenceUrls,
         identidade_visual: iv,
-        // Structured fields
+        content_id: contentId || undefined,
         tipo_postagem: postType === "art" ? tipoPostagem : undefined,
         headline: postType === "art" ? headline : undefined,
         subheadline: postType === "art" ? subheadline || undefined : undefined,
@@ -426,7 +521,7 @@ export default function ClienteRedesSociais() {
   const goBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-    } else if (postType !== "art" || artStep === 1) {
+    } else {
       resetWizard();
     }
   };
@@ -437,15 +532,116 @@ export default function ClienteRedesSociais() {
     }
   };
 
-  // Type selection (first screen of wizard)
-  if (view === "wizard" && postType === "art" && artStep === 0) {
-    // Not used — type is chosen inline
-  }
-
-  // ── WIZARD STEP CONTENT ──
+  // ── ART WIZARD STEPS (7 steps) ──
   const renderArtStep = () => {
     switch (artStep) {
-      case 1: // Formato
+      // Step 1: Briefing rápido
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold mb-1">Briefing rápido</h3>
+              <p className="text-sm text-muted-foreground">
+                Descreva o que você quer gerar. A IA preenche os campos automaticamente.
+              </p>
+            </div>
+
+            {contentData && (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-primary">Conteúdo vinculado</p>
+                    <p className="text-xs text-muted-foreground truncate">{contentData.title}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setContentData(null); setContentId(null); }}>
+                    <X className="w-3 h-3" />
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            <Textarea
+              placeholder="Ex: Quero uma postagem sobre investimento imobiliário exigir estratégia, para a Klir. A imagem deve transmitir sofisticação e visão de mercado."
+              value={briefingText}
+              onChange={(e) => setBriefingText(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
+
+            <Button
+              onClick={handleFillWithAI}
+              disabled={generateBriefing.isPending || (!briefingText.trim() && !contentData)}
+              className="w-full"
+              variant="secondary"
+            >
+              {generateBriefing.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Wand2 className="w-4 h-4 mr-2" />
+              )}
+              {generateBriefing.isPending ? "Preenchendo…" : "Preencher com IA"}
+            </Button>
+
+            {briefingFilled && (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-3 flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary shrink-0" />
+                  <p className="text-xs text-primary">
+                    Campos preenchidos! Avance para revisar as referências visuais.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        );
+
+      // Step 2: Referências visuais (obrigatório)
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold mb-1">Referências visuais</h3>
+              <p className="text-sm text-muted-foreground">
+                As referências definem a <strong>paleta de cores</strong>, <strong>logo</strong> e <strong>tipografia</strong> da sua arte. Envie pelo menos 3 imagens.
+              </p>
+            </div>
+
+            <Card className="bg-accent/30 border-accent">
+              <CardContent className="p-3 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Importante:</strong> Quanto mais referências de qualidade, melhor o resultado. Use artes anteriores, exemplos de design ou materiais da marca.
+                </p>
+              </CardContent>
+            </Card>
+
+            <RefUploader required min={3} />
+
+            {visualIdentity?.image_bank_urls && visualIdentity.image_bank_urls.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Banco de imagens da identidade visual:</p>
+                <div className="flex flex-wrap gap-2">
+                  {visualIdentity.image_bank_urls.filter(url => !referenceUrls.includes(url)).slice(0, 6).map((url, i) => (
+                    <button
+                      key={i}
+                      className="relative w-16 h-16 rounded-lg overflow-hidden border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-colors"
+                      onClick={() => setReferenceUrls(prev => [...prev, url])}
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <Plus className="w-4 h-4 text-primary-foreground" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      // Step 3: Formato
+      case 3:
         return (
           <div className="space-y-4">
             <div>
@@ -467,7 +663,8 @@ export default function ClienteRedesSociais() {
           </div>
         );
 
-      case 2: // Tipo de postagem
+      // Step 4: Tipo de postagem
+      case 4:
         return (
           <div className="space-y-4">
             <div>
@@ -487,226 +684,200 @@ export default function ClienteRedesSociais() {
           </div>
         );
 
-      case 3: // Texto da arte
+      // Step 5: Texto da arte
+      case 5:
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-semibold mb-1">Texto da arte</h3>
-              <p className="text-sm text-muted-foreground">Qual mensagem deve aparecer na imagem?</p>
+              <p className="text-sm text-muted-foreground">
+                {briefingFilled ? "Campos pré-preenchidos pela IA. Revise e ajuste." : "Qual mensagem deve aparecer na imagem?"}
+              </p>
             </div>
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Headline (obrigatório)</Label>
-                <Input
-                  placeholder="Ex: Escalar não é sorte"
-                  value={headline}
-                  onChange={(e) => setHeadline(e.target.value)}
-                  className="mt-1"
-                />
+                <Input placeholder="Ex: Escalar não é sorte" value={headline} onChange={(e) => setHeadline(e.target.value)} className="mt-1" />
               </div>
               <div>
                 <Label className="text-xs">Subheadline (opcional)</Label>
-                <Input
-                  placeholder="Ex: É processo"
-                  value={subheadline}
-                  onChange={(e) => setSubheadline(e.target.value)}
-                  className="mt-1"
-                />
+                <Input placeholder="Ex: É processo" value={subheadline} onChange={(e) => setSubheadline(e.target.value)} className="mt-1" />
               </div>
               <div>
                 <Label className="text-xs">Texto de apoio (opcional)</Label>
-                <Textarea
-                  placeholder="Ex: Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores."
-                  value={supportingText}
-                  onChange={(e) => setSupportingText(e.target.value)}
-                  rows={2}
-                  className="mt-1 resize-none"
-                />
+                <Textarea placeholder="Ex: Parcelar pode ser estratégia ou armadilha." value={supportingText} onChange={(e) => setSupportingText(e.target.value)} rows={2} className="mt-1 resize-none" />
               </div>
               <div>
                 <Label className="text-xs">Bullet points (opcional)</Label>
-                <Input
-                  placeholder="Ex: Tempo, Renda, Objetivo"
-                  value={bulletPoints}
-                  onChange={(e) => setBulletPoints(e.target.value)}
-                  className="mt-1"
-                />
+                <Input placeholder="Ex: Tempo, Renda, Objetivo" value={bulletPoints} onChange={(e) => setBulletPoints(e.target.value)} className="mt-1" />
               </div>
               <div>
                 <Label className="text-xs">Call to Action (opcional)</Label>
-                <Input
-                  placeholder="Ex: Conheça o método"
-                  value={cta}
-                  onChange={(e) => setCta(e.target.value)}
-                  className="mt-1"
-                />
+                <Input placeholder="Ex: Conheça o método" value={cta} onChange={(e) => setCta(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Nome da marca (opcional)</Label>
+                <Input placeholder="Ex: Klir, NoExcuse Marketing" value={brandName} onChange={(e) => setBrandName(e.target.value)} className="mt-1" />
               </div>
             </div>
           </div>
         );
 
-      case 4: // Cena
+      // Step 6: Cena e elementos visuais
+      case 6:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">Ideia visual da cena</h3>
-              <p className="text-sm text-muted-foreground">Descreva rapidamente a cena da imagem</p>
+              <h3 className="text-base font-semibold mb-1">Cena e elementos visuais</h3>
+              <p className="text-sm text-muted-foreground">
+                {briefingFilled ? "Pré-preenchido pela IA. Ajuste conforme necessário." : "Descreva a cena e os elementos que devem aparecer."}
+              </p>
             </div>
-            <Textarea
-              placeholder="Ex: Empresário analisando dashboard de vendas no notebook em um escritório moderno com luz natural"
-              value={cena}
-              onChange={(e) => setCena(e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {["Empresário no escritório", "Pessoa recebendo chave", "Médico com paciente", "Reunião de negócios"].map((s) => (
-                <Badge
-                  key={s}
-                  variant="outline"
-                  className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
-                  onClick={() => setCena(s)}
-                >
-                  {s}
-                </Badge>
-              ))}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Descrição da cena</Label>
+                <Textarea
+                  placeholder="Ex: Empresário analisando dashboard de vendas no notebook em um escritório moderno com luz natural"
+                  value={cena}
+                  onChange={(e) => setCena(e.target.value)}
+                  rows={4}
+                  className="mt-1 resize-none"
+                />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {["Empresário no escritório", "Pessoa recebendo chave", "Médico com paciente", "Reunião de negócios"].map((s) => (
+                    <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => setCena(s)}>
+                      {s}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Elementos visuais</Label>
+                <Input
+                  placeholder="Ex: Notebook com gráfico subindo, smartphone, prédio"
+                  value={elementosVisuais}
+                  onChange={(e) => setElementosVisuais(e.target.value)}
+                  className="mt-1"
+                />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {ELEMENT_SUGGESTIONS.map((s) => (
+                    <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => setElementosVisuais((prev) => prev ? `${prev}, ${s}` : s)}>
+                      <Plus className="w-3 h-3 mr-1" /> {s}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Identity visual info */}
+              {visualIdentity ? (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="p-3 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-3 h-3 text-primary" />
+                      <p className="text-xs font-semibold text-primary">Identidade visual aplicada automaticamente</p>
+                    </div>
+                    {visualIdentity.palette && (
+                      <p className="text-[10px] text-muted-foreground">Paleta: {typeof visualIdentity.palette === "string" ? visualIdentity.palette : JSON.stringify(visualIdentity.palette)}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-xs">Cores da marca (sem identidade visual cadastrada)</Label>
+                    <Input placeholder="Ex: Azul profundo e branco" value={manualColors} onChange={(e) => setManualColors(e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Estilo visual</Label>
+                    <Input placeholder="Ex: Corporativo premium, minimalista" value={manualStyle} onChange={(e) => setManualStyle(e.target.value)} className="mt-1" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
 
-      case 5: // Identidade visual
+      // Step 7: Revisão
+      case 7:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">Identidade visual</h3>
-              <p className="text-sm text-muted-foreground">Cores e estilo da marca</p>
+              <h3 className="text-base font-semibold mb-1">Revisão final</h3>
+              <p className="text-sm text-muted-foreground">Confira todos os dados antes de gerar a arte</p>
             </div>
-            {visualIdentity ? (
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-primary" />
-                    <p className="text-sm font-semibold text-primary">Identidade visual detectada automaticamente</p>
-                  </div>
-                  {visualIdentity.palette && (
-                    <div className="flex items-center gap-2">
-                      <Palette className="w-4 h-4 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground">Paleta: {typeof visualIdentity.palette === "string" ? visualIdentity.palette : JSON.stringify(visualIdentity.palette)}</p>
+
+            <div className="space-y-3">
+              {/* References preview */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Referências ({referenceUrls.length})</p>
+                <div className="flex flex-wrap gap-2">
+                  {referenceUrls.map((url, i) => (
+                    <div key={i} className="w-16 h-16 rounded-lg overflow-hidden border">
+                      <img src={url} alt="" className="w-full h-full object-cover" />
                     </div>
-                  )}
-                  {visualIdentity.style && (
-                    <p className="text-xs text-muted-foreground">Estilo: {visualIdentity.style}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">Esses dados serão aplicados automaticamente na geração.</p>
-                  <div className="mt-3">
-                    <Label className="text-xs">Nome da marca (opcional)</Label>
-                    <Input
-                      placeholder="Ex: NoExcuse Marketing, P2Y Crédito"
-                      value={brandName}
-                      onChange={(e) => setBrandName(e.target.value)}
-                      className="mt-1"
-                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* All fields summary */}
+              <Card className="bg-muted/30">
+                <CardContent className="p-4 space-y-2">
+                  <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
+                    <span className="text-muted-foreground font-medium">Formato:</span>
+                    <span>{ART_FORMATS.find(f => f.value === artFormat)?.label} ({ART_FORMATS.find(f => f.value === artFormat)?.ratio})</span>
+
+                    <span className="text-muted-foreground font-medium">Tipo:</span>
+                    <span>{POST_TYPES.find(t => t.value === tipoPostagem)?.label}</span>
+
+                    <span className="text-muted-foreground font-medium">Headline:</span>
+                    <span className="font-semibold">{headline || "—"}</span>
+
+                    {subheadline && <>
+                      <span className="text-muted-foreground font-medium">Subheadline:</span>
+                      <span>{subheadline}</span>
+                    </>}
+
+                    {supportingText && <>
+                      <span className="text-muted-foreground font-medium">Texto apoio:</span>
+                      <span className="line-clamp-2">{supportingText}</span>
+                    </>}
+
+                    {bulletPoints && <>
+                      <span className="text-muted-foreground font-medium">Bullets:</span>
+                      <span>{bulletPoints}</span>
+                    </>}
+
+                    {cta && <>
+                      <span className="text-muted-foreground font-medium">CTA:</span>
+                      <span>{cta}</span>
+                    </>}
+
+                    {brandName && <>
+                      <span className="text-muted-foreground font-medium">Marca:</span>
+                      <span>{brandName}</span>
+                    </>}
+
+                    {cena && <>
+                      <span className="text-muted-foreground font-medium">Cena:</span>
+                      <span className="line-clamp-2">{cena}</span>
+                    </>}
+
+                    {elementosVisuais && <>
+                      <span className="text-muted-foreground font-medium">Elementos:</span>
+                      <span>{elementosVisuais}</span>
+                    </>}
+
+                    <span className="text-muted-foreground font-medium">Refs:</span>
+                    <span>{referenceUrls.length} imagens</span>
+
+                    {visualIdentity && <>
+                      <span className="text-muted-foreground font-medium">Identidade:</span>
+                      <span className="text-primary">✓ Aplicada automaticamente</span>
+                    </>}
                   </div>
                 </CardContent>
               </Card>
-            ) : (
-              <div className="space-y-3">
-                <Card className="bg-muted/30">
-                  <CardContent className="p-3">
-                    <p className="text-xs text-muted-foreground">Nenhuma identidade visual cadastrada. Preencha abaixo:</p>
-                  </CardContent>
-                </Card>
-                <div>
-                  <Label className="text-xs">Cores da marca</Label>
-                  <Input
-                    placeholder="Ex: Preto e vermelho, Azul e branco"
-                    value={manualColors}
-                    onChange={(e) => setManualColors(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Estilo visual</Label>
-                  <Input
-                    placeholder="Ex: Minimalista, Corporativo, Premium"
-                    value={manualStyle}
-                    onChange={(e) => setManualStyle(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Nome da marca (opcional)</Label>
-                  <Input
-                    placeholder="Ex: NoExcuse Marketing, P2Y Crédito"
-                    value={brandName}
-                    onChange={(e) => setBrandName(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 6: // Elementos visuais
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold mb-1">Elementos visuais</h3>
-              <p className="text-sm text-muted-foreground">Objetos ou elementos que devem aparecer na imagem</p>
             </div>
-            <Input
-              placeholder="Ex: Notebook com gráfico subindo, smartphone, prédio"
-              value={elementosVisuais}
-              onChange={(e) => setElementosVisuais(e.target.value)}
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {ELEMENT_SUGGESTIONS.map((s) => (
-                <Badge
-                  key={s}
-                  variant="outline"
-                  className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
-                  onClick={() => setElementosVisuais((prev) => prev ? `${prev}, ${s}` : s)}
-                >
-                  <Plus className="w-3 h-3 mr-1" /> {s}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 7: // Referências
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold mb-1">Referências visuais</h3>
-              <p className="text-sm text-muted-foreground">
-                Envie pelo menos 3 imagens para manter consistência visual.
-                Podem ser artes anteriores, exemplos de design ou referências de estilo.
-              </p>
-            </div>
-            <RefUploader required min={3} />
-
-            {/* Summary */}
-            <Card className="bg-muted/30">
-              <CardContent className="p-4 space-y-2">
-                <p className="text-sm font-semibold">Resumo do briefing</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  <span className="text-muted-foreground">Formato:</span>
-                  <span>{ART_FORMATS.find(f => f.value === artFormat)?.label}</span>
-                  <span className="text-muted-foreground">Tipo:</span>
-                  <span>{POST_TYPES.find(t => t.value === tipoPostagem)?.label}</span>
-                  <span className="text-muted-foreground">Headline:</span>
-                  <span className="truncate">{headline || "—"}</span>
-                  {cena && <>
-                    <span className="text-muted-foreground">Cena:</span>
-                    <span className="truncate">{cena}</span>
-                  </>}
-                  <span className="text-muted-foreground">Refs:</span>
-                  <span>{referenceUrls.length} imagens</span>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         );
 
@@ -715,9 +886,10 @@ export default function ClienteRedesSociais() {
     }
   };
 
+  // ── VIDEO WIZARD STEPS (unchanged, 6 steps) ──
   const renderVideoStep = () => {
     switch (videoStep) {
-      case 1: // Formato
+      case 1:
         return (
           <div className="space-y-4">
             <div>
@@ -737,8 +909,7 @@ export default function ClienteRedesSociais() {
             </div>
           </div>
         );
-
-      case 2: // Duração
+      case 2:
         return (
           <div className="space-y-4">
             <div>
@@ -758,64 +929,39 @@ export default function ClienteRedesSociais() {
             </div>
           </div>
         );
-
-      case 3: // Cena
+      case 3:
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-semibold mb-1">Ideia da cena</h3>
               <p className="text-sm text-muted-foreground">Descreva rapidamente o que acontece no vídeo</p>
             </div>
-            <Textarea
-              placeholder="Ex: Empresário analisando vendas no notebook em escritório moderno"
-              value={videoCena}
-              onChange={(e) => setVideoCena(e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
+            <Textarea placeholder="Ex: Empresário analisando vendas no notebook em escritório moderno" value={videoCena} onChange={(e) => setVideoCena(e.target.value)} rows={4} className="resize-none" />
             <div className="flex flex-wrap gap-1.5">
               {["Empresário no escritório", "Pessoa recebendo chave de carro", "Médico atendendo paciente"].map((s) => (
-                <Badge
-                  key={s}
-                  variant="outline"
-                  className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
-                  onClick={() => setVideoCena(s)}
-                >
-                  {s}
-                </Badge>
+                <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => setVideoCena(s)}>{s}</Badge>
               ))}
             </div>
           </div>
         );
-
-      case 4: // Movimento
+      case 4:
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-semibold mb-1">Movimento da cena</h3>
               <p className="text-sm text-muted-foreground">O que acontece na cena? (ação)</p>
             </div>
-            <Input
-              placeholder="Ex: digitando no notebook, entregando chave"
-              value={videoMovimento}
-              onChange={(e) => setVideoMovimento(e.target.value)}
-            />
+            <Input placeholder="Ex: digitando no notebook, entregando chave" value={videoMovimento} onChange={(e) => setVideoMovimento(e.target.value)} />
             <div className="flex flex-wrap gap-1.5">
               {MOVEMENT_SUGGESTIONS.map((s) => (
-                <Badge
-                  key={s}
-                  variant="outline"
-                  className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
-                  onClick={() => setVideoMovimento(s)}
-                >
+                <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => setVideoMovimento(s)}>
                   <Plus className="w-3 h-3 mr-1" /> {s}
                 </Badge>
               ))}
             </div>
           </div>
         );
-
-      case 5: // Texto/Mensagem
+      case 5:
         return (
           <div className="space-y-4">
             <div>
@@ -825,27 +971,16 @@ export default function ClienteRedesSociais() {
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Mensagem principal</Label>
-                <Input
-                  placeholder='Ex: "Empresas não quebram por falta de clientes."'
-                  value={videoMensagem}
-                  onChange={(e) => setVideoMensagem(e.target.value)}
-                  className="mt-1"
-                />
+                <Input placeholder='Ex: "Empresas não quebram por falta de clientes."' value={videoMensagem} onChange={(e) => setVideoMensagem(e.target.value)} className="mt-1" />
               </div>
               <div>
                 <Label className="text-xs">CTA (opcional)</Label>
-                <Input
-                  placeholder='Ex: "Conheça o método."'
-                  value={videoCta}
-                  onChange={(e) => setVideoCta(e.target.value)}
-                  className="mt-1"
-                />
+                <Input placeholder='Ex: "Conheça o método."' value={videoCta} onChange={(e) => setVideoCta(e.target.value)} className="mt-1" />
               </div>
             </div>
           </div>
         );
-
-      case 6: // Referências
+      case 6:
         return (
           <div className="space-y-4">
             <div>
@@ -853,8 +988,6 @@ export default function ClienteRedesSociais() {
               <p className="text-sm text-muted-foreground">Envie referências de estilo para o vídeo (opcional)</p>
             </div>
             <RefUploader />
-
-            {/* Summary */}
             <Card className="bg-muted/30">
               <CardContent className="p-4 space-y-2">
                 <p className="text-sm font-semibold">Resumo do briefing</p>
@@ -865,20 +998,13 @@ export default function ClienteRedesSociais() {
                   <span>{VIDEO_DURATIONS.find(d => d.value === videoDuration)?.label}</span>
                   <span className="text-muted-foreground">Cena:</span>
                   <span className="truncate">{videoCena || "—"}</span>
-                  {videoMovimento && <>
-                    <span className="text-muted-foreground">Movimento:</span>
-                    <span className="truncate">{videoMovimento}</span>
-                  </>}
-                  {videoMensagem && <>
-                    <span className="text-muted-foreground">Mensagem:</span>
-                    <span className="truncate">{videoMensagem}</span>
-                  </>}
+                  {videoMovimento && <><span className="text-muted-foreground">Movimento:</span><span className="truncate">{videoMovimento}</span></>}
+                  {videoMensagem && <><span className="text-muted-foreground">Mensagem:</span><span className="truncate">{videoMensagem}</span></>}
                 </div>
               </CardContent>
             </Card>
           </div>
         );
-
       default:
         return null;
     }
@@ -888,8 +1014,9 @@ export default function ClienteRedesSociais() {
   const canProceed = () => {
     if (postType === "art") {
       switch (artStep) {
-        case 3: return !!headline.trim();
-        case 7: return referenceUrls.length >= 3;
+        case 1: return true; // briefing is optional, user can skip
+        case 2: return referenceUrls.length >= 3;
+        case 5: return !!headline.trim();
         default: return true;
       }
     } else {
