@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { usePostHistory, useGeneratePost, useApprovePost, PostItem } from "@/hooks/useClientePosts";
@@ -13,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import {
   Share2, Plus, ArrowLeft, Image, Video, Check, RefreshCw, Download,
-  FileText, Sparkles, Loader2, Upload, X, Clock, Eye
+  FileText, Sparkles, Loader2, Upload, X, Clock, Eye, Link as LinkIcon, Type
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,18 +23,10 @@ type Step = "history" | "content" | "type" | "config" | "generate";
 type PostType = "art" | "video";
 
 const ART_FORMATS = [
-  { value: "feed", label: "Feed 1:1", desc: "1080×1080" },
-  { value: "portrait", label: "Portrait 4:5", desc: "1080×1350" },
+  { value: "portrait", label: "Feed 4:5", desc: "1080×1350" },
+  { value: "feed", label: "Quadrado 1:1", desc: "1080×1080" },
   { value: "story", label: "Story 9:16", desc: "1080×1920" },
-];
-
-const ART_STYLES = [
-  { value: "grafica_moderna", label: "Design Moderno" },
-  { value: "elegante_premium", label: "Elegante Premium" },
-  { value: "colorido_vibrante", label: "Colorido Vibrante" },
-  { value: "corporativo", label: "Corporativo Pro" },
-  { value: "impacto_bold", label: "Impacto Bold" },
-  { value: "foto_destaque", label: "Foto Destaque" },
+  { value: "banner", label: "Banner 16:9", desc: "1920×1080" },
 ];
 
 const VIDEO_STYLES = [
@@ -50,9 +43,10 @@ const VIDEO_DURATIONS = [
 ];
 
 const LOADING_PHRASES = [
-  "Criando sua arte com IA…",
   "Analisando referências visuais…",
+  "Construindo prompt otimizado…",
   "Aplicando identidade visual…",
+  "Gerando imagem com IA…",
   "Finalizando composição…",
   "Quase pronto…",
 ];
@@ -62,10 +56,24 @@ export default function ClienteRedesSociais() {
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
   const [postType, setPostType] = useState<PostType>("art");
   const [manualText, setManualText] = useState("");
-  const [artFormat, setArtFormat] = useState("feed");
-  const [artStyle, setArtStyle] = useState("grafica_moderna");
+  const [artFormat, setArtFormat] = useState("portrait");
+
+  // New open fields for art config
+  const [brandLink, setBrandLink] = useState("");
+  const [objetivo, setObjetivo] = useState("");
+  const [tema, setTema] = useState("");
+  const [cena, setCena] = useState("");
+  const [ambiente, setAmbiente] = useState("");
+  const [estiloVisual, setEstiloVisual] = useState("");
+  const [headline, setHeadline] = useState("");
+  const [subheadline, setSubheadline] = useState("");
+  const [cta, setCta] = useState("");
+
+  // Video fields
   const [videoStyle, setVideoStyle] = useState("educativo");
   const [videoDuration, setVideoDuration] = useState("15s");
+
+  // Shared
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [generatedResult, setGeneratedResult] = useState<{ post: PostItem; result_url: string | null; result_data: any } | null>(null);
@@ -89,8 +97,16 @@ export default function ClienteRedesSociais() {
     setStep("history");
     setSelectedContent(null);
     setManualText("");
-    setArtFormat("feed");
-    setArtStyle("grafica_moderna");
+    setArtFormat("portrait");
+    setBrandLink("");
+    setObjetivo("");
+    setTema("");
+    setCena("");
+    setAmbiente("");
+    setEstiloVisual("");
+    setHeadline("");
+    setSubheadline("");
+    setCta("");
     setVideoStyle("educativo");
     setVideoDuration("15s");
     setReferenceUrls([]);
@@ -116,23 +132,54 @@ export default function ClienteRedesSociais() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Build rich prompt from open fields
+  const buildArtPrompt = () => {
+    const parts: string[] = [];
+    if (inputText.trim()) parts.push(`Conteúdo base: ${inputText.trim()}`);
+    if (objetivo.trim()) parts.push(`Objetivo: ${objetivo.trim()}`);
+    if (tema.trim()) parts.push(`Tema: ${tema.trim()}`);
+    if (cena.trim()) parts.push(`Cena: ${cena.trim()}`);
+    if (ambiente.trim()) parts.push(`Ambiente: ${ambiente.trim()}`);
+    if (estiloVisual.trim()) parts.push(`Estilo visual: ${estiloVisual.trim()}`);
+    if (headline.trim()) parts.push(`Headline na arte: ${headline.trim()}`);
+    if (subheadline.trim()) parts.push(`Subheadline: ${subheadline.trim()}`);
+    if (cta.trim()) parts.push(`CTA: ${cta.trim()}`);
+    if (brandLink.trim()) parts.push(`Link da marca: ${brandLink.trim()}`);
+    return parts.join("\n");
+  };
+
   const handleGenerate = async () => {
-    if (!inputText.trim()) {
-      toast({ title: "Insira um texto para gerar", variant: "destructive" });
-      return;
+    if (postType === "art") {
+      if (!cena.trim() && !inputText.trim()) {
+        toast({ title: "Descreva a cena ou insira um texto base", variant: "destructive" });
+        return;
+      }
+      if (!headline.trim()) {
+        toast({ title: "Insira a headline da arte", variant: "destructive" });
+        return;
+      }
+    } else {
+      if (!inputText.trim()) {
+        toast({ title: "Insira um texto para gerar", variant: "destructive" });
+        return;
+      }
     }
+
     setStep("generate");
     setLoadingPhraseIdx(0);
     const interval = setInterval(() => {
       setLoadingPhraseIdx((i) => Math.min(i + 1, LOADING_PHRASES.length - 1));
     }, 4000);
+
     try {
+      const richPrompt = postType === "art" ? buildArtPrompt() : inputText;
+
       const result = await generatePost.mutateAsync({
         type: postType,
         format: postType === "art" ? artFormat : undefined,
-        style: postType === "art" ? artStyle : videoStyle,
+        style: postType === "art" ? (estiloVisual.trim() || undefined) : videoStyle,
         duration: postType === "video" ? videoDuration : undefined,
-        input_text: inputText,
+        input_text: richPrompt,
         content_id: selectedContent?.id,
         reference_image_urls: referenceUrls,
         identidade_visual: visualIdentity
@@ -305,29 +352,40 @@ export default function ClienteRedesSociais() {
 
   // ── STEP 3: CONFIG ──
   if (step === "config") {
+    const isArt = postType === "art";
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <PageHeader
-          title={postType === "art" ? "Configurar Arte" : "Configurar Vídeo"}
-          subtitle="Defina os detalhes do criativo"
-          icon={postType === "art" ? <Image className="w-5 h-5 text-primary" /> : <Video className="w-5 h-5 text-primary" />}
+          title={isArt ? "Criar Arte" : "Configurar Vídeo"}
+          subtitle={isArt ? "Preencha os campos para gerar uma arte de alta qualidade" : "Defina os detalhes do vídeo"}
+          icon={isArt ? <Image className="w-5 h-5 text-primary" /> : <Video className="w-5 h-5 text-primary" />}
           backButton={<Button variant="ghost" size="icon" onClick={() => setStep("type")}><ArrowLeft className="w-4 h-4" /></Button>}
         />
 
-        {/* Text preview */}
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold text-muted-foreground mb-1">Texto base</p>
-            <p className="text-sm bg-muted/50 rounded-lg p-3 line-clamp-4">{inputText || "—"}</p>
-          </CardContent>
-        </Card>
-
-        {postType === "art" ? (
+        {isArt ? (
           <>
-            {/* Format */}
+            {/* 1. Brand link */}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <LinkIcon className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm font-semibold">Link da marca</p>
+                  <Badge variant="outline" className="text-[10px]">Opcional</Badge>
+                </div>
+                <Input
+                  placeholder="https://www.suaempresa.com.br ou @instagram"
+                  value={brandLink}
+                  onChange={(e) => setBrandLink(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Site ou Instagram para referência de cores e estilo</p>
+              </CardContent>
+            </Card>
+
+            {/* 2. Format */}
             <div className="space-y-2">
-              <p className="text-sm font-semibold">Formato</p>
-              <div className="grid grid-cols-3 gap-3">
+              <p className="text-sm font-semibold">Formato da imagem</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {ART_FORMATS.map((f) => (
                   <Card
                     key={f.value}
@@ -343,51 +401,153 @@ export default function ClienteRedesSociais() {
               </div>
             </div>
 
-            {/* Style */}
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">Estilo visual</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {ART_STYLES.map((s) => (
-                  <Card
-                    key={s.value}
-                    className={`cursor-pointer text-center transition-all ${artStyle === s.value ? "ring-2 ring-primary bg-primary/5" : ""}`}
-                    onClick={() => setArtStyle(s.value)}
-                  >
-                    <CardContent className="p-3">
-                      <p className="font-medium text-sm">{s.label}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+            {/* 3. Objetivo */}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <p className="text-sm font-semibold">Objetivo da postagem</p>
+                <Textarea
+                  placeholder="Ex: apresentar um serviço, gerar autoridade, divulgar um produto…"
+                  value={objetivo}
+                  onChange={(e) => setObjetivo(e.target.value)}
+                  rows={2}
+                />
+              </CardContent>
+            </Card>
 
-            {/* References */}
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">Referências visuais</p>
-              <div className="flex flex-wrap gap-2">
-                {referenceUrls.map((url, i) => (
-                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
-                    <button
-                      className="absolute top-0 right-0 bg-destructive text-destructive-foreground rounded-bl-lg p-0.5"
-                      onClick={() => setReferenceUrls((prev) => prev.filter((_, j) => j !== i))}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+            {/* 4. Tema */}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <p className="text-sm font-semibold">Tema / Assunto</p>
+                <Textarea
+                  placeholder="Ex: crédito imobiliário, consórcio, planejamento financeiro…"
+                  value={tema}
+                  onChange={(e) => setTema(e.target.value)}
+                  rows={2}
+                />
+              </CardContent>
+            </Card>
+
+            {/* 5. Cena */}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold">Cena da imagem</p>
+                </div>
+                <Textarea
+                  placeholder="Descreva o que deve aparecer na imagem. Ex: duas pessoas conversando sobre negócios em um escritório moderno."
+                  value={cena}
+                  onChange={(e) => setCena(e.target.value)}
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">Este é o campo mais importante — quanto mais detalhes, melhor o resultado</p>
+              </CardContent>
+            </Card>
+
+            {/* 6. Ambiente */}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold">Ambiente da cena</p>
+                  <Badge variant="outline" className="text-[10px]">Opcional</Badge>
+                </div>
+                <Input
+                  placeholder="Ex: escritório, casa, empresa, campo, cidade…"
+                  value={ambiente}
+                  onChange={(e) => setAmbiente(e.target.value)}
+                />
+              </CardContent>
+            </Card>
+
+            {/* 7. Estilo visual */}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold">Estilo visual desejado</p>
+                  <Badge variant="outline" className="text-[10px]">Opcional</Badge>
+                </div>
+                <Input
+                  placeholder="Ex: corporativo, moderno, minimalista, premium, elegante…"
+                  value={estiloVisual}
+                  onChange={(e) => setEstiloVisual(e.target.value)}
+                />
+              </CardContent>
+            </Card>
+
+            {/* 8. Texto da arte */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Type className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold">Texto da arte</p>
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Headline (frase principal)</label>
+                    <Input
+                      placeholder="Frase principal que aparece na imagem"
+                      value={headline}
+                      onChange={(e) => setHeadline(e.target.value)}
+                    />
                   </div>
-                ))}
-                <button
-                  className="w-16 h-16 rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                </button>
-              </div>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUploadRef} />
-              <p className="text-xs text-muted-foreground">Mínimo 3 imagens recomendadas para melhores resultados</p>
-            </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Subheadline (opcional)</label>
+                    <Input
+                      placeholder="Frase secundária de apoio"
+                      value={subheadline}
+                      onChange={(e) => setSubheadline(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">CTA (opcional)</label>
+                    <Input
+                      placeholder="Ex: Saiba mais, Fale conosco, Agende uma consulta"
+                      value={cta}
+                      onChange={(e) => setCta(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
+            {/* 9. Referências visuais */}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold">Referências visuais</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {referenceUrls.map((url, i) => (
+                    <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border">
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      <button
+                        className="absolute top-0 right-0 bg-destructive text-destructive-foreground rounded-bl-lg p-0.5"
+                        onClick={() => setReferenceUrls((prev) => prev.filter((_, j) => j !== i))}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    className="w-16 h-16 rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  </button>
+                </div>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUploadRef} />
+                <p className="text-xs text-muted-foreground">
+                  {referenceUrls.length < 3
+                    ? `Envie pelo menos 3 imagens de referência para melhores resultados (${referenceUrls.length}/3)`
+                    : `${referenceUrls.length} referências anexadas ✓`}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Visual identity auto-detect */}
             {visualIdentity && (
               <Card className="bg-muted/30">
                 <CardContent className="p-3 flex items-center gap-3">
@@ -399,10 +559,27 @@ export default function ClienteRedesSociais() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Text preview if content selected */}
+            {inputText && (
+              <Card className="bg-muted/30">
+                <CardContent className="p-3">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">Conteúdo base selecionado</p>
+                  <p className="text-sm line-clamp-3">{inputText}</p>
+                </CardContent>
+              </Card>
+            )}
           </>
         ) : (
           <>
-            {/* Duration */}
+            {/* Video config — kept as before */}
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Texto base</p>
+                <p className="text-sm bg-muted/50 rounded-lg p-3 line-clamp-4">{inputText || "—"}</p>
+              </CardContent>
+            </Card>
+
             <div className="space-y-2">
               <p className="text-sm font-semibold">Duração</p>
               <div className="grid grid-cols-3 gap-3">
@@ -421,7 +598,6 @@ export default function ClienteRedesSociais() {
               </div>
             </div>
 
-            {/* Video style */}
             <div className="space-y-2">
               <p className="text-sm font-semibold">Estilo do vídeo</p>
               <div className="grid grid-cols-2 gap-3">
@@ -443,7 +619,7 @@ export default function ClienteRedesSociais() {
 
         <Button onClick={handleGenerate} className="w-full" size="lg">
           <Sparkles className="w-4 h-4 mr-2" />
-          Gerar {postType === "art" ? "Arte" : "Vídeo"}
+          Gerar {isArt ? "Arte" : "Vídeo"}
         </Button>
       </div>
     );

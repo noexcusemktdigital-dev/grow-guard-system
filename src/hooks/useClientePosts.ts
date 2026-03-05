@@ -67,7 +67,7 @@ export function useGeneratePost() {
         const resp = await supabase.functions.invoke("generate-social-image", {
           body: {
             prompt: payload.input_text,
-            format: payload.format === "story" ? "story" : "feed",
+            format: payload.format || "feed",
             file_path,
             nivel: "elaborado",
             identidade_visual: payload.identidade_visual,
