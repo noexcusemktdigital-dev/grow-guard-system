@@ -412,19 +412,7 @@ Generate this image now. Prioritize brand color accuracy and compositional excel
 
     const { data: urlData } = supabase.storage.from("social-arts").getPublicUrl(file_path);
 
-    // Debit credits
-    if (organization_id) {
-      try {
-        await supabase.rpc("debit_credits", {
-          _org_id: organization_id,
-          _amount: CREDIT_COST,
-          _description: `Geração de arte social (${format})`,
-          _source: "generate-social-image",
-        });
-      } catch (debitErr) {
-        console.error("Debit error (non-blocking):", debitErr);
-      }
-    }
+    // Credits are now debited on approval, not on generation
 
     console.log(`✅ Image uploaded: ${urlData.publicUrl}`);
 
