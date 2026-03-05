@@ -30,6 +30,7 @@ import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
+import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 
 // ── Constants ──
 const OBJECTIVES = [
@@ -110,6 +111,7 @@ export default function ClienteTrafegoPago() {
   const [step, setStep] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
   const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
 
   const [wizardData, setWizardData] = useState<TrafficWizardData>({
     objetivo: "",
@@ -173,11 +175,10 @@ export default function ClienteTrafegoPago() {
     approveMutation.mutate(id, {
       onSuccess: () => toast({ title: "Estratégia aprovada!", description: "200 créditos foram debitados." }),
       onError: (err: any) => {
-        const msg = err?.message || "";
-        if (msg.includes("INSUFFICIENT_CREDITS")) {
-          toast({ title: "Créditos insuficientes", description: "Você precisa de 200 créditos.", variant: "destructive" });
+        if (isInsufficientCreditsError(err)) {
+          setShowCreditsDialog(true);
         } else {
-          toast({ title: "Erro ao aprovar", description: msg, variant: "destructive" });
+          toast({ title: "Erro ao aprovar", description: err?.message || "Erro desconhecido", variant: "destructive" });
         }
       },
     });
@@ -818,6 +819,12 @@ export default function ClienteTrafegoPago() {
           )}
         </TabsContent>
       </Tabs>
+      <InsufficientCreditsDialog
+        open={showCreditsDialog}
+        onOpenChange={setShowCreditsDialog}
+        actionLabel="esta estratégia de tráfego"
+        creditCost={200}
+      />
     </div>
   );
 }

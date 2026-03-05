@@ -60,6 +60,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Pre-check credits (200 for traffic strategy)
+    const CREDIT_COST = 200;
+    {
+      const { data: wallet } = await adminClient
+        .from("credit_wallets")
+        .select("balance")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+      if (!wallet || wallet.balance < CREDIT_COST) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos.", code: "INSUFFICIENT_CREDITS" }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Fetch marketing strategy
     const { data: strategy } = await adminClient
       .from("marketing_strategies")

@@ -1,4 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const CREDIT_COST_PER_CONTENT = 200;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,12 +19,30 @@ serve(async (req) => {
       quantidade, formatos, objetivos, tema, plataforma, tom, publico,
       estrategia, funilMomento, contextoEspecial, contextoDetalhe,
       estiloLote, nomeEmpresa, produto, diferencial, doresPublico, desejosPublico,
+      organization_id,
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const count = Number(quantidade) || 8;
+    const totalCreditCost = CREDIT_COST_PER_CONTENT * count;
+
+    // Pre-check credits
+    if (organization_id) {
+      const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: wallet } = await adminClient
+        .from("credit_wallets")
+        .select("balance")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+      if (!wallet || wallet.balance < totalCreditCost) {
+        return new Response(
+          JSON.stringify({ error: `Créditos insuficientes. Você precisa de ${totalCreditCost} créditos para ${count} conteúdos.`, code: "INSUFFICIENT_CREDITS" }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // Build distribution string
     const formatDist = (formatos || [])

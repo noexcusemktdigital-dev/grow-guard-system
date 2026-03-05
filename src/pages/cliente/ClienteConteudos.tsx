@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 
 /* ── Constants ── */
 const FORMATOS = [
@@ -153,6 +154,8 @@ export default function ClienteConteudos() {
     }
   };
 
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+
   const handleApproveOne = async (idx: number) => {
     const id = generatedIds[idx];
     if (!id) return;
@@ -160,7 +163,11 @@ export default function ClienteConteudos() {
       await approveMutation.mutateAsync(id);
       toast({ title: "Conteúdo aprovado!", description: "200 créditos debitados." });
     } catch (err: any) {
-      toast({ title: "Erro", description: err?.message, variant: "destructive" });
+      if (isInsufficientCreditsError(err)) {
+        setShowCreditsDialog(true);
+      } else {
+        toast({ title: "Erro", description: err?.message, variant: "destructive" });
+      }
     }
   };
 
@@ -169,7 +176,11 @@ export default function ClienteConteudos() {
       await approveBatchMutation.mutateAsync(generatedIds);
       toast({ title: "Lote aprovado!", description: `${generatedIds.length * 200} créditos debitados.` });
     } catch (err: any) {
-      toast({ title: "Erro", description: err?.message, variant: "destructive" });
+      if (isInsufficientCreditsError(err)) {
+        setShowCreditsDialog(true);
+      } else {
+        toast({ title: "Erro", description: err?.message, variant: "destructive" });
+      }
     }
   };
 
@@ -449,6 +460,12 @@ export default function ClienteConteudos() {
           <BatchFolderView history={history || []} navigate={navigate} />
         </TabsContent>
       </Tabs>
+      <InsufficientCreditsDialog
+        open={showCreditsDialog}
+        onOpenChange={setShowCreditsDialog}
+        actionLabel="este conteúdo"
+        creditCost={200}
+      />
     </div>
   );
 }

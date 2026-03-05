@@ -22,6 +22,7 @@ import {
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
+import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 
 type MainView = "history" | "wizard";
 type PostType = "art" | "video";
@@ -134,6 +135,7 @@ export default function ClienteRedesSociais() {
   const [loadingPhraseIdx, setLoadingPhraseIdx] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
 
   const { data: orgId } = useUserOrgId();
   const { data: posts, isLoading: postsLoading } = usePostHistory();
@@ -392,7 +394,11 @@ export default function ClienteRedesSociais() {
       await approvePost.mutateAsync({ postId: generatedResult.post.id, type: postType });
       resetWizard();
     } catch (err: any) {
-      toast({ title: "Erro ao aprovar", description: err.message, variant: "destructive" });
+      if (isInsufficientCreditsError(err)) {
+        setShowCreditsDialog(true);
+      } else {
+        toast({ title: "Erro ao aprovar", description: err.message, variant: "destructive" });
+      }
     }
   };
 
@@ -1394,6 +1400,12 @@ export default function ClienteRedesSociais() {
           </Button>
         )}
       </div>
+      <InsufficientCreditsDialog
+        open={showCreditsDialog}
+        onOpenChange={setShowCreditsDialog}
+        actionLabel={postType === "video" ? "este vídeo" : "esta arte"}
+        creditCost={postType === "video" ? 200 : 100}
+      />
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { useClienteSubscription } from "./useClienteSubscription";
+import { getPlanBySlug } from "@/constants/plans";
 
 export interface PostItem {
   id: string;
@@ -249,4 +251,36 @@ export function useApprovePost() {
       toast({ title: "Postagem aprovada!", description: "Créditos debitados com sucesso." });
     },
   });
+}
+
+/** Quota: how many posts generated this month vs plan limit */
+export function usePostQuota() {
+  const { data: orgId } = useUserOrgId();
+  const { data: subscription } = useClienteSubscription();
+
+  const plan = getPlanBySlug(subscription?.plan);
+  const maxPosts = plan?.maxSocialArts ?? 4;
+
+  const query = useQuery({
+    queryKey: ["post-quota", orgId],
+    queryFn: async () => {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { count, error } = await supabase
+        .from("client_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", orgId!)
+        .gte("created_at", monthStart);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!orgId,
+  });
+
+  return {
+    ...query,
+    used: query.data ?? 0,
+    max: maxPosts,
+    remaining: Math.max(0, maxPosts - (query.data ?? 0)),
+  };
 }
