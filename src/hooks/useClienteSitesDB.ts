@@ -63,3 +63,34 @@ export function useCreateClientSite() {
     },
   });
 }
+
+export function useApproveSite() {
+  const { data: orgId } = useUserOrgId();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (siteId: string) => {
+      if (!orgId) throw new Error("No org");
+
+      // Debit credits on approval
+      const { error: debitError } = await supabase.rpc("debit_credits" as any, {
+        _org_id: orgId,
+        _amount: 500,
+        _description: "Site aprovado",
+        _source: "generate-site",
+      });
+      if (debitError) throw debitError;
+
+      // Update status
+      const { error } = await supabase
+        .from("client_sites")
+        .update({ status: "Aprovado" } as any)
+        .eq("id", siteId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-sites"] });
+      qc.invalidateQueries({ queryKey: ["credit-wallet"] });
+    },
+  });
+}

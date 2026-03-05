@@ -1,13 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const CREDIT_COST = 500;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -24,32 +21,10 @@ serve(async (req) => {
       telefone, email_contato, endereco, redes_sociais, link_whatsapp,
       instrucoes_adicionais,
       persona, identidade_visual, estrategia,
-      organization_id,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Pre-check credits
-    if (organization_id) {
-      const { data: wallet } = await supabaseAdmin
-        .from("credit_wallets")
-        .select("balance")
-        .eq("organization_id", organization_id)
-        .maybeSingle();
-
-      if (!wallet || wallet.balance < CREDIT_COST) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
 
     const tipoDescricao: Record<string, string> = {
       lp: "Landing Page com 1 página (hero, features, testimonials, CTA, footer)",
@@ -135,7 +110,7 @@ CONTATO:
 
 ${persona ? `PERSONA:\n- Nome: ${persona.nome || "Não definida"}\n- Descrição: ${persona.descricao || "Não definida"}` : ""}
 
-${estrategia ? `CONTEXTO ESTRATÉGICO:\n- Segmento: ${estrategia.segmento || ""}\n- Modelo de negócio: ${estrategia.modelo_negocio || ""}\n- Cliente ideal: ${estrategia.cliente_ideal || ""}\n- Diferencial competitivo: ${estrategia.diferencial || ""}\n- Objetivo de marketing: ${estrategia.meta_principal || ""}` : ""}
+${estrategia ? `CONTEXTO ESTRATÉGICO:\n- Segmento: ${estrategia.segmento || ""}\n- Modelo de negócio: ${estrategia.modelo_negocio || ""}\n- Cliente ideal: ${estrategia.cliente_ideal || estrategia.publico || ""}\n- Diferencial competitivo: ${estrategia.diferencial || ""}\n- Objetivo de marketing: ${estrategia.meta_principal || estrategia.objetivo || ""}` : ""}
 
 ${instrucoes_adicionais ? `INSTRUÇÕES ADICIONAIS: ${instrucoes_adicionais}` : ""}
 
@@ -178,20 +153,6 @@ Gere o HTML COMPLETO agora.`;
     const data = await response.json();
     let html = data.choices?.[0]?.message?.content || "";
     html = html.replace(/^```html\s*/i, "").replace(/```\s*$/i, "").trim();
-
-    // Debit credits after successful generation
-    if (organization_id) {
-      try {
-        await supabaseAdmin.rpc("debit_credits", {
-          _org_id: organization_id,
-          _amount: CREDIT_COST,
-          _description: `Geração de site (${tipo})`,
-          _source: "generate-site",
-        });
-      } catch (debitErr) {
-        console.error("Debit error (non-blocking):", debitErr);
-      }
-    }
 
     return new Response(JSON.stringify({ html }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
