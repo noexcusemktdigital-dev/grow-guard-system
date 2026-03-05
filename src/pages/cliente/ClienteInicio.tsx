@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { format, startOfMonth, subMonths, isAfter, subHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -7,16 +7,19 @@ import {
   CheckSquare, ChevronRight, Sparkles, Clock,
   Zap, ArrowRight, Bot, Link, FileText, Lightbulb,
   Wifi, WifiOff, Sun, Moon, CloudSun, ListChecks,
+  Flame, Trophy, CheckCircle2, Star,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
-import { TaskListCard } from "@/components/premium/TaskListCard";
+import { motion, AnimatePresence } from "framer-motion";
 import { ProgressCtaCard } from "@/components/premium/ProgressCtaCard";
-import { useClienteChecklist } from "@/hooks/useClienteContent";
+import { CelebrationEffect, triggerCelebration } from "@/components/CelebrationEffect";
+import { useClienteChecklist, useClienteGamification, useClienteContentMutations } from "@/hooks/useClienteContent";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
@@ -27,10 +30,10 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 
 const kpiConfig = [
-  { label: "Receita Estimada", icon: DollarSign, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500" },
-  { label: "Leads do Mês", icon: Users, gradient: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-500" },
-  { label: "Taxa de Conversão", icon: TrendingUp, gradient: "from-purple-500/10 to-purple-500/5", iconColor: "text-purple-500" },
-  { label: "Meta vs Realizado", icon: Target, gradient: "from-primary/10 to-primary/5", iconColor: "text-primary" },
+  { label: "Receita Estimada", icon: DollarSign, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500", path: "/cliente/crm" },
+  { label: "Leads do Mês", icon: Users, gradient: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-500", path: "/cliente/crm" },
+  { label: "Taxa de Conversão", icon: TrendingUp, gradient: "from-purple-500/10 to-purple-500/5", iconColor: "text-purple-500", path: "/cliente/crm" },
+  { label: "Meta vs Realizado", icon: Target, gradient: "from-primary/10 to-primary/5", iconColor: "text-primary", path: "/cliente/plano-vendas" },
 ];
 
 const defaultPhrases = [
@@ -43,6 +46,51 @@ const defaultPhrases = [
   "Quem acompanha métricas, controla resultados.",
 ];
 
+const LEVELS = [
+  { name: "Novato", minXp: 0 },
+  { name: "Aprendiz", minXp: 500 },
+  { name: "Profissional", minXp: 1500 },
+  { name: "Especialista", minXp: 3500 },
+  { name: "Mestre", minXp: 7000 },
+  { name: "Lenda", minXp: 12000 },
+];
+
+function getLevelInfo(xp: number) {
+  for (let i = LEVELS.length - 1; i >= 0; i--) {
+    if (xp >= LEVELS[i].minXp) {
+      const next = LEVELS[i + 1];
+      const progressInLevel = next ? ((xp - LEVELS[i].minXp) / (next.minXp - LEVELS[i].minXp)) * 100 : 100;
+      return { level: i + 1, title: LEVELS[i].name, nextTitle: next?.name, xpToNext: next ? next.minXp - xp : 0, progress: Math.min(progressInLevel, 100) };
+    }
+  }
+  return { level: 1, title: "Novato", nextTitle: "Aprendiz", xpToNext: 500, progress: 0 };
+}
+
+function AnimatedCounter({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    const duration = 800;
+    const steps = 30;
+    const increment = value / steps;
+    let current = 0;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= value) {
+        setDisplay(value);
+        clearInterval(timer);
+      } else {
+        setDisplay(Math.round(current));
+      }
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [value]);
+
+  if (prefix === "R$") {
+    return <>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(display)}</>;
+  }
+  return <>{prefix}{display.toLocaleString("pt-BR")}{suffix}</>;
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(value);
 }
@@ -51,8 +99,9 @@ export default function ClienteInicio() {
   const navigate = useNavigate();
   const { data: profile } = useUserProfile();
   const { data: orgData, isLoading: orgLoading } = useOrgProfile();
+  const { data: gamification } = useClienteGamification();
+  const { toggleChecklistItem } = useClienteContentMutations();
 
-  // Redirect to company onboarding if not completed
   useEffect(() => {
     if (!orgLoading && orgData && (orgData as any).onboarding_completed === false) {
       navigate("/cliente/onboarding", { replace: true });
@@ -73,13 +122,16 @@ export default function ClienteInicio() {
   const checklist = checklistItems ?? [];
   const allLeads = leads ?? [];
 
-  // Date calculations
+  // Gamification data
+  const xp = (gamification as any)?.xp ?? 0;
+  const streakDays = gamification?.streak_days ?? 0;
+  const levelInfo = getLevelInfo(xp);
+
   const now = new Date();
   const monthStart = startOfMonth(now);
   const prevMonthStart = startOfMonth(subMonths(now, 1));
-  const prevMonthEnd = subMonths(monthStart, 0); // = monthStart
+  const prevMonthEnd = subMonths(monthStart, 0);
 
-  // Current month leads
   const thisMonthLeads = useMemo(() => allLeads.filter(l => isAfter(new Date(l.created_at), monthStart)), [allLeads, monthStart]);
   const prevMonthLeads = useMemo(() => allLeads.filter(l => {
     const d = new Date(l.created_at);
@@ -94,24 +146,21 @@ export default function ClienteInicio() {
   const conversionRate = thisMonthLeads.length > 0 ? (wonThisMonth.length / thisMonthLeads.length) * 100 : 0;
   const prevConversionRate = prevMonthLeads.length > 0 ? (wonPrevMonth.length / prevMonthLeads.length) * 100 : 0;
 
-  // Primary goal progress
   const primaryGoal = activeGoals?.[0];
   const primaryProgress = primaryGoal && goalProgress ? goalProgress[primaryGoal.id] : null;
   const goalPercent = primaryProgress?.percent ?? 0;
 
-  // Revenue trend
   const revenueTrend = revenuePrevMonth > 0 ? ((revenueThisMonth - revenuePrevMonth) / revenuePrevMonth * 100) : 0;
   const leadsTrend = prevMonthLeads.length > 0 ? ((thisMonthLeads.length - prevMonthLeads.length) / prevMonthLeads.length * 100) : 0;
   const convTrend = conversionRate - prevConversionRate;
 
   const kpiValues = [
-    { value: formatCurrency(revenueThisMonth), sublabel: revenueTrend !== 0 ? `${revenueTrend > 0 ? "+" : ""}${revenueTrend.toFixed(0)}% vs mês anterior` : "sem dados anteriores", trend: revenueTrend > 0 ? "up" as const : revenueTrend < 0 ? "down" as const : "neutral" as const },
-    { value: String(thisMonthLeads.length), sublabel: leadsTrend !== 0 ? `${leadsTrend > 0 ? "+" : ""}${leadsTrend.toFixed(0)}% vs mês anterior` : `${thisMonthLeads.length} leads no CRM`, trend: leadsTrend > 0 ? "up" as const : leadsTrend < 0 ? "down" as const : "neutral" as const },
-    { value: `${conversionRate.toFixed(1)}%`, sublabel: convTrend !== 0 ? `${convTrend > 0 ? "+" : ""}${convTrend.toFixed(1)}pp` : "taxa do mês", trend: convTrend > 0 ? "up" as const : convTrend < 0 ? "down" as const : "neutral" as const },
-    { value: `${Math.min(goalPercent, 100).toFixed(0)}%`, sublabel: primaryGoal ? `${formatCurrency(primaryProgress?.currentValue ?? 0)} / ${formatCurrency(primaryGoal.target_value)}` : "sem meta ativa", trend: goalPercent >= 70 ? "up" as const : goalPercent >= 40 ? "neutral" as const : "down" as const },
+    { value: formatCurrency(revenueThisMonth), rawValue: revenueThisMonth, sublabel: revenueTrend !== 0 ? `${revenueTrend > 0 ? "+" : ""}${revenueTrend.toFixed(0)}% vs mês anterior` : "sem dados anteriores", trend: revenueTrend > 0 ? "up" as const : revenueTrend < 0 ? "down" as const : "neutral" as const },
+    { value: String(thisMonthLeads.length), rawValue: thisMonthLeads.length, sublabel: leadsTrend !== 0 ? `${leadsTrend > 0 ? "+" : ""}${leadsTrend.toFixed(0)}% vs mês anterior` : `${thisMonthLeads.length} leads no CRM`, trend: leadsTrend > 0 ? "up" as const : leadsTrend < 0 ? "down" as const : "neutral" as const },
+    { value: `${conversionRate.toFixed(1)}%`, rawValue: conversionRate, sublabel: convTrend !== 0 ? `${convTrend > 0 ? "+" : ""}${convTrend.toFixed(1)}pp` : "taxa do mês", trend: convTrend > 0 ? "up" as const : convTrend < 0 ? "down" as const : "neutral" as const },
+    { value: `${Math.min(goalPercent, 100).toFixed(0)}%`, rawValue: Math.min(goalPercent, 100), sublabel: primaryGoal ? `${formatCurrency(primaryProgress?.currentValue ?? 0)} / ${formatCurrency(primaryGoal.target_value)}` : "sem meta ativa", trend: goalPercent >= 70 ? "up" as const : goalPercent >= 40 ? "neutral" as const : "down" as const },
   ];
 
-  // Weekly revenue chart from real data
   const revenueData = useMemo(() => {
     const weeks = [
       { label: "Sem 1", start: 1, end: 7 },
@@ -128,7 +177,6 @@ export default function ClienteInicio() {
     });
   }, [wonThisMonth]);
 
-  // Insights
   const leadsWithoutContact48h = useMemo(() => {
     const threshold = subHours(now, 48);
     return allLeads.filter(l => !l.won_at && !l.lost_at && isAfter(threshold, new Date(l.updated_at)));
@@ -150,7 +198,6 @@ export default function ClienteInicio() {
     return items;
   }, [leadsWithoutContact48h, goalPercent, unreadConversations]);
 
-  // Next steps
   const isWAConnected = waInstance?.status === "connected";
   const hasAgents = (agentsData || []).filter(a => a.status === "active").length > 0;
   const hasGoals = (activeGoals ?? []).length > 0;
@@ -163,7 +210,6 @@ export default function ClienteInicio() {
     return steps.filter(s => !s.done);
   }, [isWAConnected, hasAgents, hasGoals]);
 
-  // Greeting
   const hora = now.getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
   const greetingEmoji = hora < 12 ? <Sun className="w-6 h-6 text-amber-400" /> : hora < 18 ? <CloudSun className="w-6 h-6 text-orange-400" /> : <Moon className="w-6 h-6 text-indigo-400" />;
@@ -173,86 +219,119 @@ export default function ClienteInicio() {
   const completedTasks = checklist.filter(t => t.is_completed);
   const taskProgress = checklist.length > 0 ? (completedTasks.length / checklist.length) * 100 : 0;
 
-  // Daily phrase
   const dailyPhrase = dailyMessage?.message || defaultPhrases[now.getDay()];
 
-  // Goals for sidebar
   const goalsDisplay = useMemo(() => {
     if (!activeGoals || !goalProgress) return [];
     return activeGoals.slice(0, 3).map(g => {
       const p = goalProgress[g.id];
-      return {
-        label: g.title,
-        current: p?.currentValue ?? 0,
-        target: g.target_value,
-        percent: p?.percent ?? 0,
-        metric: g.metric || "revenue",
-      };
+      return { label: g.title, current: p?.currentValue ?? 0, target: g.target_value, percent: p?.percent ?? 0, metric: g.metric || "revenue" };
     });
   }, [activeGoals, goalProgress]);
 
+  // Daily score combining checklist + goals + CRM activity
+  const dailyScore = useMemo(() => {
+    const checklistScore = taskProgress * 0.4; // 40% weight
+    const goalScore = Math.min(goalPercent, 100) * 0.35; // 35% weight
+    const crmScore = Math.min(thisMonthLeads.length * 5, 100) * 0.25; // 25% weight
+    return Math.round(checklistScore + goalScore + crmScore);
+  }, [taskProgress, goalPercent, thisMonthLeads.length]);
+
+  const handleToggleTask = useCallback((id: string, currentState: boolean) => {
+    toggleChecklistItem.mutate(
+      { id, is_completed: !currentState },
+      {
+        onSuccess: (result) => {
+          if (result?.allDone) {
+            triggerCelebration();
+          }
+        },
+      }
+    );
+  }, [toggleChecklistItem]);
+
   return (
     <div className="w-full space-y-5">
+      <CelebrationEffect />
+
       {/* Hero Section */}
-      <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent shadow-md animate-fade-in">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/3 pointer-events-none" />
-        <CardContent className="relative p-6 space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2.5">
-                {greetingEmoji}
-                <h1 className="text-2xl font-bold tracking-tight text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  {greeting}
-                </h1>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent shadow-md">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/3 pointer-events-none" />
+          <CardContent className="relative p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  {greetingEmoji}
+                  <h1 className="text-2xl font-bold tracking-tight text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {greeting}
+                  </h1>
+                </div>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5" />
+                  {format(now, "EEEE, dd 'de' MMMM", { locale: ptBR }).replace(/^./, c => c.toUpperCase())}
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5" />
-                {format(now, "EEEE, dd 'de' MMMM", { locale: ptBR }).replace(/^./, c => c.toUpperCase())}
-              </p>
+              {/* Gamification mini badge */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("/cliente/gamificacao")}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-background/50 backdrop-blur-sm border border-primary/10 hover:border-primary/30 transition-all"
+              >
+                <Trophy className="w-4 h-4 text-primary" />
+                <div className="text-left">
+                  <p className="text-[10px] font-bold text-primary">{levelInfo.title}</p>
+                  <p className="text-[9px] text-muted-foreground">{xp} XP</p>
+                </div>
+                {streakDays > 0 && (
+                  <span className={`text-sm ${streakDays > 7 ? "animate-pulse" : ""}`}>🔥{streakDays}</span>
+                )}
+              </motion.button>
             </div>
-          </div>
 
-          {/* Integrated daily phrase */}
-          <div className="flex items-start gap-3 bg-background/40 rounded-xl p-3.5 backdrop-blur-sm">
-            <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-foreground/90 italic leading-relaxed">"{dailyPhrase}"</p>
-              {dailyMessage?.author && (
-                <p className="text-[10px] text-muted-foreground mt-1">— {dailyMessage.author}</p>
-              )}
+            <div className="flex items-start gap-3 bg-background/40 rounded-xl p-3.5 backdrop-blur-sm">
+              <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground/90 italic leading-relaxed">"{dailyPhrase}"</p>
+                {dailyMessage?.author && (
+                  <p className="text-[10px] text-muted-foreground mt-1">— {dailyMessage.author}</p>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Inline stats */}
-          <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <ListChecks className="w-3.5 h-3.5 text-primary" />
-              <span><span className="text-foreground font-semibold">{pendingTasks.length}</span> tarefas pendentes</span>
+            <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <ListChecks className="w-3.5 h-3.5 text-primary" />
+                <span><span className="text-foreground font-semibold">{pendingTasks.length}</span> tarefas pendentes</span>
+              </div>
+              <span className="text-muted-foreground/40">·</span>
+              <div className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-primary" />
+                <span><span className="text-foreground font-semibold">{thisMonthLeads.length}</span> leads no mês</span>
+              </div>
+              <span className="text-muted-foreground/40">·</span>
+              <div className="flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5 text-primary" />
+                <span>Meta em <span className="text-foreground font-semibold">{Math.min(goalPercent, 100).toFixed(0)}%</span></span>
+              </div>
             </div>
-            <span className="text-muted-foreground/40">·</span>
-            <div className="flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-primary" />
-              <span><span className="text-foreground font-semibold">{thisMonthLeads.length}</span> leads no mês</span>
-            </div>
-            <span className="text-muted-foreground/40">·</span>
-            <div className="flex items-center gap-1.5">
-              <Target className="w-3.5 h-3.5 text-primary" />
-              <span>Meta em <span className="text-foreground font-semibold">{Math.min(goalPercent, 100).toFixed(0)}%</span></span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Insights alerts */}
       {insights.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {insights.map((insight, i) => {
             const Icon = insight.icon;
             return (
-              <button
+              <motion.button
                 key={i}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => navigate(insight.path)}
-                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all hover:scale-[1.01] ${
+                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
                   insight.type === "urgent"
                     ? "bg-destructive/5 border-destructive/15 hover:bg-destructive/10"
                     : insight.type === "warning"
@@ -267,39 +346,83 @@ export default function ClienteInicio() {
                   insight.type === "urgent" ? "text-destructive" : insight.type === "warning" ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"
                 }`}>{insight.label}</span>
                 <ArrowRight className="w-3 h-3 ml-auto text-muted-foreground" />
-              </button>
+              </motion.button>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
-      {/* KPIs */}
+      {/* KPIs with animated counters */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpiConfig.map((cfg, i) => {
           const kpi = kpiValues[i];
           const Icon = cfg.icon;
           return (
-            <Card key={cfg.label} className={`hover-lift card-shine bg-gradient-to-br ${cfg.gradient} border-0 shadow-sm`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{cfg.label}</span>
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${cfg.iconColor} bg-background/60`}>
-                    <Icon className="h-3.5 w-3.5" />
+            <motion.div
+              key={cfg.label}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.08, duration: 0.4 }}
+            >
+              <Card
+                className={`hover-scale bg-gradient-to-br ${cfg.gradient} border-0 shadow-sm cursor-pointer group transition-all duration-300 hover:shadow-md`}
+                onClick={() => navigate(cfg.path)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{cfg.label}</span>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${cfg.iconColor} bg-background/60 group-hover:scale-110 transition-transform`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
                   </div>
-                </div>
-                <div className="text-2xl font-bold tracking-tight">{leadsLoading ? <Skeleton className="h-7 w-24" /> : kpi.value}</div>
-                <div className="flex items-center gap-1 mt-1">
-                  {kpi.trend === "up" && <ArrowUpRight className="h-3 w-3 text-emerald-500" />}
-                  {kpi.trend === "down" && <ArrowDownRight className="h-3 w-3 text-destructive" />}
-                  <span className={`text-[11px] font-medium ${kpi.trend === "up" ? "text-emerald-600 dark:text-emerald-400" : kpi.trend === "down" ? "text-destructive" : "text-muted-foreground"}`}>
-                    {kpi.sublabel}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="text-2xl font-bold tracking-tight">
+                    {leadsLoading ? <Skeleton className="h-7 w-24" /> : kpi.value}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    {kpi.trend === "up" && <ArrowUpRight className="h-3 w-3 text-emerald-500" />}
+                    {kpi.trend === "down" && <ArrowDownRight className="h-3 w-3 text-destructive" />}
+                    <span className={`text-[11px] font-medium ${kpi.trend === "up" ? "text-emerald-600 dark:text-emerald-400" : kpi.trend === "down" ? "text-destructive" : "text-muted-foreground"}`}>
+                      {kpi.sublabel}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
       </div>
+
+      {/* Gamified Daily Progress Bar */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+        <Card className="border-primary/10">
+          <CardContent className="py-4 px-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">Progresso do Dia</span>
+              </div>
+              <Badge variant={dailyScore >= 80 ? "default" : dailyScore >= 50 ? "secondary" : "outline"} className="text-xs">
+                {dailyScore}/100
+              </Badge>
+            </div>
+            <div className="w-full h-3 rounded-full bg-muted overflow-hidden">
+              <motion.div
+                className={`h-full rounded-full ${
+                  dailyScore >= 80 ? "bg-emerald-500" : dailyScore >= 50 ? "bg-amber-500" : "bg-destructive/70"
+                }`}
+                initial={{ width: 0 }}
+                animate={{ width: `${dailyScore}%` }}
+                transition={{ duration: 1.2, ease: "easeOut", delay: 0.5 }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
+              <span>Checklist {Math.round(taskProgress)}%</span>
+              <span>Metas {Math.min(goalPercent, 100).toFixed(0)}%</span>
+              <span>CRM {Math.min(thisMonthLeads.length * 5, 100)}%</span>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Progress CTA */}
       {primaryGoal && primaryProgress && (
@@ -367,8 +490,11 @@ export default function ClienteInicio() {
                 {nextSteps.map((step, i) => {
                   const Icon = step.icon;
                   return (
-                    <button
+                    <motion.button
                       key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
                       onClick={() => navigate(step.path)}
                       className="w-full group flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-all duration-200 text-left"
                     >
@@ -380,7 +506,7 @@ export default function ClienteInicio() {
                         <p className="text-[11px] text-muted-foreground">{step.description}</p>
                       </div>
                       <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
+                    </motion.button>
                   );
                 })}
               </CardContent>
@@ -390,7 +516,7 @@ export default function ClienteInicio() {
 
         {/* Right column */}
         <div className="lg:col-span-2 space-y-5">
-          {/* Tasks */}
+          {/* Interactive Tasks */}
           <Card>
             <CardHeader className="pb-3 px-5 pt-5">
               <div className="flex items-center justify-between">
@@ -405,7 +531,13 @@ export default function ClienteInicio() {
                   <div className="w-8 h-8 relative">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                       <circle cx="18" cy="18" r="15" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
-                      <circle cx="18" cy="18" r="15" fill="none" stroke="hsl(var(--primary))" strokeWidth="3" strokeDasharray={`${taskProgress * 0.942} 100`} strokeLinecap="round" className="transition-all duration-700" />
+                      <circle cx="18" cy="18" r="15" fill="none"
+                        stroke={taskProgress >= 70 ? "hsl(142, 71%, 45%)" : taskProgress >= 30 ? "hsl(38, 92%, 50%)" : "hsl(var(--destructive))"}
+                        strokeWidth="3"
+                        strokeDasharray={`${taskProgress * 0.942} 100`}
+                        strokeLinecap="round"
+                        className="transition-all duration-700"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -413,13 +545,42 @@ export default function ClienteInicio() {
             </CardHeader>
             <CardContent className="px-5 pb-5">
               <div className="space-y-1">
-                {pendingTasks.slice(0, 5).map(t => (
-                  <div key={t.id} className="group flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/40 transition-all duration-200 cursor-pointer">
-                    <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 group-hover:border-primary transition-colors flex-shrink-0" />
-                    <span className="text-[13px] flex-1 text-foreground/80 group-hover:text-foreground transition-colors">{t.title}</span>
+                <AnimatePresence mode="popLayout">
+                  {pendingTasks.slice(0, 5).map((t, i) => (
+                    <motion.div
+                      key={t.id}
+                      layout
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="group flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/40 transition-all duration-200 cursor-pointer"
+                      onClick={() => handleToggleTask(t.id, !!t.is_completed)}
+                    >
+                      <motion.div
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.8 }}
+                        className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 group-hover:border-primary transition-colors flex-shrink-0"
+                      />
+                      <span className="text-[13px] flex-1 text-foreground/80 group-hover:text-foreground transition-colors">{t.title}</span>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                {completedTasks.length > 0 && (
+                  <div className="pt-2 border-t border-border/50 mt-2">
+                    {completedTasks.slice(0, 3).map(t => (
+                      <div
+                        key={t.id}
+                        className="flex items-center gap-3 p-2 rounded-lg opacity-50 hover:opacity-70 cursor-pointer transition-all"
+                        onClick={() => handleToggleTask(t.id, !!t.is_completed)}
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <span className="text-[13px] flex-1 line-through text-muted-foreground">{t.title}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {pendingTasks.length === 0 && (
+                )}
+                {pendingTasks.length === 0 && completedTasks.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-4">Nenhuma tarefa pendente</p>
                 )}
               </div>
@@ -428,6 +589,40 @@ export default function ClienteInicio() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Level / Streak Card */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+            <Card className="border-primary/15 bg-gradient-to-br from-primary/5 to-transparent cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/cliente/gamificacao")}>
+              <CardContent className="py-4 px-5">
+                <div className="flex items-center gap-4">
+                  <div className="text-center">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Trophy className="w-6 h-6 text-primary" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-bold text-primary">{levelInfo.title}</span>
+                      <span className="text-[10px] text-muted-foreground">Nível {levelInfo.level}</span>
+                    </div>
+                    <Progress value={levelInfo.progress} className="h-2" />
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[10px] text-muted-foreground">{xp} XP</span>
+                      {levelInfo.nextTitle && (
+                        <span className="text-[10px] text-muted-foreground">{levelInfo.xpToNext} para {levelInfo.nextTitle}</span>
+                      )}
+                    </div>
+                  </div>
+                  {streakDays > 0 && (
+                    <div className={`text-center ${streakDays > 7 ? "animate-pulse" : ""}`}>
+                      <Flame className="w-6 h-6 text-orange-500 mx-auto" />
+                      <span className="text-xs font-bold text-orange-500">{streakDays}d</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Monthly Goals */}
           <Card>
@@ -454,7 +649,13 @@ export default function ClienteInicio() {
                 const pct = Math.min(goal.percent, 100);
                 const isOnTrack = pct >= 70;
                 return (
-                  <div key={i} className="space-y-1.5">
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 + i * 0.1 }}
+                    className="space-y-1.5"
+                  >
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-muted-foreground font-medium">{goal.label}</span>
                       <span className="font-semibold tabular-nums">
@@ -463,9 +664,14 @@ export default function ClienteInicio() {
                       </span>
                     </div>
                     <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div className={`h-full rounded-full transition-all duration-700 ${isOnTrack ? "bg-emerald-500" : "bg-amber-500"}`} style={{ width: `${pct}%` }} />
+                      <motion.div
+                        className={`h-full rounded-full ${isOnTrack ? "bg-emerald-500" : "bg-amber-500"}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.8, delay: 0.5 + i * 0.1 }}
+                      />
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
               <Button variant="outline" size="sm" className="w-full text-xs h-9 mt-2 rounded-lg" onClick={() => navigate("/cliente/plano-vendas")}>

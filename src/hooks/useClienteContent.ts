@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { playSound } from "@/lib/sounds";
+import { toast } from "sonner";
 
 export function useClienteContent() {
   const { data: orgId } = useUserOrgId();
@@ -175,7 +176,7 @@ export function useClienteContentMutations() {
       const { error } = await supabase.from("client_checklist_items").update({ is_completed }).eq("id", id);
       if (error) throw error;
 
-      // If completing, add XP
+      // If completing, add XP (+10 per task, +50 bonus if all done)
       if (is_completed) {
         const { data: gamData } = await supabase
           .from("client_gamification")
@@ -185,41 +186,53 @@ export function useClienteContentMutations() {
           .maybeSingle();
 
         if (gamData) {
-          // Check if all items for today are now completed
+          // Always give +10 XP per task
+          let xpGain = 10;
+
+          // Check if all items for today are now completed for bonus
           const today = new Date().toISOString().split("T")[0];
           const { data: todayItems } = await supabase
             .from("client_checklist_items")
-            .select("is_completed")
+            .select("id, is_completed")
             .eq("user_id", user!.id)
             .eq("date", today);
 
           const allDone = todayItems && todayItems.every((i: any) => i.is_completed || i.id === id);
-          const xpBonus = allDone ? 50 : 0;
-
-          if (xpBonus > 0) {
-            const currentXp = (gamData.xp as number) || 0;
-            const newXp = currentXp + xpBonus;
-            // Calculate title based on XP
-            let title = "Novato";
-            if (newXp >= 12000) title = "Lenda";
-            else if (newXp >= 7000) title = "Mestre";
-            else if (newXp >= 3500) title = "Especialista";
-            else if (newXp >= 1500) title = "Profissional";
-            else if (newXp >= 500) title = "Aprendiz";
-
-            await supabase
-              .from("client_gamification")
-              .update({ xp: newXp, title, points: (gamData.points || 0) + xpBonus, last_activity_at: new Date().toISOString() })
-              .eq("id", gamData.id);
+          if (allDone && todayItems && todayItems.length > 1) {
+            xpGain += 50; // Bonus for completing all
           }
+
+          const currentXp = (gamData.xp as number) || 0;
+          const newXp = currentXp + xpGain;
+          let title = "Novato";
+          if (newXp >= 12000) title = "Lenda";
+          else if (newXp >= 7000) title = "Mestre";
+          else if (newXp >= 3500) title = "Especialista";
+          else if (newXp >= 1500) title = "Profissional";
+          else if (newXp >= 500) title = "Aprendiz";
+
+          await supabase
+            .from("client_gamification")
+            .update({ xp: newXp, title, points: (gamData.points || 0) + xpGain, last_activity_at: new Date().toISOString() })
+            .eq("id", gamData.id);
+
+          return { xpGain, allDone, newXp };
         }
       }
+      return { xpGain: 0, allDone: false };
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (result, variables) => {
       qc.invalidateQueries({ queryKey: ["client-checklist"] });
       qc.invalidateQueries({ queryKey: ["client-gamification"] });
-      if (variables.is_completed) {
+      if (variables.is_completed && result) {
         playSound("success");
+        if (result.xpGain > 0) {
+          if (result.allDone) {
+            toast.success(`+${result.xpGain} XP 🎉 Todas concluídas! Bônus de 50 XP!`, { duration: 4000 });
+          } else {
+            toast.success(`+10 XP ⚡`, { duration: 2000 });
+          }
+        }
       }
     },
   });
