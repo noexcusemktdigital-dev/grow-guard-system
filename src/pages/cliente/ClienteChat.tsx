@@ -95,18 +95,6 @@ export default function ClienteChat() {
     [agentsData]
   );
 
-  const leadStages = useMemo(() => {
-    const map = new Map<string, string>();
-    if (!leadsData) return map;
-    contacts.forEach((c) => {
-      const contactAny = c as any;
-      if (contactAny.crm_lead_id) {
-        const lead = leadsData.find((l) => l.id === contactAny.crm_lead_id);
-        if (lead) map.set(c.id, lead.stage);
-      }
-    });
-    return map;
-  }, [contacts, leadsData]);
 
   // Use last_message_preview from contacts directly (no separate DB fetch needed)
   const lastMessages = useMemo(() => {
@@ -255,7 +243,6 @@ export default function ClienteChat() {
             selectedId={selectedContact?.id ?? null}
             onSelect={handleSelectContact}
             agents={agents}
-            leadStages={leadStages}
             isConnected={isConnected}
             lastMessages={lastMessages}
             connectedPhone={formattedPhone ?? undefined}

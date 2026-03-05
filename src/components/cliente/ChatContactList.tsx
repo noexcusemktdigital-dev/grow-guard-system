@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, User, Bot, Clock, MessageCircle, Wifi, Users, Globe, RefreshCw } from "lucide-react";
+import { Search, User, Bot, Clock, MessageCircle, Wifi, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,7 +13,6 @@ interface Props {
   selectedId: string | null;
   onSelect: (contact: WhatsAppContact) => void;
   agents?: { id: string; name: string }[];
-  leadStages?: Map<string, string>;
   isConnected?: boolean;
   lastMessages?: Map<string, string>;
   connectedPhone?: string;
@@ -21,30 +20,24 @@ interface Props {
   isSyncing?: boolean;
 }
 
-type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups" | "website";
+type ModeFilter = "all" | "ai" | "human" | "waiting";
 
-export function ChatContactList({ contacts, selectedId, onSelect, agents = [], leadStages, isConnected, lastMessages, connectedPhone, onSync, isSyncing }: Props) {
+export function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone, onSync, isSyncing }: Props) {
   const [search, setSearch] = useState("");
   const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
   const [agentFilter, setAgentFilter] = useState("");
-  const [stageFilter, setStageFilter] = useState("");
 
   const filtered = contacts.filter((c) => {
     const q = search.toLowerCase();
     const matchSearch = !q || (c.name?.toLowerCase().includes(q) || c.phone.includes(q));
     const contactAny = c as any;
     const mode = contactAny.attending_mode || "ai";
-    const contactType = contactAny.contact_type || "individual";
     let matchMode = true;
     if (modeFilter === "ai") matchMode = mode === "ai";
     else if (modeFilter === "human") matchMode = mode === "human";
     else if (modeFilter === "waiting") matchMode = c.unread_count > 0;
-    else if (modeFilter === "groups") matchMode = contactType === "group";
-    else if (modeFilter === "website") matchMode = contactType === "website";
     const matchAgent = !agentFilter || contactAny.agent_id === agentFilter;
-    const contactStage = leadStages?.get(c.id) || "";
-    const matchStage = !stageFilter || contactStage === stageFilter;
-    return matchSearch && matchMode && matchAgent && matchStage;
+    return matchSearch && matchMode && matchAgent;
   });
 
   // Separate into human and AI sections
@@ -64,15 +57,11 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
     return { humanContacts: human, aiContacts: ai };
   }, [filtered]);
 
-  const uniqueStages = leadStages ? Array.from(new Set(leadStages.values())).filter(Boolean).sort() : [];
-
   const modeButtons: { key: ModeFilter; label: string; icon?: React.ReactNode }[] = [
     { key: "all", label: "Todos" },
     { key: "ai", label: "IA", icon: <Bot className="w-3 h-3" /> },
     { key: "human", label: "Humano", icon: <User className="w-3 h-3" /> },
     { key: "waiting", label: "Espera", icon: <Clock className="w-3 h-3" /> },
-    { key: "groups", label: "Grupos", icon: <Users className="w-3 h-3" /> },
-    { key: "website", label: "Site", icon: <Globe className="w-3 h-3" /> },
   ];
 
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
@@ -147,34 +136,19 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
         </div>
 
         {/* Secondary filters */}
-        {(agents.length > 0 || uniqueStages.length > 0) && (
+        {agents.length > 0 && (
           <div className="flex gap-1.5 mt-2">
-            {agents.length > 0 && (
-              <Select value={agentFilter} onValueChange={(v) => setAgentFilter(v === "all" ? "" : v)}>
-                <SelectTrigger className="h-6 text-[10px] flex-1 rounded-full">
-                  <SelectValue placeholder="Agente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">Todos agentes</SelectItem>
-                  {agents.map((a) => (
-                    <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {uniqueStages.length > 0 && (
-              <Select value={stageFilter} onValueChange={(v) => setStageFilter(v === "all" ? "" : v)}>
-                <SelectTrigger className="h-6 text-[10px] flex-1 rounded-full">
-                  <SelectValue placeholder="Etapa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">Todas etapas</SelectItem>
-                  {uniqueStages.map((s) => (
-                    <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select value={agentFilter} onValueChange={(v) => setAgentFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-6 text-[10px] flex-1 rounded-full">
+                <SelectValue placeholder="Agente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">Todos agentes</SelectItem>
+                {agents.map((a) => (
+                  <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
@@ -204,7 +178,6 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
                     contact={contact}
                     isSelected={selectedId === contact.id}
                     onSelect={onSelect}
-                    stageLabel={leadStages?.get(contact.id)}
                     preview={lastMessages?.get(contact.id)}
                   />
                 ))}
@@ -225,7 +198,6 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], l
                     contact={contact}
                     isSelected={selectedId === contact.id}
                     onSelect={onSelect}
-                    stageLabel={leadStages?.get(contact.id)}
                     preview={lastMessages?.get(contact.id)}
                   />
                 ))}
