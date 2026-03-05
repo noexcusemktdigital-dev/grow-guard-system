@@ -28,7 +28,7 @@ import { useCrmFunnels } from "@/hooks/useClienteCrm";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useToast } from "@/hooks/use-toast";
-import { DndContext, DragOverlay, closestCorners, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
 import { CrmFunnelManager } from "@/components/crm/CrmFunnelManager";
@@ -223,6 +223,7 @@ export default function ClienteCRM() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [bulkDeleteLeadsOpen, setBulkDeleteLeadsOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const [bulkMoveStage, setBulkMoveStage] = useState("");
   const [bulkTagInput, setBulkTagInput] = useState("");
   const [bulkAssigned, setBulkAssigned] = useState("");
@@ -734,7 +735,7 @@ export default function ClienteCRM() {
               </CardContent>
             </Card>
           ) : view === "kanban" ? (
-            <DndContext collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <div className="flex gap-3 overflow-x-auto pb-4">
                 {stages.map(stage => {
                   const stageLeads = leadsByStage[stage.key] || [];
