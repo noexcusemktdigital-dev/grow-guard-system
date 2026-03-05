@@ -1,121 +1,99 @@
 
 
-# Correção Completa: Integração Asaas — Sandbox → Produção
+# Revisão Completa: Integração Asaas com Base na Documentação Oficial
 
-## Diagnóstico
+## Diagnóstico Pós-Documentação
 
-Baseado nas suas observações sobre os 4 motivos clássicos de falha na virada Sandbox → Produção, identifiquei os seguintes problemas concretos no código:
+Após cruzar o código atual com a documentação oficial do Asaas, identifiquei **1 problema crítico** que provavelmente ainda causa 401, além de melhorias de robustez.
 
-### 1. Autenticação quebrada (`getClaims` inexistente)
-Todas as 8 edge functions de pagamento usam `userClient.auth.getClaims(token)` — este método **não existe** no `supabase-js@2`. Ele falha silenciosamente e retorna 401 Unauthorized. As funções afetadas:
-- `asaas-create-charge`
-- `asaas-create-subscription`
-- `asaas-charge-client`
-- `asaas-charge-system-fee`
-- `asaas-charge-franchisee`
-- `asaas-list-payments`
-- `asaas-cancel-subscription`
-- `asaas-get-pix`
-- `asaas-test-connection`
+### Problema Crítico: Header `User-Agent` obrigatório ausente
 
-### 2. `ASAAS_BASE_URL` — possível URL de sandbox
-O secret `ASAAS_BASE_URL` pode ainda apontar para `https://sandbox.asaas.com/api/v3` ao invés de `https://api.asaas.com/v3`. O fallback no código usa produção, mas se o secret estiver setado com sandbox, ele prevalece.
+A documentação de autenticação do Asaas diz explicitamente:
 
-### 3. `ASAAS_PROXY_URL` com valor inválido
-Os logs anteriores mostraram `" https://asaas.com/api/v3"` (com espaço e URL errada). Isso não é um proxy — é a própria API. O regex valida e ignora, mas polui os logs.
+> "É obrigatório enviar o `User-Agent` no header de todas as requisições em novas contas raiz criadas a partir de 13/06/2024."
 
-### 4. `asaas_wallet_id` de ambiente errado no split
-Se o `asaas_wallet_id` salvo na tabela `organizations` é do ambiente sandbox, o split vai falhar em produção. Isso precisa de validação manual do usuário.
+O helper `asaas-fetch.ts` e todas as edge functions **não enviam `User-Agent`**. Se sua conta Asaas foi criada após essa data, isso causa **401 silencioso** em todas as chamadas.
 
-### 5. `ASAAS_API_KEY` — possível chave do sandbox
-Se a chave é do sandbox (`$aact_...` sandbox vs produção), todas as chamadas falham.
+Os headers corretos segundo a documentação:
+```
+"Content-Type": "application/json"
+"User-Agent": "NOE-Platform"
+"access_token": "sua_api_key"
+```
+
+### Problema Secundário: URL de Sandbox incorreta no diagnóstico
+
+A documentação mostra que a URL de sandbox é `https://api-sandbox.asaas.com/v3` (não `https://sandbox.asaas.com/api/v3`). O check no `asaas-test-connection` usa `.includes("sandbox")` que funciona, mas vale alinhar.
+
+### Status das correções anteriores (já aplicadas)
+
+| Item | Status |
+|---|---|
+| Auth `getUser()` em 9 funções | OK |
+| Session refresh no frontend | OK |
+| Error handling descritivo | OK |
+| Logging pré-auth | OK |
 
 ---
 
 ## Plano de Correção
 
-### Etapa 1: Corrigir autenticação em todas as edge functions (9 arquivos)
+### 1. Adicionar `User-Agent` em TODAS as chamadas ao Asaas
 
-Substituir o padrão `getClaims()` por `auth.getUser()` que funciona corretamente:
+Modificar o helper compartilhado `supabase/functions/_shared/asaas-fetch.ts` para injetar automaticamente o header `User-Agent: NOE-Platform` em todas as requisições. Isso corrige o problema em todos os 9+ edge functions de uma só vez.
 
 ```typescript
-// ANTES (quebrado)
-const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-if (claimsError || !claimsData?.claims) { return 401; }
-
-// DEPOIS (funcional)
-const { data: { user }, error: authError } = await userClient.auth.getUser();
-if (authError || !user) {
-  console.error("[function-name] Auth failed:", authError?.message);
-  return 401;
+// Em asaas-fetch.ts, antes de fazer fetch:
+const headers = new Headers(options?.headers);
+if (!headers.has("User-Agent")) {
+  headers.set("User-Agent", "NOE-Platform");
 }
 ```
 
-**Arquivos:**
-- `supabase/functions/asaas-create-charge/index.ts`
-- `supabase/functions/asaas-create-subscription/index.ts`
-- `supabase/functions/asaas-charge-client/index.ts`
-- `supabase/functions/asaas-charge-system-fee/index.ts`
-- `supabase/functions/asaas-charge-franchisee/index.ts`
-- `supabase/functions/asaas-list-payments/index.ts`
-- `supabase/functions/asaas-cancel-subscription/index.ts`
-- `supabase/functions/asaas-get-pix/index.ts`
-- `supabase/functions/asaas-test-connection/index.ts`
+**Arquivo:** `supabase/functions/_shared/asaas-fetch.ts`
 
-Com esta mudança, não precisamos mais do `token` extraído manualmente — o `userClient` já tem o header Authorization e `getUser()` o valida server-side.
+### 2. Melhorar diagnóstico do `asaas-test-connection`
 
-### Etapa 2: Adicionar diagnóstico de ambiente no `asaas-test-connection`
+Adicionar detecção do erro específico retornado pelo Asaas para guiar o usuário:
+- `invalid_environment` → "Chave de API do ambiente errado"
+- `access_token_not_found` → "Header access_token não enviado"
+- `invalid_access_token_format` → "Formato da chave inválido"
+- `invalid_access_token` → "Chave revogada ou inválida"
 
-Expandir a resposta do `asaas-test-connection` para retornar:
-- A URL base sendo usada (produção vs sandbox)
-- Se o proxy está ativo e válido
-- Se a API key está funcionando
-- Verificação do ambiente (sandbox vs produção)
+Retornar também se `User-Agent` está sendo enviado.
 
-### Etapa 3: Adicionar refresh de sessão no frontend antes de chamadas de pagamento
+**Arquivo:** `supabase/functions/asaas-test-connection/index.ts`
 
-Nos 3 pontos do frontend que chamam edge functions de pagamento, adicionar `await supabase.auth.getSession()` antes do `invoke`:
+### 3. Garantir `User-Agent` nos headers inline de todas as funções
 
-**Arquivos:**
-- `src/pages/cliente/ClientePlanoCreditos.tsx` — mutations `purchase` (créditos) e `subscribe` (plano)
-- `src/hooks/useFranqueadoSystemPayments.ts` — mutation `useChargeSystemFee`
-- `src/hooks/useClientPayments.ts` — mutation `useChargeClient`
+Algumas funções passam headers diretamente (ex: `{ "Content-Type": "application/json", access_token: asaasApiKey }`). Adicionar `"User-Agent": "NOE-Platform"` nesses locais também, como fallback caso o helper não consiga injetar.
 
-### Etapa 4: Melhorar tratamento de erros de pagamento no frontend
+**Arquivos (6 funções que fazem POST):**
+- `asaas-create-charge/index.ts`
+- `asaas-create-subscription/index.ts`
+- `asaas-charge-client/index.ts`
+- `asaas-charge-system-fee/index.ts`
+- `asaas-charge-franchisee/index.ts`
+- `asaas-cancel-subscription/index.ts`
 
-Adicionar mensagens descritivas para erros comuns:
-- 401 → "Sessão expirada. Recarregue a página."
-- `not_allowed_ip` → "IP não autorizado no Asaas. Configure o proxy."
-- `CPF/CNPJ` → Mensagem específica pedindo cadastro do documento
-
-### Etapa 5: Logging estruturado
-
-Adicionar `console.log` no início de cada função (antes do auth) para garantir visibilidade de que a função foi chamada, mesmo que o auth falhe.
-
----
-
-## Checklist de Secrets que o usuário deve validar manualmente
-
-Após as correções de código, será necessário confirmar:
-
-| Secret | Valor esperado (produção) |
-|---|---|
-| `ASAAS_API_KEY` | Chave de produção (`$aact_...`) |
-| `ASAAS_BASE_URL` | `https://api.asaas.com/v3` |
-| `ASAAS_PROXY_URL` | URL de proxy HTTP válida (ou remover) |
-| `ASAAS_WEBHOOK_TOKEN` | Token configurado no painel Asaas produção |
-
-E na tabela `organizations`, verificar que `asaas_wallet_id` e `asaas_customer_id` são IDs de produção.
+E o helper compartilhado:
+- `_shared/asaas-customer.ts` (3 chamadas à API)
 
 ---
 
 ## Resumo
 
-| Mudança | Arquivos |
-|---|---|
-| Trocar `getClaims()` por `getUser()` | 9 edge functions |
-| Refresh de sessão antes de pagamentos | 3 arquivos frontend |
-| Diagnóstico expandido | `asaas-test-connection` |
-| Erros descritivos | `ClientePlanoCreditos.tsx`, hooks de pagamento |
-| Logging antes do auth | 9 edge functions |
+| Mudança | Arquivos | Impacto |
+|---|---|---|
+| Injetar `User-Agent` no helper centralizado | `_shared/asaas-fetch.ts` | Corrige 401 em todas as chamadas |
+| Adicionar `User-Agent` nos headers inline | 6 edge functions + `_shared/asaas-customer.ts` | Redundância de segurança |
+| Diagnóstico de erros Asaas expandido | `asaas-test-connection/index.ts` | Facilita debug futuro |
+
+Total: ~8 arquivos modificados. A correção principal é no `asaas-fetch.ts` — uma linha que afeta todo o sistema.
+
+## Checklist para o usuário (após deploy)
+
+1. Executar `asaas-test-connection` para validar se retorna `connected: true`
+2. Se ainda der erro, verificar o código de erro retornado (a função agora mostra o erro exato do Asaas)
+3. Confirmar que `ASAAS_API_KEY` começa com `$aact_prod_` (produção) e `ASAAS_BASE_URL` é `https://api.asaas.com/v3`
 
