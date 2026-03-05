@@ -242,7 +242,8 @@ export default function ClienteRedesSociais() {
     setUploading(true);
     const newUrls: string[] = [];
     for (const file of Array.from(files)) {
-      const path = `references/${orgId}/${Date.now()}_${file.name}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `references/${orgId}/${Date.now()}_${safeName}`;
       const { error } = await supabase.storage.from("social-arts").upload(path, file);
       if (error) {
         toast({ title: "Erro ao enviar imagem", description: error.message, variant: "destructive" });
