@@ -17,12 +17,15 @@ import {
   Share2, Plus, ArrowLeft, Image, Video, Check, RefreshCw, Download,
   Sparkles, Loader2, Upload, X, Clock, Eye, Type, Film, Smartphone,
   Monitor, LayoutGrid, Square, RectangleVertical, Palette, Box,
-  FileText, Wand2, AlertTriangle
+  FileText, Wand2, AlertTriangle, FileDown
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
+import { useContentHistory, ContentItem } from "@/hooks/useClienteContentV2";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type MainView = "history" | "wizard";
 type PostType = "art" | "video";
@@ -136,14 +139,32 @@ export default function ClienteRedesSociais() {
   const [isGenerating, setIsGenerating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+  const [showContentPicker, setShowContentPicker] = useState(false);
 
   const { data: orgId } = useUserOrgId();
   const { data: posts, isLoading: postsLoading } = usePostHistory();
   const { data: visualIdentity } = useVisualIdentity();
+  const { data: contentHistory } = useContentHistory();
   const generatePost = useGeneratePost();
   const approvePost = useApprovePost();
   const generateBriefing = useGenerateBriefing();
   const generateVideoBriefing = useGenerateVideoBriefing();
+
+  const fillTextFromContent = (content: ContentItem) => {
+    const res = content.result as any;
+    if (!res) return;
+    const principal = res.conteudo_principal || res;
+    setHeadline(principal.headline || principal.titulo || content.title || "");
+    setSubheadline(principal.subtitulo || principal.subheadline || "");
+    setSupportingText(res.legenda ? String(res.legenda).slice(0, 300) : principal.texto_apoio || "");
+    setBulletPoints(
+      Array.isArray(principal.bullet_points)
+        ? principal.bullet_points.join(", ")
+        : principal.bullet_points || ""
+    );
+    setCta(principal.cta || res.cta || content.cta || "");
+    toast({ title: "Texto importado!", description: "Revise e ajuste os campos conforme necessário." });
+  };
 
   const totalArtSteps = 7;
   const totalVideoSteps = 8;
@@ -775,9 +796,65 @@ export default function ClienteRedesSociais() {
             <div>
               <h3 className="text-base font-semibold mb-1">Texto da arte</h3>
               <p className="text-sm text-muted-foreground">
-                {briefingFilled ? "Campos pré-preenchidos pela IA. Revise e ajuste." : "Qual mensagem deve aparecer na imagem?"}
+                {briefingFilled ? "Campos pré-preenchidos pela IA. Revise e ajuste." : "Preencha manualmente ou importe de um conteúdo gerado."}
               </p>
             </div>
+
+            {/* Linked content shortcut */}
+            {contentData && (
+              <Card className="bg-accent/50 border-accent">
+                <CardContent className="p-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-xs font-medium truncate">Conteúdo vinculado: {contentData.title || contentData.titulo || "Sem título"}</span>
+                  </div>
+                  <Button size="sm" variant="secondary" className="shrink-0 text-xs" onClick={() => fillTextFromContent(contentData as any)}>
+                    <FileDown className="w-3 h-3 mr-1" /> Usar texto
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Import from another content */}
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setShowContentPicker(true)}>
+              <FileText className="w-4 h-4 mr-2" /> Importar de outro conteúdo
+            </Button>
+
+            {/* Content picker dialog */}
+            <Dialog open={showContentPicker} onOpenChange={setShowContentPicker}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Selecionar conteúdo</DialogTitle>
+                  <DialogDescription>Escolha um conteúdo para importar o texto</DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-72">
+                  <div className="space-y-2 pr-2">
+                    {(contentHistory || []).length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-8">Nenhum conteúdo gerado ainda.</p>
+                    )}
+                    {(contentHistory || []).map((c) => (
+                      <Card
+                        key={c.id}
+                        className="cursor-pointer hover:bg-accent/50 transition-colors"
+                        onClick={() => {
+                          fillTextFromContent(c);
+                          setShowContentPicker(false);
+                        }}
+                      >
+                        <CardContent className="p-3">
+                          <p className="text-sm font-medium truncate">{c.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {c.format && <Badge variant="outline" className="text-[10px]">{c.format}</Badge>}
+                            <span className="text-[10px] text-muted-foreground">{format(new Date(c.created_at), "dd/MM/yyyy")}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Headline (obrigatório)</Label>
