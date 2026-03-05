@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,113 +6,105 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CREDIT_COST = 200;
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { briefing, formatos, estrategia, persona, organization_id, objetivos, materiais, salesPlanContext } = await req.json();
+    const { tema, formato, objetivo, mensagem_principal, cta, estrategia } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // Build strategy context
+    let estrategiaContext = "";
+    if (estrategia) {
+      const r = estrategia.strategy_result || {};
+      const a = estrategia.answers || {};
+      estrategiaContext = `
+DADOS DA ESTRATÉGIA ATIVA DO CLIENTE:
+- Empresa: ${a.empresa || "N/A"}
+- Produto: ${a.produto || "N/A"}
+- Público-alvo: ${a.publico || "N/A"}
+- Problema que resolve: ${a.problema || "N/A"}
+- Diferencial: ${a.diferencial || "N/A"}
+- Objetivo de marketing: ${a.objetivo || "N/A"}
+${r.posicionamento ? `- Posicionamento: ${JSON.stringify(r.posicionamento)}` : ""}
+${r.persona ? `- Persona: ${JSON.stringify(r.persona)}` : ""}
+${r.pilares_conteudo ? `- Pilares de conteúdo: ${JSON.stringify(r.pilares_conteudo)}` : ""}
 
-    // Pre-check credits
-    if (organization_id) {
-      const { data: wallet } = await supabaseAdmin
-        .from("credit_wallets")
-        .select("balance")
-        .eq("organization_id", organization_id)
-        .maybeSingle();
-
-      if (!wallet || wallet.balance < CREDIT_COST) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos para esta ação." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+Use estes dados para alinhar 100% do conteúdo com a estratégia do cliente.`;
     }
 
-    const totalConteudos =
-      (formatos?.feed || 0) +
-      (formatos?.carrossel || 0) +
-      (formatos?.reels || 0) +
-      (formatos?.story || 0);
+    // Format-specific instructions
+    const formatInstructions: Record<string, string> = {
+      "carrossel": `Para CARROSSEL, gere uma estrutura de slides:
+- Slide 1: Gancho forte (pergunta ou dado impactante)
+- Slide 2: Introdução do problema
+- Slide 3: Aprofundamento
+- Slide 4: Reflexão
+- Slide 5: Solução
+- Slide 6: Benefício
+- Slide 7: Reforço de autoridade
+- Slide 8: CTA
+Cada slide deve ter título curto + texto de 2-3 linhas.
+O campo "conteudo_principal" deve ser um array de objetos com "slide_numero", "titulo" e "texto".`,
 
-    const estrategiaContext = estrategia
-      ? `\n\nDados da estratégia ativa do cliente:
-Persona: ${estrategia.answers?.persona_nome || "N/A"} — ${estrategia.answers?.persona_descricao || "N/A"}
-Segmento: ${estrategia.answers?.segmento || "N/A"}
-Tom de voz: ${estrategia.answers?.tom_comunicacao || "N/A"}
-Diferenciais: ${estrategia.answers?.diferenciais || "N/A"}
-Objetivos: ${estrategia.answers?.objetivo_principal || "N/A"}
-Canais: ${estrategia.answers?.canais_ativos || "N/A"}
-Nível de maturidade: ${estrategia.nivel || "N/A"} (score: ${estrategia.score_percentage || 0}%)
-\nUse estes dados para alinhar 100% dos conteúdos com a estratégia.`
-      : "";
+      "post_unico": `Para POST ÚNICO, gere:
+- headline impactante
+- texto principal completo (3-5 parágrafos)
+- CTA final
+O campo "conteudo_principal" deve ser um objeto com "headline", "texto" e "cta".`,
 
-    const salesPlanBlock = salesPlanContext
-      ? `\n\nDADOS DO PLANO DE VENDAS (personalize ao negócio real):
-- Segmento: ${salesPlanContext.segmento || "N/A"}
-- Modelo: ${salesPlanContext.modeloNegocio || "N/A"}  
-- Produtos/Serviços: ${salesPlanContext.produtos || "N/A"}
-- Diferenciais: ${salesPlanContext.diferenciais || "N/A"}
-- Dor do Cliente: ${salesPlanContext.dorCliente || "N/A"}
-- Ticket Médio: ${salesPlanContext.ticketMedio || "N/A"}
-\nMencione produtos reais, use diferenciais como argumentos e aborde as dores do cliente ideal.`
-      : "";
+      "roteiro_video": `Para ROTEIRO DE VÍDEO, gere:
+- Hook inicial [0-3s]
+- Contexto/Problema [3-15s]
+- Desenvolvimento [15-40s]
+- Solução/Resultado [40-55s]
+- CTA [55-60s]
+Inclua também sugestões de texto na tela e legenda do vídeo.
+O campo "conteudo_principal" deve ser um objeto com "hook", "desenvolvimento", "conclusao", "cta", "texto_tela" e "legenda_video".`,
 
-    const objetivosText = Array.isArray(objetivos) && objetivos.length > 0
-      ? `Objetivos selecionados: ${objetivos.join(", ")}`
-      : `Objetivo: ${briefing.objetivo}`;
+      "thread": `Para THREAD, gere uma sequência de 5-8 tweets/posts conectados:
+- Tweet 1: Gancho
+- Tweets 2-6: Desenvolvimento (1 ideia por tweet)
+- Tweet final: CTA
+O campo "conteudo_principal" deve ser um array de objetos com "numero" e "texto".`,
 
-    const materiaisContext = Array.isArray(materiais) && materiais.length > 0
-      ? `\n\nMateriais de apoio fornecidos:\n${materiais.map((m: any, i: number) => `${i + 1}. ${m.type === "link" ? `Link: ${m.url}` : `Arquivo: ${m.name}`}`).join("\n")}\nConsidere estes materiais ao criar os conteúdos.`
-      : "";
+      "artigo_curto": `Para ARTIGO CURTO, gere:
+- Título SEO-friendly
+- Introdução (1 parágrafo)
+- 3-4 subtítulos com conteúdo
+- Conclusão com CTA
+O campo "conteudo_principal" deve ser um objeto com "titulo", "introducao", "secoes" (array com "subtitulo" e "texto") e "conclusao".`,
+    };
 
-    const personaContext = persona?.nome || persona?.descricao
-      ? `\n\nPERSONA DO PÚBLICO-ALVO:
-${persona.nome ? `Nome: ${persona.nome}` : ""}
-${persona.descricao ? `Descrição: ${persona.descricao}` : ""}
+    const formatKey = formato?.toLowerCase().replace(/ /g, "_") || "post_unico";
+    const formatInstruction = formatInstructions[formatKey] || formatInstructions["post_unico"];
 
-Adapte TODOS os roteiros, CTAs e embasamentos para este público específico.
-Use linguagem, referências e exemplos que ressoem com esta persona.
-O tom, vocabulário e nível de complexidade devem ser calibrados para esta persona.`
-      : "";
+    const systemPrompt = `Você é um estrategista de marketing digital especializado em criação de conteúdo.
+Sua tarefa é gerar UM conteúdo completo e pronto para uso.
+${estrategiaContext}
 
-    const systemPrompt = `Você é um estrategista de marketing digital especializado em redes sociais. Sua tarefa é gerar conteúdos mensais completos para uma marca/empresa.
-${personaContext}
+FORMATO SOLICITADO: ${formato}
+${formatInstruction}
 
-REGRAS OBRIGATÓRIAS:
-- Gere EXATAMENTE ${totalConteudos} conteúdos no total
-- Distribua os formatos assim: ${formatos?.feed || 0} Posts Feed, ${formatos?.carrossel || 0} Carrosséis, ${formatos?.reels || 0} Roteiros de Reels/Vídeo, ${formatos?.story || 0} Stories
-- Cada conteúdo deve ter roteiro/texto COMPLETO e pronto para uso (não apenas ideias)
-- Para Carrosséis: escreva o conteúdo de cada slide (5-10 slides)
-- Para Reels: escreva roteiro com timestamps [0-5s], [5-15s] etc
-- Para Stories: escreva sequência de 2-4 stories
-- Para Feed: escreva legenda completa com parágrafos
-- Distribua entre etapas do funil: ~40% Topo, ~35% Meio, ~25% Fundo
-- Inclua hashtags relevantes (5-10 por conteúdo)
-- IMPORTANTE: Para cada conteúdo, inclua um "embasamento" de 2-3 linhas explicando POR QUE esse formato e conteúdo foram escolhidos, com dados ou lógica de marketing
-- Sugira a rede social mais adequada (Instagram, LinkedIn, TikTok)
-${estrategiaContext}${salesPlanBlock}${materiaisContext}`;
+REGRAS:
+- O conteúdo deve ser completo, pronto para usar (não apenas ideias)
+- Adapte a linguagem ao público-alvo e posicionamento da marca
+- O CTA deve ser natural e alinhado ao objetivo
+- Gere 5 variações de headline criativas
+- A legenda deve ser completa para redes sociais (com emojis, quebras de linha)
+- Sugira hashtags relevantes (5-10)
+- A pergunta de engajamento deve estimular comentários
+- O embasamento deve explicar por que esse conteúdo funciona`;
 
-    const userPrompt = `Gere a campanha de conteúdo para o mês de ${briefing.mes} com as seguintes informações:
-
-${objetivosText}
-Tema central: ${briefing.tema}
-Tom de comunicação: ${briefing.tom}
-${briefing.promocoes ? `Promoções/Ofertas: ${briefing.promocoes}` : ""}
-${briefing.datas ? `Datas comemorativas: ${briefing.datas}` : ""}
-${briefing.destaques ? `Destaques/Novidades: ${briefing.destaques}` : ""}
-
-Gere os ${totalConteudos} conteúdos distribuídos nos formatos solicitados.`;
+    const userPrompt = `Gere um conteúdo com as seguintes informações:
+- Tema: ${tema}
+- Formato: ${formato}
+- Objetivo: ${objetivo}
+- Mensagem principal: ${mensagem_principal || "A critério da IA, baseado no tema e estratégia"}
+- CTA desejado: ${cta}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -124,7 +115,7 @@ Gere os ${totalConteudos} conteúdos distribuídos nos formatos solicitados.`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
@@ -133,31 +124,30 @@ Gere os ${totalConteudos} conteúdos distribuídos nos formatos solicitados.`;
             {
               type: "function",
               function: {
-                name: "generate_monthly_content",
-                description:
-                  "Retorna array de conteúdos gerados para a campanha mensal",
+                name: "generate_content",
+                description: "Retorna o conteúdo gerado com estrutura completa",
                 parameters: {
                   type: "object",
                   properties: {
-                    conteudos: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          titulo: { type: "string", description: "Título do conteúdo" },
-                          formato: { type: "string", enum: ["Feed", "Carrossel", "Reels", "Story"] },
-                          rede: { type: "string", enum: ["Instagram", "LinkedIn", "TikTok"] },
-                          funil: { type: "string", enum: ["Topo", "Meio", "Fundo"] },
-                          roteiro: { type: "string", description: "Roteiro/texto completo do conteúdo" },
-                          hashtags: { type: "array", items: { type: "string" } },
-                          embasamento: { type: "string", description: "Explicação de 2-3 linhas sobre POR QUE esse formato e conteúdo foram escolhidos" },
-                        },
-                        required: ["titulo", "formato", "rede", "funil", "roteiro", "hashtags", "embasamento"],
-                        additionalProperties: false,
-                      },
+                    titulo: { type: "string", description: "Título principal do conteúdo" },
+                    conteudo_principal: {
+                      description: "Estrutura do conteúdo conforme formato (slides para carrossel, hook/dev/cta para vídeo, etc.)",
                     },
+                    legenda: { type: "string", description: "Legenda completa para redes sociais com emojis" },
+                    headlines: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "5 variações de headline",
+                    },
+                    pergunta_engajamento: { type: "string", description: "Pergunta para estimular comentários" },
+                    hashtags: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "5-10 hashtags relevantes",
+                    },
+                    embasamento: { type: "string", description: "Explicação de por que este conteúdo funciona (2-3 linhas)" },
                   },
-                  required: ["conteudos"],
+                  required: ["titulo", "conteudo_principal", "legenda", "headlines", "pergunta_engajamento", "hashtags", "embasamento"],
                   additionalProperties: false,
                 },
               },
@@ -165,7 +155,7 @@ Gere os ${totalConteudos} conteúdos distribuídos nos formatos solicitados.`;
           ],
           tool_choice: {
             type: "function",
-            function: { name: "generate_monthly_content" },
+            function: { name: "generate_content" },
           },
         }),
       }
@@ -178,16 +168,10 @@ Gere os ${totalConteudos} conteúdos distribuídos nos formatos solicitados.`;
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
       return new Response(
-        JSON.stringify({ error: "Erro ao gerar conteúdos" }),
+        JSON.stringify({ error: "Erro ao gerar conteúdo" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -204,20 +188,6 @@ Gere os ${totalConteudos} conteúdos distribuídos nos formatos solicitados.`;
     }
 
     const result = JSON.parse(toolCall.function.arguments);
-
-    // Debit credits after successful generation
-    if (organization_id) {
-      try {
-        await supabaseAdmin.rpc("debit_credits", {
-          _org_id: organization_id,
-          _amount: CREDIT_COST,
-          _description: `Geração de ${totalConteudos} conteúdos`,
-          _source: "generate-content",
-        });
-      } catch (debitErr) {
-        console.error("Debit error (non-blocking):", debitErr);
-      }
-    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

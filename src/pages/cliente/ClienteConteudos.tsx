@@ -1,966 +1,604 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState } from "react";
 import {
-  FileText, Check, Plus, Sparkles, Copy,
-  BookOpen, FolderOpen, Folder, Clock, ArrowLeft,
-  Lightbulb, CheckCircle2, Circle,
-  Star, ArrowRight, Play, Image, Layers, Video,
-  Monitor, Smartphone, Square, RectangleHorizontal,
-  Camera, Mic, Sun, Download, Filter,
-  ChevronDown, History, GraduationCap, Megaphone, Palette,
+  FileText, Check, Sparkles, Copy, ArrowLeft, ArrowRight,
+  Layers, Video, AlignLeft, List, MessageSquare,
+  Target, Lightbulb, Hash, BookOpen, Clock, Filter,
+  CheckCircle2, RotateCcw, Pencil,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useClienteCampaignsDB, useCreateClientCampaign, useUpdateClientCampaign } from "@/hooks/useClienteCampaignsDB";
-import { motion, AnimatePresence } from "framer-motion";
-import { HelpTooltip } from "@/components/HelpTooltip";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ApprovalPanel, ApprovalStatusBadge, type ApprovalStatus } from "@/components/approval/ApprovalPanel";
-import { ApprovalSummary } from "@/components/approval/ApprovalSummary";
-import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
-import { useClienteSubscription } from "@/hooks/useClienteSubscription";
-import { getPlanBySlug, recommendContentDistribution } from "@/constants/plans";
-import { ChatBriefing } from "@/components/cliente/ChatBriefing";
-import { AGENTS, LUNA_STEPS } from "@/components/cliente/briefingAgents";
-import { useSalesPlan } from "@/hooks/useSalesPlan";
-import { useOrgProfile } from "@/hooks/useOrgProfile";
-
-/* ── Types ── */
-interface GeneratedContent {
-  id: string;
-  titulo: string;
-  formato: "Feed" | "Carrossel" | "Reels" | "Story";
-  rede: string;
-  funil: "Topo" | "Meio" | "Fundo";
-  roteiro: string;
-  hashtags: string[];
-  embasamento: string;
-  status: ApprovalStatus;
-  changeNote?: string;
-  // backward compat
-  approved?: boolean;
-}
-
-interface Campaign {
-  id: string;
-  mes: string;
-  label: string;
-  createdAt: string;
-  briefing: {
-    objetivo: string;
-    tema: string;
-    tom: string;
-  };
-  conteudos: GeneratedContent[];
-}
-
-/* ── Backward compat helper ── */
-function migrateContentStatus(c: any): GeneratedContent {
-  if (c.status && typeof c.status === "string") return c;
-  return { ...c, status: c.approved ? "approved" : "pending" };
-}
+import { useContentHistory, useGenerateContent, useApproveContent, type ContentItem } from "@/hooks/useClienteContentV2";
+import { motion, AnimatePresence } from "framer-motion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 /* ── Constants ── */
-const CURRENT_MONTH = "2026-02";
-
-const formatColors: Record<string, string> = {
-  Feed: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  Carrossel: "bg-purple-500/10 text-purple-600 border-purple-500/20",
-  Reels: "bg-pink-500/10 text-pink-600 border-pink-500/20",
-  Story: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-};
-
-const funnelColors: Record<string, string> = {
-  Topo: "bg-primary/10 text-primary",
-  Meio: "bg-sky-500/10 text-sky-600",
-  Fundo: "bg-emerald-500/10 text-emerald-600",
-};
-
-const networkColors: Record<string, string> = {
-  Instagram: "bg-pink-500/10 text-pink-500",
-  LinkedIn: "bg-sky-500/10 text-sky-500",
-  TikTok: "bg-purple-500/10 text-purple-500",
-};
-
-const MESES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+const FORMATOS = [
+  { value: "carrossel", label: "Carrossel", icon: Layers, desc: "Slides para redes sociais" },
+  { value: "post_unico", label: "Post Único", icon: AlignLeft, desc: "Imagem + legenda" },
+  { value: "roteiro_video", label: "Roteiro de Vídeo", icon: Video, desc: "Hook, desenvolvimento, CTA" },
+  { value: "thread", label: "Thread", icon: List, desc: "Sequência de posts conectados" },
+  { value: "artigo_curto", label: "Artigo Curto", icon: BookOpen, desc: "Texto para blog ou LinkedIn" },
 ];
 
 const OBJETIVOS = [
-  "Gerar leads", "Aumentar engajamento", "Lançar produto", "Vender mais", "Fortalecer marca",
+  { value: "gerar_leads", label: "Gerar leads" },
+  { value: "educar", label: "Educar" },
+  { value: "autoridade", label: "Autoridade" },
+  { value: "divulgar_servico", label: "Divulgar serviço" },
+  { value: "engajamento", label: "Engajamento" },
 ];
 
-const TONS = ["Educativo", "Inspirador", "Direto", "Storytelling", "Misto"];
+const CTAS = [
+  { value: "comentar", label: "Comentar" },
+  { value: "whatsapp", label: "Chamar no WhatsApp" },
+  { value: "orcamento", label: "Pedir orçamento" },
+  { value: "acessar_link", label: "Acessar link" },
+];
 
 const loadingPhrases = [
-  "Analisando seu público-alvo...",
-  "Definindo estratégia de funil...",
-  "Criando roteiros personalizados...",
-  "Selecionando formatos ideais...",
-  "Gerando hashtags relevantes...",
-  "Definindo CTAs estratégicos...",
-  "Embasando cada conteúdo...",
-  "Finalizando sua campanha...",
-];
-
-/* ── Tutorial data ── */
-const tutorialData = [
-  {
-    formato: "Post Feed",
-    icon: <Image className="w-6 h-6" />,
-    dimensao: "1080 × 1080 px",
-    proporcao: "1:1",
-    cor: "bg-blue-500/10 border-blue-500/20 text-blue-600",
-    specs: ["Formato quadrado (1:1)", "JPEG ou PNG, máx 30MB", "Até 2.200 caracteres na legenda"],
-    comoGravar: ["Boa iluminação natural ou ring light", "Fundo limpo e organizado", "Texto legível (fonte mín 24pt)"],
-    estrutura: "Gancho → Conteúdo principal → CTA\n\nEx: Comece com uma pergunta provocativa, desenvolva 3-5 pontos e finalize com chamada para ação.",
-  },
-  {
-    formato: "Carrossel",
-    icon: <Layers className="w-6 h-6" />,
-    dimensao: "1080 × 1080 px (cada slide)",
-    proporcao: "1:1",
-    cor: "bg-purple-500/10 border-purple-500/20 text-purple-600",
-    specs: ["Até 10 slides por carrossel", "Mesma proporção em todos os slides", "3x mais salvamentos que posts normais"],
-    comoGravar: ["Capa atrativa com gancho forte", "Um ponto por slide (evite poluir)", "Último slide sempre com CTA"],
-    estrutura: "Slide 1: Capa com gancho\nSlide 2-8: Conteúdo (1 ideia/slide)\nSlide 9: Resumo visual\nSlide 10: CTA + 'Salve para depois'",
-  },
-  {
-    formato: "Reels / Vídeo Curto",
-    icon: <Video className="w-6 h-6" />,
-    dimensao: "1080 × 1920 px",
-    proporcao: "9:16",
-    cor: "bg-pink-500/10 border-pink-500/20 text-pink-600",
-    specs: ["Duração ideal: 15-60 segundos", "Formato vertical (9:16)", "Gancho nos 3 primeiros segundos"],
-    comoGravar: ["Grave na vertical com celular fixo", "Áudio claro (use microfone lapela)", "Iluminação frontal, evite contraluz", "Olhe para a câmera, fale com energia"],
-    estrutura: "[0-3s] Gancho forte\n[3-15s] Contexto/Problema\n[15-40s] Desenvolvimento\n[40-55s] Solução/Resultado\n[55-60s] CTA",
-  },
-  {
-    formato: "Story",
-    icon: <Smartphone className="w-6 h-6" />,
-    dimensao: "1080 × 1920 px",
-    proporcao: "9:16",
-    cor: "bg-amber-500/10 border-amber-500/20 text-amber-600",
-    specs: ["Duração: até 60s por story", "Use enquetes, perguntas e stickers", "Sequência narrativa de 3-5 stories"],
-    comoGravar: ["Enquetes e caixas de pergunta geram interação", "Use legendas (70% assistem sem som)", "Conte uma história em sequência"],
-    estrutura: "Story 1: Gancho (pergunta ou dado)\nStory 2-3: Desenvolvimento\nStory 4: CTA (link, enquete, DM)",
-  },
-  {
-    formato: "Vídeo Longo (YouTube)",
-    icon: <Monitor className="w-6 h-6" />,
-    dimensao: "1920 × 1080 px",
-    proporcao: "16:9",
-    cor: "bg-red-500/10 border-red-500/20 text-red-600",
-    specs: ["Duração: 8-15 minutos ideal", "Formato horizontal (16:9)", "Thumbnail personalizada é obrigatória"],
-    comoGravar: ["Câmera na altura dos olhos", "Microfone externo (condensador ou lapela)", "Cenário com identidade da marca", "Edição com cortes a cada 5-8 segundos"],
-    estrutura: "[0-30s] Gancho + promessa\n[30s-1min] Intro (apresentação rápida)\n[1-10min] Conteúdo principal\n[10-12min] Resumo + CTA\n[Final] Tela de inscrição",
-  },
+  "Analisando sua estratégia...",
+  "Estruturando o conteúdo...",
+  "Criando headlines criativas...",
+  "Gerando legenda completa...",
+  "Finalizando hashtags...",
 ];
 
 export default function ClienteConteudos() {
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { data: subscription } = useClienteSubscription();
-  const plan = getPlanBySlug(subscription?.plan);
-  const maxContents = plan?.maxContents ?? 8;
-  const planName = plan?.name ?? "Starter";
   const { data: activeStrategy } = useActiveStrategy();
-  const { data: salesPlan } = useSalesPlan();
+  const { data: history } = useContentHistory();
+  const generateMutation = useGenerateContent();
+  const approveMutation = useApproveContent();
 
-  // DB hooks
-  const { data: dbCampaigns } = useClienteCampaignsDB();
-  const createCampaignMutation = useCreateClientCampaign();
-  const updateCampaignMutation = useUpdateClientCampaign();
+  // Stepper
+  const [step, setStep] = useState(1);
+  const [tema, setTema] = useState("");
+  const [formato, setFormato] = useState("");
+  const [objetivo, setObjetivo] = useState("");
+  const [mensagem, setMensagem] = useState("");
+  const [cta, setCta] = useState("");
+  const [ctaCustom, setCtaCustom] = useState("");
 
-  // Map DB campaigns to local Campaign format
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [dbSynced, setDbSynced] = useState(false);
-
-  useEffect(() => {
-    if (dbCampaigns && !dbSynced) {
-      const mapped: Campaign[] = dbCampaigns.map((c: any) => {
-        const content = c.content || {};
-        return {
-          id: c.id,
-          mes: content.mes || "",
-          label: content.label || c.name,
-          createdAt: new Date(c.created_at).toLocaleDateString("pt-BR"),
-          briefing: content.briefing || { objetivo: "", tema: "", tom: "" },
-          conteudos: (content.conteudos || []).map(migrateContentStatus),
-        };
-      });
-      setCampaigns(mapped);
-      setDbSynced(true);
-    }
-  }, [dbCampaigns, dbSynced]);
-
-  // Tab from URL (for "Gravar" redirect)
-  const initialTab = searchParams.get("tab") || "campanhas";
-  const initialFormat = searchParams.get("formato") || null;
-
-  const [openCampaign, setOpenCampaign] = useState<string | null>(null);
-  const [openContent, setOpenContent] = useState<GeneratedContent | null>(null);
-  const [formatFilter, setFormatFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-
-  // Wizard state
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardStep, setWizardStep] = useState(1);
+  // Result
+  const [result, setResult] = useState<any>(null);
+  const [resultId, setResultId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [loadingPhrase, setLoadingPhrase] = useState(0);
+  const [loadingIdx, setLoadingIdx] = useState(0);
 
-  // Briefing fields
-  const [bMes, setBMes] = useState("Março 2026");
-  const [bObjetivos, setBObjetivos] = useState<string[]>([]);
-  const [bTema, setBTema] = useState("");
-  const [bPromocoes, setBPromocoes] = useState("");
-  const [bDatas, setBDatas] = useState("");
-  const [bDestaques, setBDestaques] = useState("");
-  const [bTom, setBTom] = useState("");
+  // History
+  const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
+  const [filterFormat, setFilterFormat] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
 
-  // Persona fields
-  const [personaNome, setPersonaNome] = useState("");
-  const [personaDescricao, setPersonaDescricao] = useState("");
+  const hasStrategy = !!activeStrategy?.strategy_result;
+  const totalSteps = 5;
+  const ctaFinal = cta === "custom" ? ctaCustom : cta;
 
-  // Format quantities
-  const [qFeed, setQFeed] = useState(0);
-  const [qCarrossel, setQCarrossel] = useState(0);
-  const [qReels, setQReels] = useState(0);
-  const [qStory, setQStory] = useState(0);
-
-  const totalFormatos = qFeed + qCarrossel + qReels + qStory;
-
-  // Count total individual contents this month (not campaigns)
-  const contentsThisMonth = campaigns
-    .filter(c => c.mes.includes("2026"))
-    .reduce((sum, c) => sum + c.conteudos.length, 0);
-  const saldoRestante = maxContents === -1 ? Infinity : Math.max(0, maxContents - contentsThisMonth);
-  const quotaExceeded = maxContents !== -1 && totalFormatos > saldoRestante;
-
-  // Rotate loading phrases
-  useEffect(() => {
-    if (!isGenerating) return;
-    const interval = setInterval(() => {
-      setLoadingPhrase((p) => (p + 1) % loadingPhrases.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [isGenerating]);
-
-  const handleChatComplete = async (answers: Record<string, any>) => {
-    const objetivos = Array.isArray(answers.objetivos) ? answers.objetivos : [];
-    const tema = (answers.tema || "") as string;
-    const tom = (answers.tom || "") as string;
-    const mes = (answers.mes || "Março 2026") as string;
-    const feed = parseInt(answers.qFeed) || 0;
-    const carrossel = parseInt(answers.qCarrossel) || 0;
-    const reels = parseInt(answers.qReels) || 0;
-    const story = parseInt(answers.qStory) || 0;
-
-    if (objetivos.length === 0 || !tema || !tom) {
-      toast({ title: "Preencha os campos obrigatórios", description: "Objetivo, tema e tom são necessários.", variant: "destructive" });
-      return;
-    }
-    const total = feed + carrossel + reels + story;
-    if (total === 0) {
-      toast({ title: "Selecione ao menos 1 formato", variant: "destructive" });
-      return;
-    }
-
-    setIsGenerating(true);
-    setLoadingPhrase(0);
-    try {
-      const estrategia = activeStrategy?.answers || null;
-      const personaData = (answers.persona_nome || answers.persona_descricao)
-        ? { nome: answers.persona_nome, descricao: answers.persona_descricao }
-        : undefined;
-
-      const salesPlanContext = salesPlan?.answers ? {
-        segmento: salesPlan.answers.segmento,
-        produtos: salesPlan.answers.produtos_servicos,
-        diferenciais: salesPlan.answers.diferenciais,
-        dorCliente: salesPlan.answers.dor_principal,
-        modeloNegocio: salesPlan.answers.modelo_negocio,
-        ticketMedio: salesPlan.answers.ticket_medio,
-      } : undefined;
-
-      const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: {
-          briefing: { mes, objetivo: objetivos.join(", "), tema, promocoes: answers.promocoes || "", datas: answers.datas || "", destaques: answers.destaques || "", tom },
-          formatos: { feed, carrossel, reels, story },
-          estrategia,
-          persona: personaData,
-          salesPlanContext,
-        },
-      });
-      if (error) throw error;
-
-      const conteudos: GeneratedContent[] = (data?.conteudos || []).map(
-        (c: any, i: number) => ({ ...c, id: `gen-${Date.now()}-${i}`, status: "pending" as ApprovalStatus })
-      );
-      const newCampaign: Campaign = {
-        id: `campaign-${Date.now()}`, mes, label: mes,
-        createdAt: new Date().toLocaleDateString("pt-BR"),
-        briefing: { objetivo: objetivos.join(", "), tema, tom },
-        conteudos,
-      };
-      setCampaigns(prev => [newCampaign, ...prev]);
-      createCampaignMutation.mutate({
-        name: mes,
-        type: "content",
-        content: { mes, label: mes, briefing: newCampaign.briefing, conteudos },
-      });
-      setWizardOpen(false);
-      setOpenCampaign(newCampaign.id);
-      toast({ title: "Campanha gerada com sucesso!", description: `${conteudos.length} conteúdos criados para ${mes}.` });
-    } catch (err: any) {
-      console.error("Generation error:", err);
-      toast({ title: "Erro ao gerar conteúdos", description: err?.message || "Tente novamente.", variant: "destructive" });
-    } finally {
-      setIsGenerating(false);
-    }
+  const canAdvance = () => {
+    if (step === 1) return tema.trim().length > 0;
+    if (step === 2) return formato !== "";
+    if (step === 3) return objetivo !== "";
+    if (step === 4) return true; // optional
+    if (step === 5) return ctaFinal !== "";
+    return false;
   };
 
   const handleGenerate = async () => {
-    if (bObjetivos.length === 0 || !bTema || !bTom) {
-      toast({ title: "Preencha os campos obrigatórios", description: "Objetivo, tema e tom são necessários.", variant: "destructive" });
-      return;
-    }
-
     setIsGenerating(true);
-    setLoadingPhrase(0);
+    setLoadingIdx(0);
+    const interval = setInterval(() => setLoadingIdx(p => (p + 1) % loadingPhrases.length), 2500);
 
     try {
-      const estrategia = activeStrategy?.answers || null;
-
-      const personaData = (personaNome || personaDescricao)
-        ? { nome: personaNome, descricao: personaDescricao }
-        : undefined;
-
-      const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: {
-          briefing: { mes: bMes, objetivo: bObjetivos.join(", "), tema: bTema, promocoes: bPromocoes, datas: bDatas, destaques: bDestaques, tom: bTom },
-          formatos: { feed: qFeed, carrossel: qCarrossel, reels: qReels, story: qStory },
-          estrategia,
-          persona: personaData,
-        },
+      const res = await generateMutation.mutateAsync({
+        tema,
+        formato: FORMATOS.find(f => f.value === formato)?.label || formato,
+        objetivo: OBJETIVOS.find(o => o.value === objetivo)?.label || objetivo,
+        mensagem_principal: mensagem,
+        cta: CTAS.find(c => c.value === cta)?.label || ctaCustom || cta,
+        estrategia: activeStrategy || null,
       });
-
-      if (error) throw error;
-
-      const conteudos: GeneratedContent[] = (data?.conteudos || []).map(
-        (c: any, i: number) => ({
-          ...c,
-          id: `gen-${Date.now()}-${i}`,
-          status: "pending" as ApprovalStatus,
-        })
-      );
-
-      const newCampaign: Campaign = {
-        id: `campaign-${Date.now()}`,
-        mes: bMes,
-        label: bMes,
-        createdAt: new Date().toLocaleDateString("pt-BR"),
-        briefing: { objetivo: bObjetivos.join(", "), tema: bTema, tom: bTom },
-        conteudos,
-      };
-
-      setCampaigns(prev => [newCampaign, ...prev]);
-      createCampaignMutation.mutate({
-        name: bMes,
-        type: "content",
-        content: { mes: bMes, label: bMes, briefing: newCampaign.briefing, conteudos },
-      });
-
-      setWizardOpen(false);
-      setWizardStep(1);
-      setOpenCampaign(newCampaign.id);
-      toast({ title: "Campanha gerada com sucesso!", description: `${conteudos.length} conteúdos criados para ${bMes}.` });
+      setResult(res.result);
+      setResultId((res.dbRecord as any)?.id || null);
+      setStep(6); // result screen
+      toast({ title: "Conteúdo gerado com sucesso!" });
     } catch (err: any) {
-      console.error("Generation error:", err);
-      toast({ title: "Erro ao gerar conteúdos", description: err?.message || "Tente novamente.", variant: "destructive" });
+      toast({ title: "Erro ao gerar", description: err?.message, variant: "destructive" });
     } finally {
+      clearInterval(interval);
       setIsGenerating(false);
     }
   };
 
-  const updateContentStatus = (contentId: string, newStatus: ApprovalStatus, changeNote?: string) => {
-    setCampaigns((prev) =>
-      prev.map((c) => ({
-        ...c,
-        conteudos: c.conteudos.map((ct) =>
-          ct.id === contentId ? { ...ct, status: newStatus, changeNote: changeNote || ct.changeNote } : ct
-        ),
-      }))
-    );
-    if (openContent?.id === contentId) {
-      setOpenContent((prev) => prev ? { ...prev, status: newStatus, changeNote: changeNote || prev.changeNote } : null);
+  const handleApprove = async () => {
+    if (!resultId) return;
+    try {
+      await approveMutation.mutateAsync(resultId);
+      toast({ title: "Conteúdo aprovado!", description: "200 créditos debitados." });
+    } catch (err: any) {
+      toast({ title: "Erro ao aprovar", description: err?.message, variant: "destructive" });
     }
   };
 
-  const approveAll = (campaignId: string) => {
-    setCampaigns((prev) =>
-      prev.map((c) =>
-        c.id === campaignId
-          ? { ...c, conteudos: c.conteudos.map((ct) => ({ ...ct, status: "approved" as ApprovalStatus })) }
-          : c
-      )
-    );
-    toast({ title: "Todos os conteúdos aprovados!" });
+  const handleRegenerate = () => {
+    setResult(null);
+    setResultId(null);
+    setStep(5);
   };
 
-  const approvePending = (campaignId: string) => {
-    setCampaigns((prev) =>
-      prev.map((c) =>
-        c.id === campaignId
-          ? { ...c, conteudos: c.conteudos.map((ct) => ct.status === "pending" ? { ...ct, status: "approved" as ApprovalStatus } : ct) }
-          : c
-      )
-    );
-    toast({ title: "Conteúdos pendentes aprovados!" });
+  const resetWizard = () => {
+    setStep(1);
+    setTema("");
+    setFormato("");
+    setObjetivo("");
+    setMensagem("");
+    setCta("");
+    setCtaCustom("");
+    setResult(null);
+    setResultId(null);
   };
 
-  const currentCampaign = campaigns.find((c) => c.id === openCampaign);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copiado!" });
+  };
 
-  const filteredConteudos = currentCampaign?.conteudos.filter((c) => {
-    if (formatFilter !== "all" && c.formato !== formatFilter) return false;
-    if (statusFilter === "approved" && c.status !== "approved") return false;
-    if (statusFilter === "pending" && c.status !== "pending") return false;
-    if (statusFilter === "changes_requested" && c.status !== "changes_requested") return false;
-    if (statusFilter === "rejected" && c.status !== "rejected") return false;
+  const filteredHistory = (history || []).filter(c => {
+    if (filterFormat !== "all" && c.format !== filterFormat) return false;
+    if (filterStatus !== "all" && c.status !== filterStatus) return false;
     return true;
   });
 
-  const isCurrentMonth = (mes: string) => mes.includes("Fevereiro") && mes.includes("2026");
-
-  // Approval stats for current campaign
-  const approvalStats = currentCampaign ? {
-    total: currentCampaign.conteudos.length,
-    approved: currentCampaign.conteudos.filter(c => c.status === "approved").length,
-    changesRequested: currentCampaign.conteudos.filter(c => c.status === "changes_requested").length,
-    rejected: currentCampaign.conteudos.filter(c => c.status === "rejected").length,
-  } : { total: 0, approved: 0, changesRequested: 0, rejected: 0 };
-
+  // ── RENDER ──
   return (
-    <div className="w-full space-y-6">
-      <PageHeader
-        title="Conteúdos"
-        subtitle="Agência de IA — Gere campanhas mensais completas para suas redes sociais"
-        icon={<Megaphone className="w-5 h-5 text-primary" />}
-      />
+    <div className="space-y-6">
+      <PageHeader title="Geração de Conteúdo" subtitle="Crie conteúdos estratégicos alinhados com sua marca" />
 
-      <Tabs defaultValue={initialTab} onValueChange={(v) => {
-        if (v !== "tutorial") setSearchParams({});
-      }}>
+      {hasStrategy && (
+        <Badge variant="outline" className="gap-1.5 text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30">
+          <CheckCircle2 className="w-3.5 h-3.5" /> Estratégia conectada
+        </Badge>
+      )}
+
+      <Tabs defaultValue="criar">
         <TabsList>
-          <TabsTrigger value="campanhas" className="text-xs gap-1.5">
-            <FolderOpen className="w-3.5 h-3.5" /> Campanhas
-          </TabsTrigger>
-          <TabsTrigger value="tutorial" className="text-xs gap-1.5">
-            <GraduationCap className="w-3.5 h-3.5" /> Tutorial
-          </TabsTrigger>
-          <TabsTrigger value="historico" className="text-xs gap-1.5">
-            <History className="w-3.5 h-3.5" /> Histórico
-          </TabsTrigger>
+          <TabsTrigger value="criar"><Sparkles className="w-4 h-4 mr-1" /> Criar Conteúdo</TabsTrigger>
+          <TabsTrigger value="historico"><Clock className="w-4 h-4 mr-1" /> Histórico</TabsTrigger>
         </TabsList>
 
-        {/* ═══ CAMPANHAS ═══ */}
-        <TabsContent value="campanhas" className="space-y-4 mt-4">
-          {/* Quota banner */}
-          <UsageQuotaBanner
-            used={contentsThisMonth}
-            limit={maxContents}
-            label="conteúdos"
-            planName={planName}
-          />
-
-          {/* New campaign button */}
-          <Button
-            className="w-full gap-2 h-12 text-sm font-semibold"
-            onClick={() => { setWizardOpen(true); setWizardStep(1); }}
-            disabled={maxContents !== -1 && contentsThisMonth >= maxContents}
-          >
-            <Plus className="w-4 h-4" /> Nova Campanha Mensal
-          </Button>
-
-          {/* Wizard Dialog — ChatBriefing com Luna */}
-          <Dialog open={wizardOpen} onOpenChange={(open) => { if (!isGenerating) setWizardOpen(open); }}>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden p-0">
-              {isGenerating ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-6 px-6">
-                  <motion.div
-                    animate={{ scale: [1, 1.15, 1] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="p-4 rounded-full bg-primary/10"
-                  >
-                    <Sparkles className="w-10 h-10 text-primary" />
-                  </motion.div>
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={loadingPhrase}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="text-sm text-muted-foreground text-center"
-                    >
-                      {loadingPhrases[loadingPhrase]}
-                    </motion.p>
-                  </AnimatePresence>
-                  <p className="text-xs text-muted-foreground/60">Isso pode levar até 30 segundos...</p>
-                </div>
-              ) : (
-                <ChatBriefing
-                  agent={AGENTS.luna}
-                  steps={LUNA_STEPS}
-                  onComplete={handleChatComplete}
-                  onCancel={() => setWizardOpen(false)}
-                  context={{ maxContents: maxContents, usedContents: contentsThisMonth, planName }}
-                />
-              )}
-            </DialogContent>
-          </Dialog>
-
-          {/* Breadcrumb */}
-          {openCampaign && !openContent && (
-            <div className="flex items-center gap-2 text-sm">
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => { setOpenCampaign(null); setFormatFilter("all"); setStatusFilter("all"); }}>
-                <ArrowLeft className="w-3 h-3" /> Voltar
-              </Button>
-              <span className="text-muted-foreground">/</span>
-              <span className="font-medium">{currentCampaign?.label}</span>
-            </div>
-          )}
-
-          {openContent && (
-            <div className="flex items-center gap-2 text-sm">
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => setOpenContent(null)}>
-                <ArrowLeft className="w-3 h-3" /> Voltar
-              </Button>
-              <span className="text-muted-foreground">/</span>
-              <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => setOpenContent(null)}>{currentCampaign?.label}</button>
-              <span className="text-muted-foreground">/</span>
-              <span className="font-medium text-xs truncate max-w-xs">{openContent.titulo}</span>
-            </div>
-          )}
-
-          {/* Content detail view */}
-          {openContent ? (
-            <Card className="glass-card">
-              <CardContent className="py-5 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold">{openContent.titulo}</p>
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <Badge className={`text-[9px] ${formatColors[openContent.formato] || ""}`}>{openContent.formato}</Badge>
-                      <Badge className={`text-[9px] ${networkColors[openContent.rede] || ""}`}>{openContent.rede}</Badge>
-                      <Badge className={`text-[9px] ${funnelColors[openContent.funil] || ""}`}>{openContent.funil}</Badge>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => { navigator.clipboard.writeText(openContent.roteiro); toast({ title: "Roteiro copiado!" }); }}>
-                    <Copy className="w-3.5 h-3.5" /> Copiar
-                  </Button>
-                </div>
-
-                {/* Script */}
-                <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
-                  <p className="text-xs text-foreground whitespace-pre-line leading-relaxed">{openContent.roteiro}</p>
-                </div>
-
-                {/* Hashtags */}
-                {openContent.hashtags?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {openContent.hashtags.map((h, i) => (
-                      <Badge key={i} variant="outline" className="text-[10px] text-muted-foreground">{h.startsWith("#") ? h : `#${h}`}</Badge>
+        {/* ── TAB: CRIAR ── */}
+        <TabsContent value="criar" className="mt-4">
+          {step <= 5 && !isGenerating && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">
+                    Etapa {step} de {totalSteps}
+                  </CardTitle>
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalSteps }).map((_, i) => (
+                      <div key={i} className={`h-2 w-8 rounded-full transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />
                     ))}
                   </div>
-                )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <AnimatePresence mode="wait">
+                  <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
 
-                {/* Embasamento */}
-                {openContent.embasamento && (
-                  <div className="flex gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
-                    <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mb-1">Por que este conteúdo?</p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{openContent.embasamento}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Approval Panel */}
-                <ApprovalPanel
-                  status={openContent.status}
-                  changeNote={openContent.changeNote}
-                  onApprove={() => {
-                    updateContentStatus(openContent.id, "approved");
-                    toast({ title: "Conteúdo aprovado!" });
-                  }}
-                  onRequestChanges={(note) => {
-                    updateContentStatus(openContent.id, "changes_requested", note);
-                    toast({ title: "Alteração solicitada!" });
-                  }}
-                  onReject={() => {
-                    updateContentStatus(openContent.id, "rejected");
-                    toast({ title: "Conteúdo rejeitado." });
-                  }}
-                />
-
-                {/* ── Action Buttons ── */}
-                <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border/50">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs gap-1.5 h-8"
-                    onClick={() => {
-                      navigator.clipboard.writeText(openContent.roteiro);
-                      toast({ title: "Roteiro copiado!" });
-                    }}
-                  >
-                    <Copy className="w-3.5 h-3.5" /> Copiar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs gap-1.5 h-8"
-                    onClick={() => {
-                      const el = document.createElement("div");
-                      el.innerHTML = `
-                        <div style="font-family:sans-serif;padding:32px;max-width:600px;">
-                          <h1 style="font-size:18px;margin-bottom:8px;">${openContent.titulo}</h1>
-                          <p style="font-size:12px;color:#888;margin-bottom:16px;">${openContent.formato} · ${openContent.rede} · ${openContent.funil}</p>
-                          <div style="white-space:pre-line;font-size:13px;line-height:1.7;margin-bottom:16px;">${openContent.roteiro}</div>
-                          ${openContent.hashtags?.length ? `<p style="font-size:11px;color:#666;">${openContent.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ')}</p>` : ''}
-                          ${openContent.embasamento ? `<div style="margin-top:16px;padding:12px;background:#f5f5f5;border-radius:8px;font-size:11px;"><strong>Embasamento:</strong> ${openContent.embasamento}</div>` : ''}
+                    {/* Step 1: Tema */}
+                    {step === 1 && (
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-xl font-semibold mb-1">Sobre qual tema você deseja criar o conteúdo?</h3>
+                          <p className="text-sm text-muted-foreground">Descreva o assunto principal do conteúdo</p>
                         </div>
-                      `;
-                      import("html2pdf.js").then(({ default: html2pdf }) => {
-                        html2pdf().set({ margin: 0.5, filename: `${openContent.titulo.slice(0, 40)}.pdf`, html2canvas: { scale: 2 } }).from(el).save();
-                      });
-                    }}
-                  >
-                    <Download className="w-3.5 h-3.5" /> PDF
+                        <Input
+                          placeholder="Ex: consórcio para empresários, planejamento financeiro, como captar clientes..."
+                          value={tema}
+                          onChange={e => setTema(e.target.value)}
+                          className="text-base"
+                        />
+                      </div>
+                    )}
+
+                    {/* Step 2: Formato */}
+                    {step === 2 && (
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-xl font-semibold mb-1">Qual formato de conteúdo?</h3>
+                          <p className="text-sm text-muted-foreground">Selecione o formato ideal para sua mensagem</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {FORMATOS.map(f => {
+                            const Icon = f.icon;
+                            const selected = formato === f.value;
+                            return (
+                              <button
+                                key={f.value}
+                                onClick={() => setFormato(f.value)}
+                                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                                  selected
+                                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                    : "border-border hover:border-primary/40"
+                                }`}
+                              >
+                                <Icon className={`w-6 h-6 mb-2 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                <p className="font-medium">{f.label}</p>
+                                <p className="text-xs text-muted-foreground">{f.desc}</p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 3: Objetivo */}
+                    {step === 3 && (
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-xl font-semibold mb-1">Qual o objetivo deste conteúdo?</h3>
+                          <p className="text-sm text-muted-foreground">Selecione o resultado esperado</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {OBJETIVOS.map(o => (
+                            <button
+                              key={o.value}
+                              onClick={() => setObjetivo(o.value)}
+                              className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+                                objetivo === o.value
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border hover:border-primary/40"
+                              }`}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 4: Mensagem */}
+                    {step === 4 && (
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-xl font-semibold mb-1">Qual ideia principal você quer transmitir?</h3>
+                          <p className="text-sm text-muted-foreground">Opcional — a IA pode criar com base no tema e estratégia</p>
+                        </div>
+                        <Textarea
+                          placeholder="Ex: empresas não quebram por falta de clientes, mas por falta de processo."
+                          value={mensagem}
+                          onChange={e => setMensagem(e.target.value)}
+                          rows={3}
+                        />
+                      </div>
+                    )}
+
+                    {/* Step 5: CTA */}
+                    {step === 5 && (
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-xl font-semibold mb-1">Qual ação o leitor deve tomar?</h3>
+                          <p className="text-sm text-muted-foreground">Selecione ou escreva um CTA personalizado</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {CTAS.map(c => (
+                            <button
+                              key={c.value}
+                              onClick={() => { setCta(c.value); setCtaCustom(""); }}
+                              className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+                                cta === c.value
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border hover:border-primary/40"
+                              }`}
+                            >
+                              {c.label}
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => setCta("custom")}
+                            className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+                              cta === "custom"
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border hover:border-primary/40"
+                            }`}
+                          >
+                            Personalizado
+                          </button>
+                        </div>
+                        {cta === "custom" && (
+                          <Input
+                            placeholder="Ex: Agende sua consultoria gratuita"
+                            value={ctaCustom}
+                            onChange={e => setCtaCustom(e.target.value)}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Nav buttons */}
+                <div className="flex justify-between mt-8">
+                  <Button variant="ghost" onClick={() => step === 1 ? resetWizard() : setStep(s => s - 1)} disabled={step === 1}>
+                    <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs gap-1.5 h-8"
-                    onClick={() => {
-                      navigate(`/cliente/redes-sociais?fromContent=${openContent.id}&titulo=${encodeURIComponent(openContent.titulo)}&roteiro=${encodeURIComponent(openContent.roteiro.slice(0, 500))}`);
-                    }}
-                  >
-                    <Palette className="w-3.5 h-3.5" /> Gerar Arte
-                  </Button>
-                  {(openContent.formato === "Reels" || openContent.formato === "Story") && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs gap-1.5 h-8"
-                      onClick={() => {
-                        setSearchParams({ tab: "tutorial", formato: openContent.formato });
-                        setOpenContent(null);
-                      }}
-                    >
-                      <Video className="w-3.5 h-3.5" /> Gravar Vídeo
+                  {step < 5 ? (
+                    <Button onClick={() => setStep(s => s + 1)} disabled={!canAdvance()}>
+                      Próximo <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  ) : (
+                    <Button onClick={handleGenerate} disabled={!canAdvance() || isGenerating}>
+                      <Sparkles className="w-4 h-4 mr-1" /> Gerar Conteúdo
                     </Button>
                   )}
                 </div>
               </CardContent>
             </Card>
-          ) : openCampaign && currentCampaign ? (
-            /* Content cards inside campaign */
-            <div className="space-y-3">
-              {/* Approval Summary */}
-              <ApprovalSummary
-                total={approvalStats.total}
-                approved={approvalStats.approved}
-                changesRequested={approvalStats.changesRequested}
-                rejected={approvalStats.rejected}
-                onApproveAll={() => approveAll(currentCampaign.id)}
-                onApprovePending={() => approvePending(currentCampaign.id)}
-              />
-
-              {/* Filters */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Select value={formatFilter} onValueChange={setFormatFilter}>
-                  <SelectTrigger className="h-7 text-[10px] w-auto gap-1">
-                    <Filter className="w-3 h-3" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos formatos</SelectItem>
-                    <SelectItem value="Feed">Feed</SelectItem>
-                    <SelectItem value="Carrossel">Carrossel</SelectItem>
-                    <SelectItem value="Reels">Reels</SelectItem>
-                    <SelectItem value="Story">Story</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-7 text-[10px] w-auto gap-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos status</SelectItem>
-                    <SelectItem value="approved">Aprovados</SelectItem>
-                    <SelectItem value="pending">Pendentes</SelectItem>
-                    <SelectItem value="changes_requested">Alteração Solicitada</SelectItem>
-                    <SelectItem value="rejected">Rejeitados</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Content grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {filteredConteudos?.map((content) => {
-                  const borderColor =
-                    content.status === "approved" ? "border-emerald-500/20 bg-emerald-500/[0.02]"
-                    : content.status === "changes_requested" ? "border-amber-500/20 bg-amber-500/[0.02]"
-                    : content.status === "rejected" ? "border-red-500/20 bg-red-500/[0.02]"
-                    : "glass-card hover:bg-muted/30";
-
-                  return (
-                    <Card
-                      key={content.id}
-                      className={`cursor-pointer transition-all hover:shadow-md ${borderColor}`}
-                      onClick={() => setOpenContent(content)}
-                    >
-                      <CardContent className="py-4 space-y-2.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-semibold leading-tight flex-1">{content.titulo}</p>
-                          <ApprovalStatusBadge status={content.status} />
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Badge className={`text-[9px] ${formatColors[content.formato] || ""}`}>{content.formato}</Badge>
-                          <Badge className={`text-[9px] ${networkColors[content.rede] || ""}`}>{content.rede}</Badge>
-                          <Badge className={`text-[9px] ${funnelColors[content.funil] || ""}`}>{content.funil}</Badge>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground line-clamp-2">{content.roteiro.slice(0, 120)}...</p>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {filteredConteudos?.length === 0 && (
-                <div className="text-center py-10">
-                  <p className="text-sm text-muted-foreground">Nenhum conteúdo encontrado com os filtros selecionados.</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Campaign folder list */
-            <div className="space-y-3">
-              {campaigns.map((campaign) => {
-                const isCurrent = isCurrentMonth(campaign.label);
-                const approved = campaign.conteudos.filter((c) => c.status === "approved").length;
-                const total = campaign.conteudos.length;
-                const allApproved = approved === total && total > 0;
-
-                return (
-                  <Card
-                    key={campaign.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      isCurrent
-                        ? "ring-2 ring-primary/40 bg-primary/[0.03] shadow-md shadow-primary/10"
-                        : "glass-card hover:bg-muted/30"
-                    }`}
-                    onClick={() => setOpenCampaign(campaign.id)}
-                  >
-                    <CardContent className="py-4 flex items-center gap-4">
-                      <div className={`p-2.5 rounded-xl ${isCurrent ? "bg-primary/15" : "bg-primary/10"}`}>
-                        <Folder className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold">{campaign.label}</p>
-                          {isCurrent && (
-                            <Badge className="text-[9px] bg-primary/15 text-primary border-primary/30 gap-1">
-                              <Star className="w-2.5 h-2.5" /> Mês Atual
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {total} conteúdos • {campaign.briefing.objetivo} • Criado em {campaign.createdAt}
-                        </p>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] gap-1 shrink-0 ${allApproved ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : ""}`}
-                      >
-                        <CheckCircle2 className="w-3 h-3" /> {approved}/{total}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-
-              {campaigns.length === 0 && (
-                <div className="text-center py-16">
-                  <FolderOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">Nenhuma campanha criada ainda</p>
-                  <p className="text-xs text-muted-foreground mt-1">Clique em "Nova Campanha Mensal" para gerar seus primeiros conteúdos com IA</p>
-                </div>
-              )}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ═══ TUTORIAL ═══ */}
-        <TabsContent value="tutorial" className="space-y-4 mt-4">
-          <div className="text-center mb-6">
-            <h2 className="text-lg font-bold">Guia de Formatos</h2>
-            <p className="text-sm text-muted-foreground mt-1">Tudo que você precisa saber para produzir conteúdo profissional</p>
-          </div>
-
-          {initialFormat && (
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center gap-2">
-              <Video className="w-4 h-4 text-primary" />
-              <p className="text-xs font-medium">Mostrando instruções para <span className="text-primary font-bold">{initialFormat}</span></p>
-              <Button variant="ghost" size="sm" className="text-xs h-6 ml-auto" onClick={() => setSearchParams({})}>
-                Ver todos
-              </Button>
-            </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {tutorialData
-              .filter(item => {
-                if (!initialFormat) return true;
-                if (initialFormat === "Reels") return item.formato.includes("Reels") || item.formato.includes("Vídeo Curto");
-                if (initialFormat === "Story") return item.formato === "Story";
-                return true;
-              })
-              .map((item) => (
-              <Card key={item.formato} className={`border ${item.cor.split(" ").filter(c => c.startsWith("border-")).join(" ")} overflow-hidden ${initialFormat ? "ring-2 ring-primary/30" : ""}`}>
-                <CardContent className="py-5 space-y-4">
+          {/* Loading */}
+          {isGenerating && (
+            <Card>
+              <CardContent className="py-16 text-center space-y-4">
+                <div className="animate-spin mx-auto w-10 h-10 border-4 border-primary border-t-transparent rounded-full" />
+                <p className="text-lg font-medium animate-pulse">{loadingPhrases[loadingIdx]}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Result */}
+          {step === 6 && result && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold">{result.titulo}</h2>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleRegenerate}>
+                    <RotateCcw className="w-4 h-4 mr-1" /> Regenerar
+                  </Button>
+                  <Button size="sm" onClick={handleApprove} disabled={approveMutation.isPending}>
+                    <Check className="w-4 h-4 mr-1" /> Aprovar (200 créditos)
+                  </Button>
+                </div>
+              </div>
+
+              {/* Conteúdo Principal */}
+              <Card>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="w-4 h-4" /> Conteúdo Principal</CardTitle></CardHeader>
+                <CardContent>
+                  <ContentMainDisplay content={result.conteudo_principal} format={formato} />
+                </CardContent>
+              </Card>
+
+              {/* Legenda */}
+              <Card>
+                <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2.5 rounded-xl ${item.cor.split(" ").filter(c => c.startsWith("bg-")).join(" ")}`}>
-                        {item.icon}
+                    <CardTitle className="text-base flex items-center gap-2"><MessageSquare className="w-4 h-4" /> Legenda</CardTitle>
+                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(result.legenda)}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-wrap text-sm">{result.legenda}</p>
+                </CardContent>
+              </Card>
+
+              {/* Headlines */}
+              <Card>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Lightbulb className="w-4 h-4" /> Headlines Alternativas</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {(result.headlines || []).map((h: string, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                        <span className="text-sm">{i + 1}. {h}</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(h)}>
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold">{item.formato}</p>
-                        <p className="text-[11px] text-muted-foreground">{item.dimensao}</p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] font-mono">{item.proporcao}</Badge>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Especificações</p>
-                    {item.specs.map((s, i) => (
-                      <p key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                        <span className="text-primary mt-0.5">•</span> {s}
-                      </p>
                     ))}
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                      <Camera className="w-3 h-3" /> Como Gravar
-                    </p>
-                    {item.comoGravar.map((tip, i) => (
-                      <p key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                        <span className="text-amber-500 mt-0.5">💡</span> {tip}
-                      </p>
-                    ))}
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Estrutura Ideal</p>
-                    <div className="bg-muted/40 rounded-lg p-3">
-                      <p className="text-[11px] text-foreground whitespace-pre-line leading-relaxed font-mono">{item.estrutura}</p>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+
+              {/* Engajamento + Hashtags */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader><CardTitle className="text-base flex items-center gap-2"><Target className="w-4 h-4" /> Pergunta para Engajamento</CardTitle></CardHeader>
+                  <CardContent>
+                    <p className="text-sm italic">"{result.pergunta_engajamento}"</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader><CardTitle className="text-base flex items-center gap-2"><Hash className="w-4 h-4" /> Hashtags</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(result.hashtags || []).map((h: string, i: number) => (
+                        <Badge key={i} variant="secondary" className="text-xs">#{h.replace(/^#/, "")}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Embasamento */}
+              <Card>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><BookOpen className="w-4 h-4" /> Embasamento</CardTitle></CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{result.embasamento}</p>
+                </CardContent>
+              </Card>
+
+              <Button variant="outline" onClick={resetWizard} className="mt-4">
+                <Sparkles className="w-4 h-4 mr-1" /> Criar novo conteúdo
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
-        {/* ═══ HISTÓRICO ═══ */}
-        <TabsContent value="historico" className="space-y-4 mt-4">
-          <div className="text-center mb-6">
-            <h2 className="text-lg font-bold">Histórico de Campanhas</h2>
-            <p className="text-sm text-muted-foreground mt-1">Todas as campanhas geradas em ordem cronológica</p>
+        {/* ── TAB: HISTÓRICO ── */}
+        <TabsContent value="historico" className="mt-4 space-y-4">
+          <div className="flex gap-3 flex-wrap">
+            <Select value={filterFormat} onValueChange={setFilterFormat}>
+              <SelectTrigger className="w-[160px]"><Filter className="w-4 h-4 mr-1" /><SelectValue placeholder="Formato" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os formatos</SelectItem>
+                {FORMATOS.map(f => <SelectItem key={f.value} value={f.label}>{f.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="approved">Aprovado</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {campaigns.length === 0 ? (
-            <div className="text-center py-16">
-              <History className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhuma campanha no histórico</p>
-            </div>
+          {filteredHistory.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p>Nenhum conteúdo gerado ainda.</p>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-3">
-              {campaigns.map((campaign) => {
-                const approved = campaign.conteudos.filter((c) => c.status === "approved").length;
-                const total = campaign.conteudos.length;
-                const formatCounts: Record<string, number> = {};
-                campaign.conteudos.forEach((c) => {
-                  formatCounts[c.formato] = (formatCounts[c.formato] || 0) + 1;
-                });
-
-                return (
-                  <Collapsible key={campaign.id}>
-                    <CollapsibleTrigger asChild>
-                      <Card className="glass-card cursor-pointer hover:bg-muted/30 transition-all">
-                        <CardContent className="py-4 flex items-center gap-4">
-                          <div className="p-2 rounded-xl bg-primary/10">
-                            <Clock className="w-4 h-4 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold">{campaign.label}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                              {campaign.briefing.objetivo} • {campaign.briefing.tema}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Badge variant="outline" className="text-[10px] gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> {approved}/{total}
-                            </Badge>
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="ml-6 mt-2 space-y-2 border-l-2 border-border pl-4 pb-2">
-                        <div className="flex gap-2 flex-wrap">
-                          {Object.entries(formatCounts).map(([formato, count]) => (
-                            <Badge key={formato} variant="outline" className={`text-[10px] ${formatColors[formato] || ""}`}>
-                              {count}× {formato}
-                            </Badge>
-                          ))}
-                        </div>
-                        {campaign.conteudos.slice(0, 5).map((c) => (
-                          <div key={c.id} className="flex items-center gap-2 text-xs">
-                            <ApprovalStatusBadge status={c.status} />
-                            <span className={c.status === "approved" ? "" : "text-muted-foreground"}>{c.titulo}</span>
-                            <Badge className={`text-[8px] ml-auto ${formatColors[c.formato] || ""}`}>{c.formato}</Badge>
-                          </div>
-                        ))}
-                        {campaign.conteudos.length > 5 && (
-                          <p className="text-[10px] text-muted-foreground">+ {campaign.conteudos.length - 5} mais conteúdos</p>
-                        )}
+              {filteredHistory.map(item => (
+                <Card
+                  key={item.id}
+                  className="cursor-pointer hover:border-primary/40 transition-colors"
+                  onClick={() => {
+                    setViewingContent(item);
+                    setResult(item.result);
+                    setResultId(item.id);
+                    setFormato(FORMATOS.find(f => f.label === item.format)?.value || "post_unico");
+                    setStep(6);
+                  }}
+                >
+                  <CardContent className="py-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{item.title}</p>
+                      <div className="flex gap-2 mt-1">
+                        {item.format && <Badge variant="secondary" className="text-xs">{item.format}</Badge>}
+                        <Badge variant={item.status === "approved" ? "default" : "outline"} className="text-xs">
+                          {item.status === "approved" ? "Aprovado" : "Pendente"}
+                        </Badge>
                       </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(item.created_at).toLocaleDateString("pt-BR")}
+                    </span>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+/* ── Content Display by Format ── */
+function ContentMainDisplay({ content, format }: { content: any; format: string }) {
+  if (!content) return <p className="text-sm text-muted-foreground">Conteúdo não disponível</p>;
+
+  // Carrossel: array of slides
+  if (Array.isArray(content)) {
+    return (
+      <div className="space-y-3">
+        {content.map((slide: any, i: number) => (
+          <div key={i} className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-xs font-bold text-primary mb-1">Slide {slide.slide_numero || slide.numero || i + 1}</p>
+            {slide.titulo && <p className="font-semibold text-sm">{slide.titulo}</p>}
+            <p className="text-sm mt-1">{slide.texto || slide.content || JSON.stringify(slide)}</p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Object with specific structure
+  if (typeof content === "object") {
+    // Video
+    if (content.hook) {
+      return (
+        <div className="space-y-3">
+          {[
+            { label: "Hook [0-3s]", text: content.hook },
+            { label: "Desenvolvimento", text: content.desenvolvimento },
+            { label: "Conclusão", text: content.conclusao },
+            { label: "CTA", text: content.cta },
+            content.texto_tela && { label: "Texto na tela", text: content.texto_tela },
+            content.legenda_video && { label: "Legenda do vídeo", text: content.legenda_video },
+          ].filter(Boolean).map((item: any, i) => (
+            <div key={i} className="p-3 rounded-lg bg-muted/50 border">
+              <p className="text-xs font-bold text-primary mb-1">{item.label}</p>
+              <p className="text-sm">{item.text}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Post
+    if (content.headline) {
+      return (
+        <div className="space-y-3">
+          <div className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-xs font-bold text-primary mb-1">Headline</p>
+            <p className="font-semibold">{content.headline}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-xs font-bold text-primary mb-1">Texto Principal</p>
+            <p className="text-sm whitespace-pre-wrap">{content.texto}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-xs font-bold text-primary mb-1">CTA</p>
+            <p className="text-sm">{content.cta}</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Artigo
+    if (content.secoes) {
+      return (
+        <div className="space-y-3">
+          <div className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-xs font-bold text-primary mb-1">Título</p>
+            <p className="font-semibold">{content.titulo}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-xs font-bold text-primary mb-1">Introdução</p>
+            <p className="text-sm">{content.introducao}</p>
+          </div>
+          {(content.secoes || []).map((s: any, i: number) => (
+            <div key={i} className="p-3 rounded-lg bg-muted/50 border">
+              <p className="text-xs font-bold text-primary mb-1">{s.subtitulo}</p>
+              <p className="text-sm">{s.texto}</p>
+            </div>
+          ))}
+          <div className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-xs font-bold text-primary mb-1">Conclusão</p>
+            <p className="text-sm">{content.conclusao}</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Fallback: pretty-print
+    return <pre className="text-xs whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">{JSON.stringify(content, null, 2)}</pre>;
+  }
+
+  // String fallback
+  return <p className="text-sm whitespace-pre-wrap">{String(content)}</p>;
 }

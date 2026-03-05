@@ -400,97 +400,12 @@ export const RAFAEL_STEPS: BriefingStep[] = [
   },
 ];
 
-/* ══════════════════════════════════════════════
-   LUNA — Conteúdos (perguntas fechadas + limites de plano)
-   ══════════════════════════════════════════════ */
+/* LUNA_STEPS removido — Geração de conteúdo agora usa stepper visual em ClienteConteudos.tsx */
 
 const MESES_OPT = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ].map(m => ({ value: `${m} 2026`, label: `${m} 2026` }));
-
-const OBJETIVOS_CONTENT = [
-  "Gerar leads", "Aumentar engajamento", "Lançar produto", "Vender mais", "Fortalecer marca",
-].map(o => ({ value: o, label: o }));
-
-const TONS_OPT = ["Educativo", "Inspirador", "Direto", "Storytelling", "Misto"].map(t => ({ value: t, label: t }));
-
-const TEMAS_CONTENT = [
-  { value: "automacao", label: "Automação" }, { value: "vendas", label: "Vendas" },
-  { value: "black_friday", label: "Black Friday" }, { value: "lancamento", label: "Lançamento" },
-  { value: "autoridade", label: "Autoridade" }, { value: "cases", label: "Cases de Sucesso" },
-  { value: "bastidores", label: "Bastidores" }, { value: "tendencias", label: "Tendências" },
-  { value: "sazonalidade", label: "Sazonalidade" }, { value: "produto_servico", label: "Produto/Serviço" },
-  { value: "educativo", label: "Educativo" },
-];
-
-const DATAS_COMEMORATIVAS = [
-  { value: "carnaval", label: "Carnaval" }, { value: "dia_mulher", label: "Dia da Mulher" },
-  { value: "pascoa", label: "Páscoa" }, { value: "dia_maes", label: "Dia das Mães" },
-  { value: "dia_namorados", label: "Dia dos Namorados" }, { value: "dia_pais", label: "Dia dos Pais" },
-  { value: "black_friday", label: "Black Friday" }, { value: "natal", label: "Natal" },
-  { value: "nenhuma", label: "Nenhuma" },
-];
-
-const DESTAQUES_OPTIONS = [
-  { value: "novo_produto", label: "Novo produto" }, { value: "case_sucesso", label: "Case de sucesso" },
-  { value: "parceria", label: "Parceria" }, { value: "premiacao", label: "Premiação" },
-  { value: "evento", label: "Evento" }, { value: "nenhum", label: "Nenhum" },
-];
-
-export const LUNA_STEPS: BriefingStep[] = [
-  { id: "_intro_luna", agentMessage: "Oi! 👋 Sou a Luna, sua estrategista de conteúdo. Vou montar uma campanha completa pra você em poucos minutos!", inputType: "info" },
-  { id: "mes", agentMessage: "Pra qual mês você quer essa campanha?", inputType: "select", options: MESES_OPT },
-  { id: "objetivos", agentMessage: "Qual o foco principal? Pode marcar mais de um!", inputType: "multi-select", options: OBJETIVOS_CONTENT, helpText: "A IA vai equilibrar os conteúdos entre os objetivos selecionados." },
-  { id: "tema", agentMessage: "Qual o tema central dessa campanha?", inputType: "select", helpText: "O tema guia todo o conteúdo da campanha.",
-    options: TEMAS_CONTENT,
-  },
-  { id: "tom", agentMessage: "E o tom de voz? Como a marca quer 'falar' nessa campanha?", inputType: "select", options: TONS_OPT, helpText: "Educativo ensina, Inspirador motiva, Direto vende." },
-  { id: "promocoes_tem", agentMessage: "Tem alguma promoção ou oferta especial?", inputType: "select", optional: true,
-    options: [{ value: "sim", label: "Sim, tenho" }, { value: "nao", label: "Não tenho" }],
-  },
-  { id: "promocoes", agentMessage: "Descreve a promoção pra eu incluir nos conteúdos!", inputType: "textarea", placeholder: "Ex: 30% off plano anual, frete grátis...", optional: true,
-    skipIf: (ans) => ans.promocoes_tem !== "sim",
-  },
-  { id: "datas", agentMessage: "Alguma data comemorativa importante nesse mês?", inputType: "textarea", optional: true, helpText: "Datas sazonais aumentam relevância e engajamento.", placeholder: "Ex: Dia da Mulher, aniversário da empresa, feira do setor..." },
-  { id: "destaques", agentMessage: "Tem algum destaque ou novidade pra incluir?", inputType: "textarea", optional: true, placeholder: "Ex: Inauguração da nova sede, lançamento do app, parceria com X..." },
-  { id: "persona_nome", agentMessage: "Qual o perfil da persona dessa campanha?", inputType: "select", optional: true, helpText: "Persona ajuda a personalizar o tom e abordagem.",
-    options: PERSONA_NOME_OPTIONS,
-  },
-  { id: "persona_nome_custom", agentMessage: "Descreve o nome/perfil da persona:", inputType: "text", placeholder: "Ex: Maria, 38 anos, dona de franquia", optional: true,
-    skipIf: (ans) => ans.persona_nome !== "personalizar",
-  },
-  { id: "persona_descricao", agentMessage: "Quais características dessa persona? Marque as que se aplicam!", inputType: "multi-select", optional: true,
-    options: PERSONA_DESCRICAO_OPTIONS,
-    skipIf: (ans) => !ans.persona_nome,
-  },
-  // ── Formatos e Quantidades (com limites de plano via context)
-  { id: "_section_formatos", section: "Formatos", agentMessage: "Ótimo! Agora vamos definir os formatos. {planLimitMessage}", inputType: "info" },
-  { id: "qFeed", section: "Formatos", agentMessage: "Quantos Posts Feed (imagem quadrada)?", inputType: "select", helpText: "Posts feed são ideais para conteúdo estático e educativo.",
-    dynamicOptions: (ctx, ans) => {
-      const saldo = computeContentSaldo(ctx, ans, ["qCarrossel", "qReels", "qStory"]);
-      return makeQtyOptions(saldo);
-    },
-  },
-  { id: "qCarrossel", section: "Formatos", agentMessage: "Quantos Carrosséis?", inputType: "select", helpText: "Carrosséis têm 3x mais salvamentos que posts normais.",
-    dynamicOptions: (ctx, ans) => {
-      const saldo = computeContentSaldo(ctx, ans, ["qFeed", "qReels", "qStory"]);
-      return makeQtyOptions(saldo);
-    },
-  },
-  { id: "qReels", section: "Formatos", agentMessage: "Quantos roteiros de Reels?", inputType: "select", helpText: "Reels têm o maior alcance orgânico no Instagram.",
-    dynamicOptions: (ctx, ans) => {
-      const saldo = computeContentSaldo(ctx, ans, ["qFeed", "qCarrossel", "qStory"]);
-      return makeQtyOptions(saldo);
-    },
-  },
-  { id: "qStory", section: "Formatos", agentMessage: "E quantos Stories?", inputType: "select", helpText: "Stories geram interação direta com enquetes e caixas de pergunta.",
-    dynamicOptions: (ctx, ans) => {
-      const saldo = computeContentSaldo(ctx, ans, ["qFeed", "qCarrossel", "qReels"]);
-      return makeQtyOptions(saldo);
-    },
-  },
-];
 
 /* ══════════════════════════════════════════════
    THEO — Artes / Redes Sociais (perguntas fechadas + limites)
