@@ -38,6 +38,18 @@ const medalIcons: Record<string, React.ElementType> = {
   content: FileText, dispatch: Send, site: Globe, agent: Bot,
 };
 
+const medalColors: Record<string, { bg: string; text: string; border: string }> = {
+  lead: { bg: "bg-blue-500/15", text: "text-blue-500", border: "border-blue-500/30" },
+  sales: { bg: "bg-amber-500/15", text: "text-amber-500", border: "border-amber-500/30" },
+  streak: { bg: "bg-orange-500/15", text: "text-orange-500", border: "border-orange-500/30" },
+  crm: { bg: "bg-purple-500/15", text: "text-purple-500", border: "border-purple-500/30" },
+  closer: { bg: "bg-yellow-500/15", text: "text-yellow-500", border: "border-yellow-500/30" },
+  content: { bg: "bg-emerald-500/15", text: "text-emerald-500", border: "border-emerald-500/30" },
+  dispatch: { bg: "bg-rose-500/15", text: "text-rose-500", border: "border-rose-500/30" },
+  site: { bg: "bg-cyan-500/15", text: "text-cyan-500", border: "border-cyan-500/30" },
+  agent: { bg: "bg-violet-500/15", text: "text-violet-500", border: "border-violet-500/30" },
+};
+
 const allMedals = [
   { id: "1", name: "Primeiro Lead", emoji: "lead", description: "Captou o primeiro lead", condition: "1+ lead criado" },
   { id: "2", name: "Vendedor Nato", emoji: "sales", description: "10 vendas fechadas", condition: "10+ ganhos" },
@@ -335,6 +347,7 @@ export default function ClienteGamificacao() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {medals.map((m, idx) => {
                 const MedalIcon = medalIcons[m.emoji] || Award;
+                const colors = medalColors[m.emoji] || { bg: "bg-primary/15", text: "text-primary", border: "border-primary/30" };
                 return (
                   <motion.div
                     key={m.id}
@@ -343,19 +356,19 @@ export default function ClienteGamificacao() {
                     transition={{ delay: 0.5 + idx * 0.05 }}
                     className={`p-4 rounded-xl border text-center transition-all ${
                       m.unlocked
-                        ? "bg-muted/30 hover:bg-muted/50 hover:shadow-sm"
+                        ? `${colors.border} bg-muted/30 hover:bg-muted/50 hover:shadow-sm`
                         : "opacity-30 grayscale"
                     }`}
                   >
-                    <div className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center mb-2 ${m.unlocked ? "bg-primary/10" : "bg-muted/50"}`}>
-                      <MedalIcon className={`w-5 h-5 ${m.unlocked ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center mb-2 ${m.unlocked ? colors.bg : "bg-muted/50"}`}>
+                      <MedalIcon className={`w-5 h-5 ${m.unlocked ? colors.text : "text-muted-foreground"}`} />
                     </div>
                     <p className="text-xs font-semibold mt-1">{m.name}</p>
                     <p className="text-[10px] text-muted-foreground">{m.description}</p>
                     <p className="text-[9px] text-muted-foreground/70 mt-0.5">{m.condition}</p>
                     {m.unlocked && (
                       <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
-                        <Badge variant="secondary" className="text-[9px] mt-2">
+                        <Badge variant="secondary" className={`text-[9px] mt-2 ${colors.text}`}>
                           <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> Conquistada
                         </Badge>
                       </motion.div>
