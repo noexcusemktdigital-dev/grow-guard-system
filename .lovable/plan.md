@@ -1,85 +1,114 @@
 
 
-# Recriação da Ferramenta de Geração de Conteúdo
+# Recriação da Ferramenta de Postagens para Redes Sociais
 
 ## Situação Atual
 
-`ClienteConteudos.tsx` (966 linhas) funciona como gerador de **campanhas mensais em lote** — o usuário define mês, formatos e quantidades, e a IA gera N conteúdos de uma vez. O Documento 3 pede algo diferente: geração de **conteúdo individual** por etapas visuais (tema → formato → objetivo → mensagem → CTA), alimentado automaticamente pela estratégia.
+`ClienteRedesSociais.tsx` (1940 linhas) é um monólito com calendário, chat Theo, geração de campanhas em lote, canvas editor, e vídeo frames — tudo misturado. `ClienteRedesSociaisCriar.tsx` (531 linhas) é um wizard separado com templates. Existem duas edge functions: `generate-social-image` (Nano Banana Pro, funcional) e `generate-social-video-frames` (gera frames estáticos, não vídeos reais).
 
-A edge function `generate-content` gera arrays de conteúdos mensais. Precisa ser reescrita para gerar **1 conteúdo individual** com estrutura específica por formato (carrossel com slides, roteiro de vídeo com timestamps, etc.) + elementos adicionais (variações de headline, pergunta para comentários, legenda, hashtags).
+O Documento 4 pede algo diferente: uma ferramenta focada que **importa conteúdos da Ferramenta de Conteúdo** e os transforma em artes ou vídeos, com fluxo por etapas.
 
 ## Plano de Implementação
 
-### 1. Reescrever `generate-content` Edge Function
+### 1. Criar tabela `client_posts`
 
-Novo prompt focado em gerar **1 conteúdo** com tool calling retornando:
-- `conteudo_principal` — estrutura depende do formato (slides para carrossel, hook/desenvolvimento/CTA para vídeo, headline/texto/CTA para post)
-- `legenda` — legenda completa para redes sociais
-- `headlines` — 5 variações de headline
-- `pergunta_engajamento` — sugestão de pergunta para comentários
-- `hashtags` — array de hashtags
-- `embasamento` — por que este conteúdo funciona
+Nova tabela para armazenar postagens geradas (artes e vídeos), separada de `client_content`.
 
-O prompt recebe automaticamente os dados da estratégia ativa (persona, pilares, posicionamento, proposta de valor).
-
-Crédito consumido somente na aprovação (não na geração).
-
-### 2. Reescrever `ClienteConteudos.tsx`
-
-Interface visual por etapas (stepper, não chat):
-
-**Etapa 1 — Tema**: Input de texto livre ("Sobre qual tema?")
-**Etapa 2 — Formato**: Seleção visual com cards (Carrossel, Post Único, Roteiro de Vídeo, Thread, Artigo Curto)
-**Etapa 3 — Objetivo**: Seleção com chips (Gerar leads, Educar, Autoridade, Divulgar serviço, Engajamento)
-**Etapa 4 — Mensagem Principal**: Textarea ("Qual ideia principal?")
-**Etapa 5 — CTA**: Seleção com chips + custom (Comentar, WhatsApp, Orçamento, Acessar link)
-
-Dados da estratégia injetados automaticamente via `useActiveStrategy()` — exibir badge "Estratégia conectada" se ativa.
-
-**Tela de resultado**: Cards estruturados exibindo:
-- Conteúdo principal (slides numerados para carrossel, timestamps para vídeo, etc.)
-- Legenda completa com botão copiar
-- 5 headlines alternativas
-- Pergunta para engajamento
-- Hashtags
-- Embasamento
-- Botões: Aprovar, Regenerar, Editar, Enviar para Postagens
-
-**Histórico**: Lista de conteúdos gerados com filtro por formato/status.
-
-### 3. Atualizar tabela `client_content`
-
-Adicionar colunas para o novo formato:
 ```sql
-ALTER TABLE client_content
-  ADD COLUMN IF NOT EXISTS format text,
-  ADD COLUMN IF NOT EXISTS objective text,
-  ADD COLUMN IF NOT EXISTS cta text,
-  ADD COLUMN IF NOT EXISTS main_message text,
-  ADD COLUMN IF NOT EXISTS result jsonb,
-  ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending',
-  ADD COLUMN IF NOT EXISTS strategy_id uuid;
+CREATE TABLE client_posts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid REFERENCES organizations(id) NOT NULL,
+  content_id uuid REFERENCES client_content(id),
+  type text NOT NULL DEFAULT 'art', -- 'art' or 'video'
+  format text, -- 'feed', 'portrait', 'story'
+  style text,
+  duration text, -- for video: '15s', '30s', '60s'
+  input_text text,
+  reference_image_urls text[],
+  result_url text,
+  result_data jsonb,
+  status text DEFAULT 'pending',
+  created_by uuid,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE client_posts ENABLE ROW LEVEL SECURITY;
+-- RLS: org members can CRUD
 ```
 
-### 4. Criar hook `useClienteContentV2.ts`
+### 2. Reescrever `ClienteRedesSociais.tsx` (completamente)
 
-- `useContentHistory()` — lista conteúdos gerados
-- `useGenerateContent()` — chama edge function
-- `useApproveContent()` — debita créditos e atualiza status
+Nova interface por etapas:
 
-### 5. Remover código legado
+**Tela principal**: Lista de postagens geradas (histórico) + botão "Nova Postagem"
 
-- Remover `LUNA_STEPS` de `briefingAgents.ts` (o chat Luna não será mais usado)
-- Remover hooks de campaigns DB que serviam o formato antigo (`useClienteCampaignsDB`)
-- Limpar imports não utilizados
+**Etapa 1 — Conteúdo Base**: 
+- Listar conteúdos aprovados da Ferramenta de Conteúdo (`useContentHistory`)
+- Cada card mostra título, formato, preview do texto
+- Opção "Criar sem conteúdo base" para texto manual
+
+**Etapa 2 — Tipo de Material**:
+- Arte (imagem) ou Vídeo
+- Cards visuais de seleção
+
+**Etapa 3 — Configuração** (depende do tipo):
+
+*Se Arte:*
+- Formato: Feed 1:1, Portrait 4:5, Story 9:16
+- Referências visuais: upload de 3+ imagens (usando `social-arts` bucket)
+- Identidade visual: auto-preenchida via `useVisualIdentity`, editável
+- Texto da arte: importado do conteúdo ou manual
+
+*Se Vídeo:*
+- Roteiro: importado do conteúdo (se tipo roteiro) ou manual
+- Duração: 15s, 30s, 60s
+- Estilo: educativo, institucional, promocional, storytelling
+- Referências visuais (opcional)
+
+**Etapa 4 — Gerar**: Botão de geração, loading com frases, resultado
+
+**Tela de resultado**:
+- Visualização da arte/vídeo
+- Botões: Aprovar, Regenerar, Baixar
+- Aprovação consome crédito (1 arte = 100 créditos, 1 vídeo = 200 créditos)
+
+### 3. Atualizar `generate-social-image` Edge Function
+
+Manter a lógica atual (Nano Banana Pro) mas:
+- Remover débito automático de créditos (agora feito na aprovação)
+- Aceitar `content_text` e `strategy_data` no body para enriquecer o prompt automaticamente
+
+### 4. Atualizar `generate-social-video-frames` Edge Function
+
+Renomear/reescrever para `generate-social-video`:
+- Usar Gemini para gerar roteiro de motion graphics + frames
+- Remover débito automático (agora na aprovação)
+- Aceitar roteiro estruturado do conteúdo
+
+### 5. Criar hook `useClientePosts.ts`
+
+- `usePostHistory()` — lista postagens geradas
+- `useGeneratePost()` — chama edge function (arte ou vídeo)
+- `useApprovePost()` — debita créditos e atualiza status
+
+### 6. Remover `ClienteRedesSociaisCriar.tsx`
+
+O fluxo de criação será integrado na página principal. Remover rota `/redes-sociais/criar`.
+
+### 7. Limpar `briefingAgents.ts`
+
+Remover `THEO_STEPS` (o chat Theo não será mais usado).
 
 ## Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/migrations/` | Nova migration: colunas em `client_content` |
-| `supabase/functions/generate-content/index.ts` | Reescrever para conteúdo individual |
-| `src/pages/cliente/ClienteConteudos.tsx` | Reescrever completamente |
-| `src/hooks/useClienteContentV2.ts` | Criar novo hook |
-| `src/components/cliente/briefingAgents.ts` | Remover `LUNA_STEPS` |
+| `supabase/migrations/` | Nova migration: tabela `client_posts` + RLS |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Reescrever completamente |
+| `src/pages/cliente/ClienteRedesSociaisCriar.tsx` | Remover |
+| `src/hooks/useClientePosts.ts` | Criar novo hook |
+| `supabase/functions/generate-social-image/index.ts` | Remover débito automático |
+| `supabase/functions/generate-social-video-frames/index.ts` | Ajustar para novo fluxo |
+| `src/components/cliente/briefingAgents.ts` | Remover `THEO_STEPS` |
+| `src/App.tsx` | Remover rota `/redes-sociais/criar` |
 
