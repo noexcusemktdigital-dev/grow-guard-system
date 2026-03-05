@@ -3,8 +3,9 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useHasActiveStrategy } from "@/hooks/useMarketingStrategy";
 import { useSalesPlanCompleted } from "@/hooks/useSalesPlan";
+import { useAuth } from "@/contexts/AuthContext";
 
-type GateReason = "trial_expired" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | null;
+type GateReason = "trial_expired" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | "admin_only" | null;
 
 interface FeatureGateContextType {
   isTrialExpired: boolean;
@@ -63,9 +64,19 @@ const MARKETING_STRATEGY_REQUIRED = [
   "/cliente/trafego-pago",
 ];
 
+// Routes blocked for cliente_user (admin only)
+const ADMIN_ONLY_ROUTES = [
+  "/cliente/disparos",
+  "/cliente/dashboard",
+  "/cliente/trafego-pago",
+  "/cliente/integracoes",
+  "/cliente/plano-creditos",
+];
+
 export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const [simulateTrialExpired, setSimulateTrialExpired] = useState(false);
   const [simulateNoCredits, setSimulateNoCredits] = useState(false);
+  const { role } = useAuth();
 
   const { data: subscription } = useClienteSubscription();
   const { data: wallet } = useClienteWallet();
@@ -82,8 +93,14 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
 
   const { completed: salesPlanCompleted } = useSalesPlanCompleted();
 
+  const isClienteUser = role === "cliente_user";
+
   const getGateReason = (feature: string): GateReason => {
     if (ALWAYS_ACCESSIBLE.some((r) => feature.startsWith(r))) return null;
+
+    // Admin-only check (before trial check so user sees correct message)
+    if (isClienteUser && ADMIN_ONLY_ROUTES.some((r) => feature.startsWith(r)))
+      return "admin_only";
 
     if (isTrialExpired) return "trial_expired";
 

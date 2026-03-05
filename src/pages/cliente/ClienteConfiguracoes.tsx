@@ -19,6 +19,7 @@ import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { getPlanBySlug } from "@/constants/plans";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -327,20 +328,22 @@ function NotificationsTab() {
 }
 
 export default function ClienteConfiguracoes() {
+  const { isAdmin } = useRoleAccess();
+
   return (
     <div className="w-full space-y-6">
       <PageHeader title="Configurações" subtitle="Preferências da conta e organização" icon={<Settings className="w-5 h-5 text-primary" />} />
       <Tabs defaultValue="perfil">
-        <TabsList className="grid grid-cols-4 w-full">
+        <TabsList className={`grid w-full ${isAdmin ? "grid-cols-4" : "grid-cols-1"}`}>
           <TabsTrigger value="perfil" className="gap-1.5 text-xs sm:text-sm"><User className="w-4 h-4" /> Perfil</TabsTrigger>
-          <TabsTrigger value="organizacao" className="gap-1.5 text-xs sm:text-sm"><Building2 className="w-4 h-4" /> Organização</TabsTrigger>
-          <TabsTrigger value="usuarios" className="gap-1.5 text-xs sm:text-sm"><Users className="w-4 h-4" /> Usuários</TabsTrigger>
-          <TabsTrigger value="notificacoes" className="gap-1.5 text-xs sm:text-sm"><Bell className="w-4 h-4" /> Alertas</TabsTrigger>
+          {isAdmin && <TabsTrigger value="organizacao" className="gap-1.5 text-xs sm:text-sm"><Building2 className="w-4 h-4" /> Organização</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="usuarios" className="gap-1.5 text-xs sm:text-sm"><Users className="w-4 h-4" /> Usuários</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="notificacoes" className="gap-1.5 text-xs sm:text-sm"><Bell className="w-4 h-4" /> Alertas</TabsTrigger>}
         </TabsList>
         <TabsContent value="perfil"><ProfileTab /></TabsContent>
-        <TabsContent value="organizacao"><OrgTab /></TabsContent>
-        <TabsContent value="usuarios"><UsersTab /></TabsContent>
-        <TabsContent value="notificacoes"><NotificationsTab /></TabsContent>
+        {isAdmin && <TabsContent value="organizacao"><OrgTab /></TabsContent>}
+        {isAdmin && <TabsContent value="usuarios"><UsersTab /></TabsContent>}
+        {isAdmin && <TabsContent value="notificacoes"><NotificationsTab /></TabsContent>}
       </Tabs>
     </div>
   );
