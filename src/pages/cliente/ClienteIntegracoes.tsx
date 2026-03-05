@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link2, Wifi, WifiOff, Settings2, RefreshCw, Unplug, AlertTriangle, Headset, Copy, Key, Webhook, Calendar, BarChart3, Globe, Megaphone, MessageSquare, Database, Code2, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link2, Wifi, WifiOff, Settings2, RefreshCw, Unplug, AlertTriangle, Headset, Copy, Key, Webhook, MessageSquare, Code2, Zap, TestTube2, Trash2, Plus } from "lucide-react";
 import { WebsiteChatConfig } from "@/components/cliente/WebsiteChatConfig";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,117 +8,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { WhatsAppSetupWizard } from "@/components/cliente/WhatsAppSetupWizard";
 import { useWhatsAppInstances, useSetupWhatsApp } from "@/hooks/useWhatsApp";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useCrmSettings, useCrmSettingsMutations } from "@/hooks/useCrmSettings";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const SUPPORT_LINK = "https://wa.me/5500000000000?text=Olá! Preciso de ajuda com a integração Z-API.";
 
-interface IntegrationItem {
-  name: string;
-  icon: any;
-  desc: string;
-  provider: string;
-  fields: { key: string; label: string; placeholder: string }[];
-}
-
-const INTEGRATIONS_BY_SECTION: { title: string; icon: any; items: IntegrationItem[] }[] = [
-  {
-    title: "Comunicação",
-    icon: MessageSquare,
-    items: [
-      { name: "WhatsApp Z-API", icon: MessageSquare, desc: "Envie e receba mensagens via WhatsApp", provider: "whatsapp_zapi", fields: [] },
-      { name: "Widget de Chat", icon: MessageSquare, desc: "Chat ao vivo no seu site", provider: "website_chat", fields: [] },
-    ],
-  },
-  {
-    title: "Anúncios & Tráfego",
-    icon: TrendingUp,
-    items: [
-      { name: "Meta Ads", icon: Megaphone, desc: "Conecte campanhas do Facebook e Instagram", provider: "meta_ads", fields: [{ key: "access_token", label: "Token de Acesso", placeholder: "EAAx..." }, { key: "account_id", label: "ID da Conta", placeholder: "act_123456" }] },
-      { name: "Google Ads", icon: Globe, desc: "Importe leads de campanhas Google", provider: "google_ads", fields: [{ key: "access_token", label: "Token de Acesso", placeholder: "ya29..." }, { key: "customer_id", label: "Customer ID", placeholder: "123-456-7890" }] },
-      { name: "TikTok Ads", icon: TrendingUp, desc: "Conecte campanhas do TikTok", provider: "tiktok_ads", fields: [{ key: "access_token", label: "Token de Acesso", placeholder: "tok_..." }, { key: "advertiser_id", label: "Advertiser ID", placeholder: "123456" }] },
-    ],
-  },
-  {
-    title: "CRM & Automação",
-    icon: Database,
-    items: [
-      { name: "RD Station", icon: BarChart3, desc: "Importe leads automaticamente", provider: "rd_station", fields: [{ key: "api_token", label: "Token da API", placeholder: "Seu token RD Station" }] },
-      { name: "Webhook de Leads", icon: Webhook, desc: "Receba leads de fontes externas", provider: "webhook_leads", fields: [] },
-    ],
-  },
-  {
-    title: "Produtividade",
-    icon: Calendar,
-    items: [
-      { name: "Google Agenda", icon: Calendar, desc: "Sincronize eventos e reuniões", provider: "google_calendar", fields: [{ key: "client_id", label: "Client ID", placeholder: "xxxxx.apps.googleusercontent.com" }, { key: "client_secret", label: "Client Secret", placeholder: "GOCSPX-..." }] },
-    ],
-  },
+const WEBHOOK_EVENTS = [
+  { value: "lead_created", label: "Lead criado" },
+  { value: "stage_changed", label: "Mudança de etapa" },
+  { value: "lead_won", label: "Lead vendido" },
+  { value: "lead_lost", label: "Lead perdido" },
 ];
 
-function IntegrationConnectDialog({ integration, open, onOpenChange }: { integration: IntegrationItem | null; open: boolean; onOpenChange: (o: boolean) => void }) {
-  const [config, setConfig] = useState<Record<string, string>>({});
-  const { data: orgId } = useUserOrgId();
-  const qc = useQueryClient();
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("organization_integrations" as any)
-        .upsert({
-          organization_id: orgId!,
-          provider: integration!.provider,
-          config,
-          status: "connected",
-        }, { onConflict: "organization_id,provider" } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success(`${integration!.name} conectado!`);
-      qc.invalidateQueries({ queryKey: ["org-integrations"] });
-      onOpenChange(false);
-      setConfig({});
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  if (!integration) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Conectar {integration.name}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <p className="text-sm text-muted-foreground">{integration.desc}</p>
-          {integration.fields.map((field) => (
-            <div key={field.key} className="space-y-2">
-              <Label>{field.label}</Label>
-              <Input
-                value={config[field.key] || ""}
-                onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })}
-                placeholder={field.placeholder}
-              />
-            </div>
-          ))}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-            {saveMutation.isPending ? "Salvando..." : "Conectar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+interface OutboundWebhook {
+  name: string;
+  url: string;
+  events: string[];
+  active: boolean;
 }
+
+const PLATFORMS = [
+  { key: "make", label: "Make (Integromat)", icon: "🔧", placeholder: "https://hook.us1.make.com/...", instructions: "Crie um cenário no Make com trigger 'Webhook'. Cole a URL gerada acima." },
+  { key: "zapier", label: "Zapier", icon: "⚡", placeholder: "https://hooks.zapier.com/hooks/catch/...", instructions: "Crie um Zap com trigger 'Webhooks by Zapier > Catch Hook'. Cole a URL gerada." },
+];
 
 export default function ClienteIntegracoes() {
   const { data: instances, isLoading, refetch } = useWhatsAppInstances();
@@ -127,23 +47,21 @@ export default function ClienteIntegracoes() {
   const { data: org } = useOrgProfile();
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
-  const [connectDialog, setConnectDialog] = useState<IntegrationItem | null>(null);
-  const [connectOpen, setConnectOpen] = useState(false);
 
-  const { data: savedIntegrations } = useQuery({
-    queryKey: ["org-integrations", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("organization_integrations" as any)
-        .select("*")
-        .eq("organization_id", orgId!);
-      if (error) throw error;
-      return (data ?? []) as unknown as { provider: string; status: string }[];
-    },
-    enabled: !!orgId,
-  });
+  // Outbound webhooks state (persisted via CRM settings)
+  const { data: settings } = useCrmSettings();
+  const { upsertSettings } = useCrmSettingsMutations();
+  const [webhooks, setWebhooks] = useState<OutboundWebhook[]>([]);
+  const [newPlatform, setNewPlatform] = useState("");
+  const [newUrl, setNewUrl] = useState("");
+  const [newEvents, setNewEvents] = useState<string[]>(["lead_created"]);
 
-  const isConnected = (provider: string) => savedIntegrations?.some((i) => i.provider === provider && i.status === "connected");
+  useEffect(() => {
+    if (settings) {
+      const stored = (settings as any).outbound_webhooks;
+      if (Array.isArray(stored)) setWebhooks(stored);
+    }
+  }, [settings]);
 
   const generateApiKey = useMutation({
     mutationFn: async () => {
@@ -179,8 +97,55 @@ export default function ClienteIntegracoes() {
     }
   };
 
-  const webhookUrl = orgId ? `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/crm-lead-webhook?org_id=${orgId}` : "";
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const webhookUrl = orgId ? `https://${projectId}.supabase.co/functions/v1/crm-lead-webhook?org_id=${orgId}` : "";
   const hasAnyConnected = instances?.some((i) => i.status === "connected");
+
+  // Outbound webhook helpers
+  const saveWebhooks = (updated: OutboundWebhook[]) => {
+    setWebhooks(updated);
+    upsertSettings.mutate({ outbound_webhooks: updated });
+  };
+
+  const addWebhook = () => {
+    if (!newUrl.trim()) { toast.error("Informe a URL"); return; }
+    const platform = PLATFORMS.find(p => p.key === newPlatform) || PLATFORMS[0];
+    const updated = [...webhooks, { name: platform.label, url: newUrl.trim(), events: newEvents, active: true }];
+    saveWebhooks(updated);
+    setNewUrl("");
+    setNewEvents(["lead_created"]);
+    toast.success(`${platform.label} adicionado`);
+  };
+
+  const removeWebhook = (idx: number) => {
+    saveWebhooks(webhooks.filter((_, i) => i !== idx));
+    toast.success("Webhook removido");
+  };
+
+  const toggleWebhook = (idx: number) => {
+    const updated = [...webhooks];
+    updated[idx] = { ...updated[idx], active: !updated[idx].active };
+    saveWebhooks(updated);
+  };
+
+  const testWebhook = async (url: string, name: string) => {
+    try {
+      const isZapier = url.includes("zapier.com");
+      await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        ...(isZapier ? { mode: "no-cors" as RequestMode } : {}),
+        body: JSON.stringify({ event: "test", name: "Lead Teste", email: "teste@exemplo.com", phone: "11999999999", timestamp: new Date().toISOString(), source: "NoExcuse CRM" }),
+      });
+      toast.success(`Teste enviado para ${name}`, { description: isZapier ? "Verifique o histórico do Zap para confirmar" : "Verifique se recebeu o payload" });
+    } catch {
+      toast.error("Erro ao testar webhook");
+    }
+  };
+
+  const toggleEvent = (event: string) => {
+    setNewEvents(prev => prev.includes(event) ? prev.filter(e => e !== event) : [...prev, event]);
+  };
 
   return (
     <div className="w-full space-y-6">
@@ -190,13 +155,13 @@ export default function ClienteIntegracoes() {
         <Skeleton className="h-40 rounded-xl" />
       ) : (
         <>
-          {/* ── WhatsApp Section ── */}
+          {/* ── 1. WhatsApp Section ── */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-primary" /> Comunicação — WhatsApp
+              <MessageSquare className="w-4 h-4 text-primary" /> WhatsApp (Z-API)
             </h3>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground">WhatsApp via Z-API</p>
+              <p className="text-xs text-muted-foreground">Envie e receba mensagens via WhatsApp</p>
               <Button size="sm" onClick={() => setWizardOpen(true)}>
                 <Settings2 className="w-3.5 h-3.5 mr-1" /> Adicionar número
               </Button>
@@ -270,47 +235,10 @@ export default function ClienteIntegracoes() {
             )}
           </div>
 
-          {/* ── Integration Sections ── */}
-          {INTEGRATIONS_BY_SECTION.filter((s) => s.title !== "Comunicação").map((section) => (
-            <div key={section.title} className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <section.icon className="w-4 h-4 text-primary" /> {section.title}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {section.items.map((int) => {
-                  const connected = isConnected(int.provider);
-                  const isSpecial = int.provider === "webhook_leads" || int.provider === "website_chat";
-                  return (
-                    <Card key={int.provider} className={connected ? "border-primary/30" : ""}>
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${connected ? "bg-primary/10" : "bg-muted"}`}>
-                          <int.icon className={`w-5 h-5 ${connected ? "text-primary" : "text-muted-foreground"}`} />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">{int.name}</p>
-                          <p className="text-xs text-muted-foreground">{int.desc}</p>
-                        </div>
-                        {connected ? (
-                          <Badge className="text-[10px] gap-1 bg-primary/10 text-primary border-primary/30">
-                            <Wifi className="w-3 h-3" /> Conectado
-                          </Badge>
-                        ) : isSpecial ? null : (
-                          <Button size="sm" variant="outline" onClick={() => { setConnectDialog(int); setConnectOpen(true); }}>
-                            Conectar
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-
-          {/* ── API & Developers ── */}
+          {/* ── 2. API Aberta ── */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Code2 className="w-4 h-4 text-primary" /> API & Desenvolvedores
+              <Code2 className="w-4 h-4 text-primary" /> API Aberta
             </h3>
 
             <Card>
@@ -336,19 +264,91 @@ export default function ClienteIntegracoes() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><Webhook className="w-4 h-4" /> Webhook de Leads</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><Webhook className="w-4 h-4" /> Webhook de Leads (Entrada)</CardTitle>
                 <CardDescription>Envie leads de formulários, landing pages ou ads para este endpoint</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 <div className="flex gap-2">
                   <Input value={webhookUrl} readOnly className="bg-muted font-mono text-xs" />
                   <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada!"); }}>
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Envie POST com JSON: {"{"}"name", "email", "phone", "source"{"}"}
-                </p>
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer font-medium">Payload aceito (POST JSON)</summary>
+                  <pre className="bg-muted p-2 rounded text-[10px] overflow-x-auto mt-1">{`{
+  "name": "Nome do Lead",
+  "email": "email@exemplo.com",
+  "phone": "11999999999",
+  "company": "Empresa",
+  "source": "Meta Leads",
+  "value": 5000,
+  "tags": ["ads"]
+}`}</pre>
+                </details>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── 3. Automações (Make & Zapier) ── */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" /> Automações (Saída)
+            </h3>
+            <p className="text-xs text-muted-foreground">Envie eventos do CRM para Make ou Zapier automaticamente.</p>
+
+            {/* Existing webhooks */}
+            {webhooks.length > 0 && (
+              <div className="space-y-2">
+                {webhooks.map((wh, idx) => (
+                  <Card key={idx}>
+                    <CardContent className="p-3 flex items-center gap-2">
+                      <Switch checked={wh.active} onCheckedChange={() => toggleWebhook(idx)} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium">{wh.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate font-mono">{wh.url}</p>
+                        <div className="flex gap-1 mt-1">
+                          {wh.events.map(e => <Badge key={e} variant="outline" className="text-[8px]">{WEBHOOK_EVENTS.find(we => we.value === e)?.label || e}</Badge>)}
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => testWebhook(wh.url, wh.name)}><TestTube2 className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => removeWebhook(idx)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Add new webhook */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <p className="text-xs font-semibold">Adicionar automação</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PLATFORMS.map(p => (
+                    <button key={p.key} className={`text-left text-xs p-2.5 rounded-lg border transition-colors ${newPlatform === p.key ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`} onClick={() => setNewPlatform(p.key)}>
+                      <span className="mr-1.5">{p.icon}</span> {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {newPlatform && (
+                  <>
+                    <p className="text-[10px] text-muted-foreground">{PLATFORMS.find(p => p.key === newPlatform)?.instructions}</p>
+                    <Input value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder={PLATFORMS.find(p => p.key === newPlatform)?.placeholder} className="text-xs font-mono h-8" />
+                    <div>
+                      <Label className="text-xs mb-1.5 block">Eventos</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {WEBHOOK_EVENTS.map(ev => (
+                          <label key={ev.value} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                            <Checkbox checked={newEvents.includes(ev.value)} onCheckedChange={() => toggleEvent(ev.value)} />
+                            {ev.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <Button size="sm" className="gap-1" onClick={addWebhook}><Plus className="w-3.5 h-3.5" /> Adicionar</Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -375,7 +375,6 @@ export default function ClienteIntegracoes() {
       )}
 
       <WhatsAppSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} />
-      <IntegrationConnectDialog integration={connectDialog} open={connectOpen} onOpenChange={setConnectOpen} />
     </div>
   );
 }

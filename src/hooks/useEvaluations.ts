@@ -83,5 +83,20 @@ export function useEvaluationMutations() {
     },
   });
 
-  return { createEvaluation };
+  const deleteEvaluation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("user_evaluations")
+        .delete()
+        .eq("id", id)
+        .eq("evaluator_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["evaluations"] });
+      qc.invalidateQueries({ queryKey: ["my-evaluations"] });
+    },
+  });
+
+  return { createEvaluation, deleteEvaluation };
 }

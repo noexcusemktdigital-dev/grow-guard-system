@@ -4072,6 +4072,7 @@ export type Database = {
           full_name: string | null
           id: string
           job_title: string | null
+          notification_preferences: Json | null
           phone: string | null
           updated_at: string
         }
@@ -4082,6 +4083,7 @@ export type Database = {
           full_name?: string | null
           id: string
           job_title?: string | null
+          notification_preferences?: Json | null
           phone?: string | null
           updated_at?: string
         }
@@ -4092,6 +4094,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           job_title?: string | null
+          notification_preferences?: Json | null
           phone?: string | null
           updated_at?: string
         }

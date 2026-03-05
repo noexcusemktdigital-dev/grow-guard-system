@@ -290,9 +290,39 @@ function UsersTab() {
 }
 
 function NotificationsTab() {
+  const { user } = useAuth();
+  const { data: profile, isLoading } = useUserProfile();
   const [notifications, setNotifications] = useState({
     novosLeads: true, creditosBaixos: true, renovacao: true, whatsapp: false, relatorios: true,
   });
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (profile && !loaded) {
+      const prefs = (profile as any).notification_preferences;
+      if (prefs && typeof prefs === "object") {
+        setNotifications((prev) => ({ ...prev, ...prefs }));
+      }
+      setLoaded(true);
+    }
+  }, [profile, loaded]);
+
+  const savePreference = async (key: string, value: boolean) => {
+    const updated = { ...notifications, [key]: value };
+    setNotifications(updated);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ notification_preferences: updated } as any)
+        .eq("id", user!.id);
+      if (error) throw error;
+      toast.success(`${value ? "Ativado" : "Desativado"}`);
+    } catch {
+      toast.error("Erro ao salvar preferência");
+    }
+  };
+
+  if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
 
   return (
     <Card>
@@ -315,10 +345,7 @@ function NotificationsTab() {
             </div>
             <Switch
               checked={notifications[item.key as keyof typeof notifications]}
-              onCheckedChange={(v) => {
-                setNotifications({ ...notifications, [item.key]: v });
-                toast.success(`${item.label} ${v ? "ativado" : "desativado"}`);
-              }}
+              onCheckedChange={(v) => savePreference(item.key, v)}
             />
           </div>
         ))}
