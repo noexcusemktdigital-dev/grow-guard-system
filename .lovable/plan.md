@@ -1,70 +1,75 @@
 
 
-# Reestruturação da Ferramenta de Conteúdos
+# Reestruturação da Ferramenta de Redes Sociais (Postagens)
 
-## Resumo das Mudanças
+## Problema Central
 
-O usuário quer 3 grandes melhorias:
-
-1. **Wizard simplificado para 4 blocos** (não 5 ou 8) — dados da estratégia são importados automaticamente, sem perguntar novamente
-2. **Apresentação visual rica** dos conteúdos gerados — cards estilo rede social, não código/JSON
-3. **Organização em pastas de lotes** (por data) em vez de histórico plano, com CTAs: Copiar, Baixar PDF, Gerar Postagem
+O wizard atual tem 9 campos abertos em texto livre para artes e campos genéricos para vídeos. O cliente preenche mal, o prompt fica fraco, e a IA gera resultados inconsistentes. O usuário quer um briefing estruturado com blocos objetivos + assistência da IA para montar o prompt final.
 
 ## Plano de Implementação
 
-### 1. Wizard: 4 Blocos Fixos (`ClienteConteudos.tsx`)
+### 1. Wizard de Arte — 7 Blocos Estruturados (`ClienteRedesSociais.tsx`)
 
-Eliminar a lógica adaptativa de 5/8 steps. Sempre 4 blocos:
+Substituir os 9 campos abertos por 7 blocos claros:
 
-| Bloco | Conteúdo |
-|---|---|
-| 1 — Quantidade e Formatos | Slider + distribuição (como hoje). Mostrar limite do plano |
-| 2 — Objetivo | Seleção múltipla: Educar, Autoridade, Engajar, Quebrar objeções, Promover, Gerar leads |
-| 3 — Tema | Campo opcional. Se há estratégia, mostrar pilares como chips clicáveis. Placeholder: "Ex: marketing para médicos..." |
-| 4 — Plataforma | Instagram, LinkedIn, TikTok, YouTube, Blog |
+| Bloco | Campo | Tipo |
+|---|---|---|
+| 1 — Formato | 1:1, 4:5, 9:16 | Cards selecionáveis |
+| 2 — Tipo de postagem | Post único, Capa carrossel, Slide carrossel, Story | Cards selecionáveis |
+| 3 — Texto da arte | Headline (obrigatório), Subheadline (opcional), CTA (opcional) | Inputs estruturados |
+| 4 — Cena | Descrição da cena (textarea com exemplos inline) | Textarea com placeholders ricos |
+| 5 — Identidade visual | Auto-preenchido se existe. Senão: cores + estilo | Auto-detect + fallback manual |
+| 6 — Elementos visuais | Objetos/elementos específicos (notebook, prédio, etc.) | Input com sugestões |
+| 7 — Referências visuais | Upload mínimo 3 imagens | Upload com validação |
 
-Quando há estratégia → dados de público, tom, ICP, diferenciais, dores são injetados automaticamente no payload sem perguntar. Quando não há → esses campos vão vazios e o edge function lida com isso.
+Remover: campos "link da marca", "objetivo", "tema", "ambiente" como campos separados. O campo "cena" absorve contexto suficiente.
 
-Remover: steps de negócio, público, tom, funil, contexto especial, estilo do lote. O prompt da IA já tem inteligência para distribuir funil e tom baseado na estratégia.
+### 2. Wizard de Vídeo — 6 Blocos (`ClienteRedesSociais.tsx`)
 
-### 2. Apresentação Visual dos Conteúdos (`ClienteConteudos.tsx`)
+| Bloco | Campo | Tipo |
+|---|---|---|
+| 1 — Formato/Plataforma | Reels/TikTok (9:16), Feed (1:1), YouTube (16:9) | Cards |
+| 2 — Duração | 5 segundos, 8 segundos | Cards (simplificado) |
+| 3 — Cena | Descrição do que acontece | Textarea com exemplos |
+| 4 — Movimento | O que acontece na cena (ação) | Input com sugestões |
+| 5 — Texto/Mensagem | Frase + CTA opcional | Inputs estruturados |
+| 6 — Referências | Upload opcional | Upload |
 
-Redesenhar completamente os cards de resultado:
+### 3. Assistente IA para prompt (`generate-social-image/index.ts`)
 
-**Card de Carrossel**: Mostrar slides numerados como mini-cards empilhados com título bold e texto. Visual clean, sem labels "Slide 1".
+O chain-of-thought já existe no edge function. A melhoria é alimentá-lo com os dados estruturados dos novos blocos em vez de texto livre concatenado. O `analyzeAndOptimizePrompt` receberá campos nomeados (headline, cena, elementos, tipo_postagem) em vez de um blob de texto.
 
-**Card de Post Único**: Headline grande em destaque, texto abaixo, CTA em badge colorido. Simular visual de post.
-
-**Card de Vídeo**: Hook em destaque (como thumbnail), roteiro em seções colapsadas, CTA final.
-
-**Card de Story**: Frames em row horizontal scrollável.
-
-Cada card terá **3 CTAs fixos**:
-- **Copiar** — copia legenda + conteúdo formatado
-- **Baixar PDF** — usa html2pdf.js (já instalado) para exportar o card
-- **Gerar Postagem** — navega para `/cliente/redes-sociais`
-
-Remover: botão "Ver mais" / expand pattern. Todo conteúdo visível direto. Remover labels técnicos como "conteudo_principal", "embasamento".
-
-### 3. Organização em Pastas de Lotes (tab "Meus Conteúdos")
-
-Renomear tab "Histórico" → "Meus Conteúdos".
-
-Agrupar conteúdos por data de criação (lote = mesma `created_at` ±1min). Mostrar como:
-
-```text
-📁 Lote 05/03/2026 — 8 conteúdos
-📁 Lote 28/02/2026 — 12 conteúdos
-📁 Lote 15/02/2026 — 8 conteúdos
+Atualizar o payload enviado pelo hook para passar campos estruturados:
+```
+{
+  formato: "4:5",
+  tipo_postagem: "post_unico",
+  headline: "Escalar não é sorte",
+  subheadline: "É processo",
+  cta: "Conheça o método",
+  cena: "Empresário analisando dashboard de vendas",
+  elementos_visuais: "notebook com gráfico subindo",
+  reference_image_urls: [...],
+  identidade_visual: { ... }
+}
 ```
 
-Cada pasta expande para mostrar os cards visuais com os mesmos CTAs (copiar, PDF, gerar postagem). Usar `Collapsible` do Radix.
+### 4. Atualizar Edge Functions
 
-### Arquivos Modificados
+**`generate-social-image/index.ts`**: Receber os novos campos estruturados e montar o prompt de forma mais precisa (campo por campo) em vez de concatenar texto livre.
+
+**`generate-social-video-frames/index.ts`**: Receber cena + movimento + mensagem como campos separados para prompts de frame mais precisos.
+
+### 5. Hook `useClientePosts.ts`
+
+Expandir o payload do `useGeneratePost` para aceitar os novos campos estruturados (tipo_postagem, headline, subheadline, cta, cena, elementos_visuais, movimento).
+
+## Arquivos Modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/cliente/ClienteConteudos.tsx` | Wizard 4 blocos, cards visuais por formato, pastas de lotes, CTAs (copiar/PDF/postagem) |
-
-Nenhuma mudança no edge function ou hook — o payload já suporta os campos necessários, e campos não enviados são tratados como vazios.
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Wizard reestruturado: 7 blocos arte, 6 blocos vídeo, validação de 3 refs |
+| `src/hooks/useClientePosts.ts` | Payload expandido com campos estruturados |
+| `supabase/functions/generate-social-image/index.ts` | Receber campos estruturados, prompt mais preciso |
+| `supabase/functions/generate-social-video-frames/index.ts` | Campos cena + movimento separados |
 
