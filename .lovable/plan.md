@@ -1,90 +1,121 @@
 
 
-# Plano: Revisão do Fluxo de Criação de Conta + Trial Limitado
+# Correção Completa: Integração Asaas — Sandbox → Produção
 
-## Problemas Identificados
+## Diagnóstico
 
-### 1. Trial sem restrições reais
-O `signup-saas` cria uma subscription com `plan: "trial"`, mas `getPlanBySlug("trial")` retorna `undefined` — não existe um plano "trial" em `constants/plans.ts`. O sistema faz fallback para 5.000 créditos (igual ao Starter) e sem nenhuma restrição de funcionalidades. O trial deveria ter limites menores que o Starter.
+Baseado nas suas observações sobre os 4 motivos clássicos de falha na virada Sandbox → Produção, identifiquei os seguintes problemas concretos no código:
 
-### 2. Google OAuth não provisiona automaticamente em todos os casos
-O `AuthContext` tenta provisionar via `signup-saas` quando detecta `provider === "google"` e não tem role. Porém, se o `signup-saas` falhar silenciosamente (ex: race condition), o usuário fica "preso" sem organização. Não há retry nem feedback.
+### 1. Autenticação quebrada (`getClaims` inexistente)
+Todas as 8 edge functions de pagamento usam `userClient.auth.getClaims(token)` — este método **não existe** no `supabase-js@2`. Ele falha silenciosamente e retorna 401 Unauthorized. As funções afetadas:
+- `asaas-create-charge`
+- `asaas-create-subscription`
+- `asaas-charge-client`
+- `asaas-charge-system-fee`
+- `asaas-charge-franchisee`
+- `asaas-list-payments`
+- `asaas-cancel-subscription`
+- `asaas-get-pix`
+- `asaas-test-connection`
 
-### 3. Sem banner de dias restantes do trial
-O sidebar mostra "Trial" mas não mostra quantos dias restam. O usuário não sente urgência para converter.
+### 2. `ASAAS_BASE_URL` — possível URL de sandbox
+O secret `ASAAS_BASE_URL` pode ainda apontar para `https://sandbox.asaas.com/api/v3` ao invés de `https://api.asaas.com/v3`. O fallback no código usa produção, mas se o secret estiver setado com sandbox, ele prevalece.
 
-### 4. Sem welcome/onboarding pós-criação diferenciado para trial
-Após criar a conta, o usuário é enviado direto para o onboarding de empresa → plano de vendas. Não há uma tela de boas-vindas explicando o que está incluso no trial e o que está bloqueado.
+### 3. `ASAAS_PROXY_URL` com valor inválido
+Os logs anteriores mostraram `" https://asaas.com/api/v3"` (com espaço e URL errada). Isso não é um proxy — é a própria API. O regex valida e ignora, mas polui os logs.
 
----
+### 4. `asaas_wallet_id` de ambiente errado no split
+Se o `asaas_wallet_id` salvo na tabela `organizations` é do ambiente sandbox, o split vai falhar em produção. Isso precisa de validação manual do usuário.
 
-## Solução
-
-### 1. Criar plano Trial em `constants/plans.ts`
-
-Adicionar um `PlanConfig` com id `"trial"` com limites reduzidos:
-
-| Campo | Trial | Starter |
-|---|---|---|
-| credits | 1000 | 5000 |
-| maxUsers | 1 | 2 |
-| maxContents | 3 | 8 |
-| maxSocialArts | 2 | 4 |
-| maxSites | 0 | 1 |
-| maxAgents | 1 | 1 |
-| maxDispatches | 0 | 0 |
-| maxStrategies | 1 | 1 |
-| maxTrafficStrategies | 0 | 1 |
-
-Isso faz com que `getPlanBySlug("trial")` funcione corretamente em todo o sistema — limites de quota, alertas de crédito, etc.
-
-### 2. Banner de contagem regressiva do Trial
-
-Criar um componente `TrialCountdownBanner` que aparece no topo do layout cliente quando `subscription.plan === "trial"`. Mostra "Faltam X dias do seu teste grátis" com um botão "Ver planos". Usar cores progressivas (verde → amarelo → vermelho conforme aproxima do fim).
-
-**Arquivo:** `src/components/cliente/TrialCountdownBanner.tsx` (novo)
-**Integração:** `src/components/ClienteLayout.tsx` (adicionar antes do conteúdo)
-
-### 3. Tela de Welcome Trial pós-primeiro-login
-
-Criar um modal/tela de boas-vindas que aparece apenas uma vez após o primeiro login do trial, explicando:
-- O que está incluso nos 7 dias (CRM, 1 Agente IA, Plano de Vendas, Estratégia Marketing)
-- O que está bloqueado (Sites, Tráfego Pago, Disparos)
-- CTA para começar pelo Plano de Vendas
-
-Controlado via `localStorage` key `trial_welcome_seen`.
-
-**Arquivo:** `src/components/cliente/TrialWelcomeModal.tsx` (novo)
-**Integração:** `src/pages/cliente/ClienteInicio.tsx`
-
-### 4. Hardening do fluxo Google OAuth
-
-No `AuthContext`, após o provisioning via `signup-saas`:
-- Fazer um re-fetch do role para confirmar que foi criado
-- Se falhar, fazer retry uma vez
-- Adicionar log de erro mais descritivo
-
-### 5. Feature Gate para funcionalidades bloqueadas no Trial
-
-Atualizar o `FeatureGateContext` para adicionar gate reason `"trial_limited"` para rotas bloqueadas durante o trial (Sites, Tráfego Pago, Disparos). Atualizar o `FeatureGateOverlay` com mensagem específica incentivando upgrade.
-
-### 6. Sidebar — mostrar dias restantes
-
-No `ClienteSidebar.tsx`, trocar o texto "Trial" por "Trial · Xd" mostrando os dias restantes.
+### 5. `ASAAS_API_KEY` — possível chave do sandbox
+Se a chave é do sandbox (`$aact_...` sandbox vs produção), todas as chamadas falham.
 
 ---
 
-## Arquivos a Modificar/Criar
+## Plano de Correção
 
-| Arquivo | Ação |
+### Etapa 1: Corrigir autenticação em todas as edge functions (9 arquivos)
+
+Substituir o padrão `getClaims()` por `auth.getUser()` que funciona corretamente:
+
+```typescript
+// ANTES (quebrado)
+const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+if (claimsError || !claimsData?.claims) { return 401; }
+
+// DEPOIS (funcional)
+const { data: { user }, error: authError } = await userClient.auth.getUser();
+if (authError || !user) {
+  console.error("[function-name] Auth failed:", authError?.message);
+  return 401;
+}
+```
+
+**Arquivos:**
+- `supabase/functions/asaas-create-charge/index.ts`
+- `supabase/functions/asaas-create-subscription/index.ts`
+- `supabase/functions/asaas-charge-client/index.ts`
+- `supabase/functions/asaas-charge-system-fee/index.ts`
+- `supabase/functions/asaas-charge-franchisee/index.ts`
+- `supabase/functions/asaas-list-payments/index.ts`
+- `supabase/functions/asaas-cancel-subscription/index.ts`
+- `supabase/functions/asaas-get-pix/index.ts`
+- `supabase/functions/asaas-test-connection/index.ts`
+
+Com esta mudança, não precisamos mais do `token` extraído manualmente — o `userClient` já tem o header Authorization e `getUser()` o valida server-side.
+
+### Etapa 2: Adicionar diagnóstico de ambiente no `asaas-test-connection`
+
+Expandir a resposta do `asaas-test-connection` para retornar:
+- A URL base sendo usada (produção vs sandbox)
+- Se o proxy está ativo e válido
+- Se a API key está funcionando
+- Verificação do ambiente (sandbox vs produção)
+
+### Etapa 3: Adicionar refresh de sessão no frontend antes de chamadas de pagamento
+
+Nos 3 pontos do frontend que chamam edge functions de pagamento, adicionar `await supabase.auth.getSession()` antes do `invoke`:
+
+**Arquivos:**
+- `src/pages/cliente/ClientePlanoCreditos.tsx` — mutations `purchase` (créditos) e `subscribe` (plano)
+- `src/hooks/useFranqueadoSystemPayments.ts` — mutation `useChargeSystemFee`
+- `src/hooks/useClientPayments.ts` — mutation `useChargeClient`
+
+### Etapa 4: Melhorar tratamento de erros de pagamento no frontend
+
+Adicionar mensagens descritivas para erros comuns:
+- 401 → "Sessão expirada. Recarregue a página."
+- `not_allowed_ip` → "IP não autorizado no Asaas. Configure o proxy."
+- `CPF/CNPJ` → Mensagem específica pedindo cadastro do documento
+
+### Etapa 5: Logging estruturado
+
+Adicionar `console.log` no início de cada função (antes do auth) para garantir visibilidade de que a função foi chamada, mesmo que o auth falhe.
+
+---
+
+## Checklist de Secrets que o usuário deve validar manualmente
+
+Após as correções de código, será necessário confirmar:
+
+| Secret | Valor esperado (produção) |
 |---|---|
-| `src/constants/plans.ts` | Adicionar `PlanConfig` do trial com limites reduzidos |
-| `src/components/cliente/TrialCountdownBanner.tsx` | **Novo** — banner com countdown de dias |
-| `src/components/cliente/TrialWelcomeModal.tsx` | **Novo** — modal de boas-vindas do trial |
-| `src/components/ClienteLayout.tsx` | Integrar TrialCountdownBanner |
-| `src/pages/cliente/ClienteInicio.tsx` | Integrar TrialWelcomeModal |
-| `src/contexts/FeatureGateContext.tsx` | Adicionar gate `trial_limited` para rotas bloqueadas no trial |
-| `src/components/FeatureGateOverlay.tsx` | Adicionar config visual para `trial_limited` |
-| `src/components/ClienteSidebar.tsx` | Mostrar dias restantes no badge |
-| `src/contexts/AuthContext.tsx` | Retry no provisioning Google OAuth + re-fetch role |
+| `ASAAS_API_KEY` | Chave de produção (`$aact_...`) |
+| `ASAAS_BASE_URL` | `https://api.asaas.com/v3` |
+| `ASAAS_PROXY_URL` | URL de proxy HTTP válida (ou remover) |
+| `ASAAS_WEBHOOK_TOKEN` | Token configurado no painel Asaas produção |
+
+E na tabela `organizations`, verificar que `asaas_wallet_id` e `asaas_customer_id` são IDs de produção.
+
+---
+
+## Resumo
+
+| Mudança | Arquivos |
+|---|---|
+| Trocar `getClaims()` por `getUser()` | 9 edge functions |
+| Refresh de sessão antes de pagamentos | 3 arquivos frontend |
+| Diagnóstico expandido | `asaas-test-connection` |
+| Erros descritivos | `ClientePlanoCreditos.tsx`, hooks de pagamento |
+| Logging antes do auth | 9 edge functions |
 
