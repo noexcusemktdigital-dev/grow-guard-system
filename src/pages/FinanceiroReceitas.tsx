@@ -11,6 +11,7 @@ import { useFinanceRevenues, useFinanceMutations } from "@/hooks/useFinance";
 import { useToast } from "@/hooks/use-toast";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const today = () => new Date().toISOString().split("T")[0];
 
 export default function FinanceiroReceitas() {
   const { toast } = useToast();
@@ -20,15 +21,16 @@ export default function FinanceiroReceitas() {
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState(0);
   const [category, setCategory] = useState("Assessoria");
+  const [date, setDate] = useState(today());
 
   const total = (revenues ?? []).reduce((s, r) => s + Number(r.amount), 0);
   const paid = (revenues ?? []).filter(r => r.status === "paid").reduce((s, r) => s + Number(r.amount), 0);
 
   const handleSave = () => {
     if (!desc.trim()) { toast({ title: "Informe a descrição", variant: "destructive" }); return; }
-    createRevenue.mutate({ description: desc, amount, category, status: "pending" });
+    createRevenue.mutate({ description: desc, amount, category, status: "pending", date });
     setDialogOpen(false);
-    setDesc(""); setAmount(0);
+    setDesc(""); setAmount(0); setDate(today());
     toast({ title: "Receita adicionada" });
   };
 
@@ -92,6 +94,7 @@ export default function FinanceiroReceitas() {
           <div className="space-y-4">
             <div><Label>Descrição *</Label><Input value={desc} onChange={e => setDesc(e.target.value)} /></div>
             <div><Label>Valor (R$)</Label><Input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} /></div>
+            <div><Label>Data</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
             <div><Label>Categoria</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
