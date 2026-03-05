@@ -51,6 +51,7 @@ Deno.serve(async (req) => {
       plataformas = [],
       regiao = "",
       ativos = [],
+      strategy_id = null,
     } = body;
 
     if (!organization_id) {
@@ -229,6 +230,7 @@ Retorne APENAS um JSON válido com a estrutura: { diagnostico, kpi_tracking, inv
         is_active: true,
         status: "pending",
         created_by: userId,
+        strategy_id: strategy_id || null,
       } as any)
       .select()
       .single();

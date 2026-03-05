@@ -152,7 +152,7 @@ export default function ClienteTrafegoPago() {
   };
 
   const handleGenerate = () => {
-    generateMutation.mutate(wizardData, {
+    generateMutation.mutate({ ...wizardData, strategy_id: marketingStrategy?.id }, {
       onSuccess: () => {
         toast({ title: "Estratégia gerada!", description: "Revise e aprove para debitar os créditos." });
         setShowWizard(false);

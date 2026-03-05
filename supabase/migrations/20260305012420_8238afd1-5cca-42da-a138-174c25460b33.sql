@@ -1,0 +1,2 @@
+ALTER TABLE client_sites ADD COLUMN IF NOT EXISTS strategy_id uuid REFERENCES marketing_strategies(id);
+ALTER TABLE traffic_strategies ADD COLUMN IF NOT EXISTS strategy_id uuid REFERENCES marketing_strategies(id);

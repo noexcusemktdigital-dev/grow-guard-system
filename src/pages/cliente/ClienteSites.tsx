@@ -279,6 +279,7 @@ export default function ClienteSites() {
         name: `Site ${form.objetivo || "Novo"} — ${new Date().toLocaleDateString("pt-BR")}`,
         type: (form.paginas as string[]).length <= 1 ? "lp" : "site",
         html: data.html,
+        strategy_id: activeStrategy?.id,
       });
 
       toast({ title: "Site gerado com sucesso!" });

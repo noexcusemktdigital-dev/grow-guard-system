@@ -90,7 +90,7 @@ export function useGenerateTrafficStrategy() {
   const { data: orgId } = useUserOrgId();
 
   return useMutation({
-    mutationFn: async (wizardData: TrafficWizardData) => {
+    mutationFn: async (wizardData: TrafficWizardData & { strategy_id?: string }) => {
       if (!orgId) throw new Error("Org not found");
       const { data, error } = await supabase.functions.invoke("generate-traffic-strategy", {
         body: { organization_id: orgId, ...wizardData },
