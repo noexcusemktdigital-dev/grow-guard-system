@@ -1,33 +1,35 @@
 
 
-# Limpeza dos Filtros da Lista de Conversas
+# Sincronizar estado real do WhatsApp — remover contatos antigos
 
-## Diagnóstico
+## Problema
 
-Os filtros atuais têm vários problemas que geram confusão:
+O sync atual (`whatsapp-sync-chats`) apenas **adiciona e atualiza** contatos. Nunca remove os que não existem mais no WhatsApp. Resultado: contatos antigos, conversas deletadas e números que não interagem mais ficam acumulados na lista.
 
-1. **Filtro "Grupos"** — inútil porque o hook `useWhatsAppContacts` já filtra e **remove** todos os contatos de grupo (`@g.us`, `-group`) antes de retornar os dados. O botão nunca vai mostrar resultados.
+## Solução
 
-2. **Filtro "Site"** — nunca funciona porque `contact_type` só é definido como `"individual"`, `"group"` ou `"lid"` no hook. Nenhum contato recebe `"website"`.
+Após sincronizar os chats da Z-API, comparar os telefones retornados com os existentes no banco. Contatos que **não aparecem na Z-API** e **não têm mensagens recentes no banco** (últimos 7 dias) serão **deletados** do banco.
 
-3. **Filtro "Etapa" (CRM stage)** — só aparece se o contato tiver `crm_lead_id` vinculado a um lead existente. A maioria dos contatos WhatsApp não tem, então o filtro fica vazio.
-
-4. **Filtro "Agente"** — depende de `agent_id` no contato, que pode não estar preenchido.
+Adicionalmente, contatos sem `last_message_preview` e com `last_message_at` muito antigo (> 30 dias) que a Z-API não retornou serão removidos — são conversas mortas.
 
 ## Mudanças
 
-### `src/components/cliente/ChatContactList.tsx`
-- Remover os botões de filtro **"Grupos"** e **"Site"** (dados nunca existem)
-- Manter apenas: **Todos**, **IA**, **Humano**, **Espera** (esses funcionam com dados reais)
-- Remover o filtro dropdown de **"Etapa"** (não há vínculo CRM consistente nos contatos WhatsApp)
-- Manter o filtro de **"Agente"** apenas se houver agentes ativos (já funciona assim)
+### `supabase/functions/whatsapp-sync-chats/index.ts`
+- Após o loop de upsert, coletar todos os phones retornados pela Z-API num Set
+- Buscar contatos existentes no banco que **não estão** nesse Set
+- Para cada um desses "órfãos": deletar se `last_message_at` for > 7 dias atrás **e** não houver mensagens no banco nos últimos 7 dias
+- Retornar `contacts_removed` na resposta
+- Remover logs DEBUG desnecessários
+
+### `src/hooks/useWhatsApp.ts`
+- No `useWhatsAppContacts`, filtrar contatos do tipo `lid` (são IDs internos do WhatsApp, não contatos reais) — já filtra groups mas não lid
 
 ### `src/pages/cliente/ClienteChat.tsx`
-- Remover o cálculo de `leadStages` (useMemo que cruza contatos com leads do CRM) — não é mais necessário
-- Remover a prop `leadStages` passada ao `ChatContactList`
+- Atualizar o toast de sync para mostrar contatos removidos
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/cliente/ChatContactList.tsx` | Remover filtros Grupos, Site, Etapa |
-| `src/pages/cliente/ClienteChat.tsx` | Remover cálculo de leadStages |
+| `supabase/functions/whatsapp-sync-chats/index.ts` | Deletar contatos ausentes da Z-API + sem atividade recente |
+| `src/hooks/useWhatsApp.ts` | Filtrar contatos `lid` |
+| `src/pages/cliente/ClienteChat.tsx` | Mostrar removidos no toast |
 
