@@ -1,19 +1,17 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   FileText, Check, Sparkles, Copy, ArrowLeft, ArrowRight,
-  Layers, Video, AlignLeft, BookOpen, Clock, Filter,
-  CheckCircle2, RotateCcw, Image, Play, Palette,
-  Target, MessageSquare, Hash, Lightbulb, Eye, Zap, TrendingUp, Users,
+  Layers, Video, AlignLeft, Image, BookOpen, Clock,
+  RotateCcw, Target, Lightbulb, FolderOpen, ChevronDown, ChevronRight,
+  Download, ExternalLink, Hash,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
   useContentHistory, useGenerateContent, useApproveContent,
@@ -23,6 +21,7 @@ import { useStrategyData } from "@/hooks/useStrategyData";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 /* ── Constants ── */
 const FORMATOS = [
@@ -36,36 +35,15 @@ const FORMATOS = [
 ];
 
 const OBJETIVOS = [
-  { value: "educar", label: "Educar" },
-  { value: "autoridade", label: "Autoridade" },
-  { value: "engajamento", label: "Engajamento" },
-  { value: "leads", label: "Gerar Leads" },
-  { value: "vender", label: "Vender" },
-  { value: "quebrar_objecoes", label: "Quebrar Objeções" },
+  { value: "educar", label: "Educar o público" },
+  { value: "autoridade", label: "Gerar autoridade" },
+  { value: "engajamento", label: "Engajar a audiência" },
+  { value: "quebrar_objecoes", label: "Quebrar objeções" },
+  { value: "promover", label: "Promover produto/serviço" },
+  { value: "leads", label: "Gerar leads" },
 ];
 
-const PLATAFORMAS = ["Instagram", "LinkedIn", "TikTok", "YouTube"];
-
-const FUNIL_OPTIONS = [
-  { value: "topo", label: "Topo de Funil", desc: "Atrair e educar novos públicos", icon: Users },
-  { value: "meio", label: "Meio de Funil", desc: "Nutrir e gerar consideração", icon: TrendingUp },
-  { value: "fundo", label: "Fundo de Funil", desc: "Converter e vender", icon: Zap },
-];
-
-const CONTEXTO_OPTIONS = [
-  { value: "nenhum", label: "Nenhum contexto especial" },
-  { value: "lancamento", label: "Lançamento de produto/serviço" },
-  { value: "promocao", label: "Promoção ou oferta" },
-  { value: "data_comemorativa", label: "Data comemorativa" },
-  { value: "sazonalidade", label: "Sazonalidade do mercado" },
-  { value: "evento", label: "Evento presencial ou online" },
-];
-
-const TONS_EXPANDIDOS = [
-  "educativo", "institucional", "direto", "provocativo",
-  "inspirador", "humorístico", "técnico", "empático",
-  "storytelling", "urgente",
-];
+const PLATAFORMAS = ["Instagram", "LinkedIn", "TikTok", "YouTube", "Blog"];
 
 const loadingPhrases = [
   "Analisando sua estratégia...",
@@ -75,6 +53,8 @@ const loadingPhrases = [
   "Estruturando legendas completas...",
   "Finalizando lote de conteúdos...",
 ];
+
+const TOTAL_STEPS = 4;
 
 export default function ClienteConteudos() {
   const navigate = useNavigate();
@@ -88,56 +68,33 @@ export default function ClienteConteudos() {
   const hasStrategy = strategy.hasStrategy;
   const maxContents = quota.max;
 
-  // Adaptive wizard: 5 steps with strategy, 8 without
-  const totalSteps = hasStrategy ? 5 : 8;
-
-  // Wizard state
+  // Wizard state — always 4 steps
   const [step, setStep] = useState(1);
   const [quantidade, setQuantidade] = useState(Math.min(maxContents, 8));
   const [formatDist, setFormatDist] = useState<Record<string, number>>({});
   const [objetivos, setObjetivos] = useState<string[]>([]);
   const [tema, setTema] = useState("");
-  const [plataforma, setPlataforma] = useState("");
-  const [tom, setTom] = useState("");
-  const [publico, setPublico] = useState("");
-  const [funilMomento, setFunilMomento] = useState("topo");
-  const [contextoEspecial, setContextoEspecial] = useState("nenhum");
-  const [contextoDetalhe, setContextoDetalhe] = useState("");
-  const [estiloLote, setEstiloLote] = useState("");
-  // Without-strategy-only fields
-  const [nomeEmpresa, setNomeEmpresa] = useState("");
-  const [produto, setProduto] = useState("");
-  const [diferencial, setDiferencial] = useState("");
-  const [doresPublico, setDoresPublico] = useState("");
-  const [desejosPublico, setDesejosPublico] = useState("");
-
-  // Pre-fill from strategy
-  useEffect(() => {
-    if (hasStrategy) {
-      setPlataforma(strategy.canalPrioritario || "Instagram");
-      setTom(strategy.tomPrincipal || "");
-      setPublico(strategy.publicoAlvo || "");
-    }
-  }, [hasStrategy, strategy.canalPrioritario, strategy.tomPrincipal, strategy.publicoAlvo]);
+  const [plataforma, setPlataforma] = useState("Instagram");
 
   // Results
   const [generatedContents, setGeneratedContents] = useState<any[]>([]);
   const [generatedIds, setGeneratedIds] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingIdx, setLoadingIdx] = useState(0);
-  const [expandedCard, setExpandedCard] = useState<number | null>(null);
 
-  // History
-  const [filterFormat, setFilterFormat] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
+  // Pre-fill platform from strategy
+  useEffect(() => {
+    if (hasStrategy && strategy.canalPrioritario) {
+      setPlataforma(strategy.canalPrioritario);
+    }
+  }, [hasStrategy, strategy.canalPrioritario]);
 
   const formatTotal = Object.values(formatDist).reduce((a, b) => a + b, 0);
 
   const updateFormatDist = (fmt: string, val: number) => {
     setFormatDist(prev => {
       const next = { ...prev };
-      if (val <= 0) { delete next[fmt]; } else { next[fmt] = val; }
+      if (val <= 0) delete next[fmt]; else next[fmt] = val;
       return next;
     });
   };
@@ -146,26 +103,11 @@ export default function ClienteConteudos() {
     setObjetivos(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
   };
 
-  // === STEP VALIDATION (adaptive) ===
   const canAdvance = () => {
-    if (hasStrategy) {
-      // 5-step flow
-      if (step === 1) return quantidade > 0 && quantidade <= quota.remaining && formatTotal === quantidade;
-      if (step === 2) return objetivos.length > 0;
-      if (step === 3) return true; // tema optional
-      if (step === 4) return true; // contexto optional
-      if (step === 5) return true; // review
-    } else {
-      // 8-step flow
-      if (step === 1) return quantidade > 0 && quantidade <= quota.remaining && formatTotal === quantidade;
-      if (step === 2) return objetivos.length > 0;
-      if (step === 3) return nomeEmpresa.trim().length > 0;
-      if (step === 4) return publico.trim().length > 0;
-      if (step === 5) return true; // tom optional
-      if (step === 6) return !!plataforma;
-      if (step === 7) return true; // tema optional
-      if (step === 8) return true; // review
-    }
+    if (step === 1) return quantidade > 0 && quantidade <= quota.remaining && formatTotal === quantidade;
+    if (step === 2) return objetivos.length > 0;
+    if (step === 3) return true; // tema optional
+    if (step === 4) return !!plataforma;
     return false;
   };
 
@@ -177,7 +119,6 @@ export default function ClienteConteudos() {
     try {
       const formatos = Object.entries(formatDist).map(([tipo, qtd]) => ({ tipo, qtd }));
 
-      // Build rich strategy payload for the edge function
       const strategyPayload = hasStrategy ? {
         icp: strategy.icp,
         propostaValor: strategy.propostaValor,
@@ -195,23 +136,14 @@ export default function ClienteConteudos() {
         formatos,
         objetivos,
         tema: tema || undefined,
-        plataforma: plataforma || "Instagram",
-        tom: tom || undefined,
-        publico: publico || undefined,
+        plataforma,
+        tom: hasStrategy ? strategy.tomPrincipal || undefined : undefined,
+        publico: hasStrategy ? strategy.publicoAlvo || undefined : undefined,
         estrategia: strategyPayload,
-        funilMomento,
-        contextoEspecial: contextoEspecial !== "nenhum" ? contextoEspecial : undefined,
-        contextoDetalhe: contextoDetalhe || undefined,
-        estiloLote: estiloLote || undefined,
-        nomeEmpresa: nomeEmpresa || undefined,
-        produto: produto || undefined,
-        diferencial: diferencial || undefined,
-        doresPublico: doresPublico || undefined,
-        desejosPublico: desejosPublico || undefined,
       });
       setGeneratedContents(res.conteudos);
       setGeneratedIds((res.dbRecords as any[]).map((r: any) => r.id));
-      setStep(totalSteps + 1); // results screen
+      setStep(TOTAL_STEPS + 1);
       toast({ title: `${res.conteudos.length} conteúdos gerados com sucesso!` });
     } catch (err: any) {
       toast({ title: "Erro ao gerar", description: err?.message, variant: "destructive" });
@@ -247,88 +179,55 @@ export default function ClienteConteudos() {
     setFormatDist({});
     setObjetivos([]);
     setTema("");
-    setFunilMomento("topo");
-    setContextoEspecial("nenhum");
-    setContextoDetalhe("");
-    setEstiloLote("");
     setGeneratedContents([]);
     setGeneratedIds([]);
-    setExpandedCard(null);
-    // Keep pre-filled strategy fields
-    if (!hasStrategy) {
-      setPlataforma("Instagram");
-      setTom("");
-      setPublico("");
-    }
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyContent = (c: any) => {
+    let text = c.titulo + "\n\n";
+    if (c.legenda) text += c.legenda + "\n\n";
+    if (c.hashtags?.length) text += c.hashtags.map((h: string) => `#${h.replace(/^#/, "")}`).join(" ");
     navigator.clipboard.writeText(text);
-    toast({ title: "Copiado!" });
+    toast({ title: "Conteúdo copiado!" });
   };
 
-  const filteredHistory = useMemo(() => (history || []).filter(c => {
-    if (filterFormat !== "all" && c.format !== filterFormat) return false;
-    if (filterStatus !== "all" && c.status !== filterStatus) return false;
-    return true;
-  }), [history, filterFormat, filterStatus]);
-
-  // === RENDER STEP CONTENT (adaptive) ===
-  const renderStep = () => {
-    if (hasStrategy) return renderStrategyStep();
-    return renderFullStep();
-  };
-
-  // === WITH STRATEGY: 5 steps ===
-  const renderStrategyStep = () => {
-    switch (step) {
-      case 1: return renderStepFormatsQtd();
-      case 2: return renderStepObjetivoFunil();
-      case 3: return renderStepTemaContexto();
-      case 4: return renderStepContextoEspecial();
-      case 5: return renderStepRevisao();
-      default: return null;
+  const downloadPdf = async (c: any, idx: number) => {
+    try {
+      const el = document.getElementById(`content-card-${idx}`);
+      if (!el) return;
+      const html2pdf = (await import("html2pdf.js")).default;
+      html2pdf().set({ margin: 8, filename: `${c.titulo || "conteudo"}.pdf`, html2canvas: { scale: 2 } }).from(el).save();
+    } catch {
+      toast({ title: "Erro ao gerar PDF", variant: "destructive" });
     }
   };
 
-  // === WITHOUT STRATEGY: 8 steps ===
-  const renderFullStep = () => {
-    switch (step) {
-      case 1: return renderStepFormatsQtd();
-      case 2: return renderStepObjetivos();
-      case 3: return renderStepNegocio();
-      case 4: return renderStepPublico();
-      case 5: return renderStepTom();
-      case 6: return renderStepPlataforma();
-      case 7: return renderStepTemaContexto();
-      case 8: return renderStepRevisao();
-      default: return null;
-    }
-  };
+  const isResultScreen = step === TOTAL_STEPS + 1;
 
-  // ── Shared Step: Quantity + Formats (unified) ──
-  const renderStepFormatsQtd = () => (
+  // ── STEP RENDERERS ──
+
+  const renderStep1 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold mb-1">Quantidade e Formatos</h3>
+        <h3 className="text-xl font-semibold mb-1">Quantos conteúdos e em quais formatos?</h3>
         <p className="text-sm text-muted-foreground">
-          Plano: <strong>{quota.max}</strong> conteúdos/mês | Usado: <strong>{quota.used}</strong> | Restam: <strong>{quota.remaining}</strong>
+          Seu plano permite <strong>{quota.max}</strong> conteúdos/mês · Restam <strong className="text-primary">{quota.remaining}</strong>
         </p>
       </div>
       <div className="space-y-3">
         <Slider value={[quantidade]} onValueChange={([v]) => { setQuantidade(v); setFormatDist({}); }} min={1} max={quota.remaining} step={1} />
-        <div className="text-center text-3xl font-bold text-primary">{quantidade}</div>
+        <div className="text-center text-4xl font-bold text-primary">{quantidade}</div>
       </div>
       <div>
-        <p className="text-sm font-medium mb-2">
-          Distribua os formatos — total: <strong className={formatTotal === quantidade ? "text-primary" : "text-destructive"}>{formatTotal}/{quantidade}</strong>
+        <p className="text-sm font-medium mb-3">
+          Distribuição de formatos: <strong className={formatTotal === quantidade ? "text-primary" : "text-destructive"}>{formatTotal}/{quantidade}</strong>
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FORMATOS.map(f => {
             const Icon = f.icon;
             const val = formatDist[f.value] || 0;
             return (
-              <div key={f.value} className="flex items-center gap-3 p-3 rounded-xl border">
+              <div key={f.value} className="flex items-center gap-3 p-3 rounded-xl border bg-card">
                 <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
                 <span className="text-sm font-medium flex-1">{f.label}</span>
                 <div className="flex items-center gap-2">
@@ -344,62 +243,41 @@ export default function ClienteConteudos() {
     </div>
   );
 
-  // ── Strategy Step 2: Objetivo + Funil ──
-  const renderStepObjetivoFunil = () => (
+  const renderStep2 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold mb-1">Objetivo e Momento do Funil</h3>
-        <p className="text-sm text-muted-foreground">Qual o foco principal deste lote de conteúdos?</p>
+        <h3 className="text-xl font-semibold mb-1">Qual é o objetivo desses conteúdos?</h3>
+        <p className="text-sm text-muted-foreground">A IA distribui os objetivos proporcionalmente entre os conteúdos.</p>
       </div>
-      <div>
-        <p className="text-sm font-medium mb-2">Objetivos</p>
-        <div className="flex flex-wrap gap-2">
-          {OBJETIVOS.map(o => (
-            <button key={o.value} onClick={() => toggleObjetivo(o.value)}
-              className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${objetivos.includes(o.value) ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
-              {o.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p className="text-sm font-medium mb-2">Momento do funil</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {FUNIL_OPTIONS.map(f => {
-            const Icon = f.icon;
-            return (
-              <button key={f.value} onClick={() => setFunilMomento(f.value)}
-                className={`p-4 rounded-xl border-2 text-left transition-all ${funilMomento === f.value ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
-                <Icon className="w-5 h-5 text-primary mb-1" />
-                <p className="font-medium text-sm">{f.label}</p>
-                <p className="text-xs text-muted-foreground">{f.desc}</p>
-              </button>
-            );
-          })}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {OBJETIVOS.map(o => (
+          <button key={o.value} onClick={() => toggleObjetivo(o.value)}
+            className={`p-4 rounded-xl border-2 text-left text-sm font-medium transition-all ${objetivos.includes(o.value) ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
+            {o.label}
+          </button>
+        ))}
       </div>
     </div>
   );
 
-  // ── Strategy Step 3: Tema + sugestões dos pilares ──
-  const renderStepTemaContexto = () => (
+  const renderStep3 = () => (
     <div className="space-y-4">
       <div>
-        <h3 className="text-xl font-semibold mb-1">Tema direcionador</h3>
+        <h3 className="text-xl font-semibold mb-1">Existe algum tema específico?</h3>
         <p className="text-sm text-muted-foreground">
-          {hasStrategy ? "Opcional — se vazio, a IA usa os pilares da sua estratégia" : "Opcional — descreva um tema ou assunto específico"}
+          {hasStrategy ? "Opcional — se vazio, a IA usa os pilares da sua estratégia." : "Opcional — descreva um tema ou assunto específico."}
         </p>
       </div>
       {hasStrategy && strategy.pilares.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2">Sugestões dos seus pilares estratégicos:</p>
+          <p className="text-xs font-medium text-muted-foreground mb-2">Seus pilares estratégicos:</p>
           <div className="flex flex-wrap gap-2">
             {strategy.pilares.map((p: any, i: number) => {
-              const pilarName = typeof p === "string" ? p : p.nome || p.pilar || p.name || JSON.stringify(p);
+              const name = typeof p === "string" ? p : p.nome || p.pilar || p.name || JSON.stringify(p);
               return (
-                <button key={i} onClick={() => setTema(pilarName)}
-                  className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${tema === pilarName ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
-                  {pilarName}
+                <button key={i} onClick={() => setTema(name)}
+                  className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${tema === name ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
+                  {name}
                 </button>
               );
             })}
@@ -412,139 +290,16 @@ export default function ClienteConteudos() {
         onChange={e => setTema(e.target.value)}
         rows={3}
       />
-      <div>
-        <p className="text-sm font-medium mb-2">Estilo deste lote</p>
-        <p className="text-xs text-muted-foreground mb-2">Quer algo mais leve ou mais técnico neste lote?</p>
-        <div className="flex flex-wrap gap-2">
-          {["mais leve e acessível", "equilibrado", "mais técnico e aprofundado"].map(e => (
-            <button key={e} onClick={() => setEstiloLote(estiloLote === e ? "" : e)}
-              className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all capitalize ${estiloLote === e ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
-              {e}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 
-  // ── Strategy Step 4: Contexto especial ──
-  const renderStepContextoEspecial = () => (
-    <div className="space-y-4">
+  const renderStep4 = () => (
+    <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold mb-1">Contexto especial</h3>
-        <p className="text-sm text-muted-foreground">Existe algum contexto que deva influenciar os conteúdos?</p>
+        <h3 className="text-xl font-semibold mb-1">Onde esses conteúdos serão publicados?</h3>
+        <p className="text-sm text-muted-foreground">Isso ajusta o estilo e formato do conteúdo.</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {CONTEXTO_OPTIONS.map(c => (
-          <button key={c.value} onClick={() => setContextoEspecial(c.value)}
-            className={`p-3 rounded-xl border-2 text-left text-sm font-medium transition-all ${contextoEspecial === c.value ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
-            {c.label}
-          </button>
-        ))}
-      </div>
-      {contextoEspecial !== "nenhum" && (
-        <Textarea
-          placeholder="Descreva o contexto: nome do produto, data, detalhes da promoção..."
-          value={contextoDetalhe}
-          onChange={e => setContextoDetalhe(e.target.value)}
-          rows={2}
-        />
-      )}
-    </div>
-  );
-
-  // ── WITHOUT-STRATEGY Step 2: Objectives only ──
-  const renderStepObjetivos = () => (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Quais objetivos o lote deve cobrir?</h3>
-        <p className="text-sm text-muted-foreground">Selecione um ou mais.</p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {OBJETIVOS.map(o => (
-          <button key={o.value} onClick={() => toggleObjetivo(o.value)}
-            className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${objetivos.includes(o.value) ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
-            {o.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  // ── WITHOUT-STRATEGY Step 3: Sobre o negócio ──
-  const renderStepNegocio = () => (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Sobre o negócio</h3>
-        <p className="text-sm text-muted-foreground">Essas informações são essenciais para gerar conteúdos relevantes</p>
-      </div>
-      <div className="space-y-3">
-        <div>
-          <label className="text-sm font-medium">Nome da empresa *</label>
-          <Input placeholder="Ex: Clínica Sorriso" value={nomeEmpresa} onChange={e => setNomeEmpresa(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Produto/serviço principal</label>
-          <Input placeholder="Ex: implantes dentários, consultoria financeira" value={produto} onChange={e => setProduto(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Principal diferencial</label>
-          <Input placeholder="Ex: atendimento humanizado, preço acessível" value={diferencial} onChange={e => setDiferencial(e.target.value)} />
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── WITHOUT-STRATEGY Step 4: Público ──
-  const renderStepPublico = () => (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Público-alvo</h3>
-        <p className="text-sm text-muted-foreground">Descreva quem você quer atingir</p>
-      </div>
-      <div className="space-y-3">
-        <div>
-          <label className="text-sm font-medium">Público principal *</label>
-          <Input placeholder="Ex: empresários de PMEs, mulheres 25-45 anos" value={publico} onChange={e => setPublico(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Principais dores</label>
-          <Textarea placeholder="Ex: falta de tempo, não sabe como atrair clientes online..." value={doresPublico} onChange={e => setDoresPublico(e.target.value)} rows={2} />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Desejos / resultados esperados</label>
-          <Textarea placeholder="Ex: ter mais visibilidade, aumentar vendas em 30%..." value={desejosPublico} onChange={e => setDesejosPublico(e.target.value)} rows={2} />
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── WITHOUT-STRATEGY Step 5: Tom ──
-  const renderStepTom = () => (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Tom de comunicação</h3>
-        <p className="text-sm text-muted-foreground">Opcional — define o estilo da linguagem</p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {TONS_EXPANDIDOS.map(t => (
-          <button key={t} onClick={() => setTom(tom === t ? "" : t)}
-            className={`px-4 py-2 rounded-full border text-sm font-medium capitalize transition-all ${tom === t ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
-            {t}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  // ── WITHOUT-STRATEGY Step 6: Plataforma ──
-  const renderStepPlataforma = () => (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Onde os conteúdos serão publicados?</h3>
-        <p className="text-sm text-muted-foreground">Isso influencia o estilo e formato do conteúdo</p>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {PLATAFORMAS.map(p => (
           <button key={p} onClick={() => setPlataforma(p)}
             className={`p-4 rounded-xl border-2 text-center font-medium transition-all ${plataforma === p ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
@@ -552,57 +307,41 @@ export default function ClienteConteudos() {
           </button>
         ))}
       </div>
-    </div>
-  );
 
-  // ── Shared: Revisão ──
-  const renderStepRevisao = () => (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Revisão do lote</h3>
-        <p className="text-sm text-muted-foreground">Confirme antes de gerar</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <ReviewItem label="Quantidade" value={`${quantidade} conteúdos`} />
-        <ReviewItem label="Formatos" value={Object.entries(formatDist).map(([k, v]) => `${v}x ${FORMATOS.find(f => f.value === k)?.label || k}`).join(", ")} />
-        <ReviewItem label="Objetivos" value={objetivos.map(o => OBJETIVOS.find(x => x.value === o)?.label || o).join(", ")} />
-        <ReviewItem label="Plataforma" value={plataforma || "Instagram"} />
-        {tema && <ReviewItem label="Tema" value={tema} />}
-        {tom && <ReviewItem label="Tom" value={tom} />}
-        {funilMomento && hasStrategy && <ReviewItem label="Funil" value={FUNIL_OPTIONS.find(f => f.value === funilMomento)?.label || funilMomento} />}
-        {contextoEspecial !== "nenhum" && <ReviewItem label="Contexto" value={CONTEXTO_OPTIONS.find(c => c.value === contextoEspecial)?.label || contextoEspecial} />}
-        <ReviewItem label="Estratégia" value={hasStrategy ? "Conectada ✓" : "Sem estratégia"} />
-      </div>
-
-      {hasStrategy && (
-        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-2">
-          <p className="text-sm font-semibold text-primary">Dados da estratégia que serão usados:</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
-            {strategy.personaName && <span>👤 Persona: {strategy.personaName}</span>}
-            {strategy.tomPrincipal && <span>🎯 Tom: {strategy.tomPrincipal}</span>}
-            {strategy.pilares.length > 0 && <span>📐 {strategy.pilares.length} pilares de conteúdo</span>}
-            {strategy.dores.length > 0 && <span>💢 {strategy.dores.length} dores mapeadas</span>}
-            {strategy.palavrasUsar.length > 0 && <span>✅ {strategy.palavrasUsar.length} palavras para usar</span>}
-            {strategy.palavrasEvitar.length > 0 && <span>🚫 {strategy.palavrasEvitar.length} palavras para evitar</span>}
-            {strategy.propostaValor && <span>💎 Proposta de valor definida</span>}
-          </div>
+      {/* Review summary */}
+      <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
+        <p className="text-sm font-semibold">Resumo do lote</p>
+        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+          <span>📊 {quantidade} conteúdos</span>
+          <span>📱 {plataforma}</span>
+          <span>🎯 {objetivos.map(o => OBJETIVOS.find(x => x.value === o)?.label).join(", ")}</span>
+          {tema && <span>📝 {tema}</span>}
         </div>
-      )}
+        {hasStrategy && (
+          <div className="pt-2 border-t mt-2 grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+            <span className="text-primary font-medium col-span-2">✓ Dados importados da estratégia:</span>
+            {strategy.personaName && <span>👤 {strategy.personaName}</span>}
+            {strategy.tomPrincipal && <span>🎯 Tom: {strategy.tomPrincipal}</span>}
+            {strategy.pilares.length > 0 && <span>📐 {strategy.pilares.length} pilares</span>}
+            {strategy.dores.length > 0 && <span>💢 {strategy.dores.length} dores</span>}
+          </div>
+        )}
+      </div>
     </div>
   );
 
-  const isLastStep = step === totalSteps;
-  const isResultScreen = step === totalSteps + 1;
+  const renderSteps = [renderStep1, renderStep2, renderStep3, renderStep4];
 
   return (
     <div className="space-y-6">
       <PageHeader title="Geração de Conteúdo" subtitle="Gere lotes estratégicos de conteúdos alinhados com seu plano" />
 
       <StrategyBanner toolName="a geração de conteúdo" dataUsed="Pilares, ICP e tom de voz" />
+
       <div className="flex flex-wrap items-center gap-3">
         {hasStrategy && (
           <Badge variant="outline" className="gap-1.5 text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Estratégia conectada — wizard reduzido
+            <Check className="w-3.5 h-3.5" /> Estratégia conectada
           </Badge>
         )}
         <Badge variant="outline" className="gap-1.5">
@@ -613,12 +352,12 @@ export default function ClienteConteudos() {
       <Tabs defaultValue="criar">
         <TabsList>
           <TabsTrigger value="criar"><Sparkles className="w-4 h-4 mr-1" /> Criar Lote</TabsTrigger>
-          <TabsTrigger value="historico"><Clock className="w-4 h-4 mr-1" /> Histórico</TabsTrigger>
+          <TabsTrigger value="meus"><FolderOpen className="w-4 h-4 mr-1" /> Meus Conteúdos</TabsTrigger>
         </TabsList>
 
         {/* ── TAB: CRIAR ── */}
         <TabsContent value="criar" className="mt-4">
-          {quota.remaining <= 0 && step <= totalSteps && (
+          {quota.remaining <= 0 && step <= TOTAL_STEPS && (
             <Card className="border-destructive">
               <CardContent className="py-6 text-center space-y-2">
                 <p className="font-semibold text-destructive">Limite de conteúdos atingido este mês</p>
@@ -627,13 +366,13 @@ export default function ClienteConteudos() {
             </Card>
           )}
 
-          {quota.remaining > 0 && step <= totalSteps && !isGenerating && (
+          {quota.remaining > 0 && step <= TOTAL_STEPS && !isGenerating && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Passo {step} de {totalSteps}</CardTitle>
+                  <CardTitle className="text-lg">Passo {step} de {TOTAL_STEPS}</CardTitle>
                   <div className="flex gap-1">
-                    {Array.from({ length: totalSteps }).map((_, i) => (
+                    {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                       <div key={i} className={`h-2 w-8 rounded-full transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />
                     ))}
                   </div>
@@ -642,21 +381,20 @@ export default function ClienteConteudos() {
               <CardContent>
                 <AnimatePresence mode="wait">
                   <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                    {renderStep()}
+                    {renderSteps[step - 1]()}
                   </motion.div>
                 </AnimatePresence>
 
-                {/* Nav */}
                 <div className="flex justify-between mt-8">
                   <Button variant="ghost" onClick={() => step === 1 ? resetWizard() : setStep(s => s - 1)} disabled={step === 1}>
                     <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
                   </Button>
-                  {!isLastStep ? (
+                  {step < TOTAL_STEPS ? (
                     <Button onClick={() => setStep(s => s + 1)} disabled={!canAdvance()}>
                       Próximo <ArrowRight className="w-4 h-4 ml-1" />
                     </Button>
                   ) : (
-                    <Button onClick={handleGenerate} disabled={isGenerating}>
+                    <Button onClick={handleGenerate} disabled={!canAdvance()}>
                       <Sparkles className="w-4 h-4 mr-1" /> Gerar {quantidade} Conteúdos
                     </Button>
                   )}
@@ -676,7 +414,7 @@ export default function ClienteConteudos() {
             </Card>
           )}
 
-          {/* Results Grid */}
+          {/* Results */}
           {isResultScreen && generatedContents.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
@@ -686,252 +424,373 @@ export default function ClienteConteudos() {
                     <RotateCcw className="w-4 h-4 mr-1" /> Novo Lote
                   </Button>
                   <Button size="sm" onClick={handleApproveAll} disabled={approveBatchMutation.isPending}>
-                    <Check className="w-4 h-4 mr-1" /> Aprovar Tudo ({generatedContents.length * 200} créditos)
+                    <Check className="w-4 h-4 mr-1" /> Aprovar Tudo
                   </Button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {generatedContents.map((c, i) => (
-                  <Card key={i} className="overflow-hidden hover:border-primary/40 transition-colors">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-base leading-tight">{c.titulo}</CardTitle>
-                        <div className="flex gap-1 shrink-0">
-                          <Badge variant="secondary" className="text-xs">{c.formato}</Badge>
-                          <Badge variant="outline" className="text-xs">{c.objetivo}</Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm text-muted-foreground line-clamp-3">
-                        {typeof c.legenda === "string" ? c.legenda.slice(0, 150) + "..." : ""}
-                      </p>
-
-                      {expandedCard === i && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-3 border-t pt-3">
-                          <ContentMainDisplay content={c.conteudo_principal} format={c.formato} />
-                          {c.legenda && (
-                            <div className="p-3 rounded-lg bg-muted/50 border">
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="text-xs font-bold text-primary">Legenda</p>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(c.legenda)}><Copy className="w-3 h-3" /></Button>
-                              </div>
-                              <p className="text-sm whitespace-pre-wrap">{c.legenda}</p>
-                            </div>
-                          )}
-                          {c.headlines?.length > 0 && (
-                            <div className="p-3 rounded-lg bg-muted/50 border">
-                              <p className="text-xs font-bold text-primary mb-1">Headlines</p>
-                              {c.headlines.map((h: string, j: number) => (
-                                <p key={j} className="text-sm">{j + 1}. {h}</p>
-                              ))}
-                            </div>
-                          )}
-                          {c.hashtags?.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {c.hashtags.map((h: string, j: number) => (
-                                <Badge key={j} variant="secondary" className="text-xs">#{h.replace(/^#/, "")}</Badge>
-                              ))}
-                            </div>
-                          )}
-                          {c.embasamento && (
-                            <p className="text-xs text-muted-foreground italic">{c.embasamento}</p>
-                          )}
-                        </motion.div>
-                      )}
-
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        <Button variant="ghost" size="sm" onClick={() => setExpandedCard(expandedCard === i ? null : i)}>
-                          <Eye className="w-4 h-4 mr-1" /> {expandedCard === i ? "Fechar" : "Ver mais"}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(c.legenda || c.titulo)}>
-                          <Copy className="w-4 h-4 mr-1" /> Copiar
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => navigate("/cliente/redes-sociais")}>
-                          <Palette className="w-4 h-4 mr-1" /> Gerar Arte
-                        </Button>
-                        {(c.formato || "").toLowerCase().includes("video") && (
-                          <Button variant="ghost" size="sm"><Play className="w-4 h-4 mr-1" /> Gerar Vídeo</Button>
-                        )}
-                        <Button size="sm" onClick={() => handleApproveOne(i)} disabled={approveMutation.isPending}>
-                          <Check className="w-4 h-4 mr-1" /> Aprovar
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ContentVisualCard key={i} content={c} index={i}
+                    onCopy={() => copyContent(c)}
+                    onPdf={() => downloadPdf(c, i)}
+                    onPost={() => navigate("/cliente/redes-sociais")}
+                    onApprove={() => handleApproveOne(i)}
+                    approving={approveMutation.isPending}
+                  />
                 ))}
               </div>
             </div>
           )}
         </TabsContent>
 
-        {/* ── TAB: HISTÓRICO ── */}
-        <TabsContent value="historico" className="mt-4 space-y-4">
-          <div className="flex gap-3 flex-wrap">
-            <Select value={filterFormat} onValueChange={setFilterFormat}>
-              <SelectTrigger className="w-[160px]"><Filter className="w-4 h-4 mr-1" /><SelectValue placeholder="Formato" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os formatos</SelectItem>
-                {FORMATOS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="approved">Aprovado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {filteredHistory.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p>Nenhum conteúdo gerado ainda.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredHistory.map(item => (
-                <Card key={item.id} className="cursor-pointer hover:border-primary/40 transition-colors"
-                  onClick={() => setViewingContent(viewingContent?.id === item.id ? null : item)}>
-                  <CardContent className="py-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{item.title}</p>
-                        <div className="flex gap-2 mt-1">
-                          {item.format && <Badge variant="secondary" className="text-xs">{item.format}</Badge>}
-                          {item.objective && <Badge variant="outline" className="text-xs">{item.objective}</Badge>}
-                          <Badge variant={item.status === "approved" ? "default" : "outline"} className="text-xs">
-                            {item.status === "approved" ? "Aprovado" : "Pendente"}
-                          </Badge>
-                        </div>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>
-                    </div>
-                    {viewingContent?.id === item.id && item.result && (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 border-t pt-3 space-y-2">
-                        <ContentMainDisplay content={item.result.conteudo_principal} format={item.format || ""} />
-                        {item.result.legenda && <p className="text-sm whitespace-pre-wrap">{item.result.legenda}</p>}
-                      </motion.div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+        {/* ── TAB: MEUS CONTEÚDOS (pastas de lotes) ── */}
+        <TabsContent value="meus" className="mt-4 space-y-4">
+          <BatchFolderView history={history || []} navigate={navigate} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-/* ── Helper Components ── */
-function ReviewItem({ label, value }: { label: string; value: string }) {
+/* ══════════════════════════════════════════════════════════════
+   VISUAL CONTENT CARD — renders content in social-media style
+   ══════════════════════════════════════════════════════════════ */
+
+function ContentVisualCard({ content: c, index, onCopy, onPdf, onPost, onApprove, approving }: {
+  content: any; index: number;
+  onCopy: () => void; onPdf: () => void; onPost: () => void; onApprove: () => void; approving: boolean;
+}) {
+  const formato = (c.formato || "").toLowerCase();
+
   return (
-    <div className="p-3 rounded-lg bg-muted/50 border">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="text-sm font-semibold mt-0.5">{value}</p>
+    <Card id={`content-card-${index}`} className="overflow-hidden group hover:shadow-lg transition-shadow">
+      {/* Header bar */}
+      <div className="flex items-center gap-2 px-4 pt-4 pb-2">
+        <Badge className="text-xs">{c.formato}</Badge>
+        <Badge variant="outline" className="text-xs">{c.objetivo}</Badge>
+      </div>
+
+      <CardContent className="space-y-3 pt-0">
+        {/* Title */}
+        <h3 className="text-lg font-bold leading-tight">{c.titulo}</h3>
+
+        {/* Content body — format-specific visual */}
+        {formato.includes("carrossel") && <CarrosselVisual content={c.conteudo_principal} />}
+        {formato.includes("post") && <PostVisual content={c.conteudo_principal} />}
+        {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && <VideoVisual content={c.conteudo_principal} />}
+        {formato.includes("story") && <StoryVisual content={c.conteudo_principal} />}
+        {formato.includes("artigo") && <ArtigoVisual content={c.conteudo_principal} />}
+        {!formato.includes("carrossel") && !formato.includes("post") && !formato.includes("video") && !formato.includes("vídeo") && !formato.includes("roteiro") && !formato.includes("story") && !formato.includes("artigo") && (
+          <GenericVisual content={c.conteudo_principal} />
+        )}
+
+        {/* Caption */}
+        {c.legenda && (
+          <div className="rounded-lg bg-muted/40 p-3 text-sm whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
+            {c.legenda}
+          </div>
+        )}
+
+        {/* Hashtags */}
+        {c.hashtags?.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {c.hashtags.map((h: string, j: number) => (
+              <span key={j} className="text-xs text-primary font-medium">#{h.replace(/^#/, "")}</span>
+            ))}
+          </div>
+        )}
+
+        {/* CTAs */}
+        <div className="flex flex-wrap gap-2 pt-2 border-t">
+          <Button variant="outline" size="sm" onClick={onCopy}>
+            <Copy className="w-4 h-4 mr-1" /> Copiar
+          </Button>
+          <Button variant="outline" size="sm" onClick={onPdf}>
+            <Download className="w-4 h-4 mr-1" /> Baixar PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={onPost}>
+            <ExternalLink className="w-4 h-4 mr-1" /> Gerar Postagem
+          </Button>
+          <Button size="sm" onClick={onApprove} disabled={approving} className="ml-auto">
+            <Check className="w-4 h-4 mr-1" /> Aprovar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Carrossel: slides empilhados ── */
+function CarrosselVisual({ content }: { content: any }) {
+  if (!Array.isArray(content)) return <GenericVisual content={content} />;
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
+      {content.map((slide: any, i: number) => (
+        <div key={i} className="flex-none w-48 snap-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border p-4 space-y-1">
+          <span className="text-xs font-bold text-primary/60">{i + 1}/{content.length}</span>
+          {slide.titulo && <p className="font-bold text-sm leading-tight">{slide.titulo}</p>}
+          <p className="text-xs text-muted-foreground leading-snug line-clamp-4">{slide.texto || slide.content || ""}</p>
+        </div>
+      ))}
     </div>
   );
 }
 
-function ContentMainDisplay({ content, format }: { content: any; format: string }) {
-  if (!content) return <p className="text-sm text-muted-foreground">Conteúdo não disponível</p>;
+/* ── Post Único / Educativo / Autoridade ── */
+function PostVisual({ content }: { content: any }) {
+  if (!content || typeof content !== "object") return <GenericVisual content={content} />;
+  return (
+    <div className="rounded-xl bg-gradient-to-br from-primary/8 to-transparent border p-5 space-y-3">
+      {content.headline && (
+        <p className="text-xl font-extrabold leading-tight">{content.headline}</p>
+      )}
+      {content.texto && (
+        <p className="text-sm text-muted-foreground leading-relaxed">{content.texto}</p>
+      )}
+      {content.dica_pratica && (
+        <div className="rounded-lg bg-primary/10 p-3">
+          <p className="text-xs font-semibold text-primary mb-1">💡 Dica Prática</p>
+          <p className="text-sm">{content.dica_pratica}</p>
+        </div>
+      )}
+      {content.dado_autoridade && (
+        <div className="rounded-lg bg-primary/10 p-3">
+          <p className="text-xs font-semibold text-primary mb-1">📊 Dado de Autoridade</p>
+          <p className="text-sm">{content.dado_autoridade}</p>
+        </div>
+      )}
+      {content.cta && (
+        <Badge className="text-xs">{content.cta}</Badge>
+      )}
+    </div>
+  );
+}
 
-  if (Array.isArray(content)) {
-    return (
-      <div className="space-y-2">
-        {content.map((slide: any, i: number) => (
-          <div key={i} className="p-2 rounded-lg bg-muted/50 border">
-            <p className="text-xs font-bold text-primary mb-0.5">
-              {slide.slide_numero ? `Slide ${slide.slide_numero}` : slide.frame_numero ? `Frame ${slide.frame_numero}` : `${i + 1}`}
-            </p>
-            {slide.titulo && <p className="font-semibold text-sm">{slide.titulo}</p>}
-            <p className="text-sm">{slide.texto || slide.content || slide.acao || JSON.stringify(slide)}</p>
-          </div>
-        ))}
+/* ── Vídeo: hook em destaque + roteiro colapsado ── */
+function VideoVisual({ content }: { content: any }) {
+  if (!content || typeof content !== "object") return <GenericVisual content={content} />;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl bg-gradient-to-r from-primary/15 to-primary/5 border-2 border-primary/20 p-5 text-center">
+        <p className="text-xs font-bold text-primary mb-1">🎬 HOOK</p>
+        <p className="text-lg font-extrabold leading-tight">"{content.hook}"</p>
       </div>
+      <div className="space-y-2">
+        {content.desenvolvimento && (
+          <div className="rounded-lg bg-muted/40 p-3">
+            <p className="text-xs font-semibold text-muted-foreground mb-1">Desenvolvimento</p>
+            <p className="text-sm">{content.desenvolvimento}</p>
+          </div>
+        )}
+        {content.conclusao && (
+          <div className="rounded-lg bg-muted/40 p-3">
+            <p className="text-xs font-semibold text-muted-foreground mb-1">Conclusão</p>
+            <p className="text-sm">{content.conclusao}</p>
+          </div>
+        )}
+        {content.texto_tela && (
+          <div className="rounded-lg bg-muted/40 p-3">
+            <p className="text-xs font-semibold text-muted-foreground mb-1">Texto na tela</p>
+            <p className="text-sm">{content.texto_tela}</p>
+          </div>
+        )}
+      </div>
+      {content.cta && (
+        <Badge className="text-xs">{content.cta}</Badge>
+      )}
+    </div>
+  );
+}
+
+/* ── Story: frames horizontais ── */
+function StoryVisual({ content }: { content: any }) {
+  if (!Array.isArray(content)) return <GenericVisual content={content} />;
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
+      {content.map((frame: any, i: number) => (
+        <div key={i} className="flex-none w-32 h-56 snap-center rounded-2xl bg-gradient-to-b from-primary/15 to-primary/5 border p-3 flex flex-col justify-between">
+          <span className="text-xs font-bold text-primary/60">{i + 1}</span>
+          <div>
+            <p className="text-xs font-bold leading-tight">{frame.texto || frame.content || ""}</p>
+            {frame.acao && <p className="text-[10px] text-muted-foreground mt-1">{frame.acao}</p>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Artigo ── */
+function ArtigoVisual({ content }: { content: any }) {
+  if (!content || typeof content !== "object") return <GenericVisual content={content} />;
+  return (
+    <div className="rounded-xl border p-5 space-y-3">
+      {content.titulo && <p className="text-xl font-extrabold">{content.titulo}</p>}
+      {content.introducao && <p className="text-sm text-muted-foreground italic">{content.introducao}</p>}
+      {(content.secoes || []).map((s: any, i: number) => (
+        <div key={i}>
+          <p className="font-semibold text-sm text-primary">{s.subtitulo}</p>
+          <p className="text-sm text-muted-foreground">{s.texto}</p>
+        </div>
+      ))}
+      {content.conclusao && (
+        <div className="border-t pt-3">
+          <p className="text-sm font-medium">{content.conclusao}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Fallback ── */
+function GenericVisual({ content }: { content: any }) {
+  if (!content) return <p className="text-sm text-muted-foreground">Conteúdo não disponível</p>;
+  if (typeof content === "string") return <p className="text-sm whitespace-pre-wrap">{content}</p>;
+  return <pre className="text-xs whitespace-pre-wrap bg-muted/50 p-3 rounded-lg overflow-auto max-h-48">{JSON.stringify(content, null, 2)}</pre>;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BATCH FOLDER VIEW — groups history by creation date (batches)
+   ══════════════════════════════════════════════════════════════ */
+
+function BatchFolderView({ history, navigate }: { history: ContentItem[]; navigate: (path: string) => void }) {
+  // Group by batch (items created within 2 minutes of each other)
+  const batches = useMemo(() => {
+    if (!history.length) return [];
+    const sorted = [...history].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const groups: { date: string; items: ContentItem[] }[] = [];
+    let current: ContentItem[] = [];
+    let anchor = new Date(sorted[0].created_at).getTime();
+
+    for (const item of sorted) {
+      const t = new Date(item.created_at).getTime();
+      if (Math.abs(anchor - t) > 2 * 60 * 1000) {
+        if (current.length) groups.push({ date: current[0].created_at, items: current });
+        current = [item];
+        anchor = t;
+      } else {
+        current.push(item);
+      }
+    }
+    if (current.length) groups.push({ date: current[0].created_at, items: current });
+    return groups;
+  }, [history]);
+
+  if (batches.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground">
+          <FolderOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
+          <p>Nenhum conteúdo gerado ainda.</p>
+        </CardContent>
+      </Card>
     );
   }
 
-  if (typeof content === "object") {
-    if (content.hook) {
-      return (
-        <div className="space-y-2">
-          {[
-            { label: "Hook", text: content.hook },
-            { label: "Desenvolvimento", text: content.desenvolvimento },
-            { label: "Conclusão", text: content.conclusao },
-            { label: "CTA", text: content.cta },
-            content.texto_tela && { label: "Texto na tela", text: content.texto_tela },
-          ].filter(Boolean).map((item: any, i) => (
-            <div key={i} className="p-2 rounded-lg bg-muted/50 border">
-              <p className="text-xs font-bold text-primary">{item.label}</p>
-              <p className="text-sm">{item.text}</p>
-            </div>
-          ))}
+  return (
+    <div className="space-y-3">
+      {batches.map((batch, bi) => (
+        <BatchFolder key={bi} batch={batch} navigate={navigate} />
+      ))}
+    </div>
+  );
+}
+
+function BatchFolder({ batch, navigate }: { batch: { date: string; items: ContentItem[] }; navigate: (path: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const dateStr = new Date(batch.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  const copyItem = (item: ContentItem) => {
+    const r = item.result as any;
+    let text = item.title + "\n\n";
+    if (r?.legenda) text += r.legenda + "\n\n";
+    if (r?.hashtags?.length) text += r.hashtags.map((h: string) => `#${h.replace(/^#/, "")}`).join(" ");
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copiado!" });
+  };
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button className="w-full flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent/50 transition-colors text-left">
+          {open ? <ChevronDown className="w-5 h-5 text-primary shrink-0" /> : <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />}
+          <FolderOpen className="w-5 h-5 text-primary shrink-0" />
+          <div className="flex-1">
+            <span className="font-semibold text-sm">Lote {dateStr}</span>
+            <span className="text-xs text-muted-foreground ml-2">— {batch.items.length} conteúdo{batch.items.length > 1 ? "s" : ""}</span>
+          </div>
+          <div className="flex gap-1">
+            {[...new Set(batch.items.map(i => i.format))].filter(Boolean).map(f => (
+              <Badge key={f} variant="secondary" className="text-[10px]">{f}</Badge>
+            ))}
+          </div>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 pl-8">
+          {batch.items.map(item => {
+            const r = item.result as any;
+            if (!r) return null;
+            const formato = (item.format || r.formato || "").toLowerCase();
+
+            return (
+              <Card key={item.id} className="overflow-hidden">
+                <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+                  {item.format && <Badge className="text-[10px]">{item.format}</Badge>}
+                  {item.objective && <Badge variant="outline" className="text-[10px]">{item.objective}</Badge>}
+                  <Badge variant={item.status === "approved" ? "default" : "secondary"} className="text-[10px] ml-auto">
+                    {item.status === "approved" ? "Aprovado" : "Pendente"}
+                  </Badge>
+                </div>
+                <CardContent className="space-y-2 pt-1">
+                  <h4 className="font-bold text-sm">{item.title}</h4>
+
+                  {/* Compact visual */}
+                  {formato.includes("carrossel") && Array.isArray(r.conteudo_principal) && (
+                    <div className="flex gap-1.5 overflow-x-auto pb-1">
+                      {(r.conteudo_principal as any[]).slice(0, 4).map((s: any, si: number) => (
+                        <div key={si} className="flex-none w-28 rounded-lg bg-primary/5 border p-2">
+                          <span className="text-[10px] font-bold text-primary/50">{si + 1}</span>
+                          {s.titulo && <p className="text-[11px] font-bold leading-tight">{s.titulo}</p>}
+                        </div>
+                      ))}
+                      {(r.conteudo_principal as any[]).length > 4 && (
+                        <div className="flex-none w-28 rounded-lg bg-muted/50 border p-2 flex items-center justify-center text-xs text-muted-foreground">
+                          +{(r.conteudo_principal as any[]).length - 4}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(formato.includes("post") || formato.includes("educativo") || formato.includes("autoridade")) && r.conteudo_principal?.headline && (
+                    <p className="text-sm font-extrabold">{r.conteudo_principal.headline}</p>
+                  )}
+
+                  {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && r.conteudo_principal?.hook && (
+                    <div className="rounded-lg bg-primary/10 p-2 text-center">
+                      <p className="text-xs font-bold">🎬 "{r.conteudo_principal.hook}"</p>
+                    </div>
+                  )}
+
+                  {r.legenda && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">{r.legenda}</p>
+                  )}
+
+                  <div className="flex gap-2 pt-1 border-t">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => copyItem(item)}>
+                      <Copy className="w-3 h-3 mr-1" /> Copiar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate("/cliente/redes-sociais")}>
+                      <ExternalLink className="w-3 h-3 mr-1" /> Postagem
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-      );
-    }
-
-    if (content.headline) {
-      return (
-        <div className="space-y-2">
-          <div className="p-2 rounded-lg bg-muted/50 border">
-            <p className="text-xs font-bold text-primary">Headline</p>
-            <p className="font-semibold text-sm">{content.headline}</p>
-          </div>
-          <div className="p-2 rounded-lg bg-muted/50 border">
-            <p className="text-xs font-bold text-primary">Texto</p>
-            <p className="text-sm whitespace-pre-wrap">{content.texto}</p>
-          </div>
-          {content.dica_pratica && (
-            <div className="p-2 rounded-lg bg-muted/50 border">
-              <p className="text-xs font-bold text-primary">Dica Prática</p>
-              <p className="text-sm">{content.dica_pratica}</p>
-            </div>
-          )}
-          {content.dado_autoridade && (
-            <div className="p-2 rounded-lg bg-muted/50 border">
-              <p className="text-xs font-bold text-primary">Dado de Autoridade</p>
-              <p className="text-sm">{content.dado_autoridade}</p>
-            </div>
-          )}
-          <div className="p-2 rounded-lg bg-muted/50 border">
-            <p className="text-xs font-bold text-primary">CTA</p>
-            <p className="text-sm">{content.cta}</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (content.secoes) {
-      return (
-        <div className="space-y-2">
-          <div className="p-2 rounded-lg bg-muted/50 border">
-            <p className="font-semibold text-sm">{content.titulo}</p>
-            <p className="text-sm mt-1">{content.introducao}</p>
-          </div>
-          {(content.secoes || []).map((s: any, i: number) => (
-            <div key={i} className="p-2 rounded-lg bg-muted/50 border">
-              <p className="text-xs font-bold text-primary">{s.subtitulo}</p>
-              <p className="text-sm">{s.texto}</p>
-            </div>
-          ))}
-          <div className="p-2 rounded-lg bg-muted/50 border">
-            <p className="text-xs font-bold text-primary">Conclusão</p>
-            <p className="text-sm">{content.conclusao}</p>
-          </div>
-        </div>
-      );
-    }
-
-    return <pre className="text-xs whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">{JSON.stringify(content, null, 2)}</pre>;
-  }
-
-  return <p className="text-sm whitespace-pre-wrap">{String(content)}</p>;
+      </CollapsibleContent>
+    </Collapsible>
+  );
 }
