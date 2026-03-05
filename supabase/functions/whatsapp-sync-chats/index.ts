@@ -213,20 +213,8 @@ Deno.serve(async (req) => {
 
     console.log(`[sync] ${individualChats.length} individual chats after filtering`);
 
-    // DEBUG: Log full objects of first 5 individual chats
-    for (let i = 0; i < Math.min(5, individualChats.length); i++) {
-      const c = individualChats[i];
-      console.log(`[sync] DEBUG Chat #${i} FULL:`, JSON.stringify(c).slice(0, 2000));
-      console.log(`[sync] DEBUG Chat #${i} timestamp fields:`, JSON.stringify({
-        lastMessageTime: c.lastMessageTime,
-        lastMessageTimestamp: c.lastMessageTimestamp,
-        timestamp: c.timestamp,
-        t: c.t,
-        lastInteraction: c.lastInteraction,
-        lastActivity: c.lastActivity,
-        lastMessage: c.lastMessage,
-      }));
-    }
+    // Collect all phones from Z-API for orphan detection
+    const zapiPhones = new Set<string>(individualChats.map((c: any) => c.phone));
 
     // Get existing contacts in ONE query
     const { data: existingContacts } = await adminClient
@@ -300,13 +288,48 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[sync] Done: ${contactsCreated} created, ${contactsUpdated} updated, ${timestampsFound}/${individualChats.length} timestamps found`);
+    // --- Remove orphan contacts not in Z-API and inactive ---
+    let contactsRemoved = 0;
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Fetch all contacts for this org+instance that are NOT in the Z-API set
+    const { data: allDbContacts } = await adminClient
+      .from("whatsapp_contacts")
+      .select("id, phone, last_message_at")
+      .eq("organization_id", orgId)
+      .eq("instance_id", instance.id);
+
+    const orphans = (allDbContacts || []).filter((c: any) => !zapiPhones.has(c.phone));
+
+    for (const orphan of orphans) {
+      const lastMsg = orphan.last_message_at ? new Date(orphan.last_message_at) : null;
+      const isOld = !lastMsg || lastMsg.toISOString() < sevenDaysAgo;
+
+      if (!isOld) continue;
+
+      // Check if there are recent messages in the DB for this contact
+      const { count } = await adminClient
+        .from("whatsapp_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("contact_id", orphan.id)
+        .gte("created_at", sevenDaysAgo);
+
+      if ((count ?? 0) > 0) continue;
+
+      // Safe to delete
+      await adminClient.from("whatsapp_messages").delete().eq("contact_id", orphan.id);
+      await adminClient.from("whatsapp_contacts").delete().eq("id", orphan.id);
+      contactsRemoved++;
+    }
+
+    console.log(`[sync] Done: ${contactsCreated} created, ${contactsUpdated} updated, ${contactsRemoved} removed`);
 
     return new Response(
       JSON.stringify({
         success: true,
         contacts_created: contactsCreated,
         contacts_updated: contactsUpdated,
+        contacts_removed: contactsRemoved,
         total_chats_found: individualChats.length,
         timestamps_found: timestampsFound,
       }),
