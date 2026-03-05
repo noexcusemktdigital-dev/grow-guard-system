@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
 
     const subscriptionRes = await asaasFetch(`${ASAAS_BASE}/subscriptions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", access_token: asaasApiKey },
+      headers: { "Content-Type": "application/json", access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
       body: JSON.stringify({
         customer: asaasCustomerId,
         billingType: billing_type,

@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     // Create charge
     const chargeRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", access_token: asaasApiKey },
+      headers: { "Content-Type": "application/json", access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
       body: JSON.stringify({
         customer: customerId,
         billingType,

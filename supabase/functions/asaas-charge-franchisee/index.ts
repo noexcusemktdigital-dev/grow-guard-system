@@ -139,6 +139,7 @@ Deno.serve(async (req) => {
         headers: {
           "Content-Type": "application/json",
           access_token: asaasApiKey,
+          "User-Agent": "NOE-Platform",
         },
         body: JSON.stringify({
           customer: franchiseeOrg.asaas_customer_id,
