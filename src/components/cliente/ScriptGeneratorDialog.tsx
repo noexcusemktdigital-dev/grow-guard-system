@@ -17,8 +17,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useCrmProducts } from "@/hooks/useCrmProducts";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useSalesPlan } from "@/hooks/useSalesPlan";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 
 const funnelStages = [
   { key: "prospeccao", label: "Prospecção", icon: Crosshair, color: "text-blue-400" },
@@ -153,6 +155,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
   const [generatedTags, setGeneratedTags] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showTutorial, setShowTutorial] = useState(true);
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
 
   // Links & documents context
   const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
@@ -167,6 +170,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
   const { data: products } = useCrmProducts();
   const { data: funnels } = useCrmFunnels();
   const { data: salesPlan } = useSalesPlan();
+  const { data: orgId } = useUserOrgId();
 
   const salesPlanAnswers = salesPlan?.answers || {};
   const autoContext = {
@@ -226,11 +230,16 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
           mode: "generate",
           referenceLinks,
           additionalContext,
+          organization_id: orgId,
         },
       });
 
       if (error) throw error;
       if (data?.error) {
+        if (data.error.includes("INSUFFICIENT_CREDITS") || data.error.includes("Créditos insuficientes")) {
+          setShowCreditsDialog(true);
+          return;
+        }
         toast({ title: "Erro", description: data.error, variant: "destructive" });
         return;
       }
@@ -240,7 +249,11 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
       setGeneratedTags(data.tags || []);
       setStep(3);
     } catch (e: any) {
-      toast({ title: "Erro ao gerar script", description: e.message, variant: "destructive" });
+      if (isInsufficientCreditsError(e)) {
+        setShowCreditsDialog(true);
+      } else {
+        toast({ title: "Erro ao gerar script", description: e.message, variant: "destructive" });
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -265,6 +278,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
   const tutorial = stageTutorials[stage];
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -628,5 +642,12 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
         )}
       </DialogContent>
     </Dialog>
+    <InsufficientCreditsDialog
+      open={showCreditsDialog}
+      onOpenChange={setShowCreditsDialog}
+      actionLabel="gerar este script"
+      creditCost={150}
+    />
+    </>
   );
 }
