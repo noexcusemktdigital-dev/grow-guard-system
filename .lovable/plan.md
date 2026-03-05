@@ -1,71 +1,80 @@
 
 
-# Recriação da Ferramenta de Tráfego Pago (Documento 6)
+# Documento 7 — Estrutura de Dados e Integração entre Ferramentas
 
-## Situação Atual
+## Análise do Estado Atual
 
-`ClienteTrafegoPago.tsx` (412 linhas) tem 3 tabs: Estratégia (gera direto sem coletar dados), Tutoriais (hardcoded), Histórico. A edge function `generate-traffic-strategy` gera para 4 plataformas fixas usando apenas dados da org + estratégia de marketing. Não coleta informações do usuário (objetivo, orçamento, região, plataformas desejadas, etc.) conforme Documento 6.
+Após revisar o schema e os hooks, a maioria da infraestrutura do Documento 7 **já existe**:
 
-## Plano
+| Entidade Doc 7 | Tabela existente | FK para strategy? | Status col? |
+|---|---|---|---|
+| Estratégia | `marketing_strategies` | N/A | `status` |
+| Conteúdo | `client_content` | `strategy_id` | `status` |
+| Postagem | `client_posts` | `content_id` → content | `status` |
+| Site | `client_sites` | -- | `status` |
+| Tráfego | `traffic_strategies` | -- | `status` |
+| Créditos | `credit_wallets` + `credit_transactions` | -- | -- |
+| Identidade Visual | `marketing_visual_identities` | -- | -- |
 
-### 1. Reescrever `ClienteTrafegoPago.tsx` — Wizard visual de 8 etapas + resultado
+**O que falta** para cumprir o Documento 7:
 
-Substituir a interface atual por wizard com coleta de dados + resultado rico:
+1. **`client_sites` sem `strategy_id`** — Sites não estão vinculados à estratégia ativa.
+2. **`traffic_strategies` sem `strategy_id`** — Tráfego não vinculado à estratégia.
+3. **`client_content` sem link para posts** — Já existe (`client_posts.content_id` → `client_content.id`). OK.
+4. **Nenhuma página "Hub" centralizadora** — O Doc 7 pede uma visão mensal unificada mostrando Estratégia → Conteúdos → Postagens → Sites → Tráfego.
+5. **Edge functions não propagam `strategy_id`** — `generate-site` e `generate-traffic-strategy` não salvam qual estratégia estava ativa.
 
-**Etapas do wizard:**
-1. **Objetivo** — Cards: gerar leads, vender produtos, agendar reuniões, captar franqueados, tráfego no site
-2. **Produto/Oferta** — Textarea do produto/serviço anunciado
-3. **Público** — Chips + texto livre (empresários, médicos, consumidores finais, etc.)
-4. **Página de destino** — Cards: site institucional, landing page, WhatsApp, formulário
-5. **Orçamento** — Slider ou input numérico (R$500 a R$50.000)
-6. **Plataformas** — Multi-select: Meta, Google, TikTok, LinkedIn (sugestão automática baseada no público)
-7. **Região** — Input: cidade, estado, país
-8. **Ativos disponíveis** — Multi-select: site, landing page, artes, vídeos (auto-detectar dos dados existentes)
+## Plano de Implementação
 
-**Dados auto-injetados** (badges visuais):
-- Estratégia: público-alvo, posicionamento, proposta de valor (via `useActiveStrategy`)
-- Conteúdo: mensagens principais (via `useContentHistory`)
-- Postagens: criativos gerados (via `usePostHistory`)
-- Sites: páginas de destino (via `useSiteHistory`)
-
-**Tela de resultado** (após geração):
-- Diagnóstico de mídia
-- Cards por plataforma (com campanhas, conjuntos, anúncios)
-- Plano de investimento (gráfico pizza com distribuição %)
-- Projeção de resultados (gráfico barras: CPC, CTR, CPL, leads, clientes, faturamento)
-- KPIs sugeridos
-- Plano de otimização
-- Tutorial de execução por plataforma
-- Botões: Aprovar (debita créditos), Regenerar, Baixar
-
-**Histórico**: Lista de estratégias anteriores com status (pendente/aprovado)
-
-### 2. Atualizar `generate-traffic-strategy` Edge Function
-
-- Remover débito automático de créditos (mover para aprovação)
-- Aceitar novos campos do wizard: `objetivo`, `produto`, `publico`, `pagina_destino`, `orcamento`, `plataformas`, `regiao`, `ativos`
-- Enriquecer prompt com dados da estratégia, conteúdo, postagens e sites
-- Expandir resultado para incluir: diagnóstico, estrutura de campanhas, plano de investimento, projeções, KPIs, otimização, tutorial
-- Gerar apenas para plataformas selecionadas (não fixo 4)
-
-### 3. Atualizar `useTrafficStrategy.ts`
-
-- `useGenerateTrafficStrategy` — aceitar body com dados do wizard
-- Adicionar `useApproveTrafficStrategy` — debita 200 créditos e marca status como aprovado
-- Adicionar campo `status` ao tipo `TrafficStrategy`
-
-### 4. Migration — Adicionar coluna `status` à tabela `traffic_strategies`
+### 1. Migration — Adicionar `strategy_id` às tabelas faltantes
 
 ```sql
-ALTER TABLE traffic_strategies ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending';
+ALTER TABLE client_sites ADD COLUMN IF NOT EXISTS strategy_id uuid REFERENCES marketing_strategies(id);
+ALTER TABLE traffic_strategies ADD COLUMN IF NOT EXISTS strategy_id uuid REFERENCES marketing_strategies(id);
 ```
+
+### 2. Atualizar Edge Functions — Propagar `strategy_id`
+
+- **`generate-site/index.ts`**: Aceitar `strategy_id` no body e salvar no insert.
+- **`generate-traffic-strategy/index.ts`**: Aceitar `strategy_id` no body e salvar no insert.
+
+### 3. Atualizar Hooks — Passar `strategy_id` automaticamente
+
+- **`useClienteSitesDB.ts`** (`useCreateClientSite`): Incluir `strategy_id` no insert.
+- **`useTrafficStrategy.ts`** (`useGenerateTrafficStrategy`): Incluir `strategy_id` no body enviado à edge function.
+
+### 4. Atualizar Páginas — Enviar `strategy_id` da estratégia ativa
+
+- **`ClienteSites.tsx`**: Importar `useActiveStrategy`, passar `strategy?.id` ao gerar site.
+- **`ClienteTrafegoPago.tsx`**: Importar `useActiveStrategy`, passar `strategy?.id` ao gerar tráfego.
+
+### 5. Criar página Hub de Marketing — Visão mensal unificada
+
+Criar **`src/pages/cliente/ClienteMarketingHub.tsx`** com:
+
+- Seletor de mês (date-fns)
+- 5 cards resumo: Estratégia, Conteúdos, Postagens, Sites, Tráfego
+- Cada card mostra contagem + status (gerado/aprovado) do mês selecionado
+- Diagrama visual da cadeia: Estratégia → Conteúdo → Postagens → Site → Tráfego
+- Links rápidos para cada ferramenta
+- Dados vindos dos hooks existentes (`useActiveStrategy`, `useContentHistory`, `usePostHistory`, `useClienteSitesDB`, `useActiveTrafficStrategy`)
+
+### 6. Adicionar rota ao ClienteSidebar
+
+Registrar `/cliente/marketing-hub` como nova rota no sidebar e no `App.tsx`.
 
 ## Arquivos
 
 | Arquivo | Ação |
-|---------|------|
-| `supabase/migrations/` | Adicionar coluna `status` em `traffic_strategies` |
-| `src/pages/cliente/ClienteTrafegoPago.tsx` | Reescrever completamente |
-| `supabase/functions/generate-traffic-strategy/index.ts` | Aceitar dados do wizard, remover débito auto, expandir prompt |
-| `src/hooks/useTrafficStrategy.ts` | Adicionar params no generate, criar `useApproveTrafficStrategy` |
+|---|---|
+| `supabase/migrations/` | Adicionar `strategy_id` em `client_sites` e `traffic_strategies` |
+| `supabase/functions/generate-site/index.ts` | Aceitar e salvar `strategy_id` |
+| `supabase/functions/generate-traffic-strategy/index.ts` | Aceitar e salvar `strategy_id` |
+| `src/hooks/useClienteSitesDB.ts` | Passar `strategy_id` no create |
+| `src/hooks/useTrafficStrategy.ts` | Passar `strategy_id` no generate |
+| `src/pages/cliente/ClienteSites.tsx` | Enviar `strategy_id` ao gerar |
+| `src/pages/cliente/ClienteTrafegoPago.tsx` | Enviar `strategy_id` ao gerar |
+| `src/pages/cliente/ClienteMarketingHub.tsx` | Criar novo — hub mensal unificado |
+| `src/components/ClienteSidebar.tsx` | Adicionar link Marketing Hub |
+| `src/App.tsx` | Adicionar rota `/cliente/marketing-hub` |
 
