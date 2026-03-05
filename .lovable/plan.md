@@ -1,57 +1,52 @@
 
 
-# Plano: Vincular conteúdo gerado ao Step 5 (Texto da arte)
+# Plano: Correções do Módulo de Vendas (Scripts & Plano de Vendas)
 
-## Problema
-No passo 5 do wizard de artes, o usuário precisa digitar manualmente headline, subheadline, CTA, etc. Mas esses textos já existem nos conteúdos gerados na ferramenta "Conteúdos". Hoje o conteúdo vinculado (contentData) só preenche o briefing no step 1 — não preenche os campos do step 5.
+Não encontrei o plano exato que você mencionou na conversa atual, mas com base nas fases descritas (Fase 1: persistir histórico, Fase 2: créditos, Fase 3: dialog de créditos insuficientes) e na análise do código, identifiquei as lacunas no módulo de vendas:
 
-## Solução
+## Estado Atual
 
-No **step 5** (`case 5` do `renderArtStep`, linha 771), adicionar um seletor de conteúdo no topo:
+- **generate-script**: Já tem pre-check de créditos e debit no edge function
+- **ClienteScripts.tsx**: **NÃO** tem `InsufficientCreditsDialog` nem tratamento de erro `INSUFFICIENT_CREDITS`
+- **ScriptGeneratorDialog.tsx**: Chama `generate-script` mas não passa `organization_id` (line ~54-67), então o pre-check é pulado
+- **handleImproveWithAI**: Também não passa `organization_id`, mesmo problema
 
-1. **Botão "Importar de Conteúdo"** — abre um dialog/dropdown com a lista de conteúdos aprovados (`useContentHistory`)
-2. Ao selecionar um conteúdo, preenche automaticamente os campos: `headline`, `subheadline`, `supportingText`, `bulletPoints`, `cta` a partir do `result` do conteúdo
-3. Se já existe `contentData` vinculado no step 1, mostrar um botão direto "Usar texto do conteúdo vinculado" sem precisar abrir o seletor
-4. O usuário pode editar todos os campos após o preenchimento automático
+## Fase 1 — Persistir Histórico de Geração
 
-### Arquivo: `src/pages/cliente/ClienteRedesSociais.tsx`
+O `ScriptGeneratorDialog` gera o script via edge function e salva via `onSave` callback, mas o `handleImproveWithAI` em `ClienteScripts.tsx` atualiza in-place sem registrar que foi uma melhoria IA. Não há histórico de versões.
 
-**Mudanças:**
+**Correção**: Não requer migration — o script já é salvo/atualizado no DB. O problema é que `organization_id` não é passado ao edge function, então créditos não são verificados. Corrigir isso é a prioridade.
 
-- Importar `useContentHistory` de `useClienteContentV2`
-- No step 5, antes dos inputs, renderizar:
-  - Se `contentData` existe: card com botão "Usar texto deste conteúdo" que preenche os campos
-  - Botão "Importar de outro conteúdo" que abre um Dialog com a lista de conteúdos aprovados
-- Criar função `fillTextFromContent(content)` que extrai do `result`:
-  - `result.conteudo_principal.headline` → headline
-  - `result.conteudo_principal.subtitulo` ou legenda parcial → subheadline
-  - `result.legenda` (truncada) → supportingText  
-  - `result.conteudo_principal.bullet_points` → bulletPoints
-  - `result.conteudo_principal.cta` → cta
-- Dialog simples com ScrollArea listando conteúdos com título e data, clicável
+## Fase 2 — Integrar Créditos Corretamente
 
-### UX
+**Arquivo: `src/components/cliente/ScriptGeneratorDialog.tsx`**
+- Importar `useUserOrgId` e obter `orgId`
+- Passar `organization_id: orgId` no body da chamada `supabase.functions.invoke("generate-script")`
+- Assim o edge function consegue fazer o pre-check e o debit de 150 créditos
 
-O step 5 ficará assim:
-```text
-┌─────────────────────────────────┐
-│ Texto da arte                   │
-│ Preencha ou importe de conteúdo │
-│                                 │
-│ ┌─[Conteúdo vinculado: "..."]─┐ │  ← só se contentData existe
-│ │ [Usar texto deste conteúdo] │ │
-│ └─────────────────────────────┘ │
-│                                 │
-│ [📄 Importar de outro conteúdo] │  ← abre dialog com lista
-│                                 │
-│ Headline: [____________]        │
-│ Subheadline: [_________]        │
-│ Texto de apoio: [______]        │
-│ Bullet points: [_______]        │
-│ CTA: [_________________]        │
-│ Marca: [_______________]        │
-└─────────────────────────────────┘
-```
+**Arquivo: `src/pages/cliente/ClienteScripts.tsx`**
+- Importar `useUserOrgId` e obter `orgId`
+- No `handleImproveWithAI`, adicionar `organization_id: orgId` ao body
+- Tratar erro `INSUFFICIENT_CREDITS` com state + dialog
 
-Nenhuma migration necessária. Apenas alteração de UI no `ClienteRedesSociais.tsx`.
+## Fase 3 — Dialog de Créditos Insuficientes
+
+**Arquivo: `src/pages/cliente/ClienteScripts.tsx`**
+- Importar `InsufficientCreditsDialog` e `isInsufficientCreditsError`
+- Adicionar state `showCreditsDialog`
+- No `handleImproveWithAI` catch, verificar `isInsufficientCreditsError(err)` e abrir dialog
+- Renderizar `<InsufficientCreditsDialog>` no JSX
+
+**Arquivo: `src/components/cliente/ScriptGeneratorDialog.tsx`**
+- No catch da geração, verificar `isInsufficientCreditsError` e propagar o erro ao pai (ou mostrar dialog interno)
+- Alternativa: adicionar o dialog diretamente no `ScriptGeneratorDialog`
+
+## Arquivos a Modificar
+
+| Arquivo | Ação |
+|---|---|
+| `src/components/cliente/ScriptGeneratorDialog.tsx` | Passar `organization_id` ao edge function + dialog de créditos |
+| `src/pages/cliente/ClienteScripts.tsx` | Passar `organization_id` no improve + `InsufficientCreditsDialog` |
+
+Nenhuma migration necessária. O edge function `generate-script` já tem toda a lógica de créditos — o problema é apenas que o frontend não envia o `organization_id`.
 
