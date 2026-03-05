@@ -307,9 +307,13 @@ Create a creative mixed-media collage composition. Layer photographic elements w
       artStyleInstructions = artStyleMap[art_style] || "";
     }
 
-    const aspectInstruction = format === "feed"
-      ? "OUTPUT FORMAT: Square (1:1), 1080×1080px. Centered, balanced composition optimized for Instagram feed."
-      : "OUTPUT FORMAT: Vertical (9:16), 1080×1920px. Vertical composition with stacked elements, optimized for Stories/Reels.";
+    const aspectMap: Record<string, string> = {
+      feed: "OUTPUT FORMAT: Square (1:1), 1080×1080px. Centered, balanced composition optimized for Instagram feed.",
+      portrait: "OUTPUT FORMAT: Portrait (4:5), 1080×1350px. Vertical composition optimized for Instagram feed posts with extra vertical space.",
+      story: "OUTPUT FORMAT: Vertical (9:16), 1080×1920px. Vertical composition with stacked elements, optimized for Stories/Reels.",
+      banner: "OUTPUT FORMAT: Landscape (16:9), 1920×1080px. Wide horizontal composition optimized for banners, YouTube thumbnails, and LinkedIn posts.",
+    };
+    const aspectInstruction = aspectMap[format] || aspectMap.feed;
 
     // Use optimized prompt if available, otherwise fall back to original
     const visualBrief = optimized
