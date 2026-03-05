@@ -3061,6 +3061,88 @@ export type Database = {
           },
         ]
       }
+      gamification_claims: {
+        Row: {
+          claimed_at: string | null
+          id: string
+          organization_id: string
+          reward_id: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          id?: string
+          organization_id: string
+          reward_id: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          id?: string
+          organization_id?: string
+          reward_id?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gamification_rewards: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          organization_id: string
+          required_badges: string[] | null
+          required_level: number | null
+          title: string
+          type: string
+          value: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id: string
+          required_badges?: string[] | null
+          required_level?: number | null
+          title: string
+          type?: string
+          value?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string
+          required_badges?: string[] | null
+          required_level?: number | null
+          title?: string
+          type?: string
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_rewards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           assigned_to: string | null
