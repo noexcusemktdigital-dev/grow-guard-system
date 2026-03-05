@@ -85,6 +85,7 @@ export default function ClienteRedesSociais() {
   const [elementosVisuais, setElementosVisuais] = useState("");
   const [manualColors, setManualColors] = useState("");
   const [manualStyle, setManualStyle] = useState("");
+  const [brandName, setBrandName] = useState("");
 
   // Video state
   const [videoFormat, setVideoFormat] = useState("story");
@@ -125,6 +126,7 @@ export default function ClienteRedesSociais() {
     setElementosVisuais("");
     setManualColors("");
     setManualStyle("");
+    setBrandName("");
     setVideoFormat("story");
     setVideoDuration("5s");
     setVideoCena("");
@@ -201,6 +203,7 @@ export default function ClienteRedesSociais() {
         mensagem: postType === "video" ? videoMensagem || undefined : undefined,
         manual_colors: !visualIdentity && manualColors ? manualColors : undefined,
         manual_style: !visualIdentity && manualStyle ? manualStyle : undefined,
+        brand_name: brandName || undefined,
       });
       setGeneratedResult(result);
     } catch (err: any) {
@@ -570,6 +573,15 @@ export default function ClienteRedesSociais() {
                     <p className="text-xs text-muted-foreground">Estilo: {visualIdentity.style}</p>
                   )}
                   <p className="text-xs text-muted-foreground">Esses dados serão aplicados automaticamente na geração.</p>
+                  <div className="mt-3">
+                    <Label className="text-xs">Nome da marca (opcional)</Label>
+                    <Input
+                      placeholder="Ex: NoExcuse Marketing, P2Y Crédito"
+                      value={brandName}
+                      onChange={(e) => setBrandName(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
                 </CardContent>
               </Card>
             ) : (
@@ -594,6 +606,15 @@ export default function ClienteRedesSociais() {
                     placeholder="Ex: Minimalista, Corporativo, Premium"
                     value={manualStyle}
                     onChange={(e) => setManualStyle(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Nome da marca (opcional)</Label>
+                  <Input
+                    placeholder="Ex: NoExcuse Marketing, P2Y Crédito"
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
                     className="mt-1"
                   />
                 </div>

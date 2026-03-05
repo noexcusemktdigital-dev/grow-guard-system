@@ -8,12 +8,15 @@ const corsHeaders = {
 
 const CREDIT_COST = 100;
 
-// --- Chain-of-Thought: Analyze & optimize prompt via Flash model ---
+// --- Structured prompt result from chain-of-thought ---
 
-interface OptimizedPromptResult {
-  optimized_prompt: string;
-  composition_notes: string;
-  color_strategy: string;
+interface StructuredPromptResult {
+  scene: string;
+  environment: string;
+  design_layout: string;
+  color_palette: string;
+  mood: string;
+  style_closing: string;
 }
 
 async function analyzeAndOptimizePrompt(
@@ -25,7 +28,6 @@ async function analyzeAndOptimizePrompt(
     estilo: string;
     identidade_visual: any;
     persona: any;
-    // Structured fields
     tipo_postagem?: string;
     headline?: string;
     subheadline?: string;
@@ -34,38 +36,42 @@ async function analyzeAndOptimizePrompt(
     elementos_visuais?: string;
     manual_colors?: string;
     manual_style?: string;
+    brand_name?: string;
   }
-): Promise<OptimizedPromptResult | null> {
+): Promise<StructuredPromptResult | null> {
   const { userPrompt, format, nivel, estilo, identidade_visual, persona } = context;
 
-  const systemPrompt = `You are an elite prompt engineer specialized in AI image generation (Gemini, DALL-E, Midjourney).
+  const systemPrompt = `You are an elite prompt engineer specialized in AI image generation for social media marketing.
 
-Your job: Analyze the user's structured briefing and all brand context, then produce an OPTIMIZED visual prompt in English that will generate the highest-quality social media image possible.
+Your job: Analyze the user's structured briefing and brand context, then produce a STRUCTURED visual prompt that will generate high-quality social media images with integrated text and marketing layout.
 
-IMPORTANT: The art_style determines whether this should be a GRAPHIC DESIGN or a PHOTOGRAPH/IMAGE.
-- Styles starting with "grafica_" → Generate a FLAT GRAPHIC DESIGN (shapes, color blocks, patterns). NOT a photograph.
-- Styles starting with "foto_" → Generate a PHOTOGRAPHIC image (cinematic, editorial, product photography).
-- "ilustracao" → Generate a DIGITAL ILLUSTRATION (flat/3D, vector-like aesthetic).
-- "collage" → Generate a MIXED-MEDIA COLLAGE (layered elements, textures, photo cutouts).
+The output image WILL contain text rendered directly in the design (headline, CTA, brand name). This is intentional — the AI model supports text rendering.
 
-Your optimized prompt must:
-- Be 200-400 words, highly descriptive and specific
-- Describe exact visual elements, lighting, materials, textures, camera angle
-- Apply the brand's color palette strategically (specify WHERE each color appears)
-- Match the visual style/tone to the target audience
-- Include composition details (focal point, negative space for text overlay, visual hierarchy)
-- Reference real-world photography/design aesthetics for the AI to emulate
-- NEVER include any text, letters, words, logos, or watermarks in the image description
-- Use the structured briefing fields (headline, scene, elements) to build a precise visual description`;
+IMPORTANT: The art_style determines the visual approach:
+- Styles starting with "grafica_" → FLAT GRAPHIC DESIGN (shapes, color blocks, patterns)
+- Styles starting with "foto_" → PHOTOGRAPHIC image (cinematic, editorial)
+- "ilustracao" → DIGITAL ILLUSTRATION
+- "collage" → MIXED-MEDIA COLLAGE
 
-  // Build structured briefing section
+Your output must describe:
+- scene: What is happening, who is in it, what they're doing. Be specific about ethnicity (Brazilian), expressions, actions. 150-250 words.
+- environment: Setting, lighting, atmosphere. Be cinematic and specific.
+- design_layout: How the image is composed (e.g. "Top portion: lifestyle photo. Bottom portion: dark rounded card with text and colored highlights"). Include icon elements if relevant.
+- color_palette: Specific colors from the brand, where they appear.
+- mood: 5-10 mood keywords separated by commas.
+- style_closing: A single closing line like "Ultra realistic photography with modern marketing layout" or "Clean flat graphic design with bold typography".
+
+NEVER output generic descriptions. Be as specific as the brand context allows.`;
+
+  // Build structured briefing
   let structuredBrief = `ORIGINAL USER INPUT: ${userPrompt}`;
   if (context.tipo_postagem) structuredBrief += `\nPOST TYPE: ${context.tipo_postagem}`;
-  if (context.headline) structuredBrief += `\nHEADLINE TEXT (to be overlaid, NOT rendered in image): "${context.headline}"`;
+  if (context.headline) structuredBrief += `\nHEADLINE: "${context.headline}"`;
   if (context.subheadline) structuredBrief += `\nSUBHEADLINE: "${context.subheadline}"`;
   if (context.cta) structuredBrief += `\nCTA: "${context.cta}"`;
   if (context.cena) structuredBrief += `\nSCENE DESCRIPTION: ${context.cena}`;
-  if (context.elementos_visuais) structuredBrief += `\nSPECIFIC VISUAL ELEMENTS TO INCLUDE: ${context.elementos_visuais}`;
+  if (context.elementos_visuais) structuredBrief += `\nVISUAL ELEMENTS TO INCLUDE: ${context.elementos_visuais}`;
+  if (context.brand_name) structuredBrief += `\nBRAND NAME: ${context.brand_name}`;
 
   const formatDesc: Record<string, string> = {
     feed: "Square 1:1 (1080×1080px) for Instagram feed",
@@ -74,7 +80,6 @@ Your optimized prompt must:
     banner: "Landscape 16:9 (1920×1080px) for banners",
   };
 
-  // Build identity section
   let identitySection = "";
   if (identidade_visual) {
     identitySection = `BRAND IDENTITY:
@@ -98,7 +103,7 @@ ${identitySection || "No brand identity provided."}
 
 ${persona ? `TARGET AUDIENCE: ${persona.nome ? `${persona.nome} — ` : ""}${persona.descricao || "general audience"}` : "No specific target audience."}
 
-Analyze everything above and produce the optimized visual prompt, composition notes, and color strategy.`;
+Analyze everything above and produce the structured visual prompt sections.`;
 
   try {
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -117,22 +122,25 @@ Analyze everything above and produce the optimized visual prompt, composition no
           {
             type: "function",
             function: {
-              name: "optimized_visual_prompt",
-              description: "Return the optimized visual prompt, composition notes, and color strategy.",
+              name: "structured_visual_prompt",
+              description: "Return the structured visual prompt sections for image generation.",
               parameters: {
                 type: "object",
                 properties: {
-                  optimized_prompt: { type: "string", description: "Detailed visual prompt in English, 200-400 words" },
-                  composition_notes: { type: "string", description: "Notes about composition, focal point, layout" },
-                  color_strategy: { type: "string", description: "How brand colors will be applied in the image" },
+                  scene: { type: "string", description: "Detailed scene description with characters, actions, expressions. 150-250 words." },
+                  environment: { type: "string", description: "Setting, lighting, atmosphere details." },
+                  design_layout: { type: "string", description: "How the image is composed: photo placement, card layouts, icon elements." },
+                  color_palette: { type: "string", description: "Specific brand colors and where they appear." },
+                  mood: { type: "string", description: "5-10 mood keywords separated by commas." },
+                  style_closing: { type: "string", description: "Single closing style line." },
                 },
-                required: ["optimized_prompt", "composition_notes", "color_strategy"],
+                required: ["scene", "environment", "design_layout", "color_palette", "mood", "style_closing"],
                 additionalProperties: false,
               },
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "optimized_visual_prompt" } },
+        tool_choice: { type: "function", function: { name: "structured_visual_prompt" } },
       }),
     });
 
@@ -146,8 +154,8 @@ Analyze everything above and produce the optimized visual prompt, composition no
 
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
-      console.log("✅ Chain-of-thought optimized prompt:", parsed.optimized_prompt.slice(0, 200) + "...");
-      return parsed as OptimizedPromptResult;
+      console.log("✅ Chain-of-thought structured prompt:", JSON.stringify(parsed).slice(0, 300) + "...");
+      return parsed as StructuredPromptResult;
     }
 
     console.warn("Chain-of-thought: no tool call in response, falling back.");
@@ -231,9 +239,8 @@ serve(async (req) => {
     const {
       prompt, format, file_path, nivel, persona, identidade_visual,
       organization_id, reference_images, art_style,
-      // Structured fields
       tipo_postagem, headline, subheadline, cta, cena, elementos_visuais,
-      manual_colors, manual_style,
+      manual_colors, manual_style, brand_name,
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -271,10 +278,11 @@ serve(async (req) => {
     let enrichedPrompt = prompt || "";
     if (cena) enrichedPrompt += `\nCena: ${cena}`;
     if (elementos_visuais) enrichedPrompt += `\nElementos: ${elementos_visuais}`;
-    if (headline) enrichedPrompt += `\nHeadline (text overlay, NOT in image): ${headline}`;
+    if (headline) enrichedPrompt += `\nHeadline: ${headline}`;
     if (subheadline) enrichedPrompt += `\nSubheadline: ${subheadline}`;
     if (cta) enrichedPrompt += `\nCTA: ${cta}`;
     if (tipo_postagem) enrichedPrompt += `\nTipo: ${tipo_postagem}`;
+    if (brand_name) enrichedPrompt += `\nMarca: ${brand_name}`;
     if (feedbackContext) enrichedPrompt += feedbackContext;
 
     // Chain-of-Thought optimization
@@ -295,63 +303,96 @@ serve(async (req) => {
       elementos_visuais,
       manual_colors,
       manual_style,
+      brand_name,
     });
 
-    // Build final prompt
+    // Build final structured prompt
     const qualityInstructions = getQualityInstructions(nivel || "simples");
     const artStyleInstructions = art_style ? getArtStyleInstructions(art_style) : "";
 
-    const aspectMap: Record<string, string> = {
-      feed: "OUTPUT FORMAT: Square (1:1), 1080×1080px.",
-      portrait: "OUTPUT FORMAT: Portrait (4:5), 1080×1350px.",
-      story: "OUTPUT FORMAT: Vertical (9:16), 1080×1920px.",
-      banner: "OUTPUT FORMAT: Landscape (16:9), 1920×1080px.",
+    const formatDescMap: Record<string, string> = {
+      feed: "Square 1:1 (1080×1080px) social media post",
+      portrait: "Portrait 4:5 (1080×1350px) social media post",
+      story: "Vertical 9:16 (1080×1920px) story/reels",
+      banner: "Landscape 16:9 (1920×1080px) banner",
     };
-    const aspectInstruction = aspectMap[format] || aspectMap.feed;
 
-    const visualBrief = optimized
-      ? `OPTIMIZED VISUAL BRIEF (AI-analyzed):
-${optimized.optimized_prompt}
+    // Build text section
+    let textSection = "";
+    if (headline || subheadline || cta || brand_name) {
+      textSection = "\nText in Portuguese:";
+      if (headline) textSection += `\nHeadline: ${headline}`;
+      if (subheadline) textSection += `\nHighlight headline: ${subheadline}`;
+      if (cta) textSection += `\nCTA: ${cta}`;
+      if (brand_name) textSection += `\nBrand: ${brand_name}`;
+    }
 
-COMPOSITION STRATEGY: ${optimized.composition_notes}
-COLOR APPLICATION: ${optimized.color_strategy}`
-      : `VISUAL BRIEF:
-${enrichedPrompt}`;
+    let fullPrompt: string;
 
-    const fullPrompt = `You are a world-class art director creating a single social media visual asset.
+    if (optimized) {
+      // Structured prompt from chain-of-thought
+      fullPrompt = `${qualityInstructions}
+${artStyleInstructions ? `\n${artStyleInstructions}\n` : ""}
+Scene:
+${optimized.scene}
+
+Environment:
+${optimized.environment}
+
+Design layout:
+${optimized.design_layout}
+
+Color palette:
+${optimized.color_palette}
+
+Format:
+${formatDescMap[format] || formatDescMap.feed}.
+${textSection}
+
+Mood:
+${optimized.mood}
+
+${optimized.style_closing}`;
+    } else {
+      // Fallback: build from raw inputs
+      fullPrompt = `You are a world-class art director creating a social media visual asset.
 
 ${qualityInstructions}
-
 ${artStyleInstructions ? `\n${artStyleInstructions}\n` : ""}
+Scene:
+${cena || prompt || "Professional social media post"}
 
-${aspectInstruction}
+Format:
+${formatDescMap[format] || formatDescMap.feed}.
+${textSection}
 
 COMPOSITION RULES:
-- Reserve clear, low-detail space for text overlay (top 20% OR bottom 25%)
-- Create visual hierarchy: one unmistakable focal point
+- Create visual hierarchy with a clear focal point
 - Professional color theory: complementary/analogous relationships
 - Must work at small mobile screen sizes
 
-ABSOLUTE RULES (NEVER VIOLATE):
-- ZERO text, letters, numbers, words, logos, or watermarks in the image
-- ZERO generic stock photo aesthetics
-- ZERO busy backgrounds that compete with the focal point
+${enrichedPrompt}
 
-${visualBrief}
-
-Generate this image now. Prioritize brand color accuracy and compositional excellence.`;
+Generate this image now.`;
+    }
 
     console.log(`🎨 Generating ${format} image (refs: ${reference_images?.length || 0}, chain-of-thought: ${optimized ? "YES" : "FALLBACK"})...`);
 
+    // Build message content with reference images
     const hasRefs = reference_images && reference_images.length > 0;
+    const referenceInstruction = `Use the attached images ONLY as brand style references for the visual identity.
+Replicate the brand design system including: color palette, layout structure, card shapes, icon elements, typography style, and overall design language.
+IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references.
+Create a NEW scene that follows the same brand design language.`;
+
     const messageContent: any = hasRefs
       ? [
-          { type: "text", text: fullPrompt },
+          { type: "text", text: referenceInstruction },
           ...reference_images.slice(0, 3).map((url: string) => ({
             type: "image_url",
             image_url: { url },
           })),
-          { type: "text", text: "Study the provided reference images and match their visual style, color treatment, composition approach, and overall aesthetic. The generated image must feel like it belongs to the same visual family." },
+          { type: "text", text: fullPrompt },
         ]
       : fullPrompt;
 
