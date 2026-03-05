@@ -1,18 +1,15 @@
 
 
-# Configurar Wallet ID de Produção do Asaas
+# Limpar ASAAS_PROXY_URL e Testar Conexão
 
-## Situação Atual
+## O que será feito
 
-A tabela `organizations` tem `asaas_wallet_id = null` para todas as organizações. A franqueadora **NoExcuse Franqueadora** (ID: `4206c8f4-...`) precisa do wallet ID para que o split funcione.
+1. **Atualizar o secret `ASAAS_PROXY_URL`** para valor vazio (`""`)
+   - O código em `_shared/asaas-fetch.ts` já trata isso: quando vazio, usa `fetch` direto sem proxy
 
-## Plano
+2. **Executar `asaas-test-connection`** para verificar se a API responde sem o proxy interferindo
 
-1. **Atualizar o `asaas_wallet_id`** da organização "NoExcuse Franqueadora" com o valor `766e812a-a192-4162-bcde-fadabd5c5db4` usando o insert tool (UPDATE query).
+## Por que isso pode resolver
 
-2. **Verificar** que o `buildSplitConfig` em `_shared/asaas-customer.ts` consegue ler o wallet ID corretamente — o código já busca `parentOrg.asaas_wallet_id` e monta o split automaticamente.
-
-## Nota importante
-
-Isso resolve o split, mas o bloqueio principal (`not_allowed_ip`) ainda precisa ser resolvido no painel do Asaas antes que qualquer cobrança funcione.
+O `ASAAS_PROXY_URL` contém atualmente um valor marcado como "invalid". Mesmo com o fallback no código, a tentativa de criar o `HttpClient` com proxy inválido pode estar causando comportamento inesperado. Remover elimina essa variável da equação.
 
