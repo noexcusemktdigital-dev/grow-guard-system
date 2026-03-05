@@ -50,6 +50,9 @@ export function useChargeSystemFee() {
 
   return useMutation({
     mutationFn: async (billingType: string) => {
+      // Refresh session to ensure fresh token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { data, error } = await supabase.functions.invoke("asaas-charge-system-fee", {
         body: { organization_id: orgId, billing_type: billingType },
       });
@@ -64,6 +67,10 @@ export function useChargeSystemFee() {
       const msg = err?.message || "Erro ao gerar cobrança";
       if (msg === "already_paid") {
         toast.info("Sistema já pago neste mês");
+      } else if (msg.includes("Unauthorized") || msg.includes("401")) {
+        toast.error("Sessão expirada. Recarregue a página e tente novamente.");
+      } else if (msg.includes("not_allowed_ip")) {
+        toast.error("IP não autorizado no Asaas. Configure o proxy.");
       } else {
         toast.error(msg);
       }

@@ -15,6 +15,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("[asaas-test-connection] Request received:", req.method);
     // Auth check
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -27,15 +28,17 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      console.error("[asaas-test-connection] Auth failed:", authError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
+    const proxyUrl = Deno.env.get("ASAAS_PROXY_URL") || null;
+    const isSandbox = ASAAS_BASE.includes("sandbox");
 
     const res = await asaasFetch(`${ASAAS_BASE}/customers?limit=1`, {
       headers: { access_token: asaasApiKey },
@@ -48,6 +51,8 @@ Deno.serve(async (req) => {
         connected: res.ok,
         status: res.status,
         base_url: ASAAS_BASE,
+        environment: isSandbox ? "SANDBOX" : "PRODUCTION",
+        proxy_url: proxyUrl ? (proxyUrl.trim() === proxyUrl && /^https?:\/\/.+/.test(proxyUrl) ? "valid" : "invalid") : "not_set",
         customer_count: data.totalCount ?? null,
         first_customer: data.data?.[0]?.name ?? null,
         error: res.ok ? null : data,

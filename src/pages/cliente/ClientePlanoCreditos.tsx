@@ -224,6 +224,9 @@ function PlanSubscriptionDialog({
 
   const subscribe = useMutation({
     mutationFn: async () => {
+      // Refresh session to ensure fresh token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { data, error } = await supabase.functions.invoke("asaas-create-subscription", {
         body: { organization_id: orgId, plan_id: plan!.id, billing_type: billingType, modules },
       });
@@ -238,7 +241,14 @@ function PlanSubscriptionDialog({
       qc.invalidateQueries({ queryKey: ["credit-wallet"] });
       onOpenChange(false);
     },
-    onError: (err: any) => toast.error(`Erro: ${err.message}`),
+    onError: (err: any) => {
+      const msg = err?.message || "Erro desconhecido";
+      if (msg.includes("Unauthorized") || msg.includes("401")) {
+        toast.error("Sessão expirada. Recarregue a página e tente novamente.");
+      } else {
+        toast.error(`Erro: ${msg}`);
+      }
+    },
   });
 
   if (!plan) return null;
@@ -388,6 +398,9 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
 
   const purchase = useMutation({
     mutationFn: async () => {
+      // Refresh session to ensure fresh token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { data, error } = await supabase.functions.invoke("asaas-create-charge", {
         body: { organization_id: orgId, charge_type: "credits", billing_type: billingType, pack_id: pack!.id },
       });
