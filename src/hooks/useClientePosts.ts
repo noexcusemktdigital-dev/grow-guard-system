@@ -55,6 +55,17 @@ export function useGeneratePost() {
       content_id?: string;
       reference_image_urls?: string[];
       identidade_visual?: any;
+      // Structured fields
+      tipo_postagem?: string;
+      headline?: string;
+      subheadline?: string;
+      cta?: string;
+      cena?: string;
+      elementos_visuais?: string;
+      movimento?: string;
+      mensagem?: string;
+      manual_colors?: string;
+      manual_style?: string;
     }) => {
       if (!orgId) throw new Error("Org not found");
 
@@ -62,7 +73,6 @@ export function useGeneratePost() {
       let result_data: any = null;
 
       if (payload.type === "art") {
-        // Call generate-social-image
         const file_path = `posts/${orgId}/${Date.now()}.png`;
         const resp = await supabase.functions.invoke("generate-social-image", {
           body: {
@@ -74,22 +84,35 @@ export function useGeneratePost() {
             organization_id: orgId,
             reference_images: payload.reference_image_urls,
             art_style: payload.style || "grafica_moderna",
+            // Structured fields for better prompt
+            tipo_postagem: payload.tipo_postagem,
+            headline: payload.headline,
+            subheadline: payload.subheadline,
+            cta: payload.cta,
+            cena: payload.cena,
+            elementos_visuais: payload.elementos_visuais,
+            manual_colors: payload.manual_colors,
+            manual_style: payload.manual_style,
           },
         });
         if (resp.error) throw new Error(resp.error.message || "Erro ao gerar arte");
         if (resp.data?.error) throw new Error(resp.data.error);
         result_url = resp.data?.url;
       } else {
-        // Call generate-social-video-frames
         const resp = await supabase.functions.invoke("generate-social-video-frames", {
           body: {
-            video_description: payload.input_text,
+            video_description: payload.cena || payload.input_text,
             identidade_visual: payload.identidade_visual,
             organization_id: orgId,
             art_id: Date.now().toString(),
-            num_frames: payload.duration === "60s" ? 8 : payload.duration === "30s" ? 5 : 3,
+            num_frames: payload.duration === "8s" ? 5 : 3,
             reference_images: payload.reference_image_urls,
             video_style: payload.style || "slideshow",
+            // Structured fields
+            movimento: payload.movimento,
+            mensagem: payload.mensagem,
+            cta: payload.cta,
+            format: payload.format,
           },
         });
         if (resp.error) throw new Error(resp.error.message || "Erro ao gerar vídeo");

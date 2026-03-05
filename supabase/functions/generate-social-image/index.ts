@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const CREDIT_COST = 100;
 
-// --- Chain-of-Thought: Step 1 — Analyze & optimize prompt via Flash model ---
+// --- Chain-of-Thought: Analyze & optimize prompt via Flash model ---
 
 interface OptimizedPromptResult {
   optimized_prompt: string;
@@ -25,13 +25,22 @@ async function analyzeAndOptimizePrompt(
     estilo: string;
     identidade_visual: any;
     persona: any;
+    // Structured fields
+    tipo_postagem?: string;
+    headline?: string;
+    subheadline?: string;
+    cta?: string;
+    cena?: string;
+    elementos_visuais?: string;
+    manual_colors?: string;
+    manual_style?: string;
   }
 ): Promise<OptimizedPromptResult | null> {
   const { userPrompt, format, nivel, estilo, identidade_visual, persona } = context;
 
   const systemPrompt = `You are an elite prompt engineer specialized in AI image generation (Gemini, DALL-E, Midjourney).
 
-Your job: Analyze the user's brief and all brand context, then produce an OPTIMIZED visual prompt in English that will generate the highest-quality social media image possible.
+Your job: Analyze the user's structured briefing and all brand context, then produce an OPTIMIZED visual prompt in English that will generate the highest-quality social media image possible.
 
 IMPORTANT: The art_style determines whether this should be a GRAPHIC DESIGN or a PHOTOGRAPH/IMAGE.
 - Styles starting with "grafica_" → Generate a FLAT GRAPHIC DESIGN (shapes, color blocks, patterns). NOT a photograph.
@@ -47,23 +56,45 @@ Your optimized prompt must:
 - Include composition details (focal point, negative space for text overlay, visual hierarchy)
 - Reference real-world photography/design aesthetics for the AI to emulate
 - NEVER include any text, letters, words, logos, or watermarks in the image description
+- Use the structured briefing fields (headline, scene, elements) to build a precise visual description`;
 
-You must also provide composition notes and a color strategy explaining your decisions.`;
+  // Build structured briefing section
+  let structuredBrief = `ORIGINAL USER INPUT: ${userPrompt}`;
+  if (context.tipo_postagem) structuredBrief += `\nPOST TYPE: ${context.tipo_postagem}`;
+  if (context.headline) structuredBrief += `\nHEADLINE TEXT (to be overlaid, NOT rendered in image): "${context.headline}"`;
+  if (context.subheadline) structuredBrief += `\nSUBHEADLINE: "${context.subheadline}"`;
+  if (context.cta) structuredBrief += `\nCTA: "${context.cta}"`;
+  if (context.cena) structuredBrief += `\nSCENE DESCRIPTION: ${context.cena}`;
+  if (context.elementos_visuais) structuredBrief += `\nSPECIFIC VISUAL ELEMENTS TO INCLUDE: ${context.elementos_visuais}`;
 
-  const userMessage = `BRIEF FROM USER: ${userPrompt}
+  const formatDesc: Record<string, string> = {
+    feed: "Square 1:1 (1080×1080px) for Instagram feed",
+    portrait: "Portrait 4:5 (1080×1350px) for Instagram feed optimized",
+    story: "Vertical 9:16 (1080×1920px) for Stories/Reels",
+    banner: "Landscape 16:9 (1920×1080px) for banners",
+  };
 
-FORMAT: ${format === "feed" ? "Square 1:1 (1080×1080px) for Instagram feed" : "Vertical 9:16 (1080×1920px) for Stories/Reels"}
+  // Build identity section
+  let identitySection = "";
+  if (identidade_visual) {
+    identitySection = `BRAND IDENTITY:
+- Color palette: ${identidade_visual.paleta || identidade_visual.palette || "not specified"}
+- Style: ${identidade_visual.estilo || identidade_visual.style || "not specified"}
+- Visual tone: ${identidade_visual.tom_visual || identidade_visual.tone || "not specified"}
+- Typography feel: ${identidade_visual.fontes || identidade_visual.fonts || "not specified"}`;
+  } else if (context.manual_colors || context.manual_style) {
+    identitySection = `BRAND IDENTITY (manual):
+- Colors: ${context.manual_colors || "not specified"}
+- Style: ${context.manual_style || "not specified"}`;
+  }
 
+  const userMessage = `${structuredBrief}
+
+FORMAT: ${formatDesc[format] || formatDesc.feed}
 QUALITY LEVEL: ${nivel || "simples"}
-
 VISUAL STYLE: ${estilo || "modern professional"}
 
-${identidade_visual ? `BRAND IDENTITY:
-- Color palette: ${identidade_visual.paleta || "not specified"}
-- Style: ${identidade_visual.estilo || "not specified"}
-- Visual tone: ${identidade_visual.tom_visual || "not specified"}
-- Typography feel: ${identidade_visual.fontes || "not specified"}
-- References: ${identidade_visual.referencias || "not specified"}` : "No brand identity provided."}
+${identitySection || "No brand identity provided."}
 
 ${persona ? `TARGET AUDIENCE: ${persona.nome ? `${persona.nome} — ` : ""}${persona.descricao || "general audience"}` : "No specific target audience."}
 
@@ -116,12 +147,10 @@ Analyze everything above and produce the optimized visual prompt, composition no
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
       console.log("✅ Chain-of-thought optimized prompt:", parsed.optimized_prompt.slice(0, 200) + "...");
-      console.log("📐 Composition notes:", parsed.composition_notes);
-      console.log("🎨 Color strategy:", parsed.color_strategy);
       return parsed as OptimizedPromptResult;
     }
 
-    console.warn("Chain-of-thought: no tool call in response, falling back to original prompt.");
+    console.warn("Chain-of-thought: no tool call in response, falling back.");
     return null;
   } catch (err) {
     console.warn("Chain-of-thought optimization error (non-blocking):", err);
@@ -129,58 +158,43 @@ Analyze everything above and produce the optimized visual prompt, composition no
   }
 }
 
-// --- Helper functions for fallback/fixed instructions ---
-
 function getQualityInstructions(nivel: string): string {
   switch (nivel) {
     case "alto_padrao":
       return `QUALITY TIER: ULTRA-PREMIUM (Magazine/Campaign Level)
 - Cinematic lighting: golden-hour warmth, dramatic shadows, volumetric light rays
-- Rich material textures: brushed metal, soft fabric, glossy surfaces with realistic reflections
-- Depth of field with professional bokeh (f/1.4 - f/2.8 equivalent)
-- Color grading: film-like tones, split-toning with warm highlights and cool shadows
-- Every element must have photographic or hyper-realistic render quality
-- Think: Apple product shoots, Rolex advertisements, luxury fashion editorials`;
+- Rich material textures: brushed metal, soft fabric, glossy surfaces
+- Depth of field with professional bokeh (f/1.4 - f/2.8)
+- Film-like color grading with split-toning`;
     case "elaborado":
       return `QUALITY TIER: PROFESSIONAL (Agency Level)
 - Strong directional lighting with fill and accent lights
 - Vibrant but harmonious color palette with intentional contrast
-- Layered composition: clear foreground interest, mid-ground subject, background depth
-- Professional retouching quality: clean edges, consistent shadows
-- Think: Nike social media campaigns, Spotify Wrapped visuals`;
+- Layered composition: foreground, mid-ground, background depth
+- Professional retouching quality`;
     default:
       return `QUALITY TIER: CLEAN PROFESSIONAL (Brand Level)
 - Even, well-balanced lighting with soft shadows
-- Clean, uncluttered composition with a single clear focal point
-- Professional color balance, properly exposed
-- Suitable for immediate social media publishing
-- Think: Mailchimp illustrations, Stripe marketing visuals`;
+- Clean, uncluttered composition with a single focal point
+- Professional color balance, properly exposed`;
   }
 }
 
-function getStyleInstructions(estilo: string): string {
-  switch (estilo?.toLowerCase()) {
-    case "minimalista":
-      return `STYLE: MINIMALIST — Vast negative space, max 2-3 elements, monochromatic. Inspired by Muji, Apple.`;
-    case "bold":
-      return `STYLE: BOLD — Strong color blocking, oversized shapes, dynamic angles. Inspired by Nike, Beats.`;
-    case "corporativo":
-      return `STYLE: CORPORATE — Navy/charcoal palette, grid-based, subtle gradients. Inspired by McKinsey, IBM.`;
-    case "criativo":
-      return `STYLE: CREATIVE — Unexpected colors, mixed media, playful asymmetry. Inspired by Airbnb, Notion.`;
-    case "elegante":
-      return `STYLE: ELEGANT — Dark backgrounds, metallic accents, refined textures. Inspired by Chanel, Dior.`;
-    default:
-      return `STYLE: MODERN PROFESSIONAL — Contemporary, clean, balanced hierarchy.`;
-  }
+function getArtStyleInstructions(art_style: string): string {
+  const artStyleMap: Record<string, string> = {
+    grafica_moderna: `ART APPROACH: FLAT GRAPHIC DESIGN — NOT a photograph. Bold color blocks, geometric shapes, clean lines. Like a Canva Pro template.`,
+    grafica_elegante: `ART APPROACH: LUXURY GRAPHIC DESIGN — Dark background, gold/metallic accents, ornamental details. Premium feel.`,
+    grafica_bold: `ART APPROACH: HIGH-ENERGY GRAPHIC DESIGN — Large bold color blocks, diagonal stripes, vibrant and attention-grabbing.`,
+    grafica_minimalista: `ART APPROACH: ULTRA-MINIMALIST GRAPHIC DESIGN — 60%+ negative space, 1-2 subtle elements, monochromatic.`,
+    foto_editorial: `ART APPROACH: CINEMATIC EDITORIAL PHOTOGRAPHY. Professional bokeh, rule of thirds, dramatic lighting.`,
+    foto_produto: `ART APPROACH: LIFESTYLE PRODUCT PHOTOGRAPHY. Textured surface, soft directional lighting, curated styling.`,
+    ilustracao: `ART APPROACH: MODERN DIGITAL ILLUSTRATION. Flat/soft 3D, vector-like, friendly and professional.`,
+    collage: `ART APPROACH: CREATIVE MIXED-MEDIA COLLAGE. Layered photos with graphic shapes, torn paper edges, contemporary.`,
+  };
+  return artStyleMap[art_style] || "";
 }
 
-// --- Feedback history helper ---
-
-async function getFeedbackHistory(
-  supabase: any,
-  organizationId: string
-): Promise<string> {
+async function getFeedbackHistory(supabase: any, organizationId: string): Promise<string> {
   try {
     const { data: feedback } = await supabase
       .from("social_art_feedback")
@@ -194,22 +208,16 @@ async function getFeedbackHistory(
 
     const approved = feedback.filter((f: any) => f.status === "approved");
     const rejected = feedback.filter((f: any) => f.status === "rejected");
-    const changes = feedback.filter((f: any) => f.status === "changes_requested");
 
-    let summary = "\n\nFEEDBACK HISTORY (learn from past results):";
+    let summary = "\n\nFEEDBACK HISTORY:";
     if (approved.length > 0) {
-      summary += `\n- ${approved.length} arts were APPROVED. Successful prompts included themes like: ${approved.slice(0, 5).map((a: any) => a.prompt_used?.slice(0, 80) || "N/A").join("; ")}`;
+      summary += `\n- ${approved.length} arts APPROVED. Themes: ${approved.slice(0, 5).map((a: any) => a.prompt_used?.slice(0, 80) || "N/A").join("; ")}`;
     }
     if (rejected.length > 0) {
-      summary += `\n- ${rejected.length} arts were REJECTED. Avoid similar approaches: ${rejected.slice(0, 5).map((r: any) => `"${r.prompt_used?.slice(0, 60) || "N/A"}" ${r.feedback_note ? `(reason: ${r.feedback_note})` : ""}`).join("; ")}`;
+      summary += `\n- ${rejected.length} arts REJECTED. Avoid: ${rejected.slice(0, 5).map((r: any) => `"${r.prompt_used?.slice(0, 60)}" ${r.feedback_note ? `(${r.feedback_note})` : ""}`).join("; ")}`;
     }
-    if (changes.length > 0) {
-      summary += `\n- ${changes.length} arts had CHANGES REQUESTED: ${changes.slice(0, 5).map((c: any) => c.feedback_note || "no detail").join("; ")}`;
-    }
-    summary += "\nUse this feedback to improve the quality and match the client's preferences.";
     return summary;
-  } catch (err) {
-    console.warn("Feedback history query error (non-blocking):", err);
+  } catch {
     return "";
   }
 }
@@ -220,13 +228,21 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, format, file_path, nivel, persona, identidade_visual, organization_id, reference_images, art_style } = await req.json();
+    const {
+      prompt, format, file_path, nivel, persona, identidade_visual,
+      organization_id, reference_images, art_style,
+      // Structured fields
+      tipo_postagem, headline, subheadline, cta, cena, elementos_visuais,
+      manual_colors, manual_style,
+    } = await req.json();
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Pre-check credits
     if (organization_id) {
       const { data: wallet } = await supabase
@@ -243,79 +259,56 @@ serve(async (req) => {
       }
     }
 
-    const estilo = identidade_visual?.estilo || "";
+    const estilo = identidade_visual?.estilo || identidade_visual?.style || manual_style || "";
 
-    // --- Fetch feedback history for this org ---
+    // Feedback history
     let feedbackContext = "";
     if (organization_id) {
       feedbackContext = await getFeedbackHistory(supabase, organization_id);
     }
 
-    // --- Chain-of-Thought Step 1: Optimize the prompt ---
-    console.log(`🧠 Starting chain-of-thought analysis for ${format} image (nivel: ${nivel || "simples"}, style: ${estilo}, feedback: ${feedbackContext ? "YES" : "NONE"})...`);
+    // Build enriched prompt from structured fields
+    let enrichedPrompt = prompt || "";
+    if (cena) enrichedPrompt += `\nCena: ${cena}`;
+    if (elementos_visuais) enrichedPrompt += `\nElementos: ${elementos_visuais}`;
+    if (headline) enrichedPrompt += `\nHeadline (text overlay, NOT in image): ${headline}`;
+    if (subheadline) enrichedPrompt += `\nSubheadline: ${subheadline}`;
+    if (cta) enrichedPrompt += `\nCTA: ${cta}`;
+    if (tipo_postagem) enrichedPrompt += `\nTipo: ${tipo_postagem}`;
+    if (feedbackContext) enrichedPrompt += feedbackContext;
+
+    // Chain-of-Thought optimization
+    console.log(`🧠 Starting chain-of-thought for ${format} image (structured: ${!!cena})...`);
 
     const optimized = await analyzeAndOptimizePrompt(LOVABLE_API_KEY, {
-      userPrompt: prompt + feedbackContext,
+      userPrompt: enrichedPrompt,
       format,
       nivel: nivel || "simples",
       estilo,
       identidade_visual,
       persona,
+      tipo_postagem,
+      headline,
+      subheadline,
+      cta,
+      cena,
+      elementos_visuais,
+      manual_colors,
+      manual_style,
     });
 
-    // --- Build final image generation prompt ---
+    // Build final prompt
     const qualityInstructions = getQualityInstructions(nivel || "simples");
-    const styleInstructions = getStyleInstructions(estilo);
-
-    // Art style instructions
-    let artStyleInstructions = "";
-    if (art_style) {
-      const artStyleMap: Record<string, string> = {
-        // ── Graphic Design Styles ──
-        grafica_moderna: `ART APPROACH: FLAT GRAPHIC DESIGN — NOT a photograph.
-Create a flat graphic design composition. Use bold color blocks, geometric shapes (circles, rectangles, triangles), clean lines. The style should look like a professionally designed social media template — NOT a photograph. Use solid background colors, layered shapes with brand colors, decorative elements like dots, lines, abstract patterns. Leave clear structured space for text overlay. Think: Canva Pro template, Behance social media design, Adobe Express layout. Use the brand's color palette as the dominant color scheme. Create visual hierarchy through shape size and placement. The overall feel should be modern, clean, and immediately recognizable as a designed graphic — not generated photography.`,
-
-        grafica_elegante: `ART APPROACH: LUXURY GRAPHIC DESIGN — NOT a photograph.
-Create a luxury graphic design composition with a dark background (deep navy, black, or charcoal). Add subtle gold or metallic accent elements — thin decorative lines, ornamental borders, small geometric details. The composition should feel high-end like a fashion brand or premium service announcement. Use serif-inspired visual elements, subtle gradients, and sophisticated color palette. NOT a photograph. Think: luxury brand social media, premium event invitation, high-end restaurant menu aesthetic. Use deep shadows, metallic textures, and restrained elegance. The design should whisper "exclusive" and "premium" through restraint and sophistication.`,
-
-        grafica_bold: `ART APPROACH: HIGH-ENERGY GRAPHIC DESIGN — NOT a photograph.
-Create an energetic, high-contrast graphic design. Use large bold color blocks, diagonal stripes or slashes, strong geometric shapes. Colors should be vibrant and attention-grabbing — use the brand's most vivid colors in large areas. The composition should feel dynamic and modern — like a sports brand announcement, flash sale promotion, or festival poster. Create visual tension with contrasting elements, asymmetric layouts, and bold scale contrasts. Think: Nike campaigns, Spotify playlists, streetwear brand graphics. Every element should scream energy and urgency.`,
-
-        grafica_minimalista: `ART APPROACH: ULTRA-MINIMALIST GRAPHIC DESIGN — NOT a photograph.
-Create an ultra-clean minimalist graphic design. Maximum negative space (60%+ of canvas should be empty or single-color). Use only 1-2 subtle geometric elements. Monochromatic or two-tone color scheme. Inspired by Japanese minimalism, Muji aesthetic, Apple marketing. The design should breathe and feel premium through restraint. Think: single accent line, one small geometric shape, vast empty space with purpose. Use the brand's most neutral color as the dominant background. Every pixel of negative space is intentional. Less is dramatically more.`,
-
-        // ── Photography Styles ──
-        foto_editorial: `ART APPROACH: CINEMATIC EDITORIAL PHOTOGRAPHY.
-Create a cinematic editorial photograph with professional studio or golden-hour lighting. Use depth of field with professional bokeh (f/1.4 - f/2.8 equivalent), intentional composition following the rule of thirds. Leave clean negative space (top 20% OR bottom 25%) for text overlay. Sharp focus on subject with soft background blur. Professional color grading with film-like tones. Think: magazine cover, editorial spread, brand campaign photography by Annie Leibovitz or Peter Lindbergh. The lighting should be dramatic yet flattering, with clear directional light source and controlled shadows.`,
-
-        foto_produto: `ART APPROACH: LIFESTYLE PRODUCT PHOTOGRAPHY.
-Create a product photography scene with the product in a lifestyle context — on a textured surface (marble, wood, linen fabric), held in a hand, or arranged in a curated flat lay composition. Use soft directional lighting with subtle shadows, clean but warm color palette. Professional commercial photography quality — think: Apple product shoots, cosmetics brand photography, food styling by a professional photographer. The background should complement but never compete with the product. Include contextual props that tell a story. Every shadow and reflection should be intentional.`,
-
-        ilustracao: `ART APPROACH: MODERN DIGITAL ILLUSTRATION.
-Create a modern digital illustration with flat design or soft 3D style, clean vector-like aesthetic. Use stylized characters or objects with consistent color palette. The feel should be modern tech/startup — friendly, approachable, professional. Think: Slack illustrations, Notion artwork, Stripe marketing visuals, Headspace app illustrations. Use smooth gradients, rounded shapes, and a limited but cohesive color palette. Characters (if any) should be diverse and stylized, not photorealistic. The overall composition should feel like a premium SaaS marketing asset.`,
-
-        collage: `ART APPROACH: CREATIVE MIXED-MEDIA COLLAGE.
-Create a creative mixed-media collage composition. Layer photographic elements with graphic shapes, textures, and color blocks. Use paper-cut effect, overlapping elements at varied scales, torn paper edges, vintage textures mixed with modern graphics. Contemporary editorial collage style — artistic and eye-catching. Think: Vogue editorial layouts, contemporary art posters, festival marketing collages. Mix photography snippets with bold color fields, halftone patterns, and hand-drawn elements. The composition should feel intentionally chaotic yet balanced.`,
-
-        // ── Legacy fallbacks ──
-        foto_texto: `ART APPROACH: CINEMATIC EDITORIAL PHOTOGRAPHY with clean negative space for text overlay. Professional lighting, sharp details, rule-of-thirds composition.`,
-        composicao: `ART APPROACH: FLAT GRAPHIC DESIGN composition with abstract shapes, geometric elements, bold color blocks. Modern, layered, visually dynamic. NOT a photograph.`,
-        mockup: `ART APPROACH: LIFESTYLE PRODUCT PHOTOGRAPHY in realistic context. Natural lighting, contextual background, commercial photography quality.`,
-        quote: `ART APPROACH: MINIMALIST GRAPHIC DESIGN background (gradient, texture, pattern) optimized for text overlay. Clean, atmospheric, focused on mood.`,
-        before_after: `ART APPROACH: Split composition showing two contrasting states. Clear visual contrast, same framing perspective, transformation narrative.`,
-      };
-      artStyleInstructions = artStyleMap[art_style] || "";
-    }
+    const artStyleInstructions = art_style ? getArtStyleInstructions(art_style) : "";
 
     const aspectMap: Record<string, string> = {
-      feed: "OUTPUT FORMAT: Square (1:1), 1080×1080px. Centered, balanced composition optimized for Instagram feed.",
-      portrait: "OUTPUT FORMAT: Portrait (4:5), 1080×1350px. Vertical composition optimized for Instagram feed posts with extra vertical space.",
-      story: "OUTPUT FORMAT: Vertical (9:16), 1080×1920px. Vertical composition with stacked elements, optimized for Stories/Reels.",
-      banner: "OUTPUT FORMAT: Landscape (16:9), 1920×1080px. Wide horizontal composition optimized for banners, YouTube thumbnails, and LinkedIn posts.",
+      feed: "OUTPUT FORMAT: Square (1:1), 1080×1080px.",
+      portrait: "OUTPUT FORMAT: Portrait (4:5), 1080×1350px.",
+      story: "OUTPUT FORMAT: Vertical (9:16), 1080×1920px.",
+      banner: "OUTPUT FORMAT: Landscape (16:9), 1920×1080px.",
     };
     const aspectInstruction = aspectMap[format] || aspectMap.feed;
 
-    // Use optimized prompt if available, otherwise fall back to original
     const visualBrief = optimized
       ? `OPTIMIZED VISUAL BRIEF (AI-analyzed):
 ${optimized.optimized_prompt}
@@ -323,14 +316,13 @@ ${optimized.optimized_prompt}
 COMPOSITION STRATEGY: ${optimized.composition_notes}
 COLOR APPLICATION: ${optimized.color_strategy}`
       : `VISUAL BRIEF:
-${prompt}`;
+${enrichedPrompt}`;
 
     const fullPrompt = `You are a world-class art director creating a single social media visual asset.
 
 ${qualityInstructions}
 
 ${artStyleInstructions ? `\n${artStyleInstructions}\n` : ""}
-${styleInstructions}
 
 ${aspectInstruction}
 
@@ -338,21 +330,19 @@ COMPOSITION RULES:
 - Reserve clear, low-detail space for text overlay (top 20% OR bottom 25%)
 - Create visual hierarchy: one unmistakable focal point
 - Professional color theory: complementary/analogous relationships
-- Must work at small mobile screen sizes (key elements visible at 150×150px)
+- Must work at small mobile screen sizes
 
 ABSOLUTE RULES (NEVER VIOLATE):
 - ZERO text, letters, numbers, words, logos, or watermarks in the image
-- ZERO generic stock photo aesthetics — every element must be intentional
+- ZERO generic stock photo aesthetics
 - ZERO busy backgrounds that compete with the focal point
-- Every pixel must serve the composition and brand identity
 
 ${visualBrief}
 
-Generate this image now. Prioritize brand color accuracy and compositional excellence above all else.`;
+Generate this image now. Prioritize brand color accuracy and compositional excellence.`;
 
     console.log(`🎨 Generating ${format} image (refs: ${reference_images?.length || 0}, chain-of-thought: ${optimized ? "YES" : "FALLBACK"})...`);
 
-    // Build message content — multimodal if references exist
     const hasRefs = reference_images && reference_images.length > 0;
     const messageContent: any = hasRefs
       ? [
@@ -361,7 +351,7 @@ Generate this image now. Prioritize brand color accuracy and compositional excel
             type: "image_url",
             image_url: { url },
           })),
-          { type: "text", text: "Study the provided reference images above and match their visual style, color treatment, composition approach, and overall aesthetic quality. The generated image must feel like it belongs to the same visual family as these references." },
+          { type: "text", text: "Study the provided reference images and match their visual style, color treatment, composition approach, and overall aesthetic. The generated image must feel like it belongs to the same visual family." },
         ]
       : fullPrompt;
 
@@ -409,20 +399,12 @@ Generate this image now. Prioritize brand color accuracy and compositional excel
       .from("social-arts")
       .upload(file_path, binaryData, { contentType: "image/png", upsert: true });
 
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
-      throw new Error(`Upload failed: ${uploadError.message}`);
-    }
+    if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
     const { data: urlData } = supabase.storage.from("social-arts").getPublicUrl(file_path);
-
-    // Credits are now debited on approval, not on generation
-
     console.log(`✅ Image uploaded: ${urlData.publicUrl}`);
 
-    return new Response(JSON.stringify({ 
-      url: urlData.publicUrl,
-    }), {
+    return new Response(JSON.stringify({ url: urlData.publicUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
