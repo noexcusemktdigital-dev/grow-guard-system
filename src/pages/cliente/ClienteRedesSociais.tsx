@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { usePostHistory, useGeneratePost, useApprovePost, useGenerateBriefing, PostItem } from "@/hooks/useClientePosts";
+import { usePostHistory, useGeneratePost, useApprovePost, useGenerateBriefing, useGenerateVideoBriefing, PostItem } from "@/hooks/useClientePosts";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -46,15 +46,31 @@ const ELEMENT_SUGGESTIONS = [
 ];
 
 /* ── Video constants ── */
+const VIDEO_PLATFORMS = [
+  { value: "instagram_reels", label: "Instagram Reels", format: "story" },
+  { value: "tiktok", label: "TikTok", format: "story" },
+  { value: "youtube_shorts", label: "YouTube Shorts", format: "story" },
+  { value: "instagram_feed", label: "Feed Instagram", format: "feed" },
+  { value: "youtube", label: "YouTube", format: "banner" },
+];
+
 const VIDEO_FORMATS = [
-  { value: "story", label: "Reels / TikTok", desc: "9:16 vertical", icon: Smartphone },
-  { value: "feed", label: "Feed", desc: "1:1 quadrado", icon: Square },
-  { value: "banner", label: "YouTube", desc: "16:9 horizontal", icon: Monitor },
+  { value: "story", label: "9:16", desc: "Vertical (Reels/TikTok)", icon: Smartphone, aspect: "9:16" },
+  { value: "feed", label: "1:1", desc: "Quadrado (Feed)", icon: Square, aspect: "1:1" },
+  { value: "banner", label: "16:9", desc: "Horizontal (YouTube)", icon: Monitor, aspect: "16:9" },
 ];
 
 const VIDEO_DURATIONS = [
   { value: "5s", label: "5 segundos", frames: 3 },
   { value: "8s", label: "8 segundos", frames: 5 },
+];
+
+const VIDEO_STYLES = [
+  { value: "corporativo_moderno", label: "Corporativo moderno", desc: "Escritório, negócios, profissional" },
+  { value: "premium_minimalista", label: "Premium minimalista", desc: "Elegante, clean, sofisticado" },
+  { value: "publicidade_sofisticada", label: "Publicidade sofisticada", desc: "Alto padrão, comercial" },
+  { value: "social_media", label: "Social media", desc: "Vibrante, dinâmico, chamativo" },
+  { value: "inspiracional", label: "Inspiracional", desc: "Motivacional, corporativo aspiracional" },
 ];
 
 const MOVEMENT_SUGGESTIONS = [
@@ -105,6 +121,11 @@ export default function ClienteRedesSociais() {
   const [videoMovimento, setVideoMovimento] = useState("");
   const [videoMensagem, setVideoMensagem] = useState("");
   const [videoCta, setVideoCta] = useState("");
+  const [videoPlataforma, setVideoPlataforma] = useState("instagram_reels");
+  const [videoEstiloVisual, setVideoEstiloVisual] = useState("corporativo_moderno");
+  const [videoAcaoCena, setVideoAcaoCena] = useState("");
+  const [videoBriefingText, setVideoBriefingText] = useState("");
+  const [videoBriefingFilled, setVideoBriefingFilled] = useState(false);
 
   // Shared
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
@@ -120,9 +141,10 @@ export default function ClienteRedesSociais() {
   const generatePost = useGeneratePost();
   const approvePost = useApprovePost();
   const generateBriefing = useGenerateBriefing();
+  const generateVideoBriefing = useGenerateVideoBriefing();
 
   const totalArtSteps = 7;
-  const totalVideoSteps = 6;
+  const totalVideoSteps = 8;
 
   // Handle content_id from query params
   useEffect(() => {
@@ -197,6 +219,11 @@ export default function ClienteRedesSociais() {
     setVideoMovimento("");
     setVideoMensagem("");
     setVideoCta("");
+    setVideoPlataforma("instagram_reels");
+    setVideoEstiloVisual("corporativo_moderno");
+    setVideoAcaoCena("");
+    setVideoBriefingText("");
+    setVideoBriefingFilled(false);
     setReferenceUrls([]);
     setGeneratedResult(null);
     setLoadingPhraseIdx(0);
@@ -256,6 +283,46 @@ export default function ClienteRedesSociais() {
     }
   };
 
+  const handleFillVideoWithAI = async () => {
+    if (!videoBriefingText.trim() && !contentData) {
+      toast({ title: "Escreva um briefing ou selecione um conteúdo", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const iv = visualIdentity
+        ? { palette: visualIdentity.palette, fonts: visualIdentity.fonts, style: visualIdentity.style, tone: visualIdentity.tone }
+        : undefined;
+
+      const result = await generateVideoBriefing.mutateAsync({
+        briefing_text: videoBriefingText || undefined,
+        content_data: contentData || undefined,
+        identidade_visual: iv,
+      });
+
+      // Apply results
+      if (result.plataforma) setVideoPlataforma(result.plataforma);
+      if (result.formato_video) {
+        const fmtMap: Record<string, string> = { "9:16": "story", "1:1": "feed", "16:9": "banner" };
+        setVideoFormat(fmtMap[result.formato_video] || "story");
+      }
+      if (result.duracao) setVideoDuration(result.duracao);
+      if (result.descricao_cena) setVideoCena(result.descricao_cena);
+      if (result.acao_cena) {
+        setVideoAcaoCena(result.acao_cena);
+        setVideoMovimento(result.acao_cena);
+      }
+      if (result.mensagem_video) setVideoMensagem(result.mensagem_video);
+      if (result.estilo_visual) setVideoEstiloVisual(result.estilo_visual);
+      if (result.suggested_cta) setVideoCta(result.suggested_cta);
+
+      setVideoBriefingFilled(true);
+      toast({ title: "Campos de vídeo preenchidos com IA!", description: "Revise e ajuste antes de gerar." });
+    } catch (err: any) {
+      toast({ title: "Erro ao preencher com IA", description: err.message, variant: "destructive" });
+    }
+  };
+
   const handleGenerate = async () => {
     if (postType === "art") {
       if (!headline.trim()) {
@@ -305,6 +372,10 @@ export default function ClienteRedesSociais() {
         brand_name: brandName || undefined,
         supporting_text: postType === "art" ? supportingText || undefined : undefined,
         bullet_points: postType === "art" ? bulletPoints || undefined : undefined,
+        // Video-specific structured fields
+        plataforma: postType === "video" ? videoPlataforma : undefined,
+        estilo_visual: postType === "video" ? videoEstiloVisual : undefined,
+        acao_cena: postType === "video" ? videoAcaoCena || videoMovimento || undefined : undefined,
       });
       setGeneratedResult(result);
     } catch (err: any) {
@@ -886,125 +957,351 @@ export default function ClienteRedesSociais() {
     }
   };
 
-  // ── VIDEO WIZARD STEPS (unchanged, 6 steps) ──
+  // ── VIDEO WIZARD STEPS (8 steps) ──
   const renderVideoStep = () => {
     switch (videoStep) {
+      // Step 1: Briefing rápido
       case 1:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">Formato do vídeo</h3>
-              <p className="text-sm text-muted-foreground">Onde esse vídeo será publicado?</p>
+              <h3 className="text-base font-semibold mb-1">Briefing do vídeo</h3>
+              <p className="text-sm text-muted-foreground">
+                Descreva o que você quer gerar. A IA preenche os campos automaticamente.
+              </p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              {VIDEO_FORMATS.map((f) => (
-                <SelectCard key={f.value} selected={videoFormat === f.value} onClick={() => setVideoFormat(f.value)}>
-                  <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                    <f.icon className="w-6 h-6 text-primary" />
-                    <p className="font-semibold text-sm">{f.label}</p>
-                    <p className="text-xs text-muted-foreground">{f.desc}</p>
-                  </CardContent>
-                </SelectCard>
-              ))}
-            </div>
+
+            {contentData && (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-primary">Conteúdo vinculado</p>
+                    <p className="text-xs text-muted-foreground truncate">{contentData.title}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setContentData(null); setContentId(null); }}>
+                    <X className="w-3 h-3" />
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            <Textarea
+              placeholder="Ex: Quero um vídeo de 8 segundos mostrando um empresário analisando dados de vendas, para Instagram Reels, estilo corporativo moderno"
+              value={videoBriefingText}
+              onChange={(e) => setVideoBriefingText(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
+
+            <Button
+              onClick={handleFillVideoWithAI}
+              disabled={generateVideoBriefing.isPending || (!videoBriefingText.trim() && !contentData)}
+              className="w-full"
+              variant="secondary"
+            >
+              {generateVideoBriefing.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Wand2 className="w-4 h-4 mr-2" />
+              )}
+              {generateVideoBriefing.isPending ? "Preenchendo…" : "Preencher com IA"}
+            </Button>
+
+            {videoBriefingFilled && (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-3 flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary shrink-0" />
+                  <p className="text-xs text-primary">
+                    Campos preenchidos! Avance para selecionar a plataforma.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         );
+
+      // Step 2: Plataforma
       case 2:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">Duração do vídeo</h3>
-              <p className="text-sm text-muted-foreground">Escolha a duração ideal</p>
+              <h3 className="text-base font-semibold mb-1">Plataforma do vídeo</h3>
+              <p className="text-sm text-muted-foreground">Onde o vídeo será publicado?</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              {VIDEO_DURATIONS.map((d) => (
-                <SelectCard key={d.value} selected={videoDuration === d.value} onClick={() => setVideoDuration(d.value)}>
-                  <CardContent className="p-6 flex flex-col items-center text-center gap-2">
-                    <Clock className="w-6 h-6 text-primary" />
-                    <p className="font-semibold">{d.label}</p>
-                    <p className="text-xs text-muted-foreground">{d.frames} frames gerados</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {VIDEO_PLATFORMS.map((p) => (
+                <SelectCard key={p.value} selected={videoPlataforma === p.value} onClick={() => {
+                  setVideoPlataforma(p.value);
+                  setVideoFormat(p.format);
+                }}>
+                  <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                    {p.format === "story" ? <Smartphone className="w-6 h-6 text-primary" /> :
+                     p.format === "feed" ? <Square className="w-6 h-6 text-primary" /> :
+                     <Monitor className="w-6 h-6 text-primary" />}
+                    <p className="font-semibold text-sm">{p.label}</p>
                   </CardContent>
                 </SelectCard>
               ))}
             </div>
           </div>
         );
+
+      // Step 3: Formato + Duração
       case 3:
         return (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <h3 className="text-base font-semibold mb-1">Ideia da cena</h3>
-              <p className="text-sm text-muted-foreground">Descreva rapidamente o que acontece no vídeo</p>
+              <h3 className="text-base font-semibold mb-1">Formato e duração</h3>
+              <p className="text-sm text-muted-foreground">Ajuste o formato e a duração do vídeo</p>
             </div>
-            <Textarea placeholder="Ex: Empresário analisando vendas no notebook em escritório moderno" value={videoCena} onChange={(e) => setVideoCena(e.target.value)} rows={4} className="resize-none" />
-            <div className="flex flex-wrap gap-1.5">
-              {["Empresário no escritório", "Pessoa recebendo chave de carro", "Médico atendendo paciente"].map((s) => (
-                <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => setVideoCena(s)}>{s}</Badge>
-              ))}
+            <div className="space-y-4">
+              <div>
+                <Label className="text-xs font-medium mb-2 block">Formato</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {VIDEO_FORMATS.map((f) => (
+                    <SelectCard key={f.value} selected={videoFormat === f.value} onClick={() => setVideoFormat(f.value)}>
+                      <CardContent className="p-3 flex flex-col items-center text-center gap-1">
+                        <f.icon className="w-5 h-5 text-primary" />
+                        <p className="font-semibold text-sm">{f.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{f.desc}</p>
+                      </CardContent>
+                    </SelectCard>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-medium mb-2 block">Duração</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {VIDEO_DURATIONS.map((d) => (
+                    <SelectCard key={d.value} selected={videoDuration === d.value} onClick={() => setVideoDuration(d.value)}>
+                      <CardContent className="p-4 flex flex-col items-center text-center gap-1">
+                        <Clock className="w-5 h-5 text-primary" />
+                        <p className="font-semibold">{d.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{d.frames} frames</p>
+                      </CardContent>
+                    </SelectCard>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         );
+
+      // Step 4: Referências visuais
       case 4:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">Movimento da cena</h3>
-              <p className="text-sm text-muted-foreground">O que acontece na cena? (ação)</p>
+              <h3 className="text-base font-semibold mb-1">Referências visuais</h3>
+              <p className="text-sm text-muted-foreground">
+                As referências definem <strong>paleta de cores</strong>, <strong>estilo</strong> e <strong>atmosfera</strong> do vídeo. Envie pelo menos 3 imagens para melhor resultado.
+              </p>
             </div>
-            <Input placeholder="Ex: digitando no notebook, entregando chave" value={videoMovimento} onChange={(e) => setVideoMovimento(e.target.value)} />
-            <div className="flex flex-wrap gap-1.5">
-              {MOVEMENT_SUGGESTIONS.map((s) => (
-                <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => setVideoMovimento(s)}>
-                  <Plus className="w-3 h-3 mr-1" /> {s}
-                </Badge>
-              ))}
-            </div>
+
+            <Card className="bg-accent/30 border-accent">
+              <CardContent className="p-3 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Dica:</strong> Use artes anteriores, frames de vídeos, screenshots ou materiais da marca como referência.
+                </p>
+              </CardContent>
+            </Card>
+
+            <RefUploader required min={3} />
+
+            {visualIdentity?.image_bank_urls && visualIdentity.image_bank_urls.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Banco de imagens da identidade visual:</p>
+                <div className="flex flex-wrap gap-2">
+                  {visualIdentity.image_bank_urls.filter(url => !referenceUrls.includes(url)).slice(0, 6).map((url, i) => (
+                    <button
+                      key={i}
+                      className="relative w-16 h-16 rounded-lg overflow-hidden border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-colors"
+                      onClick={() => setReferenceUrls(prev => [...prev, url])}
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <Plus className="w-4 h-4 text-primary-foreground" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
+
+      // Step 5: Cena + Ação
       case 5:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">Texto do vídeo</h3>
-              <p className="text-sm text-muted-foreground">Frase ou mensagem que deve aparecer</p>
+              <h3 className="text-base font-semibold mb-1">Cena e ação</h3>
+              <p className="text-sm text-muted-foreground">
+                {videoBriefingFilled ? "Pré-preenchido pela IA. Ajuste conforme necessário." : "Descreva o cenário e o que acontece no vídeo."}
+              </p>
             </div>
             <div className="space-y-3">
               <div>
-                <Label className="text-xs">Mensagem principal</Label>
-                <Input placeholder='Ex: "Empresas não quebram por falta de clientes."' value={videoMensagem} onChange={(e) => setVideoMensagem(e.target.value)} className="mt-1" />
+                <Label className="text-xs">Descrição da cena (cenário principal)</Label>
+                <Textarea
+                  placeholder="Ex: Empresário sentado em escritório moderno analisando dados de vendas no notebook"
+                  value={videoCena}
+                  onChange={(e) => setVideoCena(e.target.value)}
+                  rows={3}
+                  className="mt-1 resize-none"
+                />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {["Empresário no escritório", "Investidor em apartamento luxuoso", "Empreendedor olhando dashboards", "Consultor entregando chaves"].map((s) => (
+                    <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => setVideoCena(s)}>{s}</Badge>
+                  ))}
+                </div>
               </div>
               <div>
-                <Label className="text-xs">CTA (opcional)</Label>
-                <Input placeholder='Ex: "Conheça o método."' value={videoCta} onChange={(e) => setVideoCta(e.target.value)} className="mt-1" />
+                <Label className="text-xs">Ação da cena (o que acontece)</Label>
+                <Input
+                  placeholder="Ex: olhando gráfico subir no notebook enquanto sorri"
+                  value={videoAcaoCena || videoMovimento}
+                  onChange={(e) => { setVideoAcaoCena(e.target.value); setVideoMovimento(e.target.value); }}
+                  className="mt-1"
+                />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {MOVEMENT_SUGGESTIONS.map((s) => (
+                    <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => { setVideoAcaoCena(s); setVideoMovimento(s); }}>
+                      <Plus className="w-3 h-3 mr-1" /> {s}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         );
+
+      // Step 6: Mensagem + CTA
       case 6:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">Referências visuais</h3>
-              <p className="text-sm text-muted-foreground">Envie referências de estilo para o vídeo (opcional)</p>
+              <h3 className="text-base font-semibold mb-1">Mensagem do vídeo</h3>
+              <p className="text-sm text-muted-foreground">
+                {videoBriefingFilled ? "Pré-preenchido pela IA. Ajuste conforme necessário." : "Qual frase deve aparecer no vídeo?"}
+              </p>
             </div>
-            <RefUploader />
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Mensagem principal (text overlay)</Label>
+                <Input placeholder='Ex: "Empresas não quebram por falta de clientes."' value={videoMensagem} onChange={(e) => setVideoMensagem(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Mensagem final / CTA (opcional)</Label>
+                <Input placeholder='Ex: "Elas quebram por falta de processo."' value={videoCta} onChange={(e) => setVideoCta(e.target.value)} className="mt-1" />
+              </div>
+            </div>
+          </div>
+        );
+
+      // Step 7: Estilo visual
+      case 7:
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold mb-1">Estilo visual</h3>
+              <p className="text-sm text-muted-foreground">Qual a atmosfera do vídeo?</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {VIDEO_STYLES.map((s) => (
+                <SelectCard key={s.value} selected={videoEstiloVisual === s.value} onClick={() => setVideoEstiloVisual(s.value)}>
+                  <CardContent className="p-4 text-center">
+                    <p className="font-semibold text-sm">{s.label}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{s.desc}</p>
+                  </CardContent>
+                </SelectCard>
+              ))}
+            </div>
+
+            {visualIdentity ? (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-3 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3 h-3 text-primary" />
+                    <p className="text-xs font-semibold text-primary">Identidade visual aplicada automaticamente</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
+        );
+
+      // Step 8: Revisão
+      case 8:
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold mb-1">Revisão final</h3>
+              <p className="text-sm text-muted-foreground">Confira todos os dados antes de gerar o vídeo</p>
+            </div>
+
+            {/* References preview */}
+            {referenceUrls.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Referências ({referenceUrls.length})</p>
+                <div className="flex flex-wrap gap-2">
+                  {referenceUrls.map((url, i) => (
+                    <div key={i} className="w-16 h-16 rounded-lg overflow-hidden border">
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Card className="bg-muted/30">
               <CardContent className="p-4 space-y-2">
-                <p className="text-sm font-semibold">Resumo do briefing</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  <span className="text-muted-foreground">Formato:</span>
-                  <span>{VIDEO_FORMATS.find(f => f.value === videoFormat)?.label}</span>
-                  <span className="text-muted-foreground">Duração:</span>
-                  <span>{VIDEO_DURATIONS.find(d => d.value === videoDuration)?.label}</span>
-                  <span className="text-muted-foreground">Cena:</span>
-                  <span className="truncate">{videoCena || "—"}</span>
-                  {videoMovimento && <><span className="text-muted-foreground">Movimento:</span><span className="truncate">{videoMovimento}</span></>}
-                  {videoMensagem && <><span className="text-muted-foreground">Mensagem:</span><span className="truncate">{videoMensagem}</span></>}
+                <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
+                  <span className="text-muted-foreground font-medium">Plataforma:</span>
+                  <span>{VIDEO_PLATFORMS.find(p => p.value === videoPlataforma)?.label || videoPlataforma}</span>
+
+                  <span className="text-muted-foreground font-medium">Formato:</span>
+                  <span>{VIDEO_FORMATS.find(f => f.value === videoFormat)?.label} ({VIDEO_FORMATS.find(f => f.value === videoFormat)?.aspect})</span>
+
+                  <span className="text-muted-foreground font-medium">Duração:</span>
+                  <span>{VIDEO_DURATIONS.find(d => d.value === videoDuration)?.label} ({VIDEO_DURATIONS.find(d => d.value === videoDuration)?.frames} frames)</span>
+
+                  <span className="text-muted-foreground font-medium">Cena:</span>
+                  <span className="line-clamp-2">{videoCena || "—"}</span>
+
+                  {(videoAcaoCena || videoMovimento) && <>
+                    <span className="text-muted-foreground font-medium">Ação:</span>
+                    <span className="line-clamp-1">{videoAcaoCena || videoMovimento}</span>
+                  </>}
+
+                  {videoMensagem && <>
+                    <span className="text-muted-foreground font-medium">Mensagem:</span>
+                    <span className="font-semibold">"{videoMensagem}"</span>
+                  </>}
+
+                  {videoCta && <>
+                    <span className="text-muted-foreground font-medium">CTA:</span>
+                    <span>"{videoCta}"</span>
+                  </>}
+
+                  <span className="text-muted-foreground font-medium">Estilo:</span>
+                  <span>{VIDEO_STYLES.find(s => s.value === videoEstiloVisual)?.label || videoEstiloVisual}</span>
+
+                  <span className="text-muted-foreground font-medium">Refs:</span>
+                  <span>{referenceUrls.length} imagens</span>
+
+                  {visualIdentity && <>
+                    <span className="text-muted-foreground font-medium">Identidade:</span>
+                    <span className="text-primary">✓ Aplicada automaticamente</span>
+                  </>}
                 </div>
               </CardContent>
             </Card>
           </div>
         );
+
       default:
         return null;
     }
@@ -1021,7 +1318,9 @@ export default function ClienteRedesSociais() {
       }
     } else {
       switch (videoStep) {
-        case 3: return !!videoCena.trim();
+        case 1: return true; // briefing is optional
+        case 4: return referenceUrls.length >= 3;
+        case 5: return !!videoCena.trim();
         default: return true;
       }
     }

@@ -69,6 +69,10 @@ export function useGeneratePost() {
       brand_name?: string;
       supporting_text?: string;
       bullet_points?: string;
+      // Video-specific structured fields
+      plataforma?: string;
+      estilo_visual?: string;
+      acao_cena?: string;
     }) => {
       if (!orgId) throw new Error("Org not found");
 
@@ -119,6 +123,10 @@ export function useGeneratePost() {
             mensagem: payload.mensagem,
             cta: payload.cta,
             format: payload.format,
+            // New structured fields
+            plataforma: payload.plataforma,
+            estilo_visual: payload.estilo_visual,
+            acao_cena: payload.acao_cena,
           },
         });
         if (resp.error) throw new Error(resp.error.message || "Erro ao gerar vídeo");
@@ -179,6 +187,33 @@ export function useGenerateBriefing() {
         bullet_points: string;
         suggested_format: string;
         suggested_tipo: string;
+      };
+    },
+  });
+}
+
+export function useGenerateVideoBriefing() {
+  return useMutation({
+    mutationFn: async (payload: {
+      briefing_text?: string;
+      content_data?: any;
+      identidade_visual?: any;
+      persona?: any;
+    }) => {
+      const resp = await supabase.functions.invoke("generate-video-briefing", {
+        body: payload,
+      });
+      if (resp.error) throw new Error(resp.error.message || "Erro ao gerar briefing de vídeo");
+      if (resp.data?.error) throw new Error(resp.data.error);
+      return resp.data as {
+        plataforma: string;
+        formato_video: string;
+        duracao: string;
+        descricao_cena: string;
+        acao_cena: string;
+        mensagem_video: string;
+        estilo_visual: string;
+        suggested_cta: string;
       };
     },
   });
