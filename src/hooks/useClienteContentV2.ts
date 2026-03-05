@@ -43,7 +43,7 @@ export function useContentQuota() {
   const { data: orgId } = useUserOrgId();
   const { data: subscription } = useClienteSubscription();
 
-  const plan = getPlanBySlug((subscription as any)?.plan_slug);
+  const plan = getPlanBySlug(subscription?.plan);
   const maxContents = plan?.maxContents ?? 8;
 
   const query = useQuery({
@@ -100,6 +100,7 @@ export function useGenerateContent() {
 
       const resp = await supabase.functions.invoke("generate-content", {
         body: {
+          organization_id: orgId,
           quantidade: payload.quantidade,
           formatos: payload.formatos,
           objetivos: payload.objetivos,

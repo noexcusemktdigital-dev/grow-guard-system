@@ -14,6 +14,8 @@ export interface PlanConfig {
   maxAgents: number;
   maxDispatches: number;
   maxDispatchRecipients: number;
+  maxStrategies: number;
+  maxTrafficStrategies: number;
   /** @deprecated use basePrice or comboPrice */
   price: number;
 }
@@ -35,6 +37,8 @@ export const PLANS: PlanConfig[] = [
     maxAgents: 1,
     maxDispatches: 0,
     maxDispatchRecipients: 0,
+    maxStrategies: 1,
+    maxTrafficStrategies: 1,
     features: [
       "CRM completo",
       "5.000 créditos/mês",
@@ -62,6 +66,8 @@ export const PLANS: PlanConfig[] = [
     maxAgents: 2,
     maxDispatches: 1,
     maxDispatchRecipients: 500,
+    maxStrategies: 2,
+    maxTrafficStrategies: 2,
     features: [
       "Tudo do Starter",
       "20.000 créditos/mês",
@@ -89,6 +95,8 @@ export const PLANS: PlanConfig[] = [
     maxAgents: 4,
     maxDispatches: 3,
     maxDispatchRecipients: 2000,
+    maxStrategies: 999,
+    maxTrafficStrategies: 4,
     features: [
       "Tudo do Growth",
       "50.000 créditos/mês",
@@ -123,18 +131,22 @@ export const EXTRA_USER_PRICE = 29; // R$/mês por usuário adicional
 
 /** Custo em créditos por ação de IA */
 export const CREDIT_COSTS: Record<string, { cost: number; label: string }> = {
-  "generate-content":        { cost: 200,  label: "Gerar conteúdos (lote)" },
-  "generate-site":           { cost: 500,  label: "Gerar site" },
-  "generate-script":         { cost: 150,  label: "Gerar script de vendas" },
-  "generate-strategy":       { cost: 300,  label: "Gerar estratégia comercial" },
-  "generate-prospection":    { cost: 250,  label: "Gerar plano de prospecção" },
-  "generate-social-concepts":{ cost: 200,  label: "Gerar conceitos visuais" },
-  "generate-social-image":   { cost: 100,  label: "Gerar arte social" },
-  "ai-agent-simulate":       { cost: 100,  label: "Simular agente IA" },
-  "ai-generate-agent-config":{ cost: 100,  label: "Config. automática agente" },
-  "generate-daily-checklist": { cost: 50,  label: "Checklist diário IA" },
-  "ai-agent-reply":          { cost: 0,    label: "Resposta agente (variável)" },
-  "agent-followup-cron":     { cost: 0,    label: "Follow-up automático (variável)" },
+  "generate-content":           { cost: 200,  label: "Conteúdo aprovado (por peça)" },
+  "generate-site":              { cost: 500,  label: "Site aprovado" },
+  "generate-script":            { cost: 150,  label: "Script de vendas" },
+  "generate-strategy":          { cost: 300,  label: "Estratégia de marketing aprovada" },
+  "generate-prospection":       { cost: 250,  label: "Plano de prospecção" },
+  "generate-social-concepts":   { cost: 200,  label: "Conceitos visuais aprovados" },
+  "generate-social-image":      { cost: 100,  label: "Arte social aprovada" },
+  "generate-social-video":      { cost: 200,  label: "Vídeo social aprovado" },
+  "generate-traffic-strategy":  { cost: 200,  label: "Estratégia de tráfego aprovada" },
+  "ai-agent-simulate":          { cost: 100,  label: "Simular agente IA" },
+  "ai-generate-agent-config":   { cost: 100,  label: "Config. automática agente" },
+  "generate-daily-checklist":   { cost: 50,   label: "Checklist diário IA" },
+  "generate-social-briefing":   { cost: 0,    label: "Briefing de arte (gratuito)" },
+  "generate-video-briefing":    { cost: 0,    label: "Briefing de vídeo (gratuito)" },
+  "ai-agent-reply":             { cost: 0,    label: "Resposta agente (variável)" },
+  "agent-followup-cron":        { cost: 0,    label: "Follow-up automático (variável)" },
 };
 
 export function getPlanBySlug(slug: string | undefined | null): PlanConfig | undefined {

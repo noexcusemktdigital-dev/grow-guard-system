@@ -23,6 +23,7 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { toast } from "@/hooks/use-toast";
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
+import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import { AGENTS, SOFIA_STEPS } from "@/components/cliente/briefingAgents";
 import {
   ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
@@ -967,6 +968,7 @@ export default function ClientePlanoMarketing() {
   const [showChat, setShowChat] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
 
   const { data: activeStrategy, isLoading } = useActiveStrategy();
   const { data: history } = useStrategyHistory();
@@ -1007,7 +1009,11 @@ export default function ClientePlanoMarketing() {
       await approveStrategy.mutateAsync(activeStrategy.id);
       toast({ title: "Estratégia aprovada! ✅", description: "300 créditos foram consumidos." });
     } catch (err: any) {
-      toast({ title: "Erro ao aprovar", description: err.message, variant: "destructive" });
+      if (isInsufficientCreditsError(err)) {
+        setShowCreditsDialog(true);
+      } else {
+        toast({ title: "Erro ao aprovar", description: err.message, variant: "destructive" });
+      }
     }
   };
 
@@ -1112,6 +1118,12 @@ export default function ClientePlanoMarketing() {
           )}
         </CardContent>
       </Card>
+      <InsufficientCreditsDialog
+        open={showCreditsDialog}
+        onOpenChange={setShowCreditsDialog}
+        actionLabel="esta estratégia"
+        creditCost={300}
+      />
     </div>
   );
 }
