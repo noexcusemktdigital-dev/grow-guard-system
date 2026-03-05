@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
+import { useClienteSubscription } from "./useClienteSubscription";
+import { getPlanBySlug } from "@/constants/plans";
 
 export interface ContentItem {
   id: string;
@@ -36,6 +38,38 @@ export function useContentHistory() {
   });
 }
 
+/** Quota: how many contents generated this month vs plan limit */
+export function useContentQuota() {
+  const { data: orgId } = useUserOrgId();
+  const { data: subscription } = useClienteSubscription();
+
+  const plan = getPlanBySlug((subscription as any)?.plan_slug);
+  const maxContents = plan?.maxContents ?? 8;
+
+  const query = useQuery({
+    queryKey: ["content-quota", orgId],
+    queryFn: async () => {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { count, error } = await supabase
+        .from("client_content")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", orgId!)
+        .gte("created_at", monthStart);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!orgId,
+  });
+
+  return {
+    ...query,
+    used: query.data ?? 0,
+    max: maxContents,
+    remaining: Math.max(0, maxContents - (query.data ?? 0)),
+  };
+}
+
 export function useGenerateContent() {
   const { data: orgId } = useUserOrgId();
   const { user } = useAuth();
@@ -43,23 +77,26 @@ export function useGenerateContent() {
 
   return useMutation({
     mutationFn: async (payload: {
-      tema: string;
-      formato: string;
-      objetivo: string;
-      mensagem_principal: string;
-      cta: string;
+      quantidade: number;
+      formatos: { tipo: string; qtd: number }[];
+      objetivos: string[];
+      tema?: string;
+      plataforma: string;
+      tom?: string;
+      publico?: string;
       estrategia: any | null;
     }) => {
       if (!orgId) throw new Error("Org not found");
 
-      // Call edge function
       const resp = await supabase.functions.invoke("generate-content", {
         body: {
-          tema: payload.tema,
-          formato: payload.formato,
-          objetivo: payload.objetivo,
-          mensagem_principal: payload.mensagem_principal,
-          cta: payload.cta,
+          quantidade: payload.quantidade,
+          formatos: payload.formatos,
+          objetivos: payload.objetivos,
+          tema: payload.tema || "",
+          plataforma: payload.plataforma,
+          tom: payload.tom || "",
+          publico: payload.publico || "",
           estrategia: payload.estrategia,
         },
       });
@@ -68,28 +105,32 @@ export function useGenerateContent() {
       const result = resp.data as any;
       if (result?.error) throw new Error(result.error);
 
-      // Save to DB
+      const conteudos: any[] = result.conteudos || [];
+      if (conteudos.length === 0) throw new Error("Nenhum conteúdo gerado");
+
+      // Batch insert
+      const rows = conteudos.map((c: any) => ({
+        organization_id: orgId,
+        title: c.titulo || "Conteúdo",
+        format: c.formato,
+        objective: c.objetivo,
+        result: c as any,
+        status: "pending",
+        created_by: user?.id,
+        platform: payload.plataforma,
+      }));
+
       const { data, error } = await supabase
         .from("client_content")
-        .insert({
-          organization_id: orgId,
-          title: result.titulo || payload.tema,
-          format: payload.formato,
-          objective: payload.objetivo,
-          cta: payload.cta,
-          main_message: payload.mensagem_principal,
-          result: result as any,
-          status: "pending",
-          created_by: user?.id,
-        } as any)
-        .select()
-        .single();
+        .insert(rows as any)
+        .select();
 
       if (error) throw error;
-      return { dbRecord: data, result };
+      return { dbRecords: data, conteudos };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-content-v2"] });
+      qc.invalidateQueries({ queryKey: ["content-quota"] });
     },
   });
 }
@@ -102,7 +143,6 @@ export function useApproveContent() {
     mutationFn: async (contentId: string) => {
       if (!orgId) throw new Error("Org not found");
 
-      // Debit credits
       const { error: debitError } = await supabase.rpc("debit_credits" as any, {
         _org_id: orgId,
         _amount: 200,
@@ -111,7 +151,6 @@ export function useApproveContent() {
       });
       if (debitError) throw debitError;
 
-      // Update status
       const { error } = await supabase
         .from("client_content")
         .update({ status: "approved" } as any)
@@ -121,6 +160,38 @@ export function useApproveContent() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-content-v2"] });
       qc.invalidateQueries({ queryKey: ["credit-wallet"] });
+    },
+  });
+}
+
+export function useApproveBatch() {
+  const qc = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async (contentIds: string[]) => {
+      if (!orgId) throw new Error("Org not found");
+
+      for (const id of contentIds) {
+        const { error: debitError } = await supabase.rpc("debit_credits" as any, {
+          _org_id: orgId,
+          _amount: 200,
+          _description: "Conteúdo aprovado (lote)",
+          _source: "generate-content",
+        });
+        if (debitError) throw debitError;
+
+        const { error } = await supabase
+          .from("client_content")
+          .update({ status: "approved" } as any)
+          .eq("id", id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-content-v2"] });
+      qc.invalidateQueries({ queryKey: ["credit-wallet"] });
+      qc.invalidateQueries({ queryKey: ["content-quota"] });
     },
   });
 }
