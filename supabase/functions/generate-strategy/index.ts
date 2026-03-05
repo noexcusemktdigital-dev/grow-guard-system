@@ -14,7 +14,7 @@ const TOOL_SCHEMA = {
   function: {
     name: "generate_strategy",
     description:
-      "Retorna uma estratégia de marketing completa e estruturada em 8 módulos: diagnóstico com radar, ICP, proposta de valor, aquisição, conteúdo, projeções numéricas, estrutura recomendada e plano de execução.",
+      "Retorna uma estratégia de marketing completa e estruturada em 11 módulos: diagnóstico com radar, ICP, proposta de valor, análise de concorrência, tom de comunicação, aquisição, conteúdo com calendário editorial, projeções numéricas, estrutura recomendada, benchmarks do setor e plano de execução.",
     parameters: {
       type: "object",
       properties: {
@@ -25,6 +25,7 @@ const TOOL_SCHEMA = {
             pontos_fortes: { type: "array", items: { type: "string" } },
             oportunidades: { type: "array", items: { type: "string" } },
             riscos: { type: "array", items: { type: "string" } },
+            score_geral: { type: "number", description: "Score geral de maturidade de marketing de 0-100" },
             radar: {
               type: "object",
               properties: {
@@ -32,35 +33,92 @@ const TOOL_SCHEMA = {
                 aquisicao: { type: "number", description: "Score 0-10 para Aquisição de clientes" },
                 conversao: { type: "number", description: "Score 0-10 para Conversão de leads" },
                 retencao: { type: "number", description: "Score 0-10 para Retenção de clientes" },
+                conteudo: { type: "number", description: "Score 0-10 para Estratégia de conteúdo" },
+                branding: { type: "number", description: "Score 0-10 para Força da marca" },
               },
-              required: ["autoridade", "aquisicao", "conversao", "retencao"],
+              required: ["autoridade", "aquisicao", "conversao", "retencao", "conteudo", "branding"],
               additionalProperties: false,
             },
           },
-          required: ["analise", "pontos_fortes", "oportunidades", "riscos", "radar"],
+          required: ["analise", "pontos_fortes", "oportunidades", "riscos", "score_geral", "radar"],
           additionalProperties: false,
         },
         icp: {
           type: "object",
           properties: {
+            nome_persona: { type: "string", description: "Nome fictício da persona (ex: Carlos, o Empresário)" },
+            avatar_emoji: { type: "string", description: "Emoji que representa a persona (ex: 👨‍💼)" },
             demografia: { type: "string", description: "Faixa etária, gênero, localização, renda" },
             perfil_profissional: { type: "string", description: "Cargo, setor, experiência" },
+            comportamento_digital: { type: "string", description: "Como consome conteúdo, redes preferidas, horários ativos" },
             dores: { type: "array", items: { type: "string" }, description: "3-5 principais dores" },
             desejos: { type: "array", items: { type: "string" }, description: "3-5 principais desejos" },
             objecoes: { type: "array", items: { type: "string" }, description: "3-5 objeções comuns" },
+            gatilhos_compra: { type: "array", items: { type: "string" }, description: "3-5 gatilhos que motivam a compra" },
             descricao: { type: "string", description: "Parágrafo descritivo do cliente ideal" },
           },
-          required: ["demografia", "perfil_profissional", "dores", "desejos", "objecoes", "descricao"],
+          required: ["nome_persona", "avatar_emoji", "demografia", "perfil_profissional", "comportamento_digital", "dores", "desejos", "objecoes", "gatilhos_compra", "descricao"],
           additionalProperties: false,
         },
         proposta_valor: {
           type: "object",
           properties: {
+            headline: { type: "string", description: "Frase de impacto da proposta de valor (max 15 palavras)" },
             problema: { type: "string", description: "O problema principal que o cliente enfrenta" },
             metodo: { type: "string", description: "O método/solução que a empresa oferece" },
             resultado: { type: "string", description: "O resultado prometido ao cliente" },
+            prova: { type: "string", description: "Elemento de prova social ou credibilidade" },
           },
-          required: ["problema", "metodo", "resultado"],
+          required: ["headline", "problema", "metodo", "resultado", "prova"],
+          additionalProperties: false,
+        },
+        analise_concorrencia: {
+          type: "object",
+          properties: {
+            visao_geral: { type: "string", description: "Análise geral do cenário competitivo (1-2 parágrafos)" },
+            concorrentes: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  nome: { type: "string" },
+                  pontos_fortes: { type: "string" },
+                  pontos_fracos: { type: "string" },
+                  oportunidade_diferenciacao: { type: "string" },
+                },
+                required: ["nome", "pontos_fortes", "pontos_fracos", "oportunidade_diferenciacao"],
+                additionalProperties: false,
+              },
+              description: "2-4 concorrentes analisados",
+            },
+            posicionamento_recomendado: { type: "string", description: "Como se posicionar em relação à concorrência" },
+          },
+          required: ["visao_geral", "concorrentes", "posicionamento_recomendado"],
+          additionalProperties: false,
+        },
+        tom_comunicacao: {
+          type: "object",
+          properties: {
+            tom_principal: { type: "string", description: "Tom principal (ex: Profissional e Acessível)" },
+            personalidade_marca: { type: "array", items: { type: "string" }, description: "3-5 adjetivos que definem a personalidade (ex: Confiável, Inovadora, Próxima)" },
+            voz_exemplo: { type: "string", description: "Exemplo de como a marca fala (1 parágrafo)" },
+            palavras_usar: { type: "array", items: { type: "string" }, description: "5-10 palavras/expressões que a marca deve usar" },
+            palavras_evitar: { type: "array", items: { type: "string" }, description: "5-10 palavras/expressões que a marca deve evitar" },
+            exemplos_posts: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  tipo: { type: "string", description: "educativo, autoridade, engajamento, oferta" },
+                  exemplo: { type: "string", description: "Exemplo de copy/post" },
+                },
+                required: ["tipo", "exemplo"],
+                additionalProperties: false,
+              },
+              description: "4 exemplos de posts em diferentes tons",
+            },
+          },
+          required: ["tom_principal", "personalidade_marca", "voz_exemplo", "palavras_usar", "palavras_evitar", "exemplos_posts"],
           additionalProperties: false,
         },
         estrategia_aquisicao: {
@@ -105,13 +163,29 @@ const TOOL_SCHEMA = {
                 properties: {
                   nome: { type: "string" },
                   tipo: { type: "string", enum: ["educacao", "autoridade", "prova_social", "oferta"] },
+                  percentual: { type: "number", description: "Percentual de conteúdos deste pilar (deve somar 100)" },
                   descricao: { type: "string" },
                   exemplos: { type: "array", items: { type: "string" }, description: "3-5 exemplos de conteúdo" },
                 },
-                required: ["nome", "tipo", "descricao", "exemplos"],
+                required: ["nome", "tipo", "percentual", "descricao", "exemplos"],
                 additionalProperties: false,
               },
               description: "Exatamente 4 pilares: educação, autoridade, prova social, oferta",
+            },
+            calendario_semanal: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  dia: { type: "string", description: "Segunda, Terça, etc." },
+                  formato: { type: "string", description: "Carrossel, Reels, Post, Story" },
+                  pilar: { type: "string" },
+                  sugestao: { type: "string", description: "Sugestão de tema para o dia" },
+                },
+                required: ["dia", "formato", "pilar", "sugestao"],
+                additionalProperties: false,
+              },
+              description: "Calendário semanal com 5-7 dias",
             },
             ideias_conteudo: {
               type: "array",
@@ -129,7 +203,7 @@ const TOOL_SCHEMA = {
               description: "10 a 15 ideias de conteúdo",
             },
           },
-          required: ["pilares", "ideias_conteudo"],
+          required: ["pilares", "calendario_semanal", "ideias_conteudo"],
           additionalProperties: false,
         },
         plano_crescimento: {
@@ -158,12 +232,27 @@ const TOOL_SCHEMA = {
                 cpl_estimado: { type: "string", description: "Custo por lead estimado" },
                 cac_estimado: { type: "string", description: "Custo de aquisição de cliente" },
                 roi_esperado: { type: "string", description: "ROI projetado" },
+                ltv_estimado: { type: "string", description: "LTV estimado do cliente" },
               },
-              required: ["cpc_medio", "cpl_estimado", "cac_estimado", "roi_esperado"],
+              required: ["cpc_medio", "cpl_estimado", "cac_estimado", "roi_esperado", "ltv_estimado"],
               additionalProperties: false,
             },
           },
           required: ["projecoes_mensais", "indicadores"],
+          additionalProperties: false,
+        },
+        benchmarks_setor: {
+          type: "object",
+          properties: {
+            setor: { type: "string", description: "Nome do setor analisado" },
+            taxa_conversao_media: { type: "string" },
+            cpl_medio_setor: { type: "string" },
+            ticket_medio_setor: { type: "string" },
+            canais_mais_eficientes: { type: "array", items: { type: "string" } },
+            tendencias: { type: "array", items: { type: "string" }, description: "3-5 tendências do setor" },
+            insight_competitivo: { type: "string", description: "Insight principal sobre o cenário competitivo" },
+          },
+          required: ["setor", "taxa_conversao_media", "cpl_medio_setor", "ticket_medio_setor", "canais_mais_eficientes", "tendencias", "insight_competitivo"],
           additionalProperties: false,
         },
         estrutura_recomendada: {
@@ -213,9 +302,9 @@ const TOOL_SCHEMA = {
         potencial_crescimento: { type: "string", description: "Potencial de crescimento estimado (ex: 3x em 6 meses)" },
       },
       required: [
-        "diagnostico", "icp", "proposta_valor", "estrategia_aquisicao",
-        "estrategia_conteudo", "plano_crescimento", "estrutura_recomendada",
-        "plano_execucao", "resumo_executivo", "objetivo_principal",
+        "diagnostico", "icp", "proposta_valor", "analise_concorrencia", "tom_comunicacao",
+        "estrategia_aquisicao", "estrategia_conteudo", "plano_crescimento", "benchmarks_setor",
+        "estrutura_recomendada", "plano_execucao", "resumo_executivo", "objetivo_principal",
         "canal_prioritario", "investimento_recomendado", "potencial_crescimento",
       ],
       additionalProperties: false,
@@ -225,34 +314,40 @@ const TOOL_SCHEMA = {
 
 const SYSTEM_PROMPT = `Você é um consultor sênior de marketing digital brasileiro com 15 anos de experiência, especialista em estratégia, posicionamento de marca, geração de leads e vendas digitais.
 
-Sua função é receber as respostas de um briefing empresarial com 14 perguntas em 8 blocos e gerar uma estratégia de marketing COMPLETA, DETALHADA e ACIONÁVEL.
+Sua função é receber as respostas de um briefing empresarial e gerar uma estratégia de marketing COMPLETA, DETALHADA e ACIONÁVEL.
 
 DIRETRIZES OBRIGATÓRIAS:
 
-1. DIAGNÓSTICO: Analise profundamente o negócio. Gere scores realistas de 0-10 para o radar (Autoridade, Aquisição, Conversão, Retenção) baseados nas respostas.
+1. DIAGNÓSTICO: Analise profundamente o negócio. Gere scores realistas de 0-10 para o radar (Autoridade, Aquisição, Conversão, Retenção, Conteúdo, Branding) e um score geral de 0-100.
 
-2. ICP (Cliente Ideal): Crie um perfil detalhado com demografia, perfil profissional, dores específicas, desejos e objeções reais do mercado brasileiro.
+2. ICP (Cliente Ideal): Crie uma persona com nome fictício, emoji, comportamento digital detalhado, dores, desejos, objeções e gatilhos de compra.
 
-3. PROPOSTA DE VALOR: Estruture claramente: Problema → Método/Solução → Resultado prometido.
+3. PROPOSTA DE VALOR: Estruture com headline impactante + Problema → Método → Resultado → Prova.
 
-4. AQUISIÇÃO: Defina canais prioritários com percentuais de investimento e tipo (orgânico/pago/parcerias). Estruture o funil com estimativas numéricas para cada etapa.
+4. ANÁLISE DE CONCORRÊNCIA: Analise 2-4 concorrentes (use os mencionados no briefing ou infira do segmento). Identifique pontos fortes, fracos e oportunidades de diferenciação.
 
-5. CONTEÚDO: Crie exatamente 4 pilares (educação, autoridade, prova social, oferta) com exemplos práticos. Gere 10-15 ideias de conteúdo distribuídas pelo funil.
+5. TOM DE COMUNICAÇÃO: Defina o tom, personalidade da marca, palavras para usar/evitar, e crie 4 exemplos de posts em diferentes tons.
 
-6. PROJEÇÕES: Gere projeções NUMÉRICAS realistas para 6 meses (investimento, leads, clientes, receita). Use benchmarks reais do mercado brasileiro para CPC, CPL, CAC e ROI.
+6. AQUISIÇÃO: Defina canais prioritários com percentuais e funil com estimativas numéricas.
 
-7. ESTRUTURA: Analise o que o cliente já tem e o que falta (site, landing page, tráfego, conteúdo, automação, CRM). Baseie-se nos canais informados no briefing.
+7. CONTEÚDO: Crie 4 pilares COM percentuais (devem somar 100%), calendário semanal (5-7 dias) com formato e pilar, e 10-15 ideias distribuídas pelo funil.
 
-8. EXECUÇÃO: Crie roadmap de 3 meses com passos concretos vinculados às ferramentas do sistema (conteudos, postagens, sites, trafego, crm, scripts).
+8. PROJEÇÕES: Gere projeções numéricas para 6 meses incluindo LTV. Use benchmarks reais brasileiros.
+
+9. BENCHMARKS DO SETOR: Forneça dados de referência do setor (taxa conversão, CPL, ticket médio, tendências).
+
+10. ESTRUTURA: Analise o que tem e o que falta.
+
+11. EXECUÇÃO: Roadmap de 3 meses vinculado às ferramentas.
 
 REGRAS:
 - Seja ESPECÍFICO e PRÁTICO — nada genérico
-- Todas as projeções devem ser baseadas no orçamento e ticket médio informados
+- Todas as projeções baseadas no orçamento e ticket médio
 - Use benchmarks reais do mercado brasileiro
-- Sempre responda em português brasileiro
-- O plano de execução deve vincular ações às ferramentas disponíveis no sistema
+- Sempre português brasileiro
+- Vincule ações às ferramentas: conteudos, postagens, sites, trafego, crm, scripts
 
-Use a ferramenta generate_strategy para retornar a estratégia estruturada.`;
+Use a ferramenta generate_strategy para retornar.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -319,21 +414,25 @@ serve(async (req) => {
       .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
       .join("\n");
 
-    const userPrompt = `Com base nas respostas do briefing abaixo (14 perguntas em 8 blocos), gere uma estratégia de marketing COMPLETA e DETALHADA.
+    const userPrompt = `Com base nas respostas do briefing abaixo, gere uma estratégia de marketing COMPLETA e DETALHADA com todos os 11 módulos.
 
 RESPOSTAS DO BRIEFING:
 ${answersText}
 
-INSTRUÇÕES IMPORTANTES:
-1. Gere scores realistas para o radar de diagnóstico (0-10)
-2. Crie projeções numéricas para 6 meses baseadas no orçamento e ticket médio informados
-3. Defina exatamente 4 pilares de conteúdo (educação, autoridade, prova social, oferta)
-4. Gere 10-15 ideias de conteúdo distribuídas pelo funil
-5. Analise a estrutura atual (canais informados) e recomende o que falta
-6. Crie roadmap de 3 meses com ações vinculadas às ferramentas: conteudos, postagens, sites, trafego, crm, scripts
-7. Use benchmarks reais do mercado brasileiro para CPC, CPL, CAC
+INSTRUÇÕES:
+1. Scores radar realistas (0-10) para 6 dimensões + score geral (0-100)
+2. Persona detalhada com nome, emoji, comportamento digital e gatilhos de compra
+3. Proposta de valor com headline impactante
+4. Análise de 2-4 concorrentes com oportunidades de diferenciação
+5. Tom de comunicação com exemplos de posts e palavras para usar/evitar
+6. Canais com percentuais e funil com estimativas
+7. 4 pilares de conteúdo com percentuais + calendário semanal + 10-15 ideias
+8. Projeções 6 meses com LTV
+9. Benchmarks do setor com tendências
+10. Checklist de estrutura
+11. Roadmap 3 meses vinculado às ferramentas
 
-Use a ferramenta generate_strategy para retornar a estratégia estruturada.`;
+Use a ferramenta generate_strategy para retornar.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -409,7 +508,7 @@ Use a ferramenta generate_strategy para retornar a estratégia estruturada.`;
         organization_id: orgData,
         agent_id: "00000000-0000-0000-0000-000000000000",
         contact_id: "00000000-0000-0000-0000-000000000000",
-        input_message: `[Estratégia v2] Briefing com ${Object.keys(answers).length} respostas`,
+        input_message: `[Estratégia v3] Briefing com ${Object.keys(answers).length} respostas`,
         output_message: JSON.stringify(result).substring(0, 500),
         tokens_used: tokensUsed,
         model: "google/gemini-3-flash-preview",

@@ -1,0 +1,59 @@
+import { useActiveStrategy } from "./useMarketingStrategy";
+
+/**
+ * Shared hook for other tools to consume strategy data.
+ * Used by: Conteúdos, Artes, Scripts, Tráfego Pago, CRM.
+ */
+export function useStrategyData() {
+  const { data: strategy, isLoading } = useActiveStrategy();
+  const result = strategy?.strategy_result;
+
+  return {
+    isLoading,
+    hasStrategy: !!result,
+    strategyId: strategy?.id,
+    status: strategy?.status,
+
+    // ICP
+    icp: result?.icp || null,
+    personaName: result?.icp?.nome_persona || null,
+    publicoAlvo: result?.icp?.descricao || null,
+    dores: result?.icp?.dores || [],
+    desejos: result?.icp?.desejos || [],
+    objecoes: result?.icp?.objecoes || [],
+    gatilhosCompra: result?.icp?.gatilhos_compra || [],
+
+    // Proposta de valor
+    propostaValor: result?.proposta_valor || null,
+
+    // Tom de comunicação
+    tomComunicacao: result?.tom_comunicacao || null,
+    tomPrincipal: result?.tom_comunicacao?.tom_principal || null,
+    personalidadeMarca: result?.tom_comunicacao?.personalidade_marca || [],
+    palavrasUsar: result?.tom_comunicacao?.palavras_usar || [],
+    palavrasEvitar: result?.tom_comunicacao?.palavras_evitar || [],
+
+    // Conteúdo
+    pilares: result?.estrategia_conteudo?.pilares || [],
+    calendarioSemanal: result?.estrategia_conteudo?.calendario_semanal || [],
+    ideiasConteudo: result?.estrategia_conteudo?.ideias_conteudo || [],
+
+    // Aquisição
+    canaisPrioritarios: result?.estrategia_aquisicao?.canais_prioritarios || [],
+    funil: result?.estrategia_aquisicao?.funil || null,
+
+    // Concorrência
+    analiseConcorrencia: result?.analise_concorrencia || null,
+
+    // Benchmarks
+    benchmarks: result?.benchmarks_setor || null,
+
+    // Objetivos
+    objetivoPrincipal: result?.objetivo_principal || null,
+    canalPrioritario: result?.canal_prioritario || null,
+
+    // Full result for advanced usage
+    fullResult: result,
+    answers: strategy?.answers || {},
+  };
+}
