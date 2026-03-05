@@ -1,49 +1,26 @@
 
 
-# Configurar Proxy HTTP com IP Estático para Asaas
+# Solução: Desabilitar restrição de IP no Asaas
 
-## Situação Atual
+## O Problema
 
-O código já suporta proxy — o helper `asaasFetch` em `supabase/functions/_shared/asaas-fetch.ts` lê o segredo `ASAAS_PROXY_URL` e roteia todas as chamadas automaticamente. Nenhuma alteração de código é necessária.
+O Asaas está bloqueando as chamadas porque a conta tem **restrição de IP ativada**. Como as Edge Functions usam IPs rotativos, nunca vai funcionar com whitelist de IP.
 
-## O que falta
+## Solução (gratuita, 1 minuto)
 
-Provisionar um serviço de proxy externo com IP estático e configurar o segredo.
+Desabilitar a restrição de IP diretamente no painel do Asaas:
 
-## Passo a passo
+1. Acesse o painel Asaas → **Minha Conta → Integrações → Acessos e segurança**
+2. Na seção **"Lista de IPs autorizados"**, **remova todos os IPs** ou desative a restrição
+3. Salve as alterações
 
-### 1. Contratar um serviço de proxy com IP estático
+Sem IPs na lista, o Asaas aceita chamadas de qualquer origem — e a integração funciona imediatamente.
 
-Opções recomendadas (compatíveis com Deno/Edge Functions):
+## Após desabilitar
 
-| Serviço | Preço aprox. | Como funciona |
-|---------|-------------|---------------|
-| **QuotaGuard Static** | ~$19/mês | Fornece URL de proxy HTTP com IP fixo |
-| **Fixie** | ~$5/mês | Mesmo modelo, URL de proxy HTTP |
-| **IPRoyal Static** | ~$3/mês | Proxy residencial com IP dedicado |
+Eu executo `asaas-test-connection` para confirmar `connected: true`. Nenhuma alteração de código necessária.
 
-O serviço fornecerá uma URL no formato:
-```
-http://usuario:senha@proxy.exemplo.com:9293
-```
+## Segurança
 
-### 2. Configurar o segredo `ASAAS_PROXY_URL`
-
-Após obter a URL do proxy, eu configuro o segredo `ASAAS_PROXY_URL` com o valor fornecido.
-
-### 3. Adicionar o IP fixo do proxy no Asaas
-
-No painel Asaas: **Minha Conta → Acessos e segurança → Lista de IPs autorizados** — adicionar o IP estático fornecido pelo serviço de proxy.
-
-### 4. Testar a conexão
-
-Executar `asaas-test-connection` para confirmar que `connected: true` e `proxy_url: "valid"`.
-
-## Resultado
-
-Todas as chamadas de saída para o Asaas passarão pelo proxy com IP fixo, eliminando definitivamente o problema de rotação de IP.
-
-## Ação necessária do usuário
-
-Escolher e contratar um dos serviços de proxy acima e fornecer a URL gerada para que eu configure o segredo.
+A chave de API (`ASAAS_API_KEY`) já está armazenada como segredo no servidor e nunca é exposta ao cliente. A autenticação continua protegida pelo token — a restrição de IP é uma camada opcional que conflita com infraestrutura serverless.
 
