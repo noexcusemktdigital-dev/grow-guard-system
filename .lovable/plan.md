@@ -1,118 +1,58 @@
 
 
-# Plano: Arquitetura de Permissões Admin vs Usuário no SaaS
+# Plano: Otimização de Integrações, Plano & Créditos, Configurações e Avaliações
 
-## Problema Atual
+## Problemas Identificados
 
-Hoje `cliente_admin` e `cliente_user` têm **acesso idêntico** — mesmas rotas, mesma sidebar, mesmas funcionalidades. Não existe nenhuma diferenciação real entre os dois papéis no frontend.
+### 1. Integrações — Excesso e Duplicidade
 
-## Definição de Acessos por Papel
+**BUG/DESIGN**: `ClienteIntegracoes.tsx` lista 7 integrações (Meta Ads, Google Ads, TikTok Ads, RD Station, Google Calendar, WhatsApp, Widget Chat) que **não fazem nada real** — apenas salvam config no banco sem nenhum backend que consuma esses dados.
 
-### cliente_admin (Administrador)
-Acesso completo. É o dono ou gestor da conta.
+**BUG**: Duplicidade — `CrmIntegrations.tsx` (aba "Integ." no CRM Config) tem Make/Zapier/n8n/custom webhook, enquanto `ClienteIntegracoes.tsx` tem uma seção separada de API & Webhook. São duas interfaces para a mesma coisa.
 
-| Área | Acesso |
-|---|---|
-| Início, Checklist, Gamificação | Total |
-| Plano de Vendas (criar/editar) | Total |
-| CRM (leads, funis, config) | Total |
-| CRM Config (/crm/config) | **Exclusivo** |
-| Conversas WhatsApp | Total |
-| Agentes IA (criar/config) | Total |
-| Scripts (criar/editar) | Total |
-| Disparos (criar/enviar) | Total |
-| Relatórios/Dashboard | Total |
-| Estratégia Marketing | Total |
-| Conteúdos, Redes Sociais, Sites | Total |
-| Tráfego Pago | Total |
-| Avaliações | Total |
-| Integrações | **Exclusivo** |
-| Plano & Créditos | **Exclusivo** |
-| Configurações (Org + Usuários) | **Exclusivo** |
+**BUG**: Linha 182 de `ClienteIntegracoes.tsx` expõe o project ID do Supabase hardcoded na URL do webhook. Deveria usar `VITE_SUPABASE_PROJECT_ID`.
 
-### cliente_user (Usuário/Operador)
-Acesso operacional. Executa tarefas do dia a dia.
+**Correção**: Reestruturar a página de Integrações para ter 3 seções claras:
+1. **WhatsApp (Z-API)** — manter como está (funcional)
+2. **API Aberta** — Chave de API + Webhook de Leads (manter)
+3. **Automações** — Apenas **Make** e **Zapier** como plataformas de integração (webhooks de saída). Remover n8n, custom, e todas as integrações falsas (Meta, Google, TikTok, RD Station, Google Calendar). Mover a config de Make/Zapier do CrmIntegrations para cá (fonte única).
 
-| Área | Acesso |
-|---|---|
-| Início, Checklist, Gamificação | Total |
-| Plano de Vendas | **Somente leitura** |
-| CRM (leads, atividades) | Total (sem config) |
-| CRM Config | **Bloqueado** |
-| Conversas WhatsApp | Total |
-| Agentes IA | Usar (sem criar/config) |
-| Scripts | Usar (sem criar) |
-| Disparos | **Bloqueado** |
-| Relatórios/Dashboard | **Bloqueado** |
-| Estratégia Marketing | **Somente leitura** |
-| Conteúdos, Redes Sociais, Sites | Total |
-| Tráfego Pago | **Bloqueado** |
-| Avaliações | Total |
-| Integrações | **Bloqueado** |
-| Plano & Créditos | **Bloqueado** |
-| Configurações | **Somente Perfil pessoal** |
+### 2. Configurações — Notificações não persistem
 
-## Implementação Técnica
+**BUG**: `NotificationsTab` usa `useState` local. As preferências de notificação se perdem ao recarregar. O mesmo padrão do bug de FinanceiroConfiguracoes.
 
-### 1. Hook `useRoleAccess` (novo)
-Centraliza toda a lógica de permissão por papel:
+**Correção**: Persistir preferências de notificação no campo `notification_preferences` (JSONB) da tabela `organizations` (ou no perfil do usuário). Carregar ao montar, salvar ao toggle.
 
-```typescript
-// src/hooks/useRoleAccess.ts
-const ADMIN_ONLY_ROUTES = [
-  "/cliente/crm/config",
-  "/cliente/disparos",
-  "/cliente/dashboard",
-  "/cliente/trafego-pago",
-  "/cliente/integracoes",
-  "/cliente/plano-creditos",
-];
+### 3. Plano & Créditos — Sem problemas críticos
 
-const READ_ONLY_ROUTES_FOR_USER = [
-  "/cliente/plano-vendas",
-  "/cliente/plano-marketing",
-];
+A página está funcional. Pequenas melhorias:
+- Adicionar badge visual do plano atual no topo
+- Mostrar data de início do trial e dias restantes quando `status === "trial"`
 
-export function useRoleAccess() {
-  const { role } = useAuth();
-  const isAdmin = role === "cliente_admin";
-  
-  return {
-    isAdmin,
-    canAccessRoute: (path) => ...,
-    canCreate: (module) => ...,
-    canManageSettings: isAdmin,
-    canManageUsers: isAdmin,
-    canViewFinancials: isAdmin,
-  };
-}
-```
+### 4. Avaliações — Funcional mas limitado
 
-### 2. Sidebar condicional
-Atualizar `ClienteSidebar.tsx` para:
-- Ocultar itens bloqueados do `cliente_user` (Disparos, Dashboard, Tráfego, Integrações, Plano & Créditos)
-- Mostrar ícone de cadeado em itens read-only
-- Na seção "Configurações", mostrar só "Meu Perfil" para users
-
-### 3. FeatureGateContext expandido
-Adicionar novo `GateReason` = `"admin_only"` que mostra overlay "Funcionalidade restrita ao administrador" nas rotas bloqueadas.
-
-### 4. Configurações diferenciadas
-Para `cliente_user`: mostrar apenas a aba "Perfil" (sem Organização, Usuários, Alertas).
-
-### 5. Limite de usuários por plano
-Já existe! O `UsersTab` em `ClienteConfiguracoes.tsx` já verifica `plan.maxUsers` e bloqueia convites quando atinge o limite. Apenas garantir que o convite valide também no `invite-user` edge function (server-side).
+**Melhorias**:
+- Adicionar possibilidade de **autoavaliação** (o usuário pode se avaliar)
+- Adicionar botão de **excluir avaliação** (apenas o avaliador pode deletar)
+- Mostrar **tendência** (seta ↑↓) comparando última avaliação com a anterior
 
 ## Arquivos a Modificar
 
 | Arquivo | Ação |
 |---|---|
-| `src/hooks/useRoleAccess.ts` | **Novo** — hook centralizado de permissões por papel |
-| `src/components/ClienteSidebar.tsx` | Filtrar itens por papel |
-| `src/contexts/FeatureGateContext.tsx` | Adicionar gate `admin_only` |
-| `src/components/FeatureGateOverlay.tsx` | Adicionar UI para `admin_only` |
-| `src/pages/cliente/ClienteConfiguracoes.tsx` | Esconder abas de admin para user |
-| `supabase/functions/invite-user/index.ts` | Validar maxUsers server-side |
+| `src/pages/cliente/ClienteIntegracoes.tsx` | Reestruturar: remover integrações falsas, manter WhatsApp + API + Make/Zapier |
+| `src/components/crm/CrmIntegrations.tsx` | Remover seção de webhooks outbound (movido para Integrações) — manter apenas CSV import e webhook inbound |
+| `src/pages/cliente/ClienteConfiguracoes.tsx` | Persistir preferências de notificação |
+| `src/pages/cliente/ClientePlanoCreditos.tsx` | Melhorar exibição de trial (dias restantes) |
+| `src/pages/cliente/ClienteAvaliacoes.tsx` | Autoavaliação + excluir + tendência |
+| `src/hooks/useEvaluations.ts` | Adicionar deleteEvaluation mutation |
 
-Nenhuma migration necessária — os papéis `cliente_admin` e `cliente_user` já existem no enum `app_role`.
+## Migration Necessária
+
+```sql
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS notification_preferences jsonb DEFAULT '{}';
+```
+
+Preferências por usuário (não por org), pois cada membro pode ter configurações diferentes.
 
