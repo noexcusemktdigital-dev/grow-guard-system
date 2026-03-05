@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     if (sub.asaas_subscription_id) {
       const cancelRes = await asaasFetch(`${ASAAS_BASE}/subscriptions/${sub.asaas_subscription_id}`, {
         method: "DELETE",
-        headers: { access_token: asaasApiKey },
+        headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
       });
 
       if (!cancelRes.ok) {

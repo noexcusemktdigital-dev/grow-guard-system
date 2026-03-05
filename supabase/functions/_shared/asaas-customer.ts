@@ -39,7 +39,7 @@ export async function getOrCreateAsaasCustomer(
   // 2. Search Asaas by externalReference
   const searchRes = await asaasFetch(
     `${ASAAS_BASE}/customers?externalReference=${encodeURIComponent(orgId)}`,
-    { headers: { access_token: asaasApiKey } }
+    { headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" } }
   );
   const searchData = await searchRes.json();
 
@@ -60,7 +60,7 @@ export async function getOrCreateAsaasCustomer(
   // 4. Create customer
   const createRes = await asaasFetch(`${ASAAS_BASE}/customers`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", access_token: asaasApiKey },
+    headers: { "Content-Type": "application/json", access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
     body: JSON.stringify({
       name,
       cpfCnpj: cpfCnpj.replace(/\D/g, ""),
@@ -102,7 +102,7 @@ export async function fetchPixQrCode(
         await new Promise((r) => setTimeout(r, delayMs));
       }
       const res = await asaasFetch(`${ASAAS_BASE}/payments/${paymentId}/pixQrCode`, {
-        headers: { access_token: asaasApiKey },
+        headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
       });
       if (res.ok) {
         const data = await res.json();

@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
     let clientCustomerId: string | null = null;
     const searchRes = await asaasFetch(
       `${ASAAS_BASE}/customers?externalReference=${encodeURIComponent(clientExternalRef)}`,
-      { headers: { access_token: asaasApiKey } }
+      { headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" } }
     );
     const searchData = await searchRes.json();
     if (searchData?.data?.length > 0) {
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
       // Create client customer
       const createRes = await asaasFetch(`${ASAAS_BASE}/customers`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", access_token: asaasApiKey },
+        headers: { "Content-Type": "application/json", access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
         body: JSON.stringify({
           name: clientName,
           cpfCnpj: clientDoc,
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
 
     const chargeRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", access_token: asaasApiKey },
+      headers: { "Content-Type": "application/json", access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
       body: JSON.stringify(chargePayload),
     });
 

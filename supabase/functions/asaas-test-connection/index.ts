@@ -9,6 +9,15 @@ const corsHeaders = {
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
+// Map Asaas error codes to human-readable messages
+const ASAAS_ERROR_MAP: Record<string, string> = {
+  invalid_environment: "Chave de API do ambiente errado (sandbox vs produção)",
+  access_token_not_found: "Header access_token não enviado ou vazio",
+  invalid_access_token_format: "Formato da chave de API inválido",
+  invalid_access_token: "Chave de API revogada ou inválida",
+  not_allowed_ip: "IP não autorizado na conta Asaas",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -41,10 +50,18 @@ Deno.serve(async (req) => {
     const isSandbox = ASAAS_BASE.includes("sandbox");
 
     const res = await asaasFetch(`${ASAAS_BASE}/customers?limit=1`, {
-      headers: { access_token: asaasApiKey },
+      headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
     });
 
     const data = await res.json();
+
+    // Detect specific Asaas error codes
+    let errorCode: string | null = null;
+    let errorHint: string | null = null;
+    if (!res.ok && data?.errors?.length > 0) {
+      errorCode = data.errors[0]?.code || null;
+      errorHint = errorCode ? (ASAAS_ERROR_MAP[errorCode] || null) : null;
+    }
 
     return new Response(
       JSON.stringify({
@@ -52,10 +69,13 @@ Deno.serve(async (req) => {
         status: res.status,
         base_url: ASAAS_BASE,
         environment: isSandbox ? "SANDBOX" : "PRODUCTION",
+        user_agent_sent: true,
         proxy_url: proxyUrl ? (proxyUrl.trim() === proxyUrl && /^https?:\/\/.+/.test(proxyUrl) ? "valid" : "invalid") : "not_set",
         customer_count: data.totalCount ?? null,
         first_customer: data.data?.[0]?.name ?? null,
         error: res.ok ? null : data,
+        error_code: errorCode,
+        error_hint: errorHint,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

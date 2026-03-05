@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       if (startDate) url += `&dateCreated[ge]=${startDate}`;
       if (endDate) url += `&dateCreated[le]=${endDate}`;
 
-      const res = await asaasFetch(url, { headers: { access_token: asaasApiKey } });
+      const res = await asaasFetch(url, { headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" } });
       const data = await res.json();
       const rawPayments = data.data ?? [];
 
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
         uniqueCustomerIds.map(async (custId) => {
           try {
             const custRes = await asaasFetch(`${ASAAS_BASE}/customers/${custId}`, {
-              headers: { access_token: asaasApiKey },
+              headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
             });
             const custData = await custRes.json();
             customerNameMap[custId] = custData.name || custData.company || custId;
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
         if (startDate) url += `&dateCreated[ge]=${startDate}`;
         if (endDate) url += `&dateCreated[le]=${endDate}`;
         try {
-          const res = await asaasFetch(url, { headers: { access_token: asaasApiKey } });
+          const res = await asaasFetch(url, { headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" } });
           const data = await res.json();
           for (const p of data.data ?? []) {
             allPayments.push({
