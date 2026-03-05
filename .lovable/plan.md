@@ -1,36 +1,16 @@
 
 
-# Correção: Drag-and-Drop do CRM + Realtime das Conversas
+# Correção: Banner de créditos esgotados não atualiza
 
-## Bug 1: Drag-and-Drop do CRM não funciona corretamente
+## Problema
 
-**Causa**: O `DndContext` na linha 737 de `ClienteCRM.tsx` não tem a prop `sensors` configurada. Sem sensores com `activationConstraint`, o drag pode não ativar corretamente ou conflitar com cliques normais nos cards. O `AtendimentoKanban.tsx` funciona porque usa `useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))`.
+O hook `useClienteWallet` faz um fetch único e cacheia indefinidamente (sem `staleTime` nem `refetchOnWindowFocus`). Quando os créditos são atualizados diretamente no banco (recarga manual), o cache do React Query mantém o valor antigo (`balance: 0`) e o banner "Créditos esgotados" continua aparecendo.
 
-**Correção**: Adicionar `PointerSensor` com `activationConstraint: { distance: 8 }` ao `DndContext` do CRM:
-- Importar `PointerSensor, useSensor, useSensors` do `@dnd-kit/core`
-- Criar `const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))` 
-- Passar `sensors={sensors}` no `<DndContext>`
+## Correção
 
-**Arquivo**: `src/pages/cliente/ClienteCRM.tsx` (linhas 31, ~220, 737)
+**Arquivo**: `src/hooks/useClienteWallet.ts`
 
----
+Adicionar `staleTime: 30_000` (30s) e `refetchOnWindowFocus: true` ao `useQuery`, para que o saldo seja re-verificado ao voltar à aba e não fique "grudado" no valor antigo por tempo indeterminado.
 
-## Bug 2: Realtime das Conversas WhatsApp
-
-**Causa**: A subscription Realtime em `ClienteChat.tsx` (linha 176) filtra `whatsapp_messages` por `organization_id`, mas o filtro Realtime do Supabase só suporta filtros no formato `column=eq.value` e requer que a coluna esteja indexada. O problema é que quando novas mensagens chegam via webhook, a invalidação do query cache pode não estar sincronizando o estado visual em tempo real — especificamente, `queryClient.invalidateQueries` invalida mas não força um refetch imediato se a janela não está focada ou se há um `staleTime` configurado.
-
-**Correção**:
-- Trocar `invalidateQueries` por `refetchQueries` para forçar refresh imediato das mensagens do contato selecionado
-- Garantir que o canal Realtime tenha um nome único por org para evitar conflitos
-
-**Arquivo**: `src/pages/cliente/ClienteChat.tsx` (linhas 176-191)
-
----
-
-## Resumo de Alterações
-
-| Arquivo | Mudança |
-|---|---|
-| `src/pages/cliente/ClienteCRM.tsx` | Adicionar `PointerSensor` com `distance: 8` ao `DndContext` |
-| `src/pages/cliente/ClienteChat.tsx` | Usar `refetchQueries` em vez de `invalidateQueries` para mensagens do contato ativo |
+Isso resolve tanto o caso de recarga manual quanto o caso de consumo de créditos em outra aba — o saldo atualiza automaticamente ao navegar entre páginas ou focar a janela.
 
