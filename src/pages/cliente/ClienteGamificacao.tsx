@@ -38,16 +38,16 @@ const medalIcons: Record<string, React.ElementType> = {
   content: FileText, dispatch: Send, site: Globe, agent: Bot,
 };
 
-const medalColors: Record<string, { bg: string; text: string; border: string }> = {
-  lead: { bg: "bg-blue-500/15", text: "text-blue-500", border: "border-blue-500/30" },
-  sales: { bg: "bg-amber-500/15", text: "text-amber-500", border: "border-amber-500/30" },
-  streak: { bg: "bg-orange-500/15", text: "text-orange-500", border: "border-orange-500/30" },
-  crm: { bg: "bg-purple-500/15", text: "text-purple-500", border: "border-purple-500/30" },
-  closer: { bg: "bg-yellow-500/15", text: "text-yellow-500", border: "border-yellow-500/30" },
-  content: { bg: "bg-emerald-500/15", text: "text-emerald-500", border: "border-emerald-500/30" },
-  dispatch: { bg: "bg-rose-500/15", text: "text-rose-500", border: "border-rose-500/30" },
-  site: { bg: "bg-cyan-500/15", text: "text-cyan-500", border: "border-cyan-500/30" },
-  agent: { bg: "bg-violet-500/15", text: "text-violet-500", border: "border-violet-500/30" },
+const medalColors: Record<string, { gradient: string; shadow: string; text: string; border: string; ring: string }> = {
+  lead:    { gradient: "from-blue-400 via-blue-500 to-blue-700",    shadow: "shadow-blue-500/40",    text: "text-blue-400",    border: "border-blue-400/40",    ring: "ring-blue-400/30" },
+  sales:   { gradient: "from-amber-300 via-amber-500 to-amber-700", shadow: "shadow-amber-500/40",   text: "text-amber-400",   border: "border-amber-400/40",   ring: "ring-amber-400/30" },
+  streak:  { gradient: "from-orange-400 via-orange-500 to-red-600", shadow: "shadow-orange-500/40",  text: "text-orange-400",  border: "border-orange-400/40",  ring: "ring-orange-400/30" },
+  crm:     { gradient: "from-purple-400 via-purple-500 to-purple-700", shadow: "shadow-purple-500/40", text: "text-purple-400", border: "border-purple-400/40", ring: "ring-purple-400/30" },
+  closer:  { gradient: "from-yellow-300 via-yellow-400 to-amber-600", shadow: "shadow-yellow-500/40", text: "text-yellow-400", border: "border-yellow-400/40", ring: "ring-yellow-400/30" },
+  content: { gradient: "from-emerald-400 via-emerald-500 to-green-700", shadow: "shadow-emerald-500/40", text: "text-emerald-400", border: "border-emerald-400/40", ring: "ring-emerald-400/30" },
+  dispatch:{ gradient: "from-rose-400 via-rose-500 to-pink-700",   shadow: "shadow-rose-500/40",    text: "text-rose-400",    border: "border-rose-400/40",    ring: "ring-rose-400/30" },
+  site:    { gradient: "from-cyan-400 via-cyan-500 to-teal-700",   shadow: "shadow-cyan-500/40",    text: "text-cyan-400",    border: "border-cyan-400/40",    ring: "ring-cyan-400/30" },
+  agent:   { gradient: "from-violet-400 via-violet-500 to-indigo-700", shadow: "shadow-violet-500/40", text: "text-violet-400", border: "border-violet-400/40", ring: "ring-violet-400/30" },
 };
 
 const allMedals = [
@@ -347,23 +347,43 @@ export default function ClienteGamificacao() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {medals.map((m, idx) => {
                 const MedalIcon = medalIcons[m.emoji] || Award;
-                const colors = medalColors[m.emoji] || { bg: "bg-primary/15", text: "text-primary", border: "border-primary/30" };
+                const colors = medalColors[m.emoji] || { gradient: "from-gray-400 via-gray-500 to-gray-700", shadow: "shadow-gray-500/40", text: "text-gray-400", border: "border-gray-400/40", ring: "ring-gray-400/30" };
                 return (
                   <motion.div
                     key={m.id}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5 + idx * 0.05 }}
+                    whileHover={m.unlocked ? { scale: 1.05, rotateY: 8 } : {}}
                     className={`p-4 rounded-xl border text-center transition-all ${
                       m.unlocked
-                        ? `${colors.border} bg-muted/30 hover:bg-muted/50 hover:shadow-sm`
-                        : "opacity-30 grayscale"
+                        ? `${colors.border} bg-muted/20 hover:shadow-lg ${colors.shadow}`
+                        : "opacity-25 grayscale"
                     }`}
+                    style={{ perspective: "600px" }}
                   >
-                    <div className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center mb-2 ${m.unlocked ? colors.bg : "bg-muted/50"}`}>
-                      <MedalIcon className={`w-5 h-5 ${m.unlocked ? colors.text : "text-muted-foreground"}`} />
+                    {/* 3D Medal disc */}
+                    <div className="relative w-14 h-14 mx-auto mb-3" style={{ perspective: "400px" }}>
+                      <div
+                        className={`w-14 h-14 rounded-full bg-gradient-to-br ${colors.gradient} flex items-center justify-center ring-2 ${colors.ring} ${m.unlocked ? colors.shadow : ""}`}
+                        style={{
+                          boxShadow: m.unlocked
+                            ? "inset 0 -3px 6px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.2)"
+                            : "inset 0 -2px 4px rgba(0,0,0,0.2)",
+                          transform: "rotateX(8deg)",
+                        }}
+                      >
+                        <MedalIcon className="w-6 h-6 text-white drop-shadow-md" />
+                      </div>
+                      {/* Shine highlight */}
+                      {m.unlocked && (
+                        <div
+                          className="absolute top-1 left-2.5 w-5 h-3 rounded-full opacity-40"
+                          style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.8) 0%, transparent 100%)" }}
+                        />
+                      )}
                     </div>
-                    <p className="text-xs font-semibold mt-1">{m.name}</p>
+                    <p className={`text-xs font-bold mt-1 ${m.unlocked ? colors.text : "text-muted-foreground"}`}>{m.name}</p>
                     <p className="text-[10px] text-muted-foreground">{m.description}</p>
                     <p className="text-[9px] text-muted-foreground/70 mt-0.5">{m.condition}</p>
                     {m.unlocked && (
