@@ -1,56 +1,63 @@
 
 
-# Correção da Ferramenta de Conteúdo — Geração em Lote Estratégico
+# Reestruturação do Formulário de Criação de Artes — Redes Sociais
 
 ## Problema
 
-A ferramenta atual gera 1 conteúdo por vez com formato e objetivo únicos. O correto é gerar um **lote completo** de conteúdos estratégicos, respeitando o limite do plano e cobrindo o funil de marketing.
+O formulário atual na tela de Redes Sociais (step "config") usa **seleções fixas de estilo** (6 cards pré-definidos) e um **texto base genérico**. O usuário que gerou artes excelentes manualmente usou um processo diferente: campos abertos para cena, ambiente, estilo visual, texto da arte e referências visuais (mínimo 3). Esse processo gera prompts ricos e contextuais que produzem resultados superiores.
+
+A edge function `generate-social-image` já tem toda a infraestrutura pronta (chain-of-thought, referências multimodais, identidade visual). O gargalo é o **formulário de coleta** que não captura informações suficientes.
 
 ## Plano
 
-### 1. Reescrever `ClienteConteudos.tsx` — Wizard de lote com 8 blocos
+### 1. Reescrever o step "config" em `ClienteRedesSociais.tsx`
 
-Substituir o wizard atual (5 steps, 1 conteúdo) por:
+Substituir os cards de estilo fixo por **9 campos** baseados no processo que funcionou:
 
-| Bloco | Input |
-|---|---|
-| **1. Quantidade** | Auto-detectar do plano (`maxContents`). Mostrar "Seu plano permite X conteúdos" com slider para escolher quantos gerar |
-| **2. Formatos** | Multi-select com distribuição: carrossel (N), vídeo (N), post único (N), story (N), artigo (N), post educativo (N), post autoridade (N). Total deve = quantidade escolhida |
-| **3. Objetivos** | Multi-select: educar, autoridade, engajamento, leads, vender, quebrar objeções. IA distribui automaticamente (40% educação, 30% autoridade, 20% prova social, 10% oferta) |
-| **4. Tema** | Textarea opcional. Se vazio, IA usa estratégia |
-| **5. Plataforma** | Select: Instagram, LinkedIn, TikTok, YouTube |
-| **6. Tom** | Select opcional: educativo, institucional, direto, provocativo |
-| **7. Público** | Auto-preenchido da estratégia, editável |
-| **8. Revisão** | Resumo visual do lote antes de gerar |
+| # | Campo | Tipo | Obrigatório |
+|---|---|---|---|
+| 1 | Link da marca (site/Instagram) | Input text | Opcional |
+| 2 | Formato da imagem | Cards fixos (Feed 4:5, Quadrado 1:1, Story 9:16, Banner 16:9) | Sim |
+| 3 | Objetivo da postagem | Textarea com exemplos placeholder | Sim |
+| 4 | Tema/assunto | Textarea com exemplos placeholder | Sim |
+| 5 | Cena da imagem | Textarea ("descreva o que deve aparecer") | Sim |
+| 6 | Ambiente | Input text ("onde a cena acontece") | Opcional |
+| 7 | Estilo visual | Input text ("corporativo, minimalista, premium…") | Opcional |
+| 8 | Texto da arte | Headline (input) + Subheadline (input, opcional) + CTA (input, opcional) | Headline obrigatório |
+| 9 | Referências visuais | Upload múltiplo (mínimo 3 recomendado) | Recomendado |
 
-**Tela de resultado**: Grid de cards, cada card = 1 conteúdo com:
-- Badge formato + objetivo
-- Título + preview do conteúdo
-- Botões: Editar, Gerar Arte (→ `/cliente/redes-sociais`), Gerar Vídeo, Copiar, Aprovar
+Remover: `ART_STYLES` (cards fixos de estilo). Manter: `ART_FORMATS` (atualizar com 4:5, 1:1, 9:16, 16:9).
 
-### 2. Reescrever `generate-content` Edge Function — Gerar array de conteúdos
+### 2. Atualizar o payload enviado ao `generate-social-image`
 
-- Aceitar novo payload: `{ quantidade, formatos: [{tipo, qtd}], objetivos: [string], tema?, plataforma, tom?, publico?, estrategia }`
-- IA gera array de N conteúdos, cada um com formato e objetivo distribuídos
-- Tool schema retorna `{ conteudos: Array<{ titulo, formato, objetivo, conteudo_principal, legenda, headlines, hashtags, embasamento }> }`
+Concatenar todos os campos em um prompt rico antes de enviar:
 
-### 3. Atualizar `useClienteContentV2.ts`
+```
+Objetivo: {objetivo}
+Tema: {tema}
+Cena: {cena}
+Ambiente: {ambiente}
+Estilo visual: {estilo_visual}
+Headline: {headline}
+Subheadline: {subheadline}
+CTA: {cta}
+Link da marca: {brand_link}
+```
 
-- `useGenerateContent` — aceitar novo payload, inserir N registros no `client_content` (um por conteúdo gerado)
-- `useApproveContent` — aprovar conteúdo individual (200 créditos cada) ou aprovar lote
-- Adicionar `useContentQuota` — consultar subscription + contar conteúdos do mês atual vs `maxContents`
+Enviar `art_style` como o texto livre do campo estilo visual (a edge function já trata fallbacks). Continuar passando `reference_images` e `identidade_visual` como já faz.
 
-### 4. Integração com plano
+### 3. Atualizar edge function `generate-social-image`
 
-- Importar `useClienteSubscription` + `getPlanBySlug` para determinar `maxContents`
-- Contar conteúdos já gerados no mês atual via query no `client_content`
-- Bloquear geração se limite atingido, sugerir upgrade
+Ajuste mínimo: adicionar formato `portrait` (4:5) e `banner` (16:9) no mapeamento de `aspectInstruction`. O restante já funciona — o chain-of-thought Flash já recebe o prompt completo e otimiza.
+
+### 4. Manter identidade visual automática
+
+Se o usuário já tem `marketing_visual_identities` configurada, continuar passando automaticamente (já funciona). Se forneceu link da marca no campo 1, incluir no prompt para contexto adicional.
 
 ## Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `src/pages/cliente/ClienteConteudos.tsx` | Reescrever — wizard de lote com 8 blocos + grid de resultado |
-| `supabase/functions/generate-content/index.ts` | Reescrever — gerar array de N conteúdos |
-| `src/hooks/useClienteContentV2.ts` | Atualizar — insert em lote, quota check |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Reescrever step "config" com 9 campos abertos |
+| `supabase/functions/generate-social-image/index.ts` | Adicionar formatos 4:5 e 16:9 no aspect mapping |
 
