@@ -207,19 +207,7 @@ Generate this single frame now.`;
       console.log(`Frame ${i + 1}/${scenes.length} uploaded: ${urlData.publicUrl}`);
     }
 
-    // Debit credits for generated frames
-    if (organization_id && frameUrls.length > 0) {
-      try {
-        await supabase.rpc("debit_credits", {
-          _org_id: organization_id,
-          _amount: CREDIT_COST_PER_FRAME * frameUrls.length,
-          _description: `Geração de ${frameUrls.length} frames de vídeo`,
-          _source: "generate-social-video-frames",
-        });
-      } catch (debitErr) {
-        console.error("Debit error (non-blocking):", debitErr);
-      }
-    }
+    // Credits are now debited on approval, not on generation
 
     return new Response(JSON.stringify({ frameUrls, sceneTexts, sceneConfigs }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

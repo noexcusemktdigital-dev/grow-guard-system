@@ -1216,6 +1216,75 @@ export type Database = {
           },
         ]
       }
+      client_posts: {
+        Row: {
+          content_id: string | null
+          created_at: string | null
+          created_by: string | null
+          duration: string | null
+          format: string | null
+          id: string
+          input_text: string | null
+          organization_id: string
+          reference_image_urls: string[] | null
+          result_data: Json | null
+          result_url: string | null
+          status: string | null
+          style: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          content_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duration?: string | null
+          format?: string | null
+          id?: string
+          input_text?: string | null
+          organization_id: string
+          reference_image_urls?: string[] | null
+          result_data?: Json | null
+          result_url?: string | null
+          status?: string | null
+          style?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          content_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duration?: string | null
+          format?: string | null
+          id?: string
+          input_text?: string | null
+          organization_id?: string
+          reference_image_urls?: string[] | null
+          result_data?: Json | null
+          result_url?: string | null
+          status?: string | null
+          style?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_posts_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "client_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_posts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_scripts: {
         Row: {
           category: string | null

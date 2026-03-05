@@ -70,7 +70,6 @@ import ClienteDashboard from "./pages/cliente/ClienteDashboard";
 import ClientePlanoMarketing from "./pages/cliente/ClientePlanoMarketing";
 import ClienteConteudos from "./pages/cliente/ClienteConteudos";
 import ClienteRedesSociais from "./pages/cliente/ClienteRedesSociais";
-import ClienteRedesSociaisCriar from "./pages/cliente/ClienteRedesSociaisCriar";
 import ClienteSites from "./pages/cliente/ClienteSites";
 import ClienteTrafegoPago from "./pages/cliente/ClienteTrafegoPago";
 import ClienteIntegracoes from "./pages/cliente/ClienteIntegracoes";
@@ -172,7 +171,6 @@ const App = () => (
                 <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
                 <Route path="conteudos" element={<ClienteConteudos />} />
                 <Route path="redes-sociais" element={<ClienteRedesSociais />} />
-                <Route path="redes-sociais/criar" element={<ClienteRedesSociaisCriar />} />
                 
                 <Route path="sites" element={<ClienteSites />} />
                 <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
