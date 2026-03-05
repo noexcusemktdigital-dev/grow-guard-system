@@ -1339,6 +1339,7 @@ export type Database = {
           organization_id: string
           published_at: string | null
           status: string
+          strategy_id: string | null
           type: string | null
           updated_at: string
           url: string | null
@@ -1352,6 +1353,7 @@ export type Database = {
           organization_id: string
           published_at?: string | null
           status?: string
+          strategy_id?: string | null
           type?: string | null
           updated_at?: string
           url?: string | null
@@ -1365,6 +1367,7 @@ export type Database = {
           organization_id?: string
           published_at?: string | null
           status?: string
+          strategy_id?: string | null
           type?: string | null
           updated_at?: string
           url?: string | null
@@ -1375,6 +1378,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_sites_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_strategies"
             referencedColumns: ["id"]
           },
         ]
@@ -4295,6 +4305,7 @@ export type Database = {
           platforms: Json
           source_data: Json
           status: string | null
+          strategy_id: string | null
         }
         Insert: {
           created_at?: string
@@ -4305,6 +4316,7 @@ export type Database = {
           platforms?: Json
           source_data?: Json
           status?: string | null
+          strategy_id?: string | null
         }
         Update: {
           created_at?: string
@@ -4315,6 +4327,7 @@ export type Database = {
           platforms?: Json
           source_data?: Json
           status?: string | null
+          strategy_id?: string | null
         }
         Relationships: [
           {
@@ -4322,6 +4335,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traffic_strategies_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_strategies"
             referencedColumns: ["id"]
           },
         ]

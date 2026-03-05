@@ -15,6 +15,7 @@ export interface ClientSiteDB {
   created_at: string;
   updated_at: string;
   published_at: string | null;
+  strategy_id: string | null;
 }
 
 export function useClienteSitesDB() {
@@ -29,7 +30,7 @@ export function useClienteSitesDB() {
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as ClientSiteDB[];
+      return data as unknown as ClientSiteDB[];
     },
     enabled: !!orgId,
   });
@@ -41,7 +42,7 @@ export function useCreateClientSite() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ name, type, html }: { name: string; type: string; html: string }) => {
+    mutationFn: async ({ name, type, html, strategy_id }: { name: string; type: string; html: string; strategy_id?: string }) => {
       if (!orgId) throw new Error("No org");
       const { data, error } = await supabase
         .from("client_sites")
@@ -52,7 +53,8 @@ export function useCreateClientSite() {
           status: "Rascunho",
           content: { html } as any,
           created_by: user?.id,
-        })
+          strategy_id: strategy_id || null,
+        } as any)
         .select()
         .single();
       if (error) throw error;
