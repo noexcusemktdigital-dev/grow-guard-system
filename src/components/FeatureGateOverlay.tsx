@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
-import { Lock, Zap, Crown, Target, Megaphone } from "lucide-react";
+import { Lock, Zap, Crown, Target, Megaphone, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function FeatureGateOverlay() {
@@ -51,6 +51,16 @@ export function FeatureGateOverlay() {
       ctaPath: "/cliente/plano-marketing",
       accent: "from-primary/90 to-primary/70",
       iconBg: "bg-primary/15 text-primary",
+    },
+    admin_only: {
+      icon: ShieldAlert,
+      title: "Acesso restrito ao administrador",
+      description:
+        "Esta funcionalidade é exclusiva para administradores da conta. Solicite acesso ao administrador da sua organização.",
+      cta: "Voltar ao início",
+      ctaPath: "/cliente/inicio",
+      accent: "from-muted-foreground/30 to-muted-foreground/10",
+      iconBg: "bg-muted text-muted-foreground",
     },
   }[reason];
 

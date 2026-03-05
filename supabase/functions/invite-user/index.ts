@@ -55,6 +55,28 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // ---- Validate maxUsers server-side ----
+    // Look up org subscription plan to enforce user limit
+    const { data: sub } = await adminClient
+      .from("client_subscriptions")
+      .select("plan")
+      .eq("organization_id", organization_id)
+      .maybeSingle();
+
+    const planLimits: Record<string, number> = { starter: 2, growth: 5, scale: 15 };
+    const maxUsers = planLimits[sub?.plan ?? ""] ?? 2;
+
+    const { count: currentMembers } = await adminClient
+      .from("organization_memberships")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", organization_id);
+
+    if ((currentMembers ?? 0) >= maxUsers) {
+      return new Response(
+        JSON.stringify({ error: `Limite de ${maxUsers} usuários do plano atingido. Faça upgrade para adicionar mais.` }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Invite user via email (Supabase sends the email automatically)
     const redirectTo = Deno.env.get("SITE_URL") || supabaseUrl.replace(".supabase.co", ".supabase.co");

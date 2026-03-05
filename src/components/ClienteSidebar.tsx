@@ -17,6 +17,7 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
 import { useCreditAlert } from "@/hooks/useCreditAlert";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { getPlanBySlug } from "@/constants/plans";
 import { differenceInDays } from "date-fns";
 
@@ -25,6 +26,7 @@ interface SidebarItem {
   icon: React.ElementType;
   path: string;
   badgeKey?: string;
+  adminOnly?: boolean;
 }
 
 const globalSection: SidebarItem[] = [
@@ -39,8 +41,8 @@ const vendasSection: SidebarItem[] = [
   { label: "Conversas", icon: MessageCircle, path: "/cliente/chat" },
   { label: "Agentes IA", icon: Bot, path: "/cliente/agentes-ia" },
   { label: "Scripts", icon: BookOpen, path: "/cliente/scripts" },
-  { label: "Disparos", icon: Send, path: "/cliente/disparos" },
-  { label: "Relatórios", icon: BarChart3, path: "/cliente/dashboard" },
+  { label: "Disparos", icon: Send, path: "/cliente/disparos", adminOnly: true },
+  { label: "Relatórios", icon: BarChart3, path: "/cliente/dashboard", adminOnly: true },
 ];
 
 const marketingSection: SidebarItem[] = [
@@ -49,13 +51,13 @@ const marketingSection: SidebarItem[] = [
   { label: "Conteúdos", icon: FileText, path: "/cliente/conteudos" },
   { label: "Redes Sociais", icon: Share2, path: "/cliente/redes-sociais" },
   { label: "Sites", icon: Globe, path: "/cliente/sites" },
-  { label: "Tráfego Pago", icon: DollarSign, path: "/cliente/trafego-pago" },
+  { label: "Tráfego Pago", icon: DollarSign, path: "/cliente/trafego-pago", adminOnly: true },
 ];
 
 const sistemaSection: SidebarItem[] = [
   { label: "Avaliações", icon: ClipboardCheck, path: "/cliente/avaliacoes" },
-  { label: "Integrações", icon: Link, path: "/cliente/integracoes" },
-  { label: "Plano & Créditos", icon: CreditCard, path: "/cliente/plano-creditos", badgeKey: "plano-creditos" },
+  { label: "Integrações", icon: Link, path: "/cliente/integracoes", adminOnly: true },
+  { label: "Plano & Créditos", icon: CreditCard, path: "/cliente/plano-creditos", badgeKey: "plano-creditos", adminOnly: true },
   { label: "Configurações", icon: Settings, path: "/cliente/configuracoes" },
 ] as SidebarItem[];
 
@@ -117,10 +119,14 @@ function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: b
 
 function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed: boolean }) {
   const { getGateReason } = useFeatureGate();
+  const { isAdmin } = useRoleAccess();
+
+  // Filter out admin-only items for non-admin users
+  const visibleItems = items.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <nav className="flex flex-col gap-[2px]">
-      {items.map((item) => (
+      {visibleItems.map((item) => (
         <NavItem
           key={item.path}
           item={item}
