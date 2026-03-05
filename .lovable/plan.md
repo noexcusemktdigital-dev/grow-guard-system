@@ -1,65 +1,70 @@
 
 
-# Melhorias na Ferramenta de Estratégia de Marketing
+# Reestruturação da Ferramenta de Conteúdos
 
-## Problemas Identificados
+## Resumo das Mudanças
 
-1. **Concorrentes**: O briefing pede apenas nome/descrição textual dos concorrentes (campo `concorrentes` textarea). A IA não tem dados reais para analisar — precisa de URLs (site/Instagram) para poder extrair informações concretas.
+O usuário quer 3 grandes melhorias:
 
-2. **Poucas opções no briefing**: Alguns campos limitam a personalização — faltam opções em público, tom, objetivos, e campos adicionais para aprofundar o contexto.
-
-3. **Estratégia não fica aberta por padrão**: Após geração, deveria mostrar o dashboard direto (sem precisar de ação adicional).
-
-4. **"Próximos Passos" mostra meses**: Deveria mostrar ações diretas linkadas às ferramentas de marketing (não comercial).
-
-5. **Nova estratégia deve enviar a atual pro histórico**: Já funciona parcialmente (desativa a anterior), mas precisa de confirmação clara ao usuário.
+1. **Wizard simplificado para 4 blocos** (não 5 ou 8) — dados da estratégia são importados automaticamente, sem perguntar novamente
+2. **Apresentação visual rica** dos conteúdos gerados — cards estilo rede social, não código/JSON
+3. **Organização em pastas de lotes** (por data) em vez de histórico plano, com CTAs: Copiar, Baixar PDF, Gerar Postagem
 
 ## Plano de Implementação
 
-### 1. Melhorar coleta de concorrentes (`briefingAgents.ts`)
+### 1. Wizard: 4 Blocos Fixos (`ClienteConteudos.tsx`)
 
-Substituir o campo textarea de concorrentes por um fluxo que pede **URLs dos concorrentes** (site ou Instagram) para que a IA possa analisar dados reais:
+Eliminar a lógica adaptativa de 5/8 steps. Sempre 4 blocos:
 
-- Campo `concorrentes_urls`: textarea pedindo "Cole os links (site ou Instagram) dos seus 2-3 principais concorrentes"
-- Manter o campo `concorrente_faz_melhor` como está
+| Bloco | Conteúdo |
+|---|---|
+| 1 — Quantidade e Formatos | Slider + distribuição (como hoje). Mostrar limite do plano |
+| 2 — Objetivo | Seleção múltipla: Educar, Autoridade, Engajar, Quebrar objeções, Promover, Gerar leads |
+| 3 — Tema | Campo opcional. Se há estratégia, mostrar pilares como chips clicáveis. Placeholder: "Ex: marketing para médicos..." |
+| 4 — Plataforma | Instagram, LinkedIn, TikTok, YouTube, Blog |
 
-### 2. Expandir opções do briefing (`briefingAgents.ts`)
+Quando há estratégia → dados de público, tom, ICP, diferenciais, dores são injetados automaticamente no payload sem perguntar. Quando não há → esses campos vão vazios e o edge function lida com isso.
 
-- **Público** (`publico`): Adicionar mais perfis (mães, jovens, investidores, atletas, etc.)
-- **Tom de comunicação** (`tom_comunicacao`): Adicionar opções (técnico/especialista, premium/sofisticado, urgente/escassez, empático/acolhedor)
-- **Objetivo** (`objetivo`): Adicionar (fidelizar clientes, expandir território, aumentar ticket médio, entrar em novo mercado)
-- **Diferencial** (`diferencial`): Adicionar (equipe qualificada, resultados comprovados, marca reconhecida)
-- **Novo campo**: "Quais resultados seus clientes geralmente alcançam?" (prova social real)
-- **Novo campo**: "O que você NÃO quer na sua comunicação?" (ajuda a definir limites)
+Remover: steps de negócio, público, tom, funil, contexto especial, estilo do lote. O prompt da IA já tem inteligência para distribuir funil e tom baseado na estratégia.
 
-### 3. Prompt de estratégia — análise de concorrência real (`generate-strategy/index.ts`)
+### 2. Apresentação Visual dos Conteúdos (`ClienteConteudos.tsx`)
 
-Atualizar o system prompt para instruir a IA a:
-- Usar as URLs fornecidas como base para inferir posicionamento, conteúdo e estratégia dos concorrentes
-- Gerar análise mais detalhada com "presença digital estimada" por concorrente
+Redesenhar completamente os cards de resultado:
 
-### 4. Próximos Passos: linkar só ferramentas de marketing (`ClientePlanoMarketing.tsx`)
+**Card de Carrossel**: Mostrar slides numerados como mini-cards empilhados com título bold e texto. Visual clean, sem labels "Slide 1".
 
-- Alterar o card "Próximos Passos" para NÃO mostrar "Mês 1" como título
-- Mostrar uma lista de ações com links diretos para as ferramentas de marketing: Conteúdos, Postagens, Sites, Tráfego, Scripts
-- Remover referências ao CRM/comercial nesse card (focar em marketing)
+**Card de Post Único**: Headline grande em destaque, texto abaixo, CTA em badge colorido. Simular visual de post.
 
-### 5. Estratégia sempre aberta (`ClientePlanoMarketing.tsx`)
+**Card de Vídeo**: Hook em destaque (como thumbnail), roteiro em seções colapsadas, CTA final.
 
-- Quando `hasResult === true`, o dashboard já abre direto (já funciona assim)
-- Garantir que após geração o `showChat` volta a `false` e `isGenerating` volta a `false` (já faz isso)
-- O comportamento já está correto — a estratégia fica visível sempre que existe
+**Card de Story**: Frames em row horizontal scrollável.
 
-### 6. Confirmação ao regenerar (`ClientePlanoMarketing.tsx`)
+Cada card terá **3 CTAs fixos**:
+- **Copiar** — copia legenda + conteúdo formatado
+- **Baixar PDF** — usa html2pdf.js (já instalado) para exportar o card
+- **Gerar Postagem** — navega para `/cliente/redes-sociais`
 
-- Ao clicar "Nova Estratégia", mostrar um dialog de confirmação: "Sua estratégia atual será movida para o histórico. Deseja continuar?"
-- Usar `AlertDialog` já disponível no projeto
+Remover: botão "Ver mais" / expand pattern. Todo conteúdo visível direto. Remover labels técnicos como "conteudo_principal", "embasamento".
 
-## Arquivos Modificados
+### 3. Organização em Pastas de Lotes (tab "Meus Conteúdos")
+
+Renomear tab "Histórico" → "Meus Conteúdos".
+
+Agrupar conteúdos por data de criação (lote = mesma `created_at` ±1min). Mostrar como:
+
+```text
+📁 Lote 05/03/2026 — 8 conteúdos
+📁 Lote 28/02/2026 — 12 conteúdos
+📁 Lote 15/02/2026 — 8 conteúdos
+```
+
+Cada pasta expande para mostrar os cards visuais com os mesmos CTAs (copiar, PDF, gerar postagem). Usar `Collapsible` do Radix.
+
+### Arquivos Modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/cliente/briefingAgents.ts` | Expandir opções, trocar campo concorrentes por URLs, adicionar campos de prova social e limites |
-| `supabase/functions/generate-strategy/index.ts` | Atualizar prompt para usar URLs de concorrentes |
-| `src/pages/cliente/ClientePlanoMarketing.tsx` | Próximos Passos sem mês, AlertDialog na regeneração, focar em ferramentas de marketing |
+| `src/pages/cliente/ClienteConteudos.tsx` | Wizard 4 blocos, cards visuais por formato, pastas de lotes, CTAs (copiar/PDF/postagem) |
+
+Nenhuma mudança no edge function ou hook — o payload já suporta os campos necessários, e campos não enviados são tratados como vazios.
 
