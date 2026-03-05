@@ -1,15 +1,13 @@
 
 
-# Atualizar Token do Webhook Asaas
+# Testar Conexão Asaas
 
 ## Ação
 
-Atualizar o secret `ASAAS_WEBHOOK_TOKEN` com o novo valor fornecido: `whsec_kcAPJXcUC4aRV0Klx4vkTqOmTSOse8Ow9cACaZbRqIw`
+Executar a Edge Function `asaas-test-connection` para verificar se o IP `3.124.193.96` foi aceito na lista de IPs autorizados do Asaas e as chamadas de saída estão funcionando.
 
-## Após a atualização
+## Resultado Esperado
 
-- O endpoint `asaas-webhook` passará a validar requisições usando este novo token
-- Certifique-se de que o **mesmo token** esteja configurado no painel do Asaas em **Integrações → Webhooks → Token de autenticação**
-
-Nenhuma alteração de código é necessária — apenas a atualização do secret.
+- `connected: true` e `status: 200` indicam que a integração está 100% operacional
+- Se ainda retornar `not_allowed_ip`, o IP pode ter mudado (rotação de infraestrutura cloud)
 
