@@ -17,7 +17,7 @@ import type { AiAgent } from "@/types/cliente";
 
 export default function ClienteAgentesIA() {
   const { data: agents, isLoading } = useClienteAgents();
-  const { createAgent, updateAgent, deleteAgent, duplicateAgent } = useClienteAgentMutations();
+  const { createAgent, updateAgent, deleteAgent, duplicateAgent, reactivateAgentContacts } = useClienteAgentMutations();
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<AiAgent> | null>(null);
@@ -50,8 +50,24 @@ export default function ClienteAgentesIA() {
   const handleToggleStatus = (agent: AiAgent) => {
     const newStatus = agent.status === "active" ? "paused" : "active";
     updateAgent.mutate({ id: agent.id, status: newStatus } as any, {
-      onSuccess: () => toast({ title: newStatus === "active" ? "Agente ativado!" : "Agente pausado!" }),
+      onSuccess: () => {
+        toast({ title: newStatus === "active" ? "Agente ativado!" : "Agente pausado!" });
+        // When activating, offer to reassociate contacts
+        if (newStatus === "active") {
+          reactivateAgentContacts.mutate(agent.id);
+        }
+      },
       onError: () => toast({ title: "Erro ao alterar status", variant: "destructive" }),
+    });
+  };
+
+  const handleReactivateContacts = (agent: AiAgent) => {
+    reactivateAgentContacts.mutate(agent.id, {
+      onSuccess: () => {
+        playSound("success");
+        toast({ title: "Contatos reassociados ao modo IA!" });
+      },
+      onError: () => toast({ title: "Erro ao reativar contatos", variant: "destructive" }),
     });
   };
 
@@ -78,7 +94,7 @@ export default function ClienteAgentesIA() {
       ) : hasAgents ? (
         <div className="grid gap-3 md:grid-cols-2">
           {agents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} onEdit={handleEdit} onDuplicate={handleDuplicate} onDelete={setDeleting} onToggleStatus={handleToggleStatus} />
+            <AgentCard key={agent.id} agent={agent} onEdit={handleEdit} onDuplicate={handleDuplicate} onDelete={setDeleting} onToggleStatus={handleToggleStatus} onReactivateContacts={handleReactivateContacts} />
           ))}
         </div>
       ) : (

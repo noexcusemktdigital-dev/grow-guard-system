@@ -314,7 +314,24 @@ export default function ClienteCRM() {
     const { active, over } = e;
     if (!over) return;
     const leadId = String(active.id);
-    const newStage = String(over.id);
+    const overId = String(over.id);
+
+    // Validate that overId is a valid stage key
+    const validStageKeys = stages.map(s => s.key);
+    let newStage: string | null = null;
+
+    if (validStageKeys.includes(overId)) {
+      // Dropped directly on a column
+      newStage = overId;
+    } else {
+      // Dropped on another card — find which stage that card belongs to
+      const targetLead = allLeads.find(l => l.id === overId);
+      if (targetLead && validStageKeys.includes(targetLead.stage)) {
+        newStage = targetLead.stage;
+      }
+    }
+
+    if (!newStage) return;
     const lead = allLeads.find(l => l.id === leadId);
     if (lead && lead.stage !== newStage) {
       updateLead.mutate({ id: leadId, stage: newStage });
