@@ -1,34 +1,57 @@
 
 
-# Fix: Reescrever ClienteRedesSociais.tsx
+# Recriação da Ferramenta de Geração de Sites (Documento 5)
 
-## Problema
+## Situação Atual
 
-O arquivo `ClienteRedesSociais.tsx` ainda contém o código legado de 1940 linhas (calendário, chat Theo, canvas editor, batch generation). A reescrita planejada no Documento 4 não foi aplicada ao arquivo. O hook `useClientePosts.ts` e a tabela `client_posts` já existem e estão prontos.
+`ClienteSites.tsx` usa o `ChatBriefing` com `ALEX_STEPS` (130+ linhas de perguntas em chat). O Documento 5 pede um **wizard visual por etapas** (não chat), com reaproveitamento automático de dados da Estratégia, Conteúdo e Identidade Visual. A edge function `generate-site` já funciona bem — precisa apenas de ajustes para receber os novos campos e mover o débito de créditos para a aprovação.
 
-## Solução
+## Plano
 
-Reescrever completamente `ClienteRedesSociais.tsx` com o wizard de 4 etapas conforme planejado:
+### 1. Reescrever `ClienteSites.tsx` — Wizard visual por etapas
 
-### Estrutura da nova página
+Substituir o ChatBriefing por stepper visual com 10 etapas:
 
-1. **Tela principal** — Histórico de postagens (via `usePostHistory`) + botão "Nova Postagem"
-2. **Etapa 1 — Conteúdo Base** — Lista conteúdos aprovados de `client_content` (via `useContentHistory` do `useClienteContentV2`) + opção texto manual
-3. **Etapa 2 — Tipo** — Cards: Arte ou Vídeo
-4. **Etapa 3 — Configuração**:
-   - Arte: formato (1:1, 4:5, 9:16), referências visuais (upload), identidade visual (auto via `useVisualIdentity`), texto
-   - Vídeo: roteiro, duração (15s/30s/60s), estilo (educativo/institucional/promocional/storytelling)
-5. **Etapa 4 — Geração** — Chama `useGeneratePost`, loading animado, resultado com Aprovar/Regenerar/Baixar
+1. **Referência** — Link do site/Instagram atual (opcional) + descrição manual
+2. **Tipo de Negócio** — Cards: consultoria, serviços, clínica, e-commerce, franquia
+3. **Objetivo do Site** — Cards: gerar leads, apresentar serviços, vender, captar franqueados
+4. **Público** — Chips selecionáveis + texto livre
+5. **Serviços/Produtos** — Textarea
+6. **Diferenciais** — Textarea
+7. **Prova Social** — Multi-select (depoimentos, números, cases) + textareas condicionais
+8. **CTA Principal** — Chips: orçamento, WhatsApp, reunião, comprar + custom
+9. **Páginas** — Multi-select (Home, Sobre, Serviços, Blog, Contato) com sugestão auto
+10. **Estilo Visual** — Cards: moderno, minimalista, corporativo, sofisticado, tecnológico
 
-### Dependências já prontas
-- `useClientePosts.ts` — `usePostHistory`, `useGeneratePost`, `useApprovePost`
-- `useClienteContentV2.ts` — `useContentHistory` (para listar conteúdos na etapa 1)
-- `useVisualIdentity` — auto-preencher identidade visual
-- Edge functions `generate-social-image` e `generate-social-video-frames` já ajustadas
-- Tabela `client_posts` com RLS já criada
+Dados auto-injetados (badges visuais mostrando):
+- **Estratégia**: público-alvo, proposta de valor, posicionamento, diferenciais (via `useActiveStrategy`)
+- **Conteúdo**: textos e mensagens principais dos conteúdos aprovados (via `useContentHistory`)
+- **Identidade Visual**: cores, fontes, estilo (via `useVisualIdentity`)
 
-### Arquivo
+**Tela de resultado**: Preview iframe + Aprovar / Regenerar / Editar / Baixar. Aprovação debita créditos (500).
+
+**Histórico**: Lista de sites com status (rascunho/aprovado/publicado).
+
+### 2. Atualizar `generate-site` Edge Function
+
+- Remover débito automático de créditos (mover para aprovação no frontend via `debit_credits` RPC)
+- Adicionar campos do Documento 5: `referencia`, `tipo_negocio`, `publico`, `provas`, `paginas`, `dados_conteudo`
+- Enriquecer prompt com dados da estratégia, conteúdo e identidade visual
+
+### 3. Remover `ALEX_STEPS` de `briefingAgents.ts`
+
+O chat Alex não será mais usado. Limpar as ~130 linhas de steps e opções auxiliares.
+
+### 4. Atualizar `useClienteSitesDB.ts`
+
+Adicionar `useApproveSite()` mutation que debita créditos e atualiza status para "approved".
+
+## Arquivos
+
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Reescrever completamente (1940 → ~500 linhas) |
+| `src/pages/cliente/ClienteSites.tsx` | Reescrever completamente |
+| `supabase/functions/generate-site/index.ts` | Remover débito auto, adicionar novos campos |
+| `src/components/cliente/briefingAgents.ts` | Remover `ALEX_STEPS` e opções auxiliares |
+| `src/hooks/useClienteSitesDB.ts` | Adicionar `useApproveSite` |
 
