@@ -66,6 +66,7 @@ export function useGeneratePost() {
       mensagem?: string;
       manual_colors?: string;
       manual_style?: string;
+      brand_name?: string;
     }) => {
       if (!orgId) throw new Error("Org not found");
 
@@ -93,6 +94,7 @@ export function useGeneratePost() {
             elementos_visuais: payload.elementos_visuais,
             manual_colors: payload.manual_colors,
             manual_style: payload.manual_style,
+            brand_name: payload.brand_name,
           },
         });
         if (resp.error) throw new Error(resp.error.message || "Erro ao gerar arte");
