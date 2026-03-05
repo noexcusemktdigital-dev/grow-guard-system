@@ -62,6 +62,16 @@ export function FeatureGateOverlay() {
       accent: "from-muted-foreground/30 to-muted-foreground/10",
       iconBg: "bg-muted text-muted-foreground",
     },
+    trial_limited: {
+      icon: Crown,
+      title: "Recurso exclusivo dos planos pagos",
+      description:
+        "Este recurso não está disponível no período de teste. Faça upgrade para desbloquear Sites, Tráfego Pago, Disparos e muito mais!",
+      cta: "Ver planos e fazer upgrade",
+      ctaPath: "/cliente/plano-creditos",
+      accent: "from-primary/90 to-primary/70",
+      iconBg: "bg-primary/15 text-primary",
+    },
   }[reason];
 
   const Icon = config.icon;

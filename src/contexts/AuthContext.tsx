@@ -68,16 +68,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // New user from SaaS signup — check if they came from Google OAuth or SaaS signup
       const signupSource = currentUser.user_metadata?.signup_source;
       if (signupSource === "saas" || currentUser.app_metadata?.provider === "google") {
-        // Provision via edge function
-        try {
-          const companyName = currentUser.user_metadata?.company_name || 
-                             (currentUser.user_metadata?.full_name ? currentUser.user_metadata.full_name + "'s Company" : "Minha Empresa");
-          await supabase.functions.invoke("signup-saas", {
-            body: { user_id: currentUser.id, company_name: companyName },
-          });
-          setRole("cliente_admin");
-        } catch (err) {
-          console.error("Auto-provisioning error:", err);
+        // Provision via edge function with retry
+        const companyName = currentUser.user_metadata?.company_name || 
+                           (currentUser.user_metadata?.full_name ? currentUser.user_metadata.full_name + "'s Company" : "Minha Empresa");
+        
+        let provisioned = false;
+        for (let attempt = 0; attempt < 2 && !provisioned; attempt++) {
+          try {
+            console.log(`[Auth] Provisioning attempt ${attempt + 1} for user ${currentUser.id}`);
+            await supabase.functions.invoke("signup-saas", {
+              body: { user_id: currentUser.id, company_name: companyName },
+            });
+            
+            // Re-fetch role to confirm provisioning worked
+            const { data: verifyRole } = await supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", currentUser.id);
+            
+            if (verifyRole && verifyRole.length > 0) {
+              const roles = verifyRole.map((r) => r.role as AppRole);
+              const priorityOrder: AppRole[] = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
+              const topRole = priorityOrder.find((p) => roles.includes(p)) || roles[0];
+              setRole(topRole);
+              provisioned = true;
+              console.log(`[Auth] Provisioning successful, role: ${topRole}`);
+            } else {
+              console.warn(`[Auth] Provisioning attempt ${attempt + 1} completed but no role found`);
+            }
+          } catch (err) {
+            console.error(`[Auth] Provisioning attempt ${attempt + 1} failed:`, err);
+          }
+        }
+        
+        if (!provisioned) {
+          console.error("[Auth] All provisioning attempts failed for user:", currentUser.id);
+          setRole("cliente_admin"); // Fallback so user isn't stuck
         }
       }
     }

@@ -4,6 +4,7 @@ import { ClienteSidebar, ClienteSidebarContent } from "./ClienteSidebar";
 import { FeatureGateProvider } from "@/contexts/FeatureGateContext";
 import { FeatureGateOverlay } from "./FeatureGateOverlay";
 import { CreditAlertBanner } from "./cliente/CreditAlertBanner";
+import { TrialCountdownBanner } from "./cliente/TrialCountdownBanner";
 import { ActionAlertsBanner } from "./cliente/ActionAlertsBanner";
 import { OnboardingTour } from "./cliente/OnboardingTour";
 import { CelebrationEffect } from "./CelebrationEffect";
@@ -40,6 +41,7 @@ export function ClienteLayout() {
             <span className="text-sm font-semibold text-white ml-2">NOE</span>
           </div>
 
+          <TrialCountdownBanner />
           <CreditAlertBanner />
           <div
             key={location.pathname}
