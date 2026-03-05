@@ -1,119 +1,119 @@
 
 
-# Comparação e Gaps Identificados
+# Plano: Garantir que Redes Sociais gere resultados equivalentes ao NanoBanana direto
 
-## O resultado é excelente — e nosso sistema QUASE chega lá
+## Diagnóstico
 
-Comparando o prompt de referência P2Y com o que nosso edge function gera, o fluxo estruturado (Scene → Environment → Design layout → Color palette → Text → Mood) **já está implementado corretamente**. Mas há **2 gaps** que impedem atingir o mesmo nível:
+O teste confirmou: quando as **referências visuais são anexadas**, o NanoBanana extrai paleta, logo, tipografia e layout diretamente das imagens, gerando resultados muito superiores. No nosso sistema, as referências já são enviadas ao edge function, mas há gaps na experiência do wizard e na integração com conteúdos.
 
-### Gap 1: Referência genérica vs. referência específica
+## Mudanças Necessárias
 
-**Prompt de exemplo (funciona bem):**
+### 1. Wizard mais inteligente — IA preenche campos automaticamente
+
+**Problema:** O wizard atual exige que o usuário preencha manualmente 7 etapas (formato, tipo, texto, cena, identidade, elementos, referências). Isso é trabalhoso e o usuário pode não saber descrever a cena ou elementos visuais ideais.
+
+**Solução:** Adicionar um **passo 0 "Briefing rápido"** no início do wizard com um campo de texto livre ("Descreva o que você quer") + opção de selecionar um conteúdo já gerado. A IA (Gemini Flash) analisa o briefing e **pré-preenche** os campos: headline, subheadline, CTA, cena, elementos visuais, supporting text e bullet points. O usuário pode revisar e ajustar antes de gerar.
+
+**Arquivos:**
+- `src/pages/cliente/ClienteRedesSociais.tsx` — Novo step 0 com textarea + botão "Preencher com IA" + seletor de conteúdo
+- `supabase/functions/generate-social-briefing/index.ts` — Novo edge function que recebe texto livre + identidade visual e retorna campos estruturados via tool calling
+- `src/hooks/useClientePosts.ts` — Nova mutation `useGenerateBriefing`
+
+### 2. Integração com Conteúdos gerados
+
+**Problema:** O botão "Gerar Postagem" nos conteúdos redireciona para Redes Sociais mas não carrega os dados do conteúdo no wizard.
+
+**Solução:** Ao clicar "Gerar Postagem" em um conteúdo, navegar para `/cliente/redes-sociais?content_id=xxx`. O wizard detecta o query param, carrega o conteúdo e pré-preenche os campos de texto (headline, texto de apoio, CTA) extraídos do resultado do conteúdo. O usuário só precisa adicionar referências visuais e ajustar a cena.
+
+**Arquivos:**
+- `src/pages/cliente/ClienteConteudos.tsx` — Navegar com content_id no query param
+- `src/pages/cliente/ClienteRedesSociais.tsx` — Ler query param e pré-preencher campos
+
+### 3. Referências obrigatórias com melhor UX
+
+**Problema:** O upload de 3 referências está no último passo. Usuário pode não entender a importância.
+
+**Solução:**
+- Mover referências para o **passo 1** (logo após briefing), com destaque visual explicando que as referências definem cores, logo e tipografia
+- Permitir uso de **imagens do banco de imagens** da identidade visual (`image_bank_urls`) como referências pré-carregadas
+- Manter mínimo de 3 referências obrigatórias
+
+**Arquivos:**
+- `src/pages/cliente/ClienteRedesSociais.tsx` — Reorganizar steps: Briefing → Referências → Formato → Texto → Cena → Revisão
+
+### 4. Tela de revisão antes de gerar
+
+**Problema:** Não há preview do que será enviado ao modelo.
+
+**Solução:** O último step mostra um resumo completo de todos os campos preenchidos + thumbnails das referências + botão "Gerar". Isso dá confiança ao usuário.
+
+**Arquivos:**
+- `src/pages/cliente/ClienteRedesSociais.tsx` — Step final de revisão expandido
+
+## Novo Fluxo do Wizard (7 steps)
+
+```text
+Step 1: Briefing rápido
+  ├─ Textarea livre OU selecionar conteúdo existente
+  ├─ Botão "Preencher com IA" → chama generate-social-briefing
+  └─ Pré-preenche: headline, sub, CTA, cena, elementos, supporting text
+
+Step 2: Referências visuais (obrigatório, min 3)
+  ├─ Upload de imagens
+  ├─ Auto-carrega imagens do banco da identidade visual
+  └─ Destaque: "As referências definem paleta, logo e tipografia"
+
+Step 3: Formato da imagem (1:1, 4:5, 9:16)
+
+Step 4: Tipo de postagem (post único, capa carrossel, etc.)
+
+Step 5: Texto da arte (pré-preenchido pela IA, editável)
+  ├─ Headline, Subheadline, Supporting text, Bullets, CTA
+  └─ Nome da marca
+
+Step 6: Cena e elementos visuais (pré-preenchido pela IA, editável)
+  ├─ Descrição da cena
+  └─ Elementos visuais
+
+Step 7: Revisão e geração
+  ├─ Resumo completo de todos os campos
+  ├─ Thumbnails das referências
+  └─ Botão "Gerar Arte"
 ```
-Replicate the brand design system including:
-- black and white base layout
-- lime green highlight color
-- rounded card shapes
-- circular icon elements
-- modern financial consulting layout
-- clean sans-serif typography
-- marketing educational style
+
+## Novo Edge Function: `generate-social-briefing`
+
+Recebe:
+- `briefing_text` (texto livre do usuário)
+- `content_data` (dados do conteúdo selecionado, opcional)
+- `identidade_visual` (da org)
+- `persona` (opcional)
+
+Usa Gemini Flash com tool calling para retornar:
+```json
+{
+  "headline": "...",
+  "subheadline": "...",
+  "cta": "...",
+  "cena": "...",
+  "elementos_visuais": "...",
+  "supporting_text": "...",
+  "bullet_points": "...",
+  "suggested_format": "portrait",
+  "suggested_tipo": "post_unico"
+}
 ```
 
-**Nosso sistema (genérico):**
-```
-Replicate the brand design system including: color palette, layout structure, 
-card shapes, icon elements, typography style, and overall design language.
-```
+## Arquivos Modificados/Criados
 
-A instrução de referência é estática e genérica. Deveria listar os **elementos específicos da marca** extraídos da identidade visual ou gerados pelo chain-of-thought.
-
-**Correção:** Adicionar um campo `brand_design_elements` ao tool call do chain-of-thought (Flash). O Flash já recebe a identidade visual — basta pedir que ele retorne uma lista de 5-8 elementos de design específicos da marca (ex: "dark background with lime green accents, rounded card shapes, circular icons"). Essa lista substitui os termos genéricos na instrução de referência.
-
-### Gap 2: Falta "Supporting text" e "Bullet points" no wizard
-
-O prompt P2Y inclui:
-```
-Supporting text: Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores.
-Bullet points: Tempo / Renda / Objetivo
-```
-
-Nosso wizard tem apenas: Headline, Subheadline, CTA. Faltam campos para **texto de apoio** e **bullet points** que enriquecem o layout.
-
-**Correção:** Adicionar 2 campos opcionais no bloco 3 (Texto da arte): `supportingText` e `bulletPoints`. Passar ao edge function na seção "Text in Portuguese".
-
-## Plano de Implementação
-
-### 1. Edge Function — Chain-of-thought retorna `brand_design_elements` (`generate-social-image/index.ts`)
-
-- Adicionar `brand_design_elements` ao `StructuredPromptResult` interface (tipo `string`, lista de elementos)
-- Adicionar ao tool call schema do Flash: `"brand_design_elements": { type: "string", description: "List 5-8 specific brand design elements from the references/identity: color scheme, layout shapes, icon style, typography, overall aesthetic. Format as comma-separated list." }`
-- Na montagem do `referenceInstruction`, usar `optimized.brand_design_elements` para substituir a lista genérica
-
-### 2. Edge Function — Seção Text expandida (`generate-social-image/index.ts`)
-
-- Receber `supporting_text` e `bullet_points` do payload
-- Adicionar à seção "Text in Portuguese":
-  - `Supporting text: ...`
-  - `Bullet points: ...`
-
-### 3. UI — Campos extras no bloco de texto (`ClienteRedesSociais.tsx`)
-
-- Bloco 3 (Texto da arte): adicionar `supportingText` (textarea, opcional) e `bulletPoints` (input, opcional, placeholder "Ex: Tempo, Renda, Objetivo")
-
-### 4. Hook — Payload expandido (`useClientePosts.ts`)
-
-- Passar `supporting_text` e `bullet_points` no payload do `useGeneratePost`
-
-## Arquivos Modificados
-
-| Arquivo | Mudança |
+| Arquivo | Ação |
 |---|---|
-| `supabase/functions/generate-social-image/index.ts` | `brand_design_elements` no chain-of-thought + referência dinâmica + text section expandida |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Campos `supportingText` e `bulletPoints` no bloco 3 |
-| `src/hooks/useClientePosts.ts` | Payload com `supporting_text` e `bullet_points` |
+| `supabase/functions/generate-social-briefing/index.ts` | Criar — IA extrai campos estruturados do briefing |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Refatorar — Novo fluxo de 7 steps com briefing IA + integração conteúdos |
+| `src/hooks/useClientePosts.ts` | Adicionar mutation `useGenerateBriefing` |
+| `src/pages/cliente/ClienteConteudos.tsx` | Navegar com content_id para Redes Sociais |
 
 ## Resultado Esperado
 
-Com inputs equivalentes ao exemplo P2Y, o sistema gerará:
-
-```
-Use the attached images ONLY as brand style references for the visual identity.
-Replicate the brand design system including:
-black and white base layout, lime green highlight color, rounded card shapes,
-circular icon elements, modern financial consulting layout, clean sans-serif typography.
-IMPORTANT: Do NOT recreate the same people, same scene or same composition.
-Create a NEW scene that follows the same brand design language.
-
-Scene:
-A Brazilian couple sitting together at home planning finances on a laptop...
-
-Environment:
-Modern living room with natural daylight coming through a window...
-
-Design layout:
-Top portion: lifestyle photo with the couple reviewing financial documents.
-Bottom portion: dark rounded card layout with text and lime green highlights.
-Include three circular icon elements representing: time, income and financial goal.
-
-Color palette:
-black, white and lime green accents consistent with the brand references.
-
-Format:
-Portrait 4:5 (1080×1350px) social media post.
-
-Text in Portuguese:
-Headline: O problema não é parcelar.
-Highlight headline: É parcelar sem planejamento!
-Supporting text: Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores.
-Bullet points: Tempo, Renda, Objetivo
-Brand: P2Y crédito e investimento
-
-Mood:
-accessible financial education, trust, planning and smart decisions.
-
-Ultra realistic photography with modern marketing layout.
-```
-
-Esse prompt é **equivalente ao que gerou o resultado excelente** que você mostrou.
+O usuário digita "Quero uma postagem sobre investimento imobiliário exigir estratégia, para a Klir" → IA preenche todos os campos → usuário sobe 3 referências → revisa → gera. O prompt final enviado ao NanoBanana terá a mesma qualidade e completude dos testes manuais realizados.
 
