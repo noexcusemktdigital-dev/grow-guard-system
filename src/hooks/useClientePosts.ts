@@ -67,6 +67,8 @@ export function useGeneratePost() {
       manual_colors?: string;
       manual_style?: string;
       brand_name?: string;
+      supporting_text?: string;
+      bullet_points?: string;
     }) => {
       if (!orgId) throw new Error("Org not found");
 
@@ -95,6 +97,8 @@ export function useGeneratePost() {
             manual_colors: payload.manual_colors,
             manual_style: payload.manual_style,
             brand_name: payload.brand_name,
+            supporting_text: payload.supporting_text,
+            bullet_points: payload.bullet_points,
           },
         });
         if (resp.error) throw new Error(resp.error.message || "Erro ao gerar arte");
