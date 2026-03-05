@@ -3200,6 +3200,8 @@ export type Database = {
           nivel: string
           organization_id: string
           score_percentage: number
+          status: string | null
+          strategy_result: Json | null
         }
         Insert: {
           answers?: Json
@@ -3209,6 +3211,8 @@ export type Database = {
           nivel?: string
           organization_id: string
           score_percentage?: number
+          status?: string | null
+          strategy_result?: Json | null
         }
         Update: {
           answers?: Json
@@ -3218,6 +3222,8 @@ export type Database = {
           nivel?: string
           organization_id?: string
           score_percentage?: number
+          status?: string | null
+          strategy_result?: Json | null
         }
         Relationships: [
           {
