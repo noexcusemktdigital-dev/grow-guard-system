@@ -47,135 +47,221 @@ const PERSONA_DESCRICAO_OPTIONS = [
 ];
 
 /* ══════════════════════════════════════════════
-   SOFIA — Estratégia de Marketing (10 perguntas)
+   SOFIA — Estratégia de Marketing (14 perguntas em 8 blocos)
    ══════════════════════════════════════════════ */
 
 export const SOFIA_STEPS: BriefingStep[] = [
   // ── Intro
   {
     id: "_intro_sofia",
-    agentMessage: "Oi! 👋 Sou a Sofia, sua consultora de marketing. Vou te fazer 10 perguntas rápidas para criar uma estratégia completa e personalizada para o seu negócio. Vamos lá?",
+    agentMessage: "Oi! 👋 Sou a Sofia, sua consultora de marketing. Vou te fazer 14 perguntas rápidas divididas em 8 blocos para criar uma estratégia completa e personalizada para o seu negócio. Vamos lá?",
     inputType: "info",
   },
 
-  // 1. Referência
-  {
-    id: "referencia",
-    section: "Sua Empresa",
-    agentMessage: "Pra começar, cole o link do seu site ou Instagram. Isso me ajuda a entender melhor o seu negócio! 😊",
-    inputType: "text",
-    placeholder: "https://instagram.com/suaempresa ou https://seusite.com.br",
-    helpText: "Permite que a IA entenda o contexto visual e de comunicação da sua empresa.",
-    optional: true,
-  },
+  // ═══ BLOCO 1 — Negócio ═══
 
-  // 2. Descrição do negócio
+  // 1. Nome + o que faz
   {
     id: "empresa",
-    section: "Sua Empresa",
-    agentMessage: "Em poucas palavras, o que sua empresa faz?",
+    section: "Negócio",
+    agentMessage: "Qual é o nome da sua empresa e o que ela faz?",
     inputType: "textarea",
-    placeholder: "Ex: Consultoria financeira para empresas, clínica odontológica especializada em implantes...",
+    placeholder: "Ex: Somos uma clínica odontológica especializada em implantes.",
     helpText: "Uma descrição clara ajuda a IA a direcionar toda a estratégia.",
   },
 
-  // 3. Produto/serviço principal
+  // 2. Produto principal
   {
     id: "produto",
-    section: "Seu Produto",
-    agentMessage: "Qual é o principal produto ou serviço que você deseja priorizar na estratégia?",
+    section: "Negócio",
+    agentMessage: "Qual é o principal produto ou serviço que você quer vender agora?",
     inputType: "textarea",
-    placeholder: "Ex: Consultoria empresarial premium, implante dentário, curso online...",
+    placeholder: "Ex: Implantes dentários, consultoria empresarial, curso online...",
     helpText: "Focamos a estratégia no produto/serviço com maior potencial de retorno.",
   },
 
-  // 4. Público-alvo
+  // 3. Ticket médio
   {
-    id: "publico",
-    section: "Seu Público",
-    agentMessage: "Quem é o cliente ideal da sua empresa?",
-    inputType: "textarea",
-    placeholder: "Ex: Empresários de 30-50 anos, médicos, pequenas empresas, consumidores finais...",
-    helpText: "Quanto mais detalhado, melhor será a segmentação e a personalização da estratégia.",
-  },
-
-  // 5. Problema que resolve
-  {
-    id: "problema",
-    section: "Seu Público",
-    agentMessage: "Qual problema do cliente seu produto ou serviço resolve?",
-    inputType: "textarea",
-    placeholder: "Ex: Falta de organização financeira, dor de dente crônica, baixa visibilidade online...",
-    helpText: "Entender a dor do cliente é essencial para criar mensagens que convertem.",
-  },
-
-  // 6. Diferencial competitivo
-  {
-    id: "diferencial",
-    section: "Diferencial",
-    agentMessage: "Por que um cliente escolheria sua empresa em vez de um concorrente?",
-    inputType: "textarea",
-    placeholder: "Ex: Metodologia própria, tecnologia exclusiva, atendimento personalizado...",
-    helpText: "Seu diferencial será a base do posicionamento estratégico.",
-  },
-
-  // 7. Objetivo de marketing
-  {
-    id: "objetivo",
-    section: "Objetivos",
-    agentMessage: "Qual resultado você deseja alcançar com marketing?",
+    id: "ticket_medio",
+    section: "Negócio",
+    agentMessage: "Qual é o ticket médio desse produto ou serviço?",
     inputType: "select",
     options: [
-      { value: "gerar_leads", label: "Gerar leads" },
-      { value: "vender_mais", label: "Vender mais" },
-      { value: "captar_clientes", label: "Captar clientes" },
-      { value: "aumentar_autoridade", label: "Aumentar autoridade" },
-    ],
-    helpText: "O objetivo define toda a direção da estratégia.",
-  },
-
-  // 8. Meta desejada
-  {
-    id: "meta",
-    section: "Objetivos",
-    agentMessage: "Qual resultado você gostaria de alcançar nos próximos meses?",
-    inputType: "textarea",
-    placeholder: "Ex: 50 novos clientes, R$ 100 mil de faturamento mensal, 200 leads/mês...",
-    helpText: "Metas concretas permitem criar projeções realistas.",
-  },
-
-  // 9. Canais disponíveis
-  {
-    id: "canais",
-    section: "Canais",
-    agentMessage: "Quais canais você pretende utilizar para marketing? Pode marcar vários!",
-    inputType: "multi-select",
-    options: [
-      { value: "instagram", label: "Instagram" },
-      { value: "google", label: "Google" },
-      { value: "youtube", label: "YouTube" },
-      { value: "whatsapp", label: "WhatsApp" },
-      { value: "tiktok", label: "TikTok" },
-      { value: "facebook", label: "Facebook" },
-      { value: "linkedin", label: "LinkedIn" },
-      { value: "trafego_pago", label: "Tráfego pago" },
-    ],
-    helpText: "Selecione os canais onde deseja marcar presença.",
-  },
-
-  // 10. Orçamento
-  {
-    id: "orcamento",
-    section: "Canais",
-    agentMessage: "Existe algum orçamento mensal disponível para marketing?",
-    inputType: "select",
-    options: [
-      { value: "nenhum", label: "Sem orçamento definido" },
       { value: "0-500", label: "Até R$ 500" },
       { value: "500-2k", label: "R$ 500 a R$ 2.000" },
       { value: "2k-5k", label: "R$ 2.000 a R$ 5.000" },
       { value: "5k-15k", label: "R$ 5.000 a R$ 15.000" },
       { value: "15k+", label: "Mais de R$ 15.000" },
+      { value: "personalizar", label: "Outro valor" },
+    ],
+    helpText: "O ticket médio impacta diretamente nas projeções de receita.",
+  },
+
+  // ═══ BLOCO 2 — Público ═══
+
+  // 4. Cliente ideal
+  {
+    id: "publico",
+    section: "Público",
+    agentMessage: "Quem é o cliente ideal para esse produto?",
+    inputType: "multi-select",
+    options: [
+      { value: "empresarios", label: "Empresários" },
+      { value: "medicos", label: "Médicos / Profissionais de Saúde" },
+      { value: "pequenas_empresas", label: "Pequenas empresas" },
+      { value: "consumidor_final", label: "Consumidor final" },
+      { value: "executivos", label: "Executivos / Gestores" },
+      { value: "profissionais_liberais", label: "Profissionais liberais" },
+      { value: "personalizar", label: "Outro perfil" },
+    ],
+    helpText: "Quanto mais detalhado, melhor será a segmentação da estratégia.",
+  },
+
+  // 5. Problema que resolve
+  {
+    id: "problema",
+    section: "Público",
+    agentMessage: "Qual problema esse cliente enfrenta que seu produto resolve?",
+    inputType: "textarea",
+    placeholder: "Ex: Empresários que não conseguem gerar vendas de forma previsível.",
+    helpText: "Entender a dor do cliente é essencial para criar mensagens que convertem.",
+  },
+
+  // ═══ BLOCO 3 — Posicionamento ═══
+
+  // 6. Por que escolher sua empresa
+  {
+    id: "razao_escolha",
+    section: "Posicionamento",
+    agentMessage: "Por que um cliente deveria escolher sua empresa e não a concorrência?",
+    inputType: "textarea",
+    placeholder: "Ex: Preço competitivo, qualidade superior, método próprio, experiência de 10 anos...",
+    helpText: "Seu posicionamento será a base de toda a comunicação estratégica.",
+  },
+
+  // 7. Diferencial claro
+  {
+    id: "diferencial",
+    section: "Posicionamento",
+    agentMessage: "Você tem algum diferencial claro no mercado?",
+    inputType: "select",
+    options: [
+      { value: "metodo", label: "Método exclusivo" },
+      { value: "atendimento", label: "Atendimento personalizado" },
+      { value: "nicho", label: "Especialização em nicho" },
+      { value: "tecnologia", label: "Tecnologia / Inovação" },
+      { value: "preco", label: "Melhor custo-benefício" },
+      { value: "personalizar", label: "Outro diferencial" },
+    ],
+    helpText: "Seu diferencial será usado para posicionar a marca e criar a proposta de valor.",
+  },
+
+  // ═══ BLOCO 4 — Estrutura atual ═══
+
+  // 8. Canais atuais
+  {
+    id: "canais_atuais",
+    section: "Estrutura Atual",
+    agentMessage: "Quais canais você já usa hoje para atrair clientes? Pode marcar vários!",
+    inputType: "multi-select",
+    options: [
+      { value: "instagram", label: "Instagram" },
+      { value: "site", label: "Site" },
+      { value: "trafego_pago", label: "Tráfego pago" },
+      { value: "indicacao", label: "Indicação" },
+      { value: "youtube", label: "YouTube" },
+      { value: "tiktok", label: "TikTok" },
+      { value: "linkedin", label: "LinkedIn" },
+      { value: "whatsapp", label: "WhatsApp" },
+    ],
+    helpText: "Saber os canais atuais ajuda a identificar oportunidades.",
+  },
+
+  // 9. Investe em anúncios
+  {
+    id: "investe_anuncios",
+    section: "Estrutura Atual",
+    agentMessage: "Você já investe em anúncios pagos? Se sim, quanto por mês?",
+    inputType: "select",
+    options: [
+      { value: "nao", label: "Não invisto" },
+      { value: "0-500", label: "Sim, até R$ 500/mês" },
+      { value: "500-2k", label: "Sim, R$ 500 a R$ 2.000/mês" },
+      { value: "2k-5k", label: "Sim, R$ 2.000 a R$ 5.000/mês" },
+      { value: "5k+", label: "Sim, mais de R$ 5.000/mês" },
+    ],
+    helpText: "Entender seu investimento atual em anúncios ajuda a dimensionar a estratégia.",
+  },
+
+  // ═══ BLOCO 5 — Objetivo ═══
+
+  // 10. Objetivo principal
+  {
+    id: "objetivo",
+    section: "Objetivo",
+    agentMessage: "Qual é seu principal objetivo de marketing neste momento?",
+    inputType: "select",
+    options: [
+      { value: "gerar_leads", label: "Gerar leads" },
+      { value: "aumentar_vendas", label: "Aumentar vendas" },
+      { value: "captar_premium", label: "Captar clientes premium" },
+      { value: "captar_franqueados", label: "Captar franqueados" },
+      { value: "aumentar_autoridade", label: "Aumentar autoridade" },
+      { value: "lancar_produto", label: "Lançar produto/serviço" },
+    ],
+    helpText: "O objetivo define toda a direção da estratégia.",
+  },
+
+  // 11. Meta de faturamento/crescimento
+  {
+    id: "meta",
+    section: "Objetivo",
+    agentMessage: "Qual meta de faturamento ou crescimento você gostaria de atingir?",
+    inputType: "textarea",
+    placeholder: "Ex: Quero dobrar o faturamento em 12 meses, conseguir 50 novos clientes por mês...",
+    helpText: "Metas concretas permitem criar projeções realistas.",
+  },
+
+  // ═══ BLOCO 6 — Presença digital ═══
+
+  // 12. Links
+  {
+    id: "links_digitais",
+    section: "Presença Digital",
+    agentMessage: "Se tiver, compartilhe os links do seu site, Instagram ou landing page. Isso ajuda a IA a analisar sua presença digital! 😊",
+    inputType: "textarea",
+    placeholder: "Site: https://...\nInstagram: @...\nLanding page: https://...",
+    helpText: "Links permitem que a IA entenda o contexto visual e de comunicação.",
+    optional: true,
+  },
+
+  // ═══ BLOCO 7 — Região ═══
+
+  // 13. Região de atuação
+  {
+    id: "regiao",
+    section: "Região",
+    agentMessage: "Onde sua empresa atua? Informe cidade, estado ou país.",
+    inputType: "text",
+    placeholder: "Ex: São Paulo - SP, Brasil inteiro, América Latina...",
+    helpText: "A região de atuação influencia a segmentação de campanhas.",
+  },
+
+  // ═══ BLOCO 8 — Orçamento ═══
+
+  // 14. Investimento mensal em marketing
+  {
+    id: "orcamento",
+    section: "Orçamento",
+    agentMessage: "Quanto você pretende investir em marketing por mês?",
+    inputType: "select",
+    options: [
+      { value: "0-1k", label: "Até R$ 1.000" },
+      { value: "1k-3k", label: "R$ 1.000 a R$ 3.000" },
+      { value: "3k-5k", label: "R$ 3.000 a R$ 5.000" },
+      { value: "5k-10k", label: "R$ 5.000 a R$ 10.000" },
+      { value: "10k-20k", label: "R$ 10.000 a R$ 20.000" },
+      { value: "20k+", label: "Mais de R$ 20.000" },
     ],
     helpText: "O orçamento ajuda a dimensionar campanhas e projeções de resultado.",
   },

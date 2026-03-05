@@ -14,60 +14,54 @@ const TOOL_SCHEMA = {
   function: {
     name: "generate_strategy",
     description:
-      "Retorna uma estratégia de marketing completa e estruturada com diagnóstico, posicionamento, persona, pilares de conteúdo, funil, ideias de conteúdo, estrutura de site, tráfego pago, indicadores e projeções.",
+      "Retorna uma estratégia de marketing completa e estruturada em 8 módulos: diagnóstico com radar, ICP, proposta de valor, aquisição, conteúdo, projeções numéricas, estrutura recomendada e plano de execução.",
     parameters: {
       type: "object",
       properties: {
         diagnostico: {
           type: "object",
           properties: {
-            analise: { type: "string", description: "Análise detalhada do negócio e contexto de mercado" },
+            analise: { type: "string", description: "Análise detalhada do negócio e contexto de mercado (2-3 parágrafos)" },
             pontos_fortes: { type: "array", items: { type: "string" } },
             oportunidades: { type: "array", items: { type: "string" } },
             riscos: { type: "array", items: { type: "string" } },
-          },
-          required: ["analise", "pontos_fortes", "oportunidades", "riscos"],
-          additionalProperties: false,
-        },
-        posicionamento: {
-          type: "object",
-          properties: {
-            proposta_valor: { type: "string" },
-            mensagem_central: { type: "string" },
-            diferenciacao: { type: "string" },
-            tom_de_voz: { type: "string" },
-          },
-          required: ["proposta_valor", "mensagem_central", "diferenciacao", "tom_de_voz"],
-          additionalProperties: false,
-        },
-        persona: {
-          type: "object",
-          properties: {
-            nome: { type: "string" },
-            idade: { type: "string" },
-            profissao: { type: "string" },
-            dores: { type: "array", items: { type: "string" } },
-            desejos: { type: "array", items: { type: "string" } },
-            objecoes: { type: "array", items: { type: "string" } },
-            canais_preferidos: { type: "array", items: { type: "string" } },
-            descricao: { type: "string" },
-          },
-          required: ["nome", "idade", "profissao", "dores", "desejos", "objecoes", "canais_preferidos", "descricao"],
-          additionalProperties: false,
-        },
-        pilares_conteudo: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              nome: { type: "string" },
-              descricao: { type: "string" },
-              exemplos: { type: "array", items: { type: "string" } },
+            radar: {
+              type: "object",
+              properties: {
+                autoridade: { type: "number", description: "Score 0-10 para Autoridade da marca" },
+                aquisicao: { type: "number", description: "Score 0-10 para Aquisição de clientes" },
+                conversao: { type: "number", description: "Score 0-10 para Conversão de leads" },
+                retencao: { type: "number", description: "Score 0-10 para Retenção de clientes" },
+              },
+              required: ["autoridade", "aquisicao", "conversao", "retencao"],
+              additionalProperties: false,
             },
-            required: ["nome", "descricao", "exemplos"],
-            additionalProperties: false,
           },
-          description: "3 a 5 pilares de conteúdo estratégicos",
+          required: ["analise", "pontos_fortes", "oportunidades", "riscos", "radar"],
+          additionalProperties: false,
+        },
+        icp: {
+          type: "object",
+          properties: {
+            demografia: { type: "string", description: "Faixa etária, gênero, localização, renda" },
+            perfil_profissional: { type: "string", description: "Cargo, setor, experiência" },
+            dores: { type: "array", items: { type: "string" }, description: "3-5 principais dores" },
+            desejos: { type: "array", items: { type: "string" }, description: "3-5 principais desejos" },
+            objecoes: { type: "array", items: { type: "string" }, description: "3-5 objeções comuns" },
+            descricao: { type: "string", description: "Parágrafo descritivo do cliente ideal" },
+          },
+          required: ["demografia", "perfil_profissional", "dores", "desejos", "objecoes", "descricao"],
+          additionalProperties: false,
+        },
+        proposta_valor: {
+          type: "object",
+          properties: {
+            problema: { type: "string", description: "O problema principal que o cliente enfrenta" },
+            metodo: { type: "string", description: "O método/solução que a empresa oferece" },
+            resultado: { type: "string", description: "O resultado prometido ao cliente" },
+          },
+          required: ["problema", "metodo", "resultado"],
+          additionalProperties: false,
         },
         estrategia_aquisicao: {
           type: "object",
@@ -80,147 +74,183 @@ const TOOL_SCHEMA = {
                   canal: { type: "string" },
                   justificativa: { type: "string" },
                   acao_principal: { type: "string" },
+                  percentual: { type: "number", description: "Percentual de investimento recomendado (0-100)" },
+                  tipo: { type: "string", enum: ["organico", "pago", "parcerias"], description: "Tipo do canal" },
                 },
-                required: ["canal", "justificativa", "acao_principal"],
+                required: ["canal", "justificativa", "acao_principal", "percentual", "tipo"],
                 additionalProperties: false,
               },
             },
+            funil: {
+              type: "object",
+              properties: {
+                topo: { type: "object", properties: { objetivo: { type: "string" }, acoes: { type: "array", items: { type: "string" } }, estimativa_visitantes: { type: "number" } }, required: ["objetivo", "acoes", "estimativa_visitantes"], additionalProperties: false },
+                meio: { type: "object", properties: { objetivo: { type: "string" }, acoes: { type: "array", items: { type: "string" } }, estimativa_leads: { type: "number" } }, required: ["objetivo", "acoes", "estimativa_leads"], additionalProperties: false },
+                fundo: { type: "object", properties: { objetivo: { type: "string" }, acoes: { type: "array", items: { type: "string" } }, estimativa_clientes: { type: "number" } }, required: ["objetivo", "acoes", "estimativa_clientes"], additionalProperties: false },
+              },
+              required: ["topo", "meio", "fundo"],
+              additionalProperties: false,
+            },
           },
-          required: ["canais_prioritarios"],
+          required: ["canais_prioritarios", "funil"],
           additionalProperties: false,
         },
-        funil: {
+        estrategia_conteudo: {
           type: "object",
           properties: {
-            topo: { type: "object", properties: { objetivo: { type: "string" }, acoes: { type: "array", items: { type: "string" } } }, required: ["objetivo", "acoes"], additionalProperties: false },
-            meio: { type: "object", properties: { objetivo: { type: "string" }, acoes: { type: "array", items: { type: "string" } } }, required: ["objetivo", "acoes"], additionalProperties: false },
-            fundo: { type: "object", properties: { objetivo: { type: "string" }, acoes: { type: "array", items: { type: "string" } } }, required: ["objetivo", "acoes"], additionalProperties: false },
+            pilares: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  nome: { type: "string" },
+                  tipo: { type: "string", enum: ["educacao", "autoridade", "prova_social", "oferta"] },
+                  descricao: { type: "string" },
+                  exemplos: { type: "array", items: { type: "string" }, description: "3-5 exemplos de conteúdo" },
+                },
+                required: ["nome", "tipo", "descricao", "exemplos"],
+                additionalProperties: false,
+              },
+              description: "Exatamente 4 pilares: educação, autoridade, prova social, oferta",
+            },
+            ideias_conteudo: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  titulo: { type: "string" },
+                  formato: { type: "string", description: "Carrossel, Reels, Post, Story, Artigo" },
+                  pilar: { type: "string" },
+                  etapa_funil: { type: "string", enum: ["topo", "meio", "fundo"] },
+                },
+                required: ["titulo", "formato", "pilar", "etapa_funil"],
+                additionalProperties: false,
+              },
+              description: "10 a 15 ideias de conteúdo",
+            },
           },
-          required: ["topo", "meio", "fundo"],
+          required: ["pilares", "ideias_conteudo"],
           additionalProperties: false,
         },
-        ideias_conteudo: {
+        plano_crescimento: {
+          type: "object",
+          properties: {
+            projecoes_mensais: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  mes: { type: "number", description: "Número do mês (1-6)" },
+                  investimento: { type: "number", description: "Investimento em R$" },
+                  leads: { type: "number" },
+                  clientes: { type: "number" },
+                  receita: { type: "number", description: "Receita estimada em R$" },
+                },
+                required: ["mes", "investimento", "leads", "clientes", "receita"],
+                additionalProperties: false,
+              },
+              description: "Projeções para 6 meses",
+            },
+            indicadores: {
+              type: "object",
+              properties: {
+                cpc_medio: { type: "string", description: "Custo por clique estimado" },
+                cpl_estimado: { type: "string", description: "Custo por lead estimado" },
+                cac_estimado: { type: "string", description: "Custo de aquisição de cliente" },
+                roi_esperado: { type: "string", description: "ROI projetado" },
+              },
+              required: ["cpc_medio", "cpl_estimado", "cac_estimado", "roi_esperado"],
+              additionalProperties: false,
+            },
+          },
+          required: ["projecoes_mensais", "indicadores"],
+          additionalProperties: false,
+        },
+        estrutura_recomendada: {
           type: "array",
           items: {
             type: "object",
             properties: {
-              titulo: { type: "string" },
-              formato: { type: "string", description: "Ex: Carrossel, Reels, Post, Story, Artigo" },
-              pilar: { type: "string" },
-              etapa_funil: { type: "string", enum: ["topo", "meio", "fundo"] },
+              item: { type: "string", description: "Ex: Site institucional, Landing page, Tráfego pago, etc." },
+              status: { type: "string", enum: ["tem", "falta"], description: "Se o cliente já tem ou não" },
+              prioridade: { type: "string", enum: ["alta", "media", "baixa"] },
+              recomendacao: { type: "string", description: "Recomendação específica" },
             },
-            required: ["titulo", "formato", "pilar", "etapa_funil"],
+            required: ["item", "status", "prioridade", "recomendacao"],
             additionalProperties: false,
           },
-          description: "10 a 15 ideias de conteúdo iniciais",
+          description: "Checklist de estrutura: site, landing page, tráfego, conteúdo, automação, CRM",
         },
-        estrutura_site: {
-          type: "object",
-          properties: {
-            paginas: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  nome: { type: "string" },
-                  objetivo: { type: "string" },
-                  secoes: { type: "array", items: { type: "string" } },
+        plano_execucao: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              mes: { type: "number", description: "Mês 1, 2 ou 3" },
+              titulo: { type: "string", description: "Título do mês" },
+              passos: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    acao: { type: "string" },
+                    ferramenta: { type: "string", enum: ["conteudos", "postagens", "sites", "trafego", "crm", "scripts", "manual"], description: "Ferramenta do sistema vinculada" },
+                  },
+                  required: ["acao", "ferramenta"],
+                  additionalProperties: false,
                 },
-                required: ["nome", "objetivo", "secoes"],
-                additionalProperties: false,
               },
             },
-            recomendacoes: { type: "array", items: { type: "string" } },
+            required: ["mes", "titulo", "passos"],
+            additionalProperties: false,
           },
-          required: ["paginas", "recomendacoes"],
-          additionalProperties: false,
-        },
-        trafego_pago: {
-          type: "object",
-          properties: {
-            campanhas: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  nome: { type: "string" },
-                  plataforma: { type: "string" },
-                  objetivo: { type: "string" },
-                  publico: { type: "string" },
-                  formato: { type: "string" },
-                },
-                required: ["nome", "plataforma", "objetivo", "publico", "formato"],
-                additionalProperties: false,
-              },
-            },
-            orcamento_sugerido: { type: "string" },
-            recomendacoes: { type: "array", items: { type: "string" } },
-          },
-          required: ["campanhas", "orcamento_sugerido", "recomendacoes"],
-          additionalProperties: false,
-        },
-        indicadores: {
-          type: "object",
-          properties: {
-            cpl_estimado: { type: "string" },
-            cac_estimado: { type: "string" },
-            roi_esperado: { type: "string" },
-            taxa_conversao_meta: { type: "string" },
-          },
-          required: ["cpl_estimado", "cac_estimado", "roi_esperado", "taxa_conversao_meta"],
-          additionalProperties: false,
-        },
-        projecoes: {
-          type: "object",
-          properties: {
-            leads: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: { mes: { type: "string" }, sem_estrategia: { type: "number" }, com_estrategia: { type: "number" } },
-                required: ["mes", "sem_estrategia", "com_estrategia"],
-                additionalProperties: false,
-              },
-            },
-            faturamento: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: { mes: { type: "string" }, sem_estrategia: { type: "number" }, com_estrategia: { type: "number" } },
-                required: ["mes", "sem_estrategia", "com_estrategia"],
-                additionalProperties: false,
-              },
-            },
-          },
-          required: ["leads", "faturamento"],
-          additionalProperties: false,
+          description: "Roadmap de 3 meses com passos vinculados às ferramentas do sistema",
         },
         resumo_executivo: { type: "string", description: "Resumo de 2-3 parágrafos da estratégia completa" },
+        objetivo_principal: { type: "string", description: "Objetivo principal identificado" },
+        canal_prioritario: { type: "string", description: "Canal prioritário recomendado" },
+        investimento_recomendado: { type: "string", description: "Investimento mensal recomendado" },
+        potencial_crescimento: { type: "string", description: "Potencial de crescimento estimado (ex: 3x em 6 meses)" },
       },
       required: [
-        "diagnostico", "posicionamento", "persona", "pilares_conteudo",
-        "estrategia_aquisicao", "funil", "ideias_conteudo", "estrutura_site",
-        "trafego_pago", "indicadores", "projecoes", "resumo_executivo",
+        "diagnostico", "icp", "proposta_valor", "estrategia_aquisicao",
+        "estrategia_conteudo", "plano_crescimento", "estrutura_recomendada",
+        "plano_execucao", "resumo_executivo", "objetivo_principal",
+        "canal_prioritario", "investimento_recomendado", "potencial_crescimento",
       ],
       additionalProperties: false,
     },
   },
 };
 
-const SYSTEM_PROMPT = `Você é um consultor sênior de marketing digital brasileiro, especialista em estratégia, posicionamento de marca, geração de leads e vendas digitais.
+const SYSTEM_PROMPT = `Você é um consultor sênior de marketing digital brasileiro com 15 anos de experiência, especialista em estratégia, posicionamento de marca, geração de leads e vendas digitais.
 
-Sua função é receber as respostas de um diagnóstico empresarial com 10 perguntas e gerar uma estratégia de marketing completa, estruturada e acionável.
+Sua função é receber as respostas de um briefing empresarial com 14 perguntas em 8 blocos e gerar uma estratégia de marketing COMPLETA, DETALHADA e ACIONÁVEL.
 
-Diretrizes:
-- Analise profundamente o contexto do negócio com base nas respostas
-- Gere uma persona detalhada e realista
-- Defina 3-5 pilares de conteúdo estratégicos
-- Sugira 10-15 ideias de conteúdo iniciais distribuídas pelo funil
-- Estruture campanhas de tráfego pago realistas
-- Calcule indicadores baseados em benchmarks reais do mercado brasileiro
-- Gere projeções de 6 meses para leads e faturamento
-- Todas as recomendações devem ser práticas e executáveis
+DIRETRIZES OBRIGATÓRIAS:
+
+1. DIAGNÓSTICO: Analise profundamente o negócio. Gere scores realistas de 0-10 para o radar (Autoridade, Aquisição, Conversão, Retenção) baseados nas respostas.
+
+2. ICP (Cliente Ideal): Crie um perfil detalhado com demografia, perfil profissional, dores específicas, desejos e objeções reais do mercado brasileiro.
+
+3. PROPOSTA DE VALOR: Estruture claramente: Problema → Método/Solução → Resultado prometido.
+
+4. AQUISIÇÃO: Defina canais prioritários com percentuais de investimento e tipo (orgânico/pago/parcerias). Estruture o funil com estimativas numéricas para cada etapa.
+
+5. CONTEÚDO: Crie exatamente 4 pilares (educação, autoridade, prova social, oferta) com exemplos práticos. Gere 10-15 ideias de conteúdo distribuídas pelo funil.
+
+6. PROJEÇÕES: Gere projeções NUMÉRICAS realistas para 6 meses (investimento, leads, clientes, receita). Use benchmarks reais do mercado brasileiro para CPC, CPL, CAC e ROI.
+
+7. ESTRUTURA: Analise o que o cliente já tem e o que falta (site, landing page, tráfego, conteúdo, automação, CRM). Baseie-se nos canais informados no briefing.
+
+8. EXECUÇÃO: Crie roadmap de 3 meses com passos concretos vinculados às ferramentas do sistema (conteudos, postagens, sites, trafego, crm, scripts).
+
+REGRAS:
+- Seja ESPECÍFICO e PRÁTICO — nada genérico
+- Todas as projeções devem ser baseadas no orçamento e ticket médio informados
+- Use benchmarks reais do mercado brasileiro
 - Sempre responda em português brasileiro
+- O plano de execução deve vincular ações às ferramentas disponíveis no sistema
 
 Use a ferramenta generate_strategy para retornar a estratégia estruturada.`;
 
@@ -286,15 +316,24 @@ serve(async (req) => {
     }
 
     const answersText = Object.entries(answers)
-      .map(([k, v]) => `- ${k}: ${v}`)
+      .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
       .join("\n");
 
-    const userPrompt = `Com base nas respostas do diagnóstico abaixo, gere uma estratégia de marketing completa.
+    const userPrompt = `Com base nas respostas do briefing abaixo (14 perguntas em 8 blocos), gere uma estratégia de marketing COMPLETA e DETALHADA.
 
-RESPOSTAS DO DIAGNÓSTICO:
+RESPOSTAS DO BRIEFING:
 ${answersText}
 
-Use a ferramenta generate_strategy para retornar a estratégia estruturada. Gere projeções de 6 meses. Sugira 10-15 ideias de conteúdo. Defina 3-5 pilares de conteúdo.`;
+INSTRUÇÕES IMPORTANTES:
+1. Gere scores realistas para o radar de diagnóstico (0-10)
+2. Crie projeções numéricas para 6 meses baseadas no orçamento e ticket médio informados
+3. Defina exatamente 4 pilares de conteúdo (educação, autoridade, prova social, oferta)
+4. Gere 10-15 ideias de conteúdo distribuídas pelo funil
+5. Analise a estrutura atual (canais informados) e recomende o que falta
+6. Crie roadmap de 3 meses com ações vinculadas às ferramentas: conteudos, postagens, sites, trafego, crm, scripts
+7. Use benchmarks reais do mercado brasileiro para CPC, CPL, CAC
+
+Use a ferramenta generate_strategy para retornar a estratégia estruturada.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -370,7 +409,7 @@ Use a ferramenta generate_strategy para retornar a estratégia estruturada. Gere
         organization_id: orgData,
         agent_id: "00000000-0000-0000-0000-000000000000",
         contact_id: "00000000-0000-0000-0000-000000000000",
-        input_message: `[Estratégia] Diagnóstico com ${Object.keys(answers).length} respostas`,
+        input_message: `[Estratégia v2] Briefing com ${Object.keys(answers).length} respostas`,
         output_message: JSON.stringify(result).substring(0, 500),
         tokens_used: tokensUsed,
         model: "google/gemini-3-flash-preview",

@@ -1,42 +1,63 @@
 import { useState } from "react";
-import { Sparkles, CheckCircle2, RotateCcw, Clock, ChevronDown, ChevronUp, Target, Users, Lightbulb, Globe, DollarSign, TrendingUp, BarChart3, FileText, Megaphone } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import {
+  Sparkles, CheckCircle2, RotateCcw, Clock, Target, Users, Lightbulb,
+  Globe, DollarSign, TrendingUp, BarChart3, Megaphone, ArrowRight,
+  FileText, Palette, Monitor, Zap, CheckSquare, XSquare, AlertCircle,
+  PenTool, Share2, ExternalLink,
+} from "lucide-react";
+import { motion } from "framer-motion";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActiveStrategy, useStrategyHistory, useSaveStrategy, useApproveStrategy, useGenerateStrategy } from "@/hooks/useMarketingStrategy";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { toast } from "@/hooks/use-toast";
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
 import { AGENTS, SOFIA_STEPS } from "@/components/cliente/briefingAgents";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import {
+  ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  BarChart, Bar,
+} from "recharts";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 /* ══════════════════════════════════════════════
-   STRATEGY RESULT DISPLAY COMPONENTS
+   COLORS
+   ══════════════════════════════════════════════ */
+const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2, 160 60% 45%))", "hsl(var(--chart-3, 30 80% 55%))", "hsl(var(--chart-4, 280 65% 60%))"];
+const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2, 160 60% 45%))", "hsl(var(--chart-3, 30 80% 55%))"];
+
+const TOOL_ROUTES: Record<string, { label: string; path: string; icon: any }> = {
+  conteudos: { label: "Conteúdos", path: "/cliente/conteudos", icon: FileText },
+  postagens: { label: "Postagens", path: "/cliente/redes-sociais", icon: Palette },
+  sites: { label: "Sites", path: "/cliente/sites", icon: Monitor },
+  trafego: { label: "Tráfego Pago", path: "/cliente/trafego-pago", icon: Zap },
+  crm: { label: "CRM", path: "/cliente/crm", icon: Users },
+  scripts: { label: "Scripts", path: "/cliente/scripts", icon: PenTool },
+  manual: { label: "Manual", path: "#", icon: CheckSquare },
+};
+
+/* ══════════════════════════════════════════════
+   HELPER COMPONENTS
    ══════════════════════════════════════════════ */
 
-function SectionCard({ title, icon: Icon, children, defaultOpen = true }: { title: string; icon: any; children: React.ReactNode; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+function KpiCard({ label, value, icon: Icon }: { label: string; value: string; icon: any }) {
   return (
-    <Card className="overflow-hidden">
-      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-        <div className="flex items-center gap-2">
+    <Card>
+      <CardContent className="p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
           <Icon className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold text-sm">{title}</h3>
         </div>
-        {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}>
-            <CardContent className="pt-0 pb-4">{children}</CardContent>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground truncate">{label}</p>
+          <p className="font-semibold text-sm truncate">{value}</p>
+        </div>
+      </CardContent>
     </Card>
   );
 }
@@ -44,14 +65,474 @@ function SectionCard({ title, icon: Icon, children, defaultOpen = true }: { titl
 function TagList({ items, variant = "secondary" }: { items: string[]; variant?: "secondary" | "outline" | "default" }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {items.map((item, i) => (
+      {items?.map((item, i) => (
         <Badge key={i} variant={variant} className="text-xs">{item}</Badge>
       ))}
     </div>
   );
 }
 
-function StrategyResultView({ result, onApprove, onRegenerate, isApproving, status }: {
+function ToolButton({ ferramenta }: { ferramenta: string }) {
+  const navigate = useNavigate();
+  const tool = TOOL_ROUTES[ferramenta] || TOOL_ROUTES.manual;
+  const Icon = tool.icon;
+  if (ferramenta === "manual") return null;
+  return (
+    <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => navigate(tool.path)}>
+      <Icon className="w-3.5 h-3.5" /> {tool.label} <ExternalLink className="w-3 h-3" />
+    </Button>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   TAB: RESUMO
+   ══════════════════════════════════════════════ */
+
+function TabResumo({ result }: { result: any }) {
+  const radarData = result.diagnostico?.radar
+    ? [
+        { subject: "Autoridade", value: result.diagnostico.radar.autoridade },
+        { subject: "Aquisição", value: result.diagnostico.radar.aquisicao },
+        { subject: "Conversão", value: result.diagnostico.radar.conversao },
+        { subject: "Retenção", value: result.diagnostico.radar.retencao },
+      ]
+    : [];
+
+  return (
+    <div className="space-y-6">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard label="Objetivo Principal" value={result.objetivo_principal || "—"} icon={Target} />
+        <KpiCard label="Canal Prioritário" value={result.canal_prioritario || "—"} icon={Share2} />
+        <KpiCard label="Investimento Recomendado" value={result.investimento_recomendado || "—"} icon={DollarSign} />
+        <KpiCard label="Potencial de Crescimento" value={result.potencial_crescimento || "—"} icon={TrendingUp} />
+      </div>
+
+      {/* Radar + Diagnóstico */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {radarData.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Radar de Maturidade</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 10]} tick={{ fontSize: 9 }} />
+                  <Radar name="Score" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Diagnóstico</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground leading-relaxed">{result.diagnostico?.analise}</p>
+            <div className="grid grid-cols-1 gap-2">
+              {result.diagnostico?.pontos_fortes?.length > 0 && (
+                <div><p className="text-xs font-semibold text-green-600 mb-1">Pontos Fortes</p><TagList items={result.diagnostico.pontos_fortes} variant="outline" /></div>
+              )}
+              {result.diagnostico?.oportunidades?.length > 0 && (
+                <div><p className="text-xs font-semibold text-blue-600 mb-1">Oportunidades</p><TagList items={result.diagnostico.oportunidades} variant="outline" /></div>
+              )}
+              {result.diagnostico?.riscos?.length > 0 && (
+                <div><p className="text-xs font-semibold text-orange-600 mb-1">Riscos</p><TagList items={result.diagnostico.riscos} variant="outline" /></div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Resumo executivo */}
+      {result.resumo_executivo && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">{result.resumo_executivo}</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   TAB: CLIENTE IDEAL
+   ══════════════════════════════════════════════ */
+
+function TabClienteIdeal({ result }: { result: any }) {
+  const icp = result.icp;
+  const pv = result.proposta_valor;
+
+  return (
+    <div className="space-y-4">
+      {/* ICP Card */}
+      {icp && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Perfil do Cliente Ideal (ICP)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{icp.descricao}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg bg-muted/30">
+                <p className="text-xs font-semibold mb-1">Demografia</p>
+                <p className="text-sm">{icp.demografia}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/30">
+                <p className="text-xs font-semibold mb-1">Perfil Profissional</p>
+                <p className="text-sm">{icp.perfil_profissional}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div><p className="text-xs font-semibold mb-1.5">Dores</p><TagList items={icp.dores} variant="outline" /></div>
+              <div><p className="text-xs font-semibold mb-1.5">Desejos</p><TagList items={icp.desejos} variant="outline" /></div>
+              <div><p className="text-xs font-semibold mb-1.5">Objeções</p><TagList items={icp.objecoes} variant="outline" /></div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Proposta de Valor */}
+      {pv && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Proposta de Valor</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row items-stretch gap-3">
+              <div className="flex-1 p-4 rounded-lg bg-destructive/5 border border-destructive/20 text-center">
+                <p className="text-xs font-semibold text-destructive mb-1">Problema</p>
+                <p className="text-sm">{pv.problema}</p>
+              </div>
+              <div className="flex items-center justify-center"><ArrowRight className="w-5 h-5 text-muted-foreground rotate-90 md:rotate-0" /></div>
+              <div className="flex-1 p-4 rounded-lg bg-primary/5 border border-primary/20 text-center">
+                <p className="text-xs font-semibold text-primary mb-1">Método / Solução</p>
+                <p className="text-sm">{pv.metodo}</p>
+              </div>
+              <div className="flex items-center justify-center"><ArrowRight className="w-5 h-5 text-muted-foreground rotate-90 md:rotate-0" /></div>
+              <div className="flex-1 p-4 rounded-lg bg-green-500/5 border border-green-500/20 text-center">
+                <p className="text-xs font-semibold text-green-600 mb-1">Resultado</p>
+                <p className="text-sm">{pv.resultado}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   TAB: AQUISIÇÃO
+   ══════════════════════════════════════════════ */
+
+function TabAquisicao({ result }: { result: any }) {
+  const ea = result.estrategia_aquisicao;
+  const funil = ea?.funil;
+
+  // Prepare pie data from canal types
+  const canalsByType = (ea?.canais_prioritarios || []).reduce((acc: any, c: any) => {
+    const tipo = c.tipo === "organico" ? "Orgânico" : c.tipo === "pago" ? "Tráfego Pago" : "Parcerias";
+    acc[tipo] = (acc[tipo] || 0) + (c.percentual || 0);
+    return acc;
+  }, {});
+  const pieData = Object.entries(canalsByType).map(([name, value]) => ({ name, value }));
+
+  // Funnel bar data
+  const funnelData = funil
+    ? [
+        { name: "Visitantes", value: funil.topo?.estimativa_visitantes || 0 },
+        { name: "Leads", value: funil.meio?.estimativa_leads || 0 },
+        { name: "Clientes", value: funil.fundo?.estimativa_clientes || 0 },
+      ]
+    : [];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Funil */}
+        {funnelData.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Funil de Aquisição</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={funnelData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={80} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+              {funil && (
+                <div className="grid grid-cols-3 gap-2 mt-3">
+                  {(["topo", "meio", "fundo"] as const).map((etapa) => (
+                    <div key={etapa} className="text-center p-2 rounded-lg bg-muted/30">
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground">{etapa}</p>
+                      <p className="text-xs mt-0.5">{funil[etapa]?.objetivo}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Canais (Pie) */}
+        {pieData.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Distribuição de Canais</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}%`}>
+                    {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Lista de canais */}
+      {ea?.canais_prioritarios?.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Canais Prioritários</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {ea.canais_prioritarios.map((c: any, i: number) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                  <Badge variant="outline" className="text-xs shrink-0">{c.canal}</Badge>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">{c.justificativa}</p>
+                    <p className="text-xs font-medium mt-0.5">{c.acao_principal}</p>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">{c.percentual}%</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   TAB: CONTEÚDO
+   ══════════════════════════════════════════════ */
+
+function TabConteudo({ result }: { result: any }) {
+  const navigate = useNavigate();
+  const ec = result.estrategia_conteudo;
+  const pilarIcons: Record<string, any> = { educacao: Lightbulb, autoridade: Target, prova_social: Users, oferta: DollarSign };
+
+  return (
+    <div className="space-y-4">
+      {/* Pilares */}
+      {ec?.pilares?.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {ec.pilares.map((p: any, i: number) => {
+            const Icon = pilarIcons[p.tipo] || Lightbulb;
+            return (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><Icon className="w-4 h-4 text-primary" /></div>
+                    <div>
+                      <p className="font-semibold text-sm">{p.nome}</p>
+                      <Badge variant="outline" className="text-[10px] capitalize">{p.tipo?.replace("_", " ")}</Badge>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">{p.descricao}</p>
+                  <TagList items={p.exemplos} variant="secondary" />
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Ideias de conteúdo */}
+      {ec?.ideias_conteudo?.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm">Ideias de Conteúdo</CardTitle>
+            <Button size="sm" className="gap-1.5" onClick={() => navigate("/cliente/conteudos")}>
+              <Sparkles className="w-3.5 h-3.5" /> Gerar Conteúdos
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {ec.ideias_conteudo.map((idea: any, i: number) => (
+                <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <Badge variant="outline" className="text-[10px] shrink-0">{idea.formato}</Badge>
+                  <span className="text-xs flex-1">{idea.titulo}</span>
+                  <Badge variant="secondary" className="text-[10px]">{idea.etapa_funil}</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   TAB: PROJEÇÃO
+   ══════════════════════════════════════════════ */
+
+function TabProjecao({ result }: { result: any }) {
+  const pc = result.plano_crescimento;
+  const projecoes = pc?.projecoes_mensais || [];
+  const ind = pc?.indicadores;
+
+  const chartData = projecoes.map((p: any) => ({
+    name: `Mês ${p.mes}`,
+    leads: p.leads,
+    clientes: p.clientes,
+    receita: p.receita,
+    investimento: p.investimento,
+  }));
+
+  return (
+    <div className="space-y-4">
+      {/* KPIs */}
+      {ind && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KpiCard label="CPC Médio" value={ind.cpc_medio} icon={DollarSign} />
+          <KpiCard label="CPL Estimado" value={ind.cpl_estimado} icon={TrendingUp} />
+          <KpiCard label="CAC Estimado" value={ind.cac_estimado} icon={Users} />
+          <KpiCard label="ROI Esperado" value={ind.roi_esperado} icon={BarChart3} />
+        </div>
+      )}
+
+      {/* Gráficos */}
+      {chartData.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Leads & Clientes por Mês</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="leads" stroke={CHART_COLORS[0]} name="Leads" strokeWidth={2} />
+                  <Line type="monotone" dataKey="clientes" stroke={CHART_COLORS[1]} name="Clientes" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Receita Estimada por Mês</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v: any) => `R$ ${Number(v).toLocaleString("pt-BR")}`} />
+                  <Bar dataKey="receita" fill={CHART_COLORS[0]} name="Receita" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="investimento" fill={CHART_COLORS[2]} name="Investimento" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   TAB: PLANO DE EXECUÇÃO
+   ══════════════════════════════════════════════ */
+
+function TabExecucao({ result }: { result: any }) {
+  const plano = result.plano_execucao || [];
+  const estrutura = result.estrutura_recomendada || [];
+
+  return (
+    <div className="space-y-4">
+      {/* Estrutura recomendada */}
+      {estrutura.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Estrutura de Marketing Recomendada</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {estrutura.map((e: any, i: number) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                  {e.status === "tem" ? (
+                    <CheckSquare className="w-4 h-4 text-green-500 shrink-0" />
+                  ) : (
+                    <XSquare className="w-4 h-4 text-destructive shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{e.item}</p>
+                      <Badge variant={e.prioridade === "alta" ? "destructive" : e.prioridade === "media" ? "secondary" : "outline"} className="text-[10px]">
+                        {e.prioridade}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{e.recomendacao}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Roadmap 3 meses */}
+      {plano.length > 0 && (
+        <div className="space-y-3">
+          {plano.map((mes: any, i: number) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{mes.mes}</div>
+                  {mes.titulo}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {mes.passos?.map((passo: any, j: number) => (
+                    <div key={j} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/30">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-xs text-muted-foreground shrink-0">{j + 1}.</span>
+                        <span className="text-xs">{passo.acao}</span>
+                      </div>
+                      <ToolButton ferramenta={passo.ferramenta} />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   STRATEGY DASHBOARD
+   ══════════════════════════════════════════════ */
+
+function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, status }: {
   result: any;
   onApprove: () => void;
   onRegenerate: () => void;
@@ -88,236 +569,29 @@ function StrategyResultView({ result, onApprove, onRegenerate, isApproving, stat
         </Badge>
       )}
 
-      {/* Resumo executivo */}
-      {result.resumo_executivo && (
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">{result.resumo_executivo}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Diagnóstico */}
-      {result.diagnostico && (
-        <SectionCard title="Diagnóstico do Negócio" icon={BarChart3}>
-          <p className="text-sm text-muted-foreground mb-3">{result.diagnostico.analise}</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <p className="text-xs font-semibold mb-1.5 text-green-600">Pontos Fortes</p>
-              <TagList items={result.diagnostico.pontos_fortes} variant="outline" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold mb-1.5 text-blue-600">Oportunidades</p>
-              <TagList items={result.diagnostico.oportunidades} variant="outline" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold mb-1.5 text-orange-600">Riscos</p>
-              <TagList items={result.diagnostico.riscos} variant="outline" />
-            </div>
-          </div>
-        </SectionCard>
-      )}
-
-      {/* Posicionamento */}
-      {result.posicionamento && (
-        <SectionCard title="Posicionamento Estratégico" icon={Target}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><p className="text-xs font-semibold text-muted-foreground mb-1">Proposta de Valor</p><p className="text-sm">{result.posicionamento.proposta_valor}</p></div>
-            <div><p className="text-xs font-semibold text-muted-foreground mb-1">Mensagem Central</p><p className="text-sm">{result.posicionamento.mensagem_central}</p></div>
-            <div><p className="text-xs font-semibold text-muted-foreground mb-1">Diferenciação</p><p className="text-sm">{result.posicionamento.diferenciacao}</p></div>
-            <div><p className="text-xs font-semibold text-muted-foreground mb-1">Tom de Voz</p><p className="text-sm">{result.posicionamento.tom_de_voz}</p></div>
-          </div>
-        </SectionCard>
-      )}
-
-      {/* Persona */}
-      {result.persona && (
-        <SectionCard title="Perfil do Cliente Ideal" icon={Users}>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Users className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm">{result.persona.nome}</p>
-                <p className="text-xs text-muted-foreground">{result.persona.idade} • {result.persona.profissao}</p>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground">{result.persona.descricao}</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div><p className="text-xs font-semibold mb-1.5">Dores</p><TagList items={result.persona.dores} variant="outline" /></div>
-              <div><p className="text-xs font-semibold mb-1.5">Desejos</p><TagList items={result.persona.desejos} variant="outline" /></div>
-              <div><p className="text-xs font-semibold mb-1.5">Objeções</p><TagList items={result.persona.objecoes} variant="outline" /></div>
-            </div>
-          </div>
-        </SectionCard>
-      )}
-
-      {/* Pilares de Conteúdo */}
-      {result.pilares_conteudo && (
-        <SectionCard title="Pilares de Conteúdo" icon={Lightbulb}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {result.pilares_conteudo.map((p: any, i: number) => (
-              <Card key={i} className="border">
-                <CardContent className="p-3">
-                  <p className="font-semibold text-sm mb-1">{p.nome}</p>
-                  <p className="text-xs text-muted-foreground mb-2">{p.descricao}</p>
-                  <TagList items={p.exemplos} variant="secondary" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </SectionCard>
-      )}
-
-      {/* Funil */}
-      {result.funil && (
-        <SectionCard title="Estrutura de Funil" icon={TrendingUp}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(["topo", "meio", "fundo"] as const).map((etapa) => (
-              <div key={etapa} className="space-y-2">
-                <Badge variant={etapa === "topo" ? "secondary" : etapa === "meio" ? "outline" : "default"} className="text-xs capitalize">
-                  {etapa === "topo" ? "Topo" : etapa === "meio" ? "Meio" : "Fundo"} de Funil
-                </Badge>
-                <p className="text-xs text-muted-foreground">{result.funil[etapa]?.objetivo}</p>
-                <ul className="space-y-1">
-                  {result.funil[etapa]?.acoes?.map((a: string, i: number) => (
-                    <li key={i} className="text-xs flex gap-1.5"><span className="text-primary">•</span>{a}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      )}
-
-      {/* Ideias de Conteúdo */}
-      {result.ideias_conteudo && (
-        <SectionCard title="Ideias de Conteúdo" icon={FileText} defaultOpen={false}>
-          <div className="space-y-2">
-            {result.ideias_conteudo.map((idea: any, i: number) => (
-              <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
-                <Badge variant="outline" className="text-[10px] shrink-0">{idea.formato}</Badge>
-                <span className="text-xs flex-1">{idea.titulo}</span>
-                <Badge variant="secondary" className="text-[10px]">{idea.etapa_funil}</Badge>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      )}
-
-      {/* Estrutura de Site */}
-      {result.estrutura_site && (
-        <SectionCard title="Estrutura de Site Recomendada" icon={Globe} defaultOpen={false}>
-          <div className="space-y-3">
-            {result.estrutura_site.paginas?.map((p: any, i: number) => (
-              <div key={i} className="p-3 rounded-lg border">
-                <p className="font-semibold text-sm">{p.nome}</p>
-                <p className="text-xs text-muted-foreground mb-2">{p.objetivo}</p>
-                <TagList items={p.secoes} variant="secondary" />
-              </div>
-            ))}
-            {result.estrutura_site.recomendacoes?.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold mb-1.5">Recomendações</p>
-                <ul className="space-y-1">
-                  {result.estrutura_site.recomendacoes.map((r: string, i: number) => (
-                    <li key={i} className="text-xs flex gap-1.5"><span className="text-primary">•</span>{r}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </SectionCard>
-      )}
-
-      {/* Tráfego Pago */}
-      {result.trafego_pago && (
-        <SectionCard title="Estratégia de Tráfego Pago" icon={DollarSign} defaultOpen={false}>
-          <div className="space-y-3">
-            <p className="text-xs"><span className="font-semibold">Orçamento sugerido:</span> {result.trafego_pago.orcamento_sugerido}</p>
-            {result.trafego_pago.campanhas?.map((c: any, i: number) => (
-              <div key={i} className="p-3 rounded-lg border">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-semibold text-sm">{c.nome}</p>
-                  <Badge variant="outline" className="text-[10px]">{c.plataforma}</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">{c.objetivo}</p>
-                <p className="text-xs mt-1"><span className="font-medium">Público:</span> {c.publico}</p>
-                <p className="text-xs"><span className="font-medium">Formato:</span> {c.formato}</p>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      )}
-
-      {/* Indicadores */}
-      {result.indicadores && (
-        <SectionCard title="Indicadores de Performance" icon={BarChart3} defaultOpen={false}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="text-center p-3 rounded-lg bg-muted/30">
-              <p className="text-xs text-muted-foreground">CPL Estimado</p>
-              <p className="text-lg font-bold text-primary">{result.indicadores.cpl_estimado}</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/30">
-              <p className="text-xs text-muted-foreground">CAC Estimado</p>
-              <p className="text-lg font-bold text-primary">{result.indicadores.cac_estimado}</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/30">
-              <p className="text-xs text-muted-foreground">ROI Esperado</p>
-              <p className="text-lg font-bold text-primary">{result.indicadores.roi_esperado}</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/30">
-              <p className="text-xs text-muted-foreground">Meta de Conversão</p>
-              <p className="text-lg font-bold text-primary">{result.indicadores.taxa_conversao_meta}</p>
-            </div>
-          </div>
-        </SectionCard>
-      )}
-
-      {/* Projeções */}
-      {result.projecoes && (
-        <SectionCard title="Projeções de Resultados" icon={TrendingUp}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {result.projecoes.leads && (
-              <div>
-                <p className="text-xs font-semibold mb-2">Projeção de Leads (6 meses)</p>
-                <ResponsiveContainer width="100%" height={200}>
-                  <AreaChart data={result.projecoes.leads}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="sem_estrategia" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted-foreground) / 0.1)" name="Sem estratégia" />
-                    <Area type="monotone" dataKey="com_estrategia" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" name="Com estratégia" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-            {result.projecoes.faturamento && (
-              <div>
-                <p className="text-xs font-semibold mb-2">Projeção de Faturamento (6 meses)</p>
-                <ResponsiveContainer width="100%" height={200}>
-                  <AreaChart data={result.projecoes.faturamento}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="sem_estrategia" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted-foreground) / 0.1)" name="Sem estratégia" />
-                    <Area type="monotone" dataKey="com_estrategia" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" name="Com estratégia" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-        </SectionCard>
-      )}
+      {/* Tabbed dashboard */}
+      <Tabs defaultValue="resumo" className="w-full">
+        <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="resumo" className="text-xs gap-1"><BarChart3 className="w-3.5 h-3.5" /> Resumo</TabsTrigger>
+          <TabsTrigger value="icp" className="text-xs gap-1"><Users className="w-3.5 h-3.5" /> Cliente Ideal</TabsTrigger>
+          <TabsTrigger value="aquisicao" className="text-xs gap-1"><TrendingUp className="w-3.5 h-3.5" /> Aquisição</TabsTrigger>
+          <TabsTrigger value="conteudo" className="text-xs gap-1"><Lightbulb className="w-3.5 h-3.5" /> Conteúdo</TabsTrigger>
+          <TabsTrigger value="projecao" className="text-xs gap-1"><DollarSign className="w-3.5 h-3.5" /> Projeção</TabsTrigger>
+          <TabsTrigger value="execucao" className="text-xs gap-1"><Target className="w-3.5 h-3.5" /> Execução</TabsTrigger>
+        </TabsList>
+        <TabsContent value="resumo"><TabResumo result={result} /></TabsContent>
+        <TabsContent value="icp"><TabClienteIdeal result={result} /></TabsContent>
+        <TabsContent value="aquisicao"><TabAquisicao result={result} /></TabsContent>
+        <TabsContent value="conteudo"><TabConteudo result={result} /></TabsContent>
+        <TabsContent value="projecao"><TabProjecao result={result} /></TabsContent>
+        <TabsContent value="execucao"><TabExecucao result={result} /></TabsContent>
+      </Tabs>
     </div>
   );
 }
 
 /* ══════════════════════════════════════════════
-   HISTORY VIEW
+   HISTORY
    ══════════════════════════════════════════════ */
 
 function StrategyHistoryItem({ strategy }: { strategy: any }) {
@@ -326,24 +600,13 @@ function StrategyHistoryItem({ strategy }: { strategy: any }) {
     <Card>
       <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors text-left">
         <div>
-          <p className="text-sm font-medium">
-            Estratégia de {format(new Date(strategy.created_at), "dd MMM yyyy", { locale: ptBR })}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {strategy.status === "approved" ? "✅ Aprovada" : "⏳ Pendente"}
-          </p>
+          <p className="text-sm font-medium">Estratégia de {format(new Date(strategy.created_at), "dd MMM yyyy", { locale: ptBR })}</p>
+          <p className="text-xs text-muted-foreground">{strategy.status === "approved" ? "✅ Aprovada" : "⏳ Pendente"}</p>
         </div>
-        {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
       {expanded && strategy.strategy_result && (
         <CardContent className="pt-0">
-          <StrategyResultView
-            result={strategy.strategy_result}
-            onApprove={() => {}}
-            onRegenerate={() => {}}
-            isApproving={false}
-            status={strategy.status || "approved"}
-          />
+          <StrategyDashboard result={strategy.strategy_result} onApprove={() => {}} onRegenerate={() => {}} isApproving={false} status={strategy.status || "approved"} />
         </CardContent>
       )}
     </Card>
@@ -375,13 +638,7 @@ export default function ClientePlanoMarketing() {
     setIsGenerating(true);
 
     try {
-      // 1. Generate strategy via AI
-      const aiResult = await generateStrategy.mutateAsync({
-        answers,
-        organization_id: orgId,
-      });
-
-      // 2. Save strategy with result (credits NOT consumed yet)
+      const aiResult = await generateStrategy.mutateAsync({ answers, organization_id: orgId });
       await saveStrategy.mutateAsync({
         answers,
         score_percentage: 0,
@@ -389,7 +646,6 @@ export default function ClientePlanoMarketing() {
         strategy_result: aiResult.result,
         status: "pending",
       });
-
       toast({ title: "Estratégia gerada!", description: "Revise o resultado e aprove para finalizar." });
     } catch (err: any) {
       toast({ title: "Erro ao gerar estratégia", description: err.message, variant: "destructive" });
@@ -409,9 +665,7 @@ export default function ClientePlanoMarketing() {
     }
   };
 
-  const handleRegenerate = () => {
-    setShowChat(true);
-  };
+  const handleRegenerate = () => setShowChat(true);
 
   if (isLoading) {
     return (
@@ -424,7 +678,6 @@ export default function ClientePlanoMarketing() {
     );
   }
 
-  // Chat mode
   if (showChat || isGenerating) {
     return (
       <div className="p-6 space-y-4">
@@ -432,10 +685,7 @@ export default function ClientePlanoMarketing() {
         {isGenerating ? (
           <Card>
             <CardContent className="p-12 flex flex-col items-center gap-4">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              >
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
                 <Sparkles className="w-10 h-10 text-primary" />
               </motion.div>
               <div className="text-center">
@@ -445,23 +695,17 @@ export default function ClientePlanoMarketing() {
             </CardContent>
           </Card>
         ) : (
-          <ChatBriefing
-            agent={AGENTS.sofia}
-            steps={SOFIA_STEPS}
-            onComplete={handleChatComplete}
-            onCancel={() => setShowChat(false)}
-          />
+          <ChatBriefing agent={AGENTS.sofia} steps={SOFIA_STEPS} onComplete={handleChatComplete} onCancel={() => setShowChat(false)} />
         )}
       </div>
     );
   }
 
-  // Result view (has active strategy with result)
   if (hasResult) {
     return (
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <PageHeader title="Estratégia de Marketing" subtitle="Sua estratégia personalizada" icon={<Megaphone className="w-5 h-5 text-primary" />} />
+          <PageHeader title="Estratégia de Marketing" subtitle="Dashboard estratégico personalizado" icon={<Megaphone className="w-5 h-5 text-primary" />} />
           <div className="flex gap-2">
             {(history?.length ?? 0) > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowHistory(!showHistory)} className="gap-1.5">
@@ -478,7 +722,7 @@ export default function ClientePlanoMarketing() {
           </div>
         )}
 
-        <StrategyResultView
+        <StrategyDashboard
           result={activeStrategy!.strategy_result}
           onApprove={handleApprove}
           onRegenerate={handleRegenerate}
@@ -489,7 +733,6 @@ export default function ClientePlanoMarketing() {
     );
   }
 
-  // Empty state — no strategy yet
   return (
     <div className="p-6 space-y-4">
       <PageHeader title="Estratégia de Marketing" subtitle="Crie sua estratégia personalizada com IA" icon={<Megaphone className="w-5 h-5 text-primary" />} />
@@ -502,9 +745,8 @@ export default function ClientePlanoMarketing() {
           <div>
             <h3 className="font-semibold text-lg">Crie sua Estratégia de Marketing</h3>
             <p className="text-sm text-muted-foreground max-w-md mt-1">
-              Responda 10 perguntas simples e a IA vai gerar uma estratégia completa com diagnóstico,
-              posicionamento, persona, pilares de conteúdo, funil, ideias de conteúdo, estrutura de site,
-              tráfego pago e projeções de resultado.
+              Responda 14 perguntas simples e a IA vai gerar uma estratégia executiva completa com diagnóstico,
+              radar de maturidade, projeções de crescimento, pilares de conteúdo, plano de tráfego e roadmap de execução.
             </p>
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
