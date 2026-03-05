@@ -17,5 +17,7 @@ export function useClienteWallet() {
       return data;
     },
     enabled: !!orgId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 }
