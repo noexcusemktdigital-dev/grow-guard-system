@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   FileText, Check, Sparkles, Copy, ArrowLeft, ArrowRight,
   Layers, Video, AlignLeft, BookOpen, Clock, Filter,
   CheckCircle2, RotateCcw, Image, Play, Palette,
-  Target, MessageSquare, Hash, Lightbulb, Eye,
+  Target, MessageSquare, Hash, Lightbulb, Eye, Zap, TrendingUp, Users,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,11 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 import {
   useContentHistory, useGenerateContent, useApproveContent,
   useApproveBatch, useContentQuota, type ContentItem,
 } from "@/hooks/useClienteContentV2";
+import { useStrategyData } from "@/hooks/useStrategyData";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
@@ -45,7 +45,27 @@ const OBJETIVOS = [
 ];
 
 const PLATAFORMAS = ["Instagram", "LinkedIn", "TikTok", "YouTube"];
-const TONS = ["educativo", "institucional", "direto", "provocativo"];
+
+const FUNIL_OPTIONS = [
+  { value: "topo", label: "Topo de Funil", desc: "Atrair e educar novos públicos", icon: Users },
+  { value: "meio", label: "Meio de Funil", desc: "Nutrir e gerar consideração", icon: TrendingUp },
+  { value: "fundo", label: "Fundo de Funil", desc: "Converter e vender", icon: Zap },
+];
+
+const CONTEXTO_OPTIONS = [
+  { value: "nenhum", label: "Nenhum contexto especial" },
+  { value: "lancamento", label: "Lançamento de produto/serviço" },
+  { value: "promocao", label: "Promoção ou oferta" },
+  { value: "data_comemorativa", label: "Data comemorativa" },
+  { value: "sazonalidade", label: "Sazonalidade do mercado" },
+  { value: "evento", label: "Evento presencial ou online" },
+];
+
+const TONS_EXPANDIDOS = [
+  "educativo", "institucional", "direto", "provocativo",
+  "inspirador", "humorístico", "técnico", "empático",
+  "storytelling", "urgente",
+];
 
 const loadingPhrases = [
   "Analisando sua estratégia...",
@@ -58,15 +78,18 @@ const loadingPhrases = [
 
 export default function ClienteConteudos() {
   const navigate = useNavigate();
-  const { data: activeStrategy } = useActiveStrategy();
+  const strategy = useStrategyData();
   const { data: history } = useContentHistory();
   const quota = useContentQuota();
   const generateMutation = useGenerateContent();
   const approveMutation = useApproveContent();
   const approveBatchMutation = useApproveBatch();
 
-  const hasStrategy = !!activeStrategy?.strategy_result;
+  const hasStrategy = strategy.hasStrategy;
   const maxContents = quota.max;
+
+  // Adaptive wizard: 5 steps with strategy, 8 without
+  const totalSteps = hasStrategy ? 5 : 8;
 
   // Wizard state
   const [step, setStep] = useState(1);
@@ -74,12 +97,28 @@ export default function ClienteConteudos() {
   const [formatDist, setFormatDist] = useState<Record<string, number>>({});
   const [objetivos, setObjetivos] = useState<string[]>([]);
   const [tema, setTema] = useState("");
-  const [plataforma, setPlataforma] = useState("Instagram");
+  const [plataforma, setPlataforma] = useState("");
   const [tom, setTom] = useState("");
-  const [publico, setPublico] = useState(() => {
-    const a = activeStrategy?.answers as any;
-    return a?.step_3 || a?.publico || "";
-  });
+  const [publico, setPublico] = useState("");
+  const [funilMomento, setFunilMomento] = useState("topo");
+  const [contextoEspecial, setContextoEspecial] = useState("nenhum");
+  const [contextoDetalhe, setContextoDetalhe] = useState("");
+  const [estiloLote, setEstiloLote] = useState("");
+  // Without-strategy-only fields
+  const [nomeEmpresa, setNomeEmpresa] = useState("");
+  const [produto, setProduto] = useState("");
+  const [diferencial, setDiferencial] = useState("");
+  const [doresPublico, setDoresPublico] = useState("");
+  const [desejosPublico, setDesejosPublico] = useState("");
+
+  // Pre-fill from strategy
+  useEffect(() => {
+    if (hasStrategy) {
+      setPlataforma(strategy.canalPrioritario || "Instagram");
+      setTom(strategy.tomPrincipal || "");
+      setPublico(strategy.publicoAlvo || "");
+    }
+  }, [hasStrategy, strategy.canalPrioritario, strategy.tomPrincipal, strategy.publicoAlvo]);
 
   // Results
   const [generatedContents, setGeneratedContents] = useState<any[]>([]);
@@ -93,7 +132,6 @@ export default function ClienteConteudos() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
 
-  const totalSteps = 8;
   const formatTotal = Object.values(formatDist).reduce((a, b) => a + b, 0);
 
   const updateFormatDist = (fmt: string, val: number) => {
@@ -108,15 +146,26 @@ export default function ClienteConteudos() {
     setObjetivos(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
   };
 
+  // === STEP VALIDATION (adaptive) ===
   const canAdvance = () => {
-    if (step === 1) return quantidade > 0 && quantidade <= quota.remaining;
-    if (step === 2) return formatTotal === quantidade;
-    if (step === 3) return objetivos.length > 0;
-    if (step === 4) return true; // tema is optional
-    if (step === 5) return !!plataforma;
-    if (step === 6) return true; // tom is optional
-    if (step === 7) return true; // publico is optional
-    if (step === 8) return true; // review
+    if (hasStrategy) {
+      // 5-step flow
+      if (step === 1) return quantidade > 0 && quantidade <= quota.remaining && formatTotal === quantidade;
+      if (step === 2) return objetivos.length > 0;
+      if (step === 3) return true; // tema optional
+      if (step === 4) return true; // contexto optional
+      if (step === 5) return true; // review
+    } else {
+      // 8-step flow
+      if (step === 1) return quantidade > 0 && quantidade <= quota.remaining && formatTotal === quantidade;
+      if (step === 2) return objetivos.length > 0;
+      if (step === 3) return nomeEmpresa.trim().length > 0;
+      if (step === 4) return publico.trim().length > 0;
+      if (step === 5) return true; // tom optional
+      if (step === 6) return !!plataforma;
+      if (step === 7) return true; // tema optional
+      if (step === 8) return true; // review
+    }
     return false;
   };
 
@@ -127,19 +176,42 @@ export default function ClienteConteudos() {
 
     try {
       const formatos = Object.entries(formatDist).map(([tipo, qtd]) => ({ tipo, qtd }));
+
+      // Build rich strategy payload for the edge function
+      const strategyPayload = hasStrategy ? {
+        icp: strategy.icp,
+        propostaValor: strategy.propostaValor,
+        tomComunicacao: strategy.tomComunicacao,
+        pilares: strategy.pilares,
+        calendarioSemanal: strategy.calendarioSemanal,
+        funil: strategy.funil,
+        analiseConcorrencia: strategy.analiseConcorrencia,
+        benchmarks: strategy.benchmarks,
+        answers: strategy.answers,
+      } : null;
+
       const res = await generateMutation.mutateAsync({
         quantidade,
         formatos,
         objetivos,
         tema: tema || undefined,
-        plataforma,
+        plataforma: plataforma || "Instagram",
         tom: tom || undefined,
         publico: publico || undefined,
-        estrategia: activeStrategy || null,
+        estrategia: strategyPayload,
+        funilMomento,
+        contextoEspecial: contextoEspecial !== "nenhum" ? contextoEspecial : undefined,
+        contextoDetalhe: contextoDetalhe || undefined,
+        estiloLote: estiloLote || undefined,
+        nomeEmpresa: nomeEmpresa || undefined,
+        produto: produto || undefined,
+        diferencial: diferencial || undefined,
+        doresPublico: doresPublico || undefined,
+        desejosPublico: desejosPublico || undefined,
       });
       setGeneratedContents(res.conteudos);
       setGeneratedIds((res.dbRecords as any[]).map((r: any) => r.id));
-      setStep(9); // results screen
+      setStep(totalSteps + 1); // results screen
       toast({ title: `${res.conteudos.length} conteúdos gerados com sucesso!` });
     } catch (err: any) {
       toast({ title: "Erro ao gerar", description: err?.message, variant: "destructive" });
@@ -175,11 +247,19 @@ export default function ClienteConteudos() {
     setFormatDist({});
     setObjetivos([]);
     setTema("");
-    setPlataforma("Instagram");
-    setTom("");
+    setFunilMomento("topo");
+    setContextoEspecial("nenhum");
+    setContextoDetalhe("");
+    setEstiloLote("");
     setGeneratedContents([]);
     setGeneratedIds([]);
     setExpandedCard(null);
+    // Keep pre-filled strategy fields
+    if (!hasStrategy) {
+      setPlataforma("Instagram");
+      setTom("");
+      setPublico("");
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -193,6 +273,327 @@ export default function ClienteConteudos() {
     return true;
   }), [history, filterFormat, filterStatus]);
 
+  // === RENDER STEP CONTENT (adaptive) ===
+  const renderStep = () => {
+    if (hasStrategy) return renderStrategyStep();
+    return renderFullStep();
+  };
+
+  // === WITH STRATEGY: 5 steps ===
+  const renderStrategyStep = () => {
+    switch (step) {
+      case 1: return renderStepFormatsQtd();
+      case 2: return renderStepObjetivoFunil();
+      case 3: return renderStepTemaContexto();
+      case 4: return renderStepContextoEspecial();
+      case 5: return renderStepRevisao();
+      default: return null;
+    }
+  };
+
+  // === WITHOUT STRATEGY: 8 steps ===
+  const renderFullStep = () => {
+    switch (step) {
+      case 1: return renderStepFormatsQtd();
+      case 2: return renderStepObjetivos();
+      case 3: return renderStepNegocio();
+      case 4: return renderStepPublico();
+      case 5: return renderStepTom();
+      case 6: return renderStepPlataforma();
+      case 7: return renderStepTemaContexto();
+      case 8: return renderStepRevisao();
+      default: return null;
+    }
+  };
+
+  // ── Shared Step: Quantity + Formats (unified) ──
+  const renderStepFormatsQtd = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Quantidade e Formatos</h3>
+        <p className="text-sm text-muted-foreground">
+          Plano: <strong>{quota.max}</strong> conteúdos/mês | Usado: <strong>{quota.used}</strong> | Restam: <strong>{quota.remaining}</strong>
+        </p>
+      </div>
+      <div className="space-y-3">
+        <Slider value={[quantidade]} onValueChange={([v]) => { setQuantidade(v); setFormatDist({}); }} min={1} max={quota.remaining} step={1} />
+        <div className="text-center text-3xl font-bold text-primary">{quantidade}</div>
+      </div>
+      <div>
+        <p className="text-sm font-medium mb-2">
+          Distribua os formatos — total: <strong className={formatTotal === quantidade ? "text-primary" : "text-destructive"}>{formatTotal}/{quantidade}</strong>
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {FORMATOS.map(f => {
+            const Icon = f.icon;
+            const val = formatDist[f.value] || 0;
+            return (
+              <div key={f.value} className="flex items-center gap-3 p-3 rounded-xl border">
+                <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium flex-1">{f.label}</span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, Math.max(0, val - 1))} disabled={val <= 0}>-</Button>
+                  <span className="w-6 text-center font-bold">{val}</span>
+                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, val + 1)} disabled={formatTotal >= quantidade}>+</Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Strategy Step 2: Objetivo + Funil ──
+  const renderStepObjetivoFunil = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Objetivo e Momento do Funil</h3>
+        <p className="text-sm text-muted-foreground">Qual o foco principal deste lote de conteúdos?</p>
+      </div>
+      <div>
+        <p className="text-sm font-medium mb-2">Objetivos</p>
+        <div className="flex flex-wrap gap-2">
+          {OBJETIVOS.map(o => (
+            <button key={o.value} onClick={() => toggleObjetivo(o.value)}
+              className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${objetivos.includes(o.value) ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-sm font-medium mb-2">Momento do funil</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {FUNIL_OPTIONS.map(f => {
+            const Icon = f.icon;
+            return (
+              <button key={f.value} onClick={() => setFunilMomento(f.value)}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${funilMomento === f.value ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
+                <Icon className="w-5 h-5 text-primary mb-1" />
+                <p className="font-medium text-sm">{f.label}</p>
+                <p className="text-xs text-muted-foreground">{f.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Strategy Step 3: Tema + sugestões dos pilares ──
+  const renderStepTemaContexto = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Tema direcionador</h3>
+        <p className="text-sm text-muted-foreground">
+          {hasStrategy ? "Opcional — se vazio, a IA usa os pilares da sua estratégia" : "Opcional — descreva um tema ou assunto específico"}
+        </p>
+      </div>
+      {hasStrategy && strategy.pilares.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-2">Sugestões dos seus pilares estratégicos:</p>
+          <div className="flex flex-wrap gap-2">
+            {strategy.pilares.map((p: any, i: number) => {
+              const pilarName = typeof p === "string" ? p : p.nome || p.pilar || p.name || JSON.stringify(p);
+              return (
+                <button key={i} onClick={() => setTema(pilarName)}
+                  className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${tema === pilarName ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
+                  {pilarName}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <Textarea
+        placeholder="Ex: marketing para médicos, crédito para empresas, implantes dentários..."
+        value={tema}
+        onChange={e => setTema(e.target.value)}
+        rows={3}
+      />
+      <div>
+        <p className="text-sm font-medium mb-2">Estilo deste lote</p>
+        <p className="text-xs text-muted-foreground mb-2">Quer algo mais leve ou mais técnico neste lote?</p>
+        <div className="flex flex-wrap gap-2">
+          {["mais leve e acessível", "equilibrado", "mais técnico e aprofundado"].map(e => (
+            <button key={e} onClick={() => setEstiloLote(estiloLote === e ? "" : e)}
+              className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all capitalize ${estiloLote === e ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
+              {e}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Strategy Step 4: Contexto especial ──
+  const renderStepContextoEspecial = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Contexto especial</h3>
+        <p className="text-sm text-muted-foreground">Existe algum contexto que deva influenciar os conteúdos?</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {CONTEXTO_OPTIONS.map(c => (
+          <button key={c.value} onClick={() => setContextoEspecial(c.value)}
+            className={`p-3 rounded-xl border-2 text-left text-sm font-medium transition-all ${contextoEspecial === c.value ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
+            {c.label}
+          </button>
+        ))}
+      </div>
+      {contextoEspecial !== "nenhum" && (
+        <Textarea
+          placeholder="Descreva o contexto: nome do produto, data, detalhes da promoção..."
+          value={contextoDetalhe}
+          onChange={e => setContextoDetalhe(e.target.value)}
+          rows={2}
+        />
+      )}
+    </div>
+  );
+
+  // ── WITHOUT-STRATEGY Step 2: Objectives only ──
+  const renderStepObjetivos = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Quais objetivos o lote deve cobrir?</h3>
+        <p className="text-sm text-muted-foreground">Selecione um ou mais.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {OBJETIVOS.map(o => (
+          <button key={o.value} onClick={() => toggleObjetivo(o.value)}
+            className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${objetivos.includes(o.value) ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // ── WITHOUT-STRATEGY Step 3: Sobre o negócio ──
+  const renderStepNegocio = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Sobre o negócio</h3>
+        <p className="text-sm text-muted-foreground">Essas informações são essenciais para gerar conteúdos relevantes</p>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm font-medium">Nome da empresa *</label>
+          <Input placeholder="Ex: Clínica Sorriso" value={nomeEmpresa} onChange={e => setNomeEmpresa(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Produto/serviço principal</label>
+          <Input placeholder="Ex: implantes dentários, consultoria financeira" value={produto} onChange={e => setProduto(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Principal diferencial</label>
+          <Input placeholder="Ex: atendimento humanizado, preço acessível" value={diferencial} onChange={e => setDiferencial(e.target.value)} />
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── WITHOUT-STRATEGY Step 4: Público ──
+  const renderStepPublico = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Público-alvo</h3>
+        <p className="text-sm text-muted-foreground">Descreva quem você quer atingir</p>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm font-medium">Público principal *</label>
+          <Input placeholder="Ex: empresários de PMEs, mulheres 25-45 anos" value={publico} onChange={e => setPublico(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Principais dores</label>
+          <Textarea placeholder="Ex: falta de tempo, não sabe como atrair clientes online..." value={doresPublico} onChange={e => setDoresPublico(e.target.value)} rows={2} />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Desejos / resultados esperados</label>
+          <Textarea placeholder="Ex: ter mais visibilidade, aumentar vendas em 30%..." value={desejosPublico} onChange={e => setDesejosPublico(e.target.value)} rows={2} />
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── WITHOUT-STRATEGY Step 5: Tom ──
+  const renderStepTom = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Tom de comunicação</h3>
+        <p className="text-sm text-muted-foreground">Opcional — define o estilo da linguagem</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {TONS_EXPANDIDOS.map(t => (
+          <button key={t} onClick={() => setTom(tom === t ? "" : t)}
+            className={`px-4 py-2 rounded-full border text-sm font-medium capitalize transition-all ${tom === t ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // ── WITHOUT-STRATEGY Step 6: Plataforma ──
+  const renderStepPlataforma = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Onde os conteúdos serão publicados?</h3>
+        <p className="text-sm text-muted-foreground">Isso influencia o estilo e formato do conteúdo</p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {PLATAFORMAS.map(p => (
+          <button key={p} onClick={() => setPlataforma(p)}
+            className={`p-4 rounded-xl border-2 text-center font-medium transition-all ${plataforma === p ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
+            {p}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // ── Shared: Revisão ──
+  const renderStepRevisao = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-xl font-semibold mb-1">Revisão do lote</h3>
+        <p className="text-sm text-muted-foreground">Confirme antes de gerar</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <ReviewItem label="Quantidade" value={`${quantidade} conteúdos`} />
+        <ReviewItem label="Formatos" value={Object.entries(formatDist).map(([k, v]) => `${v}x ${FORMATOS.find(f => f.value === k)?.label || k}`).join(", ")} />
+        <ReviewItem label="Objetivos" value={objetivos.map(o => OBJETIVOS.find(x => x.value === o)?.label || o).join(", ")} />
+        <ReviewItem label="Plataforma" value={plataforma || "Instagram"} />
+        {tema && <ReviewItem label="Tema" value={tema} />}
+        {tom && <ReviewItem label="Tom" value={tom} />}
+        {funilMomento && hasStrategy && <ReviewItem label="Funil" value={FUNIL_OPTIONS.find(f => f.value === funilMomento)?.label || funilMomento} />}
+        {contextoEspecial !== "nenhum" && <ReviewItem label="Contexto" value={CONTEXTO_OPTIONS.find(c => c.value === contextoEspecial)?.label || contextoEspecial} />}
+        <ReviewItem label="Estratégia" value={hasStrategy ? "Conectada ✓" : "Sem estratégia"} />
+      </div>
+
+      {hasStrategy && (
+        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-2">
+          <p className="text-sm font-semibold text-primary">Dados da estratégia que serão usados:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
+            {strategy.personaName && <span>👤 Persona: {strategy.personaName}</span>}
+            {strategy.tomPrincipal && <span>🎯 Tom: {strategy.tomPrincipal}</span>}
+            {strategy.pilares.length > 0 && <span>📐 {strategy.pilares.length} pilares de conteúdo</span>}
+            {strategy.dores.length > 0 && <span>💢 {strategy.dores.length} dores mapeadas</span>}
+            {strategy.palavrasUsar.length > 0 && <span>✅ {strategy.palavrasUsar.length} palavras para usar</span>}
+            {strategy.palavrasEvitar.length > 0 && <span>🚫 {strategy.palavrasEvitar.length} palavras para evitar</span>}
+            {strategy.propostaValor && <span>💎 Proposta de valor definida</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const isLastStep = step === totalSteps;
+  const isResultScreen = step === totalSteps + 1;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Geração de Conteúdo" subtitle="Gere lotes estratégicos de conteúdos alinhados com seu plano" />
@@ -201,7 +602,7 @@ export default function ClienteConteudos() {
       <div className="flex flex-wrap items-center gap-3">
         {hasStrategy && (
           <Badge variant="outline" className="gap-1.5 text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Estratégia conectada
+            <CheckCircle2 className="w-3.5 h-3.5" /> Estratégia conectada — wizard reduzido
           </Badge>
         )}
         <Badge variant="outline" className="gap-1.5">
@@ -217,7 +618,7 @@ export default function ClienteConteudos() {
 
         {/* ── TAB: CRIAR ── */}
         <TabsContent value="criar" className="mt-4">
-          {quota.remaining <= 0 && step <= 8 && (
+          {quota.remaining <= 0 && step <= totalSteps && (
             <Card className="border-destructive">
               <CardContent className="py-6 text-center space-y-2">
                 <p className="font-semibold text-destructive">Limite de conteúdos atingido este mês</p>
@@ -226,11 +627,11 @@ export default function ClienteConteudos() {
             </Card>
           )}
 
-          {quota.remaining > 0 && step <= 8 && !isGenerating && (
+          {quota.remaining > 0 && step <= totalSteps && !isGenerating && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Bloco {step} de {totalSteps}</CardTitle>
+                  <CardTitle className="text-lg">Passo {step} de {totalSteps}</CardTitle>
                   <div className="flex gap-1">
                     {Array.from({ length: totalSteps }).map((_, i) => (
                       <div key={i} className={`h-2 w-8 rounded-full transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />
@@ -241,183 +642,7 @@ export default function ClienteConteudos() {
               <CardContent>
                 <AnimatePresence mode="wait">
                   <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-
-                    {/* Block 1: Quantidade */}
-                    {step === 1 && (
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-1">Quantos conteúdos deseja gerar?</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Seu plano permite <strong>{quota.max}</strong> conteúdos/mês.
-                            Você já usou <strong>{quota.used}</strong>. Restam <strong>{quota.remaining}</strong>.
-                          </p>
-                        </div>
-                        <div className="space-y-3">
-                          <Slider
-                            value={[quantidade]}
-                            onValueChange={([v]) => setQuantidade(v)}
-                            min={1}
-                            max={quota.remaining}
-                            step={1}
-                          />
-                          <div className="text-center text-3xl font-bold text-primary">{quantidade}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Block 2: Formatos */}
-                    {step === 2 && (
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-1">Distribua os formatos</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Total deve ser igual a {quantidade}. Atual: <strong className={formatTotal === quantidade ? "text-primary" : "text-destructive"}>{formatTotal}</strong>
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {FORMATOS.map(f => {
-                            const Icon = f.icon;
-                            const val = formatDist[f.value] || 0;
-                            return (
-                              <div key={f.value} className="flex items-center gap-3 p-3 rounded-xl border">
-                                <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
-                                <span className="text-sm font-medium flex-1">{f.label}</span>
-                                <div className="flex items-center gap-2">
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, Math.max(0, val - 1))} disabled={val <= 0}>-</Button>
-                                  <span className="w-6 text-center font-bold">{val}</span>
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, val + 1)} disabled={formatTotal >= quantidade}>+</Button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Block 3: Objetivos */}
-                    {step === 3 && (
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-1">Quais objetivos o lote deve cobrir?</h3>
-                          <p className="text-sm text-muted-foreground">Selecione um ou mais. A IA distribui proporcionalmente (40% educação, 30% autoridade, 20% engajamento, 10% oferta).</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {OBJETIVOS.map(o => (
-                            <button
-                              key={o.value}
-                              onClick={() => toggleObjetivo(o.value)}
-                              className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
-                                objetivos.includes(o.value)
-                                  ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-border hover:border-primary/40"
-                              }`}
-                            >
-                              {o.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Block 4: Tema */}
-                    {step === 4 && (
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-1">Algum tema específico?</h3>
-                          <p className="text-sm text-muted-foreground">Opcional — se vazio, a IA usa os pilares da sua estratégia</p>
-                        </div>
-                        <Textarea
-                          placeholder="Ex: marketing para médicos, crédito para empresas, implantes dentários..."
-                          value={tema}
-                          onChange={e => setTema(e.target.value)}
-                          rows={3}
-                        />
-                      </div>
-                    )}
-
-                    {/* Block 5: Plataforma */}
-                    {step === 5 && (
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-1">Onde os conteúdos serão publicados?</h3>
-                          <p className="text-sm text-muted-foreground">Isso influencia o estilo e formato do conteúdo</p>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          {PLATAFORMAS.map(p => (
-                            <button
-                              key={p}
-                              onClick={() => setPlataforma(p)}
-                              className={`p-4 rounded-xl border-2 text-center font-medium transition-all ${
-                                plataforma === p ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"
-                              }`}
-                            >
-                              {p}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Block 6: Tom */}
-                    {step === 6 && (
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-1">Qual tom de comunicação?</h3>
-                          <p className="text-sm text-muted-foreground">Opcional — define o estilo da linguagem</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {TONS.map(t => (
-                            <button
-                              key={t}
-                              onClick={() => setTom(tom === t ? "" : t)}
-                              className={`px-4 py-2 rounded-full border text-sm font-medium capitalize transition-all ${
-                                tom === t ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"
-                              }`}
-                            >
-                              {t}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Block 7: Público */}
-                    {step === 7 && (
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-1">Público principal</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {hasStrategy ? "Pré-preenchido pela estratégia. Edite se desejar." : "Descreva seu público-alvo"}
-                          </p>
-                        </div>
-                        <Input
-                          placeholder="Ex: empresários, médicos, donos de pequenas empresas"
-                          value={publico}
-                          onChange={e => setPublico(e.target.value)}
-                        />
-                      </div>
-                    )}
-
-                    {/* Block 8: Revisão */}
-                    {step === 8 && (
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-1">Revisão do lote</h3>
-                          <p className="text-sm text-muted-foreground">Confirme antes de gerar</p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <ReviewItem label="Quantidade" value={`${quantidade} conteúdos`} />
-                          <ReviewItem label="Formatos" value={Object.entries(formatDist).map(([k, v]) => `${v}x ${FORMATOS.find(f => f.value === k)?.label || k}`).join(", ")} />
-                          <ReviewItem label="Objetivos" value={objetivos.map(o => OBJETIVOS.find(x => x.value === o)?.label || o).join(", ")} />
-                          <ReviewItem label="Plataforma" value={plataforma} />
-                          {tema && <ReviewItem label="Tema" value={tema} />}
-                          {tom && <ReviewItem label="Tom" value={tom} />}
-                          {publico && <ReviewItem label="Público" value={publico} />}
-                          <ReviewItem label="Estratégia" value={hasStrategy ? "Conectada ✓" : "Sem estratégia"} />
-                        </div>
-                      </div>
-                    )}
-
+                    {renderStep()}
                   </motion.div>
                 </AnimatePresence>
 
@@ -426,7 +651,7 @@ export default function ClienteConteudos() {
                   <Button variant="ghost" onClick={() => step === 1 ? resetWizard() : setStep(s => s - 1)} disabled={step === 1}>
                     <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
                   </Button>
-                  {step < 8 ? (
+                  {!isLastStep ? (
                     <Button onClick={() => setStep(s => s + 1)} disabled={!canAdvance()}>
                       Próximo <ArrowRight className="w-4 h-4 ml-1" />
                     </Button>
@@ -452,7 +677,7 @@ export default function ClienteConteudos() {
           )}
 
           {/* Results Grid */}
-          {step === 9 && generatedContents.length > 0 && (
+          {isResultScreen && generatedContents.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-xl font-bold">{generatedContents.length} Conteúdos Gerados</h2>
@@ -479,16 +704,13 @@ export default function ClienteConteudos() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {/* Preview */}
                       <p className="text-sm text-muted-foreground line-clamp-3">
                         {typeof c.legenda === "string" ? c.legenda.slice(0, 150) + "..." : ""}
                       </p>
 
-                      {/* Expanded detail */}
                       {expandedCard === i && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-3 border-t pt-3">
                           <ContentMainDisplay content={c.conteudo_principal} format={c.formato} />
-
                           {c.legenda && (
                             <div className="p-3 rounded-lg bg-muted/50 border">
                               <div className="flex items-center justify-between mb-1">
@@ -498,7 +720,6 @@ export default function ClienteConteudos() {
                               <p className="text-sm whitespace-pre-wrap">{c.legenda}</p>
                             </div>
                           )}
-
                           {c.headlines?.length > 0 && (
                             <div className="p-3 rounded-lg bg-muted/50 border">
                               <p className="text-xs font-bold text-primary mb-1">Headlines</p>
@@ -507,7 +728,6 @@ export default function ClienteConteudos() {
                               ))}
                             </div>
                           )}
-
                           {c.hashtags?.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                               {c.hashtags.map((h: string, j: number) => (
@@ -515,14 +735,12 @@ export default function ClienteConteudos() {
                               ))}
                             </div>
                           )}
-
                           {c.embasamento && (
                             <p className="text-xs text-muted-foreground italic">{c.embasamento}</p>
                           )}
                         </motion.div>
                       )}
 
-                      {/* Actions */}
                       <div className="flex flex-wrap gap-2 pt-1">
                         <Button variant="ghost" size="sm" onClick={() => setExpandedCard(expandedCard === i ? null : i)}>
                           <Eye className="w-4 h-4 mr-1" /> {expandedCard === i ? "Fechar" : "Ver mais"}
@@ -534,9 +752,7 @@ export default function ClienteConteudos() {
                           <Palette className="w-4 h-4 mr-1" /> Gerar Arte
                         </Button>
                         {(c.formato || "").toLowerCase().includes("video") && (
-                          <Button variant="ghost" size="sm">
-                            <Play className="w-4 h-4 mr-1" /> Gerar Vídeo
-                          </Button>
+                          <Button variant="ghost" size="sm"><Play className="w-4 h-4 mr-1" /> Gerar Vídeo</Button>
                         )}
                         <Button size="sm" onClick={() => handleApproveOne(i)} disabled={approveMutation.isPending}>
                           <Check className="w-4 h-4 mr-1" /> Aprovar
@@ -580,11 +796,8 @@ export default function ClienteConteudos() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredHistory.map(item => (
-                <Card
-                  key={item.id}
-                  className="cursor-pointer hover:border-primary/40 transition-colors"
-                  onClick={() => setViewingContent(viewingContent?.id === item.id ? null : item)}
-                >
+                <Card key={item.id} className="cursor-pointer hover:border-primary/40 transition-colors"
+                  onClick={() => setViewingContent(viewingContent?.id === item.id ? null : item)}>
                   <CardContent className="py-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -599,7 +812,6 @@ export default function ClienteConteudos() {
                       </div>
                       <span className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>
                     </div>
-
                     {viewingContent?.id === item.id && item.result && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 border-t pt-3 space-y-2">
                         <ContentMainDisplay content={item.result.conteudo_principal} format={item.format || ""} />

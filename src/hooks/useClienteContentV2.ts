@@ -85,6 +85,16 @@ export function useGenerateContent() {
       tom?: string;
       publico?: string;
       estrategia: any | null;
+      // New fields
+      funilMomento?: string;
+      contextoEspecial?: string;
+      contextoDetalhe?: string;
+      estiloLote?: string;
+      nomeEmpresa?: string;
+      produto?: string;
+      diferencial?: string;
+      doresPublico?: string;
+      desejosPublico?: string;
     }) => {
       if (!orgId) throw new Error("Org not found");
 
@@ -98,6 +108,15 @@ export function useGenerateContent() {
           tom: payload.tom || "",
           publico: payload.publico || "",
           estrategia: payload.estrategia,
+          funilMomento: payload.funilMomento || "",
+          contextoEspecial: payload.contextoEspecial || "",
+          contextoDetalhe: payload.contextoDetalhe || "",
+          estiloLote: payload.estiloLote || "",
+          nomeEmpresa: payload.nomeEmpresa || "",
+          produto: payload.produto || "",
+          diferencial: payload.diferencial || "",
+          doresPublico: payload.doresPublico || "",
+          desejosPublico: payload.desejosPublico || "",
         },
       });
 
