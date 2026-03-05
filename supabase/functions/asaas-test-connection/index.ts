@@ -45,7 +45,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
+    const rawApiKey = Deno.env.get("ASAAS_API_KEY") || "";
+    const asaasApiKey = rawApiKey.trim();
+    const keyHasWhitespace = rawApiKey !== asaasApiKey || rawApiKey.includes('\n') || rawApiKey.includes('\r');
+    const keyLength = asaasApiKey.length;
+    const keyPrefix = asaasApiKey.substring(0, 15);
+    console.log(`[asaas-test-connection] Key length: ${keyLength}, prefix: "${keyPrefix}", hasWhitespace: ${keyHasWhitespace}, rawLength: ${rawApiKey.length}`);
+
     const proxyUrl = Deno.env.get("ASAAS_PROXY_URL") || null;
     const isSandbox = ASAAS_BASE.includes("sandbox");
 
@@ -73,6 +79,13 @@ Deno.serve(async (req) => {
         proxy_url: proxyUrl ? (proxyUrl.trim() === proxyUrl && /^https?:\/\/.+/.test(proxyUrl) ? "valid" : "invalid") : "not_set",
         customer_count: data.totalCount ?? null,
         first_customer: data.data?.[0]?.name ?? null,
+        error: res.ok ? null : data,
+        error_code: errorCode,
+        error_hint: errorHint,
+        key_length: keyLength,
+        key_prefix: keyPrefix,
+        key_has_whitespace: keyHasWhitespace,
+        raw_key_length: rawApiKey.length,
         error: res.ok ? null : data,
         error_code: errorCode,
         error_hint: errorHint,
