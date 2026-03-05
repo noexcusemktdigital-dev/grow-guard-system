@@ -322,11 +322,15 @@ DIRETRIZES OBRIGATÓRIAS:
 
 2. ICP (Cliente Ideal): Crie uma persona com nome fictício, emoji, comportamento digital detalhado, dores, desejos, objeções e gatilhos de compra.
 
-3. PROPOSTA DE VALOR: Estruture com headline impactante + Problema → Método → Resultado → Prova.
+3. PROPOSTA DE VALOR: Estruture com headline impactante + Problema → Método → Resultado → Prova. Se o briefing incluir "resultados_clientes", use esses dados reais como prova social.
 
-4. ANÁLISE DE CONCORRÊNCIA: Analise 2-4 concorrentes (use os mencionados no briefing ou infira do segmento). Identifique pontos fortes, fracos e oportunidades de diferenciação.
+4. ANÁLISE DE CONCORRÊNCIA: 
+   - Se o briefing incluir "concorrentes_urls" com links de sites ou Instagram, use essas URLs para INFERIR o posicionamento, tipo de conteúdo, tom de comunicação, pontos fortes e fracos de cada concorrente.
+   - Para cada URL fornecida, analise o domínio/perfil e gere uma análise de "presença digital estimada" incluindo: tipo de conteúdo provável, frequência estimada, posicionamento de marca inferido.
+   - Se não houver URLs, use o campo "concorrente_faz_melhor" e o segmento para inferir concorrentes genéricos do setor.
+   - Identifique oportunidades de diferenciação concretas.
 
-5. TOM DE COMUNICAÇÃO: Defina o tom, personalidade da marca, palavras para usar/evitar, e crie 4 exemplos de posts em diferentes tons.
+5. TOM DE COMUNICAÇÃO: Defina o tom, personalidade da marca, palavras para usar/evitar, e crie 4 exemplos de posts em diferentes tons. Se o briefing incluir "nao_quero_comunicacao", incorpore essas restrições nas palavras a evitar e no tom geral.
 
 6. AQUISIÇÃO: Defina canais prioritários com percentuais e funil com estimativas numéricas.
 
@@ -338,14 +342,16 @@ DIRETRIZES OBRIGATÓRIAS:
 
 10. ESTRUTURA: Analise o que tem e o que falta.
 
-11. EXECUÇÃO: Roadmap de 3 meses vinculado às ferramentas.
+11. EXECUÇÃO: Roadmap de 3 meses vinculado às ferramentas. IMPORTANTE: vincule APENAS a ferramentas de MARKETING (conteudos, postagens, sites, trafego, scripts). NÃO vincule a CRM ou ferramentas comerciais.
 
 REGRAS:
 - Seja ESPECÍFICO e PRÁTICO — nada genérico
 - Todas as projeções baseadas no orçamento e ticket médio
 - Use benchmarks reais do mercado brasileiro
 - Sempre português brasileiro
-- Vincule ações às ferramentas: conteudos, postagens, sites, trafego, crm, scripts
+- Vincule ações às ferramentas de marketing: conteudos, postagens, sites, trafego, scripts
+- Se houver campo "resultados_clientes", use como prova social real
+- Se houver campo "nao_quero_comunicacao", respeite essas restrições
 
 Use a ferramenta generate_strategy para retornar.`;
 
