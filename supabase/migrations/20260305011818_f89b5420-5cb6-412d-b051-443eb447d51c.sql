@@ -1,0 +1,1 @@
+ALTER TABLE public.traffic_strategies ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending';

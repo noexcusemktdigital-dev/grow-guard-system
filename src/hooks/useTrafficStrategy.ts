@@ -18,6 +18,8 @@ export interface TrafficPlatformStrategy {
   keywords?: string[];
   interests?: string[];
   tips: string[];
+  campaign_structure?: any;
+  tutorial?: string[];
 }
 
 export interface TrafficStrategy {
@@ -26,8 +28,21 @@ export interface TrafficStrategy {
   platforms: TrafficPlatformStrategy[];
   source_data: Record<string, any>;
   is_active: boolean;
+  status: string;
   created_by: string | null;
   created_at: string;
+}
+
+export interface TrafficWizardData {
+  objetivo: string;
+  produto: string;
+  publico: string[];
+  publico_custom: string;
+  pagina_destino: string;
+  orcamento: number;
+  plataformas: string[];
+  regiao: string;
+  ativos: string[];
 }
 
 export function useActiveTrafficStrategy() {
@@ -75,10 +90,10 @@ export function useGenerateTrafficStrategy() {
   const { data: orgId } = useUserOrgId();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (wizardData: TrafficWizardData) => {
       if (!orgId) throw new Error("Org not found");
       const { data, error } = await supabase.functions.invoke("generate-traffic-strategy", {
-        body: { organization_id: orgId },
+        body: { organization_id: orgId, ...wizardData },
       });
       if (error) throw error;
       if (data?.error) {
@@ -87,6 +102,35 @@ export function useGenerateTrafficStrategy() {
         throw err;
       }
       return data.strategy as TrafficStrategy;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["traffic-strategy-active"] });
+      qc.invalidateQueries({ queryKey: ["traffic-strategy-history"] });
+    },
+  });
+}
+
+export function useApproveTrafficStrategy() {
+  const qc = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async (strategyId: string) => {
+      if (!orgId) throw new Error("Org not found");
+      // Debit credits
+      const { error: rpcErr } = await supabase.rpc("debit_credits", {
+        _org_id: orgId,
+        _amount: 200,
+        _description: "Aprovação de Estratégia de Tráfego Pago",
+        _source: "traffic_strategy",
+      });
+      if (rpcErr) throw rpcErr;
+      // Update status
+      const { error } = await supabase
+        .from("traffic_strategies" as any)
+        .update({ status: "approved" } as any)
+        .eq("id", strategyId);
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["traffic-strategy-active"] });

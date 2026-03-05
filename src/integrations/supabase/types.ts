@@ -4294,6 +4294,7 @@ export type Database = {
           organization_id: string
           platforms: Json
           source_data: Json
+          status: string | null
         }
         Insert: {
           created_at?: string
@@ -4303,6 +4304,7 @@ export type Database = {
           organization_id: string
           platforms?: Json
           source_data?: Json
+          status?: string | null
         }
         Update: {
           created_at?: string
@@ -4312,6 +4314,7 @@ export type Database = {
           organization_id?: string
           platforms?: Json
           source_data?: Json
+          status?: string | null
         }
         Relationships: [
           {
