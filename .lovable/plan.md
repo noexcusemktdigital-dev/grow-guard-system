@@ -1,52 +1,69 @@
 
 
-# Plano: Correções do Módulo de Vendas (Scripts & Plano de Vendas)
+# Revisão do Módulo de Gestão (Financeiro, Contratos, Unidades)
 
-Não encontrei o plano exato que você mencionou na conversa atual, mas com base nas fases descritas (Fase 1: persistir histórico, Fase 2: créditos, Fase 3: dialog de créditos insuficientes) e na análise do código, identifiquei as lacunas no módulo de vendas:
+## Problemas Encontrados
 
-## Estado Atual
+### BUG 1 — FinanceiroConfiguracoes: Configurações NÃO são persistidas
+**Severidade: Alta**
 
-- **generate-script**: Já tem pre-check de créditos e debit no edge function
-- **ClienteScripts.tsx**: **NÃO** tem `InsufficientCreditsDialog` nem tratamento de erro `INSUFFICIENT_CREDITS`
-- **ScriptGeneratorDialog.tsx**: Chama `generate-script` mas não passa `organization_id` (line ~54-67), então o pre-check é pulado
-- **handleImproveWithAI**: Também não passa `organization_id`, mesmo problema
+O `FinanceiroConfiguracoes.tsx` usa apenas `useState` local. O botão "Salvar" exibe um toast mas **não salva nada** no banco. Os valores (% imposto, % repasse, capacidade, etc.) se perdem ao recarregar a página.
 
-## Fase 1 — Persistir Histórico de Geração
+**Correção:** Criar uma tabela `finance_settings` (ou usar um campo JSON em `organizations`) para persistir essas configurações. Carregar via query ao montar o componente e salvar via mutation.
 
-O `ScriptGeneratorDialog` gera o script via edge function e salva via `onSave` callback, mas o `handleImproveWithAI` em `ClienteScripts.tsx` atualiza in-place sem registrar que foi uma melhoria IA. Não há histórico de versões.
+**Detalhes técnicos:**
+- Migration: Adicionar coluna `finance_settings jsonb default '{}'` na tabela `organizations` (evita criar tabela nova)
+- Criar hook ou usar `useOrgProfile` para ler/gravar
+- Atualizar `FinanceiroConfiguracoes.tsx` para carregar do DB e salvar com `supabase.from("organizations").update()`
 
-**Correção**: Não requer migration — o script já é salvo/atualizado no DB. O problema é que `organization_id` não é passado ao edge function, então créditos não são verificados. Corrigir isso é a prioridade.
+### BUG 2 — ContratosRepositorio usa status em português, DB usa inglês
+**Severidade: Média**
 
-## Fase 2 — Integrar Créditos Corretamente
+`ContratosRepositorio.tsx` filtra por `"Assinado"`, `"Rascunho"`, `"Gerado"`, etc., mas os contratos no DB usam status em inglês (`"active"`, `"signed"`, `"draft"`, `"expired"`, `"cancelled"`). Isso significa que o repositório nunca exibe nenhum contrato — todos os grupos ficam vazios.
 
-**Arquivo: `src/components/cliente/ScriptGeneratorDialog.tsx`**
-- Importar `useUserOrgId` e obter `orgId`
-- Passar `organization_id: orgId` no body da chamada `supabase.functions.invoke("generate-script")`
-- Assim o edge function consegue fazer o pre-check e o debit de 150 créditos
+**Correção:** Atualizar as constantes `SECTIONS` no `ContratosRepositorio.tsx` para usar os valores reais do DB:
+- `"Assinado"` → `"active"`, `"signed"`
+- `"Rascunho"`, `"Gerado"`, etc. → `"draft"`
+- `"Vencido"`, `"Cancelado"` → `"expired"`, `"cancelled"`
 
-**Arquivo: `src/pages/cliente/ClienteScripts.tsx`**
-- Importar `useUserOrgId` e obter `orgId`
-- No `handleImproveWithAI`, adicionar `organization_id: orgId` ao body
-- Tratar erro `INSUFFICIENT_CREDITS` com state + dialog
+E atualizar `getFileIconColor` e `CONTRATO_STATUS_COLORS` para usar os mesmos valores.
 
-## Fase 3 — Dialog de Créditos Insuficientes
+### BUG 3 — Receitas/Despesas criadas sem data
+**Severidade: Baixa**
 
-**Arquivo: `src/pages/cliente/ClienteScripts.tsx`**
-- Importar `InsufficientCreditsDialog` e `isInsufficientCreditsError`
-- Adicionar state `showCreditsDialog`
-- No `handleImproveWithAI` catch, verificar `isInsufficientCreditsError(err)` e abrir dialog
-- Renderizar `<InsufficientCreditsDialog>` no JSX
+No `FinanceiroReceitas.tsx`, o formulário de criação não pede a data. A receita é criada com `date: undefined`, o que faz o campo "Data" exibir "—" na tabela e prejudica o filtro por mês no Dashboard. O mesmo ocorre no `FinanceiroDespesas.tsx`.
 
-**Arquivo: `src/components/cliente/ScriptGeneratorDialog.tsx`**
-- No catch da geração, verificar `isInsufficientCreditsError` e propagar o erro ao pai (ou mostrar dialog interno)
-- Alternativa: adicionar o dialog diretamente no `ScriptGeneratorDialog`
+**Correção:** Definir `date: new Date().toISOString().split("T")[0]` como valor default no estado do formulário de ambas as páginas, garantindo que novos lançamentos tenham sempre uma data.
+
+### BUG 4 — Dashboard Fechamentos: taxa de sistema fixa em R$250 para todas as unidades
+**Severidade: Baixa**
+
+`FinanceiroFechamentos.tsx` hardcoda `systemFee: 250` para cada unidade. Mas cada unidade pode ter um `system_fee` diferente configurado na aba Financeiro das Unidades.
+
+**Correção:** Buscar os dados de `units` e usar o `system_fee` real de cada unidade em vez do valor hardcoded. Requer cruzar `org_name` do contrato com o `unit_org_id` correspondente.
+
+### MELHORIA 5 — Receitas: sem campo de data no formulário simplificado
+**Severidade: Baixa**
+
+O `FinanceiroReceitas.tsx` e `FinanceiroDespesas.tsx` nas páginas dedicadas não incluem campo de data no dialog de criação (diferente do `FinanceiroControle.tsx` que já tem). Adicionar campo `date` com default hoje.
 
 ## Arquivos a Modificar
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/cliente/ScriptGeneratorDialog.tsx` | Passar `organization_id` ao edge function + dialog de créditos |
-| `src/pages/cliente/ClienteScripts.tsx` | Passar `organization_id` no improve + `InsufficientCreditsDialog` |
+| `src/pages/FinanceiroConfiguracoes.tsx` | Persistir configurações no DB |
+| `src/components/ContratosRepositorio.tsx` | Corrigir status para inglês |
+| `src/types/contratos.ts` | Atualizar `CONTRATO_STATUS_COLORS` |
+| `src/pages/FinanceiroReceitas.tsx` | Adicionar campo de data com default |
+| `src/pages/FinanceiroDespesas.tsx` | Adicionar campo de data com default |
+| `src/pages/FinanceiroFechamentos.tsx` | Usar system_fee real das unidades |
 
-Nenhuma migration necessária. O edge function `generate-script` já tem toda a lógica de créditos — o problema é apenas que o frontend não envia o `organization_id`.
+## Migration Necessária
+
+```sql
+ALTER TABLE public.organizations
+ADD COLUMN IF NOT EXISTS finance_settings jsonb DEFAULT '{}';
+```
+
+Sem novas tabelas. Sem alteração de RLS (a org já tem policy de UPDATE para membros).
 
