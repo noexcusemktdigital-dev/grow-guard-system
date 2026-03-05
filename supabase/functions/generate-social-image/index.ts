@@ -8,6 +8,25 @@ const corsHeaders = {
 
 const CREDIT_COST = 100;
 
+// --- Fetch URL and convert to base64 data URI ---
+
+async function urlToBase64(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`Failed to fetch reference image (${res.status}): ${url}`);
+      return null;
+    }
+    const contentType = res.headers.get("content-type") || "image/png";
+    const buffer = await res.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    return `data:${contentType};base64,${base64}`;
+  } catch (err) {
+    console.warn(`Error fetching reference image: ${url}`, err);
+    return null;
+  }
+}
+
 // --- Structured prompt result from chain-of-thought ---
 
 interface StructuredPromptResult {
@@ -383,7 +402,7 @@ Generate this image now.`;
 
     console.log(`🎨 Generating ${format} image (refs: ${reference_images?.length || 0}, chain-of-thought: ${optimized ? "YES" : "FALLBACK"})...`);
 
-    // Build message content with reference images
+    // Build message content with reference images (converted to base64)
     const hasRefs = reference_images && reference_images.length > 0;
     const brandElements = optimized?.brand_design_elements
       ? optimized.brand_design_elements
@@ -394,16 +413,26 @@ ${brandElements.split(",").map((e: string) => `- ${e.trim()}`).join("\n")}
 IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references.
 Create a NEW scene that follows the same brand design language.`;
 
-    const messageContent: any = hasRefs
-      ? [
+    let messageContent: any = fullPrompt;
+
+    if (hasRefs) {
+      console.log(`📥 Converting ${Math.min(reference_images.length, 3)} reference images to base64...`);
+      const base64Refs: { type: string; image_url: { url: string } }[] = [];
+      for (const refUrl of reference_images.slice(0, 3)) {
+        const b64 = await urlToBase64(refUrl);
+        if (b64) {
+          base64Refs.push({ type: "image_url", image_url: { url: b64 } });
+        }
+      }
+      if (base64Refs.length > 0) {
+        console.log(`✅ ${base64Refs.length} reference images converted to base64`);
+        messageContent = [
           { type: "text", text: referenceInstruction },
-          ...reference_images.slice(0, 3).map((url: string) => ({
-            type: "image_url",
-            image_url: { url },
-          })),
+          ...base64Refs,
           { type: "text", text: fullPrompt },
-        ]
-      : fullPrompt;
+        ];
+      }
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

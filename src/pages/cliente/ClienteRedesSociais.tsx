@@ -161,10 +161,14 @@ export default function ClienteRedesSociais() {
     }
   }, [searchParams]);
 
-  // Auto-load image_bank_urls from visual identity
+  // Auto-load image_bank_urls (or logo as fallback) from visual identity
   useEffect(() => {
-    if (visualIdentity?.image_bank_urls?.length && referenceUrls.length === 0 && view === "wizard") {
-      setReferenceUrls(visualIdentity.image_bank_urls.slice(0, 5));
+    if (referenceUrls.length === 0 && view === "wizard" && visualIdentity) {
+      if (visualIdentity.image_bank_urls?.length) {
+        setReferenceUrls(visualIdentity.image_bank_urls.slice(0, 5));
+      } else if (visualIdentity.logo_url) {
+        setReferenceUrls([visualIdentity.logo_url]);
+      }
     }
   }, [visualIdentity, view]);
 
@@ -240,7 +244,9 @@ export default function ClienteRedesSociais() {
     for (const file of Array.from(files)) {
       const path = `references/${orgId}/${Date.now()}_${file.name}`;
       const { error } = await supabase.storage.from("social-arts").upload(path, file);
-      if (!error) {
+      if (error) {
+        toast({ title: "Erro ao enviar imagem", description: error.message, variant: "destructive" });
+      } else {
         const { data: urlData } = supabase.storage.from("social-arts").getPublicUrl(path);
         newUrls.push(urlData.publicUrl);
       }
