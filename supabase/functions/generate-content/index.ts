@@ -12,99 +12,71 @@ serve(async (req) => {
   }
 
   try {
-    const { tema, formato, objetivo, mensagem_principal, cta, estrategia } = await req.json();
+    const { quantidade, formatos, objetivos, tema, plataforma, tom, publico, estrategia } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Build strategy context
-    let estrategiaContext = "";
+    const count = Number(quantidade) || 8;
+
+    // Build distribution string
+    const formatDist = (formatos || [])
+      .map((f: any) => `${f.qtd}x ${f.tipo}`)
+      .join(", ");
+
+    const objList = (objetivos || []).join(", ");
+
+    // Strategy context
+    let estrategiaCtx = "";
     if (estrategia) {
       const r = estrategia.strategy_result || {};
       const a = estrategia.answers || {};
-      estrategiaContext = `
-DADOS DA ESTRATÉGIA ATIVA DO CLIENTE:
-- Empresa: ${a.empresa || "N/A"}
-- Produto: ${a.produto || "N/A"}
-- Público-alvo: ${a.publico || "N/A"}
-- Problema que resolve: ${a.problema || "N/A"}
-- Diferencial: ${a.diferencial || "N/A"}
-- Objetivo de marketing: ${a.objetivo || "N/A"}
-${r.posicionamento ? `- Posicionamento: ${JSON.stringify(r.posicionamento)}` : ""}
-${r.persona ? `- Persona: ${JSON.stringify(r.persona)}` : ""}
-${r.pilares_conteudo ? `- Pilares de conteúdo: ${JSON.stringify(r.pilares_conteudo)}` : ""}
-
-Use estes dados para alinhar 100% do conteúdo com a estratégia do cliente.`;
+      estrategiaCtx = `
+ESTRATÉGIA ATIVA DO CLIENTE:
+- Empresa: ${a.empresa || a.step_0 || "N/A"}
+- Produto: ${a.produto || a.step_1 || "N/A"}
+- Público-alvo: ${a.publico || a.step_3 || "N/A"}
+- Problema: ${a.problema || a.step_4 || "N/A"}
+- Diferencial: ${a.diferencial || a.step_6 || "N/A"}
+- Objetivo: ${a.objetivo || a.step_9 || "N/A"}
+${r.proposta_valor ? `- Proposta de valor: ${JSON.stringify(r.proposta_valor)}` : ""}
+${r.estrategia_conteudo ? `- Pilares: ${JSON.stringify(r.estrategia_conteudo)}` : ""}
+${r.icp ? `- ICP: ${JSON.stringify(r.icp)}` : ""}
+Use estes dados para alinhar 100% dos conteúdos com a estratégia.`;
     }
 
-    // Format-specific instructions
-    const formatInstructions: Record<string, string> = {
-      "carrossel": `Para CARROSSEL, gere uma estrutura de slides:
-- Slide 1: Gancho forte (pergunta ou dado impactante)
-- Slide 2: Introdução do problema
-- Slide 3: Aprofundamento
-- Slide 4: Reflexão
-- Slide 5: Solução
-- Slide 6: Benefício
-- Slide 7: Reforço de autoridade
-- Slide 8: CTA
-Cada slide deve ter título curto + texto de 2-3 linhas.
-O campo "conteudo_principal" deve ser um array de objetos com "slide_numero", "titulo" e "texto".`,
+    const systemPrompt = `Você é um estrategista de marketing digital. Sua tarefa é gerar um LOTE de ${count} conteúdos completos e prontos para uso.
 
-      "post_unico": `Para POST ÚNICO, gere:
-- headline impactante
-- texto principal completo (3-5 parágrafos)
-- CTA final
-O campo "conteudo_principal" deve ser um objeto com "headline", "texto" e "cta".`,
+${estrategiaCtx}
 
-      "roteiro_video": `Para ROTEIRO DE VÍDEO, gere:
-- Hook inicial [0-3s]
-- Contexto/Problema [3-15s]
-- Desenvolvimento [15-40s]
-- Solução/Resultado [40-55s]
-- CTA [55-60s]
-Inclua também sugestões de texto na tela e legenda do vídeo.
-O campo "conteudo_principal" deve ser um objeto com "hook", "desenvolvimento", "conclusao", "cta", "texto_tela" e "legenda_video".`,
+DISTRIBUIÇÃO DE FORMATOS: ${formatDist || "decidir pela IA"}
+OBJETIVOS SELECIONADOS: ${objList || "educar, autoridade, engajamento, vender"}
+PLATAFORMA: ${plataforma || "Instagram"}
+TOM: ${tom || "educativo e direto"}
+PÚBLICO: ${publico || "definido pela estratégia"}
+${tema ? `TEMA DIRECIONADOR: ${tema}` : "Use os pilares da estratégia como base temática."}
 
-      "thread": `Para THREAD, gere uma sequência de 5-8 tweets/posts conectados:
-- Tweet 1: Gancho
-- Tweets 2-6: Desenvolvimento (1 ideia por tweet)
-- Tweet final: CTA
-O campo "conteudo_principal" deve ser um array de objetos com "numero" e "texto".`,
+REGRAS DE DISTRIBUIÇÃO DE OBJETIVOS:
+- ~40% educação/educar
+- ~30% autoridade
+- ~20% prova social / engajamento
+- ~10% oferta / venda
+Distribua os objetivos proporcionalmente entre os ${count} conteúdos.
 
-      "artigo_curto": `Para ARTIGO CURTO, gere:
-- Título SEO-friendly
-- Introdução (1 parágrafo)
-- 3-4 subtítulos com conteúdo
-- Conclusão com CTA
-O campo "conteudo_principal" deve ser um objeto com "titulo", "introducao", "secoes" (array com "subtitulo" e "texto") e "conclusao".`,
-    };
+PARA CADA CONTEÚDO, gere a estrutura conforme o formato:
 
-    const formatKey = formato?.toLowerCase().replace(/ /g, "_") || "post_unico";
-    const formatInstruction = formatInstructions[formatKey] || formatInstructions["post_unico"];
+CARROSSEL: conteudo_principal = array de objetos {slide_numero, titulo, texto} (6-8 slides)
+POST ÚNICO: conteudo_principal = {headline, texto, cta}
+ROTEIRO DE VÍDEO: conteudo_principal = {hook, desenvolvimento, conclusao, cta, texto_tela}
+STORY: conteudo_principal = array de {frame_numero, texto, acao}
+ARTIGO: conteudo_principal = {titulo, introducao, secoes: [{subtitulo, texto}], conclusao}
+POST EDUCATIVO: conteudo_principal = {headline, texto, dica_pratica, cta}
+POST DE AUTORIDADE: conteudo_principal = {headline, texto, dado_autoridade, cta}
 
-    const systemPrompt = `Você é um estrategista de marketing digital especializado em criação de conteúdo.
-Sua tarefa é gerar UM conteúdo completo e pronto para uso.
-${estrategiaContext}
+Cada conteúdo DEVE ter: titulo, formato, objetivo, conteudo_principal, legenda (completa com emojis), headlines (3 variações), hashtags (5-8), embasamento (por que funciona).
 
-FORMATO SOLICITADO: ${formato}
-${formatInstruction}
+Gere conteúdos COMPLETOS, prontos para publicar. Não gere apenas ideias.`;
 
-REGRAS:
-- O conteúdo deve ser completo, pronto para usar (não apenas ideias)
-- Adapte a linguagem ao público-alvo e posicionamento da marca
-- O CTA deve ser natural e alinhado ao objetivo
-- Gere 5 variações de headline criativas
-- A legenda deve ser completa para redes sociais (com emojis, quebras de linha)
-- Sugira hashtags relevantes (5-10)
-- A pergunta de engajamento deve estimular comentários
-- O embasamento deve explicar por que esse conteúdo funciona`;
-
-    const userPrompt = `Gere um conteúdo com as seguintes informações:
-- Tema: ${tema}
-- Formato: ${formato}
-- Objetivo: ${objetivo}
-- Mensagem principal: ${mensagem_principal || "A critério da IA, baseado no tema e estratégia"}
-- CTA desejado: ${cta}`;
+    const userPrompt = `Gere exatamente ${count} conteúdos estratégicos seguindo a distribuição solicitada. Retorne no formato da tool.`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -124,30 +96,30 @@ REGRAS:
             {
               type: "function",
               function: {
-                name: "generate_content",
-                description: "Retorna o conteúdo gerado com estrutura completa",
+                name: "generate_batch_content",
+                description: "Retorna o lote de conteúdos gerados",
                 parameters: {
                   type: "object",
                   properties: {
-                    titulo: { type: "string", description: "Título principal do conteúdo" },
-                    conteudo_principal: {
-                      description: "Estrutura do conteúdo conforme formato (slides para carrossel, hook/dev/cta para vídeo, etc.)",
-                    },
-                    legenda: { type: "string", description: "Legenda completa para redes sociais com emojis" },
-                    headlines: {
+                    conteudos: {
                       type: "array",
-                      items: { type: "string" },
-                      description: "5 variações de headline",
+                      items: {
+                        type: "object",
+                        properties: {
+                          titulo: { type: "string" },
+                          formato: { type: "string" },
+                          objetivo: { type: "string" },
+                          conteudo_principal: { description: "Estrutura conforme formato" },
+                          legenda: { type: "string" },
+                          headlines: { type: "array", items: { type: "string" } },
+                          hashtags: { type: "array", items: { type: "string" } },
+                          embasamento: { type: "string" },
+                        },
+                        required: ["titulo", "formato", "objetivo", "conteudo_principal", "legenda", "headlines", "hashtags", "embasamento"],
+                      },
                     },
-                    pergunta_engajamento: { type: "string", description: "Pergunta para estimular comentários" },
-                    hashtags: {
-                      type: "array",
-                      items: { type: "string" },
-                      description: "5-10 hashtags relevantes",
-                    },
-                    embasamento: { type: "string", description: "Explicação de por que este conteúdo funciona (2-3 linhas)" },
                   },
-                  required: ["titulo", "conteudo_principal", "legenda", "headlines", "pergunta_engajamento", "hashtags", "embasamento"],
+                  required: ["conteudos"],
                   additionalProperties: false,
                 },
               },
@@ -155,7 +127,7 @@ REGRAS:
           ],
           tool_choice: {
             type: "function",
-            function: { name: "generate_content" },
+            function: { name: "generate_batch_content" },
           },
         }),
       }
