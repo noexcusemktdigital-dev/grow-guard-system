@@ -499,6 +499,22 @@ export default function ClientePlanoCreditos() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            {/* Trial banner */}
+            {subscription?.status === "trial" && (() => {
+              const createdAt = subscription?.created_at ? new Date(subscription.created_at) : new Date();
+              const trialEnd = subscription?.expires_at ? new Date(subscription.expires_at) : new Date(createdAt.getTime() + 14 * 86400000);
+              const daysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000));
+              return (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1">
+                  <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                    {daysLeft > 0 ? `${daysLeft} dias restantes no trial` : "Trial expirado"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Início: {createdAt.toLocaleDateString("pt-BR")} · Expira: {trialEnd.toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+              );
+            })()}
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Plano</span>
               <span className="font-semibold text-foreground">{planName} — R$ {planPrice}/mês</span>
@@ -507,7 +523,7 @@ export default function ClientePlanoCreditos() {
               <span className="text-muted-foreground">Módulos</span>
               <Badge variant="secondary" className="text-xs">{moduleLabel}</Badge>
             </div>
-            {subscription?.expires_at && (
+            {subscription?.expires_at && subscription?.status !== "trial" && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Renovação</span>
                 <span className="text-foreground">{new Date(subscription.expires_at).toLocaleDateString("pt-BR")}</span>
