@@ -387,6 +387,7 @@ Deno.serve(async (req) => {
     let leadData: any = null;
     let funnelStages: any[] = [];
     const crmActions = agent.crm_actions || {};
+    const role = agent.role || "sdr";
 
     if (contact.crm_lead_id) {
       const { data: lead } = await adminClient
@@ -441,7 +442,6 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     // Build system prompt with role-specific instructions
     const persona = agent.persona || {};
     const knowledgeBase = agent.knowledge_base || [];
-    const role = agent.role || "sdr";
     const objectives = agent.objectives || [];
 
     let systemPrompt = promptConfig.system_prompt || `Você é ${agent.name}, um assistente virtual.`;

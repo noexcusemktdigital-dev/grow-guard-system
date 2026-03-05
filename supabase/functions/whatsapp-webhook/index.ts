@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
           last_message_at: new Date().toISOString(),
           unread_count: isFromMe ? 0 : 1,
           instance_id: instance.id,
-          attending_mode: "human",
+          attending_mode: "ai",
         })
         .select("id")
         .single();

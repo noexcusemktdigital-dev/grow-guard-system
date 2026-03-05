@@ -270,11 +270,11 @@ Deno.serve(async (req) => {
             last_message_at: lastMsgTime || new Date().toISOString(),
             unread_count: unreadCount,
             instance_id: instance.id,
-            attending_mode: "human",
+            attending_mode: "ai",
             photo_url: photoUrl,
             last_message_preview: preview,
           });
-          existingMap.set(phone, { id: "pending", attending_mode: "human" });
+          existingMap.set(phone, { id: "pending", attending_mode: "ai" });
           contactsCreated++;
         }
       }
