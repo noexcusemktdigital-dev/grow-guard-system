@@ -1,58 +1,36 @@
 
 
-# Plano: Otimização de Integrações, Plano & Créditos, Configurações e Avaliações
+# Correção: Vitor não aparece nas Avaliações
 
-## Problemas Identificados
+## Problema Identificado
 
-### 1. Integrações — Excesso e Duplicidade
+A requisição do hook `useCrmTeam` faz um join PostgREST entre `organization_memberships` e `profiles`:
 
-**BUG/DESIGN**: `ClienteIntegracoes.tsx` lista 7 integrações (Meta Ads, Google Ads, TikTok Ads, RD Station, Google Calendar, WhatsApp, Widget Chat) que **não fazem nada real** — apenas salvam config no banco sem nenhum backend que consuma esses dados.
-
-**BUG**: Duplicidade — `CrmIntegrations.tsx` (aba "Integ." no CRM Config) tem Make/Zapier/n8n/custom webhook, enquanto `ClienteIntegracoes.tsx` tem uma seção separada de API & Webhook. São duas interfaces para a mesma coisa.
-
-**BUG**: Linha 182 de `ClienteIntegracoes.tsx` expõe o project ID do Supabase hardcoded na URL do webhook. Deveria usar `VITE_SUPABASE_PROJECT_ID`.
-
-**Correção**: Reestruturar a página de Integrações para ter 3 seções claras:
-1. **WhatsApp (Z-API)** — manter como está (funcional)
-2. **API Aberta** — Chave de API + Webhook de Leads (manter)
-3. **Automações** — Apenas **Make** e **Zapier** como plataformas de integração (webhooks de saída). Remover n8n, custom, e todas as integrações falsas (Meta, Google, TikTok, RD Station, Google Calendar). Mover a config de Make/Zapier do CrmIntegrations para cá (fonte única).
-
-### 2. Configurações — Notificações não persistem
-
-**BUG**: `NotificationsTab` usa `useState` local. As preferências de notificação se perdem ao recarregar. O mesmo padrão do bug de FinanceiroConfiguracoes.
-
-**Correção**: Persistir preferências de notificação no campo `notification_preferences` (JSONB) da tabela `organizations` (ou no perfil do usuário). Carregar ao montar, salvar ao toggle.
-
-### 3. Plano & Créditos — Sem problemas críticos
-
-A página está funcional. Pequenas melhorias:
-- Adicionar badge visual do plano atual no topo
-- Mostrar data de início do trial e dias restantes quando `status === "trial"`
-
-### 4. Avaliações — Funcional mas limitado
-
-**Melhorias**:
-- Adicionar possibilidade de **autoavaliação** (o usuário pode se avaliar)
-- Adicionar botão de **excluir avaliação** (apenas o avaliador pode deletar)
-- Mostrar **tendência** (seta ↑↓) comparando última avaliação com a anterior
-
-## Arquivos a Modificar
-
-| Arquivo | Ação |
-|---|---|
-| `src/pages/cliente/ClienteIntegracoes.tsx` | Reestruturar: remover integrações falsas, manter WhatsApp + API + Make/Zapier |
-| `src/components/crm/CrmIntegrations.tsx` | Remover seção de webhooks outbound (movido para Integrações) — manter apenas CSV import e webhook inbound |
-| `src/pages/cliente/ClienteConfiguracoes.tsx` | Persistir preferências de notificação |
-| `src/pages/cliente/ClientePlanoCreditos.tsx` | Melhorar exibição de trial (dias restantes) |
-| `src/pages/cliente/ClienteAvaliacoes.tsx` | Autoavaliação + excluir + tendência |
-| `src/hooks/useEvaluations.ts` | Adicionar deleteEvaluation mutation |
-
-## Migration Necessária
-
-```sql
-ALTER TABLE public.profiles
-ADD COLUMN IF NOT EXISTS notification_preferences jsonb DEFAULT '{}';
+```typescript
+.select("user_id, role, profiles(full_name)")
 ```
 
-Preferências por usuário (não por org), pois cada membro pode ter configurações diferentes.
+Mas **não existe foreign key** entre `organization_memberships.user_id` e `profiles.id`. O PostgREST retorna **erro 400**: `"Could not find a relationship between 'organization_memberships' and 'profiles'"`. Por isso a lista de membros vem vazia e o Vitor não aparece.
+
+Os dados estão corretos no banco — ambos (Davi Tesch e Vitor Rodrigues) estão na mesma organização.
+
+## Correção
+
+### 1. Migration: Adicionar FK
+
+```sql
+ALTER TABLE public.organization_memberships
+ADD CONSTRAINT fk_memberships_profiles
+FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+```
+
+Isso permite ao PostgREST resolver o join `profiles(full_name)` automaticamente.
+
+### 2. Nenhuma alteração de código necessária
+
+O `useCrmTeam` e o `ClienteAvaliacoes` já estão corretos — o único problema é a falta do FK no banco.
+
+## Bonus: Fix do console warning
+
+O `StarRating` recebe ref via Radix UI mas não usa `forwardRef`. Corrigir no `ClienteAvaliacoes.tsx` para eliminar o warning no console.
 
