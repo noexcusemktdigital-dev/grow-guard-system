@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.whatsapp-typing]
 verify_jwt = false
+
+[functions.generate-social-briefing]
+verify_jwt = false

@@ -434,7 +434,7 @@ export default function ClienteConteudos() {
                   <ContentVisualCard key={i} content={c} index={i}
                     onCopy={() => copyContent(c)}
                     onPdf={() => downloadPdf(c, i)}
-                    onPost={() => navigate("/cliente/redes-sociais")}
+                    onPost={() => navigate(`/cliente/redes-sociais?content_id=${generatedIds[i]}`)}
                     onApprove={() => handleApproveOne(i)}
                     approving={approveMutation.isPending}
                   />
@@ -781,7 +781,7 @@ function BatchFolder({ batch, navigate }: { batch: { date: string; items: Conten
                     <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => copyItem(item)}>
                       <Copy className="w-3 h-3 mr-1" /> Copiar
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate("/cliente/redes-sociais")}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate(`/cliente/redes-sociais?content_id=${item.id}`)}>
                       <ExternalLink className="w-3 h-3 mr-1" /> Postagem
                     </Button>
                   </div>
