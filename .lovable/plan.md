@@ -1,75 +1,126 @@
 
 
-# Reestruturação da Ferramenta de Redes Sociais (Postagens)
+# Análise: Nosso Sistema vs. Prompts de Referência
 
-## Problema Central
+## Diagnóstico — 3 Problemas Críticos Encontrados
 
-O wizard atual tem 9 campos abertos em texto livre para artes e campos genéricos para vídeos. O cliente preenche mal, o prompt fica fraco, e a IA gera resultados inconsistentes. O usuário quer um briefing estruturado com blocos objetivos + assistência da IA para montar o prompt final.
+Após revisar o edge function `generate-social-image/index.ts` e comparar com os prompts de exemplo que geraram ótimos resultados, identifiquei **3 gaps críticos** que impedem o sistema de gerar prompts nesse nível:
 
-## Plano de Implementação
+### Problema 1: O sistema PROÍBE texto na imagem — mas os exemplos INCLUEM texto
 
-### 1. Wizard de Arte — 7 Blocos Estruturados (`ClienteRedesSociais.tsx`)
-
-Substituir os 9 campos abertos por 7 blocos claros:
-
-| Bloco | Campo | Tipo |
-|---|---|---|
-| 1 — Formato | 1:1, 4:5, 9:16 | Cards selecionáveis |
-| 2 — Tipo de postagem | Post único, Capa carrossel, Slide carrossel, Story | Cards selecionáveis |
-| 3 — Texto da arte | Headline (obrigatório), Subheadline (opcional), CTA (opcional) | Inputs estruturados |
-| 4 — Cena | Descrição da cena (textarea com exemplos inline) | Textarea com placeholders ricos |
-| 5 — Identidade visual | Auto-preenchido se existe. Senão: cores + estilo | Auto-detect + fallback manual |
-| 6 — Elementos visuais | Objetos/elementos específicos (notebook, prédio, etc.) | Input com sugestões |
-| 7 — Referências visuais | Upload mínimo 3 imagens | Upload com validação |
-
-Remover: campos "link da marca", "objetivo", "tema", "ambiente" como campos separados. O campo "cena" absorve contexto suficiente.
-
-### 2. Wizard de Vídeo — 6 Blocos (`ClienteRedesSociais.tsx`)
-
-| Bloco | Campo | Tipo |
-|---|---|---|
-| 1 — Formato/Plataforma | Reels/TikTok (9:16), Feed (1:1), YouTube (16:9) | Cards |
-| 2 — Duração | 5 segundos, 8 segundos | Cards (simplificado) |
-| 3 — Cena | Descrição do que acontece | Textarea com exemplos |
-| 4 — Movimento | O que acontece na cena (ação) | Input com sugestões |
-| 5 — Texto/Mensagem | Frase + CTA opcional | Inputs estruturados |
-| 6 — Referências | Upload opcional | Upload |
-
-### 3. Assistente IA para prompt (`generate-social-image/index.ts`)
-
-O chain-of-thought já existe no edge function. A melhoria é alimentá-lo com os dados estruturados dos novos blocos em vez de texto livre concatenado. O `analyzeAndOptimizePrompt` receberá campos nomeados (headline, cena, elementos, tipo_postagem) em vez de um blob de texto.
-
-Atualizar o payload enviado pelo hook para passar campos estruturados:
+O prompt atual tem uma regra absoluta:
 ```
-{
-  formato: "4:5",
-  tipo_postagem: "post_unico",
-  headline: "Escalar não é sorte",
-  subheadline: "É processo",
-  cta: "Conheça o método",
-  cena: "Empresário analisando dashboard de vendas",
-  elementos_visuais: "notebook com gráfico subindo",
-  reference_image_urls: [...],
-  identidade_visual: { ... }
-}
+ABSOLUTE RULES (NEVER VIOLATE):
+- ZERO text, letters, numbers, words, logos, or watermarks in the image
 ```
 
-### 4. Atualizar Edge Functions
+E o chain-of-thought (Flash) também diz:
+```
+- NEVER include any text, letters, words, logos, or watermarks in the image description
+```
 
-**`generate-social-image/index.ts`**: Receber os novos campos estruturados e montar o prompt de forma mais precisa (campo por campo) em vez de concatenar texto livre.
+Mas os prompts de exemplo que funcionam bem **incluem texto na imagem** (headline, subheadline, CTA, bullet points, nome da marca). O NanoBanana **consegue** renderizar texto. O sistema está bloqueando isso.
 
-**`generate-social-video-frames/index.ts`**: Receber cena + movimento + mensagem como campos separados para prompts de frame mais precisos.
+### Problema 2: As referências são mal instruídas
 
-### 5. Hook `useClientePosts.ts`
+Atualmente, as referências são enviadas com apenas esta instrução genérica:
+```
+"Study the provided reference images and match their visual style, color treatment, composition approach, and overall aesthetic."
+```
 
-Expandir o payload do `useGeneratePost` para aceitar os novos campos estruturados (tipo_postagem, headline, subheadline, cta, cena, elementos_visuais, movimento).
+Nos prompts de exemplo, a instrução é muito mais precisa:
+```
+"Use the attached images ONLY as brand style references for the visual identity.
+Replicate the brand design system including: [lista específica de elementos]
+IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references.
+Create a NEW scene that follows the same brand design language."
+```
+
+### Problema 3: O prompt final não tem a estrutura dos exemplos
+
+Os prompts de exemplo são organizados em seções claras: Scene, Environment, Design layout, Color palette, Text in Portuguese, Mood. O sistema atual gera um blob genérico via chain-of-thought que perde essa estrutura.
+
+## Plano de Correção
+
+### 1. Remover a proibição de texto e incluir texto na imagem (`generate-social-image/index.ts`)
+
+- Remover as regras "ZERO text" do prompt final E do system prompt do chain-of-thought
+- Adicionar uma seção `TEXT IN PORTUGUESE` no prompt final com headline, subheadline, CTA e marca
+- Instruir a IA a renderizar o texto dentro da imagem como parte do design layout
+
+### 2. Reformular a instrução de referências (`generate-social-image/index.ts`)
+
+Substituir a instrução genérica por:
+```
+Use the attached images ONLY as brand style references for the visual identity.
+Replicate the brand design system including: color palette, layout structure, 
+card shapes, icon elements, typography style, and overall design language.
+IMPORTANT: Do NOT recreate the same people, same scene or same composition.
+Create a NEW scene that follows the same brand design language.
+```
+
+### 3. Reestruturar o chain-of-thought para gerar prompts no formato dos exemplos (`generate-social-image/index.ts`)
+
+Atualizar o system prompt do `analyzeAndOptimizePrompt` para gerar o prompt no formato estruturado:
+- **Scene**: descrição da cena com personagens e ações
+- **Environment**: detalhes do ambiente e iluminação
+- **Design layout**: estrutura visual (top photo / bottom card, etc.)
+- **Color palette**: cores específicas da marca
+- **Text in Portuguese**: headline, subheadline, CTA, bullet points, marca
+- **Mood**: palavras-chave de atmosfera
+- **Style closing**: "Ultra realistic photography with modern marketing layout"
+
+O tool call do Flash passará a retornar esses campos separados em vez de um blob único.
+
+### 4. Adicionar campo "Nome da marca" no wizard (`ClienteRedesSociais.tsx`)
+
+Os exemplos incluem o nome da marca (ex: "P2Y crédito e investimento", "Saura"). Adicionar um campo opcional no bloco de identidade visual para o nome da marca que será incluído no prompt.
 
 ## Arquivos Modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Wizard reestruturado: 7 blocos arte, 6 blocos vídeo, validação de 3 refs |
-| `src/hooks/useClientePosts.ts` | Payload expandido com campos estruturados |
-| `supabase/functions/generate-social-image/index.ts` | Receber campos estruturados, prompt mais preciso |
-| `supabase/functions/generate-social-video-frames/index.ts` | Campos cena + movimento separados |
+| `supabase/functions/generate-social-image/index.ts` | Remover proibição de texto, reestruturar prompt em seções (Scene/Environment/Layout/Text/Mood), reformular instrução de referências |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Adicionar campo "Nome da marca" no bloco de identidade visual |
+
+## Exemplo de Prompt que o Sistema Passará a Gerar
+
+Com os inputs: headline "Escalar não é sorte", subheadline "É processo", CTA "Conheça o método", cena "Empresário analisando dashboard", cores "preto e verde limão", referências anexas:
+
+```
+Use the attached images ONLY as brand style references.
+Replicate the brand design system including: color palette, layout structure,
+card shapes, icon elements, typography style, and design language.
+Do NOT recreate the same scene from the references. Create a NEW scene.
+
+Scene:
+A Brazilian businessman analyzing a sales dashboard on a modern laptop,
+looking confident and focused on the growth metrics displayed on screen.
+
+Environment:
+Modern minimalist office with natural daylight, clean desk setup,
+professional corporate atmosphere.
+
+Design layout:
+Top portion: lifestyle photography of the businessman.
+Bottom portion: dark rounded card layout with text and lime green highlights.
+
+Color palette:
+Black, white and lime green accents consistent with the brand references.
+
+Format:
+Portrait 4:5 (1080×1350px) social media post.
+
+Text in Portuguese:
+Headline: Escalar não é sorte
+Highlight headline: É processo
+CTA: Conheça o método
+
+Mood:
+Professional growth, business strategy, confidence, modern entrepreneurship.
+
+Ultra realistic photography with modern marketing layout.
+```
+
+Esse formato é equivalente aos prompts de exemplo que geraram ótimos resultados.
 
