@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const allCategorias = ["Pessoas", "Plataformas", "Estrutura", "Empréstimos", "Investimentos", "Eventos", "Treinamentos", "Impostos"];
+const today = () => new Date().toISOString().split("T")[0];
 
 export default function FinanceiroDespesas() {
   const { toast } = useToast();
@@ -22,15 +23,16 @@ export default function FinanceiroDespesas() {
   const [amount, setAmount] = useState(0);
   const [category, setCategory] = useState("Plataformas");
   const [isRecurring, setIsRecurring] = useState(false);
+  const [date, setDate] = useState(today());
 
   const total = (expenses ?? []).reduce((s, e) => s + Number(e.amount), 0);
   const fixed = (expenses ?? []).filter(e => e.is_recurring).reduce((s, e) => s + Number(e.amount), 0);
 
   const handleSave = () => {
     if (!desc.trim()) { toast({ title: "Informe a descrição", variant: "destructive" }); return; }
-    createExpense.mutate({ description: desc, amount, category, is_recurring: isRecurring });
+    createExpense.mutate({ description: desc, amount, category, is_recurring: isRecurring, date });
     setDialogOpen(false);
-    setDesc(""); setAmount(0);
+    setDesc(""); setAmount(0); setDate(today());
     toast({ title: "Despesa adicionada" });
   };
 
@@ -67,6 +69,7 @@ export default function FinanceiroDespesas() {
                 <th className="text-right py-3 px-4 font-medium text-muted-foreground">Valor</th>
                 <th className="text-center py-3 px-4 font-medium text-muted-foreground">Tipo</th>
                 <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
+                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Data</th>
               </tr>
             </thead>
             <tbody>
@@ -79,6 +82,7 @@ export default function FinanceiroDespesas() {
                   <td className="py-3 px-4 text-center">
                     <span className={`text-xs px-2 py-0.5 rounded ${e.status === "paid" ? "bg-emerald-500/15 text-emerald-500" : "bg-yellow-500/15 text-yellow-500"}`}>{e.status === "paid" ? "Pago" : "Previsto"}</span>
                   </td>
+                  <td className="py-3 px-4 text-muted-foreground">{(e as any).date ? new Date((e as any).date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -92,6 +96,7 @@ export default function FinanceiroDespesas() {
           <div className="space-y-4">
             <div><Label>Descrição *</Label><Input value={desc} onChange={e => setDesc(e.target.value)} /></div>
             <div><Label>Valor (R$)</Label><Input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} /></div>
+            <div><Label>Data</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
             <div><Label>Categoria</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger><SelectValue /></SelectTrigger>

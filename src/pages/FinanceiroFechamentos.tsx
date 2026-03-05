@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { KpiCard } from "@/components/KpiCard";
 import { useNetworkContracts } from "@/hooks/useContracts";
 import { useFinanceClosings } from "@/hooks/useFinance";
+import { useUnits } from "@/hooks/useUnits";
 import { Button } from "@/components/ui/button";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -13,24 +14,37 @@ const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", 
 export default function FinanceiroFechamentos() {
   const { data: contracts, isLoading: loadingContracts } = useNetworkContracts();
   const { data: closings, isLoading: loadingClosings } = useFinanceClosings();
+  const { data: units, isLoading: loadingUnits } = useUnits();
 
-  const isLoading = loadingContracts || loadingClosings;
+  const isLoading = loadingContracts || loadingClosings || loadingUnits;
+
+  // Build a map of unit_org_id -> system_fee from units table
+  const unitFeeMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    (units ?? []).forEach((u: any) => {
+      if (u.unit_org_id) map[u.unit_org_id] = Number(u.system_fee ?? 250);
+    });
+    return map;
+  }, [units]);
 
   // Group active contracts by org for consolidation
   const consolidation = useMemo(() => {
     if (!contracts) return [];
     const activeContracts = contracts.filter((c: any) => c.status === "active" || c.status === "signed");
-    const byOrg: Record<string, { orgName: string; contracts: number; mrr: number; royalty: number; systemFee: number }> = {};
+    const byOrg: Record<string, { orgName: string; orgId: string; contracts: number; mrr: number; royalty: number; systemFee: number }> = {};
     activeContracts.forEach((c: any) => {
       const key = c.org_name || c.organization_id;
-      if (!byOrg[key]) byOrg[key] = { orgName: c.org_name || "—", contracts: 0, mrr: 0, royalty: 0, systemFee: 250 };
+      if (!byOrg[key]) {
+        const fee = unitFeeMap[c.organization_id] ?? 250;
+        byOrg[key] = { orgName: c.org_name || "—", orgId: c.organization_id, contracts: 0, mrr: 0, royalty: 0, systemFee: fee };
+      }
       byOrg[key].contracts++;
       byOrg[key].mrr += Number(c.monthly_value || 0);
     });
     // Calculate royalties (10% of MRR)
     Object.values(byOrg).forEach(o => { o.royalty = o.mrr * 0.1; });
     return Object.values(byOrg).sort((a, b) => b.mrr - a.mrr);
-  }, [contracts]);
+  }, [contracts, unitFeeMap]);
 
   const totalMRR = consolidation.reduce((s, c) => s + c.mrr, 0);
   const totalRoyalties = consolidation.reduce((s, c) => s + c.royalty, 0);
@@ -95,7 +109,6 @@ export default function FinanceiroFechamentos() {
         </div>
       )}
 
-      {/* Existing closings/DRE files */}
       {(closings ?? []).length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">Arquivos de Fechamento</h3>

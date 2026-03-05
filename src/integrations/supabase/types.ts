@@ -3805,6 +3805,7 @@ export type Database = {
           created_at: string
           email: string | null
           employee_count: string | null
+          finance_settings: Json | null
           founded_at: string | null
           id: string
           legal_name: string | null
@@ -3833,6 +3834,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           employee_count?: string | null
+          finance_settings?: Json | null
           founded_at?: string | null
           id?: string
           legal_name?: string | null
@@ -3861,6 +3863,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           employee_count?: string | null
+          finance_settings?: Json | null
           founded_at?: string | null
           id?: string
           legal_name?: string | null
