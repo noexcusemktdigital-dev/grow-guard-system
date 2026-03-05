@@ -1,63 +1,70 @@
 
 
-# Reestruturação do Formulário de Criação de Artes — Redes Sociais
+# Reestruturação Completa da Ferramenta de Estratégia de Marketing
 
-## Problema
+## Visão
 
-O formulário atual na tela de Redes Sociais (step "config") usa **seleções fixas de estilo** (6 cards pré-definidos) e um **texto base genérico**. O usuário que gerou artes excelentes manualmente usou um processo diferente: campos abertos para cena, ambiente, estilo visual, texto da arte e referências visuais (mínimo 3). Esse processo gera prompts ricos e contextuais que produzem resultados superiores.
+A Estratégia é a **base central** do sistema. Objetivo: coletar informações do negócio → gerar estratégia completa via IA → apresentar de forma visual e dinâmica → criar links diretos para aplicar cada parte nas ferramentas (Conteúdos, Artes, Scripts, Tráfego, CRM). A estratégia é **mensal** mas não obrigatória — o sistema controla quando foi a última geração e sugere renovação.
 
-A edge function `generate-social-image` já tem toda a infraestrutura pronta (chain-of-thought, referências multimodais, identidade visual). O gargalo é o **formulário de coleta** que não captura informações suficientes.
+## Problemas Atuais
 
-## Plano
+1. **Botão "Regenerar" some após aprovação** — não há como criar nova estratégia
+2. **`useStrategyData` existe mas NÃO é importado por nenhuma ferramenta** — zero integração real
+3. **Apresentação estática** — tabs sem CTAs claros vinculando às ferramentas
+4. **Sem controle temporal** — não mostra quando foi gerada, não sugere renovação mensal
+5. **Sem fluxo de "aplicar"** — o usuário vê a estratégia mas não sabe o próximo passo
 
-### 1. Reescrever o step "config" em `ClienteRedesSociais.tsx`
+## Plano de Implementação
 
-Substituir os cards de estilo fixo por **9 campos** baseados no processo que funcionou:
+### 1. Controle temporal e regeneração (`ClientePlanoMarketing.tsx`)
 
-| # | Campo | Tipo | Obrigatório |
-|---|---|---|---|
-| 1 | Link da marca (site/Instagram) | Input text | Opcional |
-| 2 | Formato da imagem | Cards fixos (Feed 4:5, Quadrado 1:1, Story 9:16, Banner 16:9) | Sim |
-| 3 | Objetivo da postagem | Textarea com exemplos placeholder | Sim |
-| 4 | Tema/assunto | Textarea com exemplos placeholder | Sim |
-| 5 | Cena da imagem | Textarea ("descreva o que deve aparecer") | Sim |
-| 6 | Ambiente | Input text ("onde a cena acontece") | Opcional |
-| 7 | Estilo visual | Input text ("corporativo, minimalista, premium…") | Opcional |
-| 8 | Texto da arte | Headline (input) + Subheadline (input, opcional) + CTA (input, opcional) | Headline obrigatório |
-| 9 | Referências visuais | Upload múltiplo (mínimo 3 recomendado) | Recomendado |
+- Adicionar botão **"Nova Estratégia"** visível **sempre** (inclusive após aprovação), com confirmação de que vai desativar a atual
+- Mostrar **badge com data da última geração** e um alerta suave quando passaram 30+ dias ("Sua estratégia tem X dias. Considere atualizar!")
+- Manter contador de gerações e histórico
 
-Remover: `ART_STYLES` (cards fixos de estilo). Manter: `ART_FORMATS` (atualizar com 4:5, 1:1, 9:16, 16:9).
+### 2. Dashboard visual com CTAs de ação (`ClientePlanoMarketing.tsx`)
 
-### 2. Atualizar o payload enviado ao `generate-social-image`
+Reestruturar o `StrategyDashboard` para que cada seção tenha **CTAs diretos** para aplicar na ferramenta correspondente:
 
-Concatenar todos os campos em um prompt rico antes de enviar:
-
-```
-Objetivo: {objetivo}
-Tema: {tema}
-Cena: {cena}
-Ambiente: {ambiente}
-Estilo visual: {estilo_visual}
-Headline: {headline}
-Subheadline: {subheadline}
-CTA: {cta}
-Link da marca: {brand_link}
-```
-
-Enviar `art_style` como o texto livre do campo estilo visual (a edge function já trata fallbacks). Continuar passando `reference_images` e `identidade_visual` como já faz.
-
-### 3. Atualizar edge function `generate-social-image`
-
-Ajuste mínimo: adicionar formato `portrait` (4:5) e `banner` (16:9) no mapeamento de `aspectInstruction`. O restante já funciona — o chain-of-thought Flash já recebe o prompt completo e otimiza.
-
-### 4. Manter identidade visual automática
-
-Se o usuário já tem `marketing_visual_identities` configurada, continuar passando automaticamente (já funciona). Se forneceu link da marca no campo 1, incluir no prompt para contexto adicional.
-
-## Arquivos
-
-| Arquivo | Ação |
+| Seção | CTA |
 |---|---|
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Reescrever step "config" com 9 campos abertos |
-| `supabase/functions/generate-social-image/index.ts` | Adicionar formatos 4:5 e 16:9 no aspect mapping |
+| Tom de Voz / Persona | → "Gerar Scripts com esse tom" (link `/cliente/scripts`) |
+| Pilares de Conteúdo | → "Criar Conteúdo" (link `/cliente/conteudos`) |
+| Calendário Editorial | → "Criar Arte para esse dia" (link `/cliente/redes-sociais`) |
+| Estratégia de Tráfego | → "Configurar Tráfego Pago" (link `/cliente/trafego-pago`) |
+| Funil de Aquisição | → "Abrir CRM" (link `/cliente/crm`) |
+| Ideias de Conteúdo | Cada ideia com botão "Gerar" que leva à ferramenta com o tema pré-preenchido |
+
+Adicionar um **card de "Próximos Passos"** no topo do dashboard com as 3 ações prioritárias baseadas no `plano_execucao[0]` (mês 1).
+
+### 3. Integrar `useStrategyData` nas ferramentas
+
+Conectar o hook nas 4 ferramentas principais para que consumam dados da estratégia aprovada:
+
+| Ferramenta | Arquivo | Dado consumido |
+|---|---|---|
+| Conteúdos | `ClienteConteudos.tsx` | Pilares, ICP, tom de voz → injetar no prompt de geração |
+| Redes Sociais (Artes) | `ClienteRedesSociais.tsx` | Tom, persona, estilo visual → preencher campos sugeridos |
+| Scripts | `ClienteScripts.tsx` | ICP (dores, objeções, gatilhos), proposta de valor |
+| Tráfego Pago | `ClienteTrafegoPago.tsx` | Canais prioritários, funil, público-alvo |
+
+Em cada ferramenta, mostrar um **banner contextual** quando há estratégia ativa: "Dados da sua estratégia estão sendo usados para personalizar esta ferramenta ✓"
+
+### 4. Melhorias visuais no dashboard
+
+- **Card hero** no topo com score animado + data da geração + badge de status + botão "Nova Estratégia"
+- Substituir badge "Estratégia aprovada" isolada por uma **barra de ações** completa
+- Cada tab com **animações de entrada** nos cards (já tem parcialmente, padronizar)
+- Na tab "Execução", marcar visualmente os passos já executados (se o usuário já usou a ferramenta correspondente)
+
+## Arquivos Modificados
+
+| Arquivo | Mudança |
+|---|---|
+| `src/pages/cliente/ClientePlanoMarketing.tsx` | Adicionar botão "Nova Estratégia" sempre visível, alerta de 30+ dias, CTAs em cada tab, card de próximos passos |
+| `src/hooks/useStrategyData.ts` | Sem mudanças — já está pronto |
+| `src/pages/cliente/ClienteConteudos.tsx` | Importar `useStrategyData`, injetar contexto no prompt |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Importar `useStrategyData`, sugerir campos baseados na estratégia |
+| `src/pages/cliente/ClienteScripts.tsx` | Importar `useStrategyData`, usar ICP e proposta de valor |
+| `src/pages/cliente/ClienteTrafegoPago.tsx` | Importar `useStrategyData`, usar canais e funil |
 
