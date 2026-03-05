@@ -342,6 +342,7 @@ function TabConcorrencia({ result }: { result: any }) {
 /* ═══════════════ TAB: TOM DE VOZ ═══════════════ */
 
 function TabTomVoz({ result }: { result: any }) {
+  const navigate = useNavigate();
   const tc = result.tom_comunicacao;
   if (!tc) return <p className="text-sm text-muted-foreground p-4">Tom de comunicação não disponível nesta versão. Regenere a estratégia.</p>;
 
@@ -400,6 +401,19 @@ function TabTomVoz({ result }: { result: any }) {
           </CardContent>
         </Card>
       )}
+
+      {/* CTA */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Aplique esse tom nos seus scripts</p>
+            <p className="text-xs text-muted-foreground">Use as dores, objeções e gatilhos do ICP para criar scripts de venda</p>
+          </div>
+          <Button size="sm" className="gap-1.5" onClick={() => navigate("/cliente/scripts")}>
+            <PenTool className="w-3.5 h-3.5" /> Gerar Scripts <ExternalLink className="w-3 h-3" />
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -407,6 +421,7 @@ function TabTomVoz({ result }: { result: any }) {
 /* ═══════════════ TAB: AQUISIÇÃO ═══════════════ */
 
 function TabAquisicao({ result }: { result: any }) {
+  const navigate = useNavigate();
   const ea = result.estrategia_aquisicao;
   const funil = ea?.funil;
 
@@ -500,6 +515,32 @@ function TabAquisicao({ result }: { result: any }) {
             </CardContent>
           </Card>
         )}
+      </div>
+
+      {/* CTAs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Configurar Tráfego Pago</p>
+              <p className="text-xs text-muted-foreground">Aplique os canais na estratégia de anúncios</p>
+            </div>
+            <Button size="sm" className="gap-1.5" onClick={() => navigate("/cliente/trafego-pago")}>
+              <Zap className="w-3.5 h-3.5" /> Ir
+            </Button>
+          </CardContent>
+        </Card>
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Abrir CRM</p>
+              <p className="text-xs text-muted-foreground">Gerencie leads do funil de aquisição</p>
+            </div>
+            <Button size="sm" className="gap-1.5" onClick={() => navigate("/cliente/crm")}>
+              <Users className="w-3.5 h-3.5" /> Ir
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -770,34 +811,87 @@ function TabExecucao({ result }: { result: any }) {
 
 /* ═══════════════ STRATEGY DASHBOARD ═══════════════ */
 
-function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, status }: {
-  result: any; onApprove: () => void; onRegenerate: () => void; isApproving: boolean; status: string;
+function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, status, createdAt }: {
+  result: any; onApprove: () => void; onRegenerate: () => void; isApproving: boolean; status: string; createdAt?: string;
 }) {
+  const navigate = useNavigate();
   if (!result) return null;
+
+  const daysSinceCreation = createdAt ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+  const isStale = daysSinceCreation >= 30;
 
   return (
     <div className="space-y-4">
-      {status !== "approved" && (
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/10 to-transparent">
-          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
-            <div>
-              <p className="text-sm font-medium">Estratégia gerada com sucesso! 🎉</p>
-              <p className="text-xs text-muted-foreground">Revise todas as abas e aprove para consumir 300 créditos.</p>
+      {/* Hero card */}
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/10 to-transparent overflow-hidden">
+        <CardContent className="p-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <ScoreRing score={result.diagnostico?.score_geral ?? 0} label="" size={80} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant={status === "approved" ? "default" : "secondary"} className="gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> {status === "approved" ? "Aprovada" : "Pendente"}
+                  </Badge>
+                  {createdAt && (
+                    <Badge variant="outline" className="text-[10px] gap-1">
+                      <Clock className="w-3 h-3" /> {format(new Date(createdAt), "dd MMM yyyy", { locale: ptBR })} ({daysSinceCreation} dias)
+                    </Badge>
+                  )}
+                </div>
+                {isStale && (
+                  <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                    ⚠️ Sua estratégia tem {daysSinceCreation} dias. Considere atualizar!
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" onClick={onRegenerate} className="gap-1.5">
-                <RotateCcw className="w-3.5 h-3.5" /> Regenerar
+                <RotateCcw className="w-3.5 h-3.5" /> Nova Estratégia
               </Button>
-              <Button size="sm" onClick={onApprove} disabled={isApproving} className="gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" /> {isApproving ? "Aprovando..." : "Aprovar (300 créditos)"}
-              </Button>
+              {status !== "approved" && (
+                <Button size="sm" onClick={onApprove} disabled={isApproving} className="gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {isApproving ? "Aprovando..." : "Aprovar (300 créditos)"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Próximos Passos card - only for approved strategies */}
+      {status === "approved" && result.plano_execucao?.[0]?.passos?.length > 0 && (
+        <Card className="border-primary/10">
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold text-primary mb-3 flex items-center gap-1.5">
+              <ArrowRight className="w-3.5 h-3.5" /> Próximos Passos (Mês 1)
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {result.plano_execucao[0].passos.slice(0, 3).map((passo: any, i: number) => {
+                const tool = TOOL_ROUTES[passo.ferramenta] || TOOL_ROUTES.manual;
+                const Icon = tool.icon;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => tool.path !== "#" && navigate(tool.path)}
+                    className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30 hover:bg-muted/50 text-left transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium truncate">{passo.acao}</p>
+                      <p className="text-[10px] text-muted-foreground">{tool.label}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {status === "approved" && (
-        <Badge variant="default" className="gap-1.5"><CheckCircle2 className="w-3 h-3" /> Estratégia aprovada</Badge>
       )}
 
       <Tabs defaultValue="resumo" className="w-full">
@@ -957,6 +1051,7 @@ export default function ClientePlanoMarketing() {
           onRegenerate={() => setShowChat(true)}
           isApproving={approveStrategy.isPending}
           status={status}
+          createdAt={activeStrategy!.created_at}
         />
       </div>
     );

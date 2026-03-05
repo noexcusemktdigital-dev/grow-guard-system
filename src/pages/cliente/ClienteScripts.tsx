@@ -14,6 +14,8 @@ import { useClienteScripts, useClienteScriptMutations } from "@/hooks/useCliente
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
+import { StrategyBanner } from "@/components/cliente/StrategyBanner";
+import { useStrategyData } from "@/hooks/useStrategyData";
 
 const funnelStages = [
   { key: "prospeccao", label: "Prospecção", icon: Crosshair, gradient: "from-blue-500/15 to-blue-600/5", accent: "text-blue-400 border-blue-500/30" },
@@ -26,6 +28,7 @@ const funnelStages = [
 export default function ClienteScripts() {
   const { data: scripts, isLoading } = useClienteScripts();
   const { createScript, updateScript, deleteScript: deleteScriptMutation } = useClienteScriptMutations();
+  const { hasStrategy, dores, objecoes, gatilhosCompra, propostaValor } = useStrategyData();
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -99,6 +102,8 @@ export default function ClienteScripts() {
           </Button>
         }
       />
+
+      <StrategyBanner toolName="seus scripts" dataUsed="ICP, dores, objeções e proposta de valor" />
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

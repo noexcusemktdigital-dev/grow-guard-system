@@ -29,6 +29,7 @@ import { useClienteSitesDB } from "@/hooks/useClienteSitesDB";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 
 // ── Constants ──
 const OBJECTIVES = [
@@ -677,6 +678,8 @@ export default function ClienteTrafegoPago() {
         subtitle="Estratégia de campanhas gerada por IA com wizard guiado"
         icon={<DollarSign className="w-5 h-5 text-primary" />}
       />
+
+      <StrategyBanner toolName="o tráfego pago" dataUsed="Canais prioritários, funil e público-alvo" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

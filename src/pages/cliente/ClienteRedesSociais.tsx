@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 
 type Step = "history" | "content" | "type" | "config" | "generate";
 type PostType = "art" | "video";
@@ -215,6 +216,7 @@ export default function ClienteRedesSociais() {
           icon={<Share2 className="w-5 h-5 text-primary" />}
           actions={<Button onClick={() => setStep("content")}><Plus className="w-4 h-4 mr-1" /> Nova Postagem</Button>}
         />
+        <StrategyBanner toolName="suas postagens" dataUsed="Tom de voz, persona e estilo visual" />
         {postsLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
