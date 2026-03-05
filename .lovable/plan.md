@@ -1,19 +1,18 @@
 
 
-# Atualizar Chave de API Asaas para Produção
+# Configurar Wallet ID de Produção do Asaas
 
-## O que fazer
+## Situação Atual
 
-Atualizar o secret `ASAAS_API_KEY` com a chave de produção fornecida pelo usuário. A chave começa com `$aact_prod_`, confirmando que é do ambiente correto.
+A tabela `organizations` tem `asaas_wallet_id = null` para todas as organizações. A franqueadora **NoExcuse Franqueadora** (ID: `4206c8f4-...`) precisa do wallet ID para que o split funcione.
 
-## Verificações adicionais
+## Plano
 
-Após atualizar a chave, executar `asaas-test-connection` para validar que a integração está funcionando com a nova chave de produção.
+1. **Atualizar o `asaas_wallet_id`** da organização "NoExcuse Franqueadora" com o valor `766e812a-a192-4162-bcde-fadabd5c5db4` usando o insert tool (UPDATE query).
 
-## Checklist restante
+2. **Verificar** que o `buildSplitConfig` em `_shared/asaas-customer.ts` consegue ler o wallet ID corretamente — o código já busca `parentOrg.asaas_wallet_id` e monta o split automaticamente.
 
-Depois de confirmar a conexão, verificar com o usuário:
-1. `ASAAS_BASE_URL` — deve ser `https://api.asaas.com/v3`
-2. `ASAAS_PROXY_URL` — remover ou configurar proxy válido
-3. `asaas_wallet_id` na tabela organizations — deve ser ID de produção
+## Nota importante
+
+Isso resolve o split, mas o bloqueio principal (`not_allowed_ip`) ainda precisa ser resolvido no painel do Asaas antes que qualquer cobrança funcione.
 
