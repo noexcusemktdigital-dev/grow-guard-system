@@ -1,126 +1,119 @@
 
 
-# Análise: Nosso Sistema vs. Prompts de Referência
+# Comparação e Gaps Identificados
 
-## Diagnóstico — 3 Problemas Críticos Encontrados
+## O resultado é excelente — e nosso sistema QUASE chega lá
 
-Após revisar o edge function `generate-social-image/index.ts` e comparar com os prompts de exemplo que geraram ótimos resultados, identifiquei **3 gaps críticos** que impedem o sistema de gerar prompts nesse nível:
+Comparando o prompt de referência P2Y com o que nosso edge function gera, o fluxo estruturado (Scene → Environment → Design layout → Color palette → Text → Mood) **já está implementado corretamente**. Mas há **2 gaps** que impedem atingir o mesmo nível:
 
-### Problema 1: O sistema PROÍBE texto na imagem — mas os exemplos INCLUEM texto
+### Gap 1: Referência genérica vs. referência específica
 
-O prompt atual tem uma regra absoluta:
+**Prompt de exemplo (funciona bem):**
 ```
-ABSOLUTE RULES (NEVER VIOLATE):
-- ZERO text, letters, numbers, words, logos, or watermarks in the image
-```
-
-E o chain-of-thought (Flash) também diz:
-```
-- NEVER include any text, letters, words, logos, or watermarks in the image description
-```
-
-Mas os prompts de exemplo que funcionam bem **incluem texto na imagem** (headline, subheadline, CTA, bullet points, nome da marca). O NanoBanana **consegue** renderizar texto. O sistema está bloqueando isso.
-
-### Problema 2: As referências são mal instruídas
-
-Atualmente, as referências são enviadas com apenas esta instrução genérica:
-```
-"Study the provided reference images and match their visual style, color treatment, composition approach, and overall aesthetic."
+Replicate the brand design system including:
+- black and white base layout
+- lime green highlight color
+- rounded card shapes
+- circular icon elements
+- modern financial consulting layout
+- clean sans-serif typography
+- marketing educational style
 ```
 
-Nos prompts de exemplo, a instrução é muito mais precisa:
+**Nosso sistema (genérico):**
 ```
-"Use the attached images ONLY as brand style references for the visual identity.
-Replicate the brand design system including: [lista específica de elementos]
-IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references.
-Create a NEW scene that follows the same brand design language."
-```
-
-### Problema 3: O prompt final não tem a estrutura dos exemplos
-
-Os prompts de exemplo são organizados em seções claras: Scene, Environment, Design layout, Color palette, Text in Portuguese, Mood. O sistema atual gera um blob genérico via chain-of-thought que perde essa estrutura.
-
-## Plano de Correção
-
-### 1. Remover a proibição de texto e incluir texto na imagem (`generate-social-image/index.ts`)
-
-- Remover as regras "ZERO text" do prompt final E do system prompt do chain-of-thought
-- Adicionar uma seção `TEXT IN PORTUGUESE` no prompt final com headline, subheadline, CTA e marca
-- Instruir a IA a renderizar o texto dentro da imagem como parte do design layout
-
-### 2. Reformular a instrução de referências (`generate-social-image/index.ts`)
-
-Substituir a instrução genérica por:
-```
-Use the attached images ONLY as brand style references for the visual identity.
 Replicate the brand design system including: color palette, layout structure, 
 card shapes, icon elements, typography style, and overall design language.
-IMPORTANT: Do NOT recreate the same people, same scene or same composition.
-Create a NEW scene that follows the same brand design language.
 ```
 
-### 3. Reestruturar o chain-of-thought para gerar prompts no formato dos exemplos (`generate-social-image/index.ts`)
+A instrução de referência é estática e genérica. Deveria listar os **elementos específicos da marca** extraídos da identidade visual ou gerados pelo chain-of-thought.
 
-Atualizar o system prompt do `analyzeAndOptimizePrompt` para gerar o prompt no formato estruturado:
-- **Scene**: descrição da cena com personagens e ações
-- **Environment**: detalhes do ambiente e iluminação
-- **Design layout**: estrutura visual (top photo / bottom card, etc.)
-- **Color palette**: cores específicas da marca
-- **Text in Portuguese**: headline, subheadline, CTA, bullet points, marca
-- **Mood**: palavras-chave de atmosfera
-- **Style closing**: "Ultra realistic photography with modern marketing layout"
+**Correção:** Adicionar um campo `brand_design_elements` ao tool call do chain-of-thought (Flash). O Flash já recebe a identidade visual — basta pedir que ele retorne uma lista de 5-8 elementos de design específicos da marca (ex: "dark background with lime green accents, rounded card shapes, circular icons"). Essa lista substitui os termos genéricos na instrução de referência.
 
-O tool call do Flash passará a retornar esses campos separados em vez de um blob único.
+### Gap 2: Falta "Supporting text" e "Bullet points" no wizard
 
-### 4. Adicionar campo "Nome da marca" no wizard (`ClienteRedesSociais.tsx`)
+O prompt P2Y inclui:
+```
+Supporting text: Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores.
+Bullet points: Tempo / Renda / Objetivo
+```
 
-Os exemplos incluem o nome da marca (ex: "P2Y crédito e investimento", "Saura"). Adicionar um campo opcional no bloco de identidade visual para o nome da marca que será incluído no prompt.
+Nosso wizard tem apenas: Headline, Subheadline, CTA. Faltam campos para **texto de apoio** e **bullet points** que enriquecem o layout.
+
+**Correção:** Adicionar 2 campos opcionais no bloco 3 (Texto da arte): `supportingText` e `bulletPoints`. Passar ao edge function na seção "Text in Portuguese".
+
+## Plano de Implementação
+
+### 1. Edge Function — Chain-of-thought retorna `brand_design_elements` (`generate-social-image/index.ts`)
+
+- Adicionar `brand_design_elements` ao `StructuredPromptResult` interface (tipo `string`, lista de elementos)
+- Adicionar ao tool call schema do Flash: `"brand_design_elements": { type: "string", description: "List 5-8 specific brand design elements from the references/identity: color scheme, layout shapes, icon style, typography, overall aesthetic. Format as comma-separated list." }`
+- Na montagem do `referenceInstruction`, usar `optimized.brand_design_elements` para substituir a lista genérica
+
+### 2. Edge Function — Seção Text expandida (`generate-social-image/index.ts`)
+
+- Receber `supporting_text` e `bullet_points` do payload
+- Adicionar à seção "Text in Portuguese":
+  - `Supporting text: ...`
+  - `Bullet points: ...`
+
+### 3. UI — Campos extras no bloco de texto (`ClienteRedesSociais.tsx`)
+
+- Bloco 3 (Texto da arte): adicionar `supportingText` (textarea, opcional) e `bulletPoints` (input, opcional, placeholder "Ex: Tempo, Renda, Objetivo")
+
+### 4. Hook — Payload expandido (`useClientePosts.ts`)
+
+- Passar `supporting_text` e `bullet_points` no payload do `useGeneratePost`
 
 ## Arquivos Modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `supabase/functions/generate-social-image/index.ts` | Remover proibição de texto, reestruturar prompt em seções (Scene/Environment/Layout/Text/Mood), reformular instrução de referências |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Adicionar campo "Nome da marca" no bloco de identidade visual |
+| `supabase/functions/generate-social-image/index.ts` | `brand_design_elements` no chain-of-thought + referência dinâmica + text section expandida |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Campos `supportingText` e `bulletPoints` no bloco 3 |
+| `src/hooks/useClientePosts.ts` | Payload com `supporting_text` e `bullet_points` |
 
-## Exemplo de Prompt que o Sistema Passará a Gerar
+## Resultado Esperado
 
-Com os inputs: headline "Escalar não é sorte", subheadline "É processo", CTA "Conheça o método", cena "Empresário analisando dashboard", cores "preto e verde limão", referências anexas:
+Com inputs equivalentes ao exemplo P2Y, o sistema gerará:
 
 ```
-Use the attached images ONLY as brand style references.
-Replicate the brand design system including: color palette, layout structure,
-card shapes, icon elements, typography style, and design language.
-Do NOT recreate the same scene from the references. Create a NEW scene.
+Use the attached images ONLY as brand style references for the visual identity.
+Replicate the brand design system including:
+black and white base layout, lime green highlight color, rounded card shapes,
+circular icon elements, modern financial consulting layout, clean sans-serif typography.
+IMPORTANT: Do NOT recreate the same people, same scene or same composition.
+Create a NEW scene that follows the same brand design language.
 
 Scene:
-A Brazilian businessman analyzing a sales dashboard on a modern laptop,
-looking confident and focused on the growth metrics displayed on screen.
+A Brazilian couple sitting together at home planning finances on a laptop...
 
 Environment:
-Modern minimalist office with natural daylight, clean desk setup,
-professional corporate atmosphere.
+Modern living room with natural daylight coming through a window...
 
 Design layout:
-Top portion: lifestyle photography of the businessman.
+Top portion: lifestyle photo with the couple reviewing financial documents.
 Bottom portion: dark rounded card layout with text and lime green highlights.
+Include three circular icon elements representing: time, income and financial goal.
 
 Color palette:
-Black, white and lime green accents consistent with the brand references.
+black, white and lime green accents consistent with the brand references.
 
 Format:
 Portrait 4:5 (1080×1350px) social media post.
 
 Text in Portuguese:
-Headline: Escalar não é sorte
-Highlight headline: É processo
-CTA: Conheça o método
+Headline: O problema não é parcelar.
+Highlight headline: É parcelar sem planejamento!
+Supporting text: Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores.
+Bullet points: Tempo, Renda, Objetivo
+Brand: P2Y crédito e investimento
 
 Mood:
-Professional growth, business strategy, confidence, modern entrepreneurship.
+accessible financial education, trust, planning and smart decisions.
 
 Ultra realistic photography with modern marketing layout.
 ```
 
-Esse formato é equivalente aos prompts de exemplo que geraram ótimos resultados.
+Esse prompt é **equivalente ao que gerou o resultado excelente** que você mostrou.
 
