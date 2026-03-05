@@ -9,6 +9,8 @@ export interface MarketingStrategy {
   score_percentage: number;
   nivel: string;
   is_active: boolean;
+  status: string;
+  strategy_result: any | null;
   created_at: string;
 }
 
@@ -62,7 +64,13 @@ export function useSaveStrategy() {
   const { data: orgId } = useUserOrgId();
 
   return useMutation({
-    mutationFn: async (payload: { answers: Record<string, any>; score_percentage: number; nivel: string }) => {
+    mutationFn: async (payload: {
+      answers: Record<string, any>;
+      score_percentage: number;
+      nivel: string;
+      strategy_result?: any;
+      status?: string;
+    }) => {
       if (!orgId) throw new Error("Org not found");
 
       // Deactivate previous active strategies
@@ -81,6 +89,8 @@ export function useSaveStrategy() {
           score_percentage: payload.score_percentage,
           nivel: payload.nivel,
           is_active: true,
+          strategy_result: payload.strategy_result || null,
+          status: payload.status || "pending",
         } as any)
         .select()
         .single();
@@ -91,6 +101,67 @@ export function useSaveStrategy() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["marketing-strategy-active"] });
       qc.invalidateQueries({ queryKey: ["marketing-strategy-history"] });
+    },
+  });
+}
+
+export function useApproveStrategy() {
+  const qc = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async (strategyId: string) => {
+      if (!orgId) throw new Error("Org not found");
+
+      // Debit credits on approval
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      if (!token) throw new Error("Not authenticated");
+
+      // Call debit via RPC (server-side)
+      const { error: debitError } = await supabase.rpc("debit_credits" as any, {
+        _org_id: orgId,
+        _amount: 300,
+        _description: "Estratégia de marketing aprovada",
+        _source: "marketing-strategy",
+      });
+      if (debitError) throw debitError;
+
+      // Update status
+      const { data, error } = await supabase
+        .from("marketing_strategies" as any)
+        .update({ status: "approved" } as any)
+        .eq("id", strategyId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as unknown as MarketingStrategy;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["marketing-strategy-active"] });
+      qc.invalidateQueries({ queryKey: ["credit-wallet"] });
+    },
+  });
+}
+
+export function useGenerateStrategy() {
+  return useMutation({
+    mutationFn: async (payload: { answers: Record<string, any>; organization_id: string }) => {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      if (!token) throw new Error("Not authenticated");
+
+      const resp = await supabase.functions.invoke("generate-strategy", {
+        body: { answers: payload.answers, organization_id: payload.organization_id },
+      });
+
+      if (resp.error) throw new Error(resp.error.message || "Erro ao gerar estratégia");
+      
+      const data = resp.data as any;
+      if (data?.error) throw new Error(data.error);
+      
+      return data;
     },
   });
 }

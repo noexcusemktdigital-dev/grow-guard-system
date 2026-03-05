@@ -47,227 +47,137 @@ const PERSONA_DESCRICAO_OPTIONS = [
 ];
 
 /* ══════════════════════════════════════════════
-   SOFIA — Estratégia de Marketing (~30 questions, 9 sections)
+   SOFIA — Estratégia de Marketing (10 perguntas)
    ══════════════════════════════════════════════ */
 
 export const SOFIA_STEPS: BriefingStep[] = [
   // ── Intro
-  { id: "_intro_sofia", agentMessage: "Oi! 👋 Sou a Sofia, sua consultora de marketing. Vou fazer um diagnóstico completo do seu marketing em poucos minutos. Vamos começar?", inputType: "info" },
-
-  // ── 1. Seu Negócio
-  { id: "segmento", section: "Seu Negócio", agentMessage: "Pra começar, me conta: qual o segmento da sua empresa?", inputType: "select", helpText: "O segmento define o tipo de mercado em que você atua.",
-    options: SEGMENTO_OPTIONS,
-  },
-  { id: "tempo_mercado", section: "Seu Negócio", agentMessage: "Há quanto tempo sua empresa está no mercado?", inputType: "select", helpText: "Empresas mais novas precisam de estratégias de awareness, enquanto empresas maduras focam em escala e retenção.",
-    options: [
-      { value: "0-1", label: "Menos de 1 ano" }, { value: "1-3", label: "1 a 3 anos" },
-      { value: "3-5", label: "3 a 5 anos" }, { value: "5+", label: "Mais de 5 anos" },
-    ],
-  },
-  { id: "modelo_negocio", section: "Seu Negócio", agentMessage: "E o modelo de negócio? Vende pra empresas (B2B) ou consumidor final (B2C)?", inputType: "select", helpText: "B2B e B2C demandam canais, tom e funis completamente diferentes.",
-    options: [
-      { value: "b2b", label: "B2B (empresas)" }, { value: "b2c", label: "B2C (consumidor final)" },
-      { value: "ambos", label: "Ambos" },
-    ],
-  },
-  { id: "num_funcionarios", section: "Seu Negócio", agentMessage: "Quantos funcionários tem na empresa?", inputType: "select", helpText: "O tamanho da equipe influencia a capacidade de execução do marketing.",
-    options: [
-      { value: "1-5", label: "1 a 5" }, { value: "6-20", label: "6 a 20" },
-      { value: "21-50", label: "21 a 50" }, { value: "51-200", label: "51 a 200" },
-      { value: "200+", label: "200+" },
-    ],
+  {
+    id: "_intro_sofia",
+    agentMessage: "Oi! 👋 Sou a Sofia, sua consultora de marketing. Vou te fazer 10 perguntas rápidas para criar uma estratégia completa e personalizada para o seu negócio. Vamos lá?",
+    inputType: "info",
   },
 
-  // ── 2. Financeiro
-  { id: "faturamento", section: "Financeiro", agentMessage: "Qual o faturamento mensal aproximado da empresa?", inputType: "select", helpText: "O faturamento ajuda a dimensionar o investimento ideal em marketing (recomendado: 5-15% do faturamento).",
-    options: [
-      { value: "0-10k", label: "Até R$ 10 mil" }, { value: "10-30k", label: "R$ 10-30 mil" },
-      { value: "30-50k", label: "R$ 30-50 mil" }, { value: "50-100k", label: "R$ 50-100 mil" },
-      { value: "100-300k", label: "R$ 100-300 mil" }, { value: "300k-1m", label: "R$ 300 mil - 1M" },
-      { value: "1-5m", label: "R$ 1-5 milhões" }, { value: "5-10m", label: "R$ 5-10 milhões" },
-    ],
-  },
-  { id: "ticket_medio", section: "Financeiro", agentMessage: "E o ticket médio do seu produto ou serviço?", inputType: "select", helpText: "Ticket médio é o valor médio de cada venda. Influencia diretamente no ROI das campanhas.",
-    options: [
-      { value: "0-100", label: "Até R$ 100" }, { value: "100-500", label: "R$ 100-500" },
-      { value: "500-2k", label: "R$ 500-2 mil" }, { value: "2-5k", label: "R$ 2-5 mil" },
-      { value: "5-15k", label: "R$ 5-15 mil" }, { value: "15k+", label: "R$ 15 mil+" },
-    ],
+  // 1. Referência
+  {
+    id: "referencia",
+    section: "Sua Empresa",
+    agentMessage: "Pra começar, cole o link do seu site ou Instagram. Isso me ajuda a entender melhor o seu negócio! 😊",
+    inputType: "text",
+    placeholder: "https://instagram.com/suaempresa ou https://seusite.com.br",
+    helpText: "Permite que a IA entenda o contexto visual e de comunicação da sua empresa.",
+    optional: true,
   },
 
-  // ── 3. Seu Público
-  { id: "cliente_ideal", section: "Seu Público", agentMessage: "Qual o perfil do seu cliente ideal? Pode marcar vários!", inputType: "multi-select", helpText: "A persona é uma representação semi-fictícia do seu cliente ideal.",
+  // 2. Descrição do negócio
+  {
+    id: "empresa",
+    section: "Sua Empresa",
+    agentMessage: "Em poucas palavras, o que sua empresa faz?",
+    inputType: "textarea",
+    placeholder: "Ex: Consultoria financeira para empresas, clínica odontológica especializada em implantes...",
+    helpText: "Uma descrição clara ajuda a IA a direcionar toda a estratégia.",
+  },
+
+  // 3. Produto/serviço principal
+  {
+    id: "produto",
+    section: "Seu Produto",
+    agentMessage: "Qual é o principal produto ou serviço que você deseja priorizar na estratégia?",
+    inputType: "textarea",
+    placeholder: "Ex: Consultoria empresarial premium, implante dentário, curso online...",
+    helpText: "Focamos a estratégia no produto/serviço com maior potencial de retorno.",
+  },
+
+  // 4. Público-alvo
+  {
+    id: "publico",
+    section: "Seu Público",
+    agentMessage: "Quem é o cliente ideal da sua empresa?",
+    inputType: "textarea",
+    placeholder: "Ex: Empresários de 30-50 anos, médicos, pequenas empresas, consumidores finais...",
+    helpText: "Quanto mais detalhado, melhor será a segmentação e a personalização da estratégia.",
+  },
+
+  // 5. Problema que resolve
+  {
+    id: "problema",
+    section: "Seu Público",
+    agentMessage: "Qual problema do cliente seu produto ou serviço resolve?",
+    inputType: "textarea",
+    placeholder: "Ex: Falta de organização financeira, dor de dente crônica, baixa visibilidade online...",
+    helpText: "Entender a dor do cliente é essencial para criar mensagens que convertem.",
+  },
+
+  // 6. Diferencial competitivo
+  {
+    id: "diferencial",
+    section: "Diferencial",
+    agentMessage: "Por que um cliente escolheria sua empresa em vez de um concorrente?",
+    inputType: "textarea",
+    placeholder: "Ex: Metodologia própria, tecnologia exclusiva, atendimento personalizado...",
+    helpText: "Seu diferencial será a base do posicionamento estratégico.",
+  },
+
+  // 7. Objetivo de marketing
+  {
+    id: "objetivo",
+    section: "Objetivos",
+    agentMessage: "Qual resultado você deseja alcançar com marketing?",
+    inputType: "select",
     options: [
-      { value: "empresas_pme", label: "Empresas PME" }, { value: "grandes_empresas", label: "Grandes Empresas" },
-      { value: "profissionais_liberais", label: "Profissionais Liberais" }, { value: "consumidor_final", label: "Consumidor Final" },
-      { value: "jovens_18_30", label: "Jovens 18-30" }, { value: "adultos_30_50", label: "Adultos 30-50" },
-      { value: "premium", label: "Público Premium" }, { value: "personalizar", label: "Personalizar..." },
+      { value: "gerar_leads", label: "Gerar leads" },
+      { value: "vender_mais", label: "Vender mais" },
+      { value: "captar_clientes", label: "Captar clientes" },
+      { value: "aumentar_autoridade", label: "Aumentar autoridade" },
     ],
+    helpText: "O objetivo define toda a direção da estratégia.",
   },
-  { id: "cliente_ideal_custom", section: "Seu Público", agentMessage: "Descreve seu cliente ideal com mais detalhes!", inputType: "textarea", placeholder: "Ex: Mulheres de 25-40 anos, classe B, que buscam praticidade...", optional: true,
-    skipIf: (ans) => !Array.isArray(ans.cliente_ideal) || !ans.cliente_ideal.includes("personalizar"),
+
+  // 8. Meta desejada
+  {
+    id: "meta",
+    section: "Objetivos",
+    agentMessage: "Qual resultado você gostaria de alcançar nos próximos meses?",
+    inputType: "textarea",
+    placeholder: "Ex: 50 novos clientes, R$ 100 mil de faturamento mensal, 200 leads/mês...",
+    helpText: "Metas concretas permitem criar projeções realistas.",
   },
-  { id: "faixa_etaria", section: "Seu Público", agentMessage: "Qual a faixa etária principal do público?", inputType: "select", helpText: "A faixa etária define tom, canal e formato de conteúdo mais eficaz.",
-    options: FAIXA_ETARIA_OPTIONS,
-  },
-  { id: "onde_esta", section: "Seu Público", agentMessage: "Onde seu público está mais presente? Pode marcar mais de um!", inputType: "multi-select", helpText: "Saber onde seu público navega ajuda a direcionar investimento e conteúdo nos canais certos.",
+
+  // 9. Canais disponíveis
+  {
+    id: "canais",
+    section: "Canais",
+    agentMessage: "Quais canais você pretende utilizar para marketing? Pode marcar vários!",
+    inputType: "multi-select",
     options: [
-      { value: "instagram", label: "Instagram" }, { value: "facebook", label: "Facebook" },
-      { value: "tiktok", label: "TikTok" }, { value: "google", label: "Google" },
-      { value: "whatsapp", label: "WhatsApp" }, { value: "youtube", label: "YouTube" },
+      { value: "instagram", label: "Instagram" },
+      { value: "google", label: "Google" },
+      { value: "youtube", label: "YouTube" },
+      { value: "whatsapp", label: "WhatsApp" },
+      { value: "tiktok", label: "TikTok" },
+      { value: "facebook", label: "Facebook" },
       { value: "linkedin", label: "LinkedIn" },
+      { value: "trafego_pago", label: "Tráfego pago" },
     ],
-  },
-  { id: "como_decide", section: "Seu Público", agentMessage: "E como o cliente decide a compra? Pode marcar vários!", inputType: "multi-select", helpText: "Entender o processo decisório ajuda a criar conteúdos para cada etapa do funil.",
-    options: [
-      { value: "indicacao", label: "Indicação" }, { value: "google", label: "Pesquisa no Google" },
-      { value: "redes", label: "Redes sociais" }, { value: "preco", label: "Preço" },
-      { value: "marca", label: "Confiança na marca" }, { value: "presencial", label: "Visita presencial" },
-    ],
+    helpText: "Selecione os canais onde deseja marcar presença.",
   },
 
-  // ── 4. Concorrência
-  { id: "qtd_concorrentes", section: "Concorrência", agentMessage: "Quantos concorrentes diretos você tem na região?", inputType: "select", helpText: "Concorrentes diretos são empresas que vendem produtos/serviços similares para o mesmo público.",
+  // 10. Orçamento
+  {
+    id: "orcamento",
+    section: "Canais",
+    agentMessage: "Existe algum orçamento mensal disponível para marketing?",
+    inputType: "select",
     options: [
-      { value: "1-3", label: "1 a 3" }, { value: "4-10", label: "4 a 10" },
-      { value: "10+", label: "Mais de 10" }, { value: "nao_sei", label: "Não sei" },
+      { value: "nenhum", label: "Sem orçamento definido" },
+      { value: "0-500", label: "Até R$ 500" },
+      { value: "500-2k", label: "R$ 500 a R$ 2.000" },
+      { value: "2k-5k", label: "R$ 2.000 a R$ 5.000" },
+      { value: "5k-15k", label: "R$ 5.000 a R$ 15.000" },
+      { value: "15k+", label: "Mais de R$ 15.000" },
     ],
-  },
-  { id: "concorrentes_digital", section: "Concorrência", agentMessage: "Seus concorrentes investem em marketing digital?", inputType: "select", helpText: "Se seus concorrentes investem pesado, você precisa ser mais estratégico para competir.",
-    options: [
-      { value: "nao", label: "Não investem" }, { value: "pouco", label: "Pouco" },
-      { value: "bastante", label: "Sim, bastante" }, { value: "referencia", label: "São referência" },
-    ],
-  },
-  { id: "diferencial", section: "Concorrência", agentMessage: "Qual seu principal diferencial competitivo?", inputType: "textarea", helpText: "Seu diferencial é o que te torna único. Ele será a base da comunicação da marca.", placeholder: "Ex: Atendimento 24h, entrega em 2h, garantia vitalícia, único com certificação X..." },
-
-  // ── 5. Presença Digital
-  { id: "redes_ativas", section: "Presença Digital", agentMessage: "Quais redes sociais sua empresa usa ativamente? (pelo menos 1x por semana)", inputType: "multi-select", helpText: "Redes ativas são aquelas que você publica pelo menos 1x por semana.",
-    options: [
-      { value: "instagram", label: "Instagram" }, { value: "facebook", label: "Facebook" },
-      { value: "tiktok", label: "TikTok" }, { value: "linkedin", label: "LinkedIn" },
-      { value: "youtube", label: "YouTube" }, { value: "twitter", label: "Twitter / X" },
-      { value: "nenhuma", label: "Nenhuma" },
-    ],
-  },
-  { id: "url_rede", section: "Presença Digital", agentMessage: "Me passa o link do Instagram ou principal rede social — quero dar uma espiada! 😊", inputType: "text", helpText: "Usamos para analisar sua presença atual e sugerir melhorias.", placeholder: "https://instagram.com/suaempresa", optional: true,
-    skipIf: (ans) => { const redes = ans.redes_ativas; return !Array.isArray(redes) || redes.length === 0 || redes.includes("nenhuma"); },
-  },
-  { id: "freq_publicacao", section: "Presença Digital", agentMessage: "Com que frequência você publica conteúdo?", inputType: "select", helpText: "Consistência é mais importante que volume. Publicar regularmente aumenta o alcance orgânico.",
-    options: [
-      { value: "nunca", label: "Não publico" }, { value: "esporadico", label: "Esporadicamente" },
-      { value: "semanal", label: "Semanalmente" }, { value: "diario", label: "Diariamente" },
-    ],
-  },
-  { id: "tem_site", section: "Presença Digital", agentMessage: "Possui site ou landing page?", inputType: "select", helpText: "Um site otimizado é essencial para captura de leads e credibilidade da marca.",
-    options: [
-      { value: "nao", label: "Não possui" }, { value: "desatualizado", label: "Sim, desatualizado" },
-      { value: "atualizado", label: "Sim, atualizado" }, { value: "otimizado", label: "Sim, otimizado p/ SEO" },
-    ],
-  },
-  { id: "url_site", section: "Presença Digital", agentMessage: "Qual a URL do site?", inputType: "text", helpText: "Analisamos para verificar SEO, velocidade e conversão.", placeholder: "https://suaempresa.com.br", optional: true,
-    skipIf: (ans) => ans.tem_site === "nao" || !ans.tem_site,
-  },
-
-  // ── 6. Tráfego e Vendas
-  { id: "investe_trafego", section: "Tráfego e Vendas", agentMessage: "Investe em tráfego pago atualmente? (Google Ads, Meta Ads...)", inputType: "select", helpText: "Tráfego pago é a forma mais rápida de gerar leads qualificados.",
-    options: [
-      { value: "nunca", label: "Nunca investi" }, { value: "testou", label: "Já testei sem resultado" },
-      { value: "mensal", label: "Invisto mensalmente" }, { value: "otimizado", label: "Tenho campanha otimizada" },
-    ],
-  },
-  { id: "valor_trafego", section: "Tráfego e Vendas", agentMessage: "Quanto investe em tráfego por mês?", inputType: "select", helpText: "O investimento ideal em tráfego depende do CAC desejado e do ticket médio.",
-    options: [
-      { value: "0", label: "Não invisto" }, { value: "0-500", label: "Até R$ 500" },
-      { value: "500-2k", label: "R$ 500-2 mil" }, { value: "2-5k", label: "R$ 2-5 mil" },
-      { value: "5-15k", label: "R$ 5-15 mil" }, { value: "15k+", label: "R$ 15 mil+" },
-    ],
-  },
-  { id: "leads_mes", section: "Tráfego e Vendas", agentMessage: "Quantos leads você recebe por mês?", inputType: "select", helpText: "Leads são potenciais clientes que demonstraram interesse no seu produto/serviço.",
-    options: [
-      { value: "0-10", label: "0 a 10" }, { value: "11-30", label: "11 a 30" },
-      { value: "31-100", label: "31 a 100" }, { value: "100-500", label: "100 a 500" },
-      { value: "500+", label: "500+" },
-    ],
-  },
-  { id: "taxa_conversao", section: "Tráfego e Vendas", agentMessage: "Qual a taxa de conversão estimada de lead para venda?", inputType: "select", helpText: "A taxa de conversão é o percentual de leads que se tornam clientes. Média do mercado: 5-15%.",
-    options: [
-      { value: "nao_sei", label: "Não sei" }, { value: "0-5", label: "Menos de 5%" },
-      { value: "5-15", label: "5% a 15%" }, { value: "15-30", label: "15% a 30%" },
-      { value: "30+", label: "Mais de 30%" },
-    ],
-  },
-
-  // ── 7. Métricas CAC / LTV
-  { id: "sabe_cac", section: "Métricas CAC / LTV", agentMessage: "Você sabe quanto custa adquirir um cliente (CAC)?", inputType: "select", helpText: "CAC (Custo de Aquisição de Cliente) é o total investido em marketing e vendas dividido pelo número de clientes adquiridos.",
-    options: [
-      { value: "nao_sei", label: "Não sei" }, { value: "0-50", label: "Até R$ 50" },
-      { value: "50-200", label: "R$ 50-200" }, { value: "200-500", label: "R$ 200-500" },
-      { value: "500+", label: "R$ 500+" },
-    ],
-  },
-  { id: "ltv_medio", section: "Métricas CAC / LTV", agentMessage: "Quanto tempo em média um cliente fica com você?", inputType: "select", helpText: "LTV (Lifetime Value) é a receita total que um cliente gera.",
-    options: [
-      { value: "unica", label: "Compra única" }, { value: "1-3", label: "1 a 3 meses" },
-      { value: "3-12", label: "3 a 12 meses" }, { value: "1ano+", label: "Mais de 1 ano" },
-    ],
-  },
-  { id: "processo_recompra", section: "Métricas CAC / LTV", agentMessage: "Tem algum processo de recompra ou fidelização?", inputType: "select", helpText: "Um programa de fidelização pode reduzir o CAC em até 60%.",
-    options: [
-      { value: "nao", label: "Não tenho" }, { value: "informal", label: "Informal" },
-      { value: "estruturado", label: "Sim, estruturado" },
-    ],
-  },
-
-  // ── 8. Gestão de Dados
-  { id: "usa_crm", section: "Gestão de Dados", agentMessage: "Usa algum CRM ou planilha para gerenciar leads e clientes?", inputType: "select", helpText: "CRM centraliza dados de leads e clientes para acompanhar o funil de vendas.",
-    options: [
-      { value: "nao", label: "Não gerencio" }, { value: "planilha", label: "Planilha" },
-      { value: "crm_basico", label: "CRM básico" }, { value: "crm_pro", label: "CRM profissional" },
-    ],
-  },
-  { id: "historico_dados", section: "Gestão de Dados", agentMessage: "Tem histórico de dados dos seus clientes?", inputType: "select", helpText: "Dados históricos permitem segmentar campanhas e personalizar comunicações.",
-    options: [
-      { value: "nenhum", label: "Nenhum" }, { value: "parcial", label: "Parcial" },
-      { value: "completo", label: "Sim, completo" },
-    ],
-  },
-  { id: "estrategias_offline", section: "Gestão de Dados", agentMessage: "Usa estratégias de marketing além do digital?", inputType: "multi-select", helpText: "Integrar estratégias offline com digital amplia o alcance.",
-    options: [
-      { value: "eventos", label: "Eventos" }, { value: "panfletos", label: "Panfletos" },
-      { value: "networking", label: "Networking" }, { value: "parcerias", label: "Parcerias locais" },
-      { value: "indicacao", label: "Indicação" }, { value: "nenhuma", label: "Nenhuma" },
-    ],
-  },
-
-  // ── 9. Objetivos e Dores
-  { id: "meta_principal", section: "Objetivos e Dores", agentMessage: "Quase lá! Qual seu objetivo principal com o marketing?", inputType: "select", helpText: "Definir um objetivo claro permite focar os esforços e medir o sucesso.",
-    options: [
-      { value: "leads", label: "Gerar mais leads" }, { value: "vendas", label: "Aumentar vendas" },
-      { value: "autoridade", label: "Construir autoridade" }, { value: "reconhecimento", label: "Reconhecimento de marca" },
-    ],
-  },
-  { id: "prazo", section: "Objetivos e Dores", agentMessage: "Em quanto tempo espera ver resultados?", inputType: "select", helpText: "Marketing digital geralmente leva 3-6 meses para resultados consistentes.",
-    options: [
-      { value: "1-2", label: "1-2 meses" }, { value: "3-4", label: "3-4 meses" },
-      { value: "5-6", label: "5-6 meses" }, { value: "6+", label: "Mais de 6 meses" },
-    ],
-  },
-  { id: "dificuldades", section: "Objetivos e Dores", agentMessage: "Quais são suas maiores dificuldades no marketing? Pode marcar várias!", inputType: "multi-select", helpText: "Conhecer suas dores permite priorizar ações e recomendar soluções específicas.",
-    options: [
-      { value: "tempo", label: "Falta de tempo" }, { value: "conteudo", label: "Não sei o que postar" },
-      { value: "leads", label: "Não gero leads" }, { value: "equipe", label: "Não tenho equipe" },
-      { value: "engajamento", label: "Baixo engajamento" }, { value: "trafego", label: "Não sei usar tráfego pago" },
-      { value: "cac_ltv", label: "Não sei meu CAC/LTV" }, { value: "dados", label: "Dados desorganizados" },
-      { value: "concorrencia", label: "Concorrência forte" },
-    ],
-  },
-  { id: "tentativas", section: "Objetivos e Dores", agentMessage: "Pra finalizar: o que já tentou que não funcionou?", inputType: "multi-select", helpText: "Saber o que não funcionou evita repetir erros.", optional: true,
-    options: [
-      { value: "agencia", label: "Contratei agência" }, { value: "sozinho", label: "Fiz sozinho" },
-      { value: "ads", label: "Ads sem resultado" }, { value: "influenciadores", label: "Influenciadores" },
-      { value: "nada_funcionou", label: "Nada funcionou" }, { value: "nunca_tentei", label: "Nunca tentei" },
-    ],
+    helpText: "O orçamento ajuda a dimensionar campanhas e projeções de resultado.",
   },
 ];
 
