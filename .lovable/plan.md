@@ -1,95 +1,74 @@
 
 
-# Plano Consolidado: Revisão Completa do Módulo Marketing + Fluxo de Créditos
+# Plano Consolidado: Correções de Créditos + Referências Visuais
 
-Este plano unifica os dois planos aprovados anteriormente em uma execução única.
-
----
-
-## PARTE A — Correções de Créditos, Quotas e Integração
-
-### A1. Corrigir dupla cobrança nos edge functions
-
-Remover `debit_credits` dos edge functions que já cobram na aprovação frontend:
-- `generate-strategy/index.ts` — remover debit, manter pré-check de saldo
-- `generate-social-image/index.ts` — remover debit, manter pré-check
-- `generate-social-video-frames/index.ts` — remover debit, manter pré-check
-
-### A2. Adicionar pré-verificação de saldo
-
-Nos edge functions sem verificação, adicionar check antes de gastar tokens de IA:
-- `generate-site/index.ts` — verificar 500 créditos
-- `generate-content/index.ts` — verificar 200 × quantidade
-- `generate-traffic-strategy/index.ts` — verificar 200 créditos
-
-### A3. Fix bug quota de conteúdos
-
-- `useClienteContentV2.ts`: mudar `plan_slug` para `plan`
-
-### A4. Adicionar quota de postagens
-
-- Criar `usePostQuota` hook em `useClientePosts.ts`
-- Enforce em `ClienteRedesSociais.tsx` — avisar quando `remaining <= 0`
-
-### A5. Atualizar CREDIT_COSTS e PlanConfig
-
-Em `src/constants/plans.ts`:
-- Adicionar entries: `generate-traffic-strategy` (200), `generate-video-briefing` (0), `generate-social-briefing` (0)
-- Adicionar `maxStrategies` e `maxTrafficStrategies` ao `PlanConfig`
+Este plano inclui todas as correções do plano anterior (já aprovado) mais o fix de referências visuais.
 
 ---
 
-## PARTE B — Fluxo de Recarga Não-Intrusivo
+## PARTE A — Correções de Créditos, Quotas e Integração (já aprovado)
 
-### B1. Criar `InsufficientCreditsDialog`
-
-Dialog reutilizável com saldo atual, custo da ação, botões "Comprar Créditos" e "Fazer Upgrade". Aparece **apenas** quando aprovação falha por saldo insuficiente.
-
-**Arquivo:** `src/components/cliente/InsufficientCreditsDialog.tsx`
-
-### B2. Padronizar onError nos hooks de aprovação
-
-Detectar `INSUFFICIENT_CREDITS` e retornar flag para abrir o dialog:
-- `useClientePosts.ts` (useApprovePost)
-- `useMarketingStrategy.ts` (useApproveStrategy)
-- `useClienteSitesDB.ts` (useApproveSite)
-- `useClienteContentV2.ts` (useApproveContent)
-- `useTrafficStrategy.ts` (useApproveTrafficStrategy)
-
-### B3. Integrar dialog nas páginas de aprovação
-
-- `ClienteRedesSociais.tsx`
-- `ClienteConteudos.tsx`
-- `ClienteSites.tsx`
-- `ClientePlanoMarketing.tsx`
-- `ClienteTrafegoPago.tsx`
-
-### B4. Remover bloqueios pré-geração
-
-Garantir que nenhum wizard bloqueia o briefing por créditos — bloqueio apenas na aprovação.
+Sem mudanças — mantém as fases A1-A5 e B1-B4 do plano consolidado anterior.
 
 ---
 
-## Resumo de Arquivos
+## PARTE C — Fix: Referências Visuais Não Anexando
+
+### Diagnóstico
+
+O edge function `generate-social-image` recebe `reference_images` (array de URLs) e as envia como `image_url` ao modelo Gemini. Porém:
+
+1. **O modelo de geração de imagem (`gemini-3-pro-image-preview`) pode não conseguir fazer fetch de URLs externas** — modelos de imagem tipicamente precisam de base64 inline, não URLs para download.
+2. **O upload de referências no frontend falha silenciosamente** — se `supabase.storage.upload` falha, o erro é ignorado (linha 242-246) e nenhum feedback é dado ao usuário.
+3. **`image_bank_urls` está vazio** na identidade visual do teste, então o auto-preenchimento de referências (useEffect linha 165) não funciona.
+
+### Correções
+
+**C1. Edge function: converter URLs para base64 antes de enviar ao modelo**
+
+No `generate-social-image/index.ts`, antes de montar o `messageContent`, fazer fetch de cada URL de referência e converter para base64 inline (`data:image/png;base64,...`). Isso garante que o modelo receba as imagens diretamente, sem precisar fazer download externo.
+
+```
+Para cada reference_image URL:
+  1. fetch(url)
+  2. Converter response para base64
+  3. Montar como data:image/...;base64,...
+```
+
+**C2. Frontend: adicionar feedback de erro no upload**
+
+No `handleUploadRef` em `ClienteRedesSociais.tsx`, mostrar um toast quando o upload falha em vez de ignorar silenciosamente:
+
+```
+if (error) {
+  toast({ title: "Erro ao enviar imagem", description: error.message, variant: "destructive" });
+} else { ... }
+```
+
+**C3. Frontend: adicionar logo da identidade visual como referência automática**
+
+Se `image_bank_urls` está vazio mas `logo_url` existe (caso atual — logo está preenchido), incluir o logo como referência automática no useEffect.
+
+---
+
+## Arquivos a Modificar (consolidado)
 
 | Arquivo | Ação |
 |---|---|
-| `src/constants/plans.ts` | Atualizar CREDIT_COSTS + PlanConfig |
-| `src/components/cliente/InsufficientCreditsDialog.tsx` | Criar |
-| `src/hooks/useClienteContentV2.ts` | Fix plan_slug → plan + onError |
-| `src/hooks/useClientePosts.ts` | usePostQuota + onError |
-| `src/hooks/useMarketingStrategy.ts` | onError |
-| `src/hooks/useClienteSitesDB.ts` | onError |
-| `src/hooks/useTrafficStrategy.ts` | onError |
-| `supabase/functions/generate-strategy/index.ts` | Remover debit |
-| `supabase/functions/generate-social-image/index.ts` | Remover debit |
-| `supabase/functions/generate-social-video-frames/index.ts` | Remover debit |
-| `supabase/functions/generate-site/index.ts` | Pré-check saldo |
-| `supabase/functions/generate-content/index.ts` | Pré-check saldo |
-| `supabase/functions/generate-traffic-strategy/index.ts` | Pré-check saldo |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Quota + dialog |
-| `src/pages/cliente/ClienteConteudos.tsx` | Dialog |
-| `src/pages/cliente/ClienteSites.tsx` | Dialog |
-| `src/pages/cliente/ClientePlanoMarketing.tsx` | Dialog |
-| `src/pages/cliente/ClienteTrafegoPago.tsx` | Dialog |
+| `supabase/functions/generate-social-image/index.ts` | Converter reference URLs para base64 antes de enviar ao modelo |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Toast de erro no upload + auto-incluir logo como referência |
+| `src/constants/plans.ts` | Atualizar CREDIT_COSTS + PlanConfig (Parte A) |
+| `src/components/cliente/InsufficientCreditsDialog.tsx` | Já criado (Parte B) |
+| `src/hooks/useClienteContentV2.ts` | Fix plan_slug → plan (Parte A) |
+| `src/hooks/useClientePosts.ts` | usePostQuota + onError (Parte A) |
+| `src/hooks/useMarketingStrategy.ts` | onError (Parte B) |
+| `src/hooks/useClienteSitesDB.ts` | onError (Parte B) |
+| `src/hooks/useTrafficStrategy.ts` | onError (Parte B) |
+| `supabase/functions/generate-site/index.ts` | Pré-check saldo (Parte A) |
+| `supabase/functions/generate-content/index.ts` | Pré-check saldo (Parte A) |
+| `supabase/functions/generate-traffic-strategy/index.ts` | Pré-check saldo (Parte A) |
+| `src/pages/cliente/ClienteConteudos.tsx` | Dialog (Parte B) |
+| `src/pages/cliente/ClienteSites.tsx` | Dialog (Parte B) |
+| `src/pages/cliente/ClientePlanoMarketing.tsx` | Dialog (Parte B) |
+| `src/pages/cliente/ClienteTrafegoPago.tsx` | Dialog (Parte B) |
 
