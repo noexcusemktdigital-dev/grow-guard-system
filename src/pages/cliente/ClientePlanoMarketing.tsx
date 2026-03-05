@@ -14,6 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useActiveStrategy, useStrategyHistory, useSaveStrategy, useApproveStrategy, useGenerateStrategy } from "@/hooks/useMarketingStrategy";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
@@ -849,9 +853,25 @@ function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, statu
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={onRegenerate} className="gap-1.5">
-                <RotateCcw className="w-3.5 h-3.5" /> Nova Estratégia
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <RotateCcw className="w-3.5 h-3.5" /> Nova Estratégia
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Criar nova estratégia?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Sua estratégia atual será movida para o histórico. Você poderá consultá-la a qualquer momento, mas uma nova será gerada do zero.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={onRegenerate}>Sim, criar nova</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               {status !== "approved" && (
                 <Button size="sm" onClick={onApprove} disabled={isApproving} className="gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" /> {isApproving ? "Aprovando..." : "Aprovar (300 créditos)"}
@@ -862,33 +882,35 @@ function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, statu
         </CardContent>
       </Card>
 
-      {/* Próximos Passos card - only for approved strategies */}
-      {status === "approved" && result.plano_execucao?.[0]?.passos?.length > 0 && (
+      {/* Próximos Passos card - marketing tools only */}
+      {status === "approved" && (
         <Card className="border-primary/10">
           <CardContent className="p-4">
             <p className="text-xs font-semibold text-primary mb-3 flex items-center gap-1.5">
-              <ArrowRight className="w-3.5 h-3.5" /> Próximos Passos (Mês 1)
+              <ArrowRight className="w-3.5 h-3.5" /> Próximos Passos — Aplique sua estratégia
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {result.plano_execucao[0].passos.slice(0, 3).map((passo: any, i: number) => {
-                const tool = TOOL_ROUTES[passo.ferramenta] || TOOL_ROUTES.manual;
-                const Icon = tool.icon;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => tool.path !== "#" && navigate(tool.path)}
-                    className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30 hover:bg-muted/50 text-left transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Icon className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium truncate">{passo.acao}</p>
-                      <p className="text-[10px] text-muted-foreground">{tool.label}</p>
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {[
+                { key: "conteudos", label: "Gerar Conteúdos", desc: "Textos estratégicos com IA", icon: FileText, path: "/cliente/conteudos" },
+                { key: "postagens", label: "Criar Postagens", desc: "Artes para redes sociais", icon: Palette, path: "/cliente/redes-sociais" },
+                { key: "sites", label: "Criar Site", desc: "Landing pages otimizadas", icon: Monitor, path: "/cliente/sites" },
+                { key: "trafego", label: "Tráfego Pago", desc: "Estratégia de anúncios", icon: Zap, path: "/cliente/trafego-pago" },
+                { key: "scripts", label: "Gerar Scripts", desc: "Roteiros de venda", icon: PenTool, path: "/cliente/scripts" },
+              ].map((tool) => (
+                <button
+                  key={tool.key}
+                  onClick={() => navigate(tool.path)}
+                  className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30 hover:bg-muted/50 text-left transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <tool.icon className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">{tool.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{tool.desc}</p>
+                  </div>
+                </button>
+              ))}
             </div>
           </CardContent>
         </Card>

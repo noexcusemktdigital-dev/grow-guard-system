@@ -114,6 +114,12 @@ export const SOFIA_STEPS: BriefingStep[] = [
       { value: "consumidor_final", label: "Consumidor final" },
       { value: "executivos", label: "Executivos / Gestores" },
       { value: "profissionais_liberais", label: "Profissionais liberais" },
+      { value: "maes", label: "Mães / Pais" },
+      { value: "jovens", label: "Jovens (18-25)" },
+      { value: "investidores", label: "Investidores" },
+      { value: "atletas", label: "Atletas / Fitness" },
+      { value: "estudantes", label: "Estudantes" },
+      { value: "aposentados", label: "Aposentados / 55+" },
       { value: "personalizar", label: "Outro perfil" },
     ],
     helpText: "Quanto mais detalhado, melhor será a segmentação da estratégia.",
@@ -156,20 +162,32 @@ export const SOFIA_STEPS: BriefingStep[] = [
       { value: "nicho", label: "Especialização em nicho" },
       { value: "tecnologia", label: "Tecnologia / Inovação" },
       { value: "preco", label: "Melhor custo-benefício" },
+      { value: "equipe", label: "Equipe qualificada" },
+      { value: "resultados", label: "Resultados comprovados" },
+      { value: "marca", label: "Marca reconhecida" },
       { value: "personalizar", label: "Outro diferencial" },
     ],
     helpText: "Seu diferencial será usado para posicionar a marca e criar a proposta de valor.",
   },
+  {
+    id: "resultados_clientes",
+    section: "Posicionamento",
+    agentMessage: "Quais resultados seus clientes geralmente alcançam com seu produto/serviço?",
+    inputType: "textarea",
+    placeholder: "Ex: Aumento de 40% nas vendas, emagrecimento de 10kg em 3 meses, economia de 5h por semana...",
+    helpText: "Resultados reais são a melhor prova social — serão usados em conteúdos e scripts.",
+    optional: true,
+  },
 
-  // ═══ BLOCO 4 — Concorrência (NOVO) ═══
+  // ═══ BLOCO 4 — Concorrência ═══
 
   {
-    id: "concorrentes",
+    id: "concorrentes_urls",
     section: "Concorrência",
-    agentMessage: "Quem são seus 2-3 principais concorrentes? Pode citar nomes ou descrever.",
+    agentMessage: "Cole os links (site ou Instagram) dos seus 2-3 principais concorrentes. Isso permite uma análise muito mais precisa! 🔍",
     inputType: "textarea",
-    placeholder: "Ex: Clínica XYZ, Dr. Fulano, empresas grandes do segmento...",
-    helpText: "Saber quem compete com você permite posicionar melhor sua marca.",
+    placeholder: "Ex:\nhttps://www.concorrente1.com.br\nhttps://instagram.com/concorrente2\nhttps://www.concorrente3.com.br",
+    helpText: "Com URLs reais, a IA consegue inferir posicionamento, conteúdo e estratégia dos concorrentes.",
     optional: true,
   },
   {
@@ -244,6 +262,10 @@ export const SOFIA_STEPS: BriefingStep[] = [
       { value: "captar_franqueados", label: "Captar franqueados" },
       { value: "aumentar_autoridade", label: "Aumentar autoridade" },
       { value: "lancar_produto", label: "Lançar produto/serviço" },
+      { value: "fidelizar", label: "Fidelizar clientes" },
+      { value: "expandir_territorio", label: "Expandir território" },
+      { value: "aumentar_ticket", label: "Aumentar ticket médio" },
+      { value: "novo_mercado", label: "Entrar em novo mercado" },
     ],
     helpText: "O objetivo define toda a direção da estratégia.",
   },
@@ -256,7 +278,7 @@ export const SOFIA_STEPS: BriefingStep[] = [
     helpText: "Metas concretas permitem criar projeções realistas.",
   },
 
-  // ═══ BLOCO 7 — Comunicação (NOVO) ═══
+  // ═══ BLOCO 7 — Comunicação ═══
 
   {
     id: "tom_comunicacao",
@@ -270,8 +292,21 @@ export const SOFIA_STEPS: BriefingStep[] = [
       { value: "educativo", label: "Educativo / Didático" },
       { value: "inspirador", label: "Inspirador / Motivacional" },
       { value: "humoristico", label: "Humorístico / Descontraído" },
+      { value: "tecnico", label: "Técnico / Especialista" },
+      { value: "premium", label: "Premium / Sofisticado" },
+      { value: "urgente", label: "Urgente / Escassez" },
+      { value: "empatico", label: "Empático / Acolhedor" },
     ],
     helpText: "O tom de voz será aplicado em todos os conteúdos, scripts e comunicações.",
+  },
+  {
+    id: "nao_quero_comunicacao",
+    section: "Comunicação",
+    agentMessage: "O que você NÃO quer na sua comunicação? Tem algo que você considera inadequado ou que não combina com sua marca?",
+    inputType: "textarea",
+    placeholder: "Ex: Não quero parecer arrogante, não usar gírias, evitar promessas exageradas, nada de memes...",
+    helpText: "Definir limites ajuda a IA a respeitar a identidade da sua marca.",
+    optional: true,
   },
   {
     id: "marcas_referencia",
