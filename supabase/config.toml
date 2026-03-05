@@ -116,3 +116,6 @@ verify_jwt = false
 
 [functions.generate-video-briefing]
 verify_jwt = false
+
+[functions.crm-run-automations]
+verify_jwt = false

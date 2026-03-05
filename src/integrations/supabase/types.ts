@@ -1682,16 +1682,57 @@ export type Database = {
           },
         ]
       }
+      crm_automation_queue: {
+        Row: {
+          created_at: string | null
+          id: string
+          lead_id: string
+          organization_id: string
+          processed: boolean | null
+          trigger_data: Json | null
+          trigger_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lead_id: string
+          organization_id: string
+          processed?: boolean | null
+          trigger_data?: Json | null
+          trigger_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lead_id?: string
+          organization_id?: string
+          processed?: boolean | null
+          trigger_data?: Json | null
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_automation_queue_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_automations: {
         Row: {
           action_config: Json
           action_type: string
+          agent_id: string | null
           assigned_user_ids: Json
           created_at: string
           description: string | null
+          execution_count: number | null
           funnel_ids: Json
           id: string
           is_active: boolean
+          last_executed_at: string | null
           name: string
           organization_id: string
           priority: number
@@ -1703,12 +1744,15 @@ export type Database = {
         Insert: {
           action_config?: Json
           action_type?: string
+          agent_id?: string | null
           assigned_user_ids?: Json
           created_at?: string
           description?: string | null
+          execution_count?: number | null
           funnel_ids?: Json
           id?: string
           is_active?: boolean
+          last_executed_at?: string | null
           name: string
           organization_id: string
           priority?: number
@@ -1720,12 +1764,15 @@ export type Database = {
         Update: {
           action_config?: Json
           action_type?: string
+          agent_id?: string | null
           assigned_user_ids?: Json
           created_at?: string
           description?: string | null
+          execution_count?: number | null
           funnel_ids?: Json
           id?: string
           is_active?: boolean
+          last_executed_at?: string | null
           name?: string
           organization_id?: string
           priority?: number
@@ -1735,6 +1782,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_automations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "client_ai_agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_automations_organization_id_fkey"
             columns: ["organization_id"]
@@ -4743,6 +4797,7 @@ export type Database = {
           attending_mode: string
           created_at: string
           crm_lead_id: string | null
+          followup_config: Json | null
           id: string
           instance_id: string | null
           last_message_at: string | null
@@ -4759,6 +4814,7 @@ export type Database = {
           attending_mode?: string
           created_at?: string
           crm_lead_id?: string | null
+          followup_config?: Json | null
           id?: string
           instance_id?: string | null
           last_message_at?: string | null
@@ -4775,6 +4831,7 @@ export type Database = {
           attending_mode?: string
           created_at?: string
           crm_lead_id?: string | null
+          followup_config?: Json | null
           id?: string
           instance_id?: string | null
           last_message_at?: string | null

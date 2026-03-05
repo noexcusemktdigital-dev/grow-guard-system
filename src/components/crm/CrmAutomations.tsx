@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Plus, Trash2, Bot, Edit2, Layers, ArrowRight, Sparkles, CheckCircle2 } from "lucide-react";
+import { Zap, Plus, Trash2, Bot, Edit2, Layers, ArrowRight, Sparkles, CheckCircle2, Clock, MessageSquare } from "lucide-react";
 import { useCrmAutomations, useCrmAutomationMutations } from "@/hooks/useCrmAutomations";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useSalesPlan } from "@/hooks/useSalesPlan";
+import { useClienteAgents } from "@/hooks/useClienteAgents";
 import { useToast } from "@/hooks/use-toast";
 
 const TRIGGERS = [
@@ -56,45 +57,55 @@ interface RecommendedAutomation {
 function getRecommendedAutomations(answers: Record<string, any> | null): RecommendedAutomation[] {
   const recs: RecommendedAutomation[] = [];
 
-  // Always recommend follow-up
+  // AI-powered automations - always recommend
   recs.push({
-    name: "Follow-up 24h para novos leads",
-    description: "Cria tarefa de follow-up quando um lead é criado",
+    name: "🤖 Primeiro contato IA",
+    description: "Agente SDR envia mensagem de boas-vindas e inicia qualificação BANT automaticamente",
     trigger_type: "lead_created",
-    action_type: "create_task",
-    action_config: { task_title: "Follow-up com o lead", due_days: 1, priority: "high" },
+    action_type: "ai_first_contact",
+    action_config: { initial_message: "" },
   });
 
   recs.push({
-    name: "Alerta de lead quente parado",
-    description: "Notifica quando lead quente fica parado 3 dias",
+    name: "🔄 Follow-up automático 24h",
+    description: "Se o lead não responder em 24h, o agente IA faz follow-up (até 3 tentativas)",
+    trigger_type: "lead_created",
+    action_type: "ai_followup",
+    action_config: { delay_hours: 24, max_attempts: 3 },
+  });
+
+  recs.push({
+    name: "🎯 Qualificação IA por etapa",
+    description: "Quando lead entra na etapa 'Qualificação', IA inicia processo de qualificação via WhatsApp",
+    trigger_type: "stage_change",
+    action_type: "ai_qualify",
+    trigger_config: { stage: "qualificacao" },
+  });
+
+  recs.push({
+    name: "🎉 Notificar equipe em venda",
+    description: "Notifica toda a equipe quando um lead é convertido em venda",
+    trigger_type: "lead_won",
+    action_type: "notify",
+    action_config: { notification_title: "🎉 Nova venda fechada!", notification_message: "" },
+  });
+
+  recs.push({
+    name: "⚠️ Alerta lead quente parado",
+    description: "Alerta quando lead quente fica sem atividade por 3 dias",
     trigger_type: "lead_stuck",
     action_type: "notify",
     trigger_config: { days: 3 },
   });
 
-  if (answers) {
-    const ciclo = answers.ciclo_venda || "";
-    if (ciclo === "mesmo_dia" || ciclo === "1_semana") {
-      recs.push({
-        name: "Primeiro contato IA rápido",
-        description: "IA faz primeiro contato automático para ciclo de venda curto",
-        trigger_type: "lead_created",
-        action_type: "ai_first_contact",
-        trigger_config: { source_filter: "Ads" },
-      });
-    }
-
-    const equipe = answers.equipe_vendas || "";
-    if (equipe !== "sozinho") {
-      recs.push({
-        name: "Notificar quando lead vendido",
-        description: "Celebre as vendas notificando a equipe",
-        trigger_type: "lead_won",
-        action_type: "notify",
-      });
-    }
-  }
+  recs.push({
+    name: "🏷️ Mover lead qualificado para Closer",
+    description: "Quando tag 'qualificado' é adicionada, move para etapa do Closer e inicia contato IA",
+    trigger_type: "tag_added",
+    action_type: "ai_first_contact",
+    trigger_config: { tag: "qualificado" },
+    action_config: { initial_message: "Olá! Sou especialista em soluções e vi que você foi qualificado. Vamos conversar sobre como posso ajudar?" },
+  });
 
   return recs;
 }
@@ -125,7 +136,7 @@ export function CrmAutomations() {
   const { data: teams } = useCrmTeams();
   const { data: members } = useCrmTeam();
   const { data: salesPlan } = useSalesPlan();
-
+  const { data: agents } = useClienteAgents();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -137,13 +148,14 @@ export function CrmAutomations() {
   const [selectedFunnels, setSelectedFunnels] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [filterFunnel, setFilterFunnel] = useState("");
+  const [selectedAgentId, setSelectedAgentId] = useState<string>("");
 
   const recommended = getRecommendedAutomations(salesPlan?.answers || null);
   const existingNames = new Set((automations || []).map(a => a.name));
 
   const reset = () => {
     setEditingId(null); setName(""); setDescription(""); setTriggerType("lead_created"); setActionType("create_task");
-    setActionConfig({}); setTriggerConfig({}); setSelectedFunnels([]); setSelectedTeams([]);
+    setActionConfig({}); setTriggerConfig({}); setSelectedFunnels([]); setSelectedTeams([]); setSelectedAgentId("");
   };
 
   const openNew = () => { reset(); setDialogOpen(true); };
@@ -158,15 +170,20 @@ export function CrmAutomations() {
     setTriggerConfig(auto.trigger_config || {});
     setSelectedFunnels(Array.isArray(auto.funnel_ids) ? auto.funnel_ids : []);
     setSelectedTeams(Array.isArray(auto.team_ids) ? auto.team_ids : []);
+    setSelectedAgentId(auto.agent_id || "");
     setDialogOpen(true);
   };
 
   const handleSave = () => {
     if (!name.trim()) { toast({ title: "Informe o nome", variant: "destructive" }); return; }
-    const payload = {
+    if (isAiAction(actionType) && !selectedAgentId) {
+      toast({ title: "Selecione um agente IA para esta automação", variant: "destructive" }); return;
+    }
+    const payload: any = {
       name, description, trigger_type: triggerType, action_type: actionType,
       action_config: actionConfig, trigger_config: triggerConfig,
       funnel_ids: selectedFunnels, team_ids: selectedTeams,
+      agent_id: selectedAgentId || null,
     };
     if (editingId) {
       updateAutomation.mutate({ id: editingId, ...payload });
@@ -438,6 +455,63 @@ export function CrmAutomations() {
                     <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar" /></SelectTrigger>
                     <SelectContent>{funnels.map(f => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}</SelectContent>
                   </Select>
+                </div>
+               )}
+
+              {/* AI Agent Config */}
+              {isAiAction(actionType) && (
+                <div className="space-y-2 mt-2 p-2 rounded-md bg-violet-500/5 border border-violet-200/30">
+                  <Label className="text-xs font-semibold flex items-center gap-1"><Bot className="w-3 h-3 text-violet-500" /> Configuração do Agente IA</Label>
+                  <div>
+                    <Label className="text-xs">Agente *</Label>
+                    <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar agente IA" /></SelectTrigger>
+                      <SelectContent>
+                        {(agents || []).filter(a => a.status === "active").map(a => (
+                          <SelectItem key={a.id} value={a.id} className="text-xs">
+                            <span className="flex items-center gap-1">
+                              <Bot className="w-3 h-3" />
+                              {a.name} <Badge variant="outline" className="text-[8px] ml-1">{a.role}</Badge>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {actionType === "ai_first_contact" && (
+                    <div>
+                      <Label className="text-xs flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Mensagem inicial (opcional)</Label>
+                      <Textarea
+                        value={actionConfig.initial_message || ""}
+                        onChange={e => setActionConfig({ ...actionConfig, initial_message: e.target.value })}
+                        placeholder="Deixe vazio para usar a mensagem padrão do agente..."
+                        className="min-h-[60px] text-xs"
+                      />
+                    </div>
+                  )}
+                  {actionType === "ai_followup" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> Delay (horas)</Label>
+                        <Input type="number" value={actionConfig.delay_hours || 24} onChange={e => setActionConfig({ ...actionConfig, delay_hours: Number(e.target.value) })} className="h-8 text-xs" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Máx. tentativas</Label>
+                        <Input type="number" value={actionConfig.max_attempts || 3} onChange={e => setActionConfig({ ...actionConfig, max_attempts: Number(e.target.value) })} className="h-8 text-xs" />
+                      </div>
+                    </div>
+                  )}
+                  {actionType === "ai_qualify" && (
+                    <div>
+                      <Label className="text-xs flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Mensagem de qualificação (opcional)</Label>
+                      <Textarea
+                        value={actionConfig.initial_message || ""}
+                        onChange={e => setActionConfig({ ...actionConfig, initial_message: e.target.value })}
+                        placeholder="Deixe vazio para usar a mensagem padrão de qualificação BANT..."
+                        className="min-h-[60px] text-xs"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
