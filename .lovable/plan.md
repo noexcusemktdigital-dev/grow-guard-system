@@ -1,35 +1,31 @@
 
 
-## Diagnóstico: Chave Asaas sendo rejeitada como `invalid_access_token`
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Análise do código
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-O código está correto na forma de enviar:
-- Header: `access_token: <valor>` (linha 53 de `asaas-test-connection/index.ts`)
-- Base URL: `https://api.asaas.com/v3`
-- User-Agent: `NOE-Platform`
+### Ações
 
-### Problema provável
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-O valor do secret `ASAAS_API_KEY` armazenado pode conter caracteres invisíveis (espaços, quebras de linha, aspas) que foram adicionados durante a cópia/colagem. O Asaas retorna `invalid_access_token` quando a chave não bate exatamente.
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-### Plano
+3. **Executar o teste** e analisar o resultado definitivo
 
-1. **Adicionar logging de diagnóstico** na função `asaas-test-connection` para exibir:
-   - Comprimento exato da chave (`asaasApiKey.length`)
-   - Primeiros 15 caracteres (`asaasApiKey.substring(0, 15)`)
-   - Se contém espaços ou quebras de linha (`asaasApiKey.includes('\n')`, `.trim() !== asaasApiKey`)
-   - O response body completo do Asaas
+### Detalhe técnico
 
-2. **Aplicar `.trim()` na chave** antes de enviar, para eliminar espaços/quebras acidentais
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+```
 
-3. **Re-deploy e testar** a conexão para ver o diagnóstico completo nos logs
-
-### Mudança técnica
-
-Arquivo: `supabase/functions/asaas-test-connection/index.ts`
-- Na linha 48, após ler `ASAAS_API_KEY`, aplicar `.trim()` e logar informações de debug
-- Incluir no response JSON os campos de diagnóstico (`key_length`, `key_prefix`, `key_has_whitespace`)
-
-Isso vai revelar definitivamente se a chave armazenada está corrompida ou se é outro problema.
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 
