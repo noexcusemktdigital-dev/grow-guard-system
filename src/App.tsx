@@ -72,7 +72,6 @@ import ClienteConteudos from "./pages/cliente/ClienteConteudos";
 import ClienteRedesSociais from "./pages/cliente/ClienteRedesSociais";
 import ClienteSites from "./pages/cliente/ClienteSites";
 import ClienteTrafegoPago from "./pages/cliente/ClienteTrafegoPago";
-import ClienteMarketingHub from "./pages/cliente/ClienteMarketingHub";
 import ClienteIntegracoes from "./pages/cliente/ClienteIntegracoes";
 import ClientePlanoCreditos from "./pages/cliente/ClientePlanoCreditos";
 import ClienteConfiguracoes from "./pages/cliente/ClienteConfiguracoes";
@@ -173,7 +172,7 @@ const App = () => (
                 <Route path="conteudos" element={<ClienteConteudos />} />
                 <Route path="redes-sociais" element={<ClienteRedesSociais />} />
                 
-                <Route path="marketing-hub" element={<ClienteMarketingHub />} />
+                
                 <Route path="sites" element={<ClienteSites />} />
                 <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
                 <Route path="integracoes" element={<ClienteIntegracoes />} />
