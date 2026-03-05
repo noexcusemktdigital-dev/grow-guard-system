@@ -1,80 +1,95 @@
 
 
-# Análise: As perguntas do wizard de Sites são suficientes?
+# Plano Consolidado: Revisão Completa do Módulo Marketing + Fluxo de Créditos
 
-## Diagnóstico atual
+Este plano unifica os dois planos aprovados anteriormente em uma execução única.
 
-O wizard de 10 steps em `ClienteSites.tsx` coleta as seguintes informações:
+---
 
-| Step | O que coleta | Problema |
-|------|-------------|----------|
-| 1. Referência | URL ou descrição manual | Bom, mas opcional e vago |
-| 2. Tipo de Negócio | 7 opções (consultoria, serviços, etc.) | OK |
-| 3. Objetivo | 4 opções (leads, institucional, vendas, portfólio) | OK |
-| 4. Público | Chips genéricos + campo livre | Chips muito vagos ("Empresários") |
-| 5. Serviços | Textarea livre | OK |
-| 6. Diferenciais | Textarea livre | OK |
-| 7. Prova Social | Chips + campos condicionais | OK |
-| 8. CTA | 4 opções + personalizado | OK |
-| 9. Páginas | Multi-select de 8 opções | OK |
-| 10. Estilo | 5 opções simples | Muito superficial |
+## PARTE A — Correções de Créditos, Quotas e Integração
 
-## Gaps críticos que prejudicam o resultado
+### A1. Corrigir dupla cobrança nos edge functions
 
-### 1. Nome da empresa não é perguntado
-O wizard **nunca pede o nome da empresa**. Depende de `strategyAnswers.empresa`, que pode estar vazio. O prompt envia `nome_empresa: ""` e o site gerado fica sem nome no header, footer e title.
+Remover `debit_credits` dos edge functions que já cobram na aprovação frontend:
+- `generate-strategy/index.ts` — remover debit, manter pré-check de saldo
+- `generate-social-image/index.ts` — remover debit, manter pré-check
+- `generate-social-video-frames/index.ts` — remover debit, manter pré-check
 
-### 2. Dados de contato não são coletados
-Telefone, email, endereço, WhatsApp e redes sociais são todos enviados como string vazia. O site gerado fica com formulário de contato sem dados reais e botões de CTA sem link.
+### A2. Adicionar pré-verificação de saldo
 
-### 3. Slogan não é perguntado
-O hero do site fica genérico sem uma tagline da empresa.
+Nos edge functions sem verificação, adicionar check antes de gastar tokens de IA:
+- `generate-site/index.ts` — verificar 500 créditos
+- `generate-content/index.ts` — verificar 200 × quantidade
+- `generate-traffic-strategy/index.ts` — verificar 200 créditos
 
-### 4. Tom de comunicação não é perguntado
-O edge function suporta 4 tons (formal, descontraído, técnico, inspiracional) mas o wizard não oferece essa escolha. O tom fica indefinido.
+### A3. Fix bug quota de conteúdos
 
-### 5. Descrição do negócio é fraca
-O campo "descrição manual" no step de referência não tem contexto suficiente. O usuário não sabe que essa descrição será usada na seção "Sobre" do site.
+- `useClienteContentV2.ts`: mudar `plan_slug` para `plan`
 
-### 6. Estilo visual muito superficial
-Apenas 5 palavras (Moderno, Minimalista, Corporativo, Sofisticado, Tecnológico) sem descrição do que cada uma significa visualmente.
+### A4. Adicionar quota de postagens
 
-### 7. SiteWizardStep3 existe mas não é usado
-Há um componente completo (`SiteWizardStep3.tsx`) com briefing detalhado, qualidade bar, seções colapsáveis e todos os campos necessários — mas ele **não é usado** no fluxo principal do wizard.
+- Criar `usePostQuota` hook em `useClientePosts.ts`
+- Enforce em `ClienteRedesSociais.tsx` — avisar quando `remaining <= 0`
 
-## Proposta: Reorganizar o wizard para cobrir os gaps
+### A5. Atualizar CREDIT_COSTS e PlanConfig
 
-Manter a abordagem de steps interativos (não o formulário longo do Step3), mas adicionar os campos ausentes:
+Em `src/constants/plans.ts`:
+- Adicionar entries: `generate-traffic-strategy` (200), `generate-video-briefing` (0), `generate-social-briefing` (0)
+- Adicionar `maxStrategies` e `maxTrafficStrategies` ao `PlanConfig`
 
-| Step | Conteúdo | Mudança |
-|------|----------|---------|
-| 1 | **Empresa** | **NOVO** — Nome, slogan, descrição do negócio, segmento |
-| 2 | Objetivo | Manter atual |
-| 3 | Público-alvo | Melhorar chips + adicionar dores |
-| 4 | Serviços + Diferenciais | Unificar em 1 step |
-| 5 | Prova Social | Manter atual |
-| 6 | **Contato** | **NOVO** — Telefone, email, WhatsApp, endereço, redes |
-| 7 | CTA | Manter + vincular ao WhatsApp do step anterior |
-| 8 | Páginas | Manter atual |
-| 9 | **Estilo + Tom** | Expandir — estilo visual com descrições + tom de comunicação + referência URL |
-| 10 | **Revisão** | **NOVO** — Resumo de tudo antes de gerar |
+---
 
-### Detalhes das mudanças
+## PARTE B — Fluxo de Recarga Não-Intrusivo
 
-**Step 1 (Empresa):** 4 campos — nome (obrigatório), slogan, descrição (textarea), segmento (chips). Auto-preenche de `strategyAnswers` e `visualIdentity`.
+### B1. Criar `InsufficientCreditsDialog`
 
-**Step 6 (Contato):** Telefone/WhatsApp, email, endereço, redes sociais, link WhatsApp para CTA. Essencial para o site ter dados reais.
+Dialog reutilizável com saldo atual, custo da ação, botões "Comprar Créditos" e "Fazer Upgrade". Aparece **apenas** quando aprovação falha por saldo insuficiente.
 
-**Step 9 (Estilo + Tom):** Cada estilo com descrição visual (ex: "Corporativo — Tons sóbrios, layout clássico, tipografia serifada"). Adicionar seletor de tom de comunicação (formal, descontraído, técnico, inspiracional). Campo de URL de referência.
+**Arquivo:** `src/components/cliente/InsufficientCreditsDialog.tsx`
 
-**Step 10 (Revisão):** Resumo visual de todos os campos preenchidos com indicador de completude, similar ao `QualityBar` do `SiteWizardStep3`.
+### B2. Padronizar onError nos hooks de aprovação
 
-### Arquivos a modificar
+Detectar `INSUFFICIENT_CREDITS` e retornar flag para abrir o dialog:
+- `useClientePosts.ts` (useApprovePost)
+- `useMarketingStrategy.ts` (useApproveStrategy)
+- `useClienteSitesDB.ts` (useApproveSite)
+- `useClienteContentV2.ts` (useApproveContent)
+- `useTrafficStrategy.ts` (useApproveTrafficStrategy)
+
+### B3. Integrar dialog nas páginas de aprovação
+
+- `ClienteRedesSociais.tsx`
+- `ClienteConteudos.tsx`
+- `ClienteSites.tsx`
+- `ClientePlanoMarketing.tsx`
+- `ClienteTrafegoPago.tsx`
+
+### B4. Remover bloqueios pré-geração
+
+Garantir que nenhum wizard bloqueia o briefing por créditos — bloqueio apenas na aprovação.
+
+---
+
+## Resumo de Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `src/pages/cliente/ClienteSites.tsx` | Reorganizar steps, adicionar campos empresa/contato/revisão |
-| `supabase/functions/generate-site/index.ts` | Sem mudanças — já aceita todos os campos, só não recebe dados hoje |
-
-O edge function `generate-site` já está preparado para receber nome, contato, slogan, tom — o problema é exclusivamente no wizard que não coleta essas informações.
+| `src/constants/plans.ts` | Atualizar CREDIT_COSTS + PlanConfig |
+| `src/components/cliente/InsufficientCreditsDialog.tsx` | Criar |
+| `src/hooks/useClienteContentV2.ts` | Fix plan_slug → plan + onError |
+| `src/hooks/useClientePosts.ts` | usePostQuota + onError |
+| `src/hooks/useMarketingStrategy.ts` | onError |
+| `src/hooks/useClienteSitesDB.ts` | onError |
+| `src/hooks/useTrafficStrategy.ts` | onError |
+| `supabase/functions/generate-strategy/index.ts` | Remover debit |
+| `supabase/functions/generate-social-image/index.ts` | Remover debit |
+| `supabase/functions/generate-social-video-frames/index.ts` | Remover debit |
+| `supabase/functions/generate-site/index.ts` | Pré-check saldo |
+| `supabase/functions/generate-content/index.ts` | Pré-check saldo |
+| `supabase/functions/generate-traffic-strategy/index.ts` | Pré-check saldo |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Quota + dialog |
+| `src/pages/cliente/ClienteConteudos.tsx` | Dialog |
+| `src/pages/cliente/ClienteSites.tsx` | Dialog |
+| `src/pages/cliente/ClientePlanoMarketing.tsx` | Dialog |
+| `src/pages/cliente/ClienteTrafegoPago.tsx` | Dialog |
 
