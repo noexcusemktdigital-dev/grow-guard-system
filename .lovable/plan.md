@@ -1,70 +1,56 @@
 
 
-# Reestruturação da Ferramenta de Estratégia de Marketing
+# Correção da Ferramenta de Conteúdo — Geração em Lote Estratégico
 
-## Resumo das Mudanças
+## Problema
 
-Três camadas: (1) briefing expandido para 14 perguntas em 8 blocos, (2) output da IA reestruturado em 8 módulos estratégicos, (3) dashboard visual com abas, gráficos e botões de ação para outras ferramentas.
+A ferramenta atual gera 1 conteúdo por vez com formato e objetivo únicos. O correto é gerar um **lote completo** de conteúdos estratégicos, respeitando o limite do plano e cobrindo o funil de marketing.
 
----
+## Plano
 
-## 1. Briefing — Expandir `SOFIA_STEPS` em `briefingAgents.ts`
+### 1. Reescrever `ClienteConteudos.tsx` — Wizard de lote com 8 blocos
 
-Substituir as 10 perguntas atuais por 14 perguntas em 8 blocos:
+Substituir o wizard atual (5 steps, 1 conteúdo) por:
 
-| Bloco | Perguntas | Tipo |
-|---|---|---|
-| **Negócio** | 1. Nome + o que faz (textarea) | 2. Produto principal (textarea) | 3. Ticket médio (select: R$500, R$2k, R$15k, custom) |
-| **Público** | 4. Cliente ideal (chips + texto) | 5. Problema que resolve (textarea) |
-| **Posicionamento** | 6. Por que escolher sua empresa (textarea) | 7. Diferencial claro (select: método, atendimento, nicho, custom) |
-| **Estrutura atual** | 8. Canais atuais (multi-select: Instagram, Site, Tráfego, etc.) | 9. Investe em anúncios? (select: sim/não) + condicional: quanto/mês |
-| **Objetivo** | 10. Objetivo principal (select) | 11. Meta de faturamento/crescimento (textarea) |
-| **Presença digital** | 12. Links: site, Instagram, landing page (text, opcional) |
-| **Região** | 13. Onde atua (text: cidade/estado/país) |
-| **Orçamento** | 14. Investimento mensal em marketing (select com faixas) |
+| Bloco | Input |
+|---|---|
+| **1. Quantidade** | Auto-detectar do plano (`maxContents`). Mostrar "Seu plano permite X conteúdos" com slider para escolher quantos gerar |
+| **2. Formatos** | Multi-select com distribuição: carrossel (N), vídeo (N), post único (N), story (N), artigo (N), post educativo (N), post autoridade (N). Total deve = quantidade escolhida |
+| **3. Objetivos** | Multi-select: educar, autoridade, engajamento, leads, vender, quebrar objeções. IA distribui automaticamente (40% educação, 30% autoridade, 20% prova social, 10% oferta) |
+| **4. Tema** | Textarea opcional. Se vazio, IA usa estratégia |
+| **5. Plataforma** | Select: Instagram, LinkedIn, TikTok, YouTube |
+| **6. Tom** | Select opcional: educativo, institucional, direto, provocativo |
+| **7. Público** | Auto-preenchido da estratégia, editável |
+| **8. Revisão** | Resumo visual do lote antes de gerar |
 
----
+**Tela de resultado**: Grid de cards, cada card = 1 conteúdo com:
+- Badge formato + objetivo
+- Título + preview do conteúdo
+- Botões: Editar, Gerar Arte (→ `/cliente/redes-sociais`), Gerar Vídeo, Copiar, Aprovar
 
-## 2. Edge Function — Reestruturar output da IA em `generate-strategy/index.ts`
+### 2. Reescrever `generate-content` Edge Function — Gerar array de conteúdos
 
-Atualizar TOOL_SCHEMA e SYSTEM_PROMPT para gerar 8 blocos:
+- Aceitar novo payload: `{ quantidade, formatos: [{tipo, qtd}], objetivos: [string], tema?, plataforma, tom?, publico?, estrategia }`
+- IA gera array de N conteúdos, cada um com formato e objetivo distribuídos
+- Tool schema retorna `{ conteudos: Array<{ titulo, formato, objetivo, conteudo_principal, legenda, headlines, hashtags, embasamento }> }`
 
-1. **diagnostico** — análise + gráfico radar (scores 0-10 para: Autoridade, Aquisição, Conversão, Retenção)
-2. **icp** — demografia, perfil profissional, dores, desejos, objeções (substitui "persona")
-3. **proposta_valor** — problema → método/solução → resultado prometido
-4. **estrategia_aquisicao** — canais prioritários + funil (topo/meio/fundo)
-5. **estrategia_conteudo** — 4 pilares (educação, autoridade, prova social, oferta) com exemplos
-6. **plano_crescimento** — projeções numéricas: investimento, CPC, leads, clientes, receita por mês (6 meses)
-7. **estrutura_recomendada** — checklist: site, landing page, tráfego, conteúdo, automação (com status: falta/tem)
-8. **plano_execucao** — roadmap 3 meses com passos vinculados às ferramentas do sistema
+### 3. Atualizar `useClienteContentV2.ts`
 
----
+- `useGenerateContent` — aceitar novo payload, inserir N registros no `client_content` (um por conteúdo gerado)
+- `useApproveContent` — aprovar conteúdo individual (200 créditos cada) ou aprovar lote
+- Adicionar `useContentQuota` — consultar subscription + contar conteúdos do mês atual vs `maxContents`
 
-## 3. Dashboard Visual — Reescrever `ClientePlanoMarketing.tsx`
+### 4. Integração com plano
 
-Substituir o layout atual (collapsibles) por interface com **abas** + **gráficos** + **botões de ação**.
-
-**Abas da página de resultado:**
-- Resumo — 4 KPI cards + gráfico radar do diagnóstico
-- Cliente Ideal — card ICP completo + proposta de valor (Problema → Solução → Resultado)
-- Aquisição — gráfico funil (Visitantes → Leads → Clientes) + canais prioritários (gráfico pizza: Orgânico/Pago/Parcerias)
-- Conteúdo — cards dos 4 pilares + ideias de conteúdo + botão "Gerar Conteúdos"
-- Projeção — gráfico de linha (Leads, Clientes, Receita por mês) + KPIs (CPC, CPL, CAC, ROI)
-- Plano de Execução — timeline 3 meses com botões diretos para cada ferramenta (Conteúdos, Postagens, Sites, Tráfego)
-
-**Componentes visuais:**
-- Recharts: RadarChart (diagnóstico), PieChart (canais), LineChart (projeções), BarChart (funil)
-- Tabs do Radix para navegação entre seções
-- Cards com badges de status para estrutura recomendada
-- Botões de ação com ícones linkando para `/cliente/conteudos`, `/cliente/redes-sociais`, `/cliente/sites`, `/cliente/trafego-pago`
-
----
+- Importar `useClienteSubscription` + `getPlanBySlug` para determinar `maxContents`
+- Contar conteúdos já gerados no mês atual via query no `client_content`
+- Bloquear geração se limite atingido, sugerir upgrade
 
 ## Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/cliente/briefingAgents.ts` | Reescrever `SOFIA_STEPS` — 14 perguntas em 8 blocos |
-| `supabase/functions/generate-strategy/index.ts` | Atualizar TOOL_SCHEMA e prompt para 8 módulos |
-| `src/pages/cliente/ClientePlanoMarketing.tsx` | Reescrever resultado como dashboard com abas e gráficos |
+| `src/pages/cliente/ClienteConteudos.tsx` | Reescrever — wizard de lote com 8 blocos + grid de resultado |
+| `supabase/functions/generate-content/index.ts` | Reescrever — gerar array de N conteúdos |
+| `src/hooks/useClienteContentV2.ts` | Atualizar — insert em lote, quota check |
 
