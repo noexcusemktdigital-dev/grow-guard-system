@@ -22,18 +22,23 @@ import { ptBR } from "date-fns/locale";
 
 const CATEGORIES = ["Comercial", "Atendimento", "Engajamento", "Proatividade"];
 
-function StarRating({ value, onChange, size = "md" }: { value: number; onChange?: (v: number) => void; size?: "sm" | "md" }) {
-  const sizeClass = size === "sm" ? "w-3 h-3" : "w-5 h-5";
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <button key={s} type="button" onClick={() => onChange?.(s)} className="focus:outline-none" disabled={!onChange}>
-          <Star className={`${sizeClass} transition-colors ${s <= value ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
-        </button>
-      ))}
-    </div>
-  );
-}
+import React from "react";
+
+const StarRating = React.forwardRef<HTMLDivElement, { value: number; onChange?: (v: number) => void; size?: "sm" | "md" }>(
+  ({ value, onChange, size = "md" }, ref) => {
+    const sizeClass = size === "sm" ? "w-3 h-3" : "w-5 h-5";
+    return (
+      <div ref={ref} className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map((s) => (
+          <button key={s} type="button" onClick={() => onChange?.(s)} className="focus:outline-none" disabled={!onChange}>
+            <Star className={`${sizeClass} transition-colors ${s <= value ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+          </button>
+        ))}
+      </div>
+    );
+  }
+);
+StarRating.displayName = "StarRating";
 
 function TrendIndicator({ current, previous }: { current: number; previous: number | null }) {
   if (previous === null) return null;
