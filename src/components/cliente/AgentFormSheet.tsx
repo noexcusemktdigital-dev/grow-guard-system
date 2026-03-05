@@ -11,7 +11,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User, Camera, Trash2, Lock, ChevronRight, Clock, Shield, RotateCcw } from "lucide-react";
+import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User, Camera, Trash2, Lock, ChevronRight, Clock, Shield, RotateCcw, History } from "lucide-react";
+import { useAgentStats } from "@/hooks/useClienteAgents";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -52,7 +53,7 @@ interface KBEntry {
   size?: number;
 }
 
-type TabKey = "identidade" | "persona" | "knowledge" | "prompt" | "simulator";
+type TabKey = "identidade" | "persona" | "knowledge" | "prompt" | "simulator" | "historico";
 
 export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: AgentFormSheetProps) {
   const [form, setForm] = useState<Partial<AiAgent>>(defaultAgent);
@@ -71,8 +72,8 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const { data: orgId } = useUserOrgId();
   const { data: whatsappInstances } = useWhatsAppInstances();
   const queryClient = useQueryClient();
-
   const isEditing = !!agent?.id;
+  const { data: agentStats } = useAgentStats(isEditing ? agent?.id ?? null : null);
 
   useEffect(() => {
     if (agent) {
@@ -136,7 +137,8 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     persona: "knowledge",
     knowledge: "prompt",
     prompt: "simulator",
-    simulator: null,
+    simulator: isEditing ? "historico" : null,
+    historico: null,
   };
 
   const goNext = () => {
@@ -286,6 +288,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     { key: "knowledge", label: "Base", icon: <BookOpen className="w-3 h-3" /> },
     { key: "prompt", label: "Prompt", icon: <Cog className="w-3 h-3" /> },
     { key: "simulator", label: "Simulador", icon: <Play className="w-3 h-3" /> },
+    ...(isEditing ? [{ key: "historico" as TabKey, label: "Histórico", icon: <History className="w-3 h-3" /> }] : []),
   ];
 
   const NextButton = ({ disabled }: { disabled?: boolean }) => {
@@ -311,7 +314,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
         </SheetHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => canAccessTab(v as TabKey) && setActiveTab(v as TabKey)} className="mt-4">
-          <TabsList className="grid grid-cols-5 w-full">
+          <TabsList className={`grid w-full ${isEditing ? "grid-cols-6" : "grid-cols-5"}`}>
             {tabs.map((tab) => {
               const accessible = canAccessTab(tab.key);
               return (
@@ -830,6 +833,64 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               </div>
             </div>
           </TabsContent>
+
+          {/* ─── Aba 6: Histórico (only for editing) ─── */}
+          {isEditing && (
+            <TabsContent value="historico" className="space-y-4 mt-4">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">Histórico de Atividades</p>
+                <p className="text-xs text-muted-foreground">Últimas interações realizadas por este agente</p>
+              </div>
+
+              {agentStats && agentStats.activeContacts > 0 && (
+                <div className="flex gap-3">
+                  <div className="p-3 rounded-lg bg-primary/5 border flex-1 text-center">
+                    <p className="text-lg font-bold">{agentStats.activeContacts}</p>
+                    <p className="text-[10px] text-muted-foreground">Contatos ativos</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-primary/5 border flex-1 text-center">
+                    <p className="text-lg font-bold">{agentStats.messagesToday}</p>
+                    <p className="text-[10px] text-muted-foreground">Mensagens hoje</p>
+                  </div>
+                </div>
+              )}
+
+              {agentStats?.recentLogs && agentStats.recentLogs.length > 0 ? (
+                <ScrollArea className="h-[400px]">
+                  <div className="space-y-2">
+                    {agentStats.recentLogs.map((log: any) => (
+                      <div key={log.id} className="p-3 rounded-lg border space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="text-[9px]">
+                            {new Date(log.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          </Badge>
+                          <span className="text-[9px] text-muted-foreground">{log.contact_id?.slice(0, 8)}...</span>
+                        </div>
+                        {log.input_message && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground font-medium">Cliente:</span>{" "}
+                            <span className="text-foreground">{log.input_message.slice(0, 120)}{log.input_message.length > 120 ? "..." : ""}</span>
+                          </div>
+                        )}
+                        {log.output_message && (
+                          <div className="text-xs">
+                            <span className="text-primary font-medium">Agente:</span>{" "}
+                            <span className="text-foreground">{log.output_message.slice(0, 120)}{log.output_message.length > 120 ? "..." : ""}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <History className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm font-medium">Nenhuma interação registrada</p>
+                  <p className="text-xs text-muted-foreground mt-1">O histórico aparecerá quando o agente começar a responder contatos.</p>
+                </div>
+              )}
+            </TabsContent>
+          )}
         </Tabs>
 
         <div className="flex justify-end gap-2 mt-6 pt-4 border-t">

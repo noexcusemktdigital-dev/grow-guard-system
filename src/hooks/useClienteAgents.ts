@@ -139,5 +139,63 @@ export function useClienteAgentMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ai-agents"] }),
   });
 
-  return { createAgent, updateAgent, deleteAgent, duplicateAgent };
+  const reactivateAgentContacts = useMutation({
+    mutationFn: async (agentId: string) => {
+      if (!orgId) return;
+      // Set all contacts that were previously assigned to this agent back to AI mode
+      await supabase
+        .from("whatsapp_contacts" as any)
+        .update({ attending_mode: "ai" } as any)
+        .eq("agent_id", agentId)
+        .eq("organization_id", orgId)
+        .eq("attending_mode", "human");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    },
+  });
+
+  return { createAgent, updateAgent, deleteAgent, duplicateAgent, reactivateAgentContacts };
+}
+
+export function useAgentStats(agentId: string | null) {
+  const { data: orgId } = useUserOrgId();
+
+  return useQuery({
+    queryKey: ["agent-stats", agentId, orgId],
+    queryFn: async () => {
+      if (!agentId || !orgId) return null;
+
+      const [contactsRes, messagesRes, logsRes] = await Promise.all([
+        supabase
+          .from("whatsapp_contacts" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("agent_id", agentId)
+          .eq("organization_id", orgId)
+          .eq("attending_mode", "ai"),
+        supabase
+          .from("whatsapp_messages" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", orgId)
+          .eq("direction", "outbound")
+          .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
+          .contains("metadata" as any, { agent_id: agentId }),
+        supabase
+          .from("ai_conversation_logs")
+          .select("id, created_at, input_message, output_message, contact_id")
+          .eq("agent_id", agentId)
+          .eq("organization_id", orgId)
+          .order("created_at", { ascending: false })
+          .limit(20),
+      ]);
+
+      return {
+        activeContacts: contactsRes.count ?? 0,
+        messagesToday: messagesRes.count ?? 0,
+        recentLogs: logsRes.data ?? [],
+      };
+    },
+    enabled: !!agentId && !!orgId,
+    refetchInterval: 30000,
+  });
 }

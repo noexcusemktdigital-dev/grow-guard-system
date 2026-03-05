@@ -103,14 +103,40 @@ export function GoalCard({ goal, progress, onEdit, onArchive }: GoalCardProps) {
               )}
               {progress && progress.daysLeft > 0 && (
                 <>
+                  <span className="font-medium text-foreground">{progress.daysLeft} dias restantes</span>
                   <span>Faltam: {metric.format(progress.remaining)}</span>
                   <span className="flex items-center gap-0.5">
                     <TrendingUp className="w-3 h-3" />
                     Ritmo: {metric.format(Math.round(progress.pacePerDay))}/dia
                   </span>
+                  <span>
+                    Necessário: {metric.format(Math.round(progress.requiredPacePerDay))}/dia
+                  </span>
                 </>
               )}
             </div>
+
+            {/* Projection */}
+            {progress && progress.daysLeft > 0 && percent < 100 && (
+              <div className={`mt-2 p-2 rounded-md text-[10px] ${
+                progress.pacePerDay >= progress.requiredPacePerDay * 0.9
+                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : progress.pacePerDay >= progress.requiredPacePerDay * 0.7
+                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                    : "bg-destructive/10 text-destructive"
+              }`}>
+                {(() => {
+                  const projectedPercent = Math.round(progress.pacePerDay * (progress.daysLeft + (progress.currentValue / progress.pacePerDay)) / (goal.target_value || 1) * 100);
+                  if (progress.pacePerDay >= progress.requiredPacePerDay * 0.9) {
+                    return `✅ No ritmo atual, você atingirá ~${Math.min(projectedPercent, 150)}% da meta até o final do período.`;
+                  } else if (progress.pacePerDay >= progress.requiredPacePerDay * 0.7) {
+                    return `⚠️ Projeção: ~${Math.min(projectedPercent, 150)}% da meta. Aumente o ritmo em ${Math.round(((progress.requiredPacePerDay / progress.pacePerDay) - 1) * 100)}% para bater.`;
+                  } else {
+                    return `🚨 Ritmo crítico! Projeção: ~${Math.min(projectedPercent, 150)}% da meta. Necessário ${metric.format(Math.round(progress.requiredPacePerDay))}/dia.`;
+                  }
+                })()}
+              </div>
+            )}
 
             {/* Actions */}
             <div className="mt-3 flex gap-2">

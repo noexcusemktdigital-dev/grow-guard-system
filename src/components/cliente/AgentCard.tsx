@@ -1,8 +1,7 @@
-import { Bot, Copy, Edit, MoreVertical, Trash2, Smartphone, Play, Pause } from "lucide-react";
+import { Bot, Copy, Edit, MoreVertical, Trash2, Smartphone, Play, Pause, MessageCircle, Users, RotateCcw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { AiAgent } from "@/types/cliente";
 import { agentRoleConfig } from "@/types/cliente";
+import { useAgentStats } from "@/hooks/useClienteAgents";
 
 const channelLabels: Record<string, string> = {
   whatsapp: "WhatsApp",
@@ -25,12 +25,14 @@ interface AgentCardProps {
   onDuplicate: (agent: AiAgent) => void;
   onDelete: (agent: AiAgent) => void;
   onToggleStatus: (agent: AiAgent) => void;
+  onReactivateContacts?: (agent: AiAgent) => void;
 }
 
-export function AgentCard({ agent, onEdit, onDuplicate, onDelete, onToggleStatus }: AgentCardProps) {
+export function AgentCard({ agent, onEdit, onDuplicate, onDelete, onToggleStatus, onReactivateContacts }: AgentCardProps) {
   const roleInfo = agentRoleConfig[agent.role] ?? agentRoleConfig.sdr;
   const isActive = agent.status === "active";
   const instanceCount = Array.isArray(agent.whatsapp_instance_ids) ? agent.whatsapp_instance_ids.length : 0;
+  const { data: stats } = useAgentStats(agent.id);
 
   return (
     <Card className="group hover:shadow-md transition-shadow cursor-pointer" onClick={() => onEdit(agent)}>
@@ -55,6 +57,19 @@ export function AgentCard({ agent, onEdit, onDuplicate, onDelete, onToggleStatus
             {agent.description && (
               <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{agent.description}</p>
             )}
+
+            {/* Stats row */}
+            {stats && (
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Users className="w-3 h-3" /> {stats.activeContacts} contatos ativos
+                </span>
+                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <MessageCircle className="w-3 h-3" /> {stats.messagesToday} msg hoje
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className="text-[10px]">
                 {channelLabels[agent.channel] ?? agent.channel}
@@ -103,6 +118,11 @@ export function AgentCard({ agent, onEdit, onDuplicate, onDelete, onToggleStatus
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDuplicate(agent); }}>
                   <Copy className="w-4 h-4 mr-2" /> Duplicar
                 </DropdownMenuItem>
+                {!isActive && onReactivateContacts && (
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReactivateContacts(agent); }}>
+                    <RotateCcw className="w-4 h-4 mr-2" /> Reativar contatos na IA
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(agent); }}>
                   <Trash2 className="w-4 h-4 mr-2" /> Excluir
                 </DropdownMenuItem>
