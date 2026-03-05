@@ -1,114 +1,80 @@
 
 
-# Plano: Wizard de Vídeo com mesma qualidade do fluxo de Artes
+# Análise: As perguntas do wizard de Sites são suficientes?
 
-## Problema
+## Diagnóstico atual
 
-O wizard de vídeo atual tem 6 steps simples sem briefing com IA, sem referências obrigatórias, sem plataforma de publicação, sem estilo visual e sem revisão completa. Precisa seguir a mesma lógica do wizard de artes: IA preenche campos, referências ancoram identidade, e o prompt gerado segue a estrutura dos 5 exemplos fornecidos.
+O wizard de 10 steps em `ClienteSites.tsx` coleta as seguintes informações:
 
-## Mudanças
+| Step | O que coleta | Problema |
+|------|-------------|----------|
+| 1. Referência | URL ou descrição manual | Bom, mas opcional e vago |
+| 2. Tipo de Negócio | 7 opções (consultoria, serviços, etc.) | OK |
+| 3. Objetivo | 4 opções (leads, institucional, vendas, portfólio) | OK |
+| 4. Público | Chips genéricos + campo livre | Chips muito vagos ("Empresários") |
+| 5. Serviços | Textarea livre | OK |
+| 6. Diferenciais | Textarea livre | OK |
+| 7. Prova Social | Chips + campos condicionais | OK |
+| 8. CTA | 4 opções + personalizado | OK |
+| 9. Páginas | Multi-select de 8 opções | OK |
+| 10. Estilo | 5 opções simples | Muito superficial |
 
-### 1. Novo edge function: `generate-video-briefing`
+## Gaps críticos que prejudicam o resultado
 
-Gemini Flash recebe briefing de texto livre (ou content_data) e retorna campos estruturados para vídeo via tool calling:
+### 1. Nome da empresa não é perguntado
+O wizard **nunca pede o nome da empresa**. Depende de `strategyAnswers.empresa`, que pode estar vazio. O prompt envia `nome_empresa: ""` e o site gerado fica sem nome no header, footer e title.
 
-```json
-{
-  "plataforma": "instagram_reels",
-  "formato_video": "9:16",
-  "duracao": "8s",
-  "descricao_cena": "...",
-  "acao_cena": "...",
-  "mensagem_video": "...",
-  "estilo_visual": "...",
-  "suggested_cta": "..."
-}
-```
+### 2. Dados de contato não são coletados
+Telefone, email, endereço, WhatsApp e redes sociais são todos enviados como string vazia. O site gerado fica com formulário de contato sem dados reais e botões de CTA sem link.
 
-**Arquivo:** `supabase/functions/generate-video-briefing/index.ts`
+### 3. Slogan não é perguntado
+O hero do site fica genérico sem uma tagline da empresa.
 
-### 2. Refatorar wizard de vídeo para 8 steps
+### 4. Tom de comunicação não é perguntado
+O edge function suporta 4 tons (formal, descontraído, técnico, inspiracional) mas o wizard não oferece essa escolha. O tom fica indefinido.
 
-Seguindo os 9 blocos definidos pelo usuário:
+### 5. Descrição do negócio é fraca
+O campo "descrição manual" no step de referência não tem contexto suficiente. O usuário não sabe que essa descrição será usada na seção "Sobre" do site.
 
-| Step | Bloco | Conteúdo |
-|------|-------|----------|
-| 1 | Briefing | Textarea livre + botão "Preencher com IA" + seletor de conteúdo (igual ao de artes) |
-| 2 | Plataforma | Instagram Reels, TikTok, YouTube Shorts, Feed Instagram, YouTube (define formato automaticamente) |
-| 3 | Formato + Duração | 9:16 / 1:1 / 16:9 + 5s / 8s (formato auto-selecionado pela plataforma, editável) |
-| 4 | Referências visuais | Upload de referências (recomendado, min 3 para melhor resultado) + banco de imagens da identidade |
-| 5 | Cena + Ação | Descrição do cenário + o que acontece (pré-preenchido pela IA) |
-| 6 | Mensagem + CTA | Frase principal + CTA (pré-preenchido pela IA) |
-| 7 | Estilo visual | Seleção de estilo (corporativo moderno, premium minimalista, etc.) + identidade visual automática |
-| 8 | Revisão | Resumo completo de todos os campos + thumbnails das referências |
+### 6. Estilo visual muito superficial
+Apenas 5 palavras (Moderno, Minimalista, Corporativo, Sofisticado, Tecnológico) sem descrição do que cada uma significa visualmente.
 
-**Arquivo:** `src/pages/cliente/ClienteRedesSociais.tsx` — refatorar `renderVideoStep()`, atualizar `totalVideoSteps` para 8, adicionar novos states (plataforma, estiloVisual, acaoCena)
+### 7. SiteWizardStep3 existe mas não é usado
+Há um componente completo (`SiteWizardStep3.tsx`) com briefing detalhado, qualidade bar, seções colapsáveis e todos os campos necessários — mas ele **não é usado** no fluxo principal do wizard.
 
-### 3. Refatorar `generate-social-video-frames` para usar prompt estruturado
+## Proposta: Reorganizar o wizard para cobrir os gaps
 
-O prompt atual é genérico. Precisa seguir a estrutura exata dos 5 exemplos:
+Manter a abordagem de steps interativos (não o formulário longo do Step3), mas adicionar os campos ausentes:
 
-```
-Create a {duracao}-second {formato} social media video ({aspect_ratio}).
+| Step | Conteúdo | Mudança |
+|------|----------|---------|
+| 1 | **Empresa** | **NOVO** — Nome, slogan, descrição do negócio, segmento |
+| 2 | Objetivo | Manter atual |
+| 3 | Público-alvo | Melhorar chips + adicionar dores |
+| 4 | Serviços + Diferenciais | Unificar em 1 step |
+| 5 | Prova Social | Manter atual |
+| 6 | **Contato** | **NOVO** — Telefone, email, WhatsApp, endereço, redes |
+| 7 | CTA | Manter + vincular ao WhatsApp do step anterior |
+| 8 | Páginas | Manter atual |
+| 9 | **Estilo + Tom** | Expandir — estilo visual com descrições + tom de comunicação + referência URL |
+| 10 | **Revisão** | **NOVO** — Resumo de tudo antes de gerar |
 
-Scene: {descricao_cena}
+### Detalhes das mudanças
 
-Action: {acao_cena}
+**Step 1 (Empresa):** 4 campos — nome (obrigatório), slogan, descrição (textarea), segmento (chips). Auto-preenche de `strategyAnswers` e `visualIdentity`.
 
-Environment: {ambiente extraído da cena}
+**Step 6 (Contato):** Telefone/WhatsApp, email, endereço, redes sociais, link WhatsApp para CTA. Essencial para o site ter dados reais.
 
-Style: {estilo_visual}
+**Step 9 (Estilo + Tom):** Cada estilo com descrição visual (ex: "Corporativo — Tons sóbrios, layout clássico, tipografia serifada"). Adicionar seletor de tom de comunicação (formal, descontraído, técnico, inspiracional). Campo de URL de referência.
 
-Text overlay:
-"{mensagem_video}"
+**Step 10 (Revisão):** Resumo visual de todos os campos preenchidos com indicador de completude, similar ao `QualityBar` do `SiteWizardStep3`.
 
-Final message:
-"{cta}"
-```
-
-Receber campos adicionais: `plataforma`, `estilo_visual`, `acao_cena`. Construir o prompt por frame seguindo essa estrutura.
-
-**Arquivo:** `supabase/functions/generate-social-video-frames/index.ts`
-
-### 4. Hook: adicionar `useGenerateVideoBriefing`
-
-Nova mutation que chama `generate-video-briefing`.
-
-**Arquivo:** `src/hooks/useClientePosts.ts`
-
-### 5. Ajustes no `handleGenerate` e `useGeneratePost`
-
-Passar os novos campos (plataforma, estilo_visual, acao_cena) ao edge function de vídeo.
-
-**Arquivo:** `src/hooks/useClientePosts.ts` + `src/pages/cliente/ClienteRedesSociais.tsx`
-
-## Constantes novas no wizard
-
-```typescript
-const VIDEO_PLATFORMS = [
-  { value: "instagram_reels", label: "Instagram Reels", format: "story" },
-  { value: "tiktok", label: "TikTok", format: "story" },
-  { value: "youtube_shorts", label: "YouTube Shorts", format: "story" },
-  { value: "instagram_feed", label: "Feed Instagram", format: "feed" },
-  { value: "youtube", label: "YouTube", format: "banner" },
-];
-
-const VIDEO_STYLES = [
-  { value: "corporativo_moderno", label: "Corporativo moderno" },
-  { value: "premium_minimalista", label: "Premium minimalista" },
-  { value: "publicidade_sofisticada", label: "Publicidade sofisticada" },
-  { value: "social_media", label: "Estilo social media" },
-  { value: "inspiracional", label: "Inspiracional" },
-];
-```
-
-## Arquivos modificados/criados
+### Arquivos a modificar
 
 | Arquivo | Ação |
 |---|---|
-| `supabase/functions/generate-video-briefing/index.ts` | Criar — IA extrai campos de vídeo do briefing |
-| `supabase/functions/generate-social-video-frames/index.ts` | Refatorar — prompt estruturado igual aos exemplos |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Refatorar — wizard vídeo 8 steps com briefing IA |
-| `src/hooks/useClientePosts.ts` | Adicionar mutation + campos novos no payload |
-| `supabase/config.toml` | Adicionar entry para generate-video-briefing |
+| `src/pages/cliente/ClienteSites.tsx` | Reorganizar steps, adicionar campos empresa/contato/revisão |
+| `supabase/functions/generate-site/index.ts` | Sem mudanças — já aceita todos os campos, só não recebe dados hoje |
+
+O edge function `generate-site` já está preparado para receber nome, contato, slogan, tom — o problema é exclusivamente no wizard que não coleta essas informações.
 
