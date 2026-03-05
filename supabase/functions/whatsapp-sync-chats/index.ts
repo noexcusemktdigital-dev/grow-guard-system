@@ -219,12 +219,12 @@ Deno.serve(async (req) => {
     // Get existing contacts in ONE query
     const { data: existingContacts } = await adminClient
       .from("whatsapp_contacts")
-      .select("id, phone, attending_mode")
+      .select("id, phone, attending_mode, last_message_preview")
       .eq("organization_id", orgId);
 
-    const existingMap = new Map<string, { id: string; attending_mode: string | null }>();
+    const existingMap = new Map<string, { id: string; attending_mode: string | null; last_message_preview: string | null }>();
     (existingContacts || []).forEach((c: any) => {
-      existingMap.set(c.phone, { id: c.id, attending_mode: c.attending_mode });
+      existingMap.set(c.phone, { id: c.id, attending_mode: c.attending_mode, last_message_preview: c.last_message_preview });
     });
 
     let contactsCreated = 0;
@@ -255,10 +255,11 @@ Deno.serve(async (req) => {
             instance_id: instance.id,
             unread_count: unreadCount,
           };
-          if (lastMsgTime) upd.last_message_at = lastMsgTime;
+          // Do NOT overwrite last_message_at — the webhook sets it accurately.
+          // Z-API /chats timestamps are imprecise and break ordering.
           if (name) upd.name = name;
           if (photoUrl) upd.photo_url = photoUrl;
-          if (preview) upd.last_message_preview = preview;
+          if (preview && !existing.last_message_preview) upd.last_message_preview = preview;
           updates.push({ id: existing.id, data: upd });
           contactsUpdated++;
         } else {
