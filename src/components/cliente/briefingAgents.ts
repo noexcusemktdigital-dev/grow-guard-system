@@ -54,13 +54,12 @@ export const SOFIA_STEPS: BriefingStep[] = [
   // ── Intro
   {
     id: "_intro_sofia",
-    agentMessage: "Oi! 👋 Sou a Sofia, sua consultora de marketing. Vou te fazer 14 perguntas rápidas divididas em 8 blocos para criar uma estratégia completa e personalizada para o seu negócio. Vamos lá?",
+    agentMessage: "Oi! 👋 Sou a Sofia, sua consultora de marketing. Vou te fazer algumas perguntas estratégicas para criar um plano completo e personalizado para o seu negócio. Tudo que você responder aqui vai alimentar TODAS as ferramentas da plataforma — conteúdos, artes, scripts, tráfego pago e mais. Vamos lá?",
     inputType: "info",
   },
 
   // ═══ BLOCO 1 — Negócio ═══
 
-  // 1. Nome + o que faz
   {
     id: "empresa",
     section: "Negócio",
@@ -69,8 +68,6 @@ export const SOFIA_STEPS: BriefingStep[] = [
     placeholder: "Ex: Somos uma clínica odontológica especializada em implantes.",
     helpText: "Uma descrição clara ajuda a IA a direcionar toda a estratégia.",
   },
-
-  // 2. Produto principal
   {
     id: "produto",
     section: "Negócio",
@@ -79,8 +76,6 @@ export const SOFIA_STEPS: BriefingStep[] = [
     placeholder: "Ex: Implantes dentários, consultoria empresarial, curso online...",
     helpText: "Focamos a estratégia no produto/serviço com maior potencial de retorno.",
   },
-
-  // 3. Ticket médio
   {
     id: "ticket_medio",
     section: "Negócio",
@@ -96,10 +91,17 @@ export const SOFIA_STEPS: BriefingStep[] = [
     ],
     helpText: "O ticket médio impacta diretamente nas projeções de receita.",
   },
+  {
+    id: "segmento",
+    section: "Negócio",
+    agentMessage: "Qual é o segmento da sua empresa?",
+    inputType: "select",
+    options: SEGMENTO_OPTIONS,
+    helpText: "O segmento influencia benchmarks, concorrência e estratégia.",
+  },
 
   // ═══ BLOCO 2 — Público ═══
 
-  // 4. Cliente ideal
   {
     id: "publico",
     section: "Público",
@@ -116,8 +118,14 @@ export const SOFIA_STEPS: BriefingStep[] = [
     ],
     helpText: "Quanto mais detalhado, melhor será a segmentação da estratégia.",
   },
-
-  // 5. Problema que resolve
+  {
+    id: "faixa_etaria",
+    section: "Público",
+    agentMessage: "Qual a faixa etária predominante do seu público?",
+    inputType: "multi-select",
+    options: FAIXA_ETARIA_OPTIONS,
+    helpText: "A faixa etária influencia linguagem, canais e tipo de conteúdo.",
+  },
   {
     id: "problema",
     section: "Público",
@@ -129,7 +137,6 @@ export const SOFIA_STEPS: BriefingStep[] = [
 
   // ═══ BLOCO 3 — Posicionamento ═══
 
-  // 6. Por que escolher sua empresa
   {
     id: "razao_escolha",
     section: "Posicionamento",
@@ -138,8 +145,6 @@ export const SOFIA_STEPS: BriefingStep[] = [
     placeholder: "Ex: Preço competitivo, qualidade superior, método próprio, experiência de 10 anos...",
     helpText: "Seu posicionamento será a base de toda a comunicação estratégica.",
   },
-
-  // 7. Diferencial claro
   {
     id: "diferencial",
     section: "Posicionamento",
@@ -156,9 +161,29 @@ export const SOFIA_STEPS: BriefingStep[] = [
     helpText: "Seu diferencial será usado para posicionar a marca e criar a proposta de valor.",
   },
 
-  // ═══ BLOCO 4 — Estrutura atual ═══
+  // ═══ BLOCO 4 — Concorrência (NOVO) ═══
 
-  // 8. Canais atuais
+  {
+    id: "concorrentes",
+    section: "Concorrência",
+    agentMessage: "Quem são seus 2-3 principais concorrentes? Pode citar nomes ou descrever.",
+    inputType: "textarea",
+    placeholder: "Ex: Clínica XYZ, Dr. Fulano, empresas grandes do segmento...",
+    helpText: "Saber quem compete com você permite posicionar melhor sua marca.",
+    optional: true,
+  },
+  {
+    id: "concorrente_faz_melhor",
+    section: "Concorrência",
+    agentMessage: "O que seus concorrentes fazem melhor que você hoje?",
+    inputType: "textarea",
+    placeholder: "Ex: Têm mais presença digital, investem mais em tráfego, marca mais conhecida...",
+    helpText: "Identificar pontos fracos relativos ajuda a criar estratégias de diferenciação.",
+    optional: true,
+  },
+
+  // ═══ BLOCO 5 — Estrutura atual ═══
+
   {
     id: "canais_atuais",
     section: "Estrutura Atual",
@@ -176,8 +201,6 @@ export const SOFIA_STEPS: BriefingStep[] = [
     ],
     helpText: "Saber os canais atuais ajuda a identificar oportunidades.",
   },
-
-  // 9. Investe em anúncios
   {
     id: "investe_anuncios",
     section: "Estrutura Atual",
@@ -192,10 +215,23 @@ export const SOFIA_STEPS: BriefingStep[] = [
     ],
     helpText: "Entender seu investimento atual em anúncios ajuda a dimensionar a estratégia.",
   },
+  {
+    id: "frequencia_conteudo",
+    section: "Estrutura Atual",
+    agentMessage: "Com que frequência você publica conteúdo nas redes sociais?",
+    inputType: "select",
+    options: [
+      { value: "nunca", label: "Não publico" },
+      { value: "esporadico", label: "Esporadicamente" },
+      { value: "1-2_semana", label: "1-2x por semana" },
+      { value: "3-5_semana", label: "3-5x por semana" },
+      { value: "diario", label: "Diariamente" },
+    ],
+    helpText: "Frequência atual ajuda a calibrar o calendário editorial.",
+  },
 
-  // ═══ BLOCO 5 — Objetivo ═══
+  // ═══ BLOCO 6 — Objetivo ═══
 
-  // 10. Objetivo principal
   {
     id: "objetivo",
     section: "Objetivo",
@@ -211,8 +247,6 @@ export const SOFIA_STEPS: BriefingStep[] = [
     ],
     helpText: "O objetivo define toda a direção da estratégia.",
   },
-
-  // 11. Meta de faturamento/crescimento
   {
     id: "meta",
     section: "Objetivo",
@@ -222,9 +256,35 @@ export const SOFIA_STEPS: BriefingStep[] = [
     helpText: "Metas concretas permitem criar projeções realistas.",
   },
 
-  // ═══ BLOCO 6 — Presença digital ═══
+  // ═══ BLOCO 7 — Comunicação (NOVO) ═══
 
-  // 12. Links
+  {
+    id: "tom_comunicacao",
+    section: "Comunicação",
+    agentMessage: "Qual tom de comunicação combina mais com sua marca?",
+    inputType: "multi-select",
+    options: [
+      { value: "profissional", label: "Profissional / Formal" },
+      { value: "acessivel", label: "Acessível / Amigável" },
+      { value: "provocativo", label: "Provocativo / Direto" },
+      { value: "educativo", label: "Educativo / Didático" },
+      { value: "inspirador", label: "Inspirador / Motivacional" },
+      { value: "humoristico", label: "Humorístico / Descontraído" },
+    ],
+    helpText: "O tom de voz será aplicado em todos os conteúdos, scripts e comunicações.",
+  },
+  {
+    id: "marcas_referencia",
+    section: "Comunicação",
+    agentMessage: "Existe alguma marca que você admira e gostaria de se parecer? Pode ser do seu segmento ou não.",
+    inputType: "textarea",
+    placeholder: "Ex: Apple pela simplicidade, Nubank pela comunicação, Nike pela energia...",
+    helpText: "Referências ajudam a IA a entender a estética e posicionamento desejados.",
+    optional: true,
+  },
+
+  // ═══ BLOCO 8 — Presença digital ═══
+
   {
     id: "links_digitais",
     section: "Presença Digital",
@@ -235,24 +295,38 @@ export const SOFIA_STEPS: BriefingStep[] = [
     optional: true,
   },
 
-  // ═══ BLOCO 7 — Região ═══
+  // ═══ BLOCO 9 — Sazonalidade (NOVO) ═══
 
-  // 13. Região de atuação
+  {
+    id: "sazonalidade",
+    section: "Sazonalidade",
+    agentMessage: "Seu negócio tem sazonalidade? Alguns meses vendem mais que outros?",
+    inputType: "select",
+    options: [
+      { value: "nao", label: "Não, é estável o ano todo" },
+      { value: "inicio_ano", label: "Sim, vende mais no início do ano" },
+      { value: "meio_ano", label: "Sim, vende mais no meio do ano" },
+      { value: "fim_ano", label: "Sim, vende mais no fim do ano" },
+      { value: "verao", label: "Sim, no verão" },
+      { value: "inverno", label: "Sim, no inverno" },
+      { value: "personalizar", label: "Outro padrão" },
+    ],
+    helpText: "Sazonalidade influencia o calendário editorial e investimento em tráfego.",
+  },
+
+  // ═══ BLOCO 10 — Região e Orçamento ═══
+
   {
     id: "regiao",
-    section: "Região",
+    section: "Região e Orçamento",
     agentMessage: "Onde sua empresa atua? Informe cidade, estado ou país.",
     inputType: "text",
     placeholder: "Ex: São Paulo - SP, Brasil inteiro, América Latina...",
     helpText: "A região de atuação influencia a segmentação de campanhas.",
   },
-
-  // ═══ BLOCO 8 — Orçamento ═══
-
-  // 14. Investimento mensal em marketing
   {
     id: "orcamento",
-    section: "Orçamento",
+    section: "Região e Orçamento",
     agentMessage: "Quanto você pretende investir em marketing por mês?",
     inputType: "select",
     options: [
