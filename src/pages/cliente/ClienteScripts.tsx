@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 import { useStrategyData } from "@/hooks/useStrategyData";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 
 const funnelStages = [
   { key: "prospeccao", label: "Prospecção", icon: Crosshair, gradient: "from-blue-500/15 to-blue-600/5", accent: "text-blue-400 border-blue-500/30" },
@@ -29,10 +31,12 @@ export default function ClienteScripts() {
   const { data: scripts, isLoading } = useClienteScripts();
   const { createScript, updateScript, deleteScript: deleteScriptMutation } = useClienteScriptMutations();
   const { hasStrategy, dores, objecoes, gatilhosCompra, propostaValor } = useStrategyData();
+  const { data: orgId } = useUserOrgId();
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [improvingId, setImprovingId] = useState<string | null>(null);
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
 
   const allScripts = scripts ?? [];
 
@@ -63,10 +67,15 @@ export default function ClienteScripts() {
           },
           mode: "improve",
           existingScript: currentContent,
+          organization_id: orgId,
         },
       });
       if (error) throw error;
       if (data?.error) {
+        if (data.error.includes("INSUFFICIENT_CREDITS") || data.error.includes("Créditos insuficientes")) {
+          setShowCreditsDialog(true);
+          return;
+        }
         toast({ title: "Erro", description: data.error, variant: "destructive" });
         return;
       }
@@ -75,7 +84,11 @@ export default function ClienteScripts() {
         { onSuccess: () => toast({ title: "Script melhorado com IA!" }) }
       );
     } catch (e: any) {
-      toast({ title: "Erro ao melhorar script", description: e.message, variant: "destructive" });
+      if (isInsufficientCreditsError(e)) {
+        setShowCreditsDialog(true);
+      } else {
+        toast({ title: "Erro ao melhorar script", description: e.message, variant: "destructive" });
+      }
     } finally {
       setImprovingId(null);
     }
@@ -234,6 +247,13 @@ export default function ClienteScripts() {
         open={showCreate}
         onOpenChange={setShowCreate}
         onSave={handleSaveFromDialog}
+      />
+
+      <InsufficientCreditsDialog
+        open={showCreditsDialog}
+        onOpenChange={setShowCreditsDialog}
+        actionLabel="melhorar este script"
+        creditCost={150}
       />
     </div>
   );
