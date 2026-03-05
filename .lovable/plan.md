@@ -1,102 +1,65 @@
 
 
-# Diagnóstico: Ferramenta de Conteúdos — O que falta para gerar um prompt de qualidade
+# Melhorias na Ferramenta de Estratégia de Marketing
 
-## Estado Atual
+## Problemas Identificados
 
-O wizard atual coleta **8 campos** antes de gerar:
-1. Quantidade de conteúdos
-2. Distribuição de formatos (carrossel, post, vídeo, story, artigo)
-3. Objetivos (educar, autoridade, engajamento, leads, vender)
-4. Tema livre (opcional)
-5. Plataforma (Instagram, LinkedIn, TikTok, YouTube)
-6. Tom de comunicação (educativo, institucional, direto, provocativo)
-7. Público-alvo (texto livre)
-8. Revisão
+1. **Concorrentes**: O briefing pede apenas nome/descrição textual dos concorrentes (campo `concorrentes` textarea). A IA não tem dados reais para analisar — precisa de URLs (site/Instagram) para poder extrair informações concretas.
 
-**Problemas identificados:**
+2. **Poucas opções no briefing**: Alguns campos limitam a personalização — faltam opções em público, tom, objetivos, e campos adicionais para aprofundar o contexto.
 
-| Problema | Impacto |
-|---|---|
-| Estratégia é passada como JSON bruto — a extração no prompt usa chaves genéricas (`step_0`, `step_3`) | IA recebe dados incompletos ou vazios |
-| Só o campo "público" é pré-preenchido pela estratégia | Tom, pilares, persona, diferenciais, dores — nada é aproveitado |
-| Faltam informações essenciais: nome da marca, diferencial, dores do público, proposta de valor, estilo de linguagem | Prompt genérico → conteúdo genérico |
-| Tom de voz tem só 4 opções fixas, ignorando o tom definido na estratégia | Inconsistência entre estratégia e conteúdo |
-| Não há campo de "referências" ou "o que evitar" | IA não sabe os limites da marca |
+3. **Estratégia não fica aberta por padrão**: Após geração, deveria mostrar o dashboard direto (sem precisar de ação adicional).
 
-## O que é necessário para um bom prompt de conteúdo
+4. **"Próximos Passos" mostra meses**: Deveria mostrar ações diretas linkadas às ferramentas de marketing (não comercial).
 
-Para gerar conteúdo realmente estratégico, a IA precisa de **3 camadas de informação**:
-
-### Camada 1 — Da Estratégia (auto-preenchida, sem perguntar de novo)
-- Nome da empresa e segmento
-- Produto/serviço principal
-- ICP: persona, dores, desejos, objeções, gatilhos de compra
-- Proposta de valor e diferenciais
-- Tom de comunicação (principal + personalidade + palavras usar/evitar)
-- Pilares de conteúdo e calendário editorial
-- Funil de aquisição (topo/meio/fundo)
-
-### Camada 2 — Do Briefing de Conteúdo (perguntas específicas para ESTE lote)
-- Quantidade e distribuição de formatos
-- Plataforma de publicação
-- Objetivo principal deste lote (pode diferir da estratégia geral)
-- Tema/assunto direcionador (opcional — senão usa pilares)
-- Momento do funil que quer focar (topo, meio ou fundo)
-- Contexto atual: promoção, lançamento, data comemorativa, sazonalidade?
-- Referência de estilo: quer algo mais leve ou mais técnico neste lote?
-
-### Camada 3 — Regras de formatação (fixas no prompt, não pergunta ao usuário)
-- Estrutura obrigatória por formato (slides do carrossel, hook do vídeo, etc.)
-- Regras de distribuição de objetivos (40/30/20/10)
-- Obrigatoriedade de legenda completa, hashtags, headlines, embasamento
+5. **Nova estratégia deve enviar a atual pro histórico**: Já funciona parcialmente (desativa a anterior), mas precisa de confirmação clara ao usuário.
 
 ## Plano de Implementação
 
-### 1. Reestruturar o Wizard (`ClienteConteudos.tsx`)
+### 1. Melhorar coleta de concorrentes (`briefingAgents.ts`)
 
-Quando **há estratégia ativa**, o wizard fica mais curto porque muitos dados já existem:
+Substituir o campo textarea de concorrentes por um fluxo que pede **URLs dos concorrentes** (site ou Instagram) para que a IA possa analisar dados reais:
 
-**Com estratégia (5 passos):**
-1. Quantidade + Formatos (unificado)
-2. Objetivo + Momento do funil
-3. Tema/Contexto (com sugestões dos pilares da estratégia)
-4. Contexto especial (lançamento, promoção, data comemorativa — ou "nenhum")
-5. Revisão (mostrando dados da estratégia que serão usados)
+- Campo `concorrentes_urls`: textarea pedindo "Cole os links (site ou Instagram) dos seus 2-3 principais concorrentes"
+- Manter o campo `concorrente_faz_melhor` como está
 
-**Sem estratégia (8 passos — como hoje, mas melhorado):**
-1. Quantidade + Formatos
-2. Objetivos
-3. Sobre o negócio (nome, produto, diferencial)
-4. Público-alvo (persona, dores, desejos)
-5. Tom de comunicação (expandido com mais opções)
-6. Plataforma
-7. Tema/Contexto
-8. Revisão
+### 2. Expandir opções do briefing (`briefingAgents.ts`)
 
-### 2. Melhorar o Prompt no Edge Function (`generate-content/index.ts`)
+- **Público** (`publico`): Adicionar mais perfis (mães, jovens, investidores, atletas, etc.)
+- **Tom de comunicação** (`tom_comunicacao`): Adicionar opções (técnico/especialista, premium/sofisticado, urgente/escassez, empático/acolhedor)
+- **Objetivo** (`objetivo`): Adicionar (fidelizar clientes, expandir território, aumentar ticket médio, entrar em novo mercado)
+- **Diferencial** (`diferencial`): Adicionar (equipe qualificada, resultados comprovados, marca reconhecida)
+- **Novo campo**: "Quais resultados seus clientes geralmente alcançam?" (prova social real)
+- **Novo campo**: "O que você NÃO quer na sua comunicação?" (ajuda a definir limites)
 
-Usar `useStrategyData` de forma estruturada para injetar contexto rico:
+### 3. Prompt de estratégia — análise de concorrência real (`generate-strategy/index.ts`)
 
-- ICP completo com dores, desejos, objeções e gatilhos
-- Proposta de valor e diferenciais
-- Tom com palavras para usar e evitar
-- Pilares de conteúdo como base temática
-- Contexto de funil para alinhar profundidade do conteúdo
+Atualizar o system prompt para instruir a IA a:
+- Usar as URLs fornecidas como base para inferir posicionamento, conteúdo e estratégia dos concorrentes
+- Gerar análise mais detalhada com "presença digital estimada" por concorrente
 
-### 3. Pré-preencher campos inteligentemente
+### 4. Próximos Passos: linkar só ferramentas de marketing (`ClientePlanoMarketing.tsx`)
 
-Quando a estratégia existe:
-- Tom → vem do `tom_comunicacao.tom_principal`
-- Público → vem do `icp.descricao`
-- Tema → sugere os `pilares` como opções clicáveis
-- Plataforma → sugere o `canal_prioritario` da estratégia
+- Alterar o card "Próximos Passos" para NÃO mostrar "Mês 1" como título
+- Mostrar uma lista de ações com links diretos para as ferramentas de marketing: Conteúdos, Postagens, Sites, Tráfego, Scripts
+- Remover referências ao CRM/comercial nesse card (focar em marketing)
 
-### Arquivos modificados
+### 5. Estratégia sempre aberta (`ClientePlanoMarketing.tsx`)
+
+- Quando `hasResult === true`, o dashboard já abre direto (já funciona assim)
+- Garantir que após geração o `showChat` volta a `false` e `isGenerating` volta a `false` (já faz isso)
+- O comportamento já está correto — a estratégia fica visível sempre que existe
+
+### 6. Confirmação ao regenerar (`ClientePlanoMarketing.tsx`)
+
+- Ao clicar "Nova Estratégia", mostrar um dialog de confirmação: "Sua estratégia atual será movida para o histórico. Deseja continuar?"
+- Usar `AlertDialog` já disponível no projeto
+
+## Arquivos Modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/cliente/ClienteConteudos.tsx` | Wizard adaptativo (curto com estratégia, completo sem), pré-preenchimento, sugestões de pilares |
-| `supabase/functions/generate-content/index.ts` | Prompt reestruturado com extração completa dos dados da estratégia |
-| `src/hooks/useClienteContentV2.ts` | Payload expandido para incluir novos campos do briefing |
+| `src/components/cliente/briefingAgents.ts` | Expandir opções, trocar campo concorrentes por URLs, adicionar campos de prova social e limites |
+| `supabase/functions/generate-strategy/index.ts` | Atualizar prompt para usar URLs de concorrentes |
+| `src/pages/cliente/ClientePlanoMarketing.tsx` | Próximos Passos sem mês, AlertDialog na regeneração, focar em ferramentas de marketing |
 
