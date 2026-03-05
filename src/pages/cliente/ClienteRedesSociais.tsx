@@ -86,6 +86,8 @@ export default function ClienteRedesSociais() {
   const [manualColors, setManualColors] = useState("");
   const [manualStyle, setManualStyle] = useState("");
   const [brandName, setBrandName] = useState("");
+  const [supportingText, setSupportingText] = useState("");
+  const [bulletPoints, setBulletPoints] = useState("");
 
   // Video state
   const [videoFormat, setVideoFormat] = useState("story");
@@ -127,6 +129,8 @@ export default function ClienteRedesSociais() {
     setManualColors("");
     setManualStyle("");
     setBrandName("");
+    setSupportingText("");
+    setBulletPoints("");
     setVideoFormat("story");
     setVideoDuration("5s");
     setVideoCena("");
@@ -204,6 +208,8 @@ export default function ClienteRedesSociais() {
         manual_colors: !visualIdentity && manualColors ? manualColors : undefined,
         manual_style: !visualIdentity && manualStyle ? manualStyle : undefined,
         brand_name: brandName || undefined,
+        supporting_text: postType === "art" ? supportingText || undefined : undefined,
+        bullet_points: postType === "art" ? bulletPoints || undefined : undefined,
       });
       setGeneratedResult(result);
     } catch (err: any) {
@@ -504,6 +510,25 @@ export default function ClienteRedesSociais() {
                   placeholder="Ex: É processo"
                   value={subheadline}
                   onChange={(e) => setSubheadline(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Texto de apoio (opcional)</Label>
+                <Textarea
+                  placeholder="Ex: Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores."
+                  value={supportingText}
+                  onChange={(e) => setSupportingText(e.target.value)}
+                  rows={2}
+                  className="mt-1 resize-none"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Bullet points (opcional)</Label>
+                <Input
+                  placeholder="Ex: Tempo, Renda, Objetivo"
+                  value={bulletPoints}
+                  onChange={(e) => setBulletPoints(e.target.value)}
                   className="mt-1"
                 />
               </div>

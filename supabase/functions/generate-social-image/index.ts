@@ -17,6 +17,7 @@ interface StructuredPromptResult {
   color_palette: string;
   mood: string;
   style_closing: string;
+  brand_design_elements: string;
 }
 
 async function analyzeAndOptimizePrompt(
@@ -133,8 +134,9 @@ Analyze everything above and produce the structured visual prompt sections.`;
                   color_palette: { type: "string", description: "Specific brand colors and where they appear." },
                   mood: { type: "string", description: "5-10 mood keywords separated by commas." },
                   style_closing: { type: "string", description: "Single closing style line." },
+                  brand_design_elements: { type: "string", description: "List 5-8 specific brand design elements extracted from the identity/references: color scheme details, layout shapes, icon style, typography feel, overall aesthetic. Format as comma-separated items like: black and white base layout, lime green highlight color, rounded card shapes, circular icon elements, modern financial consulting layout, clean sans-serif typography." },
                 },
-                required: ["scene", "environment", "design_layout", "color_palette", "mood", "style_closing"],
+                required: ["scene", "environment", "design_layout", "color_palette", "mood", "style_closing", "brand_design_elements"],
                 additionalProperties: false,
               },
             },
@@ -241,6 +243,7 @@ serve(async (req) => {
       organization_id, reference_images, art_style,
       tipo_postagem, headline, subheadline, cta, cena, elementos_visuais,
       manual_colors, manual_style, brand_name,
+      supporting_text, bullet_points,
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -319,10 +322,12 @@ serve(async (req) => {
 
     // Build text section
     let textSection = "";
-    if (headline || subheadline || cta || brand_name) {
+    if (headline || subheadline || cta || brand_name || supporting_text || bullet_points) {
       textSection = "\nText in Portuguese:";
       if (headline) textSection += `\nHeadline: ${headline}`;
       if (subheadline) textSection += `\nHighlight headline: ${subheadline}`;
+      if (supporting_text) textSection += `\nSupporting text: ${supporting_text}`;
+      if (bullet_points) textSection += `\nBullet points: ${bullet_points}`;
       if (cta) textSection += `\nCTA: ${cta}`;
       if (brand_name) textSection += `\nBrand: ${brand_name}`;
     }
@@ -380,8 +385,12 @@ Generate this image now.`;
 
     // Build message content with reference images
     const hasRefs = reference_images && reference_images.length > 0;
+    const brandElements = optimized?.brand_design_elements
+      ? optimized.brand_design_elements
+      : "color palette, layout structure, card shapes, icon elements, typography style, and overall design language";
     const referenceInstruction = `Use the attached images ONLY as brand style references for the visual identity.
-Replicate the brand design system including: color palette, layout structure, card shapes, icon elements, typography style, and overall design language.
+Replicate the brand design system including:
+${brandElements.split(",").map((e: string) => `- ${e.trim()}`).join("\n")}
 IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references.
 Create a NEW scene that follows the same brand design language.`;
 
