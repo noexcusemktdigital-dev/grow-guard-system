@@ -220,6 +220,30 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Auto-link CRM lead if contact has no crm_lead_id
+    if (!isFromMe && (!existingContact || !(existingContact as any).crm_lead_id)) {
+      try {
+        const { data: matchedLead } = await adminClient
+          .from("crm_leads")
+          .select("id")
+          .eq("organization_id", orgId)
+          .eq("phone", phone)
+          .is("lost_at", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (matchedLead) {
+          await adminClient
+            .from("whatsapp_contacts")
+            .update({ crm_lead_id: matchedLead.id })
+            .eq("id", contactId);
+        }
+      } catch (e) {
+        console.error("CRM auto-link error:", e);
+      }
+    }
+
     // Insert message with correct direction
     const direction = isFromMe ? "outbound" : "inbound";
     const msgStatus = isFromMe ? "sent" : "received";
