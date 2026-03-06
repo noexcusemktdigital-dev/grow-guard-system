@@ -47,7 +47,7 @@ function GoogleSetupWizard({ open, onOpenChange }: { open: boolean; onOpenChange
   const [clientSecret, setClientSecret] = useState("");
   const saveCredentials = useGoogleCalendarSaveCredentials();
   const connectGoogle = useGoogleCalendarConnect();
-  const redirectUri = `${window.location.origin}/agenda`;
+  const redirectUri = `${window.location.origin}${window.location.pathname}`;
 
   async function handleSaveAndConnect() {
     if (!clientId.trim() || !clientSecret.trim()) { toast.error("Preencha o Client ID e Client Secret"); return; }
@@ -269,7 +269,7 @@ export default function Agenda() {
   useEffect(() => {
     const code = searchParams.get("code");
     if (code) {
-      const redirectUri = `${window.location.origin}/agenda`;
+      const redirectUri = `${window.location.origin}${window.location.pathname}`;
       exchangeCode.mutate({ code, redirectUri }, {
         onSuccess: () => { setSearchParams({}); handleGooglePull(); },
         onError: (e: any) => toast.error(e.message || "Erro ao conectar Google"),

@@ -1,40 +1,31 @@
 
 
-## Diagnostico: Integracao Google Agenda
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Problema identificado
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-O `redirect_uri` enviado ao Google e `https://sistema.noexcusedigital.com/agenda`. Para o OAuth funcionar, esse URI **exato** precisa estar cadastrado como "Authorized redirect URI" no Google Cloud Console do projeto `344970008357`.
+### Ações
 
-### O que precisa ser feito
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-#### 1. No Google Cloud Console (manual, feito por voce)
-- Acesse [Google Cloud Console > Credentials](https://console.cloud.google.com/apis/credentials)
-- Edite o OAuth Client ID `344970008357-kugceeg6vonnkurs9vhu5b14fe1ruutv`
-- Em **Authorized redirect URIs**, adicione:
-  - `https://sistema.noexcusedigital.com/agenda` (franqueadora)
-  - `https://sistema.noexcusedigital.com/franqueado/agenda` (franqueado)
-  - `https://grow-guard-system.lovable.app/agenda` (preview/staging)
-- Em **Authorized JavaScript origins**, adicione:
-  - `https://sistema.noexcusedigital.com`
-  - `https://grow-guard-system.lovable.app`
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-#### 2. Verificacao do app (referente ao link que voce enviou)
-- Se o app esta em modo "Testing", somente usuarios adicionados como "Test users" na tela de consentimento (OAuth Consent Screen) poderao autorizar
-- Para uso em producao com qualquer usuario, o app precisa ser publicado (e possivelmente verificado pelo Google, dependendo dos escopos)
-- O escopo `https://www.googleapis.com/auth/calendar` e **restrito**, entao o Google pode exigir verificacao completa
+3. **Executar o teste** e analisar o resultado definitivo
 
-#### 3. Correcao de codigo (pequena)
-O `redirect_uri` no `Agenda.tsx` esta hardcoded como `/agenda`, mas o usuario acessa via `/franqueadora/agenda`. Vou corrigir para usar `window.location.pathname` dinamicamente, garantindo que funcione em ambas as rotas.
+### Detalhe técnico
 
-### Arquivos a alterar
-- `src/pages/Agenda.tsx` - Corrigir `redirectUri` para usar o pathname atual
-- `src/pages/franqueado/FranqueadoAgenda.tsx` - Mesmo ajuste (ja usa `/franqueado/agenda`, esta ok)
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+```
 
-### Resumo
-| Acao | Responsavel |
-|------|-------------|
-| Adicionar redirect URIs no Google Console | Voce |
-| Adicionar test users ou publicar app | Voce |
-| Corrigir redirectUri dinamico no codigo | Lovable |
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 
