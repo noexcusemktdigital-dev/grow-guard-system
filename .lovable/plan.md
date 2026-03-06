@@ -1,31 +1,19 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Solução: Adicionar usuário de teste no Google Cloud Console
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+O erro **403: access_denied** acontece porque o app Google OAuth ainda está em modo **"Testing"** (não publicado). Nesse modo, apenas e-mails cadastrados como "Test users" conseguem autorizar.
 
-### Ações
+### Ação necessária (manual, no Google Cloud Console)
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+1. Acesse [Google Cloud Console → OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent)
+2. Na seção **"Test users"**, clique em **"Add users"**
+3. Adicione: `davi.ttesch@gmail.com`
+4. Salve
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+Depois disso, tente conectar novamente pela página de Agenda. O fluxo OAuth deve funcionar normalmente.
 
-3. **Executar o teste** e analisar o resultado definitivo
+### Sobre publicação do app
 
-### Detalhe técnico
-
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
-```
-
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+Enquanto o app estiver em modo "Testing", só test users cadastrados poderão conectar. Para permitir qualquer usuário Google sem cadastro prévio, você precisaria publicar o app — mas como o escopo `calendar` é restrito, o Google pode exigir verificação completa (envio de política de privacidade, vídeo demonstrativo, etc). Para uso interno da rede de franquias, manter em modo Testing e adicionar os e-mails manualmente é a abordagem mais prática.
 
