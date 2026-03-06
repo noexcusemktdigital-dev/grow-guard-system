@@ -269,7 +269,7 @@ export default function Agenda() {
   useEffect(() => {
     const code = searchParams.get("code");
     if (code) {
-      const redirectUri = `${window.location.origin}/agenda`;
+      const redirectUri = `${window.location.origin}${window.location.pathname}`;
       exchangeCode.mutate({ code, redirectUri }, {
         onSuccess: () => { setSearchParams({}); handleGooglePull(); },
         onError: (e: any) => toast.error(e.message || "Erro ao conectar Google"),
