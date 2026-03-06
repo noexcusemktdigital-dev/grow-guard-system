@@ -1,21 +1,26 @@
 
 
-## Diagnóstico
+## Plano: Organizar entregas e limpar artes na ferramenta Redes Sociais
 
-A org **NOEXCUSE** (`adb09618-e9f3-4dbd-a89c-29e3eb1bec9f`) está no plano **Starter** que permite apenas **8 conteúdos/mês** — e já gerou exatamente 8 este mês, por isso o bloqueio aparece. Os créditos mostram 9.900/5.000 porque o saldo é 9.900 mas o cap do plano Starter é 5.000 (a barra ultrapassa 100%).
+### Problemas identificados
 
-Isso é o comportamento esperado do sistema. Para desbloquear, há duas opções:
+1. **Cards não clicáveis**: Na view de histórico (linhas 522-548), os cards de postagens não possuem `onClick` — o usuário não consegue clicar para ver detalhes ou aprovar.
+2. **Dados existentes**: Há 1 postagem na tabela `client_posts` (org NOEXCUSE). Será deletada via SQL.
 
-### Opção A — Fazer upgrade do plano para Scale
-Atualizar a subscription de `starter` para `scale` (maxContents: 20, credits: 50.000):
+### Ações
 
-1. **UPDATE na tabela subscriptions**: mudar `plan` para `scale`, `modules` para `combo`, estender `expires_at` +30 dias
-2. **UPDATE na credit_wallets**: ajustar balance para 50.000
+**1. Apagar todas as postagens existentes**
+- DELETE de todos os registros da tabela `client_posts` para a org `adb09618-e9f3-4dbd-a89c-29e3eb1bec9f`.
 
-### Opção B — Apenas resetar a quota de conteúdos
-Se quiser manter o plano Starter mas liberar a geração novamente:
+**2. Tornar os cards clicáveis no histórico**
+- Adicionar `onClick` nos cards da lista de postagens para abrir um estado de detalhe (reutilizar a view de resultado já existente com `setGeneratedResult`).
+- Ao clicar, popular `generatedResult` com os dados do post clicado e exibir a tela de resultado (que já tem preview, botão de aprovar, download etc).
 
-1. **DELETE** dos 8 registros de `client_content` deste mês (ou marcar como de outro período)
+**3. Melhorar organização visual das entregas**
+- Agrupar postagens por status: "Pendentes" e "Aprovadas" em seções separadas.
+- Adicionar indicador visual de clicável (cursor-pointer + hover effect já existe, mas adicionar um overlay com ícone de Eye no hover).
 
-**Recomendo a Opção A** para testes completos. Posso executar ao aprovar.
+### Arquivos a editar
+- `src/pages/cliente/ClienteRedesSociais.tsx` — adicionar onClick nos cards + agrupamento por status
+- SQL DELETE via insert tool para limpar os dados
 
