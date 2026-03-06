@@ -1,31 +1,14 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Renovar plano do franqueado.teste@noexcuse.com
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+**Situação atual:** A org "Unidade Teste" (`5ee93547-ea00-4757-ae95-02e558409418`, tipo `franqueado`) não possui subscription nem wallet de créditos.
 
-### Ações
+### Ações (via insert tool — dados, não schema)
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+1. **Criar subscription** para a org com plano `scale`, módulos `combo`, status `active`, expiração em +30 dias
+2. **Criar wallet de créditos** com saldo de 50.000
+3. **Registrar transação** de crédito inicial para manter histórico
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
-
-3. **Executar o teste** e analisar o resultado definitivo
-
-### Detalhe técnico
-
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
-```
-
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+Isso vai garantir que o usuário franqueado tenha acesso completo a todas as funcionalidades sem bloqueios de trial ou créditos.
 
