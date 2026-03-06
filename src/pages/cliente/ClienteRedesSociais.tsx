@@ -519,32 +519,67 @@ export default function ClienteRedesSociais() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((p) => (
-              <Card key={p.id} className="overflow-hidden group hover:shadow-md transition-shadow">
-                {p.result_url ? (
-                  <div className="aspect-square bg-muted relative overflow-hidden">
-                    <img src={p.result_url} alt="" className="w-full h-full object-cover" />
-                    <Badge className="absolute top-2 right-2 text-[10px]" variant={p.status === "approved" ? "default" : "secondary"}>
-                      {p.status === "approved" ? "Aprovado" : "Pendente"}
-                    </Badge>
-                  </div>
-                ) : (
-                  <div className="aspect-square bg-muted flex items-center justify-center">
-                    {p.type === "video" ? <Video className="w-8 h-8 text-muted-foreground/40" /> : <Image className="w-8 h-8 text-muted-foreground/40" />}
-                  </div>
-                )}
-                <CardContent className="p-3 space-y-1">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline" className="text-[10px]">{p.type === "video" ? "Vídeo" : "Arte"}</Badge>
-                    {p.format && <span>{p.format}</span>}
-                    <span className="ml-auto">{format(new Date(p.created_at), "dd/MM/yy")}</span>
-                  </div>
-                  <p className="text-sm line-clamp-2">{p.input_text}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <>
+            {(() => {
+              const pending = posts.filter(p => p.status !== "approved");
+              const approved = posts.filter(p => p.status === "approved");
+              const renderPostCard = (p: PostItem) => (
+                <Card
+                  key={p.id}
+                  className="overflow-hidden group hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setGeneratedResult({ post: p, result_url: p.result_url, result_data: p.result_data })}
+                >
+                  {p.result_url ? (
+                    <div className="aspect-square bg-muted relative overflow-hidden">
+                      <img src={p.result_url} alt="" className="w-full h-full object-cover" />
+                      <Badge className="absolute top-2 right-2 text-[10px]" variant={p.status === "approved" ? "default" : "secondary"}>
+                        {p.status === "approved" ? "Aprovado" : "Pendente"}
+                      </Badge>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                        <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aspect-square bg-muted flex items-center justify-center">
+                      {p.type === "video" ? <Video className="w-8 h-8 text-muted-foreground/40" /> : <Image className="w-8 h-8 text-muted-foreground/40" />}
+                    </div>
+                  )}
+                  <CardContent className="p-3 space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="text-[10px]">{p.type === "video" ? "Vídeo" : "Arte"}</Badge>
+                      {p.format && <span>{p.format}</span>}
+                      <span className="ml-auto">{format(new Date(p.created_at), "dd/MM/yy")}</span>
+                    </div>
+                    <p className="text-sm line-clamp-2">{p.input_text}</p>
+                  </CardContent>
+                </Card>
+              );
+              return (
+                <div className="space-y-6">
+                  {pending.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                        <Clock className="w-4 h-4" /> Pendentes ({pending.length})
+                      </h3>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {pending.map(renderPostCard)}
+                      </div>
+                    </div>
+                  )}
+                  {approved.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                        <Check className="w-4 h-4" /> Aprovadas ({approved.length})
+                      </h3>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {approved.map(renderPostCard)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </>
         )}
       </div>
     );
