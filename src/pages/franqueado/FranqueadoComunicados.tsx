@@ -126,9 +126,9 @@ export default function FranqueadoComunicados() {
           <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Prioridade" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
-            <SelectItem value="normal">Normal</SelectItem>
-            <SelectItem value="high">Alta</SelectItem>
-            <SelectItem value="critical">Crítica</SelectItem>
+            <SelectItem value="Normal">Normal</SelectItem>
+            <SelectItem value="Alta">Alta</SelectItem>
+            <SelectItem value="Crítica">Crítica</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterType} onValueChange={setFilterType}>
