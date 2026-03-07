@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { user_id, company_name } = await req.json();
+    const { user_id, company_name, franchisee_org_id } = await req.json();
 
     if (!user_id) {
       return new Response(JSON.stringify({ error: "user_id is required" }), {
