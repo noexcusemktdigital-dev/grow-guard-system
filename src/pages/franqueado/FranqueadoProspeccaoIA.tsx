@@ -68,7 +68,7 @@ function NovaProspeccaoTab() {
     nicho: "",
     porte: "",
     desafio: "",
-    objetivo: "Agendar reunião de diagnóstico",
+    objetivo: "Agendar diagnóstico gratuito",
     nome_empresa: "",
     site: "",
     redes_sociais: "",
@@ -109,7 +109,7 @@ function NovaProspeccaoTab() {
   const handleReset = () => {
     setResult(null);
     setProspectionId(null);
-    setInputs({ regiao: "", nicho: "", porte: "", desafio: "", objetivo: "Agendar reunião de diagnóstico", nome_empresa: "", site: "", redes_sociais: "", conhecimento_previo: "", nivel_contato: "frio", contato_decisor: "", cargo_decisor: "" });
+    setInputs({ regiao: "", nicho: "", porte: "", desafio: "", objetivo: "Agendar diagnóstico gratuito", nome_empresa: "", site: "", redes_sociais: "", conhecimento_previo: "", nivel_contato: "frio", contato_decisor: "", cargo_decisor: "" });
   };
 
   return (
@@ -118,7 +118,7 @@ function NovaProspeccaoTab() {
       <Card className="glass-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-            <Target className="w-4 h-4 text-primary" /> Configurar Prospecção
+            <Target className="w-4 h-4 text-primary" /> Criar Prospecção
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -160,13 +160,13 @@ function NovaProspeccaoTab() {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Objetivo da Abordagem</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Objetivo da Abordagem</label>
               <Select value={inputs.objetivo} onValueChange={(v) => setInputs((p) => ({ ...p, objetivo: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Agendar reunião de diagnóstico">Agendar Reunião</SelectItem>
-                  <SelectItem value="Apresentar serviço">Apresentar Serviço</SelectItem>
-                  <SelectItem value="Reativar contato">Reativar Contato</SelectItem>
+                  <SelectItem value="Agendar diagnóstico gratuito">Agendar diagnóstico gratuito</SelectItem>
+                  <SelectItem value="Retomar conversa com lead">Retomar conversa com lead</SelectItem>
+                  <SelectItem value="Lead quente por indicação — agendar reunião">Lead quente por indicação — agendar reunião</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -192,7 +192,7 @@ function NovaProspeccaoTab() {
             <Textarea value={inputs.conhecimento_previo} onChange={(e) => setInputs((p) => ({ ...p, conhecimento_previo: e.target.value }))} placeholder="Ex: Vi no Instagram que fazem promoções com frequência, mas não investem em tráfego pago..." rows={3} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Desafio Principal do Prospect</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Principal dor ou necessidade identificada</label>
             <Textarea value={inputs.desafio} onChange={(e) => setInputs((p) => ({ ...p, desafio: e.target.value }))} placeholder="Ex: Baixa presença digital, não consegue captar clientes online..." rows={3} />
           </div>
           <Button onClick={handleGenerate} className="w-full" disabled={create.isPending}>
@@ -637,20 +637,20 @@ export default function FranqueadoProspeccaoIA() {
       <Tabs defaultValue="nova">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="nova"><Sparkles className="w-4 h-4 mr-1" /> Prospecção IA</TabsTrigger>
+          <TabsTrigger value="historico"><History className="w-4 h-4 mr-1" /> Minhas Prospecções</TabsTrigger>
           <TabsTrigger value="playbooks"><BookOpen className="w-4 h-4 mr-1" /> Playbooks</TabsTrigger>
-          <TabsTrigger value="historico"><History className="w-4 h-4 mr-1" /> Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="nova" className="space-y-6">
           <NovaProspeccaoTab />
         </TabsContent>
 
-        <TabsContent value="playbooks" className="space-y-6">
-          <PlaybooksTab />
-        </TabsContent>
-
         <TabsContent value="historico" className="space-y-6">
           <HistoricoTab />
+        </TabsContent>
+
+        <TabsContent value="playbooks" className="space-y-6">
+          <PlaybooksTab />
         </TabsContent>
       </Tabs>
     </div>
