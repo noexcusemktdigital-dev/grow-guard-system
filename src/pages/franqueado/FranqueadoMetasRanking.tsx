@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Target, Star, Medal, TrendingUp, Lock, Award, Flame, Zap, Crown } from "lucide-react";
+import { Trophy, Target, Star, Medal, TrendingUp, Lock, Award, Flame, Zap, Crown, Users } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
