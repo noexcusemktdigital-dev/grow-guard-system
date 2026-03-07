@@ -5440,6 +5440,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_referral_uses: { Args: { _org_id: string }; Returns: undefined }
       is_member_of_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
