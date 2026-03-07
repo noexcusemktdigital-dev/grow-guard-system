@@ -118,7 +118,7 @@ function NovaProspeccaoTab() {
       <Card className="glass-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-            <Target className="w-4 h-4 text-primary" /> Configurar Prospecção
+            <Target className="w-4 h-4 text-primary" /> Criar Prospecção
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
