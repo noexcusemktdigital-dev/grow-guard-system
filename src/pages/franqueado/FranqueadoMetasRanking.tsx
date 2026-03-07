@@ -35,8 +35,6 @@ const trophies: TrophyItem[] = [
 ];
 
 export default function FranqueadoMetasRanking() {
-  const { data: goals } = useGoals();
-  const { data: progress } = useGoalProgress();
   const currentMonth = format(new Date(), "MMMM yyyy", { locale: ptBR });
   const classification = "prata" as keyof typeof classificationConfig;
   const config = classificationConfig[classification];
