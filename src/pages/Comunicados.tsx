@@ -61,7 +61,7 @@ export default function Comunicados() {
   };
 
   const handleArchive = (id: string) => {
-    updateAnnouncement.mutate({ id, type: "archived" });
+    updateAnnouncement.mutate({ id, status: "archived" });
     toast({ title: "Comunicado arquivado" });
     if (view === "detail") setView("list");
   };
