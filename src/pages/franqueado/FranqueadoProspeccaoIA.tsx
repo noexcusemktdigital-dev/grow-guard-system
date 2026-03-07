@@ -109,7 +109,7 @@ function NovaProspeccaoTab() {
   const handleReset = () => {
     setResult(null);
     setProspectionId(null);
-    setInputs({ regiao: "", nicho: "", porte: "", desafio: "", objetivo: "Agendar reunião de diagnóstico", nome_empresa: "", site: "", redes_sociais: "", conhecimento_previo: "", nivel_contato: "frio", contato_decisor: "", cargo_decisor: "" });
+    setInputs({ regiao: "", nicho: "", porte: "", desafio: "", objetivo: "Agendar diagnóstico gratuito", nome_empresa: "", site: "", redes_sociais: "", conhecimento_previo: "", nivel_contato: "frio", contato_decisor: "", cargo_decisor: "" });
   };
 
   return (
