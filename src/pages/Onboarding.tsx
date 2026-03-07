@@ -207,6 +207,20 @@ export default function Onboarding() {
             {selected.start_date && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar className="w-3 h-3" /> Início: {new Date(selected.start_date).toLocaleDateString("pt-BR")}
+                {(selected as any).target_date && (
+                  <span className="ml-3">
+                    Prazo: {new Date((selected as any).target_date).toLocaleDateString("pt-BR")}
+                    {(() => {
+                      const days = getDaysRemaining((selected as any).target_date);
+                      if (days === null) return null;
+                      return (
+                        <span className={`ml-1 font-medium ${days < 0 ? "text-destructive" : days <= 7 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                          ({days < 0 ? `${Math.abs(days)}d atrasado` : `${days}d restantes`})
+                        </span>
+                      );
+                    })()}
+                  </span>
+                )}
               </p>
             )}
           </div>
