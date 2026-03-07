@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, Building2, Users, FileSignature, UserPlus, Shield, Download } from "lucide-react";
+import { Settings, Building2, Users, FileSignature, UserPlus, Shield, Download, Link2, Copy, ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +18,7 @@ import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useContracts } from "@/hooks/useContracts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -314,22 +314,157 @@ function ContractTab() {
   );
 }
 
+/* ── Aba Link de Indicação ── */
+function ReferralTab() {
+  const { data: orgId } = useUserOrgId();
+  const queryClient = useQueryClient();
+
+  const { data: orgData, isLoading: orgLoading } = useQuery({
+    queryKey: ["org-referral", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("referral_code")
+        .eq("id", orgId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orgId,
+  });
+
+  const { data: referralConfig } = useQuery({
+    queryKey: ["referral-config", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("referral_discounts" as any)
+        .select("*")
+        .eq("organization_id", orgId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+    enabled: !!orgId,
+  });
+
+  const [editCode, setEditCode] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (orgData?.referral_code) setEditCode(orgData.referral_code);
+  }, [orgData]);
+
+  const referralUrl = editCode
+    ? `https://grow-guard-system.lovable.app/app?ref=${editCode}`
+    : "";
+
+  const copyUrl = () => {
+    if (referralUrl) {
+      navigator.clipboard.writeText(referralUrl);
+      toast.success("Link copiado!");
+    }
+  };
+
+  const saveCode = async () => {
+    if (!editCode.trim() || !orgId) return;
+    setSaving(true);
+    const code = editCode.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30);
+    const { error } = await supabase
+      .from("organizations")
+      .update({ referral_code: code } as any)
+      .eq("id", orgId);
+    setSaving(false);
+    if (error) {
+      if (error.message?.includes("duplicate") || error.message?.includes("unique")) {
+        toast.error("Este código já está em uso. Escolha outro.");
+      } else {
+        toast.error("Erro ao salvar código.");
+      }
+    } else {
+      setEditCode(code);
+      toast.success("Código salvo!");
+      queryClient.invalidateQueries({ queryKey: ["org-referral"] });
+    }
+  };
+
+  if (orgLoading) return <Skeleton className="h-64 rounded-xl" />;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Link2 className="w-5 h-5 text-primary" />
+            <CardTitle>Link de Indicação</CardTitle>
+          </div>
+          <CardDescription>
+            Compartilhe seu link exclusivo com clientes. Eles ganham 5% de desconto e são vinculados à sua unidade automaticamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Label>Seu código</Label>
+            <div className="flex gap-2">
+              <Input
+                value={editCode}
+                onChange={(e) => setEditCode(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                placeholder="seu-codigo"
+                className="font-mono"
+              />
+              <Button onClick={saveCode} disabled={saving} size="sm">
+                {saving ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+          </div>
+
+          {referralUrl && (
+            <div className="space-y-2">
+              <Label>Seu link</Label>
+              <div className="flex gap-2 items-center">
+                <div className="flex-1 bg-muted rounded-lg px-3 py-2 text-sm font-mono text-foreground truncate border">
+                  {referralUrl}
+                </div>
+                <Button variant="outline" size="sm" onClick={copyUrl} className="gap-1.5 shrink-0">
+                  <Copy className="w-3.5 h-3.5" /> Copiar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="rounded-lg border p-4 text-center">
+              <p className="text-2xl font-bold text-foreground">{referralConfig?.uses_count ?? 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">Usos do link</p>
+            </div>
+            <div className="rounded-lg border p-4 text-center">
+              <p className="text-2xl font-bold text-primary">{referralConfig?.discount_percent ?? 5}%</p>
+              <p className="text-xs text-muted-foreground mt-1">Desconto para o cliente</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 /* ── Página Principal ── */
 export default function FranqueadoConfiguracoes() {
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Configurações" subtitle="Gerencie sua unidade, equipe e contratos" icon={<Settings className="w-5 h-5 text-primary" />} />
+      <PageHeader title="Configurações" subtitle="Gerencie sua unidade, equipe, contratos e indicações" icon={<Settings className="w-5 h-5 text-primary" />} />
 
       <Tabs defaultValue="unidade">
-        <TabsList className="grid grid-cols-3 w-full max-w-lg">
+        <TabsList className="grid grid-cols-4 w-full max-w-2xl">
           <TabsTrigger value="unidade" className="gap-1.5 text-xs sm:text-sm"><Building2 className="w-4 h-4" /> Unidade</TabsTrigger>
           <TabsTrigger value="equipe" className="gap-1.5 text-xs sm:text-sm"><Users className="w-4 h-4" /> Equipe</TabsTrigger>
           <TabsTrigger value="contrato" className="gap-1.5 text-xs sm:text-sm"><FileSignature className="w-4 h-4" /> Contrato</TabsTrigger>
+          <TabsTrigger value="indicacao" className="gap-1.5 text-xs sm:text-sm"><Link2 className="w-4 h-4" /> Indicação</TabsTrigger>
         </TabsList>
 
         <TabsContent value="unidade"><UnitDataTab /></TabsContent>
         <TabsContent value="equipe"><TeamTab /></TabsContent>
         <TabsContent value="contrato"><ContractTab /></TabsContent>
+        <TabsContent value="indicacao"><ReferralTab /></TabsContent>
       </Tabs>
     </div>
   );

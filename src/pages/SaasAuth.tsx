@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
 import SaasBrandingPanel from "@/components/SaasBrandingPanel";
@@ -37,6 +38,20 @@ const SaasAuth = () => {
   const [benefitIndex, setBenefitIndex] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const referralCode = searchParams.get("ref") || "";
+  const [referralInfo, setReferralInfo] = useState<{ org_name: string; discount: number } | null>(null);
+
+  // Resolve referral code on mount
+  useEffect(() => {
+    if (!referralCode) return;
+    supabase.rpc("get_referral_by_code", { _code: referralCode }).then(({ data }) => {
+      if (data && data.length > 0) {
+        setReferralInfo({ org_name: data[0].org_name, discount: data[0].discount_percent });
+        setTab("signup"); // Auto-switch to signup
+      }
+    });
+  }, [referralCode]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -94,10 +109,14 @@ const SaasAuth = () => {
       try {
         await supabase.from("profiles").update({ accepted_terms_at: new Date().toISOString() } as any).eq("id", data.user.id);
       } catch {}
-      // Provision org, subscription, wallet
+      // Provision org, subscription, wallet (with referral if present)
       try {
         await supabase.functions.invoke("signup-saas", {
-          body: { user_id: data.user.id, company_name: fullName + "'s Company" },
+          body: {
+            user_id: data.user.id,
+            company_name: fullName + "'s Company",
+            ...(referralCode ? { referral_code: referralCode } : {}),
+          },
         });
       } catch (err) {
         console.error("Provisioning error:", err);
@@ -213,6 +232,11 @@ const SaasAuth = () => {
               <Sparkles className="h-5 w-5 text-[hsl(45,93%,52%)]" />
               <span className="text-base font-bold text-white tracking-wide">7 dias grátis</span>
             </div>
+            {referralInfo && (
+              <div className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <span className="text-sm text-emerald-400">🎉 Indicação de <strong>{referralInfo.org_name}</strong> — {referralInfo.discount}% de desconto no plano!</span>
+              </div>
+            )}
           </div>
 
           {mode === "forgot" ? (

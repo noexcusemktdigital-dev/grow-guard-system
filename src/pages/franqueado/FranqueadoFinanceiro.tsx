@@ -11,11 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   FileSignature, DollarSign, TrendingUp, Calendar, Inbox, FileDown,
   CheckCircle, Clock, AlertCircle, Receipt, Wallet, Percent, CreditCard,
+  Users, Coins,
 } from "lucide-react";
 import { SystemPaymentTab } from "@/components/franqueado/SystemPaymentTab";
 import { useContracts } from "@/hooks/useContracts";
 import { useFinanceClosings } from "@/hooks/useFinance";
 import { useClientPayments } from "@/hooks/useClientPayments";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -125,9 +129,11 @@ export default function FranqueadoFinanceiro() {
       <PageHeader title="Financeiro" subtitle="Visão financeira, cobranças de clientes e pagamento do sistema" />
 
       <Tabs defaultValue="visao" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="visao">Visão Geral</TabsTrigger>
-          <TabsTrigger value="pagamentos">Controle de Pagamentos</TabsTrigger>
+          <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
+          <TabsTrigger value="saas_clients" className="gap-1"><Users className="w-3.5 h-3.5" />Clientes SaaS</TabsTrigger>
+          <TabsTrigger value="comissoes" className="gap-1"><Coins className="w-3.5 h-3.5" />Comissões</TabsTrigger>
           <TabsTrigger value="fechamentos">Fechamentos</TabsTrigger>
           <TabsTrigger value="sistema" className="gap-1"><Wallet className="w-3.5 h-3.5" />Sistema</TabsTrigger>
         </TabsList>
@@ -262,6 +268,16 @@ export default function FranqueadoFinanceiro() {
           )}
         </TabsContent>
 
+        {/* CLIENTES SAAS */}
+        <TabsContent value="saas_clients" className="space-y-4">
+          <SaasClientsTab />
+        </TabsContent>
+
+        {/* COMISSÕES SAAS */}
+        <TabsContent value="comissoes" className="space-y-4">
+          <SaasCommissionsTab />
+        </TabsContent>
+
         {/* FECHAMENTOS */}
         <TabsContent value="fechamentos" className="space-y-4">
           <p className="text-sm text-muted-foreground">Arquivos de fechamento (DRE) enviados pela franqueadora.</p>
@@ -291,6 +307,143 @@ export default function FranqueadoFinanceiro() {
         <TabsContent value="sistema" className="space-y-4"><SystemPaymentTab /></TabsContent>
       </Tabs>
 
+    </div>
+  );
+}
+
+/* ── SaaS Clients Tab ── */
+function SaasClientsTab() {
+  const { data: orgId } = useUserOrgId();
+
+  const { data: clients, isLoading } = useQuery({
+    queryKey: ["saas-clients", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_saas_clients_for_org", { _org_id: orgId! });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!orgId,
+  });
+
+  if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
+  if (!clients || clients.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <Users className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground font-medium">Nenhum cliente SaaS vinculado</p>
+        <p className="text-xs text-muted-foreground mt-1">Compartilhe seu link de indicação para atrair clientes.</p>
+      </div>
+    );
+  }
+
+  const planLabels: Record<string, string> = { trial: "Trial", starter: "Starter", growth: "Growth", scale: "Scale" };
+  const statusLabels: Record<string, string> = { active: "Ativo", trial: "Trial", expired: "Expirado", cancelled: "Cancelado" };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold">Clientes SaaS Vinculados ({clients.length})</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Plano</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Créditos</TableHead>
+              <TableHead>Desconto</TableHead>
+              <TableHead>Cadastro</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {clients.map((c: any) => (
+              <TableRow key={c.org_id}>
+                <TableCell className="font-medium">{c.org_name}</TableCell>
+                <TableCell><Badge variant="outline">{planLabels[c.plan] || c.plan || "—"}</Badge></TableCell>
+                <TableCell>
+                  <Badge variant={c.plan_status === "active" ? "default" : "secondary"}>
+                    {statusLabels[c.plan_status] || c.plan_status || "—"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="tabular-nums">{Number(c.credits_balance).toLocaleString("pt-BR")}</TableCell>
+                <TableCell>{c.discount_percent > 0 ? `${c.discount_percent}%` : "—"}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {c.created_at ? new Date(c.created_at).toLocaleDateString("pt-BR") : "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── SaaS Commissions Tab ── */
+function SaasCommissionsTab() {
+  const { data: orgId } = useUserOrgId();
+
+  const { data: commissions, isLoading } = useQuery({
+    queryKey: ["saas-commissions", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_saas_commissions_for_org", { _org_id: orgId! });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!orgId,
+  });
+
+  if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
+
+  const totalCommission = (commissions ?? []).reduce((s: number, c: any) => s + Number(c.commission_value), 0);
+
+  if (!commissions || commissions.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <Coins className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground font-medium">Nenhuma comissão registrada</p>
+        <p className="text-xs text-muted-foreground mt-1">Comissões de assinaturas SaaS dos seus clientes aparecerão aqui.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <KpiCard label="Total de Comissões" value={`R$ ${totalCommission.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={Coins} variant="accent" />
+        <KpiCard label="Pagamentos" value={String(commissions.length)} icon={Receipt} />
+      </div>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Valor Pgto</TableHead>
+              <TableHead>% Comissão</TableHead>
+              <TableHead>Comissão</TableHead>
+              <TableHead>Mês</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {commissions.map((c: any) => (
+              <TableRow key={c.id}>
+                <TableCell className="font-medium">{c.client_name}</TableCell>
+                <TableCell>R$ {Number(c.payment_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                <TableCell>{c.commission_percent}%</TableCell>
+                <TableCell className="font-semibold text-emerald-600">R$ {Number(c.commission_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                <TableCell>{c.month || "—"}</TableCell>
+                <TableCell>
+                  <Badge variant={c.status === "paid" ? "default" : "secondary"}>
+                    {c.status === "paid" ? "Pago" : "Pendente"}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }

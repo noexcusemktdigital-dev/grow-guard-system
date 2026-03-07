@@ -6,6 +6,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function generateReferralCode(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 30);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -49,6 +58,7 @@ Deno.serve(async (req) => {
       royalty_percent,
       system_fee,
       parent_org_id,
+      saas_commission_percent,
     } = await req.json();
 
     if (!unit_name || !manager_email || !parent_org_id) {
@@ -70,12 +80,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get parent org name for naming
-    const { data: parentOrg } = await adminClient
+    // Generate unique referral code
+    let referralCode = generateReferralCode(unit_name);
+    // Check uniqueness, append random suffix if needed
+    const { data: existingRef } = await adminClient
       .from("organizations")
-      .select("name")
-      .eq("id", parent_org_id)
-      .single();
+      .select("id")
+      .eq("referral_code", referralCode)
+      .maybeSingle();
+    if (existingRef) {
+      referralCode = referralCode + "-" + Math.random().toString(36).slice(2, 6);
+    }
 
     // 1. Create organization of type franqueado
     const { data: newOrg, error: orgErr } = await adminClient
@@ -84,12 +99,22 @@ Deno.serve(async (req) => {
         name: unit_name,
         type: "franqueado",
         parent_org_id: parent_org_id,
+        referral_code: referralCode,
+        saas_commission_percent: saas_commission_percent ?? 20,
       })
       .select()
       .single();
     if (orgErr) throw orgErr;
 
     const orgId = newOrg.id;
+
+    // 1b. Create referral_discounts config (5% default)
+    await adminClient.from("referral_discounts").insert({
+      organization_id: orgId,
+      discount_percent: 5,
+      is_active: true,
+      uses_count: 0,
+    });
 
     // 2. Create user for the franchisee manager
     const tempPassword = crypto.randomUUID().slice(0, 12) + "A1!";
@@ -105,7 +130,6 @@ Deno.serve(async (req) => {
 
     if (userErr) {
       if (userErr.message?.includes("already been registered")) {
-        // User already exists, find them
         const { data: existingUsers } = await adminClient.auth.admin.listUsers();
         const existing = existingUsers?.users?.find((u: any) => u.email === manager_email);
         if (!existing) throw new Error("User exists but could not be found");
@@ -131,15 +155,13 @@ Deno.serve(async (req) => {
       user_id: userId,
       organization_id: orgId,
     });
-    // Ignore duplicate membership errors
     if (memErr && !memErr.message?.includes("duplicate")) throw memErr;
 
-    // 5. Set role to franqueado (if not already set)
+    // 5. Set role to franqueado
     const { error: roleErr } = await adminClient.from("user_roles").insert({
       user_id: userId,
       role: "franqueado",
     });
-    // Ignore duplicate role errors
     if (roleErr && !roleErr.message?.includes("duplicate")) throw roleErr;
 
     // 6. Create the unit record linked to this org
@@ -171,7 +193,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Unit provisioned: ${unit_name} -> org ${orgId}, user ${userId}`);
+    console.log(`Unit provisioned: ${unit_name} -> org ${orgId}, user ${userId}, referral=${referralCode}`);
 
     return new Response(
       JSON.stringify({
@@ -181,6 +203,7 @@ Deno.serve(async (req) => {
         user_id: userId,
         temp_password: userAlreadyExists ? null : tempPassword,
         user_already_exists: userAlreadyExists,
+        referral_code: referralCode,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

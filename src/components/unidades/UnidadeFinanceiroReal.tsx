@@ -26,6 +26,7 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
     system_fee: unit.system_fee ?? 250,
     system_active: unit.system_active ?? true,
     financial_notes: unit.financial_notes || "",
+    saas_commission_percent: unit.saas_commission_percent ?? 20,
   });
 
   // Fetch payment history if unit has a linked org
@@ -45,11 +46,21 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
     enabled: !!unit.unit_org_id,
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Save unit config
     updateUnit.mutate(
       { id: unit.id, ...form },
       {
-        onSuccess: () => toast.success("Configuração financeira salva!"),
+        onSuccess: async () => {
+          // Also update saas_commission_percent on the linked organization
+          if (unit.unit_org_id) {
+            await supabase
+              .from("organizations")
+              .update({ saas_commission_percent: form.saas_commission_percent } as any)
+              .eq("id", unit.unit_org_id);
+          }
+          toast.success("Configuração financeira salva!");
+        },
         onError: (e) => toast.error(`Erro: ${e.message}`),
       }
     );
@@ -59,6 +70,7 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
     { label: "% Repasse", icon: Percent, value: form.transfer_percent, key: "transfer_percent" as const, suffix: "%" },
     { label: "% Royalties", icon: Percent, value: form.royalty_percent, key: "royalty_percent" as const, suffix: "%" },
     { label: "Mensalidade Sistema", icon: DollarSign, value: form.system_fee, key: "system_fee" as const, prefix: "R$" },
+    { label: "% Comissão SaaS", icon: Percent, value: form.saas_commission_percent, key: "saas_commission_percent" as const, suffix: "%" },
   ];
 
   return (

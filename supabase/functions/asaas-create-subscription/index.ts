@@ -31,7 +31,6 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      console.error("[asaas-create-subscription] No auth header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -41,7 +40,6 @@ Deno.serve(async (req) => {
     });
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) {
-      console.error("[asaas-create-subscription] Auth failed:", authError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -63,7 +61,7 @@ Deno.serve(async (req) => {
     }
 
     const moduleChoice = modules === "combo" ? "combo" : (modules || "comercial");
-    const planPrice = moduleChoice === "combo" ? planPricing.combo : planPricing.base;
+    let planPrice = moduleChoice === "combo" ? planPricing.combo : planPricing.base;
 
     const validBillingTypes = ["CREDIT_CARD", "BOLETO", "PIX"];
     if (!validBillingTypes.includes(billing_type)) {
@@ -74,7 +72,7 @@ Deno.serve(async (req) => {
 
     const { data: org, error: orgError } = await adminClient
       .from("organizations")
-      .select("id, name, cnpj, email, phone")
+      .select("id, name, cnpj, email, phone, parent_org_id")
       .eq("id", organization_id)
       .single();
 
@@ -84,7 +82,43 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get or create Asaas customer (deduplicated)
+    // Check for referral discount
+    let discountPercent = 0;
+    let referralOrgId: string | null = null;
+
+    // Get existing subscription to check stored discount
+    const { data: existingSub } = await adminClient
+      .from("subscriptions")
+      .select("discount_percent, referral_org_id")
+      .eq("organization_id", organization_id)
+      .maybeSingle();
+
+    if (existingSub?.discount_percent && existingSub.discount_percent > 0) {
+      discountPercent = existingSub.discount_percent;
+      referralOrgId = existingSub.referral_org_id;
+    } else if (org.parent_org_id) {
+      // Check if parent has referral discount config
+      const { data: parentDiscount } = await adminClient
+        .from("referral_discounts")
+        .select("discount_percent, is_active")
+        .eq("organization_id", org.parent_org_id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (parentDiscount) {
+        discountPercent = parentDiscount.discount_percent || 5;
+        referralOrgId = org.parent_org_id;
+      }
+    }
+
+    // Apply discount
+    let finalPrice = planPrice;
+    if (discountPercent > 0) {
+      finalPrice = Math.round(planPrice * (1 - discountPercent / 100) * 100) / 100;
+      console.log(`Discount applied: ${discountPercent}% → R$ ${planPrice} → R$ ${finalPrice}`);
+    }
+
+    // Get or create Asaas customer
     const asaasCustomerId = await getOrCreateAsaasCustomer(adminClient, asaasApiKey, {
       orgId: org.id,
       name: org.name,
@@ -97,18 +131,48 @@ Deno.serve(async (req) => {
     const nextDueDate = today.toISOString().split("T")[0];
     const moduleLabel = moduleChoice === "combo" ? "Combo" : moduleChoice === "marketing" ? "Marketing" : "Comercial";
 
+    // Build split config if client is linked to a franchisee
+    const splitConfig: any[] = [];
+    if (referralOrgId) {
+      // Get franchisee's commission percent and wallet ID
+      const { data: franchiseeOrg } = await adminClient
+        .from("organizations")
+        .select("saas_commission_percent, asaas_wallet_id")
+        .eq("id", referralOrgId)
+        .maybeSingle();
+
+      if (franchiseeOrg?.asaas_wallet_id) {
+        const commissionPercent = franchiseeOrg.saas_commission_percent || 20;
+        const commissionValue = Math.round(finalPrice * commissionPercent / 100 * 100) / 100;
+
+        if (commissionValue > 0) {
+          splitConfig.push({
+            walletId: franchiseeOrg.asaas_wallet_id,
+            fixedValue: commissionValue,
+          });
+          console.log(`Split: ${commissionPercent}% (R$ ${commissionValue}) to wallet ${franchiseeOrg.asaas_wallet_id}`);
+        }
+      }
+    }
+
+    const subscriptionBody: any = {
+      customer: asaasCustomerId,
+      billingType: billing_type,
+      value: finalPrice,
+      cycle: "MONTHLY",
+      nextDueDate,
+      description: `Plano ${plan_id.charAt(0).toUpperCase() + plan_id.slice(1)} ${moduleLabel} — NOE`,
+      externalReference: `${org.id}|sub|${plan_id}|${moduleChoice}`,
+    };
+
+    if (splitConfig.length > 0) {
+      subscriptionBody.split = splitConfig;
+    }
+
     const subscriptionRes = await asaasFetch(`${ASAAS_BASE}/subscriptions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
-      body: JSON.stringify({
-        customer: asaasCustomerId,
-        billingType: billing_type,
-        value: planPrice,
-        cycle: "MONTHLY",
-        nextDueDate,
-        description: `Plano ${plan_id.charAt(0).toUpperCase() + plan_id.slice(1)} ${moduleLabel} — NOE`,
-        externalReference: `${org.id}|sub|${plan_id}|${moduleChoice}`,
-      }),
+      body: JSON.stringify(subscriptionBody),
     });
 
     const subscriptionData = await subscriptionRes.json();
@@ -131,6 +195,8 @@ Deno.serve(async (req) => {
         asaas_subscription_id: subscriptionData.id,
         asaas_billing_type: billing_type,
         expires_at: expiresAt.toISOString(),
+        discount_percent: discountPercent,
+        referral_org_id: referralOrgId,
       })
       .eq("organization_id", org.id);
 
@@ -155,13 +221,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Subscription created for org ${org.id}: plan=${plan_id}, modules=${moduleChoice}, asaas_sub=${subscriptionData.id}`);
+    console.log(`Subscription created for org ${org.id}: plan=${plan_id}, modules=${moduleChoice}, price=${finalPrice}, discount=${discountPercent}%, asaas_sub=${subscriptionData.id}`);
 
     return new Response(JSON.stringify({
       success: true,
       asaas_subscription_id: subscriptionData.id,
       asaas_customer_id: asaasCustomerId,
       payment_link: subscriptionData.paymentLink || null,
+      discount_applied: discountPercent,
+      final_price: finalPrice,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
