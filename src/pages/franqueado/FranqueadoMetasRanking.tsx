@@ -51,7 +51,7 @@ export default function FranqueadoMetasRanking() {
     <div className="space-y-6">
       <PageHeader
         title="Metas & Ranking"
-        description={`Acompanhe suas metas e conquistas — ${currentMonth}`}
+        subtitle={`Acompanhe suas metas e conquistas — ${currentMonth}`}
       />
 
       {/* Classification Badge */}
