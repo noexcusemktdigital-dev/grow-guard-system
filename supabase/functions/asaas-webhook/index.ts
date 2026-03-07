@@ -232,6 +232,49 @@ Deno.serve(async (req) => {
           })
           .eq("organization_id", org.id);
 
+        // Register SaaS commission if client is linked to a franchisee
+        const { data: clientOrg } = await adminClient
+          .from("organizations")
+          .select("parent_org_id")
+          .eq("id", org.id)
+          .maybeSingle();
+
+        if (clientOrg?.parent_org_id) {
+          const { data: franchiseeOrg } = await adminClient
+            .from("organizations")
+            .select("saas_commission_percent")
+            .eq("id", clientOrg.parent_org_id)
+            .maybeSingle();
+
+          const commissionPercent = franchiseeOrg?.saas_commission_percent || 20;
+          const commissionValue = Math.round(paymentValue * commissionPercent / 100 * 100) / 100;
+          const currentMonth = new Date().toISOString().slice(0, 7);
+
+          await adminClient.from("saas_commissions").insert({
+            franchisee_org_id: clientOrg.parent_org_id,
+            client_org_id: org.id,
+            asaas_payment_id: payment.id,
+            payment_value: paymentValue,
+            commission_percent: commissionPercent,
+            commission_value: commissionValue,
+            month: currentMonth,
+            status: "pending",
+          });
+
+          // Register as finance_revenue for franchisee
+          await adminClient.from("finance_revenues").insert({
+            organization_id: clientOrg.parent_org_id,
+            description: `Comissão SaaS — ${org.name} — ${currentMonth}`,
+            amount: commissionValue,
+            date: new Date().toISOString().split("T")[0],
+            category: "saas_commission",
+            status: "received",
+            payment_method: "asaas",
+          });
+
+          console.log(`SaaS commission registered: franchisee=${clientOrg.parent_org_id}, client=${org.id}, value=R$${commissionValue}`);
+        }
+
         const planCredits = planCreditsMap[planSlug];
         if (planCredits) {
           const wallet = await getOrCreateWallet(adminClient, org.id);
