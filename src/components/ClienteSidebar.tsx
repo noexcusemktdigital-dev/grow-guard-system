@@ -57,6 +57,7 @@ const marketingSection: SidebarItem[] = [
 
 const sistemaSection: SidebarItem[] = [
   { label: "Avaliações", icon: ClipboardCheck, path: "/cliente/avaliacoes" },
+  { label: "Suporte", icon: Headphones, path: "/cliente/suporte" },
   { label: "Integrações", icon: Link, path: "/cliente/integracoes", adminOnly: true },
   { label: "Plano & Créditos", icon: CreditCard, path: "/cliente/plano-creditos", badgeKey: "plano-creditos", adminOnly: true },
   { label: "Configurações", icon: Settings, path: "/cliente/configuracoes" },
