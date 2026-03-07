@@ -1,19 +1,41 @@
 
 
-## Solução: Adicionar usuário de teste no Google Cloud Console
+## Plano: Refazer o Tutorial/Wizard do Google Calendar
 
-O erro **403: access_denied** acontece porque o app Google OAuth ainda está em modo **"Testing"** (não publicado). Nesse modo, apenas e-mails cadastrados como "Test users" conseguem autorizar.
+### Contexto
+O `GoogleSetupWizard` existe duplicado em `Agenda.tsx` (Franqueadora) e `FranqueadoAgenda.tsx` (Franqueado), com passos incompletos. O tutorial atual tem apenas 7 passos focados na criacao de credenciais, mas faltam etapas criticas como: configurar a Tela de Consentimento OAuth, adicionar Test Users, e ativar a API. O cliente final nao tem agenda, entao nao sera afetado.
 
-### Ação necessária (manual, no Google Cloud Console)
+### O que muda
 
-1. Acesse [Google Cloud Console → OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent)
-2. Na seção **"Test users"**, clique em **"Add users"**
-3. Adicione: `davi.ttesch@gmail.com`
-4. Salve
+**1. Extrair o componente `GoogleSetupWizard` para arquivo compartilhado**
+- Criar `src/components/agenda/GoogleSetupWizard.tsx` com o wizard completo
+- Remover o wizard inline de `Agenda.tsx` e `FranqueadoAgenda.tsx`, importando o componente compartilhado
+- O `redirectUri` sera calculado dinamicamente (`window.location.origin + window.location.pathname`)
 
-Depois disso, tente conectar novamente pela página de Agenda. O fluxo OAuth deve funcionar normalmente.
+**2. Reescrever o passo-a-passo do wizard (Step 1) com o fluxo completo e correto**
 
-### Sobre publicação do app
+O novo tutorial tera as seguintes etapas organizadas em cards:
 
-Enquanto o app estiver em modo "Testing", só test users cadastrados poderão conectar. Para permitir qualquer usuário Google sem cadastro prévio, você precisaria publicar o app — mas como o escopo `calendar` é restrito, o Google pode exigir verificação completa (envio de política de privacidade, vídeo demonstrativo, etc). Para uso interno da rede de franquias, manter em modo Testing e adicionar os e-mails manualmente é a abordagem mais prática.
+1. Acesse o Google Cloud Console e crie/selecione um projeto
+2. Ative a Google Calendar API em "APIs e Servicos" > "Biblioteca"
+3. Configure a Tela de Consentimento OAuth:
+   - Tipo: Externo
+   - Preencha nome do app, e-mail de suporte e dominio autorizado
+4. Adicione Test Users (enquanto app nao for publicado):
+   - Em "Tela de Consentimento" > "Test users", adicione os e-mails que vao usar
+5. Crie as credenciais OAuth:
+   - "Credenciais" > "Criar credenciais" > "ID do cliente OAuth 2.0"
+   - Tipo: Aplicativo da Web
+6. Em "Origens JavaScript autorizadas", adicione o dominio (ex: `https://sistema.noexcusedigital.com`)
+7. Em "URIs de redirecionamento autorizados", adicione a URL exata (mostrada dinamicamente)
+8. Copie o Client ID e Client Secret gerados
+
+**3. Step 2 permanece igual** (campos Client ID e Client Secret + botao Salvar e Conectar)
+
+### Arquivos alterados
+| Arquivo | Acao |
+|---------|------|
+| `src/components/agenda/GoogleSetupWizard.tsx` | Criar (novo componente compartilhado) |
+| `src/pages/Agenda.tsx` | Remover wizard inline, importar componente |
+| `src/pages/franqueado/FranqueadoAgenda.tsx` | Remover wizard inline, importar componente |
 
