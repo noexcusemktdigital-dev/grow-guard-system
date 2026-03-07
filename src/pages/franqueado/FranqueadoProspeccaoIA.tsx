@@ -637,20 +637,20 @@ export default function FranqueadoProspeccaoIA() {
       <Tabs defaultValue="nova">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="nova"><Sparkles className="w-4 h-4 mr-1" /> Prospecção IA</TabsTrigger>
+          <TabsTrigger value="historico"><History className="w-4 h-4 mr-1" /> Minhas Prospecções</TabsTrigger>
           <TabsTrigger value="playbooks"><BookOpen className="w-4 h-4 mr-1" /> Playbooks</TabsTrigger>
-          <TabsTrigger value="historico"><History className="w-4 h-4 mr-1" /> Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="nova" className="space-y-6">
           <NovaProspeccaoTab />
         </TabsContent>
 
-        <TabsContent value="playbooks" className="space-y-6">
-          <PlaybooksTab />
-        </TabsContent>
-
         <TabsContent value="historico" className="space-y-6">
           <HistoricoTab />
+        </TabsContent>
+
+        <TabsContent value="playbooks" className="space-y-6">
+          <PlaybooksTab />
         </TabsContent>
       </Tabs>
     </div>
