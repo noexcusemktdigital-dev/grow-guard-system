@@ -38,6 +38,7 @@ const marketingSection: SidebarItem[] = [
 ];
 
 const gestaoSection: SidebarItem[] = [
+  { label: "Minha Unidade", icon: Building2, path: "/franqueado/unidade" },
   { label: "Financeiro", icon: DollarSign, path: "/franqueado/financeiro" },
   { label: "Meus Contratos", icon: FileSignature, path: "/franqueado/contratos" },
 ];
