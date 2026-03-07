@@ -13,8 +13,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Card } from "@/components/ui/card";
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, Trash2, Edit2,
-  ExternalLink, RefreshCw, Unlink, CheckCircle2, KeyRound, ArrowRight, Globe, Shield, Building2,
+  RefreshCw, Unlink, CheckCircle2, Building2,
 } from "lucide-react";
+import GoogleSetupWizard from "@/components/agenda/GoogleSetupWizard";
 import { useCalendarEvents, useCalendars, useCalendarEventMutations } from "@/hooks/useCalendar";
 import {
   useGoogleCalendarConnection,
