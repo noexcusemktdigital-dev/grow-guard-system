@@ -129,6 +129,9 @@ export function UnidadeFinanceiroReal({ unit, readOnly }: Props) {
         </>
       )}
 
+      {/* Fechamentos / DREs */}
+      <ClosingsSection unitId={unit.id} readOnly={readOnly} />
+
       {/* Payment history */}
       {unit.unit_org_id && (
         <div className="space-y-3">
@@ -169,6 +172,74 @@ export function UnidadeFinanceiroReal({ unit, readOnly }: Props) {
               </Table>
             </Card>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Closings sub-component ---------- */
+const MONTH_NAMES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+function ClosingsSection({ unitId, readOnly }: { unitId: string; readOnly?: boolean }) {
+  const { data: closings, isLoading } = useQuery({
+    queryKey: ["unit-closings", unitId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("finance_closings")
+        .select("*")
+        .eq("unit_id", unitId)
+        .eq("status", "published")
+        .order("year", { ascending: false })
+        .order("month", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!unitId,
+  });
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <Calendar className="w-4 h-4 text-muted-foreground" />
+        Fechamentos / DREs
+      </h3>
+
+      {isLoading ? (
+        <Skeleton className="h-24 w-full" />
+      ) : !closings || closings.length === 0 ? (
+        <Card className="p-6 text-center text-sm text-muted-foreground">
+          <FileDown className="w-8 h-8 mx-auto mb-2 opacity-40" />
+          <p>Nenhum fechamento publicado para esta unidade.</p>
+        </Card>
+      ) : (
+        <div className="grid gap-3">
+          {closings.map((cl) => (
+            <Card key={cl.id} className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <FileDown className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">{cl.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {MONTH_NAMES[(cl.month ?? 1) - 1]}/{cl.year}
+                    {cl.notes && ` · ${cl.notes}`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant="default">Publicado</Badge>
+                {cl.file_url && (
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={cl.file_url} target="_blank" rel="noreferrer">
+                      <FileDown className="w-4 h-4 mr-1" />Baixar
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </Card>
+          ))}
         </div>
       )}
     </div>
