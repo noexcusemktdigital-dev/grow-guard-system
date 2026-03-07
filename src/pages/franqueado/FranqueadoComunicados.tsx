@@ -17,9 +17,9 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
-const PRIORITY_LABELS: Record<string, string> = { normal: "Normal", high: "Alta", critical: "Crítica" };
-const PRIORITY_VARIANTS: Record<string, "default" | "secondary" | "destructive"> = { normal: "secondary", high: "default", critical: "destructive" };
-const TYPE_LABELS: Record<string, string> = { info: "Informativo", update: "Atualização", alert: "Alerta", policy: "Política" };
+const PRIORITY_LABELS: Record<string, string> = { Normal: "Normal", Alta: "Alta", "Crítica": "Crítica" };
+const PRIORITY_VARIANTS: Record<string, "default" | "secondary" | "destructive"> = { Normal: "secondary", Alta: "default", "Crítica": "destructive" };
+const TYPE_LABELS: Record<string, string> = { Informativo: "Informativo", "Atualização de sistema": "Atualização", "Alerta operacional": "Alerta", Campanha: "Campanha", Institucional: "Institucional", Urgente: "Urgente" };
 
 export default function FranqueadoComunicados() {
   const { user } = useAuth();
