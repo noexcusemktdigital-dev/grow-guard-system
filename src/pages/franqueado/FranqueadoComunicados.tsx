@@ -229,7 +229,7 @@ function ComunicadoCard({ item, viewedIds, confirmedIds, onClick }: { item: any;
   const isConfirmed = confirmedIds.has(item.id);
   return (
     <Card
-      className={`hover-lift cursor-pointer transition-all ${!isViewed ? "border-l-4 border-l-primary" : ""} ${item.priority === "critical" && !isConfirmed ? "ring-1 ring-destructive/30" : ""}`}
+      className={`hover-lift cursor-pointer transition-all ${!isViewed ? "border-l-4 border-l-primary" : ""} ${item.priority === "Crítica" && !isConfirmed ? "ring-1 ring-destructive/30" : ""}`}
       onClick={onClick}
     >
       <CardContent className="p-5">
