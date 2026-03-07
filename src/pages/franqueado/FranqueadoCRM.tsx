@@ -2,11 +2,11 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users, Plus, Phone, Search, LayoutGrid, List, Clock,
-  GripVertical, Filter, X, Copy, MoreHorizontal,
+  GripVertical, Settings2, Filter, X, Copy, MoreHorizontal,
   MessageCircle, CircleDot, XCircle, ChevronDown,
-  DollarSign, UserCircle, FileSpreadsheet, BookUser,
+  Calendar, DollarSign, UserCircle, FileSpreadsheet, BookUser,
   Tag, Trash2, ArrowRightLeft, Snowflake, Sun, Flame,
-  Target, TrendingUp,
+  TrendingUp, HelpCircle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -17,24 +17,26 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { KpiCard } from "@/components/KpiCard";
+import { Progress } from "@/components/ui/progress";
 import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
-import { useCrmProposals } from "@/hooks/useCrmProposals";
-import { useProspections } from "@/hooks/useFranqueadoProspections";
-import { useStrategies } from "@/hooks/useFranqueadoStrategies";
+import { useCrmSettings } from "@/hooks/useCrmSettings";
+import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { toast } from "sonner";
-import { DndContext, DragOverlay, closestCorners, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { CrmLeadDetailSheet } from "@/components/franqueado/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
 import { CrmFunnelManager } from "@/components/crm/CrmFunnelManager";
 import { CrmContactsView } from "@/components/crm/CrmContactsView";
 import { CrmCsvImportDialog } from "@/components/crm/CrmCsvImportDialog";
+import { CrmTutorial } from "@/components/crm/CrmTutorial";
 import { DEFAULT_STAGES, STAGE_ICONS, getColorStyle, type FunnelStage } from "@/components/crm/CrmStageSystem";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Shuffle } from "lucide-react";
 
 const SOURCES = ["Indicação", "Site", "LinkedIn", "WhatsApp", "Meta Leads", "Eventos", "Orgânico"];
 
@@ -73,16 +75,10 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
             </div>
             <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreHorizontal className="w-3.5 h-3.5" /></Button>
-                </DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreHorizontal className="w-3.5 h-3.5" /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent className="w-36" align="end">
                   <DropdownMenuItem className="text-xs gap-2" onClick={onCopyPhone}><Copy className="w-3 h-3" /> Copiar telefone</DropdownMenuItem>
-                  {lead.phone && (
-                    <DropdownMenuItem className="text-xs gap-2" asChild>
-                      <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"><MessageCircle className="w-3 h-3" /> WhatsApp</a>
-                    </DropdownMenuItem>
-                  )}
+                  {lead.phone && <DropdownMenuItem className="text-xs gap-2" asChild><a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"><MessageCircle className="w-3 h-3" /> WhatsApp</a></DropdownMenuItem>}
                   <DropdownMenuItem className="text-xs gap-2 text-destructive" onClick={onMarkLost}><XCircle className="w-3 h-3" /> Marcar perdido</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -103,10 +99,7 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
                     Quente: { bg: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400", icon: <Flame className="w-3 h-3" /> },
                   };
                   const c = cfg[current] || cfg.Morno;
-                  return (
-                    <button title={`${current} → ${next}`} onClick={() => onUpdateTemperature(next)}
-                      className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors duration-150 ${c.bg} hover:brightness-90`}>{c.icon}</button>
-                  );
+                  return <button title={`${current} → ${next}`} onClick={() => onUpdateTemperature(next)} className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors duration-150 ${c.bg} hover:brightness-90`}>{c.icon}</button>;
                 })()}
               </div>
               {lead.source && <Badge variant="secondary" className="text-[8px] px-1.5 py-0 font-normal">{lead.source}</Badge>}
@@ -129,11 +122,34 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
 export default function FranqueadoCRM() {
   const navigate = useNavigate();
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();
-  const { data: proposals } = useCrmProposals();
-  const { data: prospections } = useProspections();
-  const { data: strategies } = useStrategies();
+  const { data: crmSettings } = useCrmSettings();
+  const { data: team } = useCrmTeam();
 
   const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
+  const accessibleFunnels = funnelsData ?? [];
+
+  useEffect(() => {
+    if (!selectedFunnelId && accessibleFunnels.length > 0) {
+      const def = accessibleFunnels.find((f: any) => f.is_default) || accessibleFunnels[0];
+      setSelectedFunnelId(def.id);
+    }
+  }, [accessibleFunnels, selectedFunnelId]);
+
+  const selectedFunnel = useMemo(() => funnelsData?.find((f: any) => f.id === selectedFunnelId) || null, [funnelsData, selectedFunnelId]);
+
+  const stages: FunnelStage[] = useMemo(() => {
+    if (selectedFunnel) {
+      const dbStages = (selectedFunnel as any).stages as any[];
+      if (Array.isArray(dbStages) && dbStages.length > 0) {
+        return dbStages.map((s: any) => ({ key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || "stage", label: s.label || "Etapa", color: s.color || "blue", icon: s.icon || "circle-dot" }));
+      }
+    }
+    return DEFAULT_STAGES;
+  }, [selectedFunnel]);
+
+  const { data: leads, isLoading: leadsLoading } = useCrmLeads(selectedFunnelId || undefined);
+  const { updateLead, deleteLead, markAsLost, bulkUpdateLeads, bulkDeleteLeads } = useCrmLeadMutations();
+
   const [activeTab, setActiveTab] = useState<"pipeline" | "contatos">("pipeline");
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [search, setSearch] = useState("");
@@ -148,62 +164,31 @@ export default function FranqueadoCRM() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [bulkTagInput, setBulkTagInput] = useState("");
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const [tutorialOpen, setTutorialOpen] = useState(() => !localStorage.getItem("crm_tutorial_seen"));
 
   const [filterSource, setFilterSource] = useState("");
   const [filterTag, setFilterTag] = useState("");
+  const [filterAssigned, setFilterAssigned] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterValueMin, setFilterValueMin] = useState("");
   const [filterValueMax, setFilterValueMax] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
-  const accessibleFunnels = funnelsData ?? [];
-
-  useEffect(() => {
-    if (!selectedFunnelId && accessibleFunnels.length > 0) {
-      const def = accessibleFunnels.find((f: any) => f.is_default) || accessibleFunnels[0];
-      setSelectedFunnelId(def.id);
-    }
-  }, [accessibleFunnels, selectedFunnelId]);
-
-  const selectedFunnel = useMemo(() => {
-    if (!funnelsData || !selectedFunnelId) return null;
-    return funnelsData.find((f: any) => f.id === selectedFunnelId) || null;
-  }, [funnelsData, selectedFunnelId]);
-
-  const stages: FunnelStage[] = useMemo(() => {
-    if (selectedFunnel) {
-      const dbStages = (selectedFunnel as any).stages as any[];
-      if (Array.isArray(dbStages) && dbStages.length > 0) {
-        return dbStages.map((s: any) => ({
-          key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || "stage",
-          label: s.label || "Etapa", color: s.color || "blue", icon: s.icon || "circle-dot",
-        }));
-      }
-    }
-    return DEFAULT_STAGES;
-  }, [selectedFunnel]);
-
-  const { data: leads, isLoading: leadsLoading } = useCrmLeads(selectedFunnelId || undefined);
-  const { updateLead, deleteLead, markAsLost, bulkUpdateLeads, bulkDeleteLeads } = useCrmLeadMutations();
-
   const allLeads = leads ?? [];
   const isLoading = leadsLoading || funnelsLoading;
-
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    allLeads.forEach((l: any) => l.tags?.forEach((t: string) => tags.add(t)));
-    return Array.from(tags).sort();
-  }, [allLeads]);
-
-  const activeFilterCount = [filterSource, filterTag, filterStatus, filterValueMin, filterValueMax, filterDateFrom, filterDateTo].filter(Boolean).length;
-  const clearAllFilters = () => { setFilterSource(""); setFilterTag(""); setFilterStatus(""); setFilterValueMin(""); setFilterValueMax(""); setFilterDateFrom(""); setFilterDateTo(""); };
+  const allTags = useMemo(() => { const tags = new Set<string>(); allLeads.forEach((l: any) => l.tags?.forEach((t: string) => tags.add(t))); return Array.from(tags).sort(); }, [allLeads]);
+  const activeFilterCount = [filterSource, filterTag, filterAssigned, filterStatus, filterValueMin, filterValueMax, filterDateFrom, filterDateTo].filter(Boolean).length;
+  const hasFilters = activeFilterCount > 0;
+  const clearAllFilters = () => { setFilterSource(""); setFilterTag(""); setFilterAssigned(""); setFilterStatus(""); setFilterValueMin(""); setFilterValueMax(""); setFilterDateFrom(""); setFilterDateTo(""); };
 
   const filteredLeads = useMemo(() => {
     let result = allLeads;
     if (search) { const q = search.toLowerCase(); result = result.filter((l: any) => l.name.toLowerCase().includes(q) || l.email?.toLowerCase().includes(q) || l.phone?.includes(q) || l.company?.toLowerCase().includes(q)); }
     if (filterSource) result = result.filter((l: any) => l.source === filterSource);
     if (filterTag) result = result.filter((l: any) => l.tags?.includes(filterTag));
+    if (filterAssigned) result = result.filter((l: any) => l.assigned_to === filterAssigned);
     if (filterStatus === "won") result = result.filter((l: any) => l.won_at);
     else if (filterStatus === "lost") result = result.filter((l: any) => l.lost_at);
     else if (filterStatus === "active") result = result.filter((l: any) => !l.won_at && !l.lost_at);
@@ -212,7 +197,7 @@ export default function FranqueadoCRM() {
     if (filterDateFrom) result = result.filter((l: any) => new Date(l.created_at) >= new Date(filterDateFrom));
     if (filterDateTo) { const to = new Date(filterDateTo); to.setHours(23, 59, 59, 999); result = result.filter((l: any) => new Date(l.created_at) <= to); }
     return result;
-  }, [allLeads, search, filterSource, filterTag, filterStatus, filterValueMin, filterValueMax, filterDateFrom, filterDateTo]);
+  }, [allLeads, search, filterSource, filterTag, filterAssigned, filterStatus, filterValueMin, filterValueMax, filterDateFrom, filterDateTo]);
 
   const leadsByStage = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -221,10 +206,21 @@ export default function FranqueadoCRM() {
     return map;
   }, [filteredLeads, stages]);
 
-  const pipelineValue = filteredLeads.filter((l: any) => !l.won_at && !l.lost_at).reduce((s: number, l: any) => s + (Number(l.value) || 0), 0);
-  const vendas = filteredLeads.filter((l: any) => l.won_at).length;
-  const totalActive = allLeads.filter((l: any) => !l.lost_at).length;
-  const conversionRate = totalActive > 0 ? Math.round((vendas / totalActive) * 100) : 0;
+  const pipelineSummary = useMemo(() => {
+    const activeLeads = filteredLeads.filter((l: any) => !l.won_at && !l.lost_at);
+    const totalValue = activeLeads.reduce((s: number, l: any) => s + (l.value || 0), 0);
+    const wonLeads = filteredLeads.filter((l: any) => l.won_at);
+    const convRate = filteredLeads.length > 0 ? Math.round((wonLeads.length / filteredLeads.length) * 100) : 0;
+    const avgValue = activeLeads.length > 0 ? Math.round(totalValue / activeLeads.length) : 0;
+    return { totalLeads: activeLeads.length, totalValue, wonLeads: wonLeads.length, convRate, avgValue };
+  }, [filteredLeads]);
+
+  const stageValues = useMemo(() => {
+    const map: Record<string, number> = {};
+    stages.forEach(s => { map[s.key] = (leadsByStage[s.key] || []).reduce((sum: number, l: any) => sum + (l.value || 0), 0); });
+    return map;
+  }, [leadsByStage, stages]);
+  const totalPipelineValue = useMemo(() => Object.values(stageValues).reduce((a, b) => a + b, 0), [stageValues]);
 
   const handleDragStart = (e: DragStartEvent) => setDraggingId(String(e.active.id));
   const handleDragEnd = (e: DragEndEvent) => {
@@ -232,7 +228,15 @@ export default function FranqueadoCRM() {
     const { active, over } = e;
     if (!over) return;
     const leadId = String(active.id);
-    const newStage = String(over.id);
+    const overId = String(over.id);
+    const validStageKeys = stages.map(s => s.key);
+    let newStage: string | null = null;
+    if (validStageKeys.includes(overId)) newStage = overId;
+    else {
+      const targetLead = allLeads.find((l: any) => l.id === overId);
+      if (targetLead && validStageKeys.includes(targetLead.stage)) newStage = targetLead.stage;
+    }
+    if (!newStage) return;
     const lead = allLeads.find((l: any) => l.id === leadId);
     if (lead && lead.stage !== newStage) updateLead.mutate({ id: leadId, stage: newStage });
   };
@@ -242,12 +246,8 @@ export default function FranqueadoCRM() {
   const toggleAllLeads = () => { if (filteredLeads.every((l: any) => selectedLeadIds.has(l.id))) setSelectedLeadIds(new Set()); else setSelectedLeadIds(new Set(filteredLeads.map((l: any) => l.id))); };
 
   const handleBulkMoveStage = (stage: string) => { bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { stage } }); setSelectedLeadIds(new Set()); toast.success(`Leads movidos`); };
-  const handleBulkAddTag = () => {
-    if (!bulkTagInput.trim()) return;
-    const tag = bulkTagInput.trim();
-    allLeads.filter((l: any) => selectedLeadIds.has(l.id) && !(l.tags || []).includes(tag)).forEach((l: any) => updateLead.mutate({ id: l.id, tags: [...(l.tags || []), tag] }));
-    setBulkTagInput(""); setSelectedLeadIds(new Set()); toast.success("Tag adicionada");
-  };
+  const handleBulkAssign = (userId: string) => { bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { assigned_to: userId } }); setSelectedLeadIds(new Set()); toast.success("Responsável atribuído"); };
+  const handleBulkAddTag = () => { if (!bulkTagInput.trim()) return; const tag = bulkTagInput.trim(); allLeads.filter((l: any) => selectedLeadIds.has(l.id) && !(l.tags || []).includes(tag)).forEach((l: any) => updateLead.mutate({ id: l.id, tags: [...(l.tags || []), tag] })); setBulkTagInput(""); setSelectedLeadIds(new Set()); toast.success("Tag adicionada"); };
   const handleBulkMarkLost = () => { bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { lost_at: new Date().toISOString(), stage: "perdido" } }); setSelectedLeadIds(new Set()); toast.success("Leads marcados como perdidos"); };
   const handleBulkDelete = () => { bulkDeleteLeads.mutate(Array.from(selectedLeadIds)); setSelectedLeadIds(new Set()); setBulkDeleteOpen(false); toast.success("Leads excluídos"); };
 
@@ -257,7 +257,7 @@ export default function FranqueadoCRM() {
     return (
       <div className="w-full space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-4 gap-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-24" />)}</div>
+        <div className="grid grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}</div>
         <Skeleton className="h-96" />
       </div>
     );
@@ -265,6 +265,8 @@ export default function FranqueadoCRM() {
 
   return (
     <div className="w-full space-y-5">
+      <CrmTutorial open={tutorialOpen} onOpenChange={setTutorialOpen} />
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -272,6 +274,8 @@ export default function FranqueadoCRM() {
           <p className="text-sm text-muted-foreground">{allLeads.length} leads · Gerencie seus leads e oportunidades</p>
         </div>
         <div className="flex items-center gap-2">
+          <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setTutorialOpen(true)}><HelpCircle className="w-4 h-4 text-muted-foreground" /></Button></TooltipTrigger><TooltipContent>Tutorial do CRM</TooltipContent></Tooltip></TooltipProvider>
+          {crmSettings?.lead_roulette_enabled && activeTab === "pipeline" && <Badge variant="outline" className="text-[10px] gap-1"><Shuffle className="w-3 h-3" /> Roleta ativa</Badge>}
           <Button variant={activeTab === "contatos" ? "default" : "outline"} size="sm" className="gap-1.5 h-8"
             onClick={() => setActiveTab(activeTab === "contatos" ? "pipeline" : "contatos")}>
             <BookUser className="w-3.5 h-3.5" /> Contatos
@@ -293,22 +297,36 @@ export default function FranqueadoCRM() {
               </div>
             </>
           )}
+          <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setFunnelManagerOpen(true)}><Settings2 className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>Gerenciar Funis</TooltipContent></Tooltip></TooltipProvider>
         </div>
       </div>
 
-      {/* Contacts tab */}
       {activeTab === "contatos" && <CrmContactsView onCreateLeadFromContact={() => { setActiveTab("pipeline"); setNewLeadOpen(true); }} />}
 
-      {/* Pipeline tab */}
       {activeTab === "pipeline" && (
         <>
-          {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Total de Leads" value={String(allLeads.length)} icon={Users} delay={0} />
-            <KpiCard label="Pipeline" value={`R$ ${pipelineValue.toLocaleString()}`} icon={DollarSign} delay={1} variant="accent" />
-            <KpiCard label="Vendas" value={String(vendas)} icon={Target} delay={2} />
-            <KpiCard label="Taxa Conversão" value={`${conversionRate}%`} icon={TrendingUp} delay={3} />
-          </div>
+          {/* Pipeline Summary */}
+          {allLeads.length > 0 && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Card><CardContent className="p-3">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Leads ativos</p>
+                <p className="text-xl font-bold mt-1">{pipelineSummary.totalLeads}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-3">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Valor no pipeline</p>
+                <p className="text-xl font-bold text-primary mt-1">R$ {pipelineSummary.totalValue.toLocaleString()}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-3">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Ticket médio</p>
+                <p className="text-xl font-bold mt-1">R$ {pipelineSummary.avgValue.toLocaleString()}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-3">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Conversão</p>
+                <p className="text-xl font-bold mt-1">{pipelineSummary.convRate}%</p>
+                <p className="text-[10px] text-muted-foreground">{pipelineSummary.wonLeads} vendidos</p>
+              </CardContent></Card>
+            </div>
+          )}
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2">
@@ -333,8 +351,20 @@ export default function FranqueadoCRM() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold">Filtros</p>
-                    {activeFilterCount > 0 && <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={clearAllFilters}><X className="w-3 h-3" /> Limpar</Button>}
+                    {hasFilters && <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={clearAllFilters}><X className="w-3 h-3" /> Limpar</Button>}
                   </div>
+                  {team && team.length > 0 && (
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Responsável</Label>
+                      <Select value={filterAssigned} onValueChange={v => setFilterAssigned(v === "all" ? "" : v)}>
+                        <SelectTrigger className="h-8 text-xs"><UserCircle className="w-3 h-3 mr-1" /><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                          {team.map(m => <SelectItem key={m.user_id} value={m.user_id} className="text-xs">{m.full_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     <div><Label className="text-[10px] text-muted-foreground">Data de</Label><Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="h-8 text-xs" /></div>
                     <div><Label className="text-[10px] text-muted-foreground">Data até</Label><Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="h-8 text-xs" /></div>
@@ -374,7 +404,7 @@ export default function FranqueadoCRM() {
                 </div>
               </PopoverContent>
             </Popover>
-            {activeFilterCount > 0 && <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={clearAllFilters}><X className="w-3 h-3" /> Limpar filtros</Button>}
+            {hasFilters && <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={clearAllFilters}><X className="w-3 h-3" /> Limpar filtros</Button>}
             <Button variant={selectionMode ? "default" : "outline"} size="sm" className="h-8 text-xs gap-1.5"
               onClick={() => { setSelectionMode(!selectionMode); if (selectionMode) setSelectedLeadIds(new Set()); }}>
               <Checkbox className="w-3.5 h-3.5 pointer-events-none" checked={selectionMode} /> Selecionar
@@ -390,6 +420,12 @@ export default function FranqueadoCRM() {
                 <SelectTrigger className="h-7 w-32 text-xs bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground"><ArrowRightLeft className="w-3 h-3 mr-1" /><SelectValue placeholder="Mover etapa" /></SelectTrigger>
                 <SelectContent>{stages.map(s => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}</SelectContent>
               </Select>
+              {team && team.length > 0 && (
+                <Select value="" onValueChange={handleBulkAssign}>
+                  <SelectTrigger className="h-7 w-32 text-xs bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground"><UserCircle className="w-3 h-3 mr-1" /><SelectValue placeholder="Atribuir" /></SelectTrigger>
+                  <SelectContent>{team.map(m => <SelectItem key={m.user_id} value={m.user_id} className="text-xs">{m.full_name}</SelectItem>)}</SelectContent>
+                </Select>
+              )}
               <div className="flex items-center gap-1">
                 <Input placeholder="Tag..." value={bulkTagInput} onChange={e => setBulkTagInput(e.target.value)} className="h-7 w-24 text-xs bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50" />
                 <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkAddTag} disabled={!bulkTagInput.trim()}><Tag className="w-3 h-3 mr-1" /> Tag</Button>
@@ -400,7 +436,6 @@ export default function FranqueadoCRM() {
             </div>
           )}
 
-          {/* Empty */}
           {allLeads.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -411,7 +446,7 @@ export default function FranqueadoCRM() {
               </CardContent>
             </Card>
           ) : view === "kanban" ? (
-            <DndContext collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <ScrollArea className="w-full">
                 <div className="flex gap-3 pb-4 min-w-max">
                   {stages.map(stage => {
@@ -426,6 +461,12 @@ export default function FranqueadoCRM() {
                           <span className="text-xs font-semibold flex-1">{stage.label}</span>
                           <Badge variant="outline" className="text-[9px] h-5">{stageLeads.length}</Badge>
                         </div>
+                        {(stageValues[stage.key] > 0 || totalPipelineValue > 0) && (
+                          <div className="px-3 py-1.5 space-y-1">
+                            <span className="text-[10px] font-bold text-primary">R$ {stageValues[stage.key].toLocaleString()}</span>
+                            {totalPipelineValue > 0 && <Progress value={(stageValues[stage.key] / totalPipelineValue) * 100} className="h-1" />}
+                          </div>
+                        )}
                         <DroppableColumn stageKey={stage.key}>
                           {stageLeads.map((lead: any) => (
                             <div key={lead.id} className="relative group/check">
@@ -493,19 +534,11 @@ export default function FranqueadoCRM() {
         </>
       )}
 
-      {/* Lead Detail Sheet */}
       <CrmLeadDetailSheet lead={selectedLead} open={detailOpen} onOpenChange={setDetailOpen} />
-
-      {/* New Lead Dialog */}
       <CrmNewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} defaultStage={stages[0]?.key || "novo"} />
-
-      {/* Funnel Manager */}
       <CrmFunnelManager open={funnelManagerOpen} onOpenChange={setFunnelManagerOpen} />
-
-      {/* CSV Import */}
       <CrmCsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
 
-      {/* Bulk Delete Confirmation */}
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

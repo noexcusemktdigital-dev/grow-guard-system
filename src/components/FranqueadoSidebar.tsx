@@ -4,7 +4,7 @@ import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router
 import {
   LayoutDashboard, Calendar, Megaphone, MessageSquare, ChevronLeft, ChevronRight,
   Sparkles, ClipboardCheck, FileText, Users, FolderOpen, GraduationCap,
-  DollarSign, FileSignature, User, Target, ChevronDown, Settings, ChevronsUpDown,
+  DollarSign, FileSignature, User, Target, ChevronDown, Settings, ChevronsUpDown, Building2,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,6 +38,7 @@ const marketingSection: SidebarItem[] = [
 ];
 
 const gestaoSection: SidebarItem[] = [
+  { label: "Minha Unidade", icon: Building2, path: "/franqueado/unidade" },
   { label: "Financeiro", icon: DollarSign, path: "/franqueado/financeiro" },
   { label: "Meus Contratos", icon: FileSignature, path: "/franqueado/contratos" },
 ];

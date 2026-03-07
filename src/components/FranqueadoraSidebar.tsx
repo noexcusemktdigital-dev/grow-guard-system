@@ -33,9 +33,9 @@ const principalSection: SidebarItem[] = [
 ];
 
 const redeSection: SidebarItem[] = [
+  { label: "CRM", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
-  { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
 ];
 

@@ -54,6 +54,7 @@ import FranqueadoContratos from "./pages/franqueado/FranqueadoContratos";
 import FranqueadoPerfil from "./pages/franqueado/FranqueadoPerfil";
 import FranqueadoConfiguracoes from "./pages/franqueado/FranqueadoConfiguracoes";
 import FranqueadoDiagnostico from "./pages/franqueado/FranqueadoDiagnostico";
+import FranqueadoMinhaUnidade from "./pages/franqueado/FranqueadoMinhaUnidade";
 // Cliente Final pages
 import ClienteInicio from "./pages/cliente/ClienteInicio";
 import ClienteChecklist from "./pages/cliente/ClienteChecklist";
@@ -145,6 +146,7 @@ const App = () => (
                 <Route path="financeiro" element={<FranqueadoFinanceiro />} />
                 <Route path="contratos" element={<FranqueadoContratos />} />
                 <Route path="diagnostico" element={<FranqueadoDiagnostico />} />
+                <Route path="unidade" element={<FranqueadoMinhaUnidade />} />
                 <Route path="perfil" element={<FranqueadoPerfil />} />
                 <Route path="configuracoes" element={<FranqueadoConfiguracoes />} />
                 <Route path="notificacoes" element={<NotificacoesPage />} />

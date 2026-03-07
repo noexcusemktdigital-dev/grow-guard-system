@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUnitDocuments, useUnitDocumentMutations } from "@/hooks/useUnitDocuments";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const docTypes = ["Contrato de franquia", "Documentos administrativos", "Arquivos internos", "Outros"];
 
@@ -24,11 +25,13 @@ const typeColors: Record<string, string> = {
 
 interface Props {
   unitId: string;
+  isFranqueadoView?: boolean;
 }
 
-export function UnidadeDocumentosReal({ unitId }: Props) {
+export function UnidadeDocumentosReal({ unitId, isFranqueadoView }: Props) {
   const { data: docs, isLoading } = useUnitDocuments(unitId);
   const { uploadAndCreate, deleteDoc } = useUnitDocumentMutations(unitId);
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [form, setForm] = useState({ name: "", type: "Outros", visibility: "both", notes: "" });
@@ -62,13 +65,18 @@ export function UnidadeDocumentosReal({ unitId }: Props) {
 
   if (isLoading) return <Skeleton className="h-48 w-full" />;
 
+  // For franchisee view, filter out franqueadora_only docs
+  const visibleDocs = isFranqueadoView
+    ? (docs || []).filter((d: any) => d.visibility !== "franqueadora_only")
+    : docs;
+
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex justify-end">
         <Button onClick={() => setOpen(true)} className="gap-2"><Plus className="w-4 h-4" /> Novo Documento</Button>
       </div>
 
-      {(!docs || docs.length === 0) ? (
+      {(!visibleDocs || visibleDocs.length === 0) ? (
         <Card className="p-8 text-center text-muted-foreground">
           <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
           <p>Nenhum documento cadastrado para esta unidade.</p>
@@ -80,38 +88,46 @@ export function UnidadeDocumentosReal({ unitId }: Props) {
               <TableRow>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead>Visibilidade</TableHead>
+                {!isFranqueadoView && <TableHead>Visibilidade</TableHead>}
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {docs.map((d: any) => (
-                <TableRow key={d.id}>
-                  <TableCell>
-                    <Badge variant="outline" className={typeColors[d.type] || typeColors["Outros"]}>{d.type}</Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">{d.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="gap-1">
-                      {d.visibility === "franqueadora_only" ? <><EyeOff className="w-3 h-3" /> Franqueadora</> : <><Eye className="w-3 h-3" /> Ambos</>}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {new Date(d.created_at).toLocaleDateString("pt-BR")}
-                  </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    {d.file_url && (
-                      <Button variant="ghost" size="icon" asChild>
-                        <a href={d.file_url} target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4" /></a>
-                      </Button>
+              {visibleDocs.map((d: any) => {
+                // Franchisee can only delete docs they uploaded
+                const canDelete = isFranqueadoView ? d.uploaded_by === user?.id : true;
+                return (
+                  <TableRow key={d.id}>
+                    <TableCell>
+                      <Badge variant="outline" className={typeColors[d.type] || typeColors["Outros"]}>{d.type}</Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">{d.name}</TableCell>
+                    {!isFranqueadoView && (
+                      <TableCell>
+                        <Badge variant="outline" className="gap-1">
+                          {d.visibility === "franqueadora_only" ? <><EyeOff className="w-3 h-3" /> Franqueadora</> : <><Eye className="w-3 h-3" /> Ambos</>}
+                        </Badge>
+                      </TableCell>
                     )}
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(d.id)} disabled={deleteDoc.isPending}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    <TableCell className="text-muted-foreground text-xs">
+                      {new Date(d.created_at).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell className="text-right space-x-1">
+                      {d.file_url && (
+                        <Button variant="ghost" size="icon" asChild>
+                          <a href={d.file_url} target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4" /></a>
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(d.id)} disabled={deleteDoc.isPending}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </Card>
@@ -136,16 +152,18 @@ export function UnidadeDocumentosReal({ unitId }: Props) {
               <Label>Arquivo</Label>
               <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
             </div>
-            <div className="space-y-1.5">
-              <Label>Visibilidade</Label>
-              <Select value={form.visibility} onValueChange={(v) => setForm((f) => ({ ...f, visibility: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="both">Ambos (Franqueadora + Unidade)</SelectItem>
-                  <SelectItem value="franqueadora_only">Somente Franqueadora</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {!isFranqueadoView && (
+              <div className="space-y-1.5">
+                <Label>Visibilidade</Label>
+                <Select value={form.visibility} onValueChange={(v) => setForm((f) => ({ ...f, visibility: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="both">Ambos (Franqueadora + Unidade)</SelectItem>
+                    <SelectItem value="franqueadora_only">Somente Franqueadora</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Observação</Label>
               <Textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />

@@ -17,9 +17,11 @@ import { toast } from "sonner";
 
 interface Props {
   unitOrgId: string | null | undefined;
+  isFranqueadoView?: boolean;
+  maxUsers?: number;
 }
 
-export function UnidadeUsuariosReal({ unitOrgId }: Props) {
+export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: Props) {
   const { data: members, isLoading } = useUnitMembers(unitOrgId);
   const queryClient = useQueryClient();
 
@@ -30,9 +32,12 @@ export function UnidadeUsuariosReal({ unitOrgId }: Props) {
   const [inviting, setInviting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
 
+  const canInvite = !maxUsers || !members || members.length < maxUsers;
+
   async function handleInvite() {
     if (!invEmail.trim() || !invName.trim()) { toast.error("Preencha nome e email"); return; }
     if (!unitOrgId) { toast.error("Unidade sem organização vinculada"); return; }
+    if (maxUsers && members && members.length >= maxUsers) { toast.error(`Limite de ${maxUsers} usuários atingido`); return; }
     setInviting(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-user", {
@@ -56,12 +61,27 @@ export function UnidadeUsuariosReal({ unitOrgId }: Props) {
 
   if (isLoading) return <Skeleton className="h-48 w-full" />;
 
+  // For franchisee view, only show admin and user roles
+  const roleOptions = isFranqueadoView
+    ? [
+        { value: "franqueado", label: "Administrador" },
+        { value: "cliente_user", label: "Usuário" },
+      ]
+    : [
+        { value: "franqueado", label: "Franqueado (Admin)" },
+        { value: "cliente_admin", label: "Administrador" },
+        { value: "cliente_user", label: "Usuário" },
+      ];
+
   return (
     <>
       <Card className="animate-fade-in">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="text-sm font-semibold flex items-center gap-2"><Users className="w-4 h-4" /> Membros</h3>
-          {unitOrgId && (
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Users className="w-4 h-4" /> Membros
+            {maxUsers && <span className="text-xs text-muted-foreground font-normal">({members?.length || 0}/{maxUsers})</span>}
+          </h3>
+          {unitOrgId && canInvite && (
             <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
               <Plus className="w-3.5 h-3.5 mr-1" /> Convidar Membro
             </Button>
@@ -141,9 +161,9 @@ export function UnidadeUsuariosReal({ unitOrgId }: Props) {
                   <Select value={invRole} onValueChange={setInvRole}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="franqueado">Franqueado (Admin)</SelectItem>
-                      <SelectItem value="cliente_admin">Administrador</SelectItem>
-                      <SelectItem value="cliente_user">Usuário</SelectItem>
+                      {roleOptions.map(r => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

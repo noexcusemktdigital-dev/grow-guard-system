@@ -16,9 +16,10 @@ import { toast } from "sonner";
 
 interface Props {
   unit: any;
+  readOnly?: boolean;
 }
 
-export function UnidadeFinanceiroReal({ unit }: Props) {
+export function UnidadeFinanceiroReal({ unit, readOnly }: Props) {
   const { updateUnit } = useUnitMutations();
   const [form, setForm] = useState({
     transfer_percent: unit.transfer_percent ?? 20,
@@ -29,7 +30,6 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
     saas_commission_percent: unit.saas_commission_percent ?? 20,
   });
 
-  // Fetch payment history if unit has a linked org
   const { data: payments, isLoading: loadingPayments } = useQuery({
     queryKey: ["unit-payments", unit.unit_org_id],
     queryFn: async () => {
@@ -47,12 +47,10 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
   });
 
   const handleSave = async () => {
-    // Save unit config
     updateUnit.mutate(
       { id: unit.id, ...form },
       {
         onSuccess: async () => {
-          // Also update saas_commission_percent on the linked organization
           if (unit.unit_org_id) {
             await supabase
               .from("organizations")
@@ -91,6 +89,7 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
                   className="text-lg font-bold"
                   value={c.value}
                   onChange={(e) => setForm((f) => ({ ...f, [c.key]: Number(e.target.value) }))}
+                  disabled={readOnly}
                 />
                 {c.suffix && <span className="text-sm text-muted-foreground">{c.suffix}</span>}
               </div>
@@ -99,30 +98,36 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
         })}
       </div>
 
-      <Card className="p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Monitor className="w-4 h-4 text-muted-foreground" />
-            <Label className="text-sm font-medium">Sistema ativo</Label>
+      {!readOnly && (
+        <Card className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Monitor className="w-4 h-4 text-muted-foreground" />
+              <Label className="text-sm font-medium">Sistema ativo</Label>
+            </div>
+            <Switch checked={form.system_active} onCheckedChange={(v) => setForm((f) => ({ ...f, system_active: v }))} />
           </div>
-          <Switch checked={form.system_active} onCheckedChange={(v) => setForm((f) => ({ ...f, system_active: v }))} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Observações financeiras</Label>
-          <Textarea rows={3} value={form.financial_notes} onChange={(e) => setForm((f) => ({ ...f, financial_notes: e.target.value }))} />
-        </div>
-      </Card>
+          <div className="space-y-1.5">
+            <Label>Observações financeiras</Label>
+            <Textarea rows={3} value={form.financial_notes} onChange={(e) => setForm((f) => ({ ...f, financial_notes: e.target.value }))} />
+          </div>
+        </Card>
+      )}
 
-      <div className="flex items-start gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4 text-sm text-muted-foreground">
-        <Info className="w-4 h-4 mt-0.5 text-blue-500 flex-shrink-0" />
-        <span>Estas configurações alimentam automaticamente Repasse, DRE e Fechamentos do módulo Financeiro.</span>
-      </div>
+      {!readOnly && (
+        <>
+          <div className="flex items-start gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4 text-sm text-muted-foreground">
+            <Info className="w-4 h-4 mt-0.5 text-blue-500 flex-shrink-0" />
+            <span>Estas configurações alimentam automaticamente Repasse, DRE e Fechamentos do módulo Financeiro.</span>
+          </div>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={updateUnit.isPending}>
-          {updateUnit.isPending ? "Salvando..." : "Salvar"}
-        </Button>
-      </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={updateUnit.isPending}>
+              {updateUnit.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
+        </>
+      )}
 
       {/* Payment history */}
       {unit.unit_org_id && (
