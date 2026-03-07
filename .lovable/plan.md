@@ -1,31 +1,47 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Onboarding Automático ao Criar Unidade
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### Estado atual
 
-### Ações
+- **Tabelas**: `onboarding_units`, `onboarding_checklist`, `onboarding_meetings`, `onboarding_tasks`, `onboarding_indicators` — todas existem com RLS
+- **Página**: `Onboarding.tsx` — funcional com lista de implantações, criação manual via dialog, abas (Etapas, Reuniões, Indicadores, Plano de Ação)
+- **Edge Function `provision-unit`**: Cria org, user, membership, role, unit, payment config — mas **não cria onboarding automaticamente**
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+### O que precisa ser feito
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+**1. Automação: Criar onboarding ao provisionar unidade**
 
-3. **Executar o teste** e analisar o resultado definitivo
+Alterar `provision-unit/index.ts` para, após criar a unit, automaticamente:
+- Criar um registro em `onboarding_units` vinculado à nova unidade
+- Popular `onboarding_checklist` com as etapas padrão do onboarding (~30 dias)
+- Definir `target_date` como `start_date + 30 dias`
 
-### Detalhe técnico
+Etapas padrão a serem inseridas automaticamente:
 
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
-```
+| Fase | Etapas |
+|------|--------|
+| Pré-Implantação | Assinatura do contrato, Pagamento da taxa, Acesso ao sistema liberado, Acesso Academy liberado |
+| Estruturação | Configuração comercial, Definição de metas, Treinamento inicial, Apresentação dos produtos |
+| Primeiros Movimentos | Primeiro lead gerado, Primeira proposta enviada, Primeiro contrato fechado, Primeira campanha ativa |
+| Consolidação | Pipeline organizado, Metas ativas, Primeira DRE analisada, Ajustes estratégicos |
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+**2. Melhorias na página Onboarding.tsx**
+
+- Adicionar coluna `target_date` na visualização (prazo de 30 dias)
+- Mostrar dias restantes/atrasados no card da implantação
+- Ao criar manualmente, calcular `target_date = start_date + 30 dias` automaticamente
+- Filtrar unidades que já têm onboarding ativo no dialog "Nova Implantação" (evitar duplicatas)
+
+### Arquivos alterados
+
+| Arquivo | Ação |
+|---------|------|
+| `supabase/functions/provision-unit/index.ts` | Adicionar criação automática de onboarding + checklist padrão |
+| `src/pages/Onboarding.tsx` | Exibir target_date, dias restantes, filtrar unidades com onboarding existente |
+
+### Ordem de execução
+
+1. Atualizar `provision-unit` com criação automática
+2. Melhorar UI do `Onboarding.tsx`
 
