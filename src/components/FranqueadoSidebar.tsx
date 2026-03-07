@@ -4,7 +4,7 @@ import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router
 import {
   LayoutDashboard, Calendar, Megaphone, MessageSquare, ChevronLeft, ChevronRight,
   Sparkles, ClipboardCheck, FileText, Users, FolderOpen, GraduationCap,
-  DollarSign, FileSignature, User, Target, ChevronDown, Settings, ChevronsUpDown, Building2,
+  DollarSign, FileSignature, User, Target, ChevronDown, Settings, ChevronsUpDown, Building2, Trophy,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
