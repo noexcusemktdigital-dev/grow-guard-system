@@ -165,6 +165,16 @@ export default function Onboarding() {
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     {u.start_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Início: {new Date(u.start_date).toLocaleDateString("pt-BR")}</span>}
+                    {(u as any).target_date && (() => {
+                      const days = getDaysRemaining((u as any).target_date);
+                      if (days === null) return null;
+                      return (
+                        <span className={`flex items-center gap-1 font-medium ${days < 0 ? "text-destructive" : days <= 7 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                          <AlertTriangle className="w-3 h-3" />
+                          {days < 0 ? `${Math.abs(days)}d atrasado` : `${days}d restantes`}
+                        </span>
+                      );
+                    })()}
                     {(u as any).responsible && <span>Resp: {(u as any).responsible}</span>}
                   </div>
                 </Card>
