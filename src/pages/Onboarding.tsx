@@ -334,7 +334,9 @@ export default function Onboarding() {
               <Select value={newUnitId} onValueChange={setNewUnitId}>
                 <SelectTrigger><SelectValue placeholder="Selecionar unidade" /></SelectTrigger>
                 <SelectContent>
-                  {(dbUnits ?? []).map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                  {availableUnits.length === 0 ? (
+                    <SelectItem value="__none" disabled>Todas as unidades já têm onboarding</SelectItem>
+                  ) : availableUnits.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
