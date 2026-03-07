@@ -46,11 +46,21 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
     enabled: !!unit.unit_org_id,
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Save unit config
     updateUnit.mutate(
       { id: unit.id, ...form },
       {
-        onSuccess: () => toast.success("Configuração financeira salva!"),
+        onSuccess: async () => {
+          // Also update saas_commission_percent on the linked organization
+          if (unit.unit_org_id) {
+            await supabase
+              .from("organizations")
+              .update({ saas_commission_percent: form.saas_commission_percent } as any)
+              .eq("id", unit.unit_org_id);
+          }
+          toast.success("Configuração financeira salva!");
+        },
         onError: (e) => toast.error(`Erro: ${e.message}`),
       }
     );
