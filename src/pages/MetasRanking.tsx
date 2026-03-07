@@ -32,7 +32,7 @@ export default function MetasRanking() {
   const { createGoal } = useGoalMutations();
 
   const [showNewGoal, setShowNewGoal] = useState(false);
-  const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_start: "", period_end: "" });
+  const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
 
   const isLoading = loadingGoals || loadingRankings;
 
@@ -50,8 +50,10 @@ export default function MetasRanking() {
         target_value: Number(goalForm.target_value),
         scope: goalForm.scope,
         unit_org_id: goalForm.scope === "unidade" ? goalForm.unit_org_id : undefined,
-        period_start: goalForm.period_start || undefined,
-        period_end: goalForm.period_end || undefined,
+        period_start: goalForm.period_month ? `${goalForm.period_month}-01` : undefined,
+        period_end: goalForm.period_month
+          ? new Date(Number(goalForm.period_month.split("-")[0]), Number(goalForm.period_month.split("-")[1]), 0).toISOString().split("T")[0]
+          : undefined,
         status: "active",
         metric: goalForm.type,
       },
@@ -59,7 +61,7 @@ export default function MetasRanking() {
         onSuccess: () => {
           toast.success("Meta criada com sucesso");
           setShowNewGoal(false);
-          setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_start: "", period_end: "" });
+          setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
         },
         onError: () => toast.error("Erro ao criar meta"),
       }
@@ -158,8 +160,7 @@ export default function MetasRanking() {
                   {g.period_start && (
                     <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                       <CalendarDays className="w-3 h-3" />
-                      {new Date(g.period_start).toLocaleDateString("pt-BR")}
-                      {g.period_end && ` — ${new Date(g.period_end).toLocaleDateString("pt-BR")}`}
+                      {new Date(g.period_start).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                     </p>
                   )}
                 </CardContent>
@@ -348,9 +349,9 @@ export default function MetasRanking() {
                 </Select>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Início</Label><Input type="date" value={goalForm.period_start} onChange={(e) => setGoalForm(f => ({ ...f, period_start: e.target.value }))} /></div>
-              <div><Label>Fim</Label><Input type="date" value={goalForm.period_end} onChange={(e) => setGoalForm(f => ({ ...f, period_end: e.target.value }))} /></div>
+            <div>
+              <Label>Mês da Meta</Label>
+              <Input type="month" value={goalForm.period_month} onChange={(e) => setGoalForm(f => ({ ...f, period_month: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
