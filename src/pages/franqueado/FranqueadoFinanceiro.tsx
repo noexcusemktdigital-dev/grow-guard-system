@@ -129,9 +129,11 @@ export default function FranqueadoFinanceiro() {
       <PageHeader title="Financeiro" subtitle="Visão financeira, cobranças de clientes e pagamento do sistema" />
 
       <Tabs defaultValue="visao" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="visao">Visão Geral</TabsTrigger>
-          <TabsTrigger value="pagamentos">Controle de Pagamentos</TabsTrigger>
+          <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
+          <TabsTrigger value="saas_clients" className="gap-1"><Users className="w-3.5 h-3.5" />Clientes SaaS</TabsTrigger>
+          <TabsTrigger value="comissoes" className="gap-1"><Coins className="w-3.5 h-3.5" />Comissões</TabsTrigger>
           <TabsTrigger value="fechamentos">Fechamentos</TabsTrigger>
           <TabsTrigger value="sistema" className="gap-1"><Wallet className="w-3.5 h-3.5" />Sistema</TabsTrigger>
         </TabsList>
