@@ -379,6 +379,8 @@ export default function Agenda() {
             <div className="space-y-1.5 text-[11px] text-muted-foreground">
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-primary/60" /> Eventos da rede</div>
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Apenas matriz</div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Pessoal</div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-violet-500" /> Clientes</div>
             </div>
           </Card>
         </div>
@@ -486,9 +488,11 @@ export default function Agenda() {
               <Select value={visibility} onValueChange={setVisibility}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="rede">Toda a rede</SelectItem>
+                  <SelectItem value="pessoal">Pessoal (só eu)</SelectItem>
+                  <SelectItem value="private">Interna (Matriz)</SelectItem>
+                  <SelectItem value="rede">Toda a rede (Franqueados)</SelectItem>
+                  <SelectItem value="clientes">Clientes finais</SelectItem>
                   <SelectItem value="unidades">Unidades selecionadas</SelectItem>
-                  <SelectItem value="private">Apenas matriz</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -568,7 +572,7 @@ export default function Agenda() {
                 )}
                 {detailEvent.visibility && (
                   <Badge variant="secondary" className="text-[10px]">
-                    {detailEvent.visibility === "rede" ? "Toda a rede" : detailEvent.visibility === "private" ? "Apenas matriz" : "Unidades selecionadas"}
+                    {detailEvent.visibility === "rede" ? "Toda a rede" : detailEvent.visibility === "private" ? "Apenas matriz" : detailEvent.visibility === "pessoal" ? "Pessoal" : detailEvent.visibility === "clientes" ? "Clientes" : "Unidades selecionadas"}
                   </Badge>
                 )}
                 {detailEvent.description && (

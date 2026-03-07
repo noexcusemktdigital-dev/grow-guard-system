@@ -16,9 +16,9 @@ const Index = () => {
   useEffect(() => {
     if (role && location.pathname === "/") {
       if (role === "super_admin" || role === "admin") {
-        navigate("/franqueadora/dashboard", { replace: true });
+        navigate("/franqueadora/inicio", { replace: true });
       } else if (role === "franqueado") {
-        navigate("/franqueado/dashboard", { replace: true });
+        navigate("/franqueado/inicio", { replace: true });
       } else {
         navigate("/cliente/inicio", { replace: true });
       }

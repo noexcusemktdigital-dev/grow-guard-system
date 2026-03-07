@@ -100,12 +100,12 @@ const App = () => (
 
             {/* Protected app shell */}
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>}>
-              <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
+              <Route index element={<Navigate to="/franqueadora/inicio" replace />} />
 
               {/* Franqueadora — super_admin + admin */}
               <Route path="franqueadora" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><FranqueadoraLayout /></ProtectedRoute>}>
-                <Route index element={<Navigate to="/franqueadora/dashboard" replace />} />
-                <Route path="dashboard" element={<Home />} />
+                <Route index element={<Navigate to="/franqueadora/inicio" replace />} />
+                <Route path="inicio" element={<Home />} />
                 <Route path="financeiro" element={<FinanceiroDashboard />} />
                 <Route path="financeiro/controle" element={<FinanceiroControle />} />
                 <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
@@ -131,8 +131,8 @@ const App = () => (
 
               {/* Franqueado */}
               <Route path="franqueado" element={<ProtectedRoute allowedRoles={["franqueado"]}><FranqueadoLayout /></ProtectedRoute>}>
-                <Route index element={<Navigate to="/franqueado/dashboard" replace />} />
-                <Route path="dashboard" element={<FranqueadoDashboard />} />
+                <Route index element={<Navigate to="/franqueado/inicio" replace />} />
+                <Route path="inicio" element={<FranqueadoDashboard />} />
                 <Route path="agenda" element={<FranqueadoAgenda />} />
                 <Route path="comunicados" element={<FranqueadoComunicados />} />
                 <Route path="suporte" element={<FranqueadoSuporte />} />

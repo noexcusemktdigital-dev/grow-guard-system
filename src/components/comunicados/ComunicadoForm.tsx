@@ -27,7 +27,7 @@ const tipoOptions: ComunicadoTipo[] = [
 ];
 
 const prioridadeOptions: ComunicadoPrioridade[] = ["Normal", "Alta", "Crítica"];
-const publicoOptions: PublicoAlvo[] = ["Franqueadora", "Franqueados", "Clientes finais", "Todos"];
+const publicoOptions: PublicoAlvo[] = ["Internos (Matriz)", "Franqueados", "Clientes finais", "Todos"];
 
 interface ComunicadoFormProps {
   comunicado?: Comunicado | null;

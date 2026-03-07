@@ -220,6 +220,7 @@ export default function FranqueadoAgenda() {
   const [allDay, setAllDay] = useState(false);
   const [color, setColor] = useState(COLORS[4]);
   const [calendarId, setCalendarId] = useState<string>("");
+  const [visibility, setVisibility] = useState("pessoal");
 
   // Month view data
   const monthStart = startOfMonth(currentDate);
@@ -243,6 +244,7 @@ export default function FranqueadoAgenda() {
   function openNewEvent(day?: Date) {
     setEditingEvent(null);
     setTitle(""); setDescription(""); setLocation(""); setAllDay(false); setColor(COLORS[4]); setCalendarId("");
+    setVisibility("pessoal");
     if (day) {
       setStartAt(format(day, "yyyy-MM-dd'T'HH:mm"));
       setEndAt(format(new Date(day.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"));
@@ -261,17 +263,19 @@ export default function FranqueadoAgenda() {
     setEndAt(format(parseISO(ev.end_at), "yyyy-MM-dd'T'HH:mm"));
     setLocation(ev.location || ""); setAllDay(ev.all_day || false);
     setColor(ev.color || COLORS[4]); setCalendarId(ev.calendar_id || "");
+    setVisibility(ev.visibility || "pessoal");
     setDetailEvent(null); setFormOpen(true);
   }
 
   function handleSave() {
     if (!title.trim()) { toast.error("Informe o título"); return; }
     if (!startAt || !endAt) { toast.error("Informe data/hora"); return; }
-    const payload = {
+    const payload: any = {
       title, description: description || undefined,
       start_at: new Date(startAt).toISOString(), end_at: new Date(endAt).toISOString(),
       location: location || undefined, all_day: allDay, color,
       calendar_id: calendarId || undefined,
+      visibility,
     };
     if (editingEvent) {
       updateEvent.mutate({ id: editingEvent.id, ...payload }, { onSuccess: () => { setFormOpen(false); toast.success("Evento atualizado!"); } });
@@ -362,6 +366,8 @@ export default function FranqueadoAgenda() {
             <div className="space-y-1.5 text-[11px] text-muted-foreground">
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-primary/60" /> Meus eventos</div>
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Franqueadora</div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Unidade</div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-violet-500" /> Clientes</div>
             </div>
           </Card>
         </div>
@@ -443,6 +449,18 @@ export default function FranqueadoAgenda() {
             <div className="flex items-center gap-2"><Switch checked={allDay} onCheckedChange={setAllDay} id="allday" /><Label htmlFor="allday">Dia todo</Label></div>
             <div><Label>Local</Label><Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Endereço ou link" /></div>
             <div><Label>Descrição</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} /></div>
+            {/* Visibility */}
+            <div>
+              <Label>Visibilidade</Label>
+              <Select value={visibility} onValueChange={setVisibility}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pessoal">Pessoal (só eu)</SelectItem>
+                  <SelectItem value="unidade">Toda a unidade</SelectItem>
+                  <SelectItem value="clientes">Compartilhar com clientes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {(calendars ?? []).length > 0 && (
               <div>
                 <Label>Calendário</Label>
