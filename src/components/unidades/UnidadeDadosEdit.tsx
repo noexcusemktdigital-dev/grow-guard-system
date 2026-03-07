@@ -10,9 +10,10 @@ import { toast } from "sonner";
 
 interface Props {
   unit: any;
+  readOnly?: boolean;
 }
 
-export function UnidadeDadosEdit({ unit }: Props) {
+export function UnidadeDadosEdit({ unit, readOnly }: Props) {
   const { updateUnit } = useUnitMutations();
   const [form, setForm] = useState({
     name: unit.name || "",
@@ -28,13 +29,24 @@ export function UnidadeDadosEdit({ unit }: Props) {
   });
 
   const handleSave = () => {
-    updateUnit.mutate(
-      { id: unit.id, ...form },
-      {
-        onSuccess: () => toast.success("Dados salvos com sucesso!"),
-        onError: (e) => toast.error(`Erro ao salvar: ${e.message}`),
-      }
-    );
+    if (readOnly) {
+      // Franchisee can only edit contact fields
+      updateUnit.mutate(
+        { id: unit.id, phone: form.phone, email: form.email, address: form.address },
+        {
+          onSuccess: () => toast.success("Dados salvos com sucesso!"),
+          onError: (e) => toast.error(`Erro ao salvar: ${e.message}`),
+        }
+      );
+    } else {
+      updateUnit.mutate(
+        { id: unit.id, ...form },
+        {
+          onSuccess: () => toast.success("Dados salvos com sucesso!"),
+          onError: (e) => toast.error(`Erro ao salvar: ${e.message}`),
+        }
+      );
+    }
   };
 
   return (
@@ -42,25 +54,25 @@ export function UnidadeDadosEdit({ unit }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Nome da Unidade</Label>
-          <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} disabled={readOnly} />
         </div>
         <div className="space-y-1.5">
           <Label>Responsável</Label>
-          <Input value={form.manager_name} onChange={(e) => setForm((f) => ({ ...f, manager_name: e.target.value }))} />
+          <Input value={form.manager_name} onChange={(e) => setForm((f) => ({ ...f, manager_name: e.target.value }))} disabled={readOnly} />
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <Label>Cidade</Label>
-          <Input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
+          <Input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} disabled={readOnly} />
         </div>
         <div className="space-y-1.5">
           <Label>Estado</Label>
-          <Input value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} />
+          <Input value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} disabled={readOnly} />
         </div>
         <div className="space-y-1.5">
           <Label>Status</Label>
-          <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
+          <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))} disabled={readOnly}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="active">Ativa</SelectItem>
@@ -87,17 +99,19 @@ export function UnidadeDadosEdit({ unit }: Props) {
         </div>
         <div className="space-y-1.5">
           <Label>Data de Abertura</Label>
-          <Input type="date" value={form.opened_at?.slice(0, 10) || ""} onChange={(e) => setForm((f) => ({ ...f, opened_at: e.target.value }))} />
+          <Input type="date" value={form.opened_at?.slice(0, 10) || ""} onChange={(e) => setForm((f) => ({ ...f, opened_at: e.target.value }))} disabled={readOnly} />
         </div>
-        <div className="space-y-1.5">
-          <Label>Wallet ID Asaas</Label>
-          <Input
-            placeholder="Ex: abc123-def456..."
-            value={form.asaas_wallet_id}
-            onChange={(e) => setForm((f) => ({ ...f, asaas_wallet_id: e.target.value }))}
-          />
-          <p className="text-xs text-muted-foreground">ID da carteira Asaas para split de pagamentos</p>
-        </div>
+        {!readOnly && (
+          <div className="space-y-1.5">
+            <Label>Wallet ID Asaas</Label>
+            <Input
+              placeholder="Ex: abc123-def456..."
+              value={form.asaas_wallet_id}
+              onChange={(e) => setForm((f) => ({ ...f, asaas_wallet_id: e.target.value }))}
+            />
+            <p className="text-xs text-muted-foreground">ID da carteira Asaas para split de pagamentos</p>
+          </div>
+        )}
       </div>
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={updateUnit.isPending}>
