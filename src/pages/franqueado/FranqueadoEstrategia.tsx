@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,7 +25,7 @@ import {
   Sparkles,
   RefreshCw,
   ClipboardCheck,
-  History,
+  FolderOpen,
   Search,
   Trash2,
   Pencil,
@@ -36,7 +39,10 @@ import {
   BarChart3,
   FileText,
   Package,
-  ArrowRight,
+  AlertTriangle,
+  Layers,
+  Map,
+  Calculator,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -59,122 +65,229 @@ import {
   PolarRadiusAxis,
   Radar,
   ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
 } from "recharts";
 import { Progress } from "@/components/ui/progress";
 
-// ── Diagnostic Questions ────────────────────────────────────────
+// ── Field types ─────────────────────────────────────────────────
 
-const diagnosticSections = [
+interface DiagField {
+  key: string;
+  label: string;
+  type: "text" | "select" | "textarea" | "checkbox-group" | "conditional-text" | "slider";
+  placeholder?: string;
+  options?: string[];
+  conditionKey?: string;
+  conditionValues?: string[];
+  subFields?: DiagField[];
+  min?: number;
+  max?: number;
+}
+
+interface DiagSection {
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  fields: DiagField[];
+}
+
+// ── 8-Block SPIN + NOEXCUSE Diagnostic ──────────────────────────
+
+const diagnosticSections: DiagSection[] = [
   {
-    title: "Sobre o Negócio",
+    title: "Situação",
+    subtitle: "Contexto do Negócio",
+    icon: <ClipboardCheck className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "segmento", label: "Segmento de atuação", type: "text", placeholder: "Ex: Odontologia, Estética, Gastronomia" },
-      { key: "tempo_mercado", label: "Tempo de mercado", type: "select", options: ["Menos de 1 ano", "1-3 anos", "3-5 anos", "5-10 anos", "Mais de 10 anos"] },
-      { key: "faturamento_mensal", label: "Faturamento mensal (R$)", type: "text", placeholder: "Ex: 50000" },
-      { key: "equipe", label: "Tamanho da equipe", type: "select", options: ["1-5", "6-15", "16-30", "31-50", "50+"] },
+      { key: "produto_servico", label: "Qual é o principal produto ou serviço que sua empresa vende hoje?", type: "text", placeholder: "Ex: Consultoria de marketing, Tratamento estético..." },
+      { key: "ticket_medio", label: "Qual é o ticket médio desse produto ou serviço? (R$)", type: "text", placeholder: "Ex: 2000" },
+      { key: "faturamento_mensal", label: "Qual é o faturamento médio mensal atual? (R$)", type: "text", placeholder: "Ex: 50000" },
+      { key: "clientes_novos_mes", label: "Quantos clientes novos entram por mês hoje?", type: "text", placeholder: "Ex: 10" },
+      { key: "meta_faturamento", label: "Qual é a meta de faturamento mensal que deseja atingir? (R$)", type: "text", placeholder: "Ex: 100000" },
+      { key: "prazo_meta", label: "Em quanto tempo deseja alcançar essa meta?", type: "select", options: ["3 meses", "6 meses", "12 meses", "Outro"] },
+      { key: "canais_atuais", label: "Quais canais hoje geram clientes para o seu negócio?", type: "checkbox-group", options: ["Indicação", "Instagram", "Tráfego pago", "Google", "WhatsApp", "Prospecção ativa", "Outros"] },
+      { key: "investe_marketing", label: "Hoje você possui algum investimento em marketing mensal?", type: "select", options: ["Sim", "Não"] },
+      { key: "valor_investimento_marketing", label: "Quanto investe por mês? (R$)", type: "text", placeholder: "Ex: 3000", conditionKey: "investe_marketing", conditionValues: ["Sim"] },
+      { key: "canais_investimento", label: "Em quais canais investe?", type: "text", placeholder: "Ex: Meta Ads, Google Ads", conditionKey: "investe_marketing", conditionValues: ["Sim"] },
     ],
   },
   {
-    title: "Marketing Atual",
+    title: "Estrutura Comercial",
+    subtitle: "Termômetro – Estrutura",
+    icon: <Layers className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "presenca_digital", label: "Tem presença digital?", type: "select", options: ["Nenhuma", "Apenas redes sociais", "Site + redes sociais", "Site + redes + Google Meu Negócio", "Presença completa e ativa"] },
-      { key: "investimento_marketing", label: "Investimento mensal em marketing (R$)", type: "text", placeholder: "Ex: 2000" },
-      { key: "canais_atuais", label: "Canais de marketing que utiliza", type: "text", placeholder: "Ex: Instagram, Google Ads, Indicação" },
-      { key: "frequencia_postagens", label: "Frequência de postagens", type: "select", options: ["Não posta", "Esporádico (sem planejamento)", "1-3x por semana", "Diário", "Múltiplas vezes ao dia"] },
+      { key: "processo_comercial", label: "Você possui um processo comercial definido?", type: "select", options: ["Não", "Parcial", "Sim"] },
+      { key: "atendimento_leads", label: "Como os leads são atendidos hoje?", type: "select", options: ["WhatsApp manual", "CRM", "Planilha", "Equipe de vendas", "Outro"] },
+      { key: "tamanho_time_comercial", label: "Quantas pessoas existem no time comercial hoje?", type: "text", placeholder: "Ex: 3" },
+      { key: "script_atendimento", label: "Existe um script ou padrão de atendimento para vendas?", type: "select", options: ["Sim", "Não", "Parcial"] },
+      { key: "funil_definido", label: "Existe um funil comercial definido?", type: "select", options: ["Sim", "Não", "Parcial"] },
+      { key: "usa_crm", label: "Você possui CRM implementado?", type: "select", options: ["Sim", "Não"] },
+      { key: "qual_crm", label: "Qual CRM utiliza?", type: "text", placeholder: "Ex: RD Station, Pipedrive...", conditionKey: "usa_crm", conditionValues: ["Sim"] },
+      { key: "mede_conversao", label: "Hoje você mede taxa de conversão de vendas?", type: "select", options: ["Sim", "Não", "Parcialmente"] },
     ],
   },
   {
-    title: "Comercial",
+    title: "Geração de Demanda",
+    subtitle: "Termômetro – Aquisição",
+    icon: <TrendingUp className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "processo_vendas", label: "Tem processo de vendas definido?", type: "select", options: ["Não tem processo", "Processo informal", "Processo documentado mas não seguido", "Processo estruturado e seguido", "Processo otimizado com métricas"] },
-      { key: "ticket_medio", label: "Ticket médio (R$)", type: "text", placeholder: "Ex: 800" },
-      { key: "ciclo_venda", label: "Ciclo médio de venda", type: "select", options: ["Mesmo dia", "1-3 dias", "1-2 semanas", "2-4 semanas", "Mais de 1 mês"] },
-      { key: "taxa_conversao", label: "Taxa de conversão estimada (%)", type: "text", placeholder: "Ex: 20" },
+      { key: "leads_mes", label: "Quantos leads sua empresa gera por mês hoje?", type: "text", placeholder: "Ex: 50" },
+      { key: "custo_por_lead", label: "Você sabe qual é o custo médio por lead? (R$)", type: "text", placeholder: "Ex: 30 ou Não sei" },
+      { key: "canal_mais_clientes", label: "Qual canal hoje gera mais clientes?", type: "text", placeholder: "Ex: Instagram, Indicação..." },
+      { key: "investe_trafego_pago", label: "Você já investe em tráfego pago?", type: "select", options: ["Sim", "Não"] },
+      { key: "plataformas_trafego", label: "Em quais plataformas?", type: "checkbox-group", options: ["Meta Ads", "Google Ads", "TikTok Ads", "Outros"], conditionKey: "investe_trafego_pago", conditionValues: ["Sim"] },
+      { key: "maior_resultado_marketing", label: "Qual foi o maior resultado que já teve com marketing?", type: "textarea", placeholder: "Descreva o melhor resultado obtido..." },
+      { key: "producao_conteudo", label: "Existe produção de conteúdo frequente?", type: "select", options: ["Sim", "Não", "Irregular"] },
+      { key: "estrategia_posicionamento", label: "Existe estratégia de posicionamento da marca?", type: "select", options: ["Sim", "Não", "Parcial"] },
     ],
   },
   {
-    title: "Receita e Objetivos",
+    title: "Problemas e Gargalos",
+    subtitle: "SPIN – Problema",
+    icon: <AlertTriangle className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "meta_faturamento", label: "Meta de faturamento mensal (R$)", type: "text", placeholder: "Ex: 100000" },
-      { key: "crescimento_desejado", label: "Crescimento desejado (%)", type: "text", placeholder: "Ex: 30" },
-      { key: "prazo_meta", label: "Prazo para atingir a meta", type: "select", options: ["3 meses", "6 meses", "12 meses", "18 meses"] },
+      { key: "problema_geracao_clientes", label: "Qual é hoje o maior problema na geração de clientes?", type: "textarea", placeholder: "Descreva..." },
+      { key: "problema_processo_vendas", label: "Qual é hoje o maior problema no processo de vendas?", type: "textarea", placeholder: "Descreva..." },
+      { key: "perde_oportunidades", label: "Você sente que perde oportunidades de venda?", type: "select", options: ["Sim", "Não", "Talvez"] },
+      { key: "motivo_perda_oportunidades", label: "Por que acredita que perde essas oportunidades?", type: "textarea", placeholder: "Descreva os motivos...", conditionKey: "perde_oportunidades", conditionValues: ["Sim", "Talvez"] },
+      { key: "dificuldade_organizar_leads", label: "Existe dificuldade em organizar leads ou acompanhar negociações?", type: "select", options: ["Sim", "Não", "Parcialmente"] },
+      { key: "marketing_gera_qualificados", label: "O marketing atual gera clientes qualificados?", type: "select", options: ["Sim", "Não", "Parcialmente"] },
+      { key: "falta_previsibilidade", label: "Você sente falta de previsibilidade nas vendas?", type: "select", options: ["Sim", "Não"] },
     ],
   },
   {
-    title: "Concorrência",
+    title: "Impacto dos Problemas",
+    subtitle: "SPIN – Implicação",
+    icon: <Target className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "principais_concorrentes", label: "Principais concorrentes", type: "text", placeholder: "Ex: Empresa A, Empresa B" },
-      { key: "diferenciais", label: "Diferenciais competitivos", type: "textarea", placeholder: "O que diferencia seu negócio dos concorrentes?" },
+      { key: "impacto_se_continuar", label: "O que acontece com a empresa se o volume de vendas continuar como está hoje?", type: "textarea", placeholder: "Descreva o impacto..." },
+      { key: "impacto_faturamento", label: "Qual impacto esses problemas geram no faturamento?", type: "textarea", placeholder: "Descreva..." },
+      { key: "vendas_perdidas_mes", label: "Quantas vendas você acredita que perde por mês hoje?", type: "text", placeholder: "Ex: 5" },
+      { key: "impacto_se_resolver", label: "Qual seria o impacto financeiro se esses problemas fossem resolvidos?", type: "textarea", placeholder: "Descreva..." },
+      { key: "aguenta_dobrar_demanda", label: "Se o negócio dobrasse de demanda hoje, a empresa conseguiria atender?", type: "select", options: ["Sim, tranquilamente", "Sim, com dificuldade", "Não, precisaria estruturar", "Não, seria caótico"] },
     ],
   },
   {
-    title: "Dores e Desafios",
+    title: "Resultado Esperado",
+    subtitle: "SPIN – Need Payoff",
+    icon: <Sparkles className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "principal_dor", label: "Principal dor/desafio do negócio", type: "textarea", placeholder: "Qual o maior problema que enfrenta hoje?" },
-      { key: "tentativas_anteriores", label: "Já tentou resolver? Como?", type: "textarea", placeholder: "O que já fez para tentar resolver?" },
+      { key: "clientes_desejados_mes", label: "Quantos clientes novos por mês você gostaria de gerar?", type: "text", placeholder: "Ex: 30" },
+      { key: "faturamento_ideal", label: "Qual faturamento mensal seria ideal para o seu negócio? (R$)", type: "text", placeholder: "Ex: 150000" },
+      { key: "ticket_medio_futuro", label: "Qual ticket médio você gostaria de trabalhar no futuro? (R$)", type: "text", placeholder: "Ex: 3000" },
+      { key: "cenario_ideal_12_meses", label: "Qual seria o cenário ideal para sua empresa nos próximos 12 meses?", type: "textarea", placeholder: "Descreva seu cenário ideal..." },
+      { key: "o_que_precisa_mudar", label: "O que você acredita que precisa mudar para chegar nesse resultado?", type: "textarea", placeholder: "Descreva..." },
     ],
   },
   {
-    title: "Objetivos do Projeto",
+    title: "Termômetro de Maturidade",
+    subtitle: "Autoavaliação (1 a 5)",
+    icon: <BarChart3 className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "expectativa_projeto", label: "O que espera alcançar com o projeto?", type: "textarea", placeholder: "Descreva suas expectativas e resultados desejados" },
-      { key: "urgencia", label: "Nível de urgência", type: "select", options: ["Baixa - estou pesquisando", "Média - quero começar em breve", "Alta - preciso resolver agora", "Crítica - está afetando o negócio"] },
+      { key: "nota_marketing", label: "Estrutura de Marketing", type: "slider", min: 1, max: 5 },
+      { key: "nota_comercial", label: "Estrutura Comercial", type: "slider", min: 1, max: 5 },
+      { key: "nota_leads", label: "Organização de Leads", type: "slider", min: 1, max: 5 },
+      { key: "nota_previsibilidade", label: "Previsibilidade de Vendas", type: "slider", min: 1, max: 5 },
+      { key: "nota_marca", label: "Posicionamento de Marca", type: "slider", min: 1, max: 5 },
+      { key: "nota_escala", label: "Escala de Aquisição de Clientes", type: "slider", min: 1, max: 5 },
+    ],
+  },
+  {
+    title: "Financeiro Estratégico",
+    subtitle: "Dados para projeções",
+    icon: <Calculator className="w-4 h-4 text-primary" />,
+    fields: [
+      { key: "margem_lucro", label: "Qual é sua margem média de lucro? (%)", type: "text", placeholder: "Ex: 30" },
+      { key: "custo_maximo_cliente", label: "Qual custo máximo aceitável por cliente? (R$)", type: "text", placeholder: "Ex: 500" },
+      { key: "ltv_medio", label: "Qual é o LTV médio de um cliente? (R$)", type: "text", placeholder: "Ex: 12000" },
     ],
   },
 ];
 
 // ── Diagnostic Form ─────────────────────────────────────────────
 
-function DiagnosticForm({ onSubmit, loading, initialAnswers, initialTitle }: { onSubmit: (answers: Record<string, string>, title: string) => void; loading: boolean; initialAnswers?: Record<string, string>; initialTitle?: string }) {
+function DiagnosticForm({
+  onSubmit,
+  loading,
+  initialAnswers,
+  initialTitle,
+}: {
+  onSubmit: (answers: Record<string, any>, title: string) => void;
+  loading: boolean;
+  initialAnswers?: Record<string, any>;
+  initialTitle?: string;
+}) {
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers || {});
+  const [answers, setAnswers] = useState<Record<string, any>>(initialAnswers || {
+    nota_marketing: 3, nota_comercial: 3, nota_leads: 3,
+    nota_previsibilidade: 3, nota_marca: 3, nota_escala: 3,
+  });
   const [title, setTitle] = useState(initialTitle || "");
 
   const section = diagnosticSections[step];
   const totalSteps = diagnosticSections.length;
   const progress = ((step + 1) / totalSteps) * 100;
 
-  const canAdvance = section.fields.every((f) => {
+  const isFieldVisible = (field: DiagField) => {
+    if (!field.conditionKey) return true;
+    const condVal = answers[field.conditionKey];
+    return field.conditionValues?.includes(condVal);
+  };
+
+  const visibleFields = section.fields.filter(isFieldVisible);
+
+  const canAdvance = visibleFields.every((f) => {
+    if (f.type === "slider") return true;
+    if (f.type === "checkbox-group") {
+      const val = answers[f.key];
+      return Array.isArray(val) && val.length > 0;
+    }
     const val = answers[f.key];
-    return val && val.trim() !== "";
+    return val && String(val).trim() !== "";
   });
 
+  const handleCheckbox = (key: string, option: string, checked: boolean) => {
+    setAnswers((p) => {
+      const arr: string[] = Array.isArray(p[key]) ? [...p[key]] : [];
+      if (checked) {
+        return { ...p, [key]: [...arr, option] };
+      }
+      return { ...p, [key]: arr.filter((v) => v !== option) };
+    });
+  };
+
   const handleSubmit = () => {
-    const finalTitle = title.trim() || `Estratégia - ${answers.segmento || "Diagnóstico"}`;
+    const finalTitle = title.trim() || `Diagnóstico - ${answers.produto_servico || "Estratégia"}`;
     onSubmit(answers, finalTitle);
   };
+
+  const sliderLabels: Record<number, string> = { 1: "Muito fraco", 2: "Fraco", 3: "Médio", 4: "Bom", 5: "Excelente" };
 
   return (
     <Card className="glass-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-            <ClipboardCheck className="w-4 h-4 text-primary" />
+            {section.icon}
             {section.title}
           </CardTitle>
           <span className="text-xs text-muted-foreground">{step + 1} de {totalSteps}</span>
         </div>
+        <p className="text-xs text-muted-foreground">{section.subtitle}</p>
         <Progress value={progress} className="h-1.5 mt-2" />
       </CardHeader>
       <CardContent className="space-y-4">
         {step === 0 && (
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Título da Estratégia (opcional)</label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Estratégia Clínica Dr. Silva" />
+            <Label className="text-xs font-medium text-muted-foreground mb-1 block">Título do Diagnóstico (opcional)</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Diagnóstico Clínica Dr. Silva" />
           </div>
         )}
 
-        {section.fields.map((field) => (
+        {visibleFields.map((field) => (
           <div key={field.key}>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">{field.label}</label>
-            {field.type === "select" ? (
+            <Label className="text-xs font-medium text-muted-foreground mb-1 block">{field.label}</Label>
+
+            {field.type === "select" && (
               <Select value={answers[field.key] || ""} onValueChange={(v) => setAnswers((p) => ({ ...p, [field.key]: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
@@ -183,10 +296,60 @@ function DiagnosticForm({ onSubmit, loading, initialAnswers, initialTitle }: { o
                   ))}
                 </SelectContent>
               </Select>
-            ) : field.type === "textarea" ? (
-              <Textarea value={answers[field.key] || ""} onChange={(e) => setAnswers((p) => ({ ...p, [field.key]: e.target.value }))} placeholder={field.placeholder} rows={3} />
-            ) : (
-              <Input value={answers[field.key] || ""} onChange={(e) => setAnswers((p) => ({ ...p, [field.key]: e.target.value }))} placeholder={field.placeholder} />
+            )}
+
+            {field.type === "textarea" && (
+              <Textarea
+                value={answers[field.key] || ""}
+                onChange={(e) => setAnswers((p) => ({ ...p, [field.key]: e.target.value }))}
+                placeholder={field.placeholder}
+                rows={3}
+              />
+            )}
+
+            {field.type === "text" && (
+              <Input
+                value={answers[field.key] || ""}
+                onChange={(e) => setAnswers((p) => ({ ...p, [field.key]: e.target.value }))}
+                placeholder={field.placeholder}
+              />
+            )}
+
+            {field.type === "checkbox-group" && (
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {field.options!.map((option) => {
+                  const checked = Array.isArray(answers[field.key]) && answers[field.key].includes(option);
+                  return (
+                    <label key={option} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(c) => handleCheckbox(field.key, option, !!c)}
+                      />
+                      {option}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            {field.type === "slider" && (
+              <div className="space-y-2 pt-1">
+                <Slider
+                  value={[answers[field.key] ?? 3]}
+                  onValueChange={([v]) => setAnswers((p) => ({ ...p, [field.key]: v }))}
+                  min={1}
+                  max={5}
+                  step={1}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <span key={n} className={answers[field.key] === n ? "font-bold text-primary" : ""}>{n}</span>
+                  ))}
+                </div>
+                <p className="text-xs text-center text-primary font-medium">
+                  {sliderLabels[answers[field.key] ?? 3]}
+                </p>
+              </div>
             )}
           </div>
         ))}
@@ -202,7 +365,7 @@ function DiagnosticForm({ onSubmit, loading, initialAnswers, initialTitle }: { o
           ) : (
             <Button onClick={handleSubmit} disabled={loading || !canAdvance}>
               {loading ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
-              {loading ? "Gerando estratégia..." : "Gerar Estratégia com IA"}
+              {loading ? "Gerando diagnóstico..." : "Gerar Diagnóstico Estratégico"}
             </Button>
           )}
         </div>
@@ -211,26 +374,31 @@ function DiagnosticForm({ onSubmit, loading, initialAnswers, initialTitle }: { o
   );
 }
 
-// ── Strategy Result ─────────────────────────────────────────────
+// ── Strategy Result View ────────────────────────────────────────
 
 function StrategyResultView({ result }: { result: StrategyResult }) {
-  if (!result?.maturidade) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        <p>Resultado incompleto. Tente regenerar a estratégia.</p>
-      </div>
-    );
+  // Support both new and legacy formats
+  const isNewFormat = !!result.diagnostico_negocio;
+
+  if (isNewFormat) {
+    return <NewStrategyResultView result={result} />;
   }
+  return <LegacyStrategyResultView result={result} />;
+}
+
+function NewStrategyResultView({ result }: { result: StrategyResult }) {
+  const diag = result.diagnostico_negocio!;
+  const matScore = diag.maturidade.score;
 
   const maturityColor =
-    result.maturidade.score <= 25 ? "text-destructive" :
-    result.maturidade.score <= 50 ? "text-orange-500" :
-    result.maturidade.score <= 75 ? "text-amber-500" : "text-green-500";
+    matScore <= 25 ? "text-destructive" :
+    matScore <= 50 ? "text-orange-500" :
+    matScore <= 75 ? "text-amber-500" : "text-green-500";
 
   const maturityBg =
-    result.maturidade.score <= 25 ? "bg-destructive/10" :
-    result.maturidade.score <= 50 ? "bg-orange-500/10" :
-    result.maturidade.score <= 75 ? "bg-amber-500/10" : "bg-green-500/10";
+    matScore <= 25 ? "bg-destructive/10" :
+    matScore <= 50 ? "bg-orange-500/10" :
+    matScore <= 75 ? "bg-amber-500/10" : "bg-green-500/10";
 
   const prioridadeColor: Record<string, string> = {
     essencial: "bg-destructive/10 text-destructive",
@@ -252,7 +420,258 @@ function StrategyResultView({ result }: { result: StrategyResult }) {
         </CardContent>
       </Card>
 
+      {/* Diagnóstico do Negócio */}
+      <Card className="glass-card">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-primary" /> Diagnóstico do Negócio
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Modelo de Negócio</p>
+            <p className="text-sm whitespace-pre-line">{diag.modelo}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Momento Atual</p>
+            <p className="text-sm whitespace-pre-line">{diag.momento}</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Termômetro de Maturidade */}
+      <Card className="glass-card">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <Target className="w-4 h-4 text-primary" /> Termômetro de Maturidade
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={`rounded-lg p-4 ${maturityBg} flex items-center gap-4`}>
+            <div className="text-center">
+              <p className={`text-3xl font-bold ${maturityColor}`}>{matScore}%</p>
+              <p className={`text-sm font-semibold ${maturityColor}`}>{diag.maturidade.nivel}</p>
+            </div>
+            <p className="text-sm flex-1">{diag.maturidade.descricao}</p>
+          </div>
+          <div className="mt-3">
+            <Progress value={matScore} className="h-2" />
+            <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
+              <span>Inicial</span><span>Desenvolvimento</span><span>Estruturado</span><span>Avançado</span><span>Excelência</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Radar Chart */}
+      {diag.radar_data && diag.radar_data.length > 0 && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" /> Análise por Área
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <RadarChart data={diag.radar_data}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="eixo" tick={{ fontSize: 10 }} />
+                <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 10 }} />
+                <Radar name="Score" dataKey="score" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Problemas Identificados */}
+      {result.problemas_identificados && result.problemas_identificados.length > 0 && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-primary" /> Problemas Identificados
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {result.problemas_identificados.map((p, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm">
+                <span className="text-destructive font-bold shrink-0">{i + 1}.</span>
+                <p>{p}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Gargalos Estratégicos */}
+      {result.gargalos && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Layers className="w-4 h-4 text-primary" /> Gargalos Estratégicos
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Object.entries(result.gargalos).map(([key, value]) => (
+              <div key={key} className="border rounded-lg p-3">
+                <p className="text-xs font-bold uppercase text-primary mb-1">
+                  {key === "aquisicao" ? "Aquisição" : key === "conversao" ? "Conversão" : key === "estrutura" ? "Estrutura" : "Posicionamento"}
+                </p>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">{value}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Projeção de Crescimento */}
+      {result.projecao_crescimento && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Calculator className="w-4 h-4 text-primary" /> Projeção de Crescimento
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-primary/5 rounded-lg p-3 text-center">
+                <p className="text-xs text-muted-foreground">Meta Faturamento</p>
+                <p className="text-lg font-bold text-primary">{result.projecao_crescimento.meta_faturamento}</p>
+              </div>
+              <div className="bg-primary/5 rounded-lg p-3 text-center">
+                <p className="text-xs text-muted-foreground">Vendas/mês</p>
+                <p className="text-lg font-bold text-primary">{result.projecao_crescimento.vendas_necessarias}</p>
+              </div>
+              <div className="bg-primary/5 rounded-lg p-3 text-center">
+                <p className="text-xs text-muted-foreground">Leads/mês</p>
+                <p className="text-lg font-bold text-primary">{result.projecao_crescimento.leads_necessarios}</p>
+              </div>
+              <div className="bg-primary/5 rounded-lg p-3 text-center">
+                <p className="text-xs text-muted-foreground">Conversão</p>
+                <p className="text-lg font-bold text-primary">{result.projecao_crescimento.taxa_conversao}%</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground whitespace-pre-line">{result.projecao_crescimento.descricao}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Estratégia Recomendada */}
+      {result.estrategia_recomendada && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" /> Estratégia Recomendada
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Object.entries(result.estrategia_recomendada).map(([pilar, acoes]) => (
+              <div key={pilar} className="border rounded-lg p-3">
+                <p className="text-xs font-bold uppercase text-primary mb-2">
+                  {pilar === "estrutura" ? "🏗️ Estrutura" : pilar === "aquisicao" ? "📣 Aquisição" : pilar === "conversao" ? "🎯 Conversão" : "📈 Escala"}
+                </p>
+                <div className="space-y-1">
+                  {acoes.map((a, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                      <span>{a}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Serviços Indicados */}
+      {result.servicos_indicados && result.servicos_indicados.length > 0 && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Package className="w-4 h-4 text-primary" /> Serviços Indicados NOEXCUSE
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {result.servicos_indicados.map((s, i) => (
+              <div key={i} className="border rounded-md p-3 flex items-start gap-3">
+                <div className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${prioridadeColor[s.prioridade] || "bg-muted text-muted-foreground"}`}>
+                  {s.prioridade}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{s.servico}</p>
+                  <p className="text-xs text-muted-foreground">{s.justificativa}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Roadmap */}
+      {result.roadmap && result.roadmap.length > 0 && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Map className="w-4 h-4 text-primary" /> Roadmap de Execução
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {result.roadmap.map((fase) => (
+              <div key={fase.fase} className="border rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="text-[10px]">{fase.periodo}</Badge>
+                  <p className="text-sm font-semibold">Fase {fase.fase} — {fase.titulo}</p>
+                </div>
+                <div className="space-y-1.5">
+                  {fase.acoes.map((a, ai) => (
+                    <div key={ai} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                      <span>{a}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function LegacyStrategyResultView({ result }: { result: StrategyResult }) {
+  if (!result?.maturidade) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>Resultado incompleto. Tente regenerar a estratégia.</p>
+      </div>
+    );
+  }
+
+  const maturityColor =
+    result.maturidade.score <= 25 ? "text-destructive" :
+    result.maturidade.score <= 50 ? "text-orange-500" :
+    result.maturidade.score <= 75 ? "text-amber-500" : "text-green-500";
+
+  const maturityBg =
+    result.maturidade.score <= 25 ? "bg-destructive/10" :
+    result.maturidade.score <= 50 ? "bg-orange-500/10" :
+    result.maturidade.score <= 75 ? "bg-amber-500/10" : "bg-green-500/10";
+
+  return (
+    <div className="space-y-4">
+      <Card className="glass-card">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <FileText className="w-4 h-4 text-primary" /> Resumo Executivo
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground whitespace-pre-line">{result.resumo_executivo}</p>
+        </CardContent>
+      </Card>
+
       <Card className="glass-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -267,128 +686,82 @@ function StrategyResultView({ result }: { result: StrategyResult }) {
             </div>
             <p className="text-sm flex-1">{result.maturidade.descricao}</p>
           </div>
-          <div className="mt-3">
-            <Progress value={result.maturidade.score} className="h-2" />
-            <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
-              <span>Caótico</span><span>Reativo</span><span>Estruturado</span><span>Analítico</span>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
-      {/* Radar Chart */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-primary" /> Análise por Área
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <RadarChart data={result.radar_data}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="eixo" tick={{ fontSize: 11 }} />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
-              <Radar name="Score" dataKey="score" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {result.radar_data && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" /> Análise por Área
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <RadarChart data={result.radar_data}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="eixo" tick={{ fontSize: 11 }} />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <Radar name="Score" dataKey="score" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Plano de Ação */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary" /> Plano de Ação
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {result.plano_acao.map((fase, fi) => (
-            <div key={fi} className="border rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="text-[10px]">{fase.periodo}</Badge>
-                <p className="text-sm font-semibold">{fase.fase}</p>
-              </div>
-              <div className="space-y-1.5">
-                {fase.acoes.map((a, ai) => (
-                  <div key={ai} className="flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <span>{a.acao}</span>
-                      <span className="text-xs text-muted-foreground ml-1">({a.responsavel})</span>
+      {result.plano_acao && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" /> Plano de Ação
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {result.plano_acao.map((fase, fi) => (
+              <div key={fi} className="border rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="text-[10px]">{fase.periodo}</Badge>
+                  <p className="text-sm font-semibold">{fase.fase}</p>
+                </div>
+                <div className="space-y-1.5">
+                  {fase.acoes.map((a, ai) => (
+                    <div key={ai} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <span>{a.acao}</span>
+                        <span className="text-xs text-muted-foreground ml-1">({a.responsavel})</span>
+                      </div>
+                      <Badge variant={a.prioridade === "alta" ? "destructive" : "secondary"} className="text-[10px] shrink-0">
+                        {a.prioridade}
+                      </Badge>
                     </div>
-                    <Badge variant={a.prioridade === "alta" ? "destructive" : "secondary"} className="text-[10px] shrink-0">
-                      {a.prioridade}
-                    </Badge>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Projeções */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-bold">Projeção de Leads</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={result.projecoes.leads}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="sem_estrategia" name="Sem Estratégia" stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" />
-                <Line type="monotone" dataKey="com_estrategia" name="Com Estratégia" stroke="hsl(var(--primary))" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            ))}
           </CardContent>
         </Card>
+      )}
+
+      {result.entregas_recomendadas && (
         <Card className="glass-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-bold">Projeção de Receita</CardTitle>
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Package className="w-4 h-4 text-primary" /> Entregas Recomendadas
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={result.projecoes.receita}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="sem_estrategia" name="Sem Estratégia" stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" />
-                <Line type="monotone" dataKey="com_estrategia" name="Com Estratégia" stroke="hsl(var(--primary))" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+          <CardContent className="space-y-2">
+            {result.entregas_recomendadas.map((e, i) => (
+              <div key={i} className="border rounded-md p-3 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{e.servico}</p>
+                  <p className="text-xs text-muted-foreground">{e.modulo} · {e.justificativa}</p>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Entregas Recomendadas */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Package className="w-4 h-4 text-primary" /> Entregas Recomendadas
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {result.entregas_recomendadas.map((e, i) => (
-            <div key={i} className="border rounded-md p-3 flex items-start gap-3">
-              <div className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${prioridadeColor[e.prioridade] || "bg-muted text-muted-foreground"}`}>
-                {e.prioridade}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{e.servico}</p>
-                <p className="text-xs text-muted-foreground">{e.modulo} · {e.justificativa}</p>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      )}
     </div>
   );
 }
@@ -399,13 +772,13 @@ function NovaEstrategiaTab() {
   const [result, setResult] = useState<StrategyResult | null>(null);
   const createStrategy = useCreateStrategy();
 
-  const handleSubmit = async (answers: Record<string, string>, title: string) => {
+  const handleSubmit = async (answers: Record<string, any>, title: string) => {
     try {
       const s = await createStrategy.mutateAsync({ title, answers });
       setResult(s.result);
-      toast.success("Estratégia gerada com sucesso!");
+      toast.success("Diagnóstico estratégico gerado com sucesso!");
     } catch (e: any) {
-      toast.error(e.message || "Erro ao gerar estratégia");
+      toast.error(e.message || "Erro ao gerar diagnóstico");
     }
   };
 
@@ -423,9 +796,9 @@ function NovaEstrategiaTab() {
   return <DiagnosticForm onSubmit={handleSubmit} loading={createStrategy.isPending} />;
 }
 
-// ── Histórico Tab ───────────────────────────────────────────────
+// ── Meus Diagnósticos Tab ───────────────────────────────────────
 
-function HistoricoTab() {
+function MeusDiagnosticosTab() {
   const { data: strategies, isLoading } = useStrategies();
   const deleteMut = useDeleteStrategy();
   const updateMut = useUpdateStrategy();
@@ -446,69 +819,83 @@ function HistoricoTab() {
     return ((leads ?? []) as any[]).find((l) => l.id === leadId)?.name || null;
   };
 
+  const getMaturityInfo = (s: Strategy) => {
+    if (s.result?.diagnostico_negocio?.maturidade) {
+      const m = s.result.diagnostico_negocio.maturidade;
+      return { nivel: m.nivel, score: m.score };
+    }
+    if (s.result?.maturidade) {
+      return { nivel: s.result.maturidade.nivel, score: s.result.maturidade.score };
+    }
+    return null;
+  };
+
   return (
     <>
       <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar estratégias..." className="pl-9" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar diagnósticos..." className="pl-9" />
         </div>
 
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregando...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">Nenhuma estratégia encontrada</div>
+          <div className="text-center py-8 text-muted-foreground text-sm">Nenhum diagnóstico encontrado</div>
         ) : (
           <div className="space-y-2">
-            {filtered.map((s) => (
-              <Card key={s.id} className="glass-card cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" onClick={() => setSelected(s)}>
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="space-y-1 flex-1 min-w-0">
-                    {editingId === s.id ? (
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="h-7 text-sm" />
-                        <Button size="sm" variant="ghost" className="h-7" onClick={() => { updateMut.mutate({ id: s.id, title: editTitle }); setEditingId(null); }}>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        </Button>
+            {filtered.map((s) => {
+              const matInfo = getMaturityInfo(s);
+              return (
+                <Card key={s.id} className="glass-card cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" onClick={() => setSelected(s)}>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      {editingId === s.id ? (
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="h-7 text-sm" />
+                          <Button size="sm" variant="ghost" className="h-7" onClick={() => { updateMut.mutate({ id: s.id, title: editTitle }); setEditingId(null); }}>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-medium truncate">{s.title}</p>
+                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(s.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </span>
+                        <Badge variant={s.status === "completed" ? "default" : "secondary"} className="text-[10px]">
+                          {s.status === "completed" ? "Concluído" : s.status === "error" ? "Erro" : "Rascunho"}
+                        </Badge>
+                        {matInfo && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {matInfo.nivel} ({matInfo.score}%)
+                          </Badge>
+                        )}
+                        {getLeadName(s.lead_id) && (
+                          <Badge variant="outline" className="text-[10px]">
+                            <Link2 className="w-3 h-3 mr-1" />{getLeadName(s.lead_id)}
+                          </Badge>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-sm font-medium truncate">{s.title}</p>
-                    )}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(s.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </span>
-                      <Badge variant={s.status === "completed" ? "default" : "secondary"} className="text-[10px]">
-                        {s.status === "completed" ? "Concluída" : s.status === "error" ? "Erro" : "Rascunho"}
-                      </Badge>
-                      {s.result?.maturidade && (
-                        <Badge variant="outline" className="text-[10px]">
-                          {s.result.maturidade.nivel} ({s.result.maturidade.score}%)
-                        </Badge>
-                      )}
-                      {getLeadName(s.lead_id) && (
-                        <Badge variant="outline" className="text-[10px]">
-                          <Link2 className="w-3 h-3 mr-1" />{getLeadName(s.lead_id)}
-                        </Badge>
-                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditTitle(s.title); setEditingId(s.id); }}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    {s.lead_id && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateMut.mutate({ id: s.id, lead_id: null })}>
-                        <Unlink className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditTitle(s.title); setEditingId(s.id); }}>
+                        <Pencil className="w-3.5 h-3.5" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMut.mutate(s.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      {s.lead_id && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateMut.mutate({ id: s.id, lead_id: null })}>
+                          <Unlink className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMut.mutate(s.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -518,7 +905,7 @@ function HistoricoTab() {
         <Sheet open={!!editingStrategy} onOpenChange={() => setEditingStrategy(null)}>
           <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>Editar e Regenerar Estratégia</SheetTitle>
+              <SheetTitle>Editar e Regenerar Diagnóstico</SheetTitle>
             </SheetHeader>
             <div className="mt-4">
               <DiagnosticForm
@@ -564,20 +951,20 @@ function HistoricoTab() {
 export default function FranqueadoEstrategia() {
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Criador de Estratégia" subtitle="Diagnóstico profundo e criação de estratégia comercial com IA" />
+      <PageHeader title="Criador de Estratégia" subtitle="Diagnóstico SPIN Selling + Termômetro NOEXCUSE para estratégia comercial" />
 
       <Tabs defaultValue="nova">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="nova"><ClipboardCheck className="w-4 h-4 mr-1" /> Novo Diagnóstico</TabsTrigger>
-          <TabsTrigger value="historico"><History className="w-4 h-4 mr-1" /> Histórico</TabsTrigger>
+          <TabsTrigger value="diagnosticos"><FolderOpen className="w-4 h-4 mr-1" /> Meus Diagnósticos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="nova" className="space-y-6">
           <NovaEstrategiaTab />
         </TabsContent>
 
-        <TabsContent value="historico" className="space-y-6">
-          <HistoricoTab />
+        <TabsContent value="diagnosticos" className="space-y-6">
+          <MeusDiagnosticosTab />
         </TabsContent>
       </Tabs>
     </div>
