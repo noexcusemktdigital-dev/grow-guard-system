@@ -11,11 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   FileSignature, DollarSign, TrendingUp, Calendar, Inbox, FileDown,
   CheckCircle, Clock, AlertCircle, Receipt, Wallet, Percent, CreditCard,
+  Users, Coins,
 } from "lucide-react";
 import { SystemPaymentTab } from "@/components/franqueado/SystemPaymentTab";
 import { useContracts } from "@/hooks/useContracts";
 import { useFinanceClosings } from "@/hooks/useFinance";
 import { useClientPayments } from "@/hooks/useClientPayments";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
