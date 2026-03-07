@@ -4674,6 +4674,7 @@ export type Database = {
           organization_id: string
           phone: string | null
           royalty_percent: number | null
+          saas_commission_percent: number | null
           state: string | null
           status: string
           system_active: boolean | null
@@ -4695,6 +4696,7 @@ export type Database = {
           organization_id: string
           phone?: string | null
           royalty_percent?: number | null
+          saas_commission_percent?: number | null
           state?: string | null
           status?: string
           system_active?: boolean | null
@@ -4716,6 +4718,7 @@ export type Database = {
           organization_id?: string
           phone?: string | null
           royalty_percent?: number | null
+          saas_commission_percent?: number | null
           state?: string | null
           status?: string
           system_active?: boolean | null
