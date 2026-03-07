@@ -5,9 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Target, Star, Medal, TrendingUp, Lock, Award, Flame, Zap, Crown } from "lucide-react";
-import { useGoals } from "@/hooks/useGoals";
-import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { ptBR } from "date-fns/locale";
 
 const classificationConfig = {
