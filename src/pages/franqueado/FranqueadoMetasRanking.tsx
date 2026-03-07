@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Target, Star, Medal, TrendingUp, Lock, Award, Flame, Zap, Crown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ptBR } from "date-fns/locale";
 
 const classificationConfig = {
   elite: { label: "Elite", color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30", icon: Crown },
