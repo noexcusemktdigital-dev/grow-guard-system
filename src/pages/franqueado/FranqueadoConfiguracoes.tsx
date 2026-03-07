@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, Building2, Users, FileSignature, UserPlus, Shield, Download } from "lucide-react";
+import { Settings, Building2, Users, FileSignature, UserPlus, Shield, Download, Link2, Copy, ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
