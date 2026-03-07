@@ -33,17 +33,22 @@ const principalSection: SidebarItem[] = [
 ];
 
 const redeSection: SidebarItem[] = [
-  { label: "CRM", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
 ];
 
 const comercialSection: SidebarItem[] = [
-  { label: "Propostas", icon: FileText, path: "/franqueadora/propostas" },
+  { label: "CRM de Vendas", icon: TrendingUp, path: "/franqueadora/crm" },
+  { label: "Prospecção", icon: Sparkles, path: "/franqueadora/prospeccao" },
+  { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueadora/estrategia" },
+  { label: "Gerador de Proposta", icon: FileText, path: "/franqueadora/propostas" },
+  { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
+];
+
+const marketingSection: SidebarItem[] = [
   { label: "Marketing", icon: Zap, path: "/franqueadora/marketing" },
   { label: "Treinamentos", icon: GraduationCap, path: "/franqueadora/treinamentos" },
-  { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
 ];
 
 const adminSection: SidebarItem[] = [
