@@ -379,6 +379,8 @@ export default function Agenda() {
             <div className="space-y-1.5 text-[11px] text-muted-foreground">
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-primary/60" /> Eventos da rede</div>
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Apenas matriz</div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Pessoal</div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-violet-500" /> Clientes</div>
             </div>
           </Card>
         </div>
