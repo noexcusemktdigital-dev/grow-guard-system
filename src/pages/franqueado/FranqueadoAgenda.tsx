@@ -220,6 +220,7 @@ export default function FranqueadoAgenda() {
   const [allDay, setAllDay] = useState(false);
   const [color, setColor] = useState(COLORS[4]);
   const [calendarId, setCalendarId] = useState<string>("");
+  const [visibility, setVisibility] = useState("pessoal");
 
   // Month view data
   const monthStart = startOfMonth(currentDate);
