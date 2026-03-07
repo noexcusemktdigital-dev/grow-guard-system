@@ -109,10 +109,14 @@ const SaasAuth = () => {
       try {
         await supabase.from("profiles").update({ accepted_terms_at: new Date().toISOString() } as any).eq("id", data.user.id);
       } catch {}
-      // Provision org, subscription, wallet
+      // Provision org, subscription, wallet (with referral if present)
       try {
         await supabase.functions.invoke("signup-saas", {
-          body: { user_id: data.user.id, company_name: fullName + "'s Company" },
+          body: {
+            user_id: data.user.id,
+            company_name: fullName + "'s Company",
+            ...(referralCode ? { referral_code: referralCode } : {}),
+          },
         });
       } catch (err) {
         console.error("Provisioning error:", err);
