@@ -1,48 +1,31 @@
 
 
-## Plano: Fechamentos Financeiros — Matriz → Unidade → Franqueado
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Problema
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-A tabela `finance_closings` já existe com campo `unit_id`, mas:
-1. **FinanceiroFechamentos.tsx** (Matriz) não tem botão para criar/publicar fechamentos vinculados a uma unidade
-2. **UnidadeFinanceiroReal.tsx** (aba Financeiro dentro de Unidades e Minha Unidade) não exibe fechamentos — mostra apenas config financeira e pagamentos do sistema
-3. O franqueado em "Minha Unidade" > Financeiro não vê nenhum fechamento/DRE
+### Ações
 
-### Solução
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-**1. FinanceiroFechamentos.tsx — Adicionar criação de fechamento por unidade**
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-- Botão "Novo Fechamento" que abre dialog com:
-  - Seletor de unidade (lista de units)
-  - Mês/Ano
-  - Título (auto-preenchido: "DRE {Unidade} - {Mês}/{Ano}")
-  - Upload de arquivo (PDF/planilha) para o bucket `closing-files`
-  - Notas opcionais
-- Ao salvar: insere em `finance_closings` com `unit_id`, `organization_id` (da matriz), `status: 'published'`, `file_url`
-- Botão de publicar/despublicar nos fechamentos existentes
+3. **Executar o teste** e analisar o resultado definitivo
 
-**2. UnidadeFinanceiroReal.tsx — Exibir fechamentos da unidade**
+### Detalhe técnico
 
-- Nova seção "Fechamentos / DREs" abaixo do histórico de pagamentos
-- Query: buscar `finance_closings` onde `unit_id = unit.id`
-- Exibir como cards com: título, mês/ano, status (badge), botão "Baixar" se `file_url` existir
-- Em modo `readOnly` (franqueado): apenas visualizar e baixar — sem editar/deletar
-- Em modo normal (matriz dentro de Unidades): pode ver e tem link para gerenciar na página Fechamentos
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+```
 
-**3. Formato DRE (inspirado na referência noexcusedigital.com/projecao)**
-
-O fechamento é um arquivo (PDF/Excel) que a matriz gera e faz upload. A visualização no sistema é apenas a lista de fechamentos com download — o DRE em si é o arquivo.
-
-### Arquivos alterados
-
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/FinanceiroFechamentos.tsx` | Adicionar dialog "Novo Fechamento" com upload e seletor de unidade |
-| `src/components/unidades/UnidadeFinanceiroReal.tsx` | Adicionar seção de fechamentos vinculados à unidade |
-
-### Ordem
-
-1. Adicionar seção de fechamentos no `UnidadeFinanceiroReal.tsx`
-2. Adicionar dialog de criação no `FinanceiroFechamentos.tsx`
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 

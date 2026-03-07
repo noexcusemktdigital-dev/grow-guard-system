@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Inbox, FileDown, Building2 } from "lucide-react";
+import { useMemo, useState, useRef } from "react";
+import { Inbox, FileDown, Building2, Plus, Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,13 +8,35 @@ import { useNetworkContracts } from "@/hooks/useContracts";
 import { useFinanceClosings } from "@/hooks/useFinance";
 import { useUnits } from "@/hooks/useUnits";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 export default function FinanceiroFechamentos() {
   const { data: contracts, isLoading: loadingContracts } = useNetworkContracts();
   const { data: closings, isLoading: loadingClosings } = useFinanceClosings();
   const { data: units, isLoading: loadingUnits } = useUnits();
+  const { data: orgId } = useUserOrgId();
+  const qc = useQueryClient();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [month, setMonth] = useState(String(new Date().getMonth() + 1));
+  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [title, setTitle] = useState("");
+  const [notes, setNotes] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const isLoading = loadingContracts || loadingClosings || loadingUnits;
 
@@ -41,7 +63,6 @@ export default function FinanceiroFechamentos() {
       byOrg[key].contracts++;
       byOrg[key].mrr += Number(c.monthly_value || 0);
     });
-    // Calculate royalties (10% of MRR)
     Object.values(byOrg).forEach(o => { o.royalty = o.mrr * 0.1; });
     return Object.values(byOrg).sort((a, b) => b.mrr - a.mrr);
   }, [contracts, unitFeeMap]);
@@ -50,13 +71,85 @@ export default function FinanceiroFechamentos() {
   const totalRoyalties = consolidation.reduce((s, c) => s + c.royalty, 0);
   const totalSystemFees = consolidation.reduce((s, c) => s + c.systemFee, 0);
 
+  // Auto-fill title when unit/month changes
+  const selectedUnitName = useMemo(() => {
+    const u = (units ?? []).find((u: any) => u.id === selectedUnitId);
+    return (u as any)?.name || "";
+  }, [units, selectedUnitId]);
+
+  const openDialog = () => {
+    setSelectedUnitId("");
+    setMonth(String(new Date().getMonth() + 1));
+    setYear(String(new Date().getFullYear()));
+    setTitle("");
+    setNotes("");
+    setFile(null);
+    setDialogOpen(true);
+  };
+
+  const handleUnitOrMonthChange = (unitId: string, m: string, y: string) => {
+    const u = (units ?? []).find((u: any) => u.id === unitId);
+    const name = (u as any)?.name || "";
+    if (name) {
+      setTitle(`DRE ${name} - ${MONTH_NAMES[Number(m) - 1]}/${y}`);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!selectedUnitId || !orgId) {
+      toast.error("Selecione uma unidade");
+      return;
+    }
+    setSaving(true);
+    try {
+      let fileUrl: string | null = null;
+
+      if (file) {
+        const ext = file.name.split(".").pop();
+        const path = `${orgId}/${selectedUnitId}/${year}-${month}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("closing-files")
+          .upload(path, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from("closing-files").getPublicUrl(path);
+        fileUrl = urlData.publicUrl;
+      }
+
+      const { error } = await supabase.from("finance_closings").insert({
+        organization_id: orgId,
+        unit_id: selectedUnitId,
+        month: Number(month),
+        year: Number(year),
+        title: title || `DRE ${selectedUnitName} - ${MONTH_NAMES[Number(month) - 1]}/${year}`,
+        file_url: fileUrl,
+        notes: notes || null,
+        status: "published",
+      });
+      if (error) throw error;
+
+      toast.success("Fechamento publicado com sucesso!");
+      qc.invalidateQueries({ queryKey: ["finance-closings"] });
+      qc.invalidateQueries({ queryKey: ["unit-closings"] });
+      setDialogOpen(false);
+    } catch (e: any) {
+      toast.error(`Erro: ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
   return (
     <div className="w-full space-y-6">
-      <div>
-        <h1 className="page-header-title">Fechamentos</h1>
-        <p className="text-sm text-muted-foreground mt-1">Consolidação mensal por unidade — royalties e taxas</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-header-title">Fechamentos</h1>
+          <p className="text-sm text-muted-foreground mt-1">Consolidação mensal por unidade — royalties e taxas</p>
+        </div>
+        <Button onClick={openDialog} className="gap-2">
+          <Plus className="w-4 h-4" /> Novo Fechamento
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -112,7 +205,7 @@ export default function FinanceiroFechamentos() {
       {(closings ?? []).length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">Arquivos de Fechamento</h3>
-          {closings!.map(cl => (
+          {closings!.map((cl: any) => (
             <Card key={cl.id} className="glass-card">
               <CardContent className="flex items-center justify-between py-4">
                 <div className="flex items-center gap-4">
@@ -121,7 +214,7 @@ export default function FinanceiroFechamentos() {
                   </div>
                   <div>
                     <p className="font-medium text-sm">{cl.title}</p>
-                    <p className="text-xs text-muted-foreground">{cl.year}</p>
+                    <p className="text-xs text-muted-foreground">{MONTH_NAMES[(cl.month ?? 1) - 1]}/{cl.year}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -139,6 +232,105 @@ export default function FinanceiroFechamentos() {
           ))}
         </div>
       )}
+
+      {/* Dialog: Novo Fechamento */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Fechamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Unidade *</Label>
+              <Select
+                value={selectedUnitId}
+                onValueChange={(v) => {
+                  setSelectedUnitId(v);
+                  handleUnitOrMonthChange(v, month, year);
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                <SelectContent>
+                  {(units ?? []).map((u: any) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Mês</Label>
+                <Select
+                  value={month}
+                  onValueChange={(v) => {
+                    setMonth(v);
+                    handleUnitOrMonthChange(selectedUnitId, v, year);
+                  }}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MONTH_NAMES.map((m, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ano</Label>
+                <Input
+                  type="number"
+                  value={year}
+                  onChange={(e) => {
+                    setYear(e.target.value);
+                    handleUnitOrMonthChange(selectedUnitId, month, e.target.value);
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Título</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="DRE Unidade - Mês/Ano" />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Arquivo (PDF / Excel)</Label>
+              <div
+                className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => fileRef.current?.click()}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.xlsx,.xls,.csv"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+                {file ? (
+                  <p className="text-sm font-medium">{file.name}</p>
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                    <Upload className="w-5 h-5" />
+                    <span className="text-xs">Clique para selecionar</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Observações</Label>
+              <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas opcionais..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving || !selectedUnitId}>
+              {saving ? "Publicando..." : "Publicar Fechamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
