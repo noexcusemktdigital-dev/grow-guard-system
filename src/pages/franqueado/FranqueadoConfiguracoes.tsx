@@ -18,7 +18,7 @@ import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useContracts } from "@/hooks/useContracts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
