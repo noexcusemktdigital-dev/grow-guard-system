@@ -24,6 +24,7 @@ import { useContracts } from "@/hooks/useContracts";
 import { useDailyMessages } from "@/hooks/useDailyMessages";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
+import { useNetworkClientStats } from "@/hooks/useNetworkClientStats";
 
 const quickActionIcons: Record<string, React.ElementType> = { UserPlus, Headphones, FileSignature, LayoutGrid };
 
