@@ -1,31 +1,39 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Corrigir Comunicados nas 3 Frentes
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### Problemas encontrados
 
-### Ações
+**1. Arquivamento corrompe dados** — `handleArchive` executa `updateAnnouncement({ id, type: "archived" })`, substituindo o tipo original (`Informativo`, `Urgente`, etc.) por `"archived"`. Isso faz o comunicado desaparecer de todos os filtros e quebra a exibição.
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+**2. Clientes finais não têm vínculo hierárquico** — Organizações do tipo `cliente` no banco possuem `parent_org_id = null`. A RPC `get_announcements_with_parent` depende de `parent_org_id` para buscar comunicados da org-pai, então clientes nunca recebem nada. É preciso suportar a cadeia completa: Franqueadora → Franqueado → Cliente.
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+**3. A RPC não filtra por `target_unit_ids`** — Quando a matriz envia um comunicado para unidades específicas (selecionadas no formulário), a RPC ignora esse filtro e retorna TODOS os comunicados publicados da org-pai. Isso pode mostrar comunicados direcionados a uma unidade para outra unidade que não deveria receber.
 
-3. **Executar o teste** e analisar o resultado definitivo
+**4. Falta coluna `status` na tabela** — A tabela `announcements` não tem campo `status` para controlar arquivamento/expiração. A solução atual de mudar o `type` para `"archived"` é destrutiva.
 
-### Detalhe técnico
+### Correções
 
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
-```
+**Migration SQL**:
+- Adicionar coluna `status TEXT NOT NULL DEFAULT 'active'` à tabela `announcements` (valores: `active`, `archived`)
+- Marcar o comunicado existente com `type = 'archived'` como `status = 'archived'` e restaurar o type original
+- Recriar a RPC `get_announcements_with_parent` para:
+  - Filtrar `status = 'active'` (excluir arquivados)
+  - Suportar cadeia hierárquica de 2 níveis (parent + grandparent) para que clientes vejam comunicados da franqueadora
+  - Filtrar por `target_unit_ids`: se o array não está vazio, só retornar para orgs que estão na lista
+  - Continuar filtrando `published_at IS NOT NULL` para esconder rascunhos de unidades filhas
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+**Código — Franqueadora (`Comunicados.tsx`)**:
+- Corrigir `handleArchive` para usar `updateAnnouncement({ id, status: 'archived' })` em vez de `type: 'archived'`
+- Ajustar mapeamento dos comunicados para usar o novo campo `status`
+
+**Código — Franqueado (`FranqueadoComunicados.tsx`)** e **Cliente (`ClienteComunicados.tsx`)**:
+- Nenhuma alteração necessária na lógica — o hook `useAnnouncements` já consome a RPC corretamente. A correção é toda no backend.
+
+### Arquivos alterados
+
+| Arquivo | Ação |
+|---------|------|
+| Migration SQL | Adicionar coluna `status`, atualizar RPC com filtros de hierarquia e `target_unit_ids` |
+| `src/pages/Comunicados.tsx` | Corrigir `handleArchive` para usar campo `status` |
 
