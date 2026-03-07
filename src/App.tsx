@@ -54,6 +54,7 @@ import FranqueadoContratos from "./pages/franqueado/FranqueadoContratos";
 import FranqueadoPerfil from "./pages/franqueado/FranqueadoPerfil";
 import FranqueadoConfiguracoes from "./pages/franqueado/FranqueadoConfiguracoes";
 import FranqueadoDiagnostico from "./pages/franqueado/FranqueadoDiagnostico";
+import FranqueadoMinhaUnidade from "./pages/franqueado/FranqueadoMinhaUnidade";
 // Cliente Final pages
 import ClienteInicio from "./pages/cliente/ClienteInicio";
 import ClienteChecklist from "./pages/cliente/ClienteChecklist";
