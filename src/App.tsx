@@ -127,6 +127,8 @@ const App = () => (
                 <Route path="matriz" element={<Matriz />} />
                 <Route path="saas" element={<SaasDashboard />} />
                 <Route path="propostas" element={<FranqueadoraPropostas />} />
+                <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
+                <Route path="estrategia" element={<FranqueadoEstrategia />} />
                 <Route path="perfil" element={<FranqueadoraPerfil />} />
                 <Route path="notificacoes" element={<NotificacoesPage />} />
               </Route>
