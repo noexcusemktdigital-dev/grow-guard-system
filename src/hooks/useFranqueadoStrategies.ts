@@ -4,29 +4,76 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+// ── New SPIN + NOEXCUSE schema ──────────────────────────────────
+
 export interface StrategyResult {
-  maturidade: {
+  // New SPIN+NOEXCUSE format
+  diagnostico_negocio?: {
+    modelo: string;
+    momento: string;
+    maturidade: {
+      score: number;
+      nivel: string;
+      descricao: string;
+    };
+    radar_data: { eixo: string; score: number; max: number }[];
+  };
+  problemas_identificados?: string[];
+  gargalos?: {
+    aquisicao: string;
+    conversao: string;
+    estrutura: string;
+    posicionamento: string;
+  };
+  projecao_crescimento?: {
+    meta_faturamento: string;
+    ticket_medio: string;
+    vendas_necessarias: number;
+    leads_necessarios: number;
+    taxa_conversao: number;
+    descricao: string;
+  };
+  estrategia_recomendada?: {
+    estrutura: string[];
+    aquisicao: string[];
+    conversao: string[];
+    escala: string[];
+  };
+  servicos_indicados?: {
+    servico: string;
+    justificativa: string;
+    prioridade: string;
+  }[];
+  roadmap?: {
+    fase: number;
+    titulo: string;
+    periodo: string;
+    acoes: string[];
+  }[];
+  resumo_executivo: string;
+
+  // Legacy fields for backward compatibility
+  maturidade?: {
     score: number;
     nivel: string;
     descricao: string;
   };
-  radar_data: { eixo: string; score: number; max: number }[];
-  plano_acao: {
+  radar_data?: { eixo: string; score: number; max: number }[];
+  plano_acao?: {
     fase: string;
     periodo: string;
     acoes: { acao: string; responsavel: string; prioridade: string }[];
   }[];
-  projecoes: {
+  projecoes?: {
     leads: { mes: string; sem_estrategia: number; com_estrategia: number }[];
     receita: { mes: string; sem_estrategia: number; com_estrategia: number }[];
   };
-  entregas_recomendadas: {
+  entregas_recomendadas?: {
     servico: string;
     modulo: string;
     justificativa: string;
     prioridade: string;
   }[];
-  resumo_executivo: string;
 }
 
 export interface Strategy {
@@ -34,7 +81,7 @@ export interface Strategy {
   organization_id: string;
   lead_id: string | null;
   title: string;
-  diagnostic_answers: Record<string, string>;
+  diagnostic_answers: Record<string, any>;
   result: StrategyResult | null;
   status: string;
   created_by: string | null;
@@ -72,7 +119,7 @@ export function useCreateStrategy() {
       leadId,
     }: {
       title: string;
-      answers: Record<string, string>;
+      answers: Record<string, any>;
       leadId?: string | null;
     }) => {
       if (!orgId || !user) throw new Error("Não autenticado");
@@ -160,7 +207,7 @@ export function useRegenerateStrategy() {
     }: {
       id: string;
       title: string;
-      answers: Record<string, string>;
+      answers: Record<string, any>;
     }) => {
       if (!user) throw new Error("Não autenticado");
 
