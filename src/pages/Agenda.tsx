@@ -572,7 +572,7 @@ export default function Agenda() {
                 )}
                 {detailEvent.visibility && (
                   <Badge variant="secondary" className="text-[10px]">
-                    {detailEvent.visibility === "rede" ? "Toda a rede" : detailEvent.visibility === "private" ? "Apenas matriz" : "Unidades selecionadas"}
+                    {detailEvent.visibility === "rede" ? "Toda a rede" : detailEvent.visibility === "private" ? "Apenas matriz" : detailEvent.visibility === "pessoal" ? "Pessoal" : detailEvent.visibility === "clientes" ? "Clientes" : "Unidades selecionadas"}
                   </Badge>
                 )}
                 {detailEvent.description && (
