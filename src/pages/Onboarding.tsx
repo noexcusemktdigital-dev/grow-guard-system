@@ -70,14 +70,27 @@ export default function Onboarding() {
     return Math.round((checklist.filter(c => c.is_completed).length / checklist.length) * 100);
   };
 
+  // Filter out units that already have an active onboarding
+  const existingUnitOrgIds = new Set((units ?? []).map(u => (u as any).unit_org_id).filter(Boolean));
+  const availableUnits = (dbUnits ?? []).filter(u => !existingUnitOrgIds.has(u.id));
+
+  const getDaysRemaining = (targetDate: string | null) => {
+    if (!targetDate) return null;
+    const diff = Math.ceil((new Date(targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return diff;
+  };
+
   const handleCreateUnit = () => {
     if (!newUnitId) { toast.error("Selecione uma unidade"); return; }
     const unitName = selectedDbUnit?.name || "Implantação";
     const responsible = (selectedDbUnit as any)?.manager_name || undefined;
+    const startDate = newStartDate || new Date().toISOString().slice(0, 10);
+    const targetDate = new Date(new Date(startDate).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     createUnit.mutate({
       name: unitName,
       unit_org_id: newUnitId,
-      start_date: newStartDate || undefined,
+      start_date: startDate,
+      target_date: targetDate,
       responsible,
     });
     setShowNewDialog(false);
@@ -152,6 +165,16 @@ export default function Onboarding() {
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     {u.start_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Início: {new Date(u.start_date).toLocaleDateString("pt-BR")}</span>}
+                    {(u as any).target_date && (() => {
+                      const days = getDaysRemaining((u as any).target_date);
+                      if (days === null) return null;
+                      return (
+                        <span className={`flex items-center gap-1 font-medium ${days < 0 ? "text-destructive" : days <= 7 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                          <AlertTriangle className="w-3 h-3" />
+                          {days < 0 ? `${Math.abs(days)}d atrasado` : `${days}d restantes`}
+                        </span>
+                      );
+                    })()}
                     {(u as any).responsible && <span>Resp: {(u as any).responsible}</span>}
                   </div>
                 </Card>
@@ -184,6 +207,20 @@ export default function Onboarding() {
             {selected.start_date && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar className="w-3 h-3" /> Início: {new Date(selected.start_date).toLocaleDateString("pt-BR")}
+                {(selected as any).target_date && (
+                  <span className="ml-3">
+                    Prazo: {new Date((selected as any).target_date).toLocaleDateString("pt-BR")}
+                    {(() => {
+                      const days = getDaysRemaining((selected as any).target_date);
+                      if (days === null) return null;
+                      return (
+                        <span className={`ml-1 font-medium ${days < 0 ? "text-destructive" : days <= 7 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                          ({days < 0 ? `${Math.abs(days)}d atrasado` : `${days}d restantes`})
+                        </span>
+                      );
+                    })()}
+                  </span>
+                )}
               </p>
             )}
           </div>
@@ -297,7 +334,9 @@ export default function Onboarding() {
               <Select value={newUnitId} onValueChange={setNewUnitId}>
                 <SelectTrigger><SelectValue placeholder="Selecionar unidade" /></SelectTrigger>
                 <SelectContent>
-                  {(dbUnits ?? []).map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                  {availableUnits.length === 0 ? (
+                    <SelectItem value="__none" disabled>Todas as unidades já têm onboarding</SelectItem>
+                  ) : availableUnits.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

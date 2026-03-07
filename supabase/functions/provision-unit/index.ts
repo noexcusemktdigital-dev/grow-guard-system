@@ -193,7 +193,56 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Unit provisioned: ${unit_name} -> org ${orgId}, user ${userId}, referral=${referralCode}`);
+    // 8. Create onboarding unit automatically
+    const startDate = new Date().toISOString().slice(0, 10);
+    const targetDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const { data: onboardingUnit, error: obErr } = await adminClient
+      .from("onboarding_units")
+      .insert({
+        name: unit_name,
+        organization_id: parent_org_id,
+        unit_org_id: orgId,
+        start_date: startDate,
+        target_date: targetDate,
+        responsible: manager_name || null,
+        status: "in_progress",
+      })
+      .select()
+      .single();
+    if (obErr) console.error("onboarding_units insert error:", obErr);
+
+    // 9. Populate default onboarding checklist
+    if (onboardingUnit) {
+      const defaultChecklist = [
+        { phase: "Pré-Implantação", title: "Assinatura do contrato", sort_order: 1 },
+        { phase: "Pré-Implantação", title: "Pagamento da taxa", sort_order: 2 },
+        { phase: "Pré-Implantação", title: "Acesso ao sistema liberado", sort_order: 3 },
+        { phase: "Pré-Implantação", title: "Acesso Academy liberado", sort_order: 4 },
+        { phase: "Estruturação", title: "Configuração comercial", sort_order: 5 },
+        { phase: "Estruturação", title: "Definição de metas", sort_order: 6 },
+        { phase: "Estruturação", title: "Treinamento inicial", sort_order: 7 },
+        { phase: "Estruturação", title: "Apresentação dos produtos", sort_order: 8 },
+        { phase: "Primeiros Movimentos", title: "Primeiro lead gerado", sort_order: 9 },
+        { phase: "Primeiros Movimentos", title: "Primeira proposta enviada", sort_order: 10 },
+        { phase: "Primeiros Movimentos", title: "Primeiro contrato fechado", sort_order: 11 },
+        { phase: "Primeiros Movimentos", title: "Primeira campanha ativa", sort_order: 12 },
+        { phase: "Consolidação", title: "Pipeline organizado", sort_order: 13 },
+        { phase: "Consolidação", title: "Metas ativas", sort_order: 14 },
+        { phase: "Consolidação", title: "Primeira DRE analisada", sort_order: 15 },
+        { phase: "Consolidação", title: "Ajustes estratégicos", sort_order: 16 },
+      ].map((item) => ({
+        ...item,
+        onboarding_unit_id: onboardingUnit.id,
+        organization_id: parent_org_id,
+        is_completed: false,
+      }));
+
+      const { error: clErr } = await adminClient.from("onboarding_checklist").insert(defaultChecklist);
+      if (clErr) console.error("onboarding_checklist insert error:", clErr);
+    }
+
+    console.log(`Unit provisioned: ${unit_name} -> org ${orgId}, user ${userId}, referral=${referralCode}, onboarding=${onboardingUnit?.id}`);
 
     return new Response(
       JSON.stringify({
