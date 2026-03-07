@@ -5,7 +5,7 @@ import { ptBR } from "date-fns/locale";
 import {
   ChevronDown, Plus, MessageSquare, Calendar, Megaphone, TrendingUp,
   Inbox, Users, FileSignature, Headphones, Building2, AlertTriangle,
-  ArrowUpRight, Target,
+  ArrowUpRight, Target, Monitor,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
