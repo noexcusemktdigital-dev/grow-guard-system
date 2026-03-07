@@ -160,13 +160,13 @@ function NovaProspeccaoTab() {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Objetivo da Abordagem</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Objetivo da Abordagem</label>
               <Select value={inputs.objetivo} onValueChange={(v) => setInputs((p) => ({ ...p, objetivo: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Agendar reunião de diagnóstico">Agendar Reunião</SelectItem>
-                  <SelectItem value="Apresentar serviço">Apresentar Serviço</SelectItem>
-                  <SelectItem value="Reativar contato">Reativar Contato</SelectItem>
+                  <SelectItem value="Agendar diagnóstico gratuito">Agendar diagnóstico gratuito</SelectItem>
+                  <SelectItem value="Retomar conversa com lead">Retomar conversa com lead</SelectItem>
+                  <SelectItem value="Lead quente por indicação — agendar reunião">Lead quente por indicação — agendar reunião</SelectItem>
                 </SelectContent>
               </Select>
             </div>
