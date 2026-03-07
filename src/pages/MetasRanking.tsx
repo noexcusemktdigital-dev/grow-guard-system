@@ -334,6 +334,7 @@ export default function MetasRanking() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="rede">Toda a Rede</SelectItem>
+                    <SelectItem value="matriz">Matriz (interna)</SelectItem>
                     <SelectItem value="unidade">Por Unidade</SelectItem>
                   </SelectContent>
                 </Select>

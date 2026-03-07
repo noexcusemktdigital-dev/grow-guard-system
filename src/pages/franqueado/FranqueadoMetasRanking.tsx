@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Target, Star, Medal, TrendingUp, Lock, Award, Flame, Zap, Crown } from "lucide-react";
+import { Trophy, Target, Star, Medal, TrendingUp, Lock, Award, Flame, Zap, Crown, Users } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -26,11 +26,11 @@ interface TrophyItem {
 
 const trophies: TrophyItem[] = [
   { id: "first_sale", title: "Primeira Venda", description: "Feche seu primeiro contrato", icon: Star, unlocked: false },
-  { id: "streak_3", title: "Hat-trick", description: "3 metas batidas consecutivas", icon: Flame, unlocked: false },
-  { id: "top_revenue", title: "Top Faturamento", description: "Alcance R$ 50.000 em um mês", icon: TrendingUp, unlocked: false },
+  { id: "hat_trick", title: "Hat-trick", description: "Conquiste seus 3 primeiros clientes", icon: Flame, unlocked: false },
+  { id: "top_revenue", title: "Top Faturamento", description: "Alcance R$ 20.000 em um mês", icon: TrendingUp, unlocked: false },
   { id: "speed_close", title: "Fechamento Relâmpago", description: "Feche um contrato em menos de 7 dias", icon: Zap, unlocked: false },
-  { id: "elite_status", title: "Status Elite", description: "Alcance a classificação Elite", icon: Crown, unlocked: false },
-  { id: "consistency", title: "Consistência", description: "Bata a meta por 6 meses seguidos", icon: Award, unlocked: false },
+  { id: "first_goal", title: "Primeira Meta Batida", description: "Atinja sua primeira meta mensal", icon: Target, unlocked: false },
+  { id: "ten_clients", title: "10 Clientes Ativos", description: "Alcance 10 clientes ativos na carteira", icon: Users, unlocked: false },
 ];
 
 export default function FranqueadoMetasRanking() {
