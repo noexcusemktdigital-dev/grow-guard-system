@@ -349,9 +349,9 @@ export default function MetasRanking() {
                 </Select>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Início</Label><Input type="date" value={goalForm.period_start} onChange={(e) => setGoalForm(f => ({ ...f, period_start: e.target.value }))} /></div>
-              <div><Label>Fim</Label><Input type="date" value={goalForm.period_end} onChange={(e) => setGoalForm(f => ({ ...f, period_end: e.target.value }))} /></div>
+            <div>
+              <Label>Mês da Meta</Label>
+              <Input type="month" value={goalForm.period_month} onChange={(e) => setGoalForm(f => ({ ...f, period_month: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
