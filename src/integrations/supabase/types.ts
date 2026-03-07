@@ -3962,6 +3962,8 @@ export type Database = {
           parent_org_id: string | null
           phone: string | null
           product_types: string[] | null
+          referral_code: string | null
+          saas_commission_percent: number | null
           segment: string | null
           state: string | null
           trade_name: string | null
@@ -3991,6 +3993,8 @@ export type Database = {
           parent_org_id?: string | null
           phone?: string | null
           product_types?: string[] | null
+          referral_code?: string | null
+          saas_commission_percent?: number | null
           segment?: string | null
           state?: string | null
           trade_name?: string | null
@@ -4020,6 +4024,8 @@ export type Database = {
           parent_org_id?: string | null
           phone?: string | null
           product_types?: string[] | null
+          referral_code?: string | null
+          saas_commission_percent?: number | null
           segment?: string | null
           state?: string | null
           trade_name?: string | null
@@ -4215,6 +4221,95 @@ export type Database = {
           },
         ]
       }
+      referral_discounts: {
+        Row: {
+          created_at: string
+          discount_percent: number
+          id: string
+          is_active: boolean
+          organization_id: string
+          uses_count: number
+        }
+        Insert: {
+          created_at?: string
+          discount_percent?: number
+          id?: string
+          is_active?: boolean
+          organization_id: string
+          uses_count?: number
+        }
+        Update: {
+          created_at?: string
+          discount_percent?: number
+          id?: string
+          is_active?: boolean
+          organization_id?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_discounts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saas_commissions: {
+        Row: {
+          asaas_payment_id: string | null
+          client_org_id: string
+          commission_percent: number
+          commission_value: number
+          created_at: string
+          franchisee_org_id: string
+          id: string
+          month: string | null
+          payment_value: number
+          status: string
+        }
+        Insert: {
+          asaas_payment_id?: string | null
+          client_org_id: string
+          commission_percent?: number
+          commission_value?: number
+          created_at?: string
+          franchisee_org_id: string
+          id?: string
+          month?: string | null
+          payment_value?: number
+          status?: string
+        }
+        Update: {
+          asaas_payment_id?: string | null
+          client_org_id?: string
+          commission_percent?: number
+          commission_value?: number
+          created_at?: string
+          franchisee_org_id?: string
+          id?: string
+          month?: string | null
+          payment_value?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_commissions_client_org_id_fkey"
+            columns: ["client_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saas_commissions_franchisee_org_id_fkey"
+            columns: ["franchisee_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_plans: {
         Row: {
           answers: Json
@@ -4305,11 +4400,13 @@ export type Database = {
           asaas_billing_type: string | null
           asaas_subscription_id: string | null
           created_at: string
+          discount_percent: number | null
           expires_at: string | null
           id: string
           modules: string
           organization_id: string
           plan: string
+          referral_org_id: string | null
           started_at: string
           status: string
           updated_at: string
@@ -4318,11 +4415,13 @@ export type Database = {
           asaas_billing_type?: string | null
           asaas_subscription_id?: string | null
           created_at?: string
+          discount_percent?: number | null
           expires_at?: string | null
           id?: string
           modules?: string
           organization_id: string
           plan?: string
+          referral_org_id?: string | null
           started_at?: string
           status?: string
           updated_at?: string
@@ -4331,11 +4430,13 @@ export type Database = {
           asaas_billing_type?: string | null
           asaas_subscription_id?: string | null
           created_at?: string
+          discount_percent?: number | null
           expires_at?: string | null
           id?: string
           modules?: string
           organization_id?: string
           plan?: string
+          referral_org_id?: string | null
           started_at?: string
           status?: string
           updated_at?: string
@@ -4344,6 +4445,13 @@ export type Database = {
           {
             foreignKeyName: "subscriptions_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_referral_org_id_fkey"
+            columns: ["referral_org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -5282,6 +5390,43 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_referral_by_code: {
+        Args: { _code: string }
+        Returns: {
+          discount_percent: number
+          is_active: boolean
+          org_name: string
+          organization_id: string
+        }[]
+      }
+      get_saas_clients_for_org: {
+        Args: { _org_id: string }
+        Returns: {
+          created_at: string
+          credits_balance: number
+          discount_percent: number
+          expires_at: string
+          org_id: string
+          org_name: string
+          plan: string
+          plan_status: string
+          referral_org_id: string
+        }[]
+      }
+      get_saas_commissions_for_org: {
+        Args: { _org_id: string }
+        Returns: {
+          client_name: string
+          client_org_id: string
+          commission_percent: number
+          commission_value: number
+          created_at: string
+          id: string
+          month: string
+          payment_value: number
+          status: string
+        }[]
       }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
