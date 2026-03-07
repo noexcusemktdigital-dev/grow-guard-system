@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, DollarSign, FileText, Building2, TrendingUp,
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
-  Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt,
+  Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt, Sparkles, ClipboardCheck,
   ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, Cloud, LogOut,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -33,17 +33,22 @@ const principalSection: SidebarItem[] = [
 ];
 
 const redeSection: SidebarItem[] = [
-  { label: "CRM", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
 ];
 
 const comercialSection: SidebarItem[] = [
-  { label: "Propostas", icon: FileText, path: "/franqueadora/propostas" },
+  { label: "CRM de Vendas", icon: TrendingUp, path: "/franqueadora/crm" },
+  { label: "Prospecção", icon: Sparkles, path: "/franqueadora/prospeccao" },
+  { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueadora/estrategia" },
+  { label: "Gerador de Proposta", icon: FileText, path: "/franqueadora/propostas" },
+  { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
+];
+
+const marketingSection: SidebarItem[] = [
   { label: "Marketing", icon: Zap, path: "/franqueadora/marketing" },
   { label: "Treinamentos", icon: GraduationCap, path: "/franqueadora/treinamentos" },
-  { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
 ];
 
 const adminSection: SidebarItem[] = [
@@ -315,7 +320,8 @@ export function FranqueadoraSidebarContent({ collapsed, setCollapsed }: { collap
         <SidebarNavItems items={principalSection} collapsed={collapsed} />
         <div className="mx-3 border-t border-sidebar-border/60" />
         <CollapsibleSection title="Rede" items={redeSection} collapsed={collapsed} defaultOpen />
-        <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} />
+        <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} defaultOpen />
+        <CollapsibleSection title="Marketing & Academy" items={marketingSection} collapsed={collapsed} />
         <CollapsibleSection title="Administrativo" items={adminSection} collapsed={collapsed} />
       </div>
 
