@@ -160,8 +160,7 @@ export default function MetasRanking() {
                   {g.period_start && (
                     <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                       <CalendarDays className="w-3 h-3" />
-                      {new Date(g.period_start).toLocaleDateString("pt-BR")}
-                      {g.period_end && ` — ${new Date(g.period_end).toLocaleDateString("pt-BR")}`}
+                      {new Date(g.period_start).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                     </p>
                   )}
                 </CardContent>
