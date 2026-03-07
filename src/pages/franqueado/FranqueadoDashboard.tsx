@@ -6,7 +6,7 @@ import {
   Plus, ChevronDown, Calendar, TrendingUp,
   UserPlus, Headphones, FileSignature, LayoutGrid,
   Users, Inbox, Target, AlertTriangle, Bell, Megaphone,
-  ArrowUpRight,
+  ArrowUpRight, Monitor,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
