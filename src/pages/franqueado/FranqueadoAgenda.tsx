@@ -428,7 +428,7 @@ export default function FranqueadoAgenda() {
       </div>
 
       {/* Google Setup Wizard */}
-      <GoogleSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} onComplete={() => {}} />
+      <GoogleSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} />
 
       {/* Event Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
