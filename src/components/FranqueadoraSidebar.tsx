@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, DollarSign, FileText, Building2, TrendingUp,
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
-  Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt,
+  Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt, Sparkles, ClipboardCheck,
   ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, Cloud, LogOut,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
