@@ -189,15 +189,15 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
               <Separator className="my-3" />
               <Label className="text-xs text-muted-foreground mb-2 block">Unidades específicas (deixe vazio para todas)</Label>
               <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
-                {(dbUnits ?? []).map((u) => (
-                  <label key={u.id} className="flex items-center gap-1.5 cursor-pointer">
-                    <Checkbox checked={unidadesEspecificas.includes(u.id)} onCheckedChange={() => handleUnidadeToggle(u.id)} />
+              {(dbUnits ?? []).filter((u) => u.unit_org_id).map((u) => (
+                  <label key={u.unit_org_id} className="flex items-center gap-1.5 cursor-pointer">
+                    <Checkbox checked={unidadesEspecificas.includes(u.unit_org_id!)} onCheckedChange={() => handleUnidadeToggle(u.unit_org_id!)} />
                     <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-xs">{u.name}</span>
                   </label>
                 ))}
-                {(dbUnits ?? []).length === 0 && (
-                  <p className="text-xs text-muted-foreground">Nenhuma unidade cadastrada</p>
+                {(dbUnits ?? []).filter((u) => u.unit_org_id).length === 0 && (
+                  <p className="text-xs text-muted-foreground">Nenhuma unidade vinculada</p>
                 )}
               </div>
             </div>
