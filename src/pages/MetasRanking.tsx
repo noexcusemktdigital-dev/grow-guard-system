@@ -50,8 +50,10 @@ export default function MetasRanking() {
         target_value: Number(goalForm.target_value),
         scope: goalForm.scope,
         unit_org_id: goalForm.scope === "unidade" ? goalForm.unit_org_id : undefined,
-        period_start: goalForm.period_start || undefined,
-        period_end: goalForm.period_end || undefined,
+        period_start: goalForm.period_month ? `${goalForm.period_month}-01` : undefined,
+        period_end: goalForm.period_month
+          ? new Date(Number(goalForm.period_month.split("-")[0]), Number(goalForm.period_month.split("-")[1]), 0).toISOString().split("T")[0]
+          : undefined,
         status: "active",
         metric: goalForm.type,
       },
@@ -59,7 +61,7 @@ export default function MetasRanking() {
         onSuccess: () => {
           toast.success("Meta criada com sucesso");
           setShowNewGoal(false);
-          setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_start: "", period_end: "" });
+          setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
         },
         onError: () => toast.error("Erro ao criar meta"),
       }
