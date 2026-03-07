@@ -263,6 +263,7 @@ export default function FranqueadoAgenda() {
     setEndAt(format(parseISO(ev.end_at), "yyyy-MM-dd'T'HH:mm"));
     setLocation(ev.location || ""); setAllDay(ev.all_day || false);
     setColor(ev.color || COLORS[4]); setCalendarId(ev.calendar_id || "");
+    setVisibility(ev.visibility || "pessoal");
     setDetailEvent(null); setFormOpen(true);
   }
 
