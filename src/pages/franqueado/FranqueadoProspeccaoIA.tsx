@@ -68,7 +68,7 @@ function NovaProspeccaoTab() {
     nicho: "",
     porte: "",
     desafio: "",
-    objetivo: "Agendar reunião de diagnóstico",
+    objetivo: "Agendar diagnóstico gratuito",
     nome_empresa: "",
     site: "",
     redes_sociais: "",
