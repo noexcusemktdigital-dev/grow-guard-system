@@ -394,6 +394,7 @@ export type Database = {
           organization_id: string
           priority: string
           published_at: string | null
+          status: string
           target_roles: string[] | null
           target_unit_ids: string[] | null
           title: string
@@ -410,6 +411,7 @@ export type Database = {
           organization_id: string
           priority?: string
           published_at?: string | null
+          status?: string
           target_roles?: string[] | null
           target_unit_ids?: string[] | null
           title: string
@@ -426,6 +428,7 @@ export type Database = {
           organization_id?: string
           priority?: string
           published_at?: string | null
+          status?: string
           target_roles?: string[] | null
           target_unit_ids?: string[] | null
           title?: string
@@ -5012,6 +5015,7 @@ export type Database = {
           organization_id: string
           priority: string
           published_at: string | null
+          status: string
           target_roles: string[] | null
           target_unit_ids: string[] | null
           title: string
