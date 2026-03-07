@@ -1,183 +1,271 @@
-import { useState } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Inbox, Plus, MessageSquare, LayoutGrid, List, Settings, ArrowLeft, Clock, User } from "lucide-react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { useSupportTicketMutations } from "@/hooks/useSupportTickets";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Plus, MessageSquare, Search, Inbox, AlertTriangle, Timer, Clock,
+  Send, ArrowLeft, User, Paperclip, X, FileText, Download,
+  KanbanSquare, List, ChevronRight, Settings,
+} from "lucide-react";
+import { useSupportMessages, useSupportTicketMutations } from "@/hooks/useSupportTickets";
 import { useSupportTicketsNetwork, type NetworkTicket } from "@/hooks/useSupportTicketsNetwork";
 import { AtendimentoConfig } from "@/components/atendimento/AtendimentoConfig";
-import { useToast } from "@/hooks/use-toast";
+import { format, formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
-type View = "kanban" | "list" | "detail";
-
-const STATUSES = [
-  { key: "open", label: "Aberto", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  { key: "in_progress", label: "Em Andamento", color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
-  { key: "waiting", label: "Aguardando", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
-  { key: "resolved", label: "Resolvido", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-];
-
-const PRIORITIES = [
-  { key: "low", label: "Baixa" },
-  { key: "medium", label: "Normal" },
-  { key: "high", label: "Alta" },
-  { key: "urgent", label: "Urgente" },
-];
+const STATUS_LABELS: Record<string, string> = {
+  open: "Aberto",
+  in_progress: "Em análise",
+  waiting: "Aguardando",
+  resolved: "Resolvido",
+  closed: "Encerrado",
+};
+const STATUS_COLORS: Record<string, string> = {
+  open: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  in_progress: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  waiting: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  resolved: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  closed: "bg-muted text-muted-foreground",
+};
+const PRIORITY_LABELS: Record<string, string> = { low: "Baixa", normal: "Normal", medium: "Normal", high: "Alta", urgent: "Urgente" };
+const PRIORITY_COLORS: Record<string, string> = {
+  low: "text-muted-foreground",
+  normal: "text-foreground",
+  medium: "text-foreground",
+  high: "text-amber-600",
+  urgent: "text-red-600",
+};
+const CATEGORIAS = ["Financeiro", "Jurídico", "Comercial", "Marketing", "Treinamentos", "Sistema", "Dúvidas gerais"];
+const KANBAN_COLUMNS = ["open", "in_progress", "waiting", "resolved"];
 
 export default function Atendimento() {
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"chamados" | "config">("chamados");
-  const [view, setView] = useState<View>("kanban");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showNew, setShowNew] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newPriority, setNewPriority] = useState("medium");
-  const [newCategory, setNewCategory] = useState("");
-  const [replyText, setReplyText] = useState("");
-
+  const { user } = useAuth();
   const { data: tickets, isLoading } = useSupportTicketsNetwork();
-  const { createTicket, updateTicket } = useSupportTicketMutations();
+  const { createTicket, updateTicket, sendMessage } = useSupportTicketMutations();
+  const [activeTab, setActiveTab] = useState<"chamados" | "config">("chamados");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterOrigin, setFilterOrigin] = useState("all");
+  const [search, setSearch] = useState("");
+  const [createDialog, setCreateDialog] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<NetworkTicket | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [msgAttachments, setMsgAttachments] = useState<File[]>([]);
+  const [uploadingMsg, setUploadingMsg] = useState(false);
 
-  const selected = (tickets ?? []).find(t => t.id === selectedId);
+  // New ticket form
+  const [novoTitulo, setNovoTitulo] = useState("");
+  const [novaCategoria, setNovaCategoria] = useState("Dúvidas gerais");
+  const [novaDescricao, setNovaDescricao] = useState("");
+  const [novaPrioridade, setNovaPrioridade] = useState("medium");
+  const [creatingTicket, setCreatingTicket] = useState(false);
 
-  const handleCreate = () => {
-    if (!newTitle.trim()) { toast({ title: "Informe o título", variant: "destructive" }); return; }
-    createTicket.mutate({ title: newTitle, description: newDesc, priority: newPriority, category: newCategory || undefined });
-    setShowNew(false);
-    setNewTitle(""); setNewDesc(""); setNewCategory("");
-    toast({ title: "Chamado criado com sucesso" });
-  };
+  const filtered = useMemo(() => {
+    return (tickets ?? []).filter(t => {
+      if (filterStatus !== "all" && t.status !== filterStatus) return false;
+      if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.org_name.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+  }, [tickets, filterStatus, filterOrigin, search]);
 
-  const handleStatusChange = (id: string, status: string) => {
+  const alerts = useMemo(() => {
+    const abertos = (tickets ?? []).filter(t => t.status === "open").length;
+    const emAnalise = (tickets ?? []).filter(t => t.status === "in_progress").length;
+    const aguardando = (tickets ?? []).filter(t => t.status === "waiting").length;
+    const resolvidos = (tickets ?? []).filter(t => t.status === "resolved").length;
+    return [
+      { label: "Abertos", count: abertos, cor: "text-red-500", icon: AlertTriangle },
+      { label: "Em Análise", count: emAnalise, cor: "text-amber-500", icon: Timer },
+      { label: "Aguardando", count: aguardando, cor: "text-blue-500", icon: Clock },
+      { label: "Resolvidos", count: resolvidos, cor: "text-emerald-500", icon: Clock },
+    ];
+  }, [tickets]);
+
+  async function uploadFiles(files: File[]): Promise<string[]> {
+    const urls: string[] = [];
+    for (const file of files) {
+      const ext = file.name.split(".").pop();
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("support-attachments").upload(path, file);
+      if (error) { toast.error(`Erro ao enviar ${file.name}`); continue; }
+      const { data } = supabase.storage.from("support-attachments").getPublicUrl(path);
+      urls.push(data.publicUrl);
+    }
+    return urls;
+  }
+
+  async function handleCreate() {
+    if (!novoTitulo.trim()) { toast.error("Informe o título"); return; }
+    setCreatingTicket(true);
+    try {
+      await createTicket.mutateAsync({
+        title: novoTitulo,
+        description: novaDescricao,
+        category: novaCategoria,
+        priority: novaPrioridade,
+      });
+      setCreateDialog(false);
+      setNovoTitulo(""); setNovaDescricao("");
+      toast.success("Chamado criado!");
+    } catch {
+      toast.error("Erro ao criar chamado");
+    }
+    setCreatingTicket(false);
+  }
+
+  async function handleSendMessage() {
+    if ((!newMessage.trim() && msgAttachments.length === 0) || !selectedTicket) return;
+    setUploadingMsg(true);
+    try {
+      let attachmentUrls: string[] = [];
+      if (msgAttachments.length > 0) {
+        attachmentUrls = await uploadFiles(msgAttachments);
+      }
+      await sendMessage.mutateAsync({
+        ticket_id: selectedTicket.id,
+        content: newMessage || (attachmentUrls.length > 0 ? "📎 Anexo" : ""),
+        attachments: attachmentUrls.length > 0 ? attachmentUrls : undefined,
+      } as any);
+      setNewMessage("");
+      setMsgAttachments([]);
+    } catch {
+      toast.error("Erro ao enviar mensagem");
+    }
+    setUploadingMsg(false);
+  }
+
+  function handleStatusChange(id: string, status: string) {
     updateTicket.mutate({ id, status });
-    toast({ title: `Status atualizado para ${STATUSES.find(s => s.key === status)?.label || status}` });
-  };
+    toast.success(`Status atualizado para ${STATUS_LABELS[status] || status}`);
+  }
 
-  if (isLoading) return <div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>;
+  if (isLoading) {
+    return (
+      <div className="w-full space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}</div>
+        <Skeleton className="h-[500px]" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {view === "detail" && activeTab === "chamados" && (
-            <Button variant="ghost" size="icon" onClick={() => { setView("kanban"); setSelectedId(null); }}>
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          )}
-          <div>
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-primary" />
-              <h1 className="page-header-title">Central de Atendimento</h1>
-              <Badge variant="secondary" className="text-[10px]">Franqueadora</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">Central de suporte e chamados da rede</p>
-          </div>
-        </div>
-        {activeTab === "chamados" && view !== "detail" && (
+        <div>
           <div className="flex items-center gap-2">
-            <div className="flex rounded-lg border bg-muted/30 p-0.5">
-              <Button variant={view === "kanban" ? "default" : "ghost"} size="sm" className="gap-1 h-7" onClick={() => setView("kanban")}>
-                <LayoutGrid className="w-3.5 h-3.5" /> Kanban
+            <MessageSquare className="w-5 h-5 text-primary" />
+            <h1 className="text-xl font-bold">Atendimento</h1>
+            <Badge variant="secondary" className="text-[10px]">Franqueadora</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">Central de suporte e chamados da rede</p>
+        </div>
+        {activeTab === "chamados" && (
+          <div className="flex items-center gap-2">
+            <div className="flex border border-border rounded-lg overflow-hidden">
+              <Button size="sm" variant={viewMode === "kanban" ? "default" : "ghost"} className="rounded-none h-8 px-3" onClick={() => setViewMode("kanban")}>
+                <KanbanSquare className="w-3.5 h-3.5" />
               </Button>
-              <Button variant={view === "list" ? "default" : "ghost"} size="sm" className="gap-1 h-7" onClick={() => setView("list")}>
-                <List className="w-3.5 h-3.5" /> Lista
+              <Button size="sm" variant={viewMode === "list" ? "default" : "ghost"} className="rounded-none h-8 px-3" onClick={() => setViewMode("list")}>
+                <List className="w-3.5 h-3.5" />
               </Button>
             </div>
-            <Button size="sm" className="gap-1 h-7" onClick={() => setShowNew(true)}>
-              <Plus className="w-3.5 h-3.5" /> Novo Chamado
+            <Button size="sm" onClick={() => setCreateDialog(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Novo Chamado
             </Button>
           </div>
         )}
       </div>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <TabsList>
           <TabsTrigger value="chamados" className="gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> Chamados</TabsTrigger>
           <TabsTrigger value="config" className="gap-1.5"><Settings className="w-3.5 h-3.5" /> Configurações</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="chamados" className="mt-4">
-          {(tickets ?? []).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-1">Nenhum chamado</h3>
-              <p className="text-sm text-muted-foreground mb-4">Crie o primeiro chamado de suporte.</p>
-              <Button onClick={() => setShowNew(true)}><Plus className="w-4 h-4 mr-1" /> Novo Chamado</Button>
+        <TabsContent value="chamados" className="mt-4 space-y-4">
+          {/* KPIs */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {alerts.map(a => (
+              <Card key={a.label} className="p-3 flex items-center gap-3">
+                <a.icon className={`w-5 h-5 ${a.cor}`} />
+                <div>
+                  <p className="text-lg font-bold">{a.count}</p>
+                  <p className="text-[11px] text-muted-foreground">{a.label}</p>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input placeholder="Buscar título ou unidade..." value={search} onChange={e => setSearch(e.target.value)} className="w-[240px] h-8 text-xs pl-8" />
             </div>
-          ) : view === "detail" && selected ? (
-            <Card className="p-6 space-y-5">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h2 className="text-lg font-bold">{selected.title}</h2>
-                <div className="flex items-center gap-2">
-                  <Select value={selected.status} onValueChange={(v) => handleStatusChange(selected.id, v)}>
-                    <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {STATUSES.map(s => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Badge variant="outline" className="text-xs">{PRIORITIES.find(p => p.key === selected.priority)?.label || selected.priority}</Badge>
-                </div>
-              </div>
+          </div>
 
-              <div className="text-sm text-muted-foreground">{selected.description || "Sem descrição"}</div>
-
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Criado em {new Date(selected.created_at).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
-                {selected.category && <span>Categoria: {selected.category}</span>}
-              </div>
-
-              <Separator />
-
-              {/* Timeline */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold">Timeline</h3>
-                <div className="border-l-2 border-border pl-4 space-y-4">
-                  <div className="relative">
-                    <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
-                    <p className="text-xs text-muted-foreground">{new Date(selected.created_at).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
-                    <p className="text-sm">Chamado aberto</p>
-                  </div>
-                  {selected.closed_at && (
-                    <div className="relative">
-                      <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-green-500 border-2 border-background" />
-                      <p className="text-xs text-muted-foreground">{new Date(selected.closed_at).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
-                      <p className="text-sm">Chamado resolvido</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ) : view === "kanban" ? (
-            <div className="flex gap-3 overflow-x-auto pb-4">
-              {STATUSES.map(status => {
-                const statusTickets = tickets!.filter(t => t.status === status.key);
+          {/* Content */}
+          {(filtered ?? []).length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Inbox className="w-12 h-12 text-muted-foreground/30 mb-3" />
+              <h3 className="text-lg font-semibold mb-1">Nenhum chamado</h3>
+              <p className="text-sm text-muted-foreground mb-4">Crie o primeiro chamado ou aguarde os da rede.</p>
+              <Button onClick={() => setCreateDialog(true)}><Plus className="w-4 h-4 mr-1" /> Novo Chamado</Button>
+            </div>
+          ) : viewMode === "kanban" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {KANBAN_COLUMNS.map(status => {
+                const col = filtered.filter(t => t.status === status);
                 return (
-                  <div key={status.key} className="min-w-[220px] max-w-[260px] flex-shrink-0">
-                    <div className={`rounded-t-lg px-3 py-2 text-xs font-semibold ${status.color}`}>{status.label} ({statusTickets.length})</div>
-                    <div className="bg-muted/30 rounded-b-lg p-2 space-y-2 min-h-[120px] border border-t-0 border-border/50">
-                      {statusTickets.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Nenhum</p>}
-                      {statusTickets.map(t => (
-                        <Card key={t.id} className="p-3 cursor-pointer hover:shadow-sm" onClick={() => { setSelectedId(t.id); setView("detail"); }}>
-                          <p className="text-sm font-medium">{t.title}</p>
-                          {"org_name" in t && (t as any).org_name && (
-                            <p className="text-[10px] text-primary font-medium mt-0.5">{(t as any).org_name}</p>
-                          )}
-                          <div className="flex items-center justify-between mt-1">
-                            <Badge variant="outline" className="text-[9px]">{PRIORITIES.find(p => p.key === t.priority)?.label || t.priority}</Badge>
-                            <span className="text-[10px] text-muted-foreground">{new Date(t.created_at).toLocaleDateString("pt-BR")}</span>
-                          </div>
-                          {t.category && <p className="text-[10px] text-muted-foreground mt-1">{t.category}</p>}
+                  <div key={status} className="space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[status]}`}>
+                        {STATUS_LABELS[status]}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">{col.length}</span>
+                    </div>
+                    <div className="space-y-2 min-h-[200px]">
+                      {col.length === 0 ? (
+                        <div className="border border-dashed border-border rounded-lg p-4 text-center">
+                          <p className="text-[11px] text-muted-foreground">Nenhum chamado</p>
+                        </div>
+                      ) : col.map(t => (
+                        <Card key={t.id} className={`cursor-pointer transition-all hover:shadow-md ${t.id === selectedTicket?.id ? "ring-2 ring-primary" : ""}`} onClick={() => setSelectedTicket(t)}>
+                          <CardContent className="p-3 space-y-1.5">
+                            <p className="text-sm font-medium line-clamp-2">{t.title}</p>
+                            <p className="text-[10px] text-primary font-medium">{t.org_name}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Badge variant="outline" className="text-[10px]">{t.category || "Geral"}</Badge>
+                              <span className={`text-[10px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+                                ● {PRIORITY_LABELS[t.priority] || t.priority}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground block">
+                              {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: true })}
+                            </span>
+                          </CardContent>
                         </Card>
                       ))}
                     </div>
@@ -186,29 +274,28 @@ export default function Atendimento() {
               })}
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/50">
-                  <th className="text-left py-3 px-4">Título</th>
-                  <th className="text-left py-3 px-4">Unidade</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Prioridade</th>
-                  <th className="text-left py-3 px-4">Categoria</th>
-                  <th className="text-left py-3 px-4">Data</th>
-                </tr></thead>
-                <tbody>
-                  {tickets!.map(t => (
-                    <tr key={t.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setSelectedId(t.id); setView("detail"); }}>
-                      <td className="py-3 px-4 font-medium">{t.title}</td>
-                      <td className="py-3 px-4 text-xs text-primary">{"org_name" in t ? (t as any).org_name : "—"}</td>
-                      <td className="py-3 px-4"><Badge className={`${STATUSES.find(s => s.key === t.status)?.color || ""} border-0 text-[10px]`}>{STATUSES.find(s => s.key === t.status)?.label || t.status}</Badge></td>
-                      <td className="py-3 px-4">{PRIORITIES.find(p => p.key === t.priority)?.label || t.priority}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{t.category || "—"}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{new Date(t.created_at).toLocaleDateString("pt-BR")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              {filtered.map(t => (
+                <Card key={t.id} className={`cursor-pointer transition-all hover:shadow-md ${t.id === selectedTicket?.id ? "ring-2 ring-primary" : ""}`} onClick={() => setSelectedTicket(t)}>
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{t.title}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
+                          {STATUS_LABELS[t.status] || t.status}
+                        </span>
+                        <span className="text-[10px] text-primary font-medium">{t.org_name}</span>
+                        <span className="text-[10px] text-muted-foreground">{t.category || "Geral"}</span>
+                        <span className={`text-[10px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+                          {PRIORITY_LABELS[t.priority] || t.priority}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">{format(new Date(t.created_at), "dd/MM")}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
@@ -218,35 +305,236 @@ export default function Atendimento() {
         </TabsContent>
       </Tabs>
 
+      {/* Detail Dialog */}
+      {selectedTicket && (
+        <Dialog open={!!selectedTicket} onOpenChange={open => !open && setSelectedTicket(null)}>
+          <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0">
+            <div className="p-5 border-b border-border">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-semibold">{selectedTicket.title}</h3>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[selectedTicket.status] || ""}`}>
+                      {STATUS_LABELS[selectedTicket.status] || selectedTicket.status}
+                    </span>
+                    <Badge variant="outline" className="text-[10px]">{selectedTicket.category || "Geral"}</Badge>
+                    <span className={`text-[10px] font-medium ${PRIORITY_COLORS[selectedTicket.priority] || ""}`}>
+                      ● {PRIORITY_LABELS[selectedTicket.priority] || selectedTicket.priority}
+                    </span>
+                    <span className="text-[10px] text-primary font-medium">{selectedTicket.org_name}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { locale: ptBR, addSuffix: true })}
+                    </span>
+                  </div>
+                  {selectedTicket.description && (
+                    <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{selectedTicket.description}</p>
+                  )}
+                  {/* Status changer */}
+                  <div className="mt-3">
+                    <Select value={selectedTicket.status} onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}>
+                      <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-hidden">
+              <TicketMessages ticketId={selectedTicket.id} userId={user?.id} />
+            </div>
+
+            {/* Input */}
+            {selectedTicket.status !== "closed" && (
+              <div className="p-3 border-t border-border space-y-2">
+                {msgAttachments.length > 0 && (
+                  <div className="flex gap-2 flex-wrap">
+                    {msgAttachments.map((f, i) => (
+                      <div key={i} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-[11px]">
+                        <FileText className="w-3 h-3" />
+                        <span className="truncate max-w-[120px]">{f.name}</span>
+                        <button onClick={() => setMsgAttachments(prev => prev.filter((_, j) => j !== i))}>
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <label className="cursor-pointer">
+                    <input type="file" className="hidden" multiple accept="image/*,.pdf,.doc,.docx" onChange={e => {
+                      if (e.target.files) setMsgAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+                    }} />
+                    <div className="h-9 w-9 flex items-center justify-center rounded-md border border-border hover:bg-muted transition-colors">
+                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </label>
+                  <Input
+                    value={newMessage}
+                    onChange={e => setNewMessage(e.target.value)}
+                    placeholder="Responder ao chamado..."
+                    className="text-sm"
+                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                  />
+                  <Button size="icon" onClick={handleSendMessage} disabled={uploadingMsg || (!newMessage.trim() && msgAttachments.length === 0)}>
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* New Ticket Dialog */}
-      <Dialog open={showNew} onOpenChange={setShowNew}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>Novo Chamado</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Título *</Label><Input placeholder="Título do chamado" value={newTitle} onChange={e => setNewTitle(e.target.value)} /></div>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-4">
+            <div>
+              <Label>Título *</Label>
+              <Input value={novoTitulo} onChange={e => setNovoTitulo(e.target.value)} placeholder="Descreva brevemente" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Prioridade</Label>
-                <Select value={newPriority} onValueChange={setNewPriority}>
-                  <SelectTrigger><SelectValue placeholder="Prioridade" /></SelectTrigger>
-                  <SelectContent>
-                    {PRIORITIES.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
-                  </SelectContent>
+                <Label>Categoria</Label>
+                <Select value={novaCategoria} onValueChange={setNovaCategoria}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{CATEGORIAS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Categoria</Label>
-                <Input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="Ex: Financeiro" />
+                <Label>Prioridade</Label>
+                <Select value={novaPrioridade} onValueChange={setNovaPrioridade}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Normal</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="urgent">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div><Label>Descrição</Label><Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Descrição do chamado" /></div>
+            <div>
+              <Label>Descrição</Label>
+              <Textarea value={novaDescricao} onChange={e => setNovaDescricao(e.target.value)} placeholder="Descreva em detalhes..." rows={4} />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
-            <Button onClick={handleCreate}>Criar Chamado</Button>
+            <Button variant="outline" onClick={() => setCreateDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={creatingTicket}>
+              {creatingTicket ? "Criando..." : "Criar Chamado"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/* ── Messages with Realtime ──────────────────────────────────── */
+function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: string }) {
+  const { data: messages, isLoading, refetch } = useSupportMessages(ticketId);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`support-messages-atend-${ticketId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "support_messages", filter: `ticket_id=eq.${ticketId}` }, () => {
+        refetch();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [ticketId, refetch]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  if (isLoading) return <div className="flex-1 flex items-center justify-center p-8"><Skeleton className="h-8 w-32" /></div>;
+
+  const groupedByDate: Record<string, any[]> = {};
+  (messages ?? []).forEach((m: any) => {
+    const dateKey = format(new Date(m.created_at), "yyyy-MM-dd");
+    if (!groupedByDate[dateKey]) groupedByDate[dateKey] = [];
+    groupedByDate[dateKey].push(m);
+  });
+
+  return (
+    <ScrollArea className="flex-1 p-4 max-h-[400px]" ref={scrollRef}>
+      {(!messages || messages.length === 0) ? (
+        <div className="text-center text-muted-foreground text-xs py-8">
+          Nenhuma mensagem ainda. Responda ao chamado!
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(groupedByDate).map(([dateKey, msgs]) => (
+            <div key={dateKey}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                  {format(new Date(dateKey), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <div className="space-y-3">
+                {msgs.map((m: any) => {
+                  const isMine = m.user_id === userId;
+                  const msgAtt = m.attachments as string[] | null;
+                  return (
+                    <div key={m.id} className={`rounded-lg border bg-card overflow-hidden ${isMine ? "border-l-4 border-l-primary" : "border-l-4 border-l-muted-foreground/30"}`}>
+                      <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isMine ? "bg-primary/15 text-primary" : "bg-muted-foreground/15 text-muted-foreground"}`}>
+                            <User className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold">{isMine ? "Você" : "Unidade"}</span>
+                            <span className="text-[10px] text-muted-foreground ml-2">
+                              {isMine ? "Equipe Matriz" : "Franqueado/Cliente"}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(m.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </span>
+                      </div>
+                      <div className="px-4 py-3">
+                        {m.content && m.content !== "📎 Anexo" && (
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                        )}
+                        {msgAtt && msgAtt.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
+                            {msgAtt.map((url: string, i: number) => {
+                              const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                              return isImg ? (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block group">
+                                  <img src={url} alt="Anexo" className="w-full h-24 object-cover rounded-md border border-border group-hover:opacity-80 transition-opacity" />
+                                </a>
+                              ) : (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-muted rounded-md px-3 py-2 text-[11px] hover:bg-muted/80 transition-colors">
+                                  <Download className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span className="truncate">{url.split("/").pop()?.substring(0, 25)}</span>
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </ScrollArea>
   );
 }
