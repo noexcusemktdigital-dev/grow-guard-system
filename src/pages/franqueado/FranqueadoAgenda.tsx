@@ -270,11 +270,12 @@ export default function FranqueadoAgenda() {
   function handleSave() {
     if (!title.trim()) { toast.error("Informe o título"); return; }
     if (!startAt || !endAt) { toast.error("Informe data/hora"); return; }
-    const payload = {
+    const payload: any = {
       title, description: description || undefined,
       start_at: new Date(startAt).toISOString(), end_at: new Date(endAt).toISOString(),
       location: location || undefined, all_day: allDay, color,
       calendar_id: calendarId || undefined,
+      visibility,
     };
     if (editingEvent) {
       updateEvent.mutate({ id: editingEvent.id, ...payload }, { onSuccess: () => { setFormOpen(false); toast.success("Evento atualizado!"); } });
