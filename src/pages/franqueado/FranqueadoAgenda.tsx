@@ -447,6 +447,18 @@ export default function FranqueadoAgenda() {
             <div className="flex items-center gap-2"><Switch checked={allDay} onCheckedChange={setAllDay} id="allday" /><Label htmlFor="allday">Dia todo</Label></div>
             <div><Label>Local</Label><Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Endereço ou link" /></div>
             <div><Label>Descrição</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} /></div>
+            {/* Visibility */}
+            <div>
+              <Label>Visibilidade</Label>
+              <Select value={visibility} onValueChange={setVisibility}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pessoal">Pessoal (só eu)</SelectItem>
+                  <SelectItem value="unidade">Toda a unidade</SelectItem>
+                  <SelectItem value="clientes">Compartilhar com clientes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {(calendars ?? []).length > 0 && (
               <div>
                 <Label>Calendário</Label>
