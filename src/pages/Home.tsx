@@ -201,7 +201,6 @@ export default function Home() {
               </div>
             </div>
           )}
-          </div>
 
           {/* Smart Priorities + Mensagem do Dia */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
