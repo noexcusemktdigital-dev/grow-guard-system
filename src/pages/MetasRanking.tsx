@@ -32,7 +32,7 @@ export default function MetasRanking() {
   const { createGoal } = useGoalMutations();
 
   const [showNewGoal, setShowNewGoal] = useState(false);
-  const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_start: "", period_end: "" });
+  const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
 
   const isLoading = loadingGoals || loadingRankings;
 
