@@ -41,9 +41,14 @@ Deno.serve(async (req) => {
     }
 
     // 1. Create organization
+    const orgPayload: any = { name: company_name || "Minha Empresa", type: "cliente" };
+    if (franchisee_org_id) {
+      orgPayload.parent_org_id = franchisee_org_id;
+    }
+
     const { data: org, error: orgError } = await supabaseAdmin
       .from("organizations")
-      .insert({ name: company_name || "Minha Empresa", type: "cliente" })
+      .insert(orgPayload)
       .select("id")
       .single();
 
