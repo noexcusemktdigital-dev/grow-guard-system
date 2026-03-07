@@ -1,31 +1,76 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Reestruturar Módulo Comercial (Franqueadora + Franqueado)
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### Resumo
 
-### Ações
+Espelhar a estrutura comercial do Franqueado na Franqueadora (CRM, Prospecção, Estratégia, Propostas), mover CRM da seção "Rede" para "Comercial", adicionar "Metas & Ranking" ao Comercial do Franqueado, e reorganizar Marketing/Academy em seção própria. Os dados de cada portal são **completamente isolados** via `organization_id` — nenhum compartilhamento entre Matriz e Unidades.
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+### Mudanças na Sidebar
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
-
-3. **Executar o teste** e analisar o resultado definitivo
-
-### Detalhe técnico
+**Franqueadora (`FranqueadoraSidebar.tsx`)**
 
 ```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+REDE (antes)              REDE (depois)
+├─ CRM                    ├─ Atendimento
+├─ Atendimento            ├─ Unidades
+├─ Unidades               └─ Onboarding
+└─ Onboarding
+
+COMERCIAL (antes)         COMERCIAL (depois)
+├─ Propostas              ├─ CRM de Vendas     ← movido da Rede
+├─ Marketing              ├─ Prospecção         ← NOVO
+├─ Treinamentos           ├─ Criador de Estratégia ← NOVO
+├─ Metas & Ranking        ├─ Gerador de Proposta
+                          └─ Metas & Ranking
+
+(novo)                    MARKETING & ACADEMY
+                          ├─ Marketing
+                          └─ Treinamentos
 ```
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+**Franqueado (`FranqueadoSidebar.tsx`)**
+
+Adicionar ao Comercial:
+```text
+COMERCIAL (depois)
+├─ CRM de Vendas
+├─ Prospecção
+├─ Criador de Estratégia
+├─ Gerador de Proposta
+└─ Metas & Ranking ← NOVO
+```
+
+### Novas rotas (`App.tsx`)
+
+| Rota | Componente | Observação |
+|------|-----------|------------|
+| `/franqueadora/prospeccao` | `FranqueadoProspeccaoIA` | Mesmo componente, dados isolados por org_id |
+| `/franqueadora/estrategia` | `FranqueadoEstrategia` | Idem |
+| `/franqueado/metas` | `FranqueadoMetasRanking` (NOVO) | Visão read-only de metas e troféus |
+
+### Nova página: `FranqueadoMetasRanking.tsx`
+
+- Exibe metas mensais da unidade (herdadas da Matriz via `get_goals_with_parent`)
+- Mostra ranking apenas se a unidade está no ranking (filtrado por `unit_org_id`)
+- Classificação da unidade (Prata/Ouro/Elite) como badge
+- Seção de troféus desbloqueáveis ao atingir metas
+
+### Isolamento de dados
+
+Os hooks `useCrmLeads`, `useFranqueadoProspections`, `useFranqueadoStrategies`, `useCrmProposals` já filtram por `organization_id`. Como Matriz e Franqueado têm `organization_id` diferentes, os dados são automaticamente isolados — nenhuma alteração de RLS necessária.
+
+### Arquivos
+
+| Arquivo | Ação |
+|---------|------|
+| `src/components/FranqueadoraSidebar.tsx` | Reorganizar seções |
+| `src/components/FranqueadoSidebar.tsx` | Adicionar Metas & Ranking |
+| `src/App.tsx` | Adicionar 3 rotas |
+| `src/pages/franqueado/FranqueadoMetasRanking.tsx` | CRIAR |
+
+### Ordem
+1. Atualizar sidebars
+2. Adicionar rotas no App.tsx
+3. Criar FranqueadoMetasRanking
 
