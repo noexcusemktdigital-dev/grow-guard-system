@@ -47,7 +47,7 @@ export default function FranqueadoComunicados() {
 
   // Critical unconfirmed
   const criticalPending = useMemo(() => {
-    return (announcements ?? []).filter(a => a.priority === "critical" && !confirmedIds.has(a.id));
+    return (announcements ?? []).filter(a => a.priority === "Crítica" && !confirmedIds.has(a.id));
   }, [announcements, confirmedIds]);
 
   function openDetail(item: any) {
