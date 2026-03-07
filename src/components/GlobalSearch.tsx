@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/command";
 
 const pages = [
-  { label: "Dashboard", path: "/franqueadora/dashboard", group: "Páginas" },
+  { label: "Início", path: "/franqueadora/inicio", group: "Páginas" },
   { label: "CRM & Expansão", path: "/franqueadora/crm", group: "Páginas" },
   { label: "Financeiro", path: "/franqueadora/financeiro/dashboard", group: "Páginas" },
   { label: "Unidades", path: "/franqueadora/unidades", group: "Páginas" },

@@ -11,8 +11,8 @@ interface ProtectedRouteProps {
 
 function getRoleRedirect(role: AppRole | null): string {
   if (!role) return "/acessofranquia";
-  if (role === "super_admin" || role === "admin") return "/franqueadora/dashboard";
-  if (role === "franqueado") return "/franqueado/dashboard";
+  if (role === "super_admin" || role === "admin") return "/franqueadora/inicio";
+  if (role === "franqueado") return "/franqueado/inicio";
   return "/cliente/inicio";
 }
 
