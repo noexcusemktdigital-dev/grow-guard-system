@@ -39,6 +39,7 @@ export default function FranqueadoDashboard() {
   const { data: dailyMessage } = useDailyMessages();
   const { data: goals } = useActiveGoals();
   const { data: goalProgress } = useGoalProgress(goals);
+  const { data: clientStats } = useNetworkClientStats();
 
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
