@@ -334,7 +334,7 @@ export default function FranqueadoAgenda() {
             </>
           ) : (
             <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setWizardOpen(true)} disabled={loadingConnection}>
-              <ExternalLink className="w-3.5 h-3.5" /> Conectar Google Agenda
+              <Calendar className="w-3.5 h-3.5" /> Conectar Google Agenda
             </Button>
           )}
           <Button size="sm" onClick={() => openNewEvent()}><Plus className="w-4 h-4 mr-1" /> Novo Evento</Button>
