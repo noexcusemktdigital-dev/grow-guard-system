@@ -486,9 +486,11 @@ export default function Agenda() {
               <Select value={visibility} onValueChange={setVisibility}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="rede">Toda a rede</SelectItem>
+                  <SelectItem value="pessoal">Pessoal (só eu)</SelectItem>
+                  <SelectItem value="private">Interna (Matriz)</SelectItem>
+                  <SelectItem value="rede">Toda a rede (Franqueados)</SelectItem>
+                  <SelectItem value="clientes">Clientes finais</SelectItem>
                   <SelectItem value="unidades">Unidades selecionadas</SelectItem>
-                  <SelectItem value="private">Apenas matriz</SelectItem>
                 </SelectContent>
               </Select>
             </div>
