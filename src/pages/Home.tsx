@@ -5,7 +5,7 @@ import { ptBR } from "date-fns/locale";
 import {
   ChevronDown, Plus, MessageSquare, Calendar, Megaphone, TrendingUp,
   Inbox, Users, FileSignature, Headphones, Building2, AlertTriangle,
-  ArrowUpRight, Target,
+  ArrowUpRight, Target, Monitor,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ import { useUnits } from "@/hooks/useUnits";
 import { useContracts } from "@/hooks/useContracts";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
+import { useNetworkClientStats } from "@/hooks/useNetworkClientStats";
 import type { MensagemDoDia } from "@/types/home";
 
 const quickActionIcons: Record<string, React.ElementType> = {
@@ -44,6 +45,7 @@ export default function Home() {
   const { data: contracts } = useContracts();
   const { data: goals } = useActiveGoals("network");
   const { data: goalProgress } = useGoalProgress(goals);
+  const { data: clientStats } = useNetworkClientStats();
 
   const hoje = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const hojeCapitalized = hoje.charAt(0).toUpperCase() + hoje.slice(1);
@@ -163,6 +165,42 @@ export default function Home() {
             <KpiCard label="Contratos Ativos" value={String(contratosAtivos)} icon={FileSignature} delay={2} />
             <KpiCard label="Chamados Abertos" value={String(chamadosAbertos)} sublabel={chamadosAbertos > 0 ? "pendentes" : "tudo em dia"} icon={Headphones} delay={3} />
           </div>
+
+          {/* SaaS Network Stats */}
+          {clientStats && clientStats.total_clients > 0 && (
+            <div className="glass-card p-6">
+              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Monitor className="w-4 h-4 text-primary" />
+                Performance SaaS da Rede
+              </h3>
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">{clientStats.total_clients}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Clientes Total</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">{clientStats.active_clients}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Ativos</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">
+                    {clientStats.total_mrr > 0 ? `R$ ${Number(clientStats.total_mrr).toLocaleString("pt-BR")}` : "R$ 0"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">MRR</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">{clientStats.total_leads}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Leads dos Clientes</p>
+                </div>
+                <div className="text-center">
+                  <p className={`text-2xl font-bold ${clientStats.expiring_soon > 0 ? "text-destructive" : "text-foreground"}`}>
+                    {clientStats.expiring_soon}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Expirando em 7d</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Smart Priorities + Mensagem do Dia */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

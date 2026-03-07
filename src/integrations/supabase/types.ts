@@ -5186,6 +5186,17 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_network_client_stats: {
+        Args: { _org_id: string }
+        Returns: {
+          active_clients: number
+          expiring_soon: number
+          total_clients: number
+          total_credits: number
+          total_leads: number
+          total_mrr: number
+        }[]
+      }
       get_network_contracts: {
         Args: { _org_id: string }
         Returns: {

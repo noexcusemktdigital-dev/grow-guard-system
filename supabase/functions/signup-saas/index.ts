@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { user_id, company_name } = await req.json();
+    const { user_id, company_name, franchisee_org_id } = await req.json();
 
     if (!user_id) {
       return new Response(JSON.stringify({ error: "user_id is required" }), {
@@ -41,9 +41,14 @@ Deno.serve(async (req) => {
     }
 
     // 1. Create organization
+    const orgPayload: any = { name: company_name || "Minha Empresa", type: "cliente" };
+    if (franchisee_org_id) {
+      orgPayload.parent_org_id = franchisee_org_id;
+    }
+
     const { data: org, error: orgError } = await supabaseAdmin
       .from("organizations")
-      .insert({ name: company_name || "Minha Empresa", type: "cliente" })
+      .insert(orgPayload)
       .select("id")
       .single();
 

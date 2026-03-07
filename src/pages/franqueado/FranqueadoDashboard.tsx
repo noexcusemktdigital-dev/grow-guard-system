@@ -6,7 +6,7 @@ import {
   Plus, ChevronDown, Calendar, TrendingUp,
   UserPlus, Headphones, FileSignature, LayoutGrid,
   Users, Inbox, Target, AlertTriangle, Bell, Megaphone,
-  ArrowUpRight,
+  ArrowUpRight, Monitor,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import { useContracts } from "@/hooks/useContracts";
 import { useDailyMessages } from "@/hooks/useDailyMessages";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
+import { useNetworkClientStats } from "@/hooks/useNetworkClientStats";
 
 const quickActionIcons: Record<string, React.ElementType> = { UserPlus, Headphones, FileSignature, LayoutGrid };
 
@@ -38,6 +39,7 @@ export default function FranqueadoDashboard() {
   const { data: dailyMessage } = useDailyMessages();
   const { data: goals } = useActiveGoals();
   const { data: goalProgress } = useGoalProgress(goals);
+  const { data: clientStats } = useNetworkClientStats();
 
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
@@ -165,6 +167,38 @@ export default function FranqueadoDashboard() {
             <KpiCard label="Próximos Eventos" value={String((events ?? []).slice(0, 5).length)} sublabel="Na agenda" icon={Calendar} delay={2} />
             <KpiCard label="Comunicados" value={String(unreadAnnouncements.length)} sublabel={unreadAnnouncements.length > 0 ? "não lidos" : "tudo lido"} icon={Megaphone} delay={3} />
           </div>
+
+          {/* Client Stats */}
+          {clientStats && clientStats.total_clients > 0 && (
+            <div className="glass-card p-6">
+              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Monitor className="w-4 h-4 text-primary" />
+                Meus Clientes SaaS
+              </h3>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">{clientStats.active_clients}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Ativos</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">{clientStats.total_leads}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Leads</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">
+                    {Number(clientStats.total_mrr) > 0 ? `R$ ${Number(clientStats.total_mrr).toLocaleString("pt-BR")}` : "R$ 0"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">MRR</p>
+                </div>
+                <div className="text-center">
+                  <p className={`text-2xl font-bold ${clientStats.expiring_soon > 0 ? "text-destructive" : "text-foreground"}`}>
+                    {clientStats.expiring_soon}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Expirando</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Goals + Pipeline */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
