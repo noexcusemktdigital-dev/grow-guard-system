@@ -320,7 +320,8 @@ export function FranqueadoraSidebarContent({ collapsed, setCollapsed }: { collap
         <SidebarNavItems items={principalSection} collapsed={collapsed} />
         <div className="mx-3 border-t border-sidebar-border/60" />
         <CollapsibleSection title="Rede" items={redeSection} collapsed={collapsed} defaultOpen />
-        <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} />
+        <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} defaultOpen />
+        <CollapsibleSection title="Marketing & Academy" items={marketingSection} collapsed={collapsed} />
         <CollapsibleSection title="Administrativo" items={adminSection} collapsed={collapsed} />
       </div>
 
