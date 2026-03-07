@@ -77,7 +77,7 @@ import ClientePlanoCreditos from "./pages/cliente/ClientePlanoCreditos";
 import ClienteConfiguracoes from "./pages/cliente/ClienteConfiguracoes";
 import ClienteAvaliacoes from "./pages/cliente/ClienteAvaliacoes";
 import ClienteOnboardingCompany from "./pages/cliente/ClienteOnboardingCompany";
-
+import ClienteComunicados from "./pages/cliente/ClienteComunicados";
 
 const queryClient = new QueryClient();
 
@@ -179,6 +179,7 @@ const App = () => (
                 <Route path="plano-creditos" element={<ClientePlanoCreditos />} />
                 <Route path="configuracoes" element={<ClienteConfiguracoes />} />
                 <Route path="avaliacoes" element={<ClienteAvaliacoes />} />
+                <Route path="comunicados" element={<ClienteComunicados />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
