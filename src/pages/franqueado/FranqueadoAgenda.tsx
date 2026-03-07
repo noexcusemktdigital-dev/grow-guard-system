@@ -244,6 +244,7 @@ export default function FranqueadoAgenda() {
   function openNewEvent(day?: Date) {
     setEditingEvent(null);
     setTitle(""); setDescription(""); setLocation(""); setAllDay(false); setColor(COLORS[4]); setCalendarId("");
+    setVisibility("pessoal");
     if (day) {
       setStartAt(format(day, "yyyy-MM-dd'T'HH:mm"));
       setEndAt(format(new Date(day.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"));
