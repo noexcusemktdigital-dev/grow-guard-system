@@ -33,7 +33,7 @@ export default function Comunicados() {
     exigirConfirmacao: false,
     dataProgramada: undefined,
     dataExpiracao: a.expires_at || undefined,
-    status: a.published_at ? "Ativo" : "Rascunho",
+    status: (a as any).status === "archived" ? "Arquivado" : a.published_at ? "Ativo" : "Rascunho",
     autorId: a.created_by || "",
     autorNome: "Admin",
     criadoEm: a.created_at,
