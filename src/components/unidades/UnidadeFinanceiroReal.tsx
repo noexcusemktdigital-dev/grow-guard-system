@@ -26,6 +26,7 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
     system_fee: unit.system_fee ?? 250,
     system_active: unit.system_active ?? true,
     financial_notes: unit.financial_notes || "",
+    saas_commission_percent: unit.saas_commission_percent ?? 20,
   });
 
   // Fetch payment history if unit has a linked org
