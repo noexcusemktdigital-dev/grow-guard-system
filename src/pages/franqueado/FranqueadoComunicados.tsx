@@ -243,7 +243,7 @@ function ComunicadoCard({ item, viewedIds, confirmedIds, onClick }: { item: any;
               {item.type && (
                 <Badge variant="outline" className="text-[10px]">{TYPE_LABELS[item.type] || item.type}</Badge>
               )}
-              {item.priority === "critical" && !isConfirmed && (
+              {item.priority === "Crítica" && !isConfirmed && (
                 <Badge variant="destructive" className="text-[10px] animate-pulse">
                   <AlertTriangle className="w-3 h-3 mr-1" /> Requer confirmação
                 </Badge>
