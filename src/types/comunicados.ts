@@ -3,7 +3,7 @@
 export type ComunicadoStatus = "Ativo" | "Programado" | "Expirado" | "Rascunho" | "Arquivado";
 export type ComunicadoTipo = "Informativo" | "Atualização de sistema" | "Alerta operacional" | "Campanha" | "Institucional" | "Urgente";
 export type ComunicadoPrioridade = "Normal" | "Alta" | "Crítica";
-export type PublicoAlvo = "Franqueadora" | "Franqueados" | "Clientes finais" | "Todos";
+export type PublicoAlvo = "Franqueadora" | "Internos (Matriz)" | "Franqueados" | "Clientes finais" | "Todos";
 
 export interface Comunicado {
   id: string;
