@@ -38,6 +38,20 @@ const SaasAuth = () => {
   const [benefitIndex, setBenefitIndex] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const referralCode = searchParams.get("ref") || "";
+  const [referralInfo, setReferralInfo] = useState<{ org_name: string; discount: number } | null>(null);
+
+  // Resolve referral code on mount
+  useEffect(() => {
+    if (!referralCode) return;
+    supabase.rpc("get_referral_by_code", { _code: referralCode }).then(({ data }) => {
+      if (data && data.length > 0) {
+        setReferralInfo({ org_name: data[0].org_name, discount: data[0].discount_percent });
+        setTab("signup"); // Auto-switch to signup
+      }
+    });
+  }, [referralCode]);
 
   useEffect(() => {
     const interval = setInterval(() => {
