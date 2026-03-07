@@ -1,31 +1,37 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Atualizar Troféus e Seletor de Metas por Mês
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### 1. Troféus — `FranqueadoMetasRanking.tsx` (linhas 27-34)
 
-### Ações
+Substituir os 6 troféus atuais por estes 6:
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+| ID | Título | Descrição | Ícone |
+|---|---|---|---|
+| `first_sale` | Primeira Venda | Feche seu primeiro contrato | Star |
+| `hat_trick` | Hat-trick | Conquiste seus 3 primeiros clientes | Flame |
+| `top_revenue` | Top Faturamento | Alcance R$ 20.000 em um mês | TrendingUp |
+| `speed_close` | Fechamento Relâmpago | Feche um contrato em menos de 7 dias | Zap |
+| `first_goal` | Primeira Meta Batida | Atinja sua primeira meta mensal | Target |
+| `ten_clients` | 10 Clientes Ativos | Alcance 10 clientes ativos na carteira | Users |
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+Remove: "Status Elite" e "Consistência".
+Adiciona: "Primeira Meta Batida" e "10 Clientes Ativos".
 
-3. **Executar o teste** e analisar o resultado definitivo
+### 2. Metas — `MetasRanking.tsx` (dialog de criação, linhas 331-355)
 
-### Detalhe técnico
+- Adicionar opção de escopo **"Matriz (interna)"** além de "Toda a Rede" e "Por Unidade"
+- Já usa `<Input type="month">` para seleção de mês — manter assim, sem campos de data
 
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
-```
+Escopos finais:
+- `rede` — Toda a Rede
+- `matriz` — Matriz (interna)
+- `unidade` — Por Unidade
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+### Arquivos
+
+| Arquivo | Ação |
+|---|---|
+| `src/pages/franqueado/FranqueadoMetasRanking.tsx` | Atualizar array de troféus |
+| `src/pages/MetasRanking.tsx` | Adicionar escopo "matriz" no Select |
 
