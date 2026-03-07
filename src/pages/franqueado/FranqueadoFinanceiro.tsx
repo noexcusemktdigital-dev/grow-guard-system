@@ -268,6 +268,16 @@ export default function FranqueadoFinanceiro() {
           )}
         </TabsContent>
 
+        {/* CLIENTES SAAS */}
+        <TabsContent value="saas_clients" className="space-y-4">
+          <SaasClientsTab />
+        </TabsContent>
+
+        {/* COMISSÕES SAAS */}
+        <TabsContent value="comissoes" className="space-y-4">
+          <SaasCommissionsTab />
+        </TabsContent>
+
         {/* FECHAMENTOS */}
         <TabsContent value="fechamentos" className="space-y-4">
           <p className="text-sm text-muted-foreground">Arquivos de fechamento (DRE) enviados pela franqueadora.</p>
