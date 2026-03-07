@@ -232,6 +232,11 @@ const SaasAuth = () => {
               <Sparkles className="h-5 w-5 text-[hsl(45,93%,52%)]" />
               <span className="text-base font-bold text-white tracking-wide">7 dias grátis</span>
             </div>
+            {referralInfo && (
+              <div className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <span className="text-sm text-emerald-400">🎉 Indicação de <strong>{referralInfo.org_name}</strong> — {referralInfo.discount}% de desconto no plano!</span>
+              </div>
+            )}
           </div>
 
           {mode === "forgot" ? (
