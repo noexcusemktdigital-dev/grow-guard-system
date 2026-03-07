@@ -79,10 +79,18 @@ DADOS DO PROSPECT:
 - Nível de Contato: ${nivelContatoLabel}
 - Decisor: ${contato_decisor ? `${contato_decisor}${cargo_decisor ? ` (${cargo_decisor})` : ""}` : "Não informado"}
 - O que já se sabe sobre a empresa: ${conhecimento_previo || "Nada informado"}
-- Principal Desafio: ${desafio || "Não informado"}
-- Objetivo da Abordagem: ${objetivo || "Agendar reunião de diagnóstico"}
+- Principal dor ou necessidade identificada: ${desafio || "Não informado"}
+- Objetivo da Abordagem: ${objetivo || "Agendar diagnóstico gratuito"}
 
-IMPORTANTE: Leve em conta todas as informações acima para personalizar ao máximo a estratégia. Se o nível de contato é frio, foque em abordagem inicial e pesquisa. Se é morno ou quente, foque em retomada e fechamento. Use o nome da empresa e do decisor nos scripts quando disponíveis.
+CONTEXTO IMPORTANTE:
+O objetivo final de toda prospecção é AGENDAR UMA CONVERSA DE DIAGNÓSTICO OU ESTRATÉGIA GRATUITA. Nós oferecemos ao prospect uma reunião onde analisamos a situação da empresa e criamos uma estratégia personalizada sem custo. Esse é o nosso principal gancho de vendas — o prospect recebe valor real gratuitamente e, a partir do diagnóstico, apresentamos nossas soluções.
+
+CENÁRIOS DE CONTATO:
+- Se o nível de contato é FRIO: Foque na abordagem inicial, pesquisa sobre a empresa e no convite para o diagnóstico gratuito como isca de valor.
+- Se o nível é MORNO (já houve contato anterior): Foque em retomar a conversa, relembrar o que foi discutido e reforçar o convite para o diagnóstico.
+- Se o nível é QUENTE (indicação ou interesse demonstrado): Foque em agilizar o agendamento da reunião, aproveitando a confiança já existente pela indicação.
+
+Use o nome da empresa e do decisor nos scripts quando disponíveis. Todos os scripts devem ter como call-to-action o agendamento do diagnóstico/estratégia gratuita.
 
 Use a ferramenta generate_prospection_plan para retornar o plano estruturado.`;
 
