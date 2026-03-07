@@ -26,6 +26,7 @@ import { useUnits } from "@/hooks/useUnits";
 import { useContracts } from "@/hooks/useContracts";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
+import { useNetworkClientStats } from "@/hooks/useNetworkClientStats";
 import type { MensagemDoDia } from "@/types/home";
 
 const quickActionIcons: Record<string, React.ElementType> = {
