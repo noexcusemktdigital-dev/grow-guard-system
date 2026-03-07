@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { user_id, company_name, franchisee_org_id } = await req.json();
+    const { user_id, company_name, franchisee_org_id, referral_code } = await req.json();
 
     if (!user_id) {
       return new Response(JSON.stringify({ error: "user_id is required" }), {
@@ -40,10 +40,55 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Resolve referral_code to franchisee org
+    let resolvedParentOrgId: string | null = franchisee_org_id || null;
+    let discountPercent = 0;
+    let referralOrgId: string | null = null;
+
+    if (referral_code && !resolvedParentOrgId) {
+      const { data: referralData } = await supabaseAdmin
+        .from("organizations")
+        .select("id, referral_code")
+        .eq("referral_code", referral_code)
+        .maybeSingle();
+
+      if (referralData) {
+        resolvedParentOrgId = referralData.id;
+        referralOrgId = referralData.id;
+
+        // Get discount config
+        const { data: discountData } = await supabaseAdmin
+          .from("referral_discounts")
+          .select("discount_percent, is_active")
+          .eq("organization_id", referralData.id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (discountData) {
+          discountPercent = discountData.discount_percent || 5;
+          // Increment uses_count
+          await supabaseAdmin.rpc("increment_referral_uses", { _org_id: referralData.id }).catch(() => {
+            // Fallback: direct update
+            supabaseAdmin
+              .from("referral_discounts")
+              .update({ uses_count: (discountData as any).uses_count + 1 } as any)
+              .eq("organization_id", referralData.id);
+          });
+        } else {
+          discountPercent = 5; // Default 5% even if no config row
+        }
+
+        console.log(`Referral resolved: code=${referral_code}, org=${referralData.id}, discount=${discountPercent}%`);
+      }
+    }
+
     // 1. Create organization
-    const orgPayload: any = { name: company_name || "Minha Empresa", type: "cliente" };
-    if (franchisee_org_id) {
-      orgPayload.parent_org_id = franchisee_org_id;
+    const orgPayload: any = {
+      name: company_name || "Minha Empresa",
+      type: "cliente",
+    };
+    if (resolvedParentOrgId) {
+      orgPayload.parent_org_id = resolvedParentOrgId;
     }
 
     const { data: org, error: orgError } = await supabaseAdmin
@@ -72,14 +117,22 @@ Deno.serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    const subPayload: any = {
+      organization_id: org.id,
+      plan: "trial",
+      status: "active",
+      expires_at: expiresAt.toISOString(),
+    };
+    if (discountPercent > 0) {
+      subPayload.discount_percent = discountPercent;
+    }
+    if (referralOrgId) {
+      subPayload.referral_org_id = referralOrgId;
+    }
+
     const { error: subError } = await supabaseAdmin
       .from("subscriptions")
-      .insert({
-        organization_id: org.id,
-        plan: "trial",
-        status: "active",
-        expires_at: expiresAt.toISOString(),
-      });
+      .insert(subPayload);
 
     if (subError) throw subError;
 
@@ -90,8 +143,15 @@ Deno.serve(async (req) => {
 
     if (walletError) throw walletError;
 
+    console.log(`SaaS signup: org=${org.id}, parent=${resolvedParentOrgId || 'none'}, referral=${referral_code || 'none'}, discount=${discountPercent}%`);
+
     return new Response(
-      JSON.stringify({ success: true, organization_id: org.id }),
+      JSON.stringify({
+        success: true,
+        organization_id: org.id,
+        referral_applied: !!referral_code && !!resolvedParentOrgId,
+        discount_percent: discountPercent,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
