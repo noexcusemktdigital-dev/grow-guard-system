@@ -70,6 +70,7 @@ export function UnidadeFinanceiroReal({ unit }: Props) {
     { label: "% Repasse", icon: Percent, value: form.transfer_percent, key: "transfer_percent" as const, suffix: "%" },
     { label: "% Royalties", icon: Percent, value: form.royalty_percent, key: "royalty_percent" as const, suffix: "%" },
     { label: "Mensalidade Sistema", icon: DollarSign, value: form.system_fee, key: "system_fee" as const, prefix: "R$" },
+    { label: "% Comissão SaaS", icon: Percent, value: form.saas_commission_percent, key: "saas_commission_percent" as const, suffix: "%" },
   ];
 
   return (
