@@ -192,7 +192,7 @@ function NovaProspeccaoTab() {
             <Textarea value={inputs.conhecimento_previo} onChange={(e) => setInputs((p) => ({ ...p, conhecimento_previo: e.target.value }))} placeholder="Ex: Vi no Instagram que fazem promoções com frequência, mas não investem em tráfego pago..." rows={3} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Desafio Principal do Prospect</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Principal dor ou necessidade identificada</label>
             <Textarea value={inputs.desafio} onChange={(e) => setInputs((p) => ({ ...p, desafio: e.target.value }))} placeholder="Ex: Baixa presença digital, não consegue captar clientes online..." rows={3} />
           </div>
           <Button onClick={handleGenerate} className="w-full" disabled={create.isPending}>
