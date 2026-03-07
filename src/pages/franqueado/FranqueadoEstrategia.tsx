@@ -214,6 +214,14 @@ function DiagnosticForm({ onSubmit, loading, initialAnswers, initialTitle }: { o
 // ── Strategy Result ─────────────────────────────────────────────
 
 function StrategyResultView({ result }: { result: StrategyResult }) {
+  if (!result?.maturidade) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>Resultado incompleto. Tente regenerar a estratégia.</p>
+      </div>
+    );
+  }
+
   const maturityColor =
     result.maturidade.score <= 25 ? "text-destructive" :
     result.maturidade.score <= 50 ? "text-orange-500" :
