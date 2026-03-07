@@ -70,14 +70,27 @@ export default function Onboarding() {
     return Math.round((checklist.filter(c => c.is_completed).length / checklist.length) * 100);
   };
 
+  // Filter out units that already have an active onboarding
+  const existingUnitOrgIds = new Set((units ?? []).map(u => (u as any).unit_org_id).filter(Boolean));
+  const availableUnits = (dbUnits ?? []).filter(u => !existingUnitOrgIds.has(u.id));
+
+  const getDaysRemaining = (targetDate: string | null) => {
+    if (!targetDate) return null;
+    const diff = Math.ceil((new Date(targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return diff;
+  };
+
   const handleCreateUnit = () => {
     if (!newUnitId) { toast.error("Selecione uma unidade"); return; }
     const unitName = selectedDbUnit?.name || "Implantação";
     const responsible = (selectedDbUnit as any)?.manager_name || undefined;
+    const startDate = newStartDate || new Date().toISOString().slice(0, 10);
+    const targetDate = new Date(new Date(startDate).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     createUnit.mutate({
       name: unitName,
       unit_org_id: newUnitId,
-      start_date: newStartDate || undefined,
+      start_date: startDate,
+      target_date: targetDate,
       responsible,
     });
     setShowNewDialog(false);
