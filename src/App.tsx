@@ -131,8 +131,8 @@ const App = () => (
 
               {/* Franqueado */}
               <Route path="franqueado" element={<ProtectedRoute allowedRoles={["franqueado"]}><FranqueadoLayout /></ProtectedRoute>}>
-                <Route index element={<Navigate to="/franqueado/dashboard" replace />} />
-                <Route path="dashboard" element={<FranqueadoDashboard />} />
+                <Route index element={<Navigate to="/franqueado/inicio" replace />} />
+                <Route path="inicio" element={<FranqueadoDashboard />} />
                 <Route path="agenda" element={<FranqueadoAgenda />} />
                 <Route path="comunicados" element={<FranqueadoComunicados />} />
                 <Route path="suporte" element={<FranqueadoSuporte />} />
