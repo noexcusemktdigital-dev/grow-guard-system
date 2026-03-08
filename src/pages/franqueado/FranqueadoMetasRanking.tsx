@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Target, Star, Medal, TrendingUp, Lock, Award, Flame, Zap, Crown, Users } from "lucide-react";
+import { Trophy, Target, Star, Medal, TrendingUp, Lock, Award, Flame, Zap, Crown, Users, BarChart3, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useActiveGoals } from "@/hooks/useGoals";
@@ -49,6 +49,26 @@ export default function FranqueadoMetasRanking() {
 
   const isLoading = loadingGoals || loadingProgress;
 
+  // KPIs for overview
+  const metasAtingidas = activeGoals.filter((g: any) => {
+    const gp = goalProgress?.[g.id];
+    return gp && gp.percent >= 100;
+  }).length;
+
+  const avgProgress = activeGoals.length > 0
+    ? Math.round(activeGoals.reduce((sum: number, g: any) => {
+        const gp = goalProgress?.[g.id];
+        return sum + Math.min(100, gp?.percent ?? 0);
+      }, 0) / activeGoals.length)
+    : 0;
+
+  const unlockedTrophies = trophies ? Object.values(trophies).filter(t => t.unlocked).length : 0;
+
+  const maxDaysLeft = activeGoals.reduce((max: number, g: any) => {
+    const gp = goalProgress?.[g.id];
+    return Math.max(max, gp?.daysLeft ?? 0);
+  }, 0);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -76,8 +96,12 @@ export default function FranqueadoMetasRanking() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="metas" className="space-y-4">
+      <Tabs defaultValue="visao-geral" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="visao-geral" className="gap-1.5">
+            <BarChart3 className="w-4 h-4" />
+            Visão Geral
+          </TabsTrigger>
           <TabsTrigger value="metas" className="gap-1.5">
             <Target className="w-4 h-4" />
             Metas do Mês
@@ -87,6 +111,66 @@ export default function FranqueadoMetasRanking() {
             Troféus
           </TabsTrigger>
         </TabsList>
+
+        {/* Visão Geral */}
+        <TabsContent value="visao-geral" className="space-y-4">
+          {isLoading ? (
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                {[
+                  { label: "Metas Ativas", value: activeGoals.length, icon: Target, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                  { label: "Atingimento Médio", value: `${avgProgress}%`, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10" },
+                  { label: "Troféus", value: `${unlockedTrophies}/6`, icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
+                  { label: "Dias Restantes", value: maxDaysLeft, icon: CalendarDays, color: "text-purple-500", bg: "bg-purple-500/10" },
+                ].map(kpi => (
+                  <Card key={kpi.label}>
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl ${kpi.bg} flex items-center justify-center`}>
+                        <kpi.icon className={`w-5 h-5 ${kpi.color}`} />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{kpi.value}</p>
+                        <p className="text-xs text-muted-foreground">{kpi.label}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Quick goal progress list */}
+              {activeGoals.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Progresso das Metas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {activeGoals.map((goal: any) => {
+                      const gp = goalProgress?.[goal.id];
+                      const pct = gp ? Math.min(100, Math.round(gp.percent)) : 0;
+                      const reached = pct >= 100;
+                      return (
+                        <div key={goal.id} className="space-y-1.5">
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm font-medium">{goal.title || goal.type || "Meta"}</p>
+                            <div className="flex items-center gap-2">
+                              {reached && <Badge className="bg-green-500/15 text-green-400 border-green-500/30 text-[10px]">✓</Badge>}
+                              <span className="text-sm font-bold">{pct}%</span>
+                            </div>
+                          </div>
+                          <Progress value={pct} className="h-2" />
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+        </TabsContent>
 
         <TabsContent value="metas" className="space-y-4">
           {isLoading ? (
