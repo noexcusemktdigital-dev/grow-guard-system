@@ -473,6 +473,62 @@ export default function Marketing() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Rename Folder dialog */}
+      <Dialog open={!!renameFolder} onOpenChange={(open) => !open && setRenameFolder(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Renomear Pasta</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Novo nome</Label>
+              <Input value={renameFolder?.name ?? ""} onChange={(e) => setRenameFolder((p) => p ? { ...p, name: e.target.value } : null)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameFolder(null)}>Cancelar</Button>
+            <Button onClick={handleRenameFolder} disabled={updateFolder.isPending}>
+              {updateFolder.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Asset dialog */}
+      <Dialog open={!!renameAssetTarget} onOpenChange={(open) => !open && setRenameAssetTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Renomear Arquivo</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Novo nome</Label>
+              <Input value={renameAssetTarget?.name ?? ""} onChange={(e) => setRenameAssetTarget((p) => p ? { ...p, name: e.target.value } : null)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameAssetTarget(null)}>Cancelar</Button>
+            <Button onClick={handleRenameAsset} disabled={updateAsset.isPending}>
+              {updateAsset.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>"{deleteConfirm?.label}"</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteAssets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
