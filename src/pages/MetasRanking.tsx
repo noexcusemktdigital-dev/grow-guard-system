@@ -67,7 +67,7 @@ export default function MetasRanking() {
 
   const openNewGoal = () => {
     setEditingGoal(null);
-    setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
+    setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month_num: "", period_year: String(currentYear) });
     setShowGoalDialog(true);
   };
 
