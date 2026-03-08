@@ -501,8 +501,8 @@ export default function ClienteInicio() {
       {/* Main 2-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         <div className="lg:col-span-3 space-y-5">
-          {/* Revenue Chart */}
-          <Card className="overflow-hidden">
+          {/* Revenue Chart — Admin only */}
+          {isAdmin && (
             <CardHeader className="pb-2 px-5 pt-5">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold">Receita Semanal</CardTitle>
