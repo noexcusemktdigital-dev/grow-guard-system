@@ -104,9 +104,6 @@ const App = () => (
                 <Route index element={<Navigate to="/franqueadora/inicio" replace />} />
                 <Route path="inicio" element={<Home />} />
                 <Route path="financeiro" element={<FinanceiroDashboard />} />
-                <Route path="financeiro/controle" element={<FinanceiroControle />} />
-                <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
-                <Route path="financeiro/fechamentos" element={<FinanceiroFechamentos />} />
                 <Route path="contratos" element={<ContratosGerador />} />
                 <Route path="marketing" element={<Marketing />} />
                 <Route path="treinamentos" element={<Academy />} />
