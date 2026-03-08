@@ -35,11 +35,18 @@ import { useAnnouncementViews } from "@/hooks/useAnnouncementViews";
 import { useClienteTasks } from "@/hooks/useClienteTasks";
 import { useAuth } from "@/contexts/AuthContext";
 
-const kpiConfig = [
+const adminKpiConfig = [
   { label: "Receita Estimada", icon: DollarSign, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500", path: "/cliente/crm" },
   { label: "Leads do Mês", icon: Users, gradient: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-500", path: "/cliente/crm" },
   { label: "Taxa de Conversão", icon: TrendingUp, gradient: "from-purple-500/10 to-purple-500/5", iconColor: "text-purple-500", path: "/cliente/crm" },
   { label: "Meta vs Realizado", icon: Target, gradient: "from-primary/10 to-primary/5", iconColor: "text-primary", path: "/cliente/plano-vendas" },
+];
+
+const userKpiConfig = [
+  { label: "Meus Leads", icon: Users, gradient: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-500", path: "/cliente/crm" },
+  { label: "Minhas Conversões", icon: TrendingUp, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500", path: "/cliente/crm" },
+  { label: "Meu XP", icon: Trophy, gradient: "from-purple-500/10 to-purple-500/5", iconColor: "text-purple-500", path: "/cliente/gamificacao" },
+  { label: "Tarefas Pendentes", icon: CheckSquare, gradient: "from-primary/10 to-primary/5", iconColor: "text-primary", path: "/cliente/checklist" },
 ];
 
 const defaultPhrases = [
