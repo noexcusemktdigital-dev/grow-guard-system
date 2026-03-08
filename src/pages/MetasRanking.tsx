@@ -101,7 +101,7 @@ export default function MetasRanking() {
     const payload: any = {
       title: goalForm.title,
       type: goalForm.type,
-      target_value: Number(goalForm.target_value),
+      target_value: parseFormattedNumber(goalForm.target_value),
       scope: goalForm.scope,
       unit_org_id: goalForm.scope === "unidade" ? goalForm.unit_org_id : null,
       period_start: goalForm.period_month_num ? `${goalForm.period_year}-${goalForm.period_month_num.padStart(2, "0")}-01` : undefined,
