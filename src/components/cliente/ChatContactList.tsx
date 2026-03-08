@@ -67,6 +67,16 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
   const humanUnread = humanContacts.reduce((s, c) => s + c.unread_count, 0);
 
+  // Stats: messages today and active contacts (last 24h)
+  const now = useMemo(() => new Date(), []);
+  const todayStart = useMemo(() => {
+    const d = new Date(now); d.setHours(0,0,0,0); return d.getTime();
+  }, [now]);
+  const activeToday = useMemo(() => contacts.filter(c => {
+    if (!c.last_message_at) return false;
+    return new Date(c.last_message_at).getTime() >= todayStart;
+  }).length, [contacts, todayStart]);
+
   return (
     <div className="flex flex-col h-full border-r border-border bg-card/50">
       {/* Header */}
@@ -75,6 +85,11 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold tracking-tight">Conversas</h3>
             <Badge variant="secondary" className="text-[10px] h-5 px-1.5 rounded-full">{contacts.length}</Badge>
+            {activeToday > 0 && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1.5 rounded-full text-emerald-500 border-emerald-500/30">
+                {activeToday} hoje
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             {onSync && (

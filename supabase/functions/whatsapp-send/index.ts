@@ -130,19 +130,10 @@ Deno.serve(async (req) => {
         const { data: inst } = await adminClient
           .from("whatsapp_instances")
           .select("*")
-          .eq("id", inst?.id || contact.instance_id)
+          .eq("id", contact.instance_id)
+          .eq("status", "connected")
           .maybeSingle();
-        // Fix: query by the correct instance_id from contact
-        if (!inst) {
-          const { data: inst2 } = await adminClient
-            .from("whatsapp_instances")
-            .select("*")
-            .eq("id", contact.instance_id)
-            .maybeSingle();
-          if (inst2 && inst2.status === "connected") instance = inst2;
-        } else if (inst && inst.status === "connected") {
-          instance = inst;
-        }
+        if (inst) instance = inst;
       }
     }
 

@@ -176,16 +176,16 @@ export default function ClienteChat() {
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, (payload: any) => {
         const changedContactId = payload.new?.contact_id || payload.old?.contact_id;
         if (changedContactId && changedContactId === selectedContactIdRef.current) {
-          queryClient.refetchQueries({ queryKey: ["whatsapp-messages"] });
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         }
-        queryClient.refetchQueries({ queryKey: ["whatsapp-contacts"] });
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
         // Play notification sound for new inbound messages
         if (payload.eventType === "INSERT" && payload.new?.direction === "inbound") {
           try { playSound("notification"); } catch {}
         }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
-        queryClient.refetchQueries({ queryKey: ["whatsapp-contacts"] });
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
