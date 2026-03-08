@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { KpiCard } from "@/components/KpiCard";
+import { Fragment } from "react";
 import {
   AlertTriangle, CheckCircle, Search, BarChart3, Activity,
   ChevronDown, ChevronUp, Trash2, Eye, Clock, Bug, ShieldAlert, Server,
@@ -191,8 +192,8 @@ function ErrosTab() {
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum erro encontrado 🎉</TableCell></TableRow>
               ) : (
                 errors.map((err) => (
-                  <>
-                    <TableRow key={err.id} className="cursor-pointer" onClick={() => setExpanded(expanded === err.id ? null : err.id)}>
+                  <Fragment key={err.id}>
+                    <TableRow className="cursor-pointer" onClick={() => setExpanded(expanded === err.id ? null : err.id)}>
                       <TableCell className="px-2">
                         {expanded === err.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                       </TableCell>
@@ -222,7 +223,7 @@ function ErrosTab() {
                       </TableCell>
                     </TableRow>
                     {expanded === err.id && (
-                      <TableRow key={`${err.id}-detail`}>
+                      <TableRow>
                         <TableCell colSpan={8} className="bg-muted/30 p-4">
                           <div className="space-y-3 text-xs">
                             <div>
@@ -248,7 +249,7 @@ function ErrosTab() {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </Fragment>
                 ))
               )}
             </TableBody>

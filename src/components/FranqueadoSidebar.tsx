@@ -4,7 +4,7 @@ import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router
 import {
   LayoutDashboard, Calendar, Megaphone, MessageSquare, ChevronLeft, ChevronRight,
   Sparkles, ClipboardCheck, FileText, Users, FolderOpen, GraduationCap,
-  DollarSign, FileSignature, User, Target, ChevronDown, Settings, ChevronsUpDown, Building2, Trophy,
+  DollarSign, FileSignature, User, Target, ChevronDown, Settings, ChevronsUpDown, Building2, Trophy, LogOut,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
@@ -146,7 +146,7 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
 
 export function FranqueadoSidebarContent({ collapsed, setCollapsed, onNavigate }: { collapsed: boolean; setCollapsed: (v: boolean) => void; onNavigate?: () => void }) {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
 
   const userName = profile?.full_name || "Usuário";
   const userInitials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -217,6 +217,13 @@ export function FranqueadoSidebarContent({ collapsed, setCollapsed, onNavigate }
             >
               <Settings className="w-4 h-4" />
               Configurações
+            </button>
+            <button
+              onClick={() => { signOut(); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[13px] rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
             </button>
           </PopoverContent>
         </Popover>
