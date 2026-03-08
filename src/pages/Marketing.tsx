@@ -72,6 +72,13 @@ export default function Marketing() {
   const [showUpload, setShowUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Rename dialogs
+  const [renameFolder, setRenameFolder] = useState<{ id: string; name: string } | null>(null);
+  const [renameAssetTarget, setRenameAssetTarget] = useState<{ id: string; name: string } | null>(null);
+
+  // Delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: "folder" | "assets"; id?: string; ids?: Set<string>; label: string } | null>(null);
+
   const isLoading = foldersLoading || assetsLoading;
 
   const breadcrumb = useMemo(() => {
