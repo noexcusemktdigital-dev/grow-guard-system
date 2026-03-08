@@ -373,8 +373,8 @@ export const modules: Module[] = [
       },
       {
         id: 'ecommerce',
-        name: 'E-commerce WooCommerce',
-        description: 'Criação de e-commerce, incluindo até 5 páginas personalizadas e layout com banners específicos. Inclui configuração de meios de pagamento e frete, além de treinamento. [Entrega em até 25 dias úteis]',
+        name: 'E-commerce',
+        description: 'Criação de e-commerce com até 50 produtos, incluindo até 5 páginas personalizadas e layout com banners específicos. Inclui configuração de meios de pagamento e frete, além de treinamento. [Entrega em até 25 dias úteis]',
         price: 4500,
         type: 'one_time',
         quantityType: 'single',
