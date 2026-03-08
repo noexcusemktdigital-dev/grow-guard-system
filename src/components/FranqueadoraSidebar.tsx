@@ -6,7 +6,7 @@ import {
   LayoutDashboard, DollarSign, FileText, Building2, TrendingUp,
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
   Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt, Sparkles, ClipboardCheck,
-  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, Cloud, LogOut,
+  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, AlertTriangle, LogOut,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -55,7 +55,7 @@ const adminSection: SidebarItem[] = [
   { label: "Matriz", icon: Shield, path: "/franqueadora/matriz" },
   { label: "Contratos", icon: FileText, path: "/franqueadora/contratos" },
   { label: "Financeiro", icon: DollarSign, path: "/franqueadora/financeiro" },
-  { label: "SaaS", icon: Cloud, path: "/franqueadora/saas" },
+  { label: "Logs & Erros", icon: AlertTriangle, path: "/franqueadora/logs" },
 ];
 
 function NavItem({ item, collapsed }: { item: SidebarItem; collapsed: boolean }) {

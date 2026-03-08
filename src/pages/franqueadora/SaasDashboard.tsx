@@ -7,285 +7,141 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { KpiCard } from "@/components/KpiCard";
 import {
-  Users, DollarSign, Settings, HeadphonesIcon, AlertTriangle,
-  CheckCircle, CreditCard, TrendingUp, Coins, Search,
+  AlertTriangle, CheckCircle, Search, BarChart3, Activity,
+  ChevronDown, ChevronUp, Trash2, Eye, Clock, Bug, ShieldAlert, Server,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import {
-  useSaasClients,
-  useSaasCostDashboard,
-  usePlatformErrors,
-  useResolveError,
-  useAllSupportTickets,
-  useAdjustCredits,
-} from "@/hooks/useSaasAdmin";
+import { usePlatformErrors, useResolveError, useDeleteError, useErrorStats } from "@/hooks/useSaasAdmin";
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
-function ClientesTab() {
-  const { data: clients, isLoading } = useSaasClients();
-  const [search, setSearch] = useState("");
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: "hsl(var(--destructive))",
+  error: "hsl(var(--destructive) / 0.7)",
+  warning: "hsl(var(--chart-4))",
+  info: "hsl(var(--chart-2))",
+};
 
-  const filtered = (clients || []).filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
+const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <Badge variant="secondary">{filtered.length} clientes</Badge>
-      </div>
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Plano</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Créditos</TableHead>
-                <TableHead>Usuários</TableHead>
-                <TableHead>Criado em</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado</TableCell></TableRow>
-              ) : (
-                filtered.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{client.subscription?.plan || "Sem plano"}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={client.subscription?.status === "active" ? "default" : "secondary"}>
-                        {client.subscription?.status || "inativo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{client.wallet?.balance ?? 0}</TableCell>
-                    <TableCell>{client.memberCount}</TableCell>
-                    <TableCell>{format(new Date(client.created_at), "dd/MM/yyyy")}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+/* ─── Visão Geral ─── */
+function VisaoGeralTab() {
+  const { data: stats, isLoading } = useErrorStats();
 
-function CustosTab() {
-  const { data: costs, isLoading } = useSaasCostDashboard();
-
-  if (isLoading) return <div className="text-muted-foreground py-8 text-center">Carregando dados de custos...</div>;
+  if (isLoading) return <div className="text-muted-foreground py-12 text-center">Carregando estatísticas...</div>;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <KpiCard label="Assinaturas Ativas" value={String(costs?.activeSubscriptions || 0)} icon={CreditCard} />
-        <KpiCard label="Créditos Consumidos (mês)" value={String(costs?.totalCreditsConsumed || 0)} icon={Coins} />
-        <KpiCard label="Custo IA Estimado" value={`R$ ${(costs?.estimatedAiCost || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={TrendingUp} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <KpiCard label="Erros Abertos" value={String(stats?.totalOpen || 0)} icon={Bug} />
+        <KpiCard label="Críticos Abertos" value={String(stats?.criticalOpen || 0)} icon={ShieldAlert} />
+        <KpiCard label="Resolvidos (mês)" value={String(stats?.resolvedThisMonth || 0)} icon={CheckCircle} />
+        <KpiCard label="Últimas 24h" value={String(stats?.last24h || 0)} icon={Clock} />
       </div>
 
-      <Card>
-        <CardHeader><CardTitle className="text-base">Consumo por Organização</CardTitle></CardHeader>
-        <CardContent>
-          {costs?.consumptionByOrg && Object.keys(costs.consumptionByOrg).length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Org ID</TableHead>
-                  <TableHead>Créditos Consumidos</TableHead>
-                  <TableHead>Custo Estimado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(costs.consumptionByOrg).map(([orgId, amount]) => (
-                  <TableRow key={orgId}>
-                    <TableCell className="font-mono text-xs">{orgId.slice(0, 8)}...</TableCell>
-                    <TableCell>{amount as number}</TableCell>
-                    <TableCell>R$ {((amount as number) * 0.002).toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-muted-foreground text-sm">Nenhum consumo registrado este mês.</p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Erros por Dia (últimos 7 dias)</CardTitle></CardHeader>
+          <CardContent className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats?.dailyCounts || []}>
+                <XAxis dataKey="date" tickFormatter={(v) => format(new Date(v), "dd/MM")} tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <RechartsTooltip labelFormatter={(v) => format(new Date(v as string), "dd/MM/yyyy")} />
+                <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="Erros" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-function GerenciamentoTab() {
-  const { data: clients, isLoading } = useSaasClients();
-  const adjustCredits = useAdjustCredits();
-  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
-  const [creditAmount, setCreditAmount] = useState("");
-  const [creditDesc, setCreditDesc] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const handleAdjust = async () => {
-    if (!selectedOrg || !creditAmount) return;
-    try {
-      await adjustCredits.mutateAsync({
-        orgId: selectedOrg,
-        amount: parseInt(creditAmount),
-        description: creditDesc || "Ajuste manual pelo admin",
-      });
-      toast.success("Créditos ajustados com sucesso");
-      setDialogOpen(false);
-      setCreditAmount("");
-      setCreditDesc("");
-      setSelectedOrg(null);
-    } catch {
-      toast.error("Erro ao ajustar créditos");
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Plano</TableHead>
-                <TableHead>Créditos</TableHead>
-                <TableHead>Usuários</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : (
-                (clients || []).map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{client.subscription?.plan || "—"}</Badge>
-                    </TableCell>
-                    <TableCell>{client.wallet?.balance ?? 0}</TableCell>
-                    <TableCell>{client.memberCount}</TableCell>
-                    <TableCell>
-                      <Dialog open={dialogOpen && selectedOrg === client.id} onOpenChange={(o) => { setDialogOpen(o); if (!o) setSelectedOrg(null); }}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline" onClick={() => { setSelectedOrg(client.id); setDialogOpen(true); }}>
-                            Ajustar Créditos
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader><DialogTitle>Ajustar Créditos — {client.name}</DialogTitle></DialogHeader>
-                          <div className="space-y-4 pt-2">
-                            <div>
-                              <Label>Quantidade (positivo = adicionar, negativo = remover)</Label>
-                              <Input type="number" value={creditAmount} onChange={(e) => setCreditAmount(e.target.value)} placeholder="Ex: 500 ou -100" />
-                            </div>
-                            <div>
-                              <Label>Descrição</Label>
-                              <Input value={creditDesc} onChange={(e) => setCreditDesc(e.target.value)} placeholder="Motivo do ajuste" />
-                            </div>
-                            <Button onClick={handleAdjust} disabled={adjustCredits.isPending} className="w-full">
-                              {adjustCredits.isPending ? "Ajustando..." : "Confirmar Ajuste"}
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function SuporteTab() {
-  const { data: tickets, isLoading } = useAllSupportTickets();
-
-  return (
-    <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Título</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Prioridade</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Criado em</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-            ) : !tickets?.length ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum ticket encontrado</TableCell></TableRow>
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Distribuição por Source</CardTitle></CardHeader>
+          <CardContent className="h-[260px] flex items-center justify-center">
+            {stats?.bySource?.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={stats.bySource} dataKey="count" nameKey="source" cx="50%" cy="50%" outerRadius={90} label={({ source, percent }) => `${source} (${(percent * 100).toFixed(0)}%)`}>
+                    {stats.bySource.map((_: any, i: number) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip />
+                </PieChart>
+              </ResponsiveContainer>
             ) : (
-              tickets.map((t: any) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.title}</TableCell>
-                  <TableCell>{t.category || "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant={t.priority === "high" || t.priority === "urgent" ? "destructive" : "secondary"}>
-                      {t.priority || "normal"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={t.status === "open" ? "default" : "secondary"}>{t.status}</Badge>
-                  </TableCell>
-                  <TableCell>{format(new Date(t.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
-                </TableRow>
-              ))
+              <p className="text-sm text-muted-foreground">Sem dados disponíveis</p>
             )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
 
+/* ─── Erros (Tabela) ─── */
 function ErrosTab() {
-  const [severity, setSeverity] = useState<string>("");
-  const [source, setSource] = useState<string>("");
+  const [severity, setSeverity] = useState("");
+  const [source, setSource] = useState("");
+  const [status, setStatus] = useState("");
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [resolveDialog, setResolveDialog] = useState<string | null>(null);
+  const [resolveNote, setResolveNote] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
   const { data: errors, isLoading } = usePlatformErrors({
     severity: severity || undefined,
     source: source || undefined,
+    status: status || undefined,
+    search: search || undefined,
   });
   const resolveError = useResolveError();
+  const deleteError = useDeleteError();
 
-  const handleResolve = async (id: string) => {
+  const handleResolve = async () => {
+    if (!resolveDialog) return;
     try {
-      await resolveError.mutateAsync(id);
+      await resolveError.mutateAsync({ errorId: resolveDialog, note: resolveNote });
       toast.success("Erro marcado como resolvido");
+      setResolveDialog(null);
+      setResolveNote("");
     } catch {
       toast.error("Falha ao resolver erro");
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteError.mutateAsync(deleteTarget);
+      toast.success("Erro excluído");
+      setDeleteTarget(null);
+    } catch {
+      toast.error("Falha ao excluir erro");
+    }
+  };
+
+  const severityBadge = (sev: string) => {
+    const variant = sev === "critical" ? "destructive" : sev === "error" ? "destructive" : sev === "warning" ? "secondary" : "outline";
+    return <Badge variant={variant}>{sev}</Badge>;
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar mensagem ou função..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
         <Select value={severity} onValueChange={setSeverity}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Severidade" /></SelectTrigger>
+          <SelectTrigger className="w-36"><SelectValue placeholder="Severidade" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
             <SelectItem value="warning">Warning</SelectItem>
@@ -294,7 +150,7 @@ function ErrosTab() {
           </SelectContent>
         </Select>
         <Select value={source} onValueChange={setSource}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Source" /></SelectTrigger>
+          <SelectTrigger className="w-36"><SelectValue placeholder="Source" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
             <SelectItem value="edge_function">Edge Function</SelectItem>
@@ -302,6 +158,15 @@ function ErrosTab() {
             <SelectItem value="client_app">Client App</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="open">Aberto</SelectItem>
+            <SelectItem value="resolved">Resolvido</SelectItem>
+          </SelectContent>
+        </Select>
+        <Badge variant="secondary">{errors?.length || 0} resultados</Badge>
       </div>
 
       <Card>
@@ -309,79 +174,200 @@ function ErrosTab() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8"></TableHead>
                 <TableHead>Severidade</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Função</TableHead>
                 <TableHead>Mensagem</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead></TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !errors?.length ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum erro registrado 🎉</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum erro encontrado 🎉</TableCell></TableRow>
               ) : (
                 errors.map((err) => (
-                  <TableRow key={err.id}>
-                    <TableCell>
-                      <Badge variant={err.severity === "critical" ? "destructive" : err.severity === "warning" ? "secondary" : "outline"}>
-                        {err.severity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">{err.source}</TableCell>
-                    <TableCell className="font-mono text-xs">{err.function_name || "—"}</TableCell>
-                    <TableCell className="max-w-[300px] truncate text-xs">{err.error_message}</TableCell>
-                    <TableCell className="text-xs">{format(new Date(err.created_at), "dd/MM HH:mm")}</TableCell>
-                    <TableCell>
-                      {err.resolved ? (
-                        <Badge variant="secondary" className="gap-1"><CheckCircle className="w-3 h-3" /> Resolvido</Badge>
-                      ) : (
-                        <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" /> Aberto</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {!err.resolved && (
-                        <Button size="sm" variant="ghost" onClick={() => handleResolve(err.id)} disabled={resolveError.isPending}>
-                          Resolver
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
+                  <>
+                    <TableRow key={err.id} className="cursor-pointer" onClick={() => setExpanded(expanded === err.id ? null : err.id)}>
+                      <TableCell className="px-2">
+                        {expanded === err.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                      </TableCell>
+                      <TableCell>{severityBadge(err.severity)}</TableCell>
+                      <TableCell className="text-xs">{err.source}</TableCell>
+                      <TableCell className="font-mono text-xs">{err.function_name || "—"}</TableCell>
+                      <TableCell className="max-w-[250px] truncate text-xs">{err.error_message}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{format(new Date(err.created_at), "dd/MM HH:mm")}</TableCell>
+                      <TableCell>
+                        {err.resolved ? (
+                          <Badge variant="secondary" className="gap-1"><CheckCircle className="w-3 h-3" /> Resolvido</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" /> Aberto</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          {!err.resolved && (
+                            <Button size="sm" variant="ghost" onClick={() => setResolveDialog(err.id)}>
+                              <CheckCircle className="w-3.5 h-3.5 mr-1" /> Resolver
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget(err.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {expanded === err.id && (
+                      <TableRow key={`${err.id}-detail`}>
+                        <TableCell colSpan={8} className="bg-muted/30 p-4">
+                          <div className="space-y-3 text-xs">
+                            <div>
+                              <span className="font-semibold text-foreground">Mensagem completa:</span>
+                              <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{err.error_message}</p>
+                            </div>
+                            {err.error_stack && (
+                              <div>
+                                <span className="font-semibold text-foreground">Stack Trace:</span>
+                                <pre className="mt-1 text-[11px] bg-background p-3 rounded-md border overflow-x-auto max-h-[200px] text-muted-foreground">{err.error_stack}</pre>
+                              </div>
+                            )}
+                            {err.metadata && Object.keys(err.metadata).length > 0 && (
+                              <div>
+                                <span className="font-semibold text-foreground">Metadata:</span>
+                                <pre className="mt-1 text-[11px] bg-background p-3 rounded-md border overflow-x-auto text-muted-foreground">{JSON.stringify(err.metadata, null, 2)}</pre>
+                              </div>
+                            )}
+                            {err.resolved && err.resolved_at && (
+                              <p className="text-muted-foreground">Resolvido em {format(new Date(err.resolved_at), "dd/MM/yyyy HH:mm")}{err.resolved_note ? ` — ${err.resolved_note}` : ""}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
                 ))
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Resolve Dialog */}
+      <Dialog open={!!resolveDialog} onOpenChange={(o) => { if (!o) { setResolveDialog(null); setResolveNote(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Resolver Erro</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label>Nota (opcional)</Label>
+              <Textarea value={resolveNote} onChange={(e) => setResolveNote(e.target.value)} placeholder="Descreva a causa raiz ou o que foi feito..." rows={3} />
+            </div>
+            <Button onClick={handleResolve} disabled={resolveError.isPending} className="w-full">
+              {resolveError.isPending ? "Resolvendo..." : "Marcar como Resolvido"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir erro?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação é irreversível. O registro será removido permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
+/* ─── Atividade (Timeline) ─── */
+function AtividadeTab() {
+  const [filterSev, setFilterSev] = useState("");
+  const { data: errors, isLoading } = usePlatformErrors({ severity: filterSev || undefined });
+
+  const recent = (errors || []).slice(0, 50);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Select value={filterSev} onValueChange={setFilterSev}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Severidade" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="warning">Warning</SelectItem>
+            <SelectItem value="error">Error</SelectItem>
+            <SelectItem value="critical">Critical</SelectItem>
+          </SelectContent>
+        </Select>
+        <Badge variant="secondary">{recent.length} registros</Badge>
+      </div>
+
+      {isLoading ? (
+        <div className="text-muted-foreground py-12 text-center">Carregando atividade...</div>
+      ) : !recent.length ? (
+        <div className="text-muted-foreground py-12 text-center">Nenhuma atividade recente</div>
+      ) : (
+        <div className="space-y-2">
+          {recent.map((err) => (
+            <Card key={err.id} className="p-3">
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${
+                  err.severity === "critical" ? "bg-destructive" : err.severity === "error" ? "bg-destructive/70" : err.severity === "warning" ? "bg-chart-4" : "bg-chart-2"
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={err.severity === "critical" ? "destructive" : err.severity === "error" ? "destructive" : "secondary"} className="text-[10px]">
+                      {err.severity}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{err.source}</span>
+                    {err.function_name && <span className="text-xs font-mono text-muted-foreground">• {err.function_name}</span>}
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {formatDistanceToNow(new Date(err.created_at), { addSuffix: true, locale: ptBR })}
+                    </span>
+                  </div>
+                  <p className="text-sm mt-1 text-foreground truncate">{err.error_message}</p>
+                </div>
+                {err.resolved && <CheckCircle className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main ─── */
 export default function SaasDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Gestão SaaS"
-        subtitle="Painel centralizado de gestão da plataforma SaaS"
+        title="Logs & Erros"
+        subtitle="Central de monitoramento de erros e logs do sistema"
+        icon={<Server className="w-5 h-5 text-primary" />}
       />
 
-      <Tabs defaultValue="clientes" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-          <TabsTrigger value="clientes" className="gap-1.5 text-xs"><Users className="w-3.5 h-3.5" /> Clientes</TabsTrigger>
-          <TabsTrigger value="custos" className="gap-1.5 text-xs"><DollarSign className="w-3.5 h-3.5" /> Custos</TabsTrigger>
-          <TabsTrigger value="gerenciamento" className="gap-1.5 text-xs"><Settings className="w-3.5 h-3.5" /> Gerenciamento</TabsTrigger>
-          <TabsTrigger value="suporte" className="gap-1.5 text-xs"><HeadphonesIcon className="w-3.5 h-3.5" /> Suporte</TabsTrigger>
+      <Tabs defaultValue="visao-geral" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="visao-geral" className="gap-1.5 text-xs"><BarChart3 className="w-3.5 h-3.5" /> Visão Geral</TabsTrigger>
           <TabsTrigger value="erros" className="gap-1.5 text-xs"><AlertTriangle className="w-3.5 h-3.5" /> Erros</TabsTrigger>
+          <TabsTrigger value="atividade" className="gap-1.5 text-xs"><Activity className="w-3.5 h-3.5" /> Atividade</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="clientes"><ClientesTab /></TabsContent>
-        <TabsContent value="custos"><CustosTab /></TabsContent>
-        <TabsContent value="gerenciamento"><GerenciamentoTab /></TabsContent>
-        <TabsContent value="suporte"><SuporteTab /></TabsContent>
+        <TabsContent value="visao-geral"><VisaoGeralTab /></TabsContent>
         <TabsContent value="erros"><ErrosTab /></TabsContent>
+        <TabsContent value="atividade"><AtividadeTab /></TabsContent>
       </Tabs>
     </div>
   );
