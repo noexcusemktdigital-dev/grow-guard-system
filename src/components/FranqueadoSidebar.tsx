@@ -169,9 +169,15 @@ export function FranqueadoSidebarContent({ collapsed, setCollapsed, onNavigate }
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
         <SidebarNavItems items={principalSection} collapsed={collapsed} />
         <div className="mx-3 border-t border-sidebar-border/60" />
-        <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} defaultOpen />
-        <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
-        <CollapsibleSection title="Gestão" items={gestaoSection} collapsed={collapsed} />
+        <div data-tour="comercial">
+          <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} defaultOpen />
+        </div>
+        <div data-tour="marketing">
+          <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
+        </div>
+        <div data-tour="gestao">
+          <CollapsibleSection title="Gestão" items={gestaoSection} collapsed={collapsed} />
+        </div>
       </div>
 
       {/* Footer — User Menu */}

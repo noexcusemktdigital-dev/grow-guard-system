@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { FranqueadoSidebar, FranqueadoSidebarContent } from "./FranqueadoSidebar";
+import { FranqueadoTour } from "./FranqueadoTour";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -36,6 +37,7 @@ export function FranqueadoLayout() {
           <Outlet />
         </div>
       </main>
+      <FranqueadoTour />
     </div>
   );
 }
