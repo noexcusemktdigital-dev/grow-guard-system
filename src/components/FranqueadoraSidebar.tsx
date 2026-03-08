@@ -6,7 +6,7 @@ import {
   LayoutDashboard, DollarSign, FileText, Building2, TrendingUp,
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
   Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt, Sparkles, ClipboardCheck,
-  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, Cloud, LogOut,
+  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, AlertTriangle, LogOut,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

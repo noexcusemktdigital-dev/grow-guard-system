@@ -115,7 +115,7 @@ const App = () => (
                 <Route path="comunicados" element={<Comunicados />} />
                 <Route path="agenda" element={<Agenda />} />
                 <Route path="matriz" element={<Matriz />} />
-                <Route path="saas" element={<SaasDashboard />} />
+                <Route path="logs" element={<SaasDashboard />} />
                 <Route path="propostas" element={<FranqueadoraPropostas />} />
                 <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
                 <Route path="estrategia" element={<FranqueadoEstrategia />} />
