@@ -262,7 +262,10 @@ export const modules: Module[] = [
         description: 'Criamos e editamos seu perfil comercial no Google Search e Maps, adicionando informações como endereço, telefone, horário de funcionamento e fotos.',
         price: 450,
         type: 'one_time',
-        quantityType: 'single',
+        quantityType: 'quantity',
+        perUnit: 'conta',
+        minQuantity: 1,
+        maxQuantity: 10,
       },
       {
         id: 'artes-campanha',
