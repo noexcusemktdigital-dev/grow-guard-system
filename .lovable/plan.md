@@ -1,31 +1,43 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Simplificar Financeiro da Matriz — Apenas dados do Asaas
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### O que muda
 
-### Ações
+O usuário quer que as abas **Receitas** e **Clientes** mostrem **apenas dados vindos do Asaas**, removendo entradas manuais dessas abas.
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+### Mudanças no arquivo `src/pages/FinanceiroDashboard.tsx`
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+#### Aba Receitas
+- Remover a lógica de "unified entries" que mistura manual + Asaas
+- Mostrar **apenas** pagamentos do Asaas (`asaasPayments`)
+- Remover o botão "Nova Receita" (entrada manual)
+- Remover o dialog de criação/edição de receita manual
+- Remover o dialog de exclusão de receita manual
+- Manter: busca, botão "Atualizar Asaas", tabela com status/fatura/link externo
+- Remover imports e uso de `createRevenue`, `updateRevenue`, `deleteRevenue`
 
-3. **Executar o teste** e analisar o resultado definitivo
+#### Aba Clientes
+- Já mostra apenas contratos ativos com emissão via Asaas — **sem mudanças necessárias**
 
-### Detalhe técnico
+#### Dashboard
+- Atualizar KPI "Receitas" para usar apenas `totalAsaasPaid` (remover `totalManualRev`)
+- Remover gráfico de composição por categoria manual (pie chart) — substituir por composição de pagamentos Asaas
+- Gráfico de barras: receitas baseadas em Asaas payments agrupados por mês
 
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
-```
+#### Limpeza
+- Remover `revCategories` (não mais usado)
+- Remover props `createRevenue`, `updateRevenue`, `deleteRevenue` da ReceitasTab
+- Simplificar interface `UnifiedEntry` e funções relacionadas
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+### Abas que permanecem inalteradas
+- **Despesas** — CRUD manual permanece (são gastos da matriz)
+- **Repasse** — cobranças automáticas para franqueados via Asaas
+- **Fechamentos** — consolidação mensal
+- **Configurações** — regras financeiras
+
+### Arquivo afetado
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/FinanceiroDashboard.tsx` | Simplificar Receitas para só Asaas, atualizar Dashboard |
 
