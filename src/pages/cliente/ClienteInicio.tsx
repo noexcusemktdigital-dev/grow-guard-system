@@ -7,7 +7,7 @@ import {
   CheckSquare, ChevronRight, Sparkles, Clock,
   Zap, ArrowRight, Bot, Link, FileText, Lightbulb,
   Wifi, WifiOff, Sun, Moon, CloudSun, ListChecks,
-  Flame, Trophy, CheckCircle2, Star,
+  Flame, Trophy, CheckCircle2, Star, Megaphone,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,12 +29,24 @@ import { useClienteAgents } from "@/hooks/useClienteAgents";
 import { useDailyMessages } from "@/hooks/useDailyMessages";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
+import { useAnnouncements } from "@/hooks/useAnnouncements";
+import { useAnnouncementViews } from "@/hooks/useAnnouncementViews";
+import { useClienteTasks } from "@/hooks/useClienteTasks";
+import { useAuth } from "@/contexts/AuthContext";
 
-const kpiConfig = [
+const adminKpiConfig = [
   { label: "Receita Estimada", icon: DollarSign, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500", path: "/cliente/crm" },
   { label: "Leads do Mês", icon: Users, gradient: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-500", path: "/cliente/crm" },
   { label: "Taxa de Conversão", icon: TrendingUp, gradient: "from-purple-500/10 to-purple-500/5", iconColor: "text-purple-500", path: "/cliente/crm" },
   { label: "Meta vs Realizado", icon: Target, gradient: "from-primary/10 to-primary/5", iconColor: "text-primary", path: "/cliente/plano-vendas" },
+];
+
+const userKpiConfig = [
+  { label: "Meus Leads", icon: Users, gradient: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-500", path: "/cliente/crm" },
+  { label: "Minhas Conversões", icon: TrendingUp, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500", path: "/cliente/crm" },
+  { label: "Meu XP", icon: Trophy, gradient: "from-purple-500/10 to-purple-500/5", iconColor: "text-purple-500", path: "/cliente/gamificacao" },
+  { label: "Tarefas Pendentes", icon: CheckSquare, gradient: "from-primary/10 to-primary/5", iconColor: "text-primary", path: "/cliente/checklist" },
 ];
 
 const defaultPhrases = [
@@ -97,6 +109,11 @@ function formatCurrency(value: number) {
 }
 
 export default function ClienteInicio() {
+  const { isAdmin } = useRoleAccess();
+  const { user } = useAuth();
+  const { data: announcements } = useAnnouncements();
+  const { data: announcementViews } = useAnnouncementViews();
+  const { data: myTasks } = useClienteTasks({ assigned_to: user?.id });
   const navigate = useNavigate();
   const { data: profile } = useUserProfile();
   const { data: orgData, isLoading: orgLoading } = useOrgProfile();
@@ -142,6 +159,11 @@ export default function ClienteInicio() {
   const wonThisMonth = useMemo(() => allLeads.filter(l => l.won_at && isAfter(new Date(l.won_at), monthStart)), [allLeads, monthStart]);
   const wonPrevMonth = useMemo(() => allLeads.filter(l => l.won_at && isAfter(new Date(l.won_at), prevMonthStart) && !isAfter(new Date(l.won_at), prevMonthEnd)), [allLeads, prevMonthStart, prevMonthEnd]);
 
+  // User-specific leads
+  const myLeads = useMemo(() => allLeads.filter(l => l.assigned_to === user?.id), [allLeads, user?.id]);
+  const myWonLeads = useMemo(() => myLeads.filter(l => !!l.won_at), [myLeads]);
+  const myPendingTasks = (myTasks ?? []).filter(t => t.status === "pending").length;
+
   const revenueThisMonth = wonThisMonth.reduce((s, l) => s + (Number(l.value) || 0), 0);
   const revenuePrevMonth = wonPrevMonth.reduce((s, l) => s + (Number(l.value) || 0), 0);
   const conversionRate = thisMonthLeads.length > 0 ? (wonThisMonth.length / thisMonthLeads.length) * 100 : 0;
@@ -155,12 +177,28 @@ export default function ClienteInicio() {
   const leadsTrend = prevMonthLeads.length > 0 ? ((thisMonthLeads.length - prevMonthLeads.length) / prevMonthLeads.length * 100) : 0;
   const convTrend = conversionRate - prevConversionRate;
 
-  const kpiValues = [
+  // Role-based KPI values
+  const kpiConfig = isAdmin ? adminKpiConfig : userKpiConfig;
+  const kpiValues = isAdmin ? [
     { value: formatCurrency(revenueThisMonth), rawValue: revenueThisMonth, sublabel: revenueTrend !== 0 ? `${revenueTrend > 0 ? "+" : ""}${revenueTrend.toFixed(0)}% vs mês anterior` : "sem dados anteriores", trend: revenueTrend > 0 ? "up" as const : revenueTrend < 0 ? "down" as const : "neutral" as const },
     { value: String(thisMonthLeads.length), rawValue: thisMonthLeads.length, sublabel: leadsTrend !== 0 ? `${leadsTrend > 0 ? "+" : ""}${leadsTrend.toFixed(0)}% vs mês anterior` : `${thisMonthLeads.length} leads no CRM`, trend: leadsTrend > 0 ? "up" as const : leadsTrend < 0 ? "down" as const : "neutral" as const },
     { value: `${conversionRate.toFixed(1)}%`, rawValue: conversionRate, sublabel: convTrend !== 0 ? `${convTrend > 0 ? "+" : ""}${convTrend.toFixed(1)}pp` : "taxa do mês", trend: convTrend > 0 ? "up" as const : convTrend < 0 ? "down" as const : "neutral" as const },
     { value: `${Math.min(goalPercent, 100).toFixed(0)}%`, rawValue: Math.min(goalPercent, 100), sublabel: primaryGoal ? `${formatCurrency(primaryProgress?.currentValue ?? 0)} / ${formatCurrency(primaryGoal.target_value)}` : "sem meta ativa", trend: goalPercent >= 70 ? "up" as const : goalPercent >= 40 ? "neutral" as const : "down" as const },
+  ] : [
+    { value: String(myLeads.length), rawValue: myLeads.length, sublabel: `${myLeads.filter(l => !l.won_at && !l.lost_at).length} ativos`, trend: myLeads.length > 0 ? "up" as const : "neutral" as const },
+    { value: String(myWonLeads.length), rawValue: myWonLeads.length, sublabel: `${myLeads.length > 0 ? ((myWonLeads.length / myLeads.length) * 100).toFixed(0) : 0}% de conversão`, trend: myWonLeads.length > 0 ? "up" as const : "neutral" as const },
+    { value: `${xp.toLocaleString()}`, rawValue: xp, sublabel: `Nível ${levelInfo.level} · ${levelInfo.title}`, trend: "up" as const },
+    { value: String(myPendingTasks), rawValue: myPendingTasks, sublabel: myPendingTasks === 0 ? "Tudo em dia! ✅" : `${myPendingTasks} pendente${myPendingTasks > 1 ? "s" : ""}`, trend: myPendingTasks === 0 ? "up" as const : myPendingTasks > 5 ? "down" as const : "neutral" as const },
   ];
+
+  // Unread announcements for inline display
+  const unreadAnnouncements = useMemo(() => {
+    if (!announcements || !announcementViews) return [];
+    const viewedIds = new Set((announcementViews as any[]).map((v: any) => v.announcement_id));
+    return (announcements as any[]).filter((a: any) =>
+      a.status === "active" && a.published_at && !viewedIds.has(a.id)
+    ).slice(0, 3);
+  }, [announcements, announcementViews]);
 
   const revenueData = useMemo(() => {
     const weeks = [
@@ -354,6 +392,24 @@ export default function ClienteInicio() {
         </motion.div>
       )}
 
+      {/* Announcement alerts */}
+      {unreadAnnouncements.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-2">
+          {unreadAnnouncements.map((ann: any) => (
+            <Card key={ann.id} className={`border-l-4 ${ann.priority === "critical" ? "border-l-destructive bg-destructive/5" : ann.priority === "high" ? "border-l-amber-500 bg-amber-500/5" : "border-l-primary bg-primary/5"}`}>
+              <CardContent className="py-3 px-4 flex items-center gap-3">
+                <Megaphone className={`w-4 h-4 shrink-0 ${ann.priority === "critical" ? "text-destructive" : ann.priority === "high" ? "text-amber-500" : "text-primary"}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{ann.title}</p>
+                  {ann.content && <p className="text-xs text-muted-foreground line-clamp-1">{ann.content}</p>}
+                </div>
+                <Badge variant="outline" className="text-[9px] shrink-0">Comunicado</Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </motion.div>
+      )}
+
       {/* KPIs with animated counters */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpiConfig.map((cfg, i) => {
@@ -445,40 +501,42 @@ export default function ClienteInicio() {
       {/* Main 2-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         <div className="lg:col-span-3 space-y-5">
-          {/* Revenue Chart */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-2 px-5 pt-5">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold">Receita Semanal</CardTitle>
-                <Badge variant="secondary" className="text-[10px] rounded-full">{format(now, "MMM/yyyy", { locale: ptBR })}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="px-5 pb-5">
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={revenueData}>
-                    <defs>
-                      <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                    <Tooltip
-                      formatter={(v: number) => [formatCurrency(v), "Receita"]}
-                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
-                    />
-                    <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="url(#revenueGrad)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--card))" }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Revenue Chart — Admin only */}
+          {isAdmin && (
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-2 px-5 pt-5">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold">Receita Semanal</CardTitle>
+                  <Badge variant="secondary" className="text-[10px] rounded-full">{format(now, "MMM/yyyy", { locale: ptBR })}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="px-5 pb-5">
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={revenueData}>
+                      <defs>
+                        <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                      <Tooltip
+                        formatter={(v: number) => [formatCurrency(v), "Receita"]}
+                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                      />
+                      <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="url(#revenueGrad)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--card))" }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Next Steps */}
-          {nextSteps.length > 0 && (
+          {/* Next Steps — Admin only */}
+          {isAdmin && nextSteps.length > 0 && (
             <Card>
               <CardHeader className="pb-3 px-5 pt-5">
                 <div className="flex items-center gap-2">

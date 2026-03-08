@@ -1,17 +1,32 @@
-import { useState, useEffect, useCallback } from "react";
-import { CheckSquare, Plus, CheckCircle2, Flame, Settings2, Zap, Sparkles } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import {
+  CheckSquare, Plus, CheckCircle2, Flame, Settings2, Zap, Sparkles,
+  Calendar, Users, Filter, Trash2, Clock, AlertTriangle, ChevronDown,
+} from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useClienteChecklist, useClienteGamification, useClienteContentMutations } from "@/hooks/useClienteContent";
-import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  useClienteChecklist, useClienteGamification, useClienteContentMutations,
+} from "@/hooks/useClienteContent";
+import { useClienteTasks, useClienteTaskMutations } from "@/hooks/useClienteTasks";
+import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
+import { format, isToday, isPast, isFuture, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { CelebrationEffect, triggerCelebration } from "@/components/CelebrationEffect";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const categoryConfig: Record<string, { color: string; icon: string }> = {
   comercial: { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: "💼" },
@@ -19,24 +34,19 @@ const categoryConfig: Record<string, { color: string; icon: string }> = {
   operacional: { color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", icon: "⚙️" },
 };
 
-const streakMessages = [
-  { min: 0, msg: "Comece hoje e construa sua sequência!" },
-  { min: 1, msg: "Bom começo! Continue assim." },
-  { min: 3, msg: "Estabilidade é a chave. Siga firme!" },
-  { min: 7, msg: "Uma semana inteira! Você é consistente. 🔥" },
-  { min: 14, msg: "Duas semanas! Hábito formado. 💪" },
-  { min: 30, msg: "Maratonista! 30 dias inparáveis! 🏆" },
-];
+const priorityConfig: Record<string, { label: string; color: string }> = {
+  high: { label: "Alta", color: "bg-destructive/10 text-destructive border-destructive/20" },
+  medium: { label: "Média", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
+  low: { label: "Baixa", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+};
 
-function getStreakMessage(days: number) {
-  let msg = streakMessages[0].msg;
-  for (const s of streakMessages) {
-    if (days >= s.min) msg = s.msg;
-  }
-  return msg;
-}
+const sourceConfig: Record<string, { label: string; color: string }> = {
+  manual: { label: "Manual", color: "text-foreground" },
+  admin: { label: "Admin", color: "text-primary" },
+  system: { label: "Sistema", color: "text-amber-500" },
+};
 
-export default function ClienteChecklist() {
+function DailyChecklistTab() {
   const { user } = useAuth();
   const today = format(new Date(), "yyyy-MM-dd");
   const { data: items, isLoading } = useClienteChecklist(today);
@@ -47,28 +57,11 @@ export default function ClienteChecklist() {
   const [generating, setGenerating] = useState(false);
 
   const streakDays = gamification?.streak_days ?? 0;
-  const xp = (gamification as any)?.xp ?? 0;
-
-  useEffect(() => {
-    if (!isLoading && items && user) {
-      const hasSystemTasks = items.some((i: any) => i.source === "system");
-      if (!hasSystemTasks) {
-        setGenerating(true);
-        supabase.functions
-          .invoke("generate-daily-checklist")
-          .then(() => {
-            window.location.reload();
-          })
-          .catch(() => setGenerating(false));
-      }
-    }
-  }, [isLoading, items?.length, user?.id]);
 
   const allItems = items ?? [];
   const completed = allItems.filter((i: any) => i.is_completed).length;
   const total = allItems.length || 1;
   const progress = Math.round((completed / total) * 100);
-
   const progressColor = progress >= 70 ? "hsl(142, 71%, 45%)" : progress >= 30 ? "hsl(38, 92%, 50%)" : "hsl(0, 84%, 60%)";
 
   const addTask = () => {
@@ -81,64 +74,24 @@ export default function ClienteChecklist() {
   const handleToggle = useCallback((id: string, currentState: boolean) => {
     toggleChecklistItem.mutate(
       { id, is_completed: !currentState },
-      {
-        onSuccess: (result) => {
-          if (result?.allDone) {
-            triggerCelebration();
-          }
-        },
-      }
+      { onSuccess: (result) => { if (result?.allDone) triggerCelebration(); } }
     );
   }, [toggleChecklistItem]);
 
   const pendingItems = allItems.filter((i: any) => !i.is_completed);
   const doneItems = allItems.filter((i: any) => i.is_completed);
 
-  const groupByCategory = (list: any[]) => {
-    const groups: Record<string, any[]> = {};
-    list.forEach((item) => {
-      const cat = item.category || "operacional";
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(item);
-    });
-    return groups;
-  };
-
   if (isLoading || generating) {
-    return (
-      <div className="w-full space-y-5">
-        <PageHeader title="Checklist do Dia" subtitle="Suas tarefas operacionais para hoje" icon={<CheckSquare className="w-5 h-5 text-primary" />} />
-        <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
-      </div>
-    );
+    return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>;
   }
 
-  const pendingGroups = groupByCategory(pendingItems);
-
   return (
-    <div className="w-full space-y-5">
-      <CelebrationEffect />
-
-      <PageHeader
-        title="Checklist do Dia"
-        subtitle="Suas tarefas operacionais para hoje"
-        icon={<CheckSquare className="w-5 h-5 text-primary" />}
-        actions={
-          <Button size="sm" variant="outline" onClick={() => setShowInput(!showInput)}>
-            <Plus className="w-4 h-4 mr-1" /> Adicionar
-          </Button>
-        }
-      />
-
-      {/* Progress + Streak Header */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4">
-        <div className="relative w-20 h-20 flex-shrink-0">
-          <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <div className="relative w-16 h-16 flex-shrink-0">
+          <svg className="w-16 h-16 -rotate-90" viewBox="0 0 80 80">
             <circle cx="40" cy="40" r="34" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
-            <motion.circle
-              cx="40" cy="40" r="34" fill="none"
-              stroke={progressColor}
-              strokeWidth="6" strokeLinecap="round"
+            <motion.circle cx="40" cy="40" r="34" fill="none" stroke={progressColor} strokeWidth="6" strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 34}`}
               initial={{ strokeDashoffset: 2 * Math.PI * 34 }}
               animate={{ strokeDashoffset: 2 * Math.PI * 34 * (1 - progress / 100) }}
@@ -146,142 +99,276 @@ export default function ClienteChecklist() {
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-bold">{progress}%</span>
+            <span className="text-sm font-bold">{progress}%</span>
           </div>
         </div>
         <div className="flex-1">
           <p className="text-sm font-medium">{completed} de {allItems.length} tarefas</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {progress === 100 ? "Tudo concluído! 🎉 +50 XP bônus" : `+10 XP por tarefa concluída`}
-          </p>
-          {/* Streak */}
-          <div className="flex items-center gap-2 mt-2">
+          <p className="text-xs text-muted-foreground">{progress === 100 ? "Tudo concluído! 🎉" : "+10 XP por tarefa"}</p>
+          <div className="flex items-center gap-2 mt-1">
             <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/10 ${streakDays > 7 ? "animate-pulse" : ""}`}>
-              <Flame className="w-3.5 h-3.5 text-orange-500" />
+              <Flame className="w-3 h-3 text-orange-500" />
               <span className="text-[11px] font-bold text-orange-500">{streakDays} dias</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">{getStreakMessage(streakDays)}</span>
           </div>
         </div>
-      </motion.div>
+        <Button size="sm" variant="outline" onClick={() => setShowInput(!showInput)}>
+          <Plus className="w-4 h-4 mr-1" /> Adicionar
+        </Button>
+      </div>
 
       {showInput && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
-          <Card>
-            <CardContent className="py-3">
-              <div className="flex gap-2">
-                <Input placeholder="Descreva a tarefa..." value={newTask} onChange={e => setNewTask(e.target.value)} onKeyDown={e => e.key === "Enter" && addTask()} className="text-sm" />
-                <Button size="sm" onClick={addTask} disabled={createChecklistItem.isPending}>Criar</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <Card>
+          <CardContent className="py-3">
+            <div className="flex gap-2">
+              <Input placeholder="Descreva a tarefa..." value={newTask} onChange={e => setNewTask(e.target.value)} onKeyDown={e => e.key === "Enter" && addTask()} className="text-sm" />
+              <Button size="sm" onClick={addTask} disabled={createChecklistItem.isPending}>Criar</Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {pendingItems.length === 0 && doneItems.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
-          <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-emerald-500" />
-          <p className="text-foreground font-medium">Nenhuma tarefa ainda</p>
-          <p className="text-sm text-muted-foreground">Suas tarefas automáticas serão geradas em breve.</p>
-        </motion.div>
-      ) : pendingItems.length === 0 ? (
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center py-12">
-          <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: 2, duration: 0.5 }}>
-            <Sparkles className="h-12 w-12 mx-auto mb-3 text-primary" />
-          </motion.div>
-          <p className="text-foreground font-medium text-lg">Tudo concluído! 🎉</p>
-          <p className="text-sm text-muted-foreground">Parabéns! Você está em dia com suas atividades.</p>
-          <Badge className="mt-2 text-xs" variant="secondary">+50 XP bônus ganhos</Badge>
-        </motion.div>
-      ) : (
-        <div className="space-y-4">
-          {Object.entries(pendingGroups).map(([cat, catItems]) => {
-            const config = categoryConfig[cat] || categoryConfig.operacional;
-            return (
-              <div key={cat} className="space-y-1.5">
-                <div className="flex items-center gap-2 px-1 mb-1">
-                  <span className="text-sm">{config.icon}</span>
-                  <Badge variant="outline" className={`text-[10px] capitalize ${config.color}`}>
-                    {cat}
-                  </Badge>
-                  <Badge variant="secondary" className="text-[9px]">{catItems.length}</Badge>
-                </div>
-                <AnimatePresence mode="popLayout">
-                  {catItems.map((item: any, idx: number) => (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -30, scale: 0.9 }}
-                      transition={{ delay: idx * 0.05, duration: 0.3 }}
-                    >
-                      <Card className="border bg-muted/5 transition-all duration-200 hover:shadow-sm group">
-                        <CardContent className="py-2.5 px-3 flex items-center gap-3">
-                          <motion.div
-                            whileHover={{ scale: 1.3 }}
-                            whileTap={{ scale: 0.7 }}
-                            onClick={() => handleToggle(item.id, item.is_completed)}
-                            className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 hover:border-primary hover:bg-primary/10 flex items-center justify-center transition-all flex-shrink-0 cursor-pointer"
-                          />
-                          <span className="text-[13px] flex-1">{item.title}</span>
-                          <div className="flex items-center gap-1.5">
-                            {item.source === "system" && (
-                              <Badge variant="outline" className="text-[9px] gap-1 border-primary/20 text-primary">
-                                <Settings2 className="w-2.5 h-2.5" /> Auto
-                              </Badge>
-                            )}
-                            <Badge variant="secondary" className="text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Zap className="w-2 h-2 mr-0.5" />+10 XP
-                            </Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            );
-          })}
+        <div className="text-center py-12">
+          <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
+          <p className="text-sm text-muted-foreground">Nenhuma tarefa hoje</p>
         </div>
-      )}
-
-      {/* Done Items */}
-      <AnimatePresence>
-        {doneItems.length > 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1 mb-2">
-              Concluídas ({doneItems.length})
-            </p>
-            {doneItems.map((item: any) => (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-              >
-                <Card className="opacity-50 transition-all duration-200 cursor-pointer hover:opacity-70" onClick={() => handleToggle(item.id, item.is_completed)}>
-                  <CardContent className="py-2 px-3 flex items-center gap-3">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    </motion.div>
-                    <span className="text-[13px] flex-1 line-through text-muted-foreground">{item.title}</span>
+      ) : (
+        <>
+          <AnimatePresence mode="popLayout">
+            {pendingItems.map((item: any, idx: number) => (
+              <motion.div key={item.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ delay: idx * 0.03 }}>
+                <Card className="border bg-muted/5 hover:shadow-sm group">
+                  <CardContent className="py-2.5 px-3 flex items-center gap-3">
+                    <motion.div whileHover={{ scale: 1.3 }} whileTap={{ scale: 0.7 }} onClick={() => handleToggle(item.id, item.is_completed)}
+                      className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 hover:border-primary hover:bg-primary/10 flex items-center justify-center cursor-pointer flex-shrink-0" />
+                    <span className="text-[13px] flex-1">{item.title}</span>
                     {item.source === "system" && (
-                      <Badge variant="outline" className="text-[9px] gap-1 border-primary/20 text-primary opacity-60">
-                        <Settings2 className="w-2.5 h-2.5" /> Auto
-                      </Badge>
+                      <Badge variant="outline" className="text-[9px] gap-1 border-primary/20 text-primary"><Settings2 className="w-2.5 h-2.5" /> Auto</Badge>
                     )}
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </AnimatePresence>
+          {doneItems.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Concluídas ({doneItems.length})</p>
+              {doneItems.map((item: any) => (
+                <Card key={item.id} className="opacity-50 cursor-pointer hover:opacity-70" onClick={() => handleToggle(item.id, item.is_completed)}>
+                  <CardContent className="py-2 px-3 flex items-center gap-3">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <span className="text-[13px] flex-1 line-through text-muted-foreground">{item.title}</span>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
+  const { user } = useAuth();
+  const { isAdmin } = useRoleAccess();
+  const { data: allTasks, isLoading } = useClienteTasks();
+  const { data: members } = useOrgMembers();
+  const { createTask, toggleTask, deleteTask } = useClienteTaskMutations();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [form, setForm] = useState({ title: "", description: "", due_date: "", priority: "medium", assigned_to: "", assigned_team: "" });
+
+  const tasks = useMemo(() => {
+    let list = allTasks ?? [];
+    if (filterMyTasks) list = list.filter(t => t.assigned_to === user?.id || (!t.assigned_to && t.created_by === user?.id));
+    if (priorityFilter !== "all") list = list.filter(t => t.priority === priorityFilter);
+    return list;
+  }, [allTasks, filterMyTasks, user?.id, priorityFilter]);
+
+  const pending = tasks.filter(t => t.status === "pending");
+  const done = tasks.filter(t => t.status === "done");
+
+  const handleCreate = () => {
+    if (!form.title.trim()) return;
+    createTask.mutate({
+      title: form.title,
+      description: form.description || undefined,
+      due_date: form.due_date || undefined,
+      priority: form.priority,
+      source: isAdmin ? "admin" : "manual",
+      assigned_to: form.assigned_to || undefined,
+      assigned_team: form.assigned_team || undefined,
+    }, {
+      onSuccess: () => {
+        setCreateOpen(false);
+        setForm({ title: "", description: "", due_date: "", priority: "medium", assigned_to: "", assigned_team: "" });
+        toast.success("Tarefa criada!");
+      },
+    });
+  };
+
+  if (isLoading) return <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>;
+
+  const getMemberName = (id: string | null) => members?.find(m => m.user_id === id)?.full_name || "";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger className="w-36 h-8 text-xs"><Filter className="w-3 h-3 mr-1" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="high">Alta</SelectItem>
+            <SelectItem value="medium">Média</SelectItem>
+            <SelectItem value="low">Baixa</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-1" /> Nova Tarefa</Button>
+      </div>
+
+      {pending.length === 0 && done.length === 0 ? (
+        <div className="text-center py-12">
+          <Sparkles className="h-10 w-10 mx-auto mb-3 text-primary/40" />
+          <p className="text-sm text-muted-foreground">Nenhuma tarefa encontrada</p>
+        </div>
+      ) : (
+        <>
+          {pending.map((task) => {
+            const prio = priorityConfig[task.priority] || priorityConfig.medium;
+            const src = sourceConfig[task.source] || sourceConfig.manual;
+            const isOverdue = task.due_date && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
+            return (
+              <Card key={task.id} className={`border transition-all hover:shadow-sm ${isOverdue ? "border-destructive/30" : ""}`}>
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-start gap-3">
+                    <motion.div whileHover={{ scale: 1.3 }} whileTap={{ scale: 0.7 }}
+                      onClick={() => toggleTask.mutate({ id: task.id, done: true })}
+                      className="w-5 h-5 mt-0.5 rounded-full border-2 border-muted-foreground/30 hover:border-primary hover:bg-primary/10 cursor-pointer flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{task.title}</p>
+                      {task.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{task.description}</p>}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <Badge variant="outline" className={`text-[9px] ${prio.color}`}>{prio.label}</Badge>
+                        <Badge variant="outline" className={`text-[9px] ${src.color}`}>{src.label}</Badge>
+                        {task.due_date && (
+                          <Badge variant="outline" className={`text-[9px] gap-0.5 ${isOverdue ? "text-destructive border-destructive/30" : ""}`}>
+                            <Calendar className="w-2.5 h-2.5" />
+                            {format(parseISO(task.due_date), "dd/MM")}
+                          </Badge>
+                        )}
+                        {task.assigned_to && task.assigned_to !== user?.id && (
+                          <Badge variant="secondary" className="text-[9px]">{getMemberName(task.assigned_to) || "Membro"}</Badge>
+                        )}
+                        {task.assigned_team && (
+                          <Badge variant="secondary" className="text-[9px] gap-0.5"><Users className="w-2.5 h-2.5" />{task.assigned_team}</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => deleteTask.mutate(task.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+          {done.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Concluídas ({done.length})</p>
+              {done.slice(0, 5).map((task) => (
+                <Card key={task.id} className="opacity-50 cursor-pointer hover:opacity-70" onClick={() => toggleTask.mutate({ id: task.id, done: false })}>
+                  <CardContent className="py-2 px-3 flex items-center gap-3">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <span className="text-[13px] flex-1 line-through text-muted-foreground">{task.title}</span>
+                    {task.completed_at && <span className="text-[9px] text-muted-foreground">{format(parseISO(task.completed_at), "dd/MM")}</span>}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Nova Tarefa</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Título *</Label>
+              <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="O que precisa ser feito?" />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detalhes opcionais..." rows={2} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Prazo</Label>
+                <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Prioridade</Label>
+                <Select value={form.priority} onValueChange={v => setForm({ ...form, priority: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="low">Baixa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {isAdmin && members && members.length > 1 && (
+              <div className="space-y-2">
+                <Label>Atribuir a</Label>
+                <Select value={form.assigned_to} onValueChange={v => setForm({ ...form, assigned_to: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar membro" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Ninguém (eu)</SelectItem>
+                    {members.map(m => (
+                      <SelectItem key={m.user_id} value={m.user_id}>{m.full_name || "Sem nome"}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={createTask.isPending || !form.title.trim()}>
+              {createTask.isPending ? "Criando..." : "Criar Tarefa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+export default function ClienteChecklist() {
+  const { isAdmin } = useRoleAccess();
+
+  return (
+    <div className="w-full space-y-5">
+      <CelebrationEffect />
+      <PageHeader
+        title="Tarefas"
+        subtitle="Gerencie suas tarefas diárias e atribuições"
+        icon={<CheckSquare className="w-5 h-5 text-primary" />}
+      />
+
+      <Tabs defaultValue="hoje">
+        <TabsList className={`grid w-full ${isAdmin ? "grid-cols-3" : "grid-cols-2"}`}>
+          <TabsTrigger value="hoje" className="text-xs gap-1"><Zap className="w-3.5 h-3.5" /> Hoje</TabsTrigger>
+          <TabsTrigger value="minhas" className="text-xs gap-1"><CheckSquare className="w-3.5 h-3.5" /> Minhas Tarefas</TabsTrigger>
+          {isAdmin && <TabsTrigger value="time" className="text-xs gap-1"><Users className="w-3.5 h-3.5" /> Time</TabsTrigger>}
+        </TabsList>
+        <TabsContent value="hoje"><DailyChecklistTab /></TabsContent>
+        <TabsContent value="minhas"><TasksTab filterMyTasks /></TabsContent>
+        {isAdmin && <TabsContent value="time"><TasksTab filterMyTasks={false} /></TabsContent>}
+      </Tabs>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Settings, User, Building2, Users, Bell, UserPlus, Copy, Shield, Camera } from "lucide-react";
+import { Settings, User, Building2, Users, Bell, UserPlus, Shield, Camera, Crown, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +20,7 @@ import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
+import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
 import { getPlanBySlug } from "@/constants/plans";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -32,61 +33,40 @@ function ProfileTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (profile) {
-      setForm({
-        full_name: profile.full_name || "",
-        phone: profile.phone || "",
-        job_title: profile.job_title || "",
-      });
-    }
+    if (profile) setForm({ full_name: profile.full_name || "", phone: profile.phone || "", job_title: profile.job_title || "" });
   }, [profile]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     if (file.size > 2 * 1024 * 1024) return toast.error("Imagem deve ter no máximo 2MB");
-
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
       const path = `${user.id}/avatar.${ext}`;
       const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
-
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-      const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
-      update.mutate({ avatar_url: urlWithCacheBuster });
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao enviar foto");
-    } finally {
-      setUploading(false);
-    }
+      update.mutate({ avatar_url: `${publicUrl}?t=${Date.now()}` });
+    } catch (err: any) { toast.error(err.message || "Erro ao enviar foto"); }
+    finally { setUploading(false); }
   };
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
-
-  const initials = (form.full_name || "U").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  const initials = (form.full_name || "U").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Seu Perfil</CardTitle>
-        <CardDescription>Informações pessoais da sua conta</CardDescription>
-      </CardHeader>
+      <CardHeader><CardTitle>Seu Perfil</CardTitle><CardDescription>Informações pessoais da sua conta</CardDescription></CardHeader>
       <CardContent className="space-y-5">
         <div className="flex items-center gap-4">
           <div className="relative group">
             <Avatar className="h-16 w-16">
-              {profile?.avatar_url ? (
-                <AvatarImage src={profile.avatar_url} alt="Foto de perfil" />
-              ) : null}
+              {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt="Foto" /> : null}
               <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">{initials}</AvatarFallback>
             </Avatar>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-            >
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
               <Camera className="w-5 h-5 text-white" />
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
@@ -98,26 +78,12 @@ function ProfileTab() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Nome</Label>
-            <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
-          </div>
-          <div className="space-y-2">
-            <Label>E-mail</Label>
-            <Input value={user?.email || ""} readOnly className="bg-muted" />
-          </div>
-          <div className="space-y-2">
-            <Label>Telefone</Label>
-            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" />
-          </div>
-          <div className="space-y-2">
-            <Label>Cargo</Label>
-            <Input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} placeholder="CEO" />
-          </div>
+          <div className="space-y-2"><Label>Nome</Label><Input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} /></div>
+          <div className="space-y-2"><Label>E-mail</Label><Input value={user?.email || ""} readOnly className="bg-muted" /></div>
+          <div className="space-y-2"><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" /></div>
+          <div className="space-y-2"><Label>Cargo</Label><Input value={form.job_title} onChange={e => setForm({ ...form, job_title: e.target.value })} placeholder="CEO" /></div>
         </div>
-        <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
-          {update.isPending ? "Salvando..." : "Salvar Alterações"}
-        </Button>
+        <Button onClick={() => update.mutate(form)} disabled={update.isPending}>{update.isPending ? "Salvando..." : "Salvar Alterações"}</Button>
       </CardContent>
     </Card>
   );
@@ -126,72 +92,36 @@ function ProfileTab() {
 function OrgTab() {
   const { data: org, isLoading, update } = useOrgProfile();
   const [form, setForm] = useState({ name: "", cnpj: "", email: "", phone: "", address: "", city: "", state: "" });
-
   useEffect(() => {
-    if (org) {
-      setForm({
-        name: org.name || "",
-        cnpj: org.cnpj || "",
-        email: org.email || "",
-        phone: org.phone || "",
-        address: org.address || "",
-        city: org.city || "",
-        state: org.state || "",
-      });
-    }
+    if (org) setForm({ name: org.name || "", cnpj: org.cnpj || "", email: org.email || "", phone: org.phone || "", address: org.address || "", city: org.city || "", state: org.state || "" });
   }, [org]);
-
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
-
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Dados da Organização</CardTitle>
-        <CardDescription>Informações da empresa</CardDescription>
-      </CardHeader>
+      <CardHeader><CardTitle>Dados da Organização</CardTitle><CardDescription>Informações da empresa</CardDescription></CardHeader>
       <CardContent className="space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Nome da Empresa</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </div>
-          <div className="space-y-2">
-            <Label>CNPJ</Label>
-            <Input value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0001-00" />
-          </div>
-          <div className="space-y-2">
-            <Label>E-mail</Label>
-            <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="contato@empresa.com" />
-          </div>
-          <div className="space-y-2">
-            <Label>Telefone</Label>
-            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 3333-0000" />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label>Endereço</Label>
-            <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, número, bairro" />
-          </div>
-          <div className="space-y-2">
-            <Label>Cidade</Label>
-            <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-          </div>
-          <div className="space-y-2">
-            <Label>Estado</Label>
-            <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="SP" />
-          </div>
+          <div className="space-y-2"><Label>Nome da Empresa</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+          <div className="space-y-2"><Label>CNPJ</Label><Input value={form.cnpj} onChange={e => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0001-00" /></div>
+          <div className="space-y-2"><Label>E-mail</Label><Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+          <div className="space-y-2"><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
+          <div className="space-y-2 md:col-span-2"><Label>Endereço</Label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
+          <div className="space-y-2"><Label>Cidade</Label><Input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} /></div>
+          <div className="space-y-2"><Label>Estado</Label><Input value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} placeholder="SP" /></div>
         </div>
-        <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
-          {update.isPending ? "Salvando..." : "Salvar Dados"}
-        </Button>
+        <Button onClick={() => update.mutate(form)} disabled={update.isPending}>{update.isPending ? "Salvando..." : "Salvar Dados"}</Button>
       </CardContent>
     </Card>
   );
 }
 
-function UsersTab() {
-  const { data: members, isLoading, refetch } = useOrgMembers();
+function UsersAndTeamsTab() {
+  const { data: members, isLoading } = useOrgMembers();
   const { data: subscription } = useClienteSubscription();
   const { data: orgId } = useUserOrgId();
+  const { data: teams } = useOrgTeams();
+  const { data: memberships } = useTeamMemberships();
+  const { setUserTeams } = useTeamMutations();
   const plan = getPlanBySlug(subscription?.plan);
   const maxUsers = plan?.maxUsers ?? 2;
   const currentCount = members?.length ?? 0;
@@ -208,8 +138,8 @@ function UsersTab() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: (data) => {
-      toast.success("Convite enviado! O usuário receberá um e-mail para definir sua senha.");
+    onSuccess: () => {
+      toast.success("Convite enviado!");
       setInviteOpen(false);
       setInviteForm({ email: "", full_name: "", role: "cliente_user" });
       qc.invalidateQueries({ queryKey: ["org-members"] });
@@ -218,57 +148,156 @@ function UsersTab() {
   });
 
   const roleLabels: Record<string, string> = { cliente_admin: "Admin", cliente_user: "Usuário", super_admin: "Super Admin", admin: "Admin" };
+  const roleColors: Record<string, string> = { cliente_admin: "bg-primary/10 text-primary border-primary/20", cliente_user: "bg-muted text-muted-foreground border-muted" };
+
+  const getUserTeams = (userId: string) => {
+    if (!memberships || !teams) return [];
+    const teamIds = memberships.filter(m => m.user_id === userId).map(m => m.team_id);
+    return teams.filter(t => teamIds.includes(t.id));
+  };
+
+  const admins = members?.filter(m => m.role === "cliente_admin" || m.role === "admin" || m.role === "super_admin") ?? [];
+  const users = members?.filter(m => m.role === "cliente_user") ?? [];
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
 
   return (
-    <>
+    <div className="space-y-6">
+      {/* Hierarchy View */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Usuários</CardTitle>
-              <CardDescription>{currentCount}/{maxUsers} usuários · {maxUsers - currentCount > 0 ? `${maxUsers - currentCount} disponíveis` : "Limite atingido"}</CardDescription>
+              <CardTitle className="text-sm font-semibold">Hierarquia da Organização</CardTitle>
+              <CardDescription>{currentCount}/{maxUsers} usuários</CardDescription>
             </div>
             <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)} disabled={currentCount >= maxUsers}>
               <UserPlus className="w-4 h-4" /> Convidar
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {members?.map((m) => (
-              <div key={m.user_id} className="flex items-center justify-between p-3 rounded-lg border">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
-                      {(m.full_name || "U").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{m.full_name || "Sem nome"}</p>
-                    <p className="text-xs text-muted-foreground">{m.job_title || "—"}</p>
+        <CardContent className="space-y-4">
+          {/* Admins section */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Crown className="w-4 h-4 text-primary" />
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Administradores ({admins.length})</span>
+            </div>
+            <div className="space-y-2 ml-6">
+              {admins.map(m => (
+                <div key={m.user_id} className="flex items-center justify-between p-3 rounded-lg border border-primary/10 bg-primary/5">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                        {(m.full_name || "U").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{m.full_name || "Sem nome"}</p>
+                      <p className="text-[10px] text-muted-foreground">{m.job_title || "Administrador"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getUserTeams(m.user_id).map(t => (
+                      <Badge key={t.id} variant="secondary" className="text-[9px]">{t.name}</Badge>
+                    ))}
+                    <Badge variant="outline" className="gap-1 bg-primary/10 text-primary border-primary/20">
+                      <Shield className="w-3 h-3" />{roleLabels[m.role] || m.role}
+                    </Badge>
                   </div>
                 </div>
-                <Badge variant="outline" className="gap-1"><Shield className="w-3 h-3" />{roleLabels[m.role] || m.role}</Badge>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-          {currentCount >= maxUsers && (
-            <p className="text-xs text-muted-foreground mt-4 text-center">Limite de usuários do plano atingido. Faça upgrade ou compre usuários adicionais (R$ 29/mês cada).</p>
-          )}
+
+          {/* Users section */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Usuários ({users.length})</span>
+            </div>
+            <div className="space-y-2 ml-6">
+              {users.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">Nenhum usuário convidado</p>
+              ) : users.map(m => (
+                <div key={m.user_id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-muted text-muted-foreground text-xs font-bold">
+                        {(m.full_name || "U").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{m.full_name || "Sem nome"}</p>
+                      <p className="text-[10px] text-muted-foreground">{m.job_title || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getUserTeams(m.user_id).map(t => (
+                      <Badge key={t.id} variant="secondary" className="text-[9px]">{t.name}</Badge>
+                    ))}
+                    <Badge variant="outline" className="gap-1"><Shield className="w-3 h-3" />Usuário</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Permissions summary */}
+          <Card className="bg-muted/30 border-dashed">
+            <CardContent className="py-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Permissões por Papel</p>
+              <div className="grid grid-cols-2 gap-3 text-[11px]">
+                <div>
+                  <p className="font-semibold text-primary flex items-center gap-1"><Crown className="w-3 h-3" /> Admin</p>
+                  <p className="text-muted-foreground">Acesso total: financeiro, integrações, disparos, configurações, usuários</p>
+                </div>
+                <div>
+                  <p className="font-semibold flex items-center gap-1"><User className="w-3 h-3" /> Usuário</p>
+                  <p className="text-muted-foreground">Operacional: CRM, chat, conteúdos, scripts, tarefas pessoais</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </CardContent>
       </Card>
+
+      {/* Teams */}
+      {teams && teams.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold">Times</CardTitle>
+            <CardDescription>Organize membros por equipe</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {teams.map(t => {
+                const teamMembers = memberships?.filter(m => m.team_id === t.id) ?? [];
+                return (
+                  <div key={t.id} className="p-3 rounded-xl border bg-muted/10 text-center">
+                    <p className="text-sm font-semibold">{t.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{teamMembers.length} membro{teamMembers.length !== 1 ? "s" : ""}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {currentCount >= maxUsers && (
+        <p className="text-xs text-muted-foreground text-center">Limite de usuários atingido. Faça upgrade para adicionar mais.</p>
+      )}
 
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Convidar Usuário</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2"><Label>E-mail</Label><Input value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="usuario@empresa.com" /></div>
-            <div className="space-y-2"><Label>Nome</Label><Input value={inviteForm.full_name} onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })} placeholder="Nome completo" /></div>
+            <div className="space-y-2"><Label>E-mail</Label><Input value={inviteForm.email} onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="usuario@empresa.com" /></div>
+            <div className="space-y-2"><Label>Nome</Label><Input value={inviteForm.full_name} onChange={e => setInviteForm({ ...inviteForm, full_name: e.target.value })} placeholder="Nome completo" /></div>
             <div className="space-y-2">
               <Label>Permissão</Label>
-              <Select value={inviteForm.role} onValueChange={(v) => setInviteForm({ ...inviteForm, role: v })}>
+              <Select value={inviteForm.role} onValueChange={v => setInviteForm({ ...inviteForm, role: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cliente_admin">Admin</SelectItem>
@@ -285,24 +314,20 @@ function UsersTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
 
 function NotificationsTab() {
   const { user } = useAuth();
   const { data: profile, isLoading } = useUserProfile();
-  const [notifications, setNotifications] = useState({
-    novosLeads: true, creditosBaixos: true, renovacao: true, whatsapp: false, relatorios: true,
-  });
+  const [notifications, setNotifications] = useState({ novosLeads: true, creditosBaixos: true, renovacao: true, whatsapp: false, relatorios: true });
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (profile && !loaded) {
       const prefs = (profile as any).notification_preferences;
-      if (prefs && typeof prefs === "object") {
-        setNotifications((prev) => ({ ...prev, ...prefs }));
-      }
+      if (prefs && typeof prefs === "object") setNotifications(prev => ({ ...prev, ...prefs }));
       setLoaded(true);
     }
   }, [profile, loaded]);
@@ -311,42 +336,28 @@ function NotificationsTab() {
     const updated = { ...notifications, [key]: value };
     setNotifications(updated);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ notification_preferences: updated } as any)
-        .eq("id", user!.id);
+      const { error } = await supabase.from("profiles").update({ notification_preferences: updated } as any).eq("id", user!.id);
       if (error) throw error;
       toast.success(`${value ? "Ativado" : "Desativado"}`);
-    } catch {
-      toast.error("Erro ao salvar preferência");
-    }
+    } catch { toast.error("Erro ao salvar preferência"); }
   };
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Notificações</CardTitle>
-        <CardDescription>Escolha quais alertas deseja receber</CardDescription>
-      </CardHeader>
+      <CardHeader><CardTitle>Notificações</CardTitle><CardDescription>Escolha quais alertas deseja receber</CardDescription></CardHeader>
       <CardContent className="space-y-5">
         {[
-          { key: "novosLeads", label: "Novos leads", desc: "Receber alerta quando um novo lead for captado" },
-          { key: "creditosBaixos", label: "Créditos baixos", desc: "Avisar quando créditos estiverem abaixo de 20%" },
-          { key: "renovacao", label: "Renovação de plano", desc: "Lembrete antes da renovação automática" },
-          { key: "whatsapp", label: "Mensagens WhatsApp", desc: "Notificar novas mensagens no WhatsApp" },
-          { key: "relatorios", label: "Relatórios semanais", desc: "Receber relatório semanal por e-mail" },
-        ].map((item) => (
+          { key: "novosLeads", label: "Novos leads", desc: "Alerta quando um novo lead for captado" },
+          { key: "creditosBaixos", label: "Créditos baixos", desc: "Aviso quando créditos estiverem abaixo de 20%" },
+          { key: "renovacao", label: "Renovação de plano", desc: "Lembrete antes da renovação" },
+          { key: "whatsapp", label: "Mensagens WhatsApp", desc: "Notificar novas mensagens" },
+          { key: "relatorios", label: "Relatórios semanais", desc: "Relatório semanal por e-mail" },
+        ].map(item => (
           <div key={item.key} className="flex items-center justify-between py-2">
-            <div>
-              <p className="text-sm font-medium text-foreground">{item.label}</p>
-              <p className="text-xs text-muted-foreground">{item.desc}</p>
-            </div>
-            <Switch
-              checked={notifications[item.key as keyof typeof notifications]}
-              onCheckedChange={(v) => savePreference(item.key, v)}
-            />
+            <div><p className="text-sm font-medium text-foreground">{item.label}</p><p className="text-xs text-muted-foreground">{item.desc}</p></div>
+            <Switch checked={notifications[item.key as keyof typeof notifications]} onCheckedChange={v => savePreference(item.key, v)} />
           </div>
         ))}
       </CardContent>
@@ -364,12 +375,12 @@ export default function ClienteConfiguracoes() {
         <TabsList className={`grid w-full ${isAdmin ? "grid-cols-4" : "grid-cols-1"}`}>
           <TabsTrigger value="perfil" className="gap-1.5 text-xs sm:text-sm"><User className="w-4 h-4" /> Perfil</TabsTrigger>
           {isAdmin && <TabsTrigger value="organizacao" className="gap-1.5 text-xs sm:text-sm"><Building2 className="w-4 h-4" /> Organização</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="usuarios" className="gap-1.5 text-xs sm:text-sm"><Users className="w-4 h-4" /> Usuários</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="usuarios" className="gap-1.5 text-xs sm:text-sm"><Users className="w-4 h-4" /> Usuários & Times</TabsTrigger>}
           {isAdmin && <TabsTrigger value="notificacoes" className="gap-1.5 text-xs sm:text-sm"><Bell className="w-4 h-4" /> Alertas</TabsTrigger>}
         </TabsList>
         <TabsContent value="perfil"><ProfileTab /></TabsContent>
         {isAdmin && <TabsContent value="organizacao"><OrgTab /></TabsContent>}
-        {isAdmin && <TabsContent value="usuarios"><UsersTab /></TabsContent>}
+        {isAdmin && <TabsContent value="usuarios"><UsersAndTeamsTab /></TabsContent>}
         {isAdmin && <TabsContent value="notificacoes"><NotificationsTab /></TabsContent>}
       </Tabs>
     </div>
