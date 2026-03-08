@@ -39,7 +39,10 @@ export function useSupportTicketMutations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["support-tickets"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["support-tickets"] });
+      qc.invalidateQueries({ queryKey: ["support-tickets-network"] });
+    },
   });
 
   const updateTicket = useMutation({
@@ -48,7 +51,10 @@ export function useSupportTicketMutations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["support-tickets"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["support-tickets"] });
+      qc.invalidateQueries({ queryKey: ["support-tickets-network"] });
+    },
   });
 
   const sendMessage = useMutation({
@@ -57,7 +63,10 @@ export function useSupportTicketMutations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["support-messages"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["support-messages"] });
+      qc.invalidateQueries({ queryKey: ["support-tickets-network"] });
+    },
   });
 
   return { createTicket, updateTicket, sendMessage };
