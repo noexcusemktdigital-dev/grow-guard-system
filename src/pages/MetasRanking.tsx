@@ -216,8 +216,8 @@ export default function MetasRanking() {
                     </div>
                     <div className="flex items-start gap-2">
                       <div className="text-right">
-                        <p className="text-lg font-bold">{formatBRL(g.target_value)}</p>
-                        {gp && <p className={`text-xs font-medium ${statusColor}`}>Atual: {formatBRL(currentValue)}</p>}
+                        <p className="text-lg font-bold">{formatMetricValue(g.target_value, g.type || g.metric || "")}</p>
+                        {gp && <p className={`text-xs font-medium ${statusColor}`}>Atual: {formatMetricValue(currentValue, g.type || g.metric || "")}</p>}
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
