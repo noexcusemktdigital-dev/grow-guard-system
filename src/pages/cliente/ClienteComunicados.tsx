@@ -194,7 +194,7 @@ function AnnouncementCard({ item, viewedIds, confirmedIds, onClick }: { item: an
               <Badge variant={PRIORITY_VARIANTS[item.priority] || "secondary"} className="text-[10px]">
                 {PRIORITY_LABELS[item.priority] || item.priority}
               </Badge>
-              {item.priority === "Crítica" && !isConfirmed && (
+              {((item as any).require_confirmation || item.priority === "Crítica") && !isConfirmed && (
                 <Badge variant="destructive" className="text-[10px] animate-pulse">
                   <AlertTriangle className="w-3 h-3 mr-1" /> Requer confirmação
                 </Badge>
