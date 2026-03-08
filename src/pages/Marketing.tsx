@@ -2,8 +2,9 @@ import { useState, useMemo, useRef } from "react";
 import {
   Inbox, Upload, Search, FolderOpen, ChevronRight, Image, Video, FileText, FileSpreadsheet, Presentation, File,
   Eye, Calendar, Tag, Filter, ArrowLeft, Palette, CalendarDays, Settings2, Share2, Megaphone, MonitorPlay,
-  Download, Plus, Trash2, FolderPlus,
+  Download, Plus, Trash2, FolderPlus, Pencil,
 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +57,7 @@ type DbAsset = NonNullable<ReturnType<typeof useMarketingAssets>["data"]>[number
 export default function Marketing() {
   const { data: folders, isLoading: foldersLoading } = useMarketingFolders();
   const { data: assets, isLoading: assetsLoading } = useMarketingAssets();
-  const { createFolder, deleteFolder, deleteAsset, uploadAsset } = useMarketingMutations();
+  const { createFolder, deleteFolder, deleteAsset, uploadAsset, updateFolder, updateAsset } = useMarketingMutations();
 
   const [activeCategory, setActiveCategory] = useState<MarketingCategory | null>(null);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -70,6 +71,13 @@ export default function Marketing() {
   const [newFolderName, setNewFolderName] = useState("");
   const [showUpload, setShowUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Rename dialogs
+  const [renameFolder, setRenameFolder] = useState<{ id: string; name: string } | null>(null);
+  const [renameAssetTarget, setRenameAssetTarget] = useState<{ id: string; name: string } | null>(null);
+
+  // Delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: "folder" | "assets"; id?: string; ids?: Set<string>; label: string } | null>(null);
 
   const isLoading = foldersLoading || assetsLoading;
 
@@ -168,10 +176,39 @@ export default function Marketing() {
   };
 
   const handleDeleteSelected = () => {
-    selectedIds.forEach((id) => {
-      deleteAsset.mutate(id, { onSuccess: () => setSelectedIds((p) => { const n = new Set(p); n.delete(id); return n; }) });
+    setDeleteConfirm({ type: "assets", ids: new Set(selectedIds), label: `${selectedIds.size} arquivo(s)` });
+  };
+
+  const confirmDeleteAssets = () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === "folder" && deleteConfirm.id) {
+      deleteFolder.mutate(deleteConfirm.id, {
+        onSuccess: () => { toast.success("Pasta excluída"); setDeleteConfirm(null); },
+        onError: () => toast.error("Erro ao excluir pasta"),
+      });
+    } else if (deleteConfirm.ids) {
+      deleteConfirm.ids.forEach((id) => {
+        deleteAsset.mutate(id, { onSuccess: () => setSelectedIds((p) => { const n = new Set(p); n.delete(id); return n; }) });
+      });
+      toast.success("Arquivos excluídos");
+      setDeleteConfirm(null);
+    }
+  };
+
+  const handleRenameFolder = () => {
+    if (!renameFolder || !renameFolder.name.trim()) return;
+    updateFolder.mutate({ id: renameFolder.id, name: renameFolder.name.trim() }, {
+      onSuccess: () => { toast.success("Pasta renomeada"); setRenameFolder(null); },
+      onError: () => toast.error("Erro ao renomear"),
     });
-    toast.success("Arquivos excluídos");
+  };
+
+  const handleRenameAsset = () => {
+    if (!renameAssetTarget || !renameAssetTarget.name.trim()) return;
+    updateAsset.mutate({ id: renameAssetTarget.id, name: renameAssetTarget.name.trim() }, {
+      onSuccess: () => { toast.success("Arquivo renomeado"); setRenameAssetTarget(null); },
+      onError: () => toast.error("Erro ao renomear"),
+    });
   };
 
   if (isLoading) {
@@ -305,13 +342,21 @@ export default function Marketing() {
       {childFolders.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           {childFolders.map((folder) => (
-            <Card key={folder.id} className="hover:shadow-md cursor-pointer group transition-all" onClick={() => handleNavigateFolder(folder.id)}>
-              <CardContent className="p-4 flex items-center gap-3">
+            <Card key={folder.id} className="hover:shadow-md cursor-pointer group transition-all relative">
+              <CardContent className="p-4 flex items-center gap-3" onClick={() => handleNavigateFolder(folder.id)}>
                 <FolderOpen className="w-8 h-8 text-primary/70 group-hover:text-primary transition-colors flex-shrink-0" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold truncate">{folder.name}</p>
                 </div>
               </CardContent>
+              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setRenameFolder({ id: folder.id, name: folder.name }); }}>
+                  <Pencil className="w-3 h-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ type: "folder", id: folder.id, label: folder.name }); }}>
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
             </Card>
           ))}
         </div>
@@ -360,6 +405,9 @@ export default function Marketing() {
                     </Button>
                     <Button variant="outline" size="sm" className="text-xs flex-1" onClick={() => asset.url && window.open(asset.url, "_blank")}>
                       <Download className="w-3.5 h-3.5 mr-1" /> Baixar
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => setRenameAssetTarget({ id: asset.id, name: asset.name })}>
+                      <Pencil className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </CardContent>
@@ -425,6 +473,62 @@ export default function Marketing() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Rename Folder dialog */}
+      <Dialog open={!!renameFolder} onOpenChange={(open) => !open && setRenameFolder(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Renomear Pasta</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Novo nome</Label>
+              <Input value={renameFolder?.name ?? ""} onChange={(e) => setRenameFolder((p) => p ? { ...p, name: e.target.value } : null)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameFolder(null)}>Cancelar</Button>
+            <Button onClick={handleRenameFolder} disabled={updateFolder.isPending}>
+              {updateFolder.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Asset dialog */}
+      <Dialog open={!!renameAssetTarget} onOpenChange={(open) => !open && setRenameAssetTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Renomear Arquivo</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Novo nome</Label>
+              <Input value={renameAssetTarget?.name ?? ""} onChange={(e) => setRenameAssetTarget((p) => p ? { ...p, name: e.target.value } : null)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameAssetTarget(null)}>Cancelar</Button>
+            <Button onClick={handleRenameAsset} disabled={updateAsset.isPending}>
+              {updateAsset.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>"{deleteConfirm?.label}"</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteAssets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

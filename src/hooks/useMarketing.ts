@@ -112,5 +112,23 @@ export function useMarketingMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing-assets"] }),
   });
 
-  return { createFolder, deleteFolder, createAsset, deleteAsset, uploadAsset };
+  const updateFolder = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { data, error } = await supabase.from("marketing_folders").update({ name }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing-folders"] }),
+  });
+
+  const updateAsset = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { data, error } = await supabase.from("marketing_assets").update({ name }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing-assets"] }),
+  });
+
+  return { createFolder, deleteFolder, createAsset, deleteAsset, uploadAsset, updateFolder, updateAsset };
 }
