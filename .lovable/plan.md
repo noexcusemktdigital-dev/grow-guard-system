@@ -1,23 +1,31 @@
 
 
-## Plano: Lista de Conversas Unificada (Estilo WhatsApp)
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Problema
-A lista de contatos separa "Atendimento Humano" e "Agente IA" em seções distintas com headers coloridos. O usuário quer uma lista única, cronológica, idêntica ao WhatsApp real.
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-### Mudança em `ChatContactList.tsx`
+### Ações
 
-**Remover**: A lógica de separação `humanContacts` / `aiContacts` e os dois blocos de seção com headers ("Atendimento Humano" e "Agente IA").
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-**Substituir por**: Uma única lista flat ordenada por `last_message_at` (mais recente primeiro). O indicador de modo (IA/Humano) já existe no `ChatContactItem` como badge no avatar — continua visível sem precisar de seções separadas.
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-**Manter**: Os filtros por pill (Todos, IA, Humano, Espera) no header para quem quiser filtrar. Busca por nome/telefone. Filtro por agente. Stats de "hoje" e unread count.
+3. **Executar o teste** e analisar o resultado definitivo
 
-### Resumo técnico
-- Substituir o `useMemo` que separa em `humanContacts`/`aiContacts` por um único array `sortedContacts`
-- Remover os dois blocos `<div>` com headers de seção
-- Renderizar um único `.map(contact => <ChatContactItem>)` direto no `ScrollArea`
-- Remover variável `humanUnread` (não mais usada)
+### Detalhe técnico
 
-Apenas 1 arquivo alterado: `src/components/cliente/ChatContactList.tsx`
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+```
+
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 

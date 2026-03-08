@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, User, Bot, Clock, MessageCircle, Wifi, RefreshCw } from "lucide-react";
+import { Search, RefreshCw, Clock, MessageCircle, Wifi, Bot, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,21 +40,12 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
     return matchSearch && matchMode && matchAgent;
   });
 
-  // Separate into human and AI sections
-  const { humanContacts, aiContacts } = useMemo(() => {
-    const human: WhatsAppContact[] = [];
-    const ai: WhatsAppContact[] = [];
-    const sorted = [...filtered].sort((a, b) => {
+  const sortedContacts = useMemo(() => {
+    return [...filtered].sort((a, b) => {
       const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
       const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
       return db - da;
     });
-    sorted.forEach((c) => {
-      const mode = (c as any).attending_mode || "ai";
-      if (mode === "human") human.push(c);
-      else ai.push(c);
-    });
-    return { humanContacts: human, aiContacts: ai };
   }, [filtered]);
 
   const modeButtons: { key: ModeFilter; label: string; icon?: React.ReactNode }[] = [
@@ -65,7 +56,6 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
   ];
 
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
-  const humanUnread = humanContacts.reduce((s, c) => s + c.unread_count, 0);
 
   // Stats: messages today and active contacts (last 24h)
   const now = useMemo(() => new Date(), []);
@@ -169,56 +159,23 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
       </div>
 
       <ScrollArea className="flex-1">
-        {humanContacts.length === 0 && aiContacts.length === 0 ? (
+        {sortedContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4">
             <MessageCircle className="w-8 h-8 text-muted-foreground/20 mb-2" />
             <p className="text-xs text-muted-foreground">Nenhum contato encontrado</p>
           </div>
         ) : (
-          <>
-            {/* Human section */}
-            {humanContacts.length > 0 && (
-              <div>
-                <div className="px-4 py-2 flex items-center gap-2 bg-orange-500/5 border-b border-orange-500/10">
-                  <User className="w-3.5 h-3.5 text-orange-500" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400">Atendimento Humano</span>
-                  <Badge className="h-4 min-w-4 px-1 text-[9px] bg-orange-500 text-white rounded-full">{humanContacts.length}</Badge>
-                  {humanUnread > 0 && (
-                    <Badge className="h-4 min-w-4 px-1 text-[9px] bg-destructive text-destructive-foreground rounded-full ml-auto">{humanUnread} nova{humanUnread > 1 ? "s" : ""}</Badge>
-                  )}
-                </div>
-                {humanContacts.map((contact) => (
-                  <ChatContactItem
-                    key={contact.id}
-                    contact={contact}
-                    isSelected={selectedId === contact.id}
-                    onSelect={onSelect}
-                    preview={lastMessages?.get(contact.id)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* AI section */}
-            {aiContacts.length > 0 && (
-              <div>
-                <div className="px-4 py-2 flex items-center gap-2 bg-primary/[0.04] border-b border-primary/10">
-                  <Bot className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Agente IA</span>
-                  <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[9px] rounded-full">{aiContacts.length}</Badge>
-                </div>
-                {aiContacts.map((contact) => (
-                  <ChatContactItem
-                    key={contact.id}
-                    contact={contact}
-                    isSelected={selectedId === contact.id}
-                    onSelect={onSelect}
-                    preview={lastMessages?.get(contact.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </>
+          <div>
+            {sortedContacts.map((contact) => (
+              <ChatContactItem
+                key={contact.id}
+                contact={contact}
+                isSelected={selectedId === contact.id}
+                onSelect={onSelect}
+                preview={lastMessages?.get(contact.id)}
+              />
+            ))}
+          </div>
         )}
       </ScrollArea>
     </div>
