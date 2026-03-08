@@ -503,38 +503,40 @@ export default function ClienteInicio() {
         <div className="lg:col-span-3 space-y-5">
           {/* Revenue Chart — Admin only */}
           {isAdmin && (
-            <CardHeader className="pb-2 px-5 pt-5">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold">Receita Semanal</CardTitle>
-                <Badge variant="secondary" className="text-[10px] rounded-full">{format(now, "MMM/yyyy", { locale: ptBR })}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="px-5 pb-5">
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={revenueData}>
-                    <defs>
-                      <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                    <Tooltip
-                      formatter={(v: number) => [formatCurrency(v), "Receita"]}
-                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
-                    />
-                    <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="url(#revenueGrad)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--card))" }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-2 px-5 pt-5">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold">Receita Semanal</CardTitle>
+                  <Badge variant="secondary" className="text-[10px] rounded-full">{format(now, "MMM/yyyy", { locale: ptBR })}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="px-5 pb-5">
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={revenueData}>
+                      <defs>
+                        <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                      <Tooltip
+                        formatter={(v: number) => [formatCurrency(v), "Receita"]}
+                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                      />
+                      <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="url(#revenueGrad)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--card))" }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Next Steps */}
-          {nextSteps.length > 0 && (
+          {/* Next Steps — Admin only */}
+          {isAdmin && nextSteps.length > 0 && (
             <Card>
               <CardHeader className="pb-3 px-5 pt-5">
                 <div className="flex items-center gap-2">
@@ -570,7 +572,6 @@ export default function ClienteInicio() {
               </CardContent>
             </Card>
           )}
-        </div>
 
         {/* Right column */}
         <div className="lg:col-span-2 space-y-5">
