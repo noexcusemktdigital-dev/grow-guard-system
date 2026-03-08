@@ -135,6 +135,23 @@ export const ServiceCard = ({
           {service.quantityType === 'youtube_time' && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                <label className="text-xs md:text-sm text-muted-foreground">Quantidade:</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={selection?.quantity || 1}
+                  onChange={(e) => {
+                    let value = parseInt(e.target.value) || 1;
+                    if (value < 1) value = 1;
+                    if (value > 20) value = 20;
+                    onUpdateQuantity(value);
+                  }}
+                  className="w-20 md:w-24 h-10 text-base"
+                />
+                <span className="text-xs md:text-sm text-muted-foreground">vídeo(s)</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 md:gap-3">
                 <label className="text-xs md:text-sm text-muted-foreground">Duração do vídeo:</label>
                 <Select
                   value={String(selection?.youtubeMinutes || 2)}
@@ -153,7 +170,7 @@ export const ServiceCard = ({
                 </Select>
               </div>
               <div className="rounded-lg bg-muted p-2 md:p-3">
-                <p className="text-[10px] md:text-xs text-muted-foreground mb-2">Tabela de preços:</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground mb-2">Tabela de preços (por vídeo):</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 md:gap-2 text-[10px] md:text-xs">
                   {[2, 4, 6, 8, 10, 12].map((min) => (
                     <span key={min} className="text-muted-foreground">

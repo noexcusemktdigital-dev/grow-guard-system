@@ -132,7 +132,7 @@ export const useCalculator = () => {
     if (!service) return 0;
 
     if (service.quantityType === 'youtube_time' && selection.youtubeMinutes) {
-      return getYoutubePrice(selection.youtubeMinutes);
+      return getYoutubePrice(selection.youtubeMinutes) * (selection.quantity || 1);
     }
     if (service.quantityType === 'package' && selection.packageSize) {
       return service.price * selection.packageSize;
