@@ -146,7 +146,7 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
 
 export function FranqueadoSidebarContent({ collapsed, setCollapsed, onNavigate }: { collapsed: boolean; setCollapsed: (v: boolean) => void; onNavigate?: () => void }) {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
 
   const userName = profile?.full_name || "Usuário";
   const userInitials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
