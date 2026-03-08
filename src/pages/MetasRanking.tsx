@@ -245,7 +245,7 @@ export default function MetasRanking() {
                   </div>
                   {gp && gp.daysLeft > 0 && (
                     <p className="text-[10px] text-muted-foreground">
-                      Faltam {gp.daysLeft} dias • Ritmo necessário: {formatBRL(gp.requiredPacePerDay)}/dia
+                      Faltam {gp.daysLeft} dias • Ritmo necessário: {formatMetricValue(gp.requiredPacePerDay, g.type || g.metric || "")}/dia
                     </p>
                   )}
                   {g.period_start && (
