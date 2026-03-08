@@ -284,7 +284,7 @@ export default function MetasRanking() {
                       <p className="text-xs text-muted-foreground">{unit?.city || ""}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold">{r.score ?? 0}</p>
+                      <p className="text-lg font-bold">{(r.score ?? 0).toLocaleString("pt-BR")}</p>
                       <p className="text-[10px] text-muted-foreground">pontos</p>
                     </div>
                   </CardContent>
