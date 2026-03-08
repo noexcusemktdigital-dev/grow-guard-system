@@ -56,7 +56,7 @@ type DbAsset = NonNullable<ReturnType<typeof useMarketingAssets>["data"]>[number
 export default function Marketing() {
   const { data: folders, isLoading: foldersLoading } = useMarketingFolders();
   const { data: assets, isLoading: assetsLoading } = useMarketingAssets();
-  const { createFolder, deleteFolder, deleteAsset, uploadAsset } = useMarketingMutations();
+  const { createFolder, deleteFolder, deleteAsset, uploadAsset, updateFolder, updateAsset } = useMarketingMutations();
 
   const [activeCategory, setActiveCategory] = useState<MarketingCategory | null>(null);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);

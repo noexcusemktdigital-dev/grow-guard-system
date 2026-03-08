@@ -5,18 +5,18 @@ import { Progress } from "@/components/ui/progress";
 import { KpiCard } from "@/components/KpiCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, PlayCircle, BookOpen, Award, Inbox, ChevronRight, Clock, Trophy } from "lucide-react";
+import { GraduationCap, PlayCircle, BookOpen, Award, Inbox, ChevronRight, Clock, Trophy, FileQuestion, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
   useAcademyModules, useAcademyLessons, useAcademyProgress, useAcademyCertificates,
   useAcademyQuizzes, useAcademyQuizAttempts,
   computeModuleProgress, computeTotalProgress,
-  type DbModule, type DbLesson, type DbProgress,
 } from "@/hooks/useAcademy";
 import { AcademyModulePlayer } from "@/components/academy/AcademyModulePlayer";
 import { AcademyEvolution } from "@/components/academy/AcademyEvolution";
 import { AcademyRanking } from "@/components/academy/AcademyRanking";
+import { AcademyQuiz } from "@/components/academy/AcademyQuiz";
 import { format } from "date-fns";
 
 export default function FranqueadoAcademy() {
@@ -24,8 +24,10 @@ export default function FranqueadoAcademy() {
   const { data: lessons } = useAcademyLessons();
   const { data: progress } = useAcademyProgress();
   const { data: certificates } = useAcademyCertificates();
+  const { data: quizzes } = useAcademyQuizzes();
   const { data: quizAttempts } = useAcademyQuizAttempts();
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
+  const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -42,12 +44,22 @@ export default function FranqueadoAcademy() {
   const allLessons = lessons ?? [];
   const allProgress = progress ?? [];
   const allCerts = certificates ?? [];
+  const allQuizzes = quizzes ?? [];
+  const allAttempts = quizAttempts ?? [];
   const totalProgress = computeTotalProgress(allLessons, allProgress);
   const completedLessons = allLessons.filter((l) => allProgress.some((p) => p.lesson_id === l.id && p.completed_at)).length;
-  const totalHours = Math.round(allLessons.reduce((s, l) => s + (l.duration_minutes || 0), 0) / 60);
   const completedModules = published.filter((m) => computeModuleProgress(m.id, allLessons, allProgress) === 100).length;
 
-  // If a module is selected, show the player
+  // Quiz view
+  if (activeQuizId) {
+    return (
+      <div className="w-full">
+        <AcademyQuiz quizId={activeQuizId} onBack={() => setActiveQuizId(null)} />
+      </div>
+    );
+  }
+
+  // Module player
   if (selectedModuleId) {
     return (
       <div className="w-full">
@@ -71,8 +83,9 @@ export default function FranqueadoAcademy() {
       </div>
 
       <Tabs defaultValue="trilhas" className="w-full">
-        <TabsList className="grid grid-cols-4 w-full max-w-lg">
+        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
           <TabsTrigger value="trilhas">Trilhas</TabsTrigger>
+          <TabsTrigger value="provas">Provas</TabsTrigger>
           <TabsTrigger value="evolucao">Minha Evolução</TabsTrigger>
           <TabsTrigger value="certificados">Certificados</TabsTrigger>
           <TabsTrigger value="ranking">Ranking</TabsTrigger>
@@ -132,6 +145,76 @@ export default function FranqueadoAcademy() {
           )}
         </TabsContent>
 
+        {/* ===== PROVAS ===== */}
+        <TabsContent value="provas" className="mt-6">
+          {(() => {
+            const modulesWithQuiz = published.filter((m) => allQuizzes.some((q) => q.module_id === m.id));
+            if (modulesWithQuiz.length === 0) {
+              return (
+                <div className="text-center py-16">
+                  <FileQuestion className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground font-medium">Nenhuma prova disponível</p>
+                  <p className="text-xs text-muted-foreground mt-1">As provas serão liberadas conforme seus módulos avançarem.</p>
+                </div>
+              );
+            }
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {modulesWithQuiz.map((mod) => {
+                  const quiz = allQuizzes.find((q) => q.module_id === mod.id)!;
+                  const modProgress = computeModuleProgress(mod.id, allLessons, allProgress);
+                  const attempts = allAttempts.filter((a) => a.quiz_id === quiz.id);
+                  const passed = attempts.some((a) => a.passed);
+                  const bestScore = attempts.length > 0 ? Math.max(...attempts.map((a) => a.score)) : null;
+
+                  return (
+                    <Card key={mod.id} className={`hover-lift cursor-pointer group overflow-hidden border-2 ${passed ? "border-emerald-500/30 bg-emerald-500/5" : "border-border"}`} onClick={() => setActiveQuizId(quiz.id)}>
+                      <CardContent className="p-5 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${passed ? "bg-emerald-500/20" : "bg-orange-500/20"}`}>
+                            {passed ? <CheckCircle2 className="w-6 h-6 text-emerald-600" /> : <FileQuestion className="w-6 h-6 text-orange-600" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-bold truncate">{mod.title}</h3>
+                            <p className="text-[10px] text-muted-foreground">Nota mínima: {quiz.passing_score ?? 70}%</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-xs">
+                          <Badge variant={modProgress === 100 ? "default" : "secondary"} className="text-[10px]">
+                            {modProgress === 100 ? "Aulas concluídas" : `${modProgress}% das aulas`}
+                          </Badge>
+                          {passed && <Badge className="text-[10px] bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500/30">Aprovado</Badge>}
+                        </div>
+
+                        {attempts.length > 0 && (
+                          <div className="flex gap-1.5 flex-wrap">
+                            {attempts.map((a, i) => (
+                              <div key={a.id} className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${a.passed ? "bg-emerald-500/10 text-emerald-600" : "bg-destructive/10 text-destructive"}`}>
+                                #{i + 1}: {a.score}%
+                                {a.passed ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {bestScore !== null && (
+                          <div className="text-xs text-muted-foreground">Melhor nota: <strong>{bestScore}%</strong></div>
+                        )}
+
+                        <Button variant="ghost" size="sm" className="w-full text-xs group-hover:text-primary">
+                          {passed ? "Refazer Prova" : modProgress === 100 ? "Fazer Prova" : "Ver Detalhes"}
+                          <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </TabsContent>
+
         {/* ===== EVOLUÇÃO ===== */}
         <TabsContent value="evolucao" className="mt-6">
           <AcademyEvolution
@@ -139,7 +222,7 @@ export default function FranqueadoAcademy() {
             lessons={allLessons}
             progress={allProgress}
             certificates={allCerts}
-            quizAttempts={quizAttempts ?? []}
+            quizAttempts={allAttempts}
           />
         </TabsContent>
 
