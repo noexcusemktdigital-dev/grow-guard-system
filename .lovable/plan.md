@@ -1,31 +1,54 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Finalizar Marketing Drive + NOE Academy
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### Estado Atual
 
-### Ações
+**Marketing** -- Ambas as páginas existem e funcionam:
+- Franqueadora (`Marketing.tsx`): CRUD de pastas e upload de arquivos OK. Falta: editar/renomear pasta, editar asset, confirmação de exclusão.
+- Franqueado (`FranqueadoMateriais.tsx`): Read-only OK. Falta: nada estrutural, apenas pequenos ajustes de UX.
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+**Academy** -- Ambas as páginas existem:
+- Franqueadora (`Academy.tsx` + `AcademyAdmin.tsx`): Criar módulos/aulas/questões OK. Falta: **editar e excluir** módulos, aulas e questões (botões existem mas são placeholder toast). Falta: editar prova config. Falta `deleteModule`, `deleteLesson`, `deleteQuizQuestion`, `updateLesson`, `updateQuizQuestion` no hook.
+- Franqueado (`FranqueadoAcademy.tsx`): Trilhas, Evolução, Certificados, Ranking OK. Falta: **aba Provas** (fazer quiz) -- o componente `AcademyQuiz` existe mas não é usado nesta página.
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+### Mudanças
 
-3. **Executar o teste** e analisar o resultado definitivo
+#### 1. Hook `useAcademy.ts` -- Adicionar mutações faltantes
+- `deleteModule` (delete from academy_modules)
+- `updateLesson` (update academy_lessons)
+- `deleteLesson` (delete from academy_lessons)
+- `updateQuizQuestion` (update academy_quiz_questions)
+- `deleteQuizQuestion` (delete from academy_quiz_questions)
+- `createQuiz` (insert into academy_quizzes para módulos sem prova)
+- `updateQuiz` (update passing_score, etc.)
 
-### Detalhe técnico
+#### 2. `AcademyAdmin.tsx` -- Tornar edição/exclusão real
+- Módulos: botão Editar abre dialog preenchido → chama `updateModule`; adicionar botão Excluir → chama `deleteModule` com confirmação
+- Aulas: botão Editar abre dialog preenchido → chama `updateLesson`; botão Excluir → chama `deleteLesson` com confirmação
+- Provas: editar config (passing_score) → chama `updateQuiz`; botão Criar Prova para módulos sem prova; botão Excluir questão → `deleteQuizQuestion`; botão Editar questão → dialog preenchido → `updateQuizQuestion`
 
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
-```
+#### 3. `FranqueadoAcademy.tsx` -- Adicionar aba Provas
+- Adicionar tab "Provas" que lista módulos com provas disponíveis
+- Ao clicar, abre o componente `AcademyQuiz` já existente para fazer a prova
+- Mostrar tentativas anteriores e status (aprovado/reprovado)
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+#### 4. `Marketing.tsx` (Franqueadora) -- Polimentos
+- Adicionar dialog de confirmação antes de excluir arquivos/pastas
+- Adicionar opção de renomear pasta (já existe `createFolder`, falta update)
+- Adicionar rename para assets
+
+#### 5. Hook `useMarketing.ts` -- Adicionar mutações faltantes
+- `updateFolder` (rename)
+- `updateAsset` (rename)
+
+### Arquivos afetados
+
+| Arquivo | Ação |
+|---------|------|
+| `src/hooks/useAcademy.ts` | Adicionar 7 mutações faltantes |
+| `src/components/academy/AcademyAdmin.tsx` | Tornar editar/excluir funcional |
+| `src/pages/franqueado/FranqueadoAcademy.tsx` | Adicionar aba Provas |
+| `src/pages/Marketing.tsx` | Confirmação de exclusão, rename |
+| `src/hooks/useMarketing.ts` | Adicionar updateFolder, updateAsset |
 
