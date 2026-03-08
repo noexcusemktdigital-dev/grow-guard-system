@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     }
     const callerId = user.id;
 
-    const { email, full_name, role, organization_id } = await req.json();
+    const { email, full_name, role, organization_id, team_ids } = await req.json();
 
     if (!email || !organization_id) {
       return new Response(JSON.stringify({ error: "email and organization_id required" }), {
@@ -55,8 +55,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
     // ---- Validate maxUsers server-side ----
-    // Look up org subscription plan to enforce user limit
     const { data: sub } = await adminClient
       .from("client_subscriptions")
       .select("plan")
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Invite user via email (Supabase sends the email automatically)
+    // Invite user via email
     const redirectTo = Deno.env.get("SITE_URL") || supabaseUrl.replace(".supabase.co", ".supabase.co");
     const { data: newUser, error: createErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
       data: { full_name: full_name || email.split("@")[0] },
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
       organization_id,
     });
 
-    // Set role — accept all valid app_role values
+    // Set role
     const allowedRoles = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
     const validRole = allowedRoles.includes(role) ? role : "cliente_user";
     await adminClient.from("user_roles").insert({
@@ -116,7 +116,13 @@ Deno.serve(async (req) => {
       role: validRole,
     });
 
-    console.log(`User invited: ${email} -> org ${organization_id} as ${validRole}`);
+    // Assign to teams if provided
+    if (Array.isArray(team_ids) && team_ids.length > 0) {
+      const teamRows = team_ids.map((tid: string) => ({ team_id: tid, user_id: userId }));
+      await adminClient.from("org_team_memberships").insert(teamRows);
+    }
+
+    console.log(`User invited: ${email} -> org ${organization_id} as ${validRole} (teams: ${team_ids?.length ?? 0})`);
 
     return new Response(
       JSON.stringify({ success: true, user_id: userId }),

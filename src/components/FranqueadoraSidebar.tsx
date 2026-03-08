@@ -322,7 +322,7 @@ export function FranqueadoraSidebarContent({ collapsed, setCollapsed }: { collap
         <CollapsibleSection title="Rede" items={redeSection} collapsed={collapsed} defaultOpen />
         <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} defaultOpen />
         <CollapsibleSection title="Marketing & Academy" items={marketingSection} collapsed={collapsed} />
-        <CollapsibleSection title="Administrativo" items={adminSection} collapsed={collapsed} />
+        <CollapsibleSection title="Gestão" items={adminSection} collapsed={collapsed} />
       </div>
 
       {/* Footer — User */}
