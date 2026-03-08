@@ -188,7 +188,6 @@ export default function FranqueadoMetasRanking() {
                 const pct = gp ? Math.min(100, Math.round(gp.percent)) : 0;
                 const reached = pct >= 100;
                 const metricLabel = goal.title || goal.type || goal.metric || "Meta";
-                const isMonetary = ["revenue", "faturamento", "avg_ticket"].includes(goal.metric || goal.type);
 
                 return (
                   <Card key={goal.id} className={`border transition-colors ${reached ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>

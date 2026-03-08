@@ -87,7 +87,7 @@ export default function MetasRanking() {
     setGoalForm({
       title: g.title || "",
       type: g.type || g.metric || "faturamento",
-      target_value: String(g.target_value || ""),
+      target_value: g.target_value ? Number(g.target_value).toLocaleString("pt-BR") : "",
       scope: g.scope || "rede",
       unit_org_id: g.unit_org_id || "",
       period_month_num: pMonth,
