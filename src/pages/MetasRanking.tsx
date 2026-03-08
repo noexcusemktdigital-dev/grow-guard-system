@@ -73,14 +73,16 @@ export default function MetasRanking() {
 
   const openEditGoal = (g: any) => {
     setEditingGoal(g);
-    const month = g.period_start ? g.period_start.substring(0, 7) : "";
+    const pMonth = g.period_start ? String(Number(g.period_start.substring(5, 7))) : "";
+    const pYear = g.period_start ? g.period_start.substring(0, 4) : String(currentYear);
     setGoalForm({
       title: g.title || "",
       type: g.type || g.metric || "faturamento",
       target_value: String(g.target_value || ""),
       scope: g.scope || "rede",
       unit_org_id: g.unit_org_id || "",
-      period_month: month,
+      period_month_num: pMonth,
+      period_year: pYear,
     });
     setShowGoalDialog(true);
   };
