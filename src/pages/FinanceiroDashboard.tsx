@@ -154,10 +154,14 @@ export default function FinanceiroDashboard() {
             networkMRR={networkMRR}
             overdueCount={overdueCount}
             asaasPayments={asaasPayments}
+            revenues={revenues}
             expenses={expenses}
             activeContracts={activeContracts}
             selectedMonth={selectedMonth}
             monthOptions={monthOptions}
+            monthTotal={monthTotal}
+            monthReceived={monthReceived}
+            monthOverdue={monthOverdue}
           />
         </TabsContent>
 
