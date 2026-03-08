@@ -1,31 +1,49 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Receitas com Asaas + Manual, Cobranças do mês/atrasadas/recebidas, Matriz como 1ª ferramenta
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### Mudanças
 
-### Ações
+#### 1. Sidebar — Reordenar seção Gestão
+**Arquivo**: `src/components/FranqueadoraSidebar.tsx`
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
-
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
-
-3. **Executar o teste** e analisar o resultado definitivo
-
-### Detalhe técnico
-
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+Mover "Matriz" para a primeira posição da seção adminSection:
+```
+Matriz → Contratos → Financeiro → SaaS
 ```
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+#### 2. Receitas — Permitir Asaas + Manual
+**Arquivo**: `src/pages/FinanceiroDashboard.tsx`
+
+Na aba **Receitas**, restaurar a capacidade de adicionar receitas manuais junto com as do Asaas:
+- Adicionar botão "Nova Receita" para entrada manual (usando `createRevenue` do `useFinanceMutations`)
+- Lista unificada: cobranças Asaas + receitas manuais, diferenciadas por badge "Asaas" ou "Manual"
+- Dialog de criação/edição de receita manual (descrição, valor, data, categoria, status)
+- Reimportar `useFinanceRevenues` e mutações de receita do `useFinance`
+
+#### 3. Dashboard — KPIs reais com cobranças do mês
+**Arquivo**: `src/pages/FinanceiroDashboard.tsx`
+
+Atualizar KPIs do Dashboard para mostrar dados reais combinados (Asaas + manual):
+- **Cobranças do Mês**: total de cobranças Asaas com dueDate no mês atual
+- **Recebidas**: cobranças com status CONFIRMED/RECEIVED/RECEIVED_IN_CASH
+- **Atrasadas**: cobranças com status OVERDUE
+- **Resultado**: (Receitas Asaas pagas + Receitas manuais pagas) - Despesas pagas
+
+#### 4. Receitas Tab — Cards de resumo aprimorados
+Adicionar 4 cards de resumo:
+- Total Recebido (Asaas pago + manual pago)
+- Total Pendente (Asaas pendente + manual pendente)
+- Atrasadas (Asaas OVERDUE)
+- Cobranças do Mês (total no período)
+
+#### 5. Clientes Tab — Somente dados reais
+A aba Clientes já mostra apenas contratos ativos reais da rede. Sem alteração necessária.
+
+### Arquivos afetados
+
+| Arquivo | Ação |
+|---------|------|
+| `src/components/FranqueadoraSidebar.tsx` | Reordenar: Matriz como 1º item |
+| `src/pages/FinanceiroDashboard.tsx` | Receitas: Asaas + manual; Dashboard KPIs atualizados |
 
