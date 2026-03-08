@@ -342,13 +342,21 @@ export default function Marketing() {
       {childFolders.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           {childFolders.map((folder) => (
-            <Card key={folder.id} className="hover:shadow-md cursor-pointer group transition-all" onClick={() => handleNavigateFolder(folder.id)}>
-              <CardContent className="p-4 flex items-center gap-3">
+            <Card key={folder.id} className="hover:shadow-md cursor-pointer group transition-all relative">
+              <CardContent className="p-4 flex items-center gap-3" onClick={() => handleNavigateFolder(folder.id)}>
                 <FolderOpen className="w-8 h-8 text-primary/70 group-hover:text-primary transition-colors flex-shrink-0" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold truncate">{folder.name}</p>
                 </div>
               </CardContent>
+              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setRenameFolder({ id: folder.id, name: folder.name }); }}>
+                  <Pencil className="w-3 h-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ type: "folder", id: folder.id, label: folder.name }); }}>
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
             </Card>
           ))}
         </div>
