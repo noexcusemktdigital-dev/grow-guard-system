@@ -291,7 +291,7 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
 export default function FranqueadoContratos() {
   const { data: contracts, isLoading } = useContracts();
   const { data: leads } = useCrmLeads();
-  const [tab, setTab] = useState("lista");
+  const [tab, setTab] = useState("novo");
   const [statusFilter, setStatusFilter] = useState("all");
 
   if (isLoading) {
