@@ -95,9 +95,9 @@ export default function MetasRanking() {
       target_value: Number(goalForm.target_value),
       scope: goalForm.scope,
       unit_org_id: goalForm.scope === "unidade" ? goalForm.unit_org_id : null,
-      period_start: goalForm.period_month ? `${goalForm.period_month}-01` : undefined,
-      period_end: goalForm.period_month
-        ? new Date(Number(goalForm.period_month.split("-")[0]), Number(goalForm.period_month.split("-")[1]), 0).toISOString().split("T")[0]
+      period_start: goalForm.period_month_num ? `${goalForm.period_year}-${goalForm.period_month_num.padStart(2, "0")}-01` : undefined,
+      period_end: goalForm.period_month_num
+        ? new Date(Number(goalForm.period_year), Number(goalForm.period_month_num), 0).toISOString().split("T")[0]
         : undefined,
       metric: goalForm.type,
     };
