@@ -13,8 +13,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard } from "@/components/KpiCard";
 import {
   FileSignature, DollarSign, Inbox, Download, Plus, Users, CalendarDays,
-  CheckCircle, AlertTriangle, Clock, Eye, Link2,
+  CheckCircle, AlertTriangle, Clock, Eye, Link2, Search, Filter, Pencil, Trash2,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useContracts, useContractMutations } from "@/hooks/useContracts";
 import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { useSearchParams } from "react-router-dom";
