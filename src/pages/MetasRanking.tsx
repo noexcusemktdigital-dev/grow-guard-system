@@ -50,7 +50,8 @@ export default function MetasRanking() {
 
   const [showGoalDialog, setShowGoalDialog] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
-  const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
+  const currentYear = new Date().getFullYear();
+  const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month_num: "", period_year: String(currentYear) });
 
   const isLoading = loadingGoals || loadingRankings;
 
