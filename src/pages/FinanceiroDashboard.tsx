@@ -225,43 +225,47 @@ export default function FinanceiroDashboard() {
 /* DASHBOARD TAB                                                      */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, overdueCount, asaasPayments, expenses, activeContracts, selectedMonth, monthOptions }: any) {
-  // Chart data: last 6 months — receitas from Asaas, despesas from manual
+function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, overdueCount, asaasPayments, revenues, expenses, activeContracts, selectedMonth, monthOptions, monthTotal, monthReceived, monthOverdue }: any) {
   const chartData = useMemo(() => {
     const now = new Date();
     return Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
       const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const rec = (asaasPayments ?? [])
+      const asaasRec = (asaasPayments ?? [])
         .filter((p: any) => (p.paymentDate || p.dueDate || "").startsWith(prefix) && ASAAS_PAID_STATUSES.includes(p.status))
         .reduce((s: number, p: any) => s + p.value, 0);
+      const manualRec = (revenues ?? [])
+        .filter((r: any) => (r.date || "").startsWith(prefix) && r.status === "paid")
+        .reduce((s: number, r: any) => s + Number(r.amount), 0);
       const desp = (expenses ?? []).filter((e: any) => (e.date || "").startsWith(prefix)).reduce((s: number, e: any) => s + Number(e.amount), 0);
-      return { name: months[d.getMonth()], receitas: rec, despesas: desp };
+      return { name: months[d.getMonth()], receitas: asaasRec + manualRec, despesas: desp };
     });
-  }, [asaasPayments, expenses]);
+  }, [asaasPayments, revenues, expenses]);
 
-  // Revenue composition by billing type from Asaas
   const pieData = useMemo(() => {
-    const cats: Record<string, number> = {};
+    const cats: Record<string, number> = { "Manual": 0 };
     (asaasPayments ?? []).filter((p: any) => ASAAS_PAID_STATUSES.includes(p.status)).forEach((p: any) => {
       const cat = p.billingType || "Outros";
       cats[cat] = (cats[cat] || 0) + p.value;
     });
+    const manualTotal = (revenues ?? []).filter((r: any) => r.status === "paid").reduce((s: number, r: any) => s + Number(r.amount), 0);
+    if (manualTotal > 0) cats["Manual"] = manualTotal;
+    else delete cats["Manual"];
     return Object.entries(cats).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
-  }, [asaasPayments]);
+  }, [asaasPayments, revenues]);
 
   return (
     <>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <KpiCard label="MRR da Rede" value={formatBRL(networkMRR)} sublabel={`${activeContracts.length} contratos ativos`} accent />
-        <KpiCard label="Receitas (Asaas)" value={formatBRL(totalRevenue)} trend="up" sublabel={selectedMonth !== "all" ? monthOptions.find((o: any) => o.value === selectedMonth)?.label : undefined} />
+        <KpiCard label="Cobranças do Mês" value={formatBRL(monthTotal)} sublabel="total no período" />
+        <KpiCard label="Recebidas" value={formatBRL(monthReceived)} trend="up" sublabel="confirmadas" />
+        <KpiCard label="Atrasadas" value={formatBRL(monthOverdue)} sublabel={overdueCount > 0 ? `${overdueCount} cobranças` : "nenhuma"} />
         <KpiCard label="Despesas" value={formatBRL(totalExpenses)} sublabel={selectedMonth !== "all" ? monthOptions.find((o: any) => o.value === selectedMonth)?.label : undefined} />
         <KpiCard label="Resultado" value={formatBRL(resultado)} trend={resultado >= 0 ? "up" : "down"} />
-        <KpiCard label="Inadimplentes" value={String(overdueCount)} sublabel={overdueCount > 0 ? "cobranças vencidas" : "nenhuma"} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Bar chart */}
         <div className="lg:col-span-2 glass-card p-6">
           <h3 className="text-sm font-semibold text-foreground mb-4">Receitas vs Despesas (últimos 6 meses)</h3>
           <ResponsiveContainer width="100%" height={240}>
@@ -276,9 +280,8 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
           </ResponsiveContainer>
         </div>
 
-        {/* Pie chart — by billing type */}
         <div className="glass-card p-6">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Receitas por Tipo de Cobrança</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4">Receitas por Tipo</h3>
           {pieData.length === 0 ? (
             <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados</div>
           ) : (
@@ -296,7 +299,6 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
         </div>
       </div>
 
-      {/* Active contracts preview */}
       <div className="glass-card p-6">
         <h3 className="text-sm font-semibold text-foreground mb-4">Receita de Contratos Ativos</h3>
         {activeContracts.length === 0 ? (
@@ -309,7 +311,7 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
                   <span className="text-sm font-medium">{c.signer_name || c.title}</span>
                   <span className="text-xs text-muted-foreground ml-2">{c.org_name || "Matriz"}</span>
                 </div>
-                <span className="text-sm font-medium text-emerald-500">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}/mês</span>
+                <span className="text-sm font-medium text-primary">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}/mês</span>
               </div>
             ))}
             {activeContracts.length > 8 && <p className="text-xs text-muted-foreground text-center pt-2">+{activeContracts.length - 8} contratos</p>}
