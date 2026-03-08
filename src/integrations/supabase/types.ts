@@ -394,6 +394,9 @@ export type Database = {
           organization_id: string
           priority: string
           published_at: string | null
+          require_confirmation: boolean
+          show_dashboard: boolean
+          show_popup: boolean
           status: string
           target_roles: string[] | null
           target_unit_ids: string[] | null
@@ -411,6 +414,9 @@ export type Database = {
           organization_id: string
           priority?: string
           published_at?: string | null
+          require_confirmation?: boolean
+          show_dashboard?: boolean
+          show_popup?: boolean
           status?: string
           target_roles?: string[] | null
           target_unit_ids?: string[] | null
@@ -428,6 +434,9 @@ export type Database = {
           organization_id?: string
           priority?: string
           published_at?: string | null
+          require_confirmation?: boolean
+          show_dashboard?: boolean
+          show_popup?: boolean
           status?: string
           target_roles?: string[] | null
           target_unit_ids?: string[] | null
@@ -5194,6 +5203,9 @@ export type Database = {
           organization_id: string
           priority: string
           published_at: string | null
+          require_confirmation: boolean
+          show_dashboard: boolean
+          show_popup: boolean
           status: string
           target_roles: string[] | null
           target_unit_ids: string[] | null

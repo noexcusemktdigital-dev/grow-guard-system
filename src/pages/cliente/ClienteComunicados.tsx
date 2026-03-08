@@ -39,7 +39,7 @@ export default function ClienteComunicados() {
   const read = useMemo(() => all.filter(a => viewedIds.has(a.id)), [all, viewedIds]);
 
   const criticalPending = useMemo(() => {
-    return (announcements ?? []).filter(a => a.priority === "Crítica" && !confirmedIds.has(a.id));
+    return (announcements ?? []).filter(a => ((a as any).require_confirmation || a.priority === "Crítica") && !confirmedIds.has(a.id));
   }, [announcements, confirmedIds]);
 
   function openDetail(item: any) {
@@ -143,7 +143,18 @@ export default function ClienteComunicados() {
               <div className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed border-t border-border pt-4">
                 {detailItem.content || "Sem conteúdo."}
               </div>
-              {detailItem.priority === "Crítica" && !confirmedIds.has(detailItem.id) && (
+              {detailItem.attachment_url && (
+                <a
+                  href={detailItem.attachment_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline p-3 rounded-lg border border-border bg-muted/30"
+                >
+                  <Eye className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{detailItem.attachment_url.split("/").pop()}</span>
+                </a>
+              )}
+              {(detailItem.require_confirmation || detailItem.priority === "Crítica") && !confirmedIds.has(detailItem.id) && (
                 <div className="border border-destructive/30 rounded-lg p-4 bg-destructive/5 space-y-3">
                   <div className="flex items-center gap-2 text-destructive text-sm font-medium">
                     <AlertTriangle className="w-4 h-4" /> Confirmação obrigatória
@@ -172,7 +183,7 @@ function AnnouncementCard({ item, viewedIds, confirmedIds, onClick }: { item: an
   const isConfirmed = confirmedIds.has(item.id);
   return (
     <Card
-      className={`hover-lift cursor-pointer transition-all ${!isViewed ? "border-l-4 border-l-primary" : ""} ${item.priority === "Crítica" && !isConfirmed ? "ring-1 ring-destructive/30" : ""}`}
+      className={`hover-lift cursor-pointer transition-all ${!isViewed ? "border-l-4 border-l-primary" : ""} ${(item.priority === "Crítica" || (item as any).require_confirmation) && !isConfirmed ? "ring-1 ring-destructive/30" : ""}`}
       onClick={onClick}
     >
       <CardContent className="p-5">
@@ -183,7 +194,7 @@ function AnnouncementCard({ item, viewedIds, confirmedIds, onClick }: { item: an
               <Badge variant={PRIORITY_VARIANTS[item.priority] || "secondary"} className="text-[10px]">
                 {PRIORITY_LABELS[item.priority] || item.priority}
               </Badge>
-              {item.priority === "Crítica" && !isConfirmed && (
+              {((item as any).require_confirmation || item.priority === "Crítica") && !isConfirmed && (
                 <Badge variant="destructive" className="text-[10px] animate-pulse">
                   <AlertTriangle className="w-3 h-3 mr-1" /> Requer confirmação
                 </Badge>

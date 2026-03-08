@@ -28,9 +28,9 @@ export default function Comunicados() {
     prioridade: (a.priority || "Normal") as any,
     publico: (a.target_roles || []) as PublicoAlvo[],
     unidadesEspecificas: (a.target_unit_ids || []) as string[],
-    mostrarDashboard: true,
-    mostrarPopup: false,
-    exigirConfirmacao: false,
+    mostrarDashboard: (a as any).show_dashboard ?? true,
+    mostrarPopup: (a as any).show_popup ?? false,
+    exigirConfirmacao: (a as any).require_confirmation ?? false,
     dataProgramada: undefined,
     dataExpiracao: a.expires_at || undefined,
     status: (a as any).status === "archived" ? "Arquivado" : a.published_at ? "Ativo" : "Rascunho",
@@ -85,6 +85,9 @@ export default function Comunicados() {
       published_at: new Date().toISOString(),
       expires_at: data.dataExpiracao || null,
       attachment_url: data.attachmentUrl || null,
+      show_dashboard: data.mostrarDashboard ?? true,
+      show_popup: data.mostrarPopup ?? false,
+      require_confirmation: data.exigirConfirmacao ?? false,
     };
     if (view === "edit" && selectedId) {
       updateAnnouncement.mutate({ id: selectedId, ...payload });
@@ -106,6 +109,9 @@ export default function Comunicados() {
       target_roles: data.publico,
       target_unit_ids: data.unidadesEspecificas?.length ? data.unidadesEspecificas : [],
       attachment_url: data.attachmentUrl || null,
+      show_dashboard: data.mostrarDashboard ?? true,
+      show_popup: data.mostrarPopup ?? false,
+      require_confirmation: data.exigirConfirmacao ?? false,
     };
     if (view === "edit" && selectedId) {
       updateAnnouncement.mutate({ id: selectedId, ...payload });

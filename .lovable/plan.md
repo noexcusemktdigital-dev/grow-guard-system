@@ -1,61 +1,31 @@
 
 
-## Plano: Correção Completa do Módulo de Comunicados
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Problemas identificados
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-1. **`show_popup`, `show_dashboard`, `require_confirmation` NÃO existem no banco** — O formulário coleta esses campos mas eles nunca são salvos. Em `Comunicados.tsx`, os valores são hardcoded: `mostrarDashboard: true, mostrarPopup: false, exigirConfirmacao: false`.
+### Ações
 
-2. **Popup inexistente** — Não existe nenhum componente que exiba comunicados como popup ao login. O campo é coletado no form mas nunca implementado.
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-3. **Anexo não aparece na visualização do cliente/franqueado** — `ClienteComunicados.tsx` (e o equivalente franqueado) não renderiza `attachment_url` no detalhe do comunicado.
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-4. **Confirmação de leitura vinculada apenas a prioridade "Crítica"** — No `ClienteComunicados.tsx`, a confirmação só aparece se `priority === "Crítica"`, ignorando o campo `require_confirmation` do formulário.
+3. **Executar o teste** e analisar o resultado definitivo
 
-5. **Console warning** — `ComunicadoForm` passa ref para `Select` (Radix), gerando warning.
+### Detalhe técnico
 
-### Mudanças
-
-#### 1. Migração DB — Adicionar 3 colunas na tabela `announcements`
-```sql
-ALTER TABLE announcements ADD COLUMN show_dashboard boolean NOT NULL DEFAULT true;
-ALTER TABLE announcements ADD COLUMN show_popup boolean NOT NULL DEFAULT false;
-ALTER TABLE announcements ADD COLUMN require_confirmation boolean NOT NULL DEFAULT false;
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
 ```
 
-#### 2. `src/pages/Comunicados.tsx` — Salvar e ler os novos campos
-- **handlePublish/handleSaveDraft**: Incluir `show_dashboard`, `show_popup`, `require_confirmation` no payload
-- **Mapping de DB → Comunicado**: Ler `a.show_dashboard`, `a.show_popup`, `a.require_confirmation` em vez de hardcodar
-
-#### 3. `src/components/comunicados/ComunicadoForm.tsx` — Fix ref warning
-- O warning vem do Radix Select recebendo ref. Não há mudança funcional necessária, mas caso persista, isolar via wrapper.
-
-#### 4. Criar `src/components/AnnouncementPopupDialog.tsx` — Popup ao login
-Componente montado nos 3 layouts (Franqueadora, Franqueado, Cliente) que:
-- Consulta comunicados com `show_popup = true` e `published_at IS NOT NULL`
-- Filtra os que o usuário ainda não visualizou (via `useAnnouncementViews`)
-- Exibe um Dialog modal com título, conteúdo, anexo e botão "Li e entendi"
-- Ao fechar, marca como visualizado via `markViewed`
-- Se `require_confirmation = true`, exige o botão "Li e concordo" antes de fechar
-
-#### 5. `src/pages/cliente/ClienteComunicados.tsx` — Mostrar anexo + usar require_confirmation
-- No detalhe (Sheet), renderizar link de download se `attachment_url` existir
-- Trocar a lógica de confirmação de `priority === "Crítica"` para usar o campo `require_confirmation` do DB (ou manter ambos como fallback)
-
-#### 6. Montar popup nos layouts
-- `FranqueadoraLayout.tsx`: Importar e montar `<AnnouncementPopupDialog />`
-- `FranqueadoLayout.tsx`: Idem
-- `ClienteLayout.tsx`: Idem
-
-### Arquivos afetados
-
-| Arquivo | Ação |
-|---------|------|
-| **Migração SQL** | Adicionar `show_dashboard`, `show_popup`, `require_confirmation` |
-| `src/pages/Comunicados.tsx` | Salvar/ler novos campos do DB |
-| `src/components/AnnouncementPopupDialog.tsx` | Criar — popup modal ao login |
-| `src/pages/cliente/ClienteComunicados.tsx` | Exibir anexo + lógica require_confirmation |
-| `src/components/FranqueadoraLayout.tsx` | Montar popup |
-| `src/components/FranqueadoLayout.tsx` | Montar popup |
-| `src/components/ClienteLayout.tsx` | Montar popup |
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 

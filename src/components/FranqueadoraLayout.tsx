@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { FranqueadoraSidebar, FranqueadoraSidebarContent } from "./FranqueadoraSidebar";
 import { FranqueadoraTour } from "./FranqueadoraTour";
+import { AnnouncementPopupDialog } from "./AnnouncementPopupDialog";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -38,6 +39,7 @@ export function FranqueadoraLayout() {
         </div>
       </main>
       <FranqueadoraTour />
+      <AnnouncementPopupDialog />
     </div>
   );
 }
