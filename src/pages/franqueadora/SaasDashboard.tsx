@@ -192,8 +192,8 @@ function ErrosTab() {
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum erro encontrado 🎉</TableCell></TableRow>
               ) : (
                 errors.map((err) => (
-                  <>
-                    <TableRow key={err.id} className="cursor-pointer" onClick={() => setExpanded(expanded === err.id ? null : err.id)}>
+                  <Fragment key={err.id}>
+                    <TableRow className="cursor-pointer" onClick={() => setExpanded(expanded === err.id ? null : err.id)}>
                       <TableCell className="px-2">
                         {expanded === err.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                       </TableCell>
