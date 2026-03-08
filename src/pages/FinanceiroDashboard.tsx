@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useFinanceExpenses, useFinanceMutations, useFinanceClosings } from "@/hooks/useFinance";
+import { useFinanceExpenses, useFinanceRevenues, useFinanceMutations, useFinanceClosings } from "@/hooks/useFinance";
 import { useNetworkContracts } from "@/hooks/useContracts";
 import { useChargeClient, useAsaasNetworkPayments, type AsaasPayment } from "@/hooks/useClientPayments";
 import { useUnits } from "@/hooks/useUnits";
