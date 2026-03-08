@@ -7,7 +7,7 @@ import {
   CheckSquare, ChevronRight, Sparkles, Clock,
   Zap, ArrowRight, Bot, Link, FileText, Lightbulb,
   Wifi, WifiOff, Sun, Moon, CloudSun, ListChecks,
-  Flame, Trophy, CheckCircle2, Star,
+  Flame, Trophy, CheckCircle2, Star, Megaphone,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,11 @@ import { useClienteAgents } from "@/hooks/useClienteAgents";
 import { useDailyMessages } from "@/hooks/useDailyMessages";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
+import { useAnnouncements } from "@/hooks/useAnnouncements";
+import { useAnnouncementViews } from "@/hooks/useAnnouncementViews";
+import { useClienteTasks } from "@/hooks/useClienteTasks";
+import { useAuth } from "@/contexts/AuthContext";
 
 const kpiConfig = [
   { label: "Receita Estimada", icon: DollarSign, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500", path: "/cliente/crm" },
