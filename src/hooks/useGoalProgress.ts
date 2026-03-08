@@ -89,6 +89,7 @@ export function useGoalProgress(goals: any[] | undefined) {
         let currentValue = 0;
         switch (metric) {
           case "revenue":
+          case "faturamento":
             currentValue = scopedWon.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
             break;
           case "leads":
@@ -100,8 +101,18 @@ export function useGoalProgress(goals: any[] | undefined) {
               : 0;
             break;
           case "contracts":
+          case "contratos":
             currentValue = scopedWon.length;
             break;
+          case "contratos_ativos": {
+            const { data: activeContracts } = await supabase
+              .from("contracts")
+              .select("id")
+              .eq("organization_id", orgId!)
+              .eq("status", "active");
+            currentValue = activeContracts?.length || 0;
+            break;
+          }
           case "meetings":
             currentValue = scopedActivities.filter(a => a.type === "meeting").length;
             break;

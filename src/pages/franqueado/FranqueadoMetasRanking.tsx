@@ -1,12 +1,15 @@
-import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Target, Star, Medal, TrendingUp, Lock, Award, Flame, Zap, Crown, Users } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useActiveGoals } from "@/hooks/useGoals";
+import { useGoalProgress } from "@/hooks/useGoalProgress";
+import { useTrophyProgress, type TrophyId } from "@/hooks/useTrophyProgress";
 
 const classificationConfig = {
   elite: { label: "Elite", color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30", icon: Crown },
@@ -16,22 +19,22 @@ const classificationConfig = {
 };
 
 interface TrophyItem {
-  id: string;
+  id: TrophyId;
   title: string;
   description: string;
   icon: React.ElementType;
-  unlocked: boolean;
-  unlockedAt?: string;
 }
 
-const trophies: TrophyItem[] = [
-  { id: "first_sale", title: "Primeira Venda", description: "Feche seu primeiro contrato", icon: Star, unlocked: false },
-  { id: "hat_trick", title: "Hat-trick", description: "Conquiste seus 3 primeiros clientes", icon: Flame, unlocked: false },
-  { id: "top_revenue", title: "Top Faturamento", description: "Alcance R$ 20.000 em um mês", icon: TrendingUp, unlocked: false },
-  { id: "speed_close", title: "Fechamento Relâmpago", description: "Feche um contrato em menos de 7 dias", icon: Zap, unlocked: false },
-  { id: "first_goal", title: "Primeira Meta Batida", description: "Atinja sua primeira meta mensal", icon: Target, unlocked: false },
-  { id: "ten_clients", title: "10 Clientes Ativos", description: "Alcance 10 clientes ativos na carteira", icon: Users, unlocked: false },
+const trophyDefs: TrophyItem[] = [
+  { id: "first_sale", title: "Primeira Venda", description: "Feche seu primeiro contrato", icon: Star },
+  { id: "hat_trick", title: "Hat-trick", description: "Conquiste seus 3 primeiros clientes", icon: Flame },
+  { id: "top_revenue", title: "Top Faturamento", description: "Alcance R$ 20.000 em um mês", icon: TrendingUp },
+  { id: "speed_close", title: "Fechamento Relâmpago", description: "Feche um contrato em menos de 7 dias", icon: Zap },
+  { id: "first_goal", title: "Primeira Meta Batida", description: "Atinja sua primeira meta mensal", icon: Target },
+  { id: "ten_clients", title: "10 Clientes Ativos", description: "Alcance 10 clientes ativos na carteira", icon: Users },
 ];
+
+const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function FranqueadoMetasRanking() {
   const currentMonth = format(new Date(), "MMMM yyyy", { locale: ptBR });
@@ -39,12 +42,12 @@ export default function FranqueadoMetasRanking() {
   const config = classificationConfig[classification];
   const ClassIcon = config.icon;
 
-  // Mock monthly goals for the unit (would come from parent org via RPC)
-  const monthlyGoals = [
-    { label: "Faturamento", current: 32000, target: 50000, unit: "R$" },
-    { label: "Novos Contratos", current: 4, target: 8, unit: "" },
-    { label: "Leads Gerados", current: 22, target: 30, unit: "" },
-  ];
+  const { data: goals, isLoading: loadingGoals } = useActiveGoals();
+  const activeGoals = (goals ?? []).filter((g: any) => g.status === "active");
+  const { data: goalProgress, isLoading: loadingProgress } = useGoalProgress(activeGoals.length > 0 ? activeGoals : undefined);
+  const { data: trophies, isLoading: loadingTrophies } = useTrophyProgress(goalProgress ?? undefined);
+
+  const isLoading = loadingGoals || loadingProgress;
 
   return (
     <div className="space-y-6">
@@ -86,74 +89,100 @@ export default function FranqueadoMetasRanking() {
         </TabsList>
 
         <TabsContent value="metas" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            {monthlyGoals.map((goal) => {
-              const pct = Math.min(100, Math.round((goal.current / goal.target) * 100));
-              const reached = pct >= 100;
-              return (
-                <Card key={goal.label} className={`border transition-colors ${reached ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                      {goal.label}
-                      {reached && <Badge className="bg-green-500/15 text-green-400 border-green-500/30 text-[10px]">Atingida ✓</Badge>}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-end gap-1">
-                      <span className="text-2xl font-bold">
-                        {goal.unit === "R$" ? `R$ ${goal.current.toLocaleString("pt-BR")}` : goal.current}
-                      </span>
-                      <span className="text-sm text-muted-foreground mb-0.5">
-                        / {goal.unit === "R$" ? `R$ ${goal.target.toLocaleString("pt-BR")}` : goal.target}
-                      </span>
-                    </div>
-                    <Progress value={pct} className="h-2" />
-                    <p className="text-xs text-muted-foreground text-right">{pct}%</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          {isLoading ? (
+            <div className="grid gap-4 md:grid-cols-3">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-36" />)}
+            </div>
+          ) : activeGoals.length === 0 ? (
+            <Card><CardContent className="p-8 text-center text-muted-foreground text-sm">Nenhuma meta definida para este período.</CardContent></Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              {activeGoals.map((goal: any) => {
+                const gp = goalProgress?.[goal.id];
+                const currentValue = gp?.currentValue ?? 0;
+                const pct = gp ? Math.min(100, Math.round(gp.percent)) : 0;
+                const reached = pct >= 100;
+                const metricLabel = goal.title || goal.type || goal.metric || "Meta";
+                const isMonetary = ["revenue", "faturamento", "avg_ticket"].includes(goal.metric || goal.type);
+
+                return (
+                  <Card key={goal.id} className={`border transition-colors ${reached ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                        {metricLabel}
+                        {reached && <Badge className="bg-green-500/15 text-green-400 border-green-500/30 text-[10px]">Atingida ✓</Badge>}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-end gap-1">
+                        <span className="text-2xl font-bold">
+                          {isMonetary ? formatBRL(currentValue) : currentValue}
+                        </span>
+                        <span className="text-sm text-muted-foreground mb-0.5">
+                          / {isMonetary ? formatBRL(goal.target_value) : goal.target_value}
+                        </span>
+                      </div>
+                      <Progress value={pct} className="h-2" />
+                      <div className="flex justify-between">
+                        <p className="text-xs text-muted-foreground">{pct}%</p>
+                        {gp && gp.daysLeft > 0 && (
+                          <p className="text-xs text-muted-foreground">{gp.daysLeft}d restantes</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="trofeus" className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Desbloqueie troféus ao atingir marcos importantes. Continue evoluindo!
           </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {trophies.map((trophy) => {
-              const Icon = trophy.icon;
-              return (
-                <Card
-                  key={trophy.id}
-                  className={`border transition-all ${
-                    trophy.unlocked
-                      ? "border-yellow-500/30 bg-yellow-500/5"
-                      : "border-border opacity-60"
-                  }`}
-                >
-                  <CardContent className="pt-5 flex items-start gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        trophy.unlocked
-                          ? "bg-yellow-500/15 text-yellow-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {trophy.unlocked ? <Icon className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{trophy.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{trophy.description}</p>
-                      {trophy.unlocked && trophy.unlockedAt && (
-                        <p className="text-[10px] text-yellow-400 mt-1">Desbloqueado em {trophy.unlockedAt}</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          {loadingTrophies ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {trophyDefs.map((trophy) => {
+                const Icon = trophy.icon;
+                const status = trophies?.[trophy.id];
+                const unlocked = status?.unlocked ?? false;
+                return (
+                  <Card
+                    key={trophy.id}
+                    className={`border transition-all ${
+                      unlocked
+                        ? "border-yellow-500/30 bg-yellow-500/5"
+                        : "border-border opacity-60"
+                    }`}
+                  >
+                    <CardContent className="pt-5 flex items-start gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          unlocked
+                            ? "bg-yellow-500/15 text-yellow-400"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {unlocked ? <Icon className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{trophy.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{trophy.description}</p>
+                        {unlocked && status?.unlockedAt && (
+                          <p className="text-[10px] text-yellow-400 mt-1">Desbloqueado em {status.unlockedAt}</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
