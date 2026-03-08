@@ -19,6 +19,15 @@ import type { TrophyId } from "@/hooks/useTrophyProgress";
 import { toast } from "sonner";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const MONETARY_TYPES = ["faturamento", "avg_ticket", "revenue"];
+const isMonetaryType = (type: string) => MONETARY_TYPES.includes(type);
+const formatMetricValue = (v: number, type: string) => isMonetaryType(type) ? formatBRL(v) : v.toLocaleString("pt-BR");
+const parseFormattedNumber = (s: string) => Number(s.replace(/\./g, "").replace(",", ".")) || 0;
+const formatInputNumber = (s: string) => {
+  const digits = s.replace(/\D/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("pt-BR");
+};
 
 const tabs = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3, color: "text-blue-500", bg: "bg-blue-500/10" },
