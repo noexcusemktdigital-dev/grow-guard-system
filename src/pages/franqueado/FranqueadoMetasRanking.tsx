@@ -35,6 +35,7 @@ const trophyDefs: TrophyItem[] = [
 ];
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const formatMetricValue = (v: number, type: string) => ["revenue", "faturamento", "avg_ticket"].includes(type) ? formatBRL(v) : v.toLocaleString("pt-BR");
 
 export default function FranqueadoMetasRanking() {
   const currentMonth = format(new Date(), "MMMM yyyy", { locale: ptBR });
