@@ -117,6 +117,7 @@ export default function ClienteInicio() {
   const navigate = useNavigate();
   const { data: profile } = useUserProfile();
   const { data: orgData, isLoading: orgLoading } = useOrgProfile();
+  const { data: gamification } = useClienteGamification();
   const { toggleChecklistItem } = useClienteContentMutations();
 
   useEffect(() => {
