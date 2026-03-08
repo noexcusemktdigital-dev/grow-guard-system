@@ -223,7 +223,7 @@ function ErrosTab() {
                       </TableCell>
                     </TableRow>
                     {expanded === err.id && (
-                      <TableRow key={`${err.id}-detail`}>
+                      <TableRow>
                         <TableCell colSpan={8} className="bg-muted/30 p-4">
                           <div className="space-y-3 text-xs">
                             <div>
