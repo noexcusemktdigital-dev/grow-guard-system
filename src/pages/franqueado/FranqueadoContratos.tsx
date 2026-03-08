@@ -306,7 +306,7 @@ export default function FranqueadoContratos() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Meus Contratos" subtitle="Crie e gerencie contratos de prestação de serviço" />
+      <PageHeader title="Contratos" subtitle="Gere e gerencie contratos de prestação de serviço" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Contratos Ativos" value={String(ativos)} icon={FileSignature} delay={0} variant="accent" />

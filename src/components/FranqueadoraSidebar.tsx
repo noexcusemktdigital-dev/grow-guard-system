@@ -52,14 +52,7 @@ const marketingSection: SidebarItem[] = [
 ];
 
 const adminSection: SidebarItem[] = [
-  {
-    label: "Contratos", icon: FileText, path: "/franqueadora/contratos",
-    children: [
-      { label: "Templates", icon: Copy, path: "/franqueadora/contratos/templates" },
-      { label: "Criar Contrato", icon: FilePlus, path: "/franqueadora/contratos/criar" },
-      { label: "Gestão", icon: Building2, path: "/franqueadora/contratos" },
-    ],
-  },
+  { label: "Contratos", icon: FileText, path: "/franqueadora/contratos" },
   {
     label: "Financeiro", icon: DollarSign, path: "/franqueadora/financeiro",
     children: [

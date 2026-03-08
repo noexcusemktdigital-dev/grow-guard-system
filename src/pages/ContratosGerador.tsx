@@ -18,7 +18,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useContracts, useContractMutations } from "@/hooks/useContracts";
+import { useContracts, useNetworkContracts, useContractMutations } from "@/hooks/useContracts";
 import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
