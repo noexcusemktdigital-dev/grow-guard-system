@@ -56,7 +56,6 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
   ];
 
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
-  const humanUnread = humanContacts.reduce((s, c) => s + c.unread_count, 0);
 
   // Stats: messages today and active contacts (last 24h)
   const now = useMemo(() => new Date(), []);
