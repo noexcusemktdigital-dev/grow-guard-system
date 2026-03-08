@@ -169,7 +169,7 @@ export default function MetasRanking() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{unit?.name || `Unidade ${i + 1}`}</p>
                     </div>
-                    <p className="text-sm font-bold">{r.score ?? 0} pts</p>
+                    <p className="text-sm font-bold">{(r.score ?? 0).toLocaleString("pt-BR")} pts</p>
                   </div>
                 );
               })}
