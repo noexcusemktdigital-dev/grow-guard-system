@@ -392,6 +392,24 @@ export default function ClienteInicio() {
         </motion.div>
       )}
 
+      {/* Announcement alerts */}
+      {unreadAnnouncements.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-2">
+          {unreadAnnouncements.map((ann: any) => (
+            <Card key={ann.id} className={`border-l-4 ${ann.priority === "critical" ? "border-l-destructive bg-destructive/5" : ann.priority === "high" ? "border-l-amber-500 bg-amber-500/5" : "border-l-primary bg-primary/5"}`}>
+              <CardContent className="py-3 px-4 flex items-center gap-3">
+                <Megaphone className={`w-4 h-4 shrink-0 ${ann.priority === "critical" ? "text-destructive" : ann.priority === "high" ? "text-amber-500" : "text-primary"}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{ann.title}</p>
+                  {ann.content && <p className="text-xs text-muted-foreground line-clamp-1">{ann.content}</p>}
+                </div>
+                <Badge variant="outline" className="text-[9px] shrink-0">Comunicado</Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </motion.div>
+      )}
+
       {/* KPIs with animated counters */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpiConfig.map((cfg, i) => {
