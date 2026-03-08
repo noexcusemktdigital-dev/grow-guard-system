@@ -389,17 +389,9 @@ export const modules: Module[] = [
     services: [
       {
         id: 'config-crm',
-        name: 'Configuração CRM + Acompanhamento (RD Station)',
-        description: 'Realizamos o mapeamento comercial para definir um plano personalizado, criar usuários e times, além de oferecer treinamento. Desenvolvemos até 5 automações para geração e distribuição de demandas dentro dos funis. [Entrega em até 10 dias úteis]',
+        name: 'Configuração do CRM + Implantação',
+        description: 'Realizamos o mapeamento comercial, criação de usuários e times, treinamento e até 5 automações para geração e distribuição de demandas. [Entrega em até 10 dias úteis]',
         price: 1000,
-        type: 'one_time',
-        quantityType: 'single',
-      },
-      {
-        id: 'fluxo-funil',
-        name: 'Fluxo/Funil (Etapas de venda + roteiro comercial)',
-        description: 'Desenvolvemos até 3 funis, integrados ou não ao CRM, com até 12 etapas cada, incluindo script e roteiro comercial. [Entrega em até 10 dias úteis]',
-        price: 600,
         type: 'one_time',
         quantityType: 'single',
       },
