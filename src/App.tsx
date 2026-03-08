@@ -77,7 +77,15 @@ import ClienteOnboardingCompany from "./pages/cliente/ClienteOnboardingCompany";
 import ClienteComunicados from "./pages/cliente/ClienteComunicados";
 import ClienteSuporte from "./pages/cliente/ClienteSuporte";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2,
+      gcTime: 1000 * 60 * 10,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

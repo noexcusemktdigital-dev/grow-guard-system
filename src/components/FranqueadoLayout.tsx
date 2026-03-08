@@ -37,6 +37,7 @@ export function FranqueadoLayout() {
           <Outlet />
         </div>
       </main>
+      <FranqueadoTour />
     </div>
   );
 }
