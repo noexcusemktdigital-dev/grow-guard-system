@@ -145,8 +145,19 @@ export default function Atendimento() {
     setUploadingMsg(false);
   }
 
+  // Sync selectedTicket when tickets data updates
+  useEffect(() => {
+    if (selectedTicket && tickets) {
+      const updated = tickets.find(t => t.id === selectedTicket.id);
+      if (updated && (updated.status !== selectedTicket.status || updated.updated_at !== selectedTicket.updated_at)) {
+        setSelectedTicket(updated);
+      }
+    }
+  }, [tickets, selectedTicket]);
+
   function handleStatusChange(id: string, status: string) {
     updateTicket.mutate({ id, status });
+    setSelectedTicket(prev => prev ? { ...prev, status } : null);
     toast.success(`Status atualizado para ${STATUS_LABELS[status] || status}`);
   }
 
