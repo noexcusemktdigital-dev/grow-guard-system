@@ -176,10 +176,39 @@ export default function Marketing() {
   };
 
   const handleDeleteSelected = () => {
-    selectedIds.forEach((id) => {
-      deleteAsset.mutate(id, { onSuccess: () => setSelectedIds((p) => { const n = new Set(p); n.delete(id); return n; }) });
+    setDeleteConfirm({ type: "assets", ids: new Set(selectedIds), label: `${selectedIds.size} arquivo(s)` });
+  };
+
+  const confirmDeleteAssets = () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === "folder" && deleteConfirm.id) {
+      deleteFolder.mutate(deleteConfirm.id, {
+        onSuccess: () => { toast.success("Pasta excluída"); setDeleteConfirm(null); },
+        onError: () => toast.error("Erro ao excluir pasta"),
+      });
+    } else if (deleteConfirm.ids) {
+      deleteConfirm.ids.forEach((id) => {
+        deleteAsset.mutate(id, { onSuccess: () => setSelectedIds((p) => { const n = new Set(p); n.delete(id); return n; }) });
+      });
+      toast.success("Arquivos excluídos");
+      setDeleteConfirm(null);
+    }
+  };
+
+  const handleRenameFolder = () => {
+    if (!renameFolder || !renameFolder.name.trim()) return;
+    updateFolder.mutate({ id: renameFolder.id, name: renameFolder.name.trim() }, {
+      onSuccess: () => { toast.success("Pasta renomeada"); setRenameFolder(null); },
+      onError: () => toast.error("Erro ao renomear"),
     });
-    toast.success("Arquivos excluídos");
+  };
+
+  const handleRenameAsset = () => {
+    if (!renameAssetTarget || !renameAssetTarget.name.trim()) return;
+    updateAsset.mutate({ id: renameAssetTarget.id, name: renameAssetTarget.name.trim() }, {
+      onSuccess: () => { toast.success("Arquivo renomeado"); setRenameAssetTarget(null); },
+      onError: () => toast.error("Erro ao renomear"),
+    });
   };
 
   if (isLoading) {
