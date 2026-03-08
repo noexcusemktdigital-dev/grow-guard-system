@@ -20,9 +20,7 @@ import FinanceiroDashboard from "./pages/FinanceiroDashboard";
 import FinanceiroControle from "./pages/FinanceiroControle";
 import FinanceiroRepasse from "./pages/FinanceiroRepasse";
 import FinanceiroFechamentos from "./pages/FinanceiroFechamentos";
-import ContratosGerenciamento from "./pages/ContratosGerenciamento";
 import ContratosGerador from "./pages/ContratosGerador";
-import ContratosTemplates from "./pages/ContratosTemplates";
 import Marketing from "./pages/Marketing";
 import Academy from "./pages/Academy";
 import MetasRanking from "./pages/MetasRanking";
@@ -112,9 +110,7 @@ const App = () => (
                 <Route path="financeiro/controle" element={<FinanceiroControle />} />
                 <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
                 <Route path="financeiro/fechamentos" element={<FinanceiroFechamentos />} />
-                <Route path="contratos" element={<ContratosGerenciamento />} />
-                <Route path="contratos/criar" element={<ContratosGerador />} />
-                <Route path="contratos/templates" element={<ContratosTemplates />} />
+                <Route path="contratos" element={<ContratosGerador />} />
                 <Route path="marketing" element={<Marketing />} />
                 <Route path="treinamentos" element={<Academy />} />
                 <Route path="metas" element={<MetasRanking />} />

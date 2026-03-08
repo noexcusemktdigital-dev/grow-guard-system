@@ -1,57 +1,31 @@
 
 
-## Plano: Reorganizar Contratos como 2ª ferramenta do módulo Gestão (Franqueadora + Franqueado)
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Estado Atual
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-- **Franqueadora**: Sidebar "Gestão" tem Contratos como submenu com 3 links (Templates, Criar, Gestão) apontando para 3 páginas separadas (`ContratosGerador`, `ContratosGerenciamento`, `ContratosTemplates`)
-- **Franqueado**: Sidebar "Gestão" tem "Meus Contratos" apontando para `FranqueadoContratos` — página com 2 abas (Lista + Novo Contrato), gera apenas contratos de assessoria
-- Ambos já funcionam, mas precisam de ajuste na organização
+### Ações
 
-### Mudanças
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-#### 1. Sidebar Franqueadora — Simplificar Contratos
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-**Arquivo**: `src/components/FranqueadoraSidebar.tsx`
+3. **Executar o teste** e analisar o resultado definitivo
 
-Remover os subitens (Templates, Criar, Gestão) de Contratos. Deixar como link único: `{ label: "Contratos", icon: FileText, path: "/franqueadora/contratos" }`. A página de Contratos terá 2 abas internas.
+### Detalhe técnico
 
-#### 2. Página Contratos Franqueadora — Unificar em 2 abas
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+```
 
-**Arquivo**: `src/pages/ContratosGerador.tsx` → Refatorar para ser a página principal de Contratos
-
-- **Aba "Gerar Contrato"**: Já existe com seleção de tipo (Assessoria / Franquia) + formulário + preview PDF. Manter como está.
-- **Aba "Gestão"**: Trazer o conteúdo de `ContratosGerenciamento.tsx` para dentro — lista com filtros, KPIs, edição, exclusão, alertas de vencimento.
-
-Remover a rota separada `/contratos/templates` (funcionalidade de templates já está embutida nos formulários via `contractTemplates.ts`).
-
-#### 3. Rotas — Limpar
-
-**Arquivo**: `src/App.tsx`
-
-- Manter `/franqueadora/contratos` → Nova página unificada
-- Remover `/franqueadora/contratos/criar` e `/franqueadora/contratos/templates`
-
-#### 4. Franqueado — Ajuste menor
-
-**Arquivo**: `src/pages/franqueado/FranqueadoContratos.tsx`
-
-- Renomear abas de "Contratos" / "Novo Contrato" para **"Gerar Contrato"** / **"Gestão de Contratos"** para manter consistência
-- Franqueado só gera contratos de assessoria (cliente), sem opção de franquia — já está correto
-
-#### 5. Sidebar Franqueado — Reordenar
-
-**Arquivo**: `src/components/FranqueadoSidebar.tsx`
-
-Mover "Meus Contratos" para logo depois de "Minha Unidade" (já está nessa ordem, confirmar apenas).
-
-### Arquivos afetados
-
-| Arquivo | Ação |
-|---------|------|
-| `src/components/FranqueadoraSidebar.tsx` | Remover subitens de Contratos |
-| `src/pages/ContratosGerador.tsx` | Unificar: 2 abas (Gerar + Gestão) |
-| `src/pages/ContratosGerenciamento.tsx` | Código absorvido no Gerador, pode ser removido |
-| `src/App.tsx` | Remover rotas `/contratos/criar` e `/contratos/templates` |
-| `src/pages/franqueado/FranqueadoContratos.tsx` | Renomear abas para consistência |
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 

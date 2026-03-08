@@ -13,9 +13,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard } from "@/components/KpiCard";
 import {
   FileSignature, DollarSign, Inbox, Download, Plus, Users, CalendarDays,
-  CheckCircle, AlertTriangle, Clock, Eye, Link2,
+  CheckCircle, AlertTriangle, Clock, Eye, Link2, Search, Filter, Pencil, Trash2,
 } from "lucide-react";
-import { useContracts, useContractMutations } from "@/hooks/useContracts";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useContracts, useNetworkContracts, useContractMutations } from "@/hooks/useContracts";
 import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -496,114 +499,96 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
 
 export default function ContratosGerador() {
   const { data: contracts, isLoading } = useContracts();
+  const { data: networkContracts, isLoading: isLoadingNetwork } = useNetworkContracts();
+  const { updateContract, deleteContract } = useContractMutations();
   const [searchParams] = useSearchParams();
   const proposalIdFromUrl = searchParams.get("proposal_id");
   const tabFromUrl = searchParams.get("tab");
-  const [tab, setTab] = useState(tabFromUrl === "novo" ? "novo" : "lista");
+  const [tab, setTab] = useState(tabFromUrl === "novo" ? "gerar" : "gestao");
   const [contractType, setContractType] = useState("assessoria");
-  const [statusFilter, setStatusFilter] = useState("all");
 
-  if (isLoading) {
+  // Gestão tab state
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterOwner, setFilterOwner] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [detailContract, setDetailContract] = useState<any>(null);
+  const [editDialog, setEditDialog] = useState(false);
+  const [editingContract, setEditingContract] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ status: "active", monthly_value: 0, signer_name: "", signer_email: "", start_date: "", end_date: "" });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const gestaoStatusLabels: Record<string, string> = { draft: "Rascunho", active: "Ativo", signed: "Assinado", expired: "Vencido", cancelled: "Cancelado" };
+  const gestaoStatusColors: Record<string, string> = { draft: "bg-muted text-muted-foreground", active: "bg-emerald-500/15 text-emerald-500", signed: "bg-blue-500/15 text-blue-500", expired: "bg-red-500/15 text-red-500", cancelled: "bg-red-500/15 text-red-500" };
+  const typeLabels: Record<string, string> = { assessoria: "Assessoria", saas: "SaaS", sistema: "Sistema", franquia: "Franquia" };
+  const ownerLabels: Record<string, string> = { unidade: "Unidade", matriz: "Matriz", cliente_saas: "Cliente SaaS" };
+
+  function daysUntilExpiry(endDate: string | null): number | null {
+    if (!endDate) return null;
+    const diff = new Date(endDate).getTime() - Date.now();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
+
+  const allContracts = networkContracts ?? [];
+  const filtered = useMemo(() => {
+    return allContracts.filter((c: any) => {
+      if (search && !c.title?.toLowerCase().includes(search.toLowerCase()) && !c.signer_name?.toLowerCase().includes(search.toLowerCase()) && !c.org_name?.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterType !== "all" && c.contract_type !== filterType) return false;
+      if (filterOwner !== "all" && c.owner_type !== filterOwner) return false;
+      if (filterStatus !== "all" && c.status !== filterStatus) return false;
+      return true;
+    });
+  }, [allContracts, search, filterType, filterOwner, filterStatus]);
+
+  const totalMRR = filtered.filter((c: any) => c.status === "active" || c.status === "signed").reduce((s: number, c: any) => s + Number(c.monthly_value || 0), 0);
+  const totalContracts = filtered.length;
+  const activeCount = filtered.filter((c: any) => c.status === "active" || c.status === "signed").length;
+  const expiringCount = filtered.filter((c: any) => { const d = daysUntilExpiry(c.end_date); return d !== null && d > 0 && d <= 30; }).length;
+  const formatBRLFn = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const openEdit = (c: any) => {
+    setEditingContract(c);
+    setEditForm({ status: c.status, monthly_value: Number(c.monthly_value || 0), signer_name: c.signer_name || "", signer_email: c.signer_email || "", start_date: c.start_date || "", end_date: c.end_date || "" });
+    setEditDialog(true);
+  };
+
+  const saveEdit = () => {
+    if (!editingContract) return;
+    updateContract.mutate({ id: editingContract.id, ...editForm });
+    setEditDialog(false);
+    toast.success("Contrato atualizado");
+  };
+
+  const confirmDelete = () => {
+    if (!deleteId) return;
+    deleteContract.mutate(deleteId);
+    setDeleteId(null);
+    toast.success("Contrato excluído");
+  };
+
+  if (isLoading || isLoadingNetwork) {
     return <div className="w-full space-y-6"><Skeleton className="h-10 w-64" /><div className="grid grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div></div>;
   }
 
-  const matrizContracts = (contracts ?? []).filter(c => (c as any).owner_type === "matriz" || !(c as any).owner_type);
-  const filtered = statusFilter === "all" ? matrizContracts : matrizContracts.filter(c => c.status === statusFilter);
-  const ativos = matrizContracts.filter(c => c.status === "active").length;
-  const totalMensal = matrizContracts.filter(c => c.status === "active").reduce((s, c) => s + Number((c as any).monthly_value || 0), 0);
-
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Criar Contrato" subtitle="Crie contratos da matriz — franquia ou prestação de serviço" />
+      <PageHeader title="Contratos" subtitle="Gere e gerencie contratos da matriz — franquia ou prestação de serviço" />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Contratos Ativos" value={String(ativos)} icon={FileSignature} delay={0} variant="accent" />
-        <KpiCard label="Total Contratos" value={String(matrizContracts.length)} icon={FileSignature} delay={1} />
-        <KpiCard label="Receita Mensal" value={`R$ ${totalMensal.toLocaleString("pt-BR")}`} icon={DollarSign} delay={2} />
-        <KpiCard label="Franquias" value={String(matrizContracts.filter(c => (c as any).contract_type === "franquia").length)} icon={Users} delay={3} />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <KpiCard label="Total" value={String(totalContracts)} icon={FileSignature} delay={0} />
+        <KpiCard label="Ativos" value={String(activeCount)} icon={FileSignature} delay={1} variant="accent" />
+        <KpiCard label="MRR Rede" value={formatBRLFn(totalMRR)} icon={DollarSign} delay={2} />
+        <KpiCard label="A Vencer (30d)" value={String(expiringCount)} icon={AlertTriangle} delay={3} />
+        <KpiCard label="Valor Total" value={formatBRLFn(filtered.reduce((s: number, c: any) => s + Number(c.total_value || 0), 0))} icon={DollarSign} delay={4} />
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="lista">Contratos</TabsTrigger>
-          <TabsTrigger value="novo"><Plus className="w-4 h-4 mr-1" />Novo Contrato</TabsTrigger>
+          <TabsTrigger value="gerar"><Plus className="w-4 h-4 mr-1" />Gerar Contrato</TabsTrigger>
+          <TabsTrigger value="gestao">Gestão de Contratos</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="lista" className="space-y-4">
-          <div className="flex gap-2">
-            {["all", "draft", "active", "signed", "cancelled"].map(s => (
-              <Button key={s} size="sm" variant={statusFilter === s ? "default" : "outline"} onClick={() => setStatusFilter(s)}>
-                {s === "all" ? "Todos" : statusLabels[s]?.label || s}
-              </Button>
-            ))}
-          </div>
-
-          {filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground font-medium">Nenhum contrato encontrado</p>
-            </div>
-          ) : (
-            <Card className="glass-card">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Cliente / Franqueada</TableHead>
-                    <TableHead>Valor Mensal</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assinatura</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map(c => {
-                    const st = statusLabels[c.status] || { label: c.status, variant: "secondary" as const };
-                    const isSigned = !!(c as any).signed_at;
-                    const endDateContract = (c as any).end_date ? new Date((c as any).end_date) : null;
-                    const daysToEnd = endDateContract ? differenceInDays(endDateContract, new Date()) : null;
-                    const tipo = (c as any).contract_type === "franquia" ? "Franquia" : "Assessoria";
-
-                    return (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.title}</TableCell>
-                        <TableCell><Badge variant="outline">{tipo}</Badge></TableCell>
-                        <TableCell>{c.signer_name || "—"}</TableCell>
-                        <TableCell className="font-semibold">R$ {Number((c as any).monthly_value || 0).toLocaleString("pt-BR")}</TableCell>
-                        <TableCell><Badge variant={st.variant}>{st.label}</Badge></TableCell>
-                        <TableCell>
-                          {isSigned ? (
-                            <Badge className="gap-1 bg-emerald-500/15 text-emerald-700 border-emerald-500/30 text-[10px]"><CheckCircle className="w-3 h-3" />Assinado</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="gap-1 text-[10px]"><Clock className="w-3 h-3" />Não assinado</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {daysToEnd !== null && c.status === "active" ? (
-                            daysToEnd <= 30 ? (
-                              <Badge variant="destructive" className="gap-1 text-[10px]"><AlertTriangle className="w-3 h-3" />Vence em {daysToEnd}d</Badge>
-                            ) : daysToEnd <= 90 ? (
-                              <Badge variant="outline" className="gap-1 text-[10px] text-amber-600"><Clock className="w-3 h-3" />{daysToEnd}d</Badge>
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground">{daysToEnd}d</span>
-                            )
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" variant="ghost" onClick={() => downloadContractPdf(c)} title="Baixar PDF"><Download className="w-4 h-4" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="novo" className="space-y-4">
+        <TabsContent value="gerar" className="space-y-4">
           <div className="flex gap-3 items-center">
             <Label className="text-sm font-medium">Tipo de Contrato:</Label>
             {CONTRACT_TYPE_OPTIONS.map(opt => (
@@ -614,12 +599,179 @@ export default function ContratosGerador() {
           </div>
 
           {contractType === "assessoria" ? (
-            <ServiceContractForm onSuccess={() => setTab("lista")} initialProposalId={proposalIdFromUrl || undefined} />
+            <ServiceContractForm onSuccess={() => setTab("gestao")} initialProposalId={proposalIdFromUrl || undefined} />
           ) : (
-            <FranchiseContractForm onSuccess={() => setTab("lista")} />
+            <FranchiseContractForm onSuccess={() => setTab("gestao")} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="gestao" className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Buscar por título, cliente ou unidade..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-[140px]"><Filter className="w-3.5 h-3.5 mr-1" /><SelectValue placeholder="Tipo" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Tipos</SelectItem>
+                {Object.entries(typeLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterOwner} onValueChange={setFilterOwner}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Proprietário" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Donos</SelectItem>
+                {Object.entries(ownerLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Status</SelectItem>
+                {Object.entries(gestaoStatusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-1">Nenhum contrato encontrado</h3>
+              <p className="text-sm text-muted-foreground">Ajuste os filtros ou crie novos contratos.</p>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left py-3 px-4 font-medium">Cliente</th>
+                    <th className="text-left py-3 px-4 font-medium">Contrato</th>
+                    <th className="text-left py-3 px-4 font-medium">Unidade</th>
+                    <th className="text-center py-3 px-4 font-medium">Tipo</th>
+                    <th className="text-right py-3 px-4 font-medium">Mensal</th>
+                    <th className="text-center py-3 px-4 font-medium">Status</th>
+                    <th className="text-left py-3 px-4 font-medium">Vencimento</th>
+                    <th className="text-center py-3 px-4 font-medium">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c: any) => {
+                    const days = daysUntilExpiry(c.end_date);
+                    const isExpiring = days !== null && days > 0 && days <= 30;
+                    const isExpired = days !== null && days <= 0;
+                    return (
+                      <tr key={c.id} className="border-b hover:bg-muted/30">
+                        <td className="py-3 px-4 font-medium">{c.signer_name || "—"}</td>
+                        <td className="py-3 px-4 text-muted-foreground">{c.title}</td>
+                        <td className="py-3 px-4 text-muted-foreground">{c.org_name || "—"}</td>
+                        <td className="py-3 px-4 text-center">
+                          <Badge variant="outline" className="text-[10px] capitalize">{typeLabels[c.contract_type] || c.contract_type || "—"}</Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">{c.monthly_value ? formatBRLFn(Number(c.monthly_value)) : "—"}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`text-xs px-2 py-0.5 rounded ${gestaoStatusColors[c.status] || "bg-muted"}`}>{gestaoStatusLabels[c.status] || c.status}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">{c.end_date ? new Date(c.end_date).toLocaleDateString("pt-BR") : "—"}</span>
+                            {isExpiring && <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />}
+                            {isExpired && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailContract(c)}><Eye className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(c.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadContractPdf(c)} title="Baixar PDF"><Download className="w-3.5 h-3.5" /></Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Detail Sheet */}
+      <Sheet open={!!detailContract} onOpenChange={() => setDetailContract(null)}>
+        <SheetContent className="overflow-y-auto">
+          <SheetHeader><SheetTitle>Detalhes do Contrato</SheetTitle></SheetHeader>
+          {detailContract && (
+            <div className="space-y-4 mt-4">
+              {[
+                ["Título", detailContract.title],
+                ["Cliente (Signatário)", detailContract.signer_name],
+                ["E-mail", detailContract.signer_email],
+                ["CPF/CNPJ", detailContract.client_document],
+                ["Telefone", detailContract.client_phone],
+                ["Endereço", detailContract.client_address],
+                ["Unidade", detailContract.org_name],
+                ["Tipo", typeLabels[detailContract.contract_type] || detailContract.contract_type],
+                ["Dono", ownerLabels[detailContract.owner_type] || detailContract.owner_type],
+                ["Status", gestaoStatusLabels[detailContract.status] || detailContract.status],
+                ["Valor Mensal", detailContract.monthly_value ? formatBRLFn(Number(detailContract.monthly_value)) : "—"],
+                ["Valor Total", detailContract.total_value ? formatBRLFn(Number(detailContract.total_value)) : "—"],
+                ["Duração", detailContract.duration_months ? `${detailContract.duration_months} meses` : "—"],
+                ["Início", detailContract.start_date ? new Date(detailContract.start_date).toLocaleDateString("pt-BR") : "—"],
+                ["Vencimento", detailContract.end_date ? new Date(detailContract.end_date).toLocaleDateString("pt-BR") : "—"],
+                ["Dia Pagamento", detailContract.payment_day || "—"],
+                ["Descrição do Serviço", detailContract.service_description],
+                ["Criado em", new Date(detailContract.created_at).toLocaleDateString("pt-BR")],
+              ].map(([label, value]) => (
+                <div key={label as string}>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="text-sm font-medium">{value || "—"}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialog} onOpenChange={setEditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Editar Contrato</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Cliente (Signatário)</Label><Input value={editForm.signer_name} onChange={e => setEditForm(f => ({ ...f, signer_name: e.target.value }))} /></div>
+            <div><Label>E-mail</Label><Input value={editForm.signer_email} onChange={e => setEditForm(f => ({ ...f, signer_email: e.target.value }))} /></div>
+            <div><Label>Valor Mensal (R$)</Label><Input type="number" value={editForm.monthly_value} onChange={e => setEditForm(f => ({ ...f, monthly_value: Number(e.target.value) }))} /></div>
+            <div><Label>Status</Label>
+              <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{Object.entries(gestaoStatusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Início</Label><Input type="date" value={editForm.start_date} onChange={e => setEditForm(f => ({ ...f, start_date: e.target.value }))} /></div>
+              <div><Label>Vencimento</Label><Input type="date" value={editForm.end_date} onChange={e => setEditForm(f => ({ ...f, end_date: e.target.value }))} /></div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog(false)}>Cancelar</Button>
+            <Button onClick={saveEdit}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir contrato</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. Deseja excluir este contrato?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
