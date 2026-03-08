@@ -40,21 +40,12 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
     return matchSearch && matchMode && matchAgent;
   });
 
-  // Separate into human and AI sections
-  const { humanContacts, aiContacts } = useMemo(() => {
-    const human: WhatsAppContact[] = [];
-    const ai: WhatsAppContact[] = [];
-    const sorted = [...filtered].sort((a, b) => {
+  const sortedContacts = useMemo(() => {
+    return [...filtered].sort((a, b) => {
       const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
       const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
       return db - da;
     });
-    sorted.forEach((c) => {
-      const mode = (c as any).attending_mode || "ai";
-      if (mode === "human") human.push(c);
-      else ai.push(c);
-    });
-    return { humanContacts: human, aiContacts: ai };
   }, [filtered]);
 
   const modeButtons: { key: ModeFilter; label: string; icon?: React.ReactNode }[] = [
