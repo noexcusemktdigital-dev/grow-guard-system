@@ -391,7 +391,7 @@ function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: any) => void;
 
 export default function FranqueadoraPropostas() {
   const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get("lead_id") ? "calculadora" : "propostas";
+  const defaultTab = searchParams.get("lead_id") ? "calculadora" : "calculadora";
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [editingProposal, setEditingProposal] = useState<any>(null);
   const [viewingProposal, setViewingProposal] = useState<any>(null);
@@ -404,14 +404,14 @@ export default function FranqueadoraPropostas() {
 
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === "propostas") setEditingProposal(null); }}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="propostas"><FileText className="w-4 h-4 mr-1" /> Propostas</TabsTrigger>
           <TabsTrigger value="calculadora"><Calculator className="w-4 h-4 mr-1" /> Calculadora</TabsTrigger>
+          <TabsTrigger value="propostas"><FileText className="w-4 h-4 mr-1" /> Propostas</TabsTrigger>
         </TabsList>
-        <TabsContent value="propostas" className="space-y-6">
-          <PropostasListTab onEdit={handleEditProposal} onView={setViewingProposal} />
-        </TabsContent>
         <TabsContent value="calculadora" className="space-y-6">
           <CalculadoraTab editingProposal={editingProposal} onEditComplete={() => { setEditingProposal(null); setActiveTab("propostas"); }} />
+        </TabsContent>
+        <TabsContent value="propostas" className="space-y-6">
+          <PropostasListTab onEdit={handleEditProposal} onView={setViewingProposal} />
         </TabsContent>
       </Tabs>
 

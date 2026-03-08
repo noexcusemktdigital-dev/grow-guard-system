@@ -1,39 +1,31 @@
 
 
-## Plano: Implementar Alterações na Calculadora de Propostas
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### 1. Inverter abas (`src/pages/franqueadora/FranqueadoraPropostas.tsx`)
-- Linha 394: mudar default de `"propostas"` para `"calculadora"`
-- Linhas 407-408: inverter ordem — Calculadora primeiro, Propostas segundo
-- Linhas 410-415: inverter ordem dos `TabsContent`
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-### 2. Atualizar serviços (`src/data/services.ts`)
+### Ações
 
-| Serviço | Mudança |
-|---------|---------|
-| `ebook` (L79-85) | Nome → "E-book / Cardápio / Catálogo", preço R$55, `quantityType: 'quantity'`, `perUnit: 'página'`, min 1, max 100 |
-| `apresentacao-comercial` (L87-93) | Preço R$55, `quantityType: 'quantity'`, `perUnit: 'página'`, min 1, max 100 |
-| `capa-destaques` (L167-173) | `quantityType: 'quantity'`, `perUnit: 'capa'`, min 1, max 20 |
-| `criacao-avatar` (L174-181) | Preço R$25, `quantityType: 'quantity'`, `perUnit: 'avatar'`, min 1, max 20 |
-| `template-canva` (L182-189) | `quantityType: 'quantity'`, `perUnit: 'template'`, min 1, max 20 |
-| `config-gmb` (L251-257) | `quantityType: 'quantity'`, `perUnit: 'conta'`, min 1, max 10 |
-| `lp-link-bio` (L298-304) | `quantityType: 'quantity'`, `perUnit: 'LP'`, min 1, max 10 |
-| `lp-vsl` (L306-312) | `quantityType: 'quantity'`, `perUnit: 'LP'`, min 1, max 10 |
-| `lp-vendas` (L314-320) | `quantityType: 'quantity'`, `perUnit: 'LP'`, min 1, max 10 |
-| `lp-ebook` (L333-339) | `quantityType: 'quantity'`, `perUnit: 'LP'`, min 1, max 10 |
-| `ecommerce` (L362-369) | Nome → "E-commerce", descrição → adicionar "até 50 produtos" |
-| `config-crm` (L379-385) | Nome → "Configuração do CRM + Implantação", limpar descrição |
-| `fluxo-funil` (L386-393) | **REMOVER** completamente |
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-### 3. YouTube com quantidade (`ServiceCard.tsx` + `useCalculator.ts`)
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-**`ServiceCard.tsx`** — No bloco `youtube_time` (linhas ~120-140), adicionar campo Input de quantidade antes do Select de duração. Atualizar `calculateDisplayPrice` para multiplicar por quantity.
+3. **Executar o teste** e analisar o resultado definitivo
 
-**`useCalculator.ts`** — Em `calculateServicePrice`, multiplicar `getYoutubePrice(minutes) * selection.quantity`. Em `toggleService`, inicializar `quantity: 1` para `youtube_time`.
+### Detalhe técnico
 
-### Arquivos (4)
-- `src/data/services.ts`
-- `src/components/calculator/ServiceCard.tsx`
-- `src/hooks/useCalculator.ts`
-- `src/pages/franqueadora/FranqueadoraPropostas.tsx`
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+```
+
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 

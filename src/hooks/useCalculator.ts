@@ -79,7 +79,7 @@ export const useCalculator = () => {
       const newService: SelectedService = {
         serviceId,
         moduleId,
-        quantity: service.quantityType === 'quantity' ? (service.minQuantity || 1) : 1,
+        quantity: service.quantityType === 'quantity' || service.quantityType === 'youtube_time' ? (service.minQuantity || 1) : 1,
         packageSize: service.quantityType === 'package' ? service.packages?.[0] : undefined,
         youtubeMinutes: service.quantityType === 'youtube_time' ? 2 : undefined,
       };
@@ -134,7 +134,7 @@ export const useCalculator = () => {
     if (!service) return 0;
 
     if (service.quantityType === 'youtube_time' && selection.youtubeMinutes) {
-      return getYoutubePrice(selection.youtubeMinutes);
+      return getYoutubePrice(selection.youtubeMinutes) * (selection.quantity || 1);
     }
     if (service.quantityType === 'package' && selection.packageSize) {
       return service.price * selection.packageSize;
