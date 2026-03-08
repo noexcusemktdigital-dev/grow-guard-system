@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useFinanceExpenses, useFinanceMutations, useFinanceClosings } from "@/hooks/useFinance";
+import { useFinanceExpenses, useFinanceRevenues, useFinanceMutations, useFinanceClosings } from "@/hooks/useFinance";
 import { useNetworkContracts } from "@/hooks/useContracts";
 import { useChargeClient, useAsaasNetworkPayments, type AsaasPayment } from "@/hooks/useClientPayments";
 import { useUnits } from "@/hooks/useUnits";
@@ -65,8 +65,9 @@ export default function FinanceiroDashboard() {
   const qc = useQueryClient();
 
   const { data: expenses, isLoading: le } = useFinanceExpenses();
+  const { data: revenues, isLoading: lr } = useFinanceRevenues();
   const { data: contracts, isLoading: lc } = useNetworkContracts();
-  const { createExpense, updateExpense, deleteExpense } = useFinanceMutations();
+  const { createRevenue, updateRevenue, deleteRevenue, createExpense, updateExpense, deleteExpense } = useFinanceMutations();
   const chargeClient = useChargeClient();
   const { data: asaasPayments, isLoading: la, refetch: refetchAsaas } = useAsaasNetworkPayments();
   const { data: closings, isLoading: loadingClosings } = useFinanceClosings();
@@ -76,7 +77,7 @@ export default function FinanceiroDashboard() {
   const [selectedMonth, setSelectedMonth] = useState("all");
   const monthOptions = useMemo(getMonthOptions, []);
 
-  const isLoading = le || lc;
+  const isLoading = le || lc || lr;
   const activeContracts = useMemo(() => (contracts ?? []).filter((c: any) => c.status === "active" || c.status === "signed"), [contracts]);
 
   const filteredExpenses = useMemo(() => {
@@ -89,11 +90,26 @@ export default function FinanceiroDashboard() {
     return (asaasPayments ?? []).filter(p => (p.paymentDate || p.dueDate || "").startsWith(selectedMonth));
   }, [asaasPayments, selectedMonth]);
 
-  const totalRevenue = useMemo(() => filteredAsaas.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [filteredAsaas]);
+  const filteredRevenues = useMemo(() => {
+    if (selectedMonth === "all") return revenues ?? [];
+    return (revenues ?? []).filter((r: any) => (r.date || "").startsWith(selectedMonth));
+  }, [revenues, selectedMonth]);
+
+  const totalAsaasPaid = useMemo(() => filteredAsaas.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [filteredAsaas]);
+  const totalManualPaid = useMemo(() => filteredRevenues.filter((r: any) => r.status === "paid").reduce((s: number, r: any) => s + Number(r.amount), 0), [filteredRevenues]);
+  const totalRevenue = totalAsaasPaid + totalManualPaid;
   const totalExpenses = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const resultado = totalRevenue - totalExpenses;
   const networkMRR = activeContracts.reduce((s: number, c: any) => s + Number(c.monthly_value || 0), 0);
   const overdueCount = useMemo(() => (asaasPayments ?? []).filter(p => p.status === "OVERDUE").length, [asaasPayments]);
+
+  // Current month Asaas stats
+  const now = new Date();
+  const currentPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthAsaas = useMemo(() => (asaasPayments ?? []).filter(p => (p.dueDate || "").startsWith(currentPrefix)), [asaasPayments, currentPrefix]);
+  const monthTotal = useMemo(() => monthAsaas.reduce((s, p) => s + p.value, 0), [monthAsaas]);
+  const monthReceived = useMemo(() => monthAsaas.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [monthAsaas]);
+  const monthOverdue = useMemo(() => monthAsaas.filter(p => p.status === "OVERDUE").reduce((s, p) => s + p.value, 0), [monthAsaas]);
 
   if (isLoading) {
     return (
@@ -138,10 +154,14 @@ export default function FinanceiroDashboard() {
             networkMRR={networkMRR}
             overdueCount={overdueCount}
             asaasPayments={asaasPayments}
+            revenues={revenues}
             expenses={expenses}
             activeContracts={activeContracts}
             selectedMonth={selectedMonth}
             monthOptions={monthOptions}
+            monthTotal={monthTotal}
+            monthReceived={monthReceived}
+            monthOverdue={monthOverdue}
           />
         </TabsContent>
 
@@ -149,9 +169,14 @@ export default function FinanceiroDashboard() {
         <TabsContent value="receitas" className="space-y-4">
           <ReceitasTab
             asaasPayments={asaasPayments}
+            revenues={revenues}
             selectedMonth={selectedMonth}
             la={la}
             refetchAsaas={refetchAsaas}
+            createRevenue={createRevenue}
+            updateRevenue={updateRevenue}
+            deleteRevenue={deleteRevenue}
+            toast={toast}
           />
         </TabsContent>
 
@@ -200,43 +225,47 @@ export default function FinanceiroDashboard() {
 /* DASHBOARD TAB                                                      */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, overdueCount, asaasPayments, expenses, activeContracts, selectedMonth, monthOptions }: any) {
-  // Chart data: last 6 months — receitas from Asaas, despesas from manual
+function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, overdueCount, asaasPayments, revenues, expenses, activeContracts, selectedMonth, monthOptions, monthTotal, monthReceived, monthOverdue }: any) {
   const chartData = useMemo(() => {
     const now = new Date();
     return Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
       const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const rec = (asaasPayments ?? [])
+      const asaasRec = (asaasPayments ?? [])
         .filter((p: any) => (p.paymentDate || p.dueDate || "").startsWith(prefix) && ASAAS_PAID_STATUSES.includes(p.status))
         .reduce((s: number, p: any) => s + p.value, 0);
+      const manualRec = (revenues ?? [])
+        .filter((r: any) => (r.date || "").startsWith(prefix) && r.status === "paid")
+        .reduce((s: number, r: any) => s + Number(r.amount), 0);
       const desp = (expenses ?? []).filter((e: any) => (e.date || "").startsWith(prefix)).reduce((s: number, e: any) => s + Number(e.amount), 0);
-      return { name: months[d.getMonth()], receitas: rec, despesas: desp };
+      return { name: months[d.getMonth()], receitas: asaasRec + manualRec, despesas: desp };
     });
-  }, [asaasPayments, expenses]);
+  }, [asaasPayments, revenues, expenses]);
 
-  // Revenue composition by billing type from Asaas
   const pieData = useMemo(() => {
-    const cats: Record<string, number> = {};
+    const cats: Record<string, number> = { "Manual": 0 };
     (asaasPayments ?? []).filter((p: any) => ASAAS_PAID_STATUSES.includes(p.status)).forEach((p: any) => {
       const cat = p.billingType || "Outros";
       cats[cat] = (cats[cat] || 0) + p.value;
     });
+    const manualTotal = (revenues ?? []).filter((r: any) => r.status === "paid").reduce((s: number, r: any) => s + Number(r.amount), 0);
+    if (manualTotal > 0) cats["Manual"] = manualTotal;
+    else delete cats["Manual"];
     return Object.entries(cats).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
-  }, [asaasPayments]);
+  }, [asaasPayments, revenues]);
 
   return (
     <>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <KpiCard label="MRR da Rede" value={formatBRL(networkMRR)} sublabel={`${activeContracts.length} contratos ativos`} accent />
-        <KpiCard label="Receitas (Asaas)" value={formatBRL(totalRevenue)} trend="up" sublabel={selectedMonth !== "all" ? monthOptions.find((o: any) => o.value === selectedMonth)?.label : undefined} />
+        <KpiCard label="Cobranças do Mês" value={formatBRL(monthTotal)} sublabel="total no período" />
+        <KpiCard label="Recebidas" value={formatBRL(monthReceived)} trend="up" sublabel="confirmadas" />
+        <KpiCard label="Atrasadas" value={formatBRL(monthOverdue)} sublabel={overdueCount > 0 ? `${overdueCount} cobranças` : "nenhuma"} />
         <KpiCard label="Despesas" value={formatBRL(totalExpenses)} sublabel={selectedMonth !== "all" ? monthOptions.find((o: any) => o.value === selectedMonth)?.label : undefined} />
         <KpiCard label="Resultado" value={formatBRL(resultado)} trend={resultado >= 0 ? "up" : "down"} />
-        <KpiCard label="Inadimplentes" value={String(overdueCount)} sublabel={overdueCount > 0 ? "cobranças vencidas" : "nenhuma"} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Bar chart */}
         <div className="lg:col-span-2 glass-card p-6">
           <h3 className="text-sm font-semibold text-foreground mb-4">Receitas vs Despesas (últimos 6 meses)</h3>
           <ResponsiveContainer width="100%" height={240}>
@@ -251,9 +280,8 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
           </ResponsiveContainer>
         </div>
 
-        {/* Pie chart — by billing type */}
         <div className="glass-card p-6">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Receitas por Tipo de Cobrança</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4">Receitas por Tipo</h3>
           {pieData.length === 0 ? (
             <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados</div>
           ) : (
@@ -271,7 +299,6 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
         </div>
       </div>
 
-      {/* Active contracts preview */}
       <div className="glass-card p-6">
         <h3 className="text-sm font-semibold text-foreground mb-4">Receita de Contratos Ativos</h3>
         {activeContracts.length === 0 ? (
@@ -284,7 +311,7 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
                   <span className="text-sm font-medium">{c.signer_name || c.title}</span>
                   <span className="text-xs text-muted-foreground ml-2">{c.org_name || "Matriz"}</span>
                 </div>
-                <span className="text-sm font-medium text-emerald-500">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}/mês</span>
+                <span className="text-sm font-medium text-primary">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}/mês</span>
               </div>
             ))}
             {activeContracts.length > 8 && <p className="text-xs text-muted-foreground text-center pt-2">+{activeContracts.length - 8} contratos</p>}
@@ -296,25 +323,58 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
 }
 
 /* ═══════════════════════════════════════════════════════════════════ */
-/* RECEITAS TAB — Asaas only                                          */
+/* RECEITAS TAB — Asaas + Manual                                      */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function ReceitasTab({ asaasPayments, selectedMonth, la, refetchAsaas }: any) {
+const revCategories = ["Serviço", "Consultoria", "Licença", "Comissão", "Outros"];
+
+function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas, createRevenue, updateRevenue, deleteRevenue, toast }: any) {
   const [search, setSearch] = useState("");
+  const [revDialog, setRevDialog] = useState(false);
+  const [editingRev, setEditingRev] = useState<any>(null);
+  const [revForm, setRevForm] = useState({ description: "", amount: 0, category: "Serviço", status: "pending", date: "", payment_method: "" });
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    let list = (asaasPayments ?? []) as AsaasPayment[];
-    if (selectedMonth !== "all") {
-      list = list.filter(p => (p.paymentDate || p.dueDate || "").startsWith(selectedMonth));
-    }
-    if (search) {
-      list = list.filter(p => (p.description || p.orgName || "").toLowerCase().includes(search.toLowerCase()));
-    }
-    return list.sort((a, b) => (b.dueDate || "").localeCompare(a.dueDate || ""));
-  }, [asaasPayments, selectedMonth, search]);
+  // Unified list: Asaas + Manual
+  type UnifiedEntry = { id: string; description: string; value: number; date: string; status: string; source: "asaas" | "manual"; billingType?: string; invoiceUrl?: string; bankSlipUrl?: string; orgName?: string; category?: string; rawStatus?: string };
 
-  const totalPaid = useMemo(() => filtered.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [filtered]);
-  const totalPending = useMemo(() => filtered.filter(p => !ASAAS_PAID_STATUSES.includes(p.status) && p.status !== "REFUNDED").reduce((s, p) => s + p.value, 0), [filtered]);
+  const unified = useMemo(() => {
+    const asaasList: UnifiedEntry[] = ((asaasPayments ?? []) as AsaasPayment[]).map(p => ({
+      id: p.id, description: p.description || p.orgName || "—", value: p.value,
+      date: p.dueDate || p.paymentDate || "", status: ASAAS_PAID_STATUSES.includes(p.status) ? "paid" : p.status === "OVERDUE" ? "overdue" : "pending",
+      source: "asaas" as const, billingType: p.billingType, invoiceUrl: p.invoiceUrl, bankSlipUrl: p.bankSlipUrl, orgName: p.orgName, rawStatus: p.status,
+    }));
+    const manualList: UnifiedEntry[] = ((revenues ?? []) as any[]).map(r => ({
+      id: r.id, description: r.description || "—", value: Number(r.amount),
+      date: r.date || "", status: r.status || "pending",
+      source: "manual" as const, category: r.category,
+    }));
+    let list = [...asaasList, ...manualList];
+    if (selectedMonth !== "all") list = list.filter(e => e.date.startsWith(selectedMonth));
+    if (search) list = list.filter(e => e.description.toLowerCase().includes(search.toLowerCase()) || (e.orgName || "").toLowerCase().includes(search.toLowerCase()));
+    return list.sort((a, b) => b.date.localeCompare(a.date));
+  }, [asaasPayments, revenues, selectedMonth, search]);
+
+  const totalPaid = useMemo(() => unified.filter(e => e.status === "paid").reduce((s, e) => s + e.value, 0), [unified]);
+  const totalPending = useMemo(() => unified.filter(e => e.status === "pending").reduce((s, e) => s + e.value, 0), [unified]);
+  const totalOverdue = useMemo(() => unified.filter(e => e.status === "overdue").reduce((s, e) => s + e.value, 0), [unified]);
+
+  const openNewRev = () => { setEditingRev(null); setRevForm({ description: "", amount: 0, category: "Serviço", status: "pending", date: "", payment_method: "" }); setRevDialog(true); };
+  const openEditRev = (r: any) => { setEditingRev(r); setRevForm({ description: r.description, amount: Number(r.amount), category: r.category || "Serviço", status: r.status || "pending", date: r.date || "", payment_method: r.payment_method || "" }); setRevDialog(true); };
+
+  const saveRev = () => {
+    if (!revForm.description.trim()) { toast({ title: "Informe a descrição", variant: "destructive" }); return; }
+    if (editingRev) { updateRevenue.mutate({ id: editingRev.id, ...revForm }); toast({ title: "Receita atualizada" }); }
+    else { createRevenue.mutate(revForm); toast({ title: "Receita adicionada" }); }
+    setRevDialog(false);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteRevenue.mutate(deleteTarget);
+    toast({ title: "Receita excluída" });
+    setDeleteTarget(null);
+  };
 
   return (
     <>
@@ -326,51 +386,66 @@ function ReceitasTab({ asaasPayments, selectedMonth, la, refetchAsaas }: any) {
         <Button variant="outline" size="sm" className="gap-2" onClick={() => refetchAsaas()} disabled={la}>
           <RefreshCw className={`w-4 h-4 ${la ? "animate-spin" : ""}`} /> Atualizar Asaas
         </Button>
+        <Button size="sm" onClick={openNewRev} className="gap-2"><Plus className="w-4 h-4" /> Nova Receita</Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Recebido</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-emerald-600">{formatBRL(totalPaid)}</span></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Pendente</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-yellow-600">{formatBRL(totalPending)}</span></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Cobranças</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-foreground">{filtered.length}</span></CardContent></Card>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Recebido</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-primary">{formatBRL(totalPaid)}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Pendente</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-muted-foreground">{formatBRL(totalPending)}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Atrasadas</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-destructive">{formatBRL(totalOverdue)}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Entradas</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-foreground">{unified.length}</span></CardContent></Card>
       </div>
 
-      {la && !asaasPayments ? (
-        <div className="space-y-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
-      ) : filtered.length === 0 ? (
+      {unified.length === 0 ? (
         <div className="flex flex-col items-center py-12 text-center">
           <Inbox className="w-10 h-10 text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhuma cobrança encontrada no Asaas.</p>
+          <p className="text-sm text-muted-foreground">Nenhuma receita encontrada.</p>
         </div>
       ) : (
         <div className="border rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b bg-muted/50">
-              <th className="text-left py-3 px-4 font-medium">Descrição / Cliente</th>
-              <th className="text-left py-3 px-4 font-medium">Tipo</th>
+              <th className="text-left py-3 px-4 font-medium">Descrição</th>
+              <th className="text-left py-3 px-4 font-medium">Origem</th>
               <th className="text-right py-3 px-4 font-medium">Valor</th>
               <th className="text-center py-3 px-4 font-medium">Status</th>
-              <th className="text-left py-3 px-4 font-medium">Vencimento</th>
-              <th className="text-left py-3 px-4 font-medium">Pagamento</th>
-              <th className="text-center py-3 px-4 font-medium">Fatura</th>
+              <th className="text-left py-3 px-4 font-medium">Data</th>
+              <th className="text-center py-3 px-4 font-medium">Ações</th>
             </tr></thead>
             <tbody>
-              {filtered.map(p => {
-                const st = asaasStatusLabel(p.status);
+              {unified.map(entry => {
+                const statusCls = entry.status === "paid" ? "bg-emerald-500/15 text-emerald-600" : entry.status === "overdue" ? "bg-destructive/15 text-destructive" : "bg-yellow-500/15 text-yellow-600";
+                const statusLabel = entry.status === "paid" ? "Recebido" : entry.status === "overdue" ? "Vencido" : "Pendente";
                 return (
-                  <tr key={p.id} className="border-b hover:bg-muted/30">
+                  <tr key={`${entry.source}-${entry.id}`} className="border-b hover:bg-muted/30">
                     <td className="py-3 px-4">
-                      <div className="font-medium">{p.description || p.orgName || "—"}</div>
-                      {p.orgName && p.description && <div className="text-xs text-muted-foreground">{p.orgName}</div>}
+                      <div className="font-medium">{entry.description}</div>
+                      {entry.orgName && <div className="text-xs text-muted-foreground">{entry.orgName}</div>}
                     </td>
-                    <td className="py-3 px-4"><Badge variant="outline" className="text-[10px]">{p.billingType || "—"}</Badge></td>
-                    <td className="py-3 px-4 text-right text-emerald-500 font-medium">{formatBRL(p.value)}</td>
-                    <td className="py-3 px-4 text-center"><span className={`text-xs px-2 py-0.5 rounded ${st.cls}`}>{st.label}</span></td>
-                    <td className="py-3 px-4 text-muted-foreground">{p.dueDate ? new Date(p.dueDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
-                    <td className="py-3 px-4 text-muted-foreground">{p.paymentDate ? new Date(p.paymentDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                    <td className="py-3 px-4">
+                      <Badge variant={entry.source === "asaas" ? "default" : "secondary"} className="text-[10px]">
+                        {entry.source === "asaas" ? (entry.billingType || "Asaas") : "Manual"}
+                      </Badge>
+                      {entry.category && <span className="text-[10px] text-muted-foreground ml-1">{entry.category}</span>}
+                    </td>
+                    <td className="py-3 px-4 text-right text-primary font-medium">{formatBRL(entry.value)}</td>
+                    <td className="py-3 px-4 text-center"><span className={`text-xs px-2 py-0.5 rounded ${statusCls}`}>{statusLabel}</span></td>
+                    <td className="py-3 px-4 text-muted-foreground">{entry.date ? new Date(entry.date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
                     <td className="py-3 px-4 text-center">
-                      {(p.invoiceUrl || p.bankSlipUrl) ? (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(p.invoiceUrl || p.bankSlipUrl!, "_blank")}><ExternalLink className="w-3.5 h-3.5" /></Button>
-                      ) : <span className="text-xs text-muted-foreground">—</span>}
+                      <div className="flex items-center justify-center gap-1">
+                        {entry.source === "asaas" && (entry.invoiceUrl || entry.bankSlipUrl) && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(entry.invoiceUrl || entry.bankSlipUrl!, "_blank")}><ExternalLink className="w-3.5 h-3.5" /></Button>
+                        )}
+                        {entry.source === "manual" && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                              const rev = (revenues ?? []).find((r: any) => r.id === entry.id);
+                              if (rev) openEditRev(rev);
+                            }}><Pencil className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(entry.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -379,6 +454,45 @@ function ReceitasTab({ asaasPayments, selectedMonth, la, refetchAsaas }: any) {
           </table>
         </div>
       )}
+
+      {/* Revenue Dialog */}
+      <Dialog open={revDialog} onOpenChange={setRevDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{editingRev ? "Editar Receita" : "Nova Receita"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Descrição *</Label><Input value={revForm.description} onChange={e => setRevForm(f => ({ ...f, description: e.target.value }))} /></div>
+            <div><Label>Valor (R$)</Label><Input type="number" value={revForm.amount} onChange={e => setRevForm(f => ({ ...f, amount: Number(e.target.value) }))} /></div>
+            <div><Label>Data</Label><Input type="date" value={revForm.date} onChange={e => setRevForm(f => ({ ...f, date: e.target.value }))} /></div>
+            <div><Label>Categoria</Label>
+              <Select value={revForm.category} onValueChange={v => setRevForm(f => ({ ...f, category: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{revCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Status</Label>
+              <Select value={revForm.status} onValueChange={v => setRevForm(f => ({ ...f, status: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="paid">Recebido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter><Button onClick={saveRev}>{editingRev ? "Salvar" : "Adicionar"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Excluir receita?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

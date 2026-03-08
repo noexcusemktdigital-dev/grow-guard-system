@@ -52,9 +52,9 @@ const marketingSection: SidebarItem[] = [
 ];
 
 const adminSection: SidebarItem[] = [
+  { label: "Matriz", icon: Shield, path: "/franqueadora/matriz" },
   { label: "Contratos", icon: FileText, path: "/franqueadora/contratos" },
   { label: "Financeiro", icon: DollarSign, path: "/franqueadora/financeiro" },
-  { label: "Matriz", icon: Shield, path: "/franqueadora/matriz" },
   { label: "SaaS", icon: Cloud, path: "/franqueadora/saas" },
 ];
 
