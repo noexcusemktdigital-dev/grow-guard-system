@@ -165,11 +165,22 @@ Deno.serve(async (req) => {
 
     let contactId: string;
 
+    // Build preview text for contact list
+    const previewText = messageText
+      ? messageText.substring(0, 100)
+      : messageType === "audio" ? "🎤 Áudio"
+      : messageType === "image" ? "📷 Imagem"
+      : messageType === "video" ? "🎬 Vídeo"
+      : messageType === "document" ? "📄 Documento"
+      : messageType === "sticker" ? "🏷️ Sticker"
+      : "📎 Mídia";
+
     if (existingContact) {
       contactId = existingContact.id;
       const updateData: any = {
         name: senderName || undefined,
         last_message_at: new Date().toISOString(),
+        last_message_preview: (isFromMe ? "Você: " : "") + previewText,
         instance_id: instance.id,
       };
       // Only increment unread for inbound messages
@@ -188,6 +199,7 @@ Deno.serve(async (req) => {
           phone,
           name: senderName,
           last_message_at: new Date().toISOString(),
+          last_message_preview: (isFromMe ? "Você: " : "") + previewText,
           unread_count: isFromMe ? 0 : 1,
           instance_id: instance.id,
           attending_mode: "ai",

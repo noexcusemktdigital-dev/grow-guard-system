@@ -85,6 +85,11 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold tracking-tight">Conversas</h3>
             <Badge variant="secondary" className="text-[10px] h-5 px-1.5 rounded-full">{contacts.length}</Badge>
+            {activeToday > 0 && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1.5 rounded-full text-emerald-500 border-emerald-500/30">
+                {activeToday} hoje
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             {onSync && (

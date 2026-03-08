@@ -139,7 +139,7 @@ export function useWhatsAppMessages(contactId: string | null) {
       return ((data || []) as unknown as WhatsAppMessage[]).reverse();
     },
     enabled: !!orgId && !!contactId,
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 }
 
