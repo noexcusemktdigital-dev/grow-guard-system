@@ -205,7 +205,76 @@ export function useAcademyMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["academy-quiz-questions"] }),
   });
 
-  return { createModule, updateModule, createLesson, markLessonComplete, submitQuizAttempt, insertCertificate, createQuizQuestion };
+  const deleteModule = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("academy_modules").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["academy-modules"] });
+      qc.invalidateQueries({ queryKey: ["academy-lessons"] });
+    },
+  });
+
+  const updateLesson = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; title?: string; content?: string; video_url?: string; duration_minutes?: number; sort_order?: number }) => {
+      const { data, error } = await supabase.from("academy_lessons").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["academy-lessons"] }),
+  });
+
+  const deleteLesson = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("academy_lessons").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["academy-lessons"] }),
+  });
+
+  const createQuiz = useMutation({
+    mutationFn: async (quiz: { title: string; module_id: string; passing_score?: number }) => {
+      const { data, error } = await supabase.from("academy_quizzes").insert({ ...quiz, organization_id: orgId! }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["academy-quizzes"] }),
+  });
+
+  const updateQuiz = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; title?: string; passing_score?: number }) => {
+      const { data, error } = await supabase.from("academy_quizzes").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["academy-quizzes"] }),
+  });
+
+  const updateQuizQuestion = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; question?: string; options?: Json; correct_answer?: number; sort_order?: number }) => {
+      const { data, error } = await supabase.from("academy_quiz_questions").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["academy-quiz-questions"] }),
+  });
+
+  const deleteQuizQuestion = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("academy_quiz_questions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["academy-quiz-questions"] }),
+  });
+
+  return {
+    createModule, updateModule, deleteModule,
+    createLesson, updateLesson, deleteLesson,
+    markLessonComplete, submitQuizAttempt, insertCertificate,
+    createQuiz, updateQuiz,
+    createQuizQuestion, updateQuizQuestion, deleteQuizQuestion,
+  };
 }
 
 // ===== Computed helpers =====
