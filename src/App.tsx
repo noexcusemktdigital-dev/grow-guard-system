@@ -184,7 +184,6 @@ const App = () => (
                 <Route path="plano-creditos" element={<ClientePlanoCreditos />} />
                 <Route path="configuracoes" element={<ClienteConfiguracoes />} />
                 <Route path="avaliacoes" element={<ClienteAvaliacoes />} />
-                <Route path="comunicados" element={<ClienteComunicados />} />
                 <Route path="suporte" element={<ClienteSuporte />} />
               </Route>
             </Route>
