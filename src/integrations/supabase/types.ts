@@ -1401,6 +1401,68 @@ export type Database = {
           },
         ]
       }
+      client_tasks: {
+        Row: {
+          assigned_team: string | null
+          assigned_to: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          organization_id: string
+          priority: string
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_team?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id: string
+          priority?: string
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_team?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id?: string
+          priority?: string
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_templates: {
         Row: {
           content: string | null
