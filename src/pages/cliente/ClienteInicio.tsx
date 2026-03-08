@@ -572,6 +572,7 @@ export default function ClienteInicio() {
               </CardContent>
             </Card>
           )}
+        </div>
 
         {/* Right column */}
         <div className="lg:col-span-2 space-y-5">
