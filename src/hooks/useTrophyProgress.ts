@@ -10,8 +10,9 @@ export interface TrophyStatus {
 
 export type TrophyId = "first_sale" | "hat_trick" | "top_revenue" | "speed_close" | "first_goal" | "ten_clients";
 
-export function useTrophyProgress(goalProgressData?: Record<string, { percent: number }>) {
-  const { data: orgId } = useUserOrgId();
+export function useTrophyProgress(goalProgressData?: Record<string, { percent: number }>, overrideOrgId?: string | null) {
+  const { data: userOrgId } = useUserOrgId();
+  const orgId = overrideOrgId ?? userOrgId;
 
   return useQuery({
     queryKey: ["trophy-progress", orgId, goalProgressData ? Object.keys(goalProgressData).length : 0],

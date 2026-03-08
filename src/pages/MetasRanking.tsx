@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trophy, BarChart3, Target, Plus, TrendingUp, Medal, Users, CalendarDays, Inbox } from "lucide-react";
+import { Trophy, BarChart3, Target, Plus, TrendingUp, Medal, Users, CalendarDays, Inbox, MoreVertical, Pencil, Archive, Star, Flame, Zap, Lock, Crown, Award } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,10 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { useGoals, useRankings, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useUnits } from "@/hooks/useUnits";
+import { useOrgMembers } from "@/hooks/useOrgMembers";
+import { useNetworkTrophies } from "@/hooks/useNetworkTrophies";
+import type { TrophyId } from "@/hooks/useTrophyProgress";
 import { toast } from "sonner";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -22,23 +26,35 @@ const tabs = [
   { id: "ranking", label: "Ranking", icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
 ];
 
+const trophyDefs: { id: TrophyId; title: string; icon: React.ElementType }[] = [
+  { id: "first_sale", title: "1ª Venda", icon: Star },
+  { id: "hat_trick", title: "Hat-trick", icon: Flame },
+  { id: "top_revenue", title: "Top Faturamento", icon: TrendingUp },
+  { id: "speed_close", title: "Relâmpago", icon: Zap },
+  { id: "first_goal", title: "1ª Meta", icon: Target },
+  { id: "ten_clients", title: "10 Clientes", icon: Users },
+];
+
 export default function MetasRanking() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const { data: goals, isLoading: loadingGoals } = useGoals();
   const now = new Date();
   const { data: rankings, isLoading: loadingRankings } = useRankings(now.getMonth() + 1, now.getFullYear());
   const { data: units } = useUnits();
-  const { createGoal } = useGoalMutations();
+  const { data: orgMembers } = useOrgMembers();
+  const { data: networkTrophies, isLoading: loadingNetworkTrophies } = useNetworkTrophies();
+  const { createGoal, updateGoal, archiveGoal } = useGoalMutations();
 
-  const activeGoals = (goals ?? []).filter(g => g.status === "active");
+  const activeGoals = (goals ?? []).filter((g: any) => g.status === "active");
   const { data: goalProgress } = useGoalProgress(activeGoals.length > 0 ? activeGoals : undefined);
 
-  const [showNewGoal, setShowNewGoal] = useState(false);
+  const [showGoalDialog, setShowGoalDialog] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<any>(null);
   const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
 
   const isLoading = loadingGoals || loadingRankings;
 
-  const goalsWithProgress = activeGoals.map(g => {
+  const goalsWithProgress = activeGoals.map((g: any) => {
     const progress = goalProgress?.[g.id];
     return { ...g, realPercent: progress?.percent ?? 0, realValue: progress?.currentValue ?? 0, status_calc: progress?.status ?? "em_andamento" };
   });
@@ -48,31 +64,59 @@ export default function MetasRanking() {
     ? Math.round(goalsWithProgress.reduce((sum, g) => sum + Math.min(100, g.realPercent), 0) / goalsWithProgress.length)
     : 0;
 
-  const handleCreateGoal = () => {
+  const openNewGoal = () => {
+    setEditingGoal(null);
+    setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
+    setShowGoalDialog(true);
+  };
+
+  const openEditGoal = (g: any) => {
+    setEditingGoal(g);
+    const month = g.period_start ? g.period_start.substring(0, 7) : "";
+    setGoalForm({
+      title: g.title || "",
+      type: g.type || g.metric || "faturamento",
+      target_value: String(g.target_value || ""),
+      scope: g.scope || "rede",
+      unit_org_id: g.unit_org_id || "",
+      period_month: month,
+    });
+    setShowGoalDialog(true);
+  };
+
+  const handleSaveGoal = () => {
     if (!goalForm.title || !goalForm.target_value) return;
-    createGoal.mutate(
-      {
-        title: goalForm.title,
-        type: goalForm.type,
-        target_value: Number(goalForm.target_value),
-        scope: goalForm.scope,
-        unit_org_id: goalForm.scope === "unidade" ? goalForm.unit_org_id : undefined,
-        period_start: goalForm.period_month ? `${goalForm.period_month}-01` : undefined,
-        period_end: goalForm.period_month
-          ? new Date(Number(goalForm.period_month.split("-")[0]), Number(goalForm.period_month.split("-")[1]), 0).toISOString().split("T")[0]
-          : undefined,
-        status: "active",
-        metric: goalForm.type,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Meta criada com sucesso");
-          setShowNewGoal(false);
-          setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
-        },
+    const payload: any = {
+      title: goalForm.title,
+      type: goalForm.type,
+      target_value: Number(goalForm.target_value),
+      scope: goalForm.scope,
+      unit_org_id: goalForm.scope === "unidade" ? goalForm.unit_org_id : null,
+      period_start: goalForm.period_month ? `${goalForm.period_month}-01` : undefined,
+      period_end: goalForm.period_month
+        ? new Date(Number(goalForm.period_month.split("-")[0]), Number(goalForm.period_month.split("-")[1]), 0).toISOString().split("T")[0]
+        : undefined,
+      metric: goalForm.type,
+    };
+
+    if (editingGoal) {
+      updateGoal.mutate({ id: editingGoal.id, ...payload }, {
+        onSuccess: () => { toast.success("Meta atualizada"); setShowGoalDialog(false); },
+        onError: () => toast.error("Erro ao atualizar meta"),
+      });
+    } else {
+      createGoal.mutate({ ...payload, status: "active" }, {
+        onSuccess: () => { toast.success("Meta criada com sucesso"); setShowGoalDialog(false); },
         onError: () => toast.error("Erro ao criar meta"),
-      }
-    );
+      });
+    }
+  };
+
+  const handleArchiveGoal = (id: string) => {
+    archiveGoal.mutate(id, {
+      onSuccess: () => toast.success("Meta arquivada"),
+      onError: () => toast.error("Erro ao arquivar"),
+    });
   };
 
   const renderDashboard = () => (
@@ -130,7 +174,7 @@ export default function MetasRanking() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="font-semibold text-sm">Metas da Rede</h3>
-        <Button size="sm" className="gap-1.5" onClick={() => setShowNewGoal(true)}>
+        <Button size="sm" className="gap-1.5" onClick={openNewGoal}>
           <Plus className="w-4 h-4" /> Nova Meta
         </Button>
       </div>
@@ -155,11 +199,29 @@ export default function MetasRanking() {
                         <Badge variant={g.status === "active" ? "default" : "secondary"} className="text-[10px]">{g.status}</Badge>
                         {g.scope === "unidade" && unit && <Badge variant="secondary" className="text-[10px]">{unit.name}</Badge>}
                         {g.scope === "rede" && <Badge variant="secondary" className="text-[10px]">Rede</Badge>}
+                        {g.scope === "matriz" && <Badge variant="secondary" className="text-[10px]">Matriz</Badge>}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold">{formatBRL(g.target_value)}</p>
-                      {gp && <p className={`text-xs font-medium ${statusColor}`}>Atual: {formatBRL(currentValue)}</p>}
+                    <div className="flex items-start gap-2">
+                      <div className="text-right">
+                        <p className="text-lg font-bold">{formatBRL(g.target_value)}</p>
+                        {gp && <p className={`text-xs font-medium ${statusColor}`}>Atual: {formatBRL(currentValue)}</p>}
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditGoal(g)}>
+                            <Pencil className="w-4 h-4 mr-2" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleArchiveGoal(g.id)} className="text-destructive">
+                            <Archive className="w-4 h-4 mr-2" /> Arquivar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -190,33 +252,123 @@ export default function MetasRanking() {
   );
 
   const renderRanking = () => (
-    <div className="space-y-4">
-      <h3 className="font-semibold text-sm">Ranking Mensal — {now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</h3>
-      {(rankings ?? []).length === 0 ? (
-        <div className="text-center py-12"><Inbox className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" /><p className="text-sm text-muted-foreground">Nenhum dado de ranking disponível.</p></div>
-      ) : (
-        <div className="space-y-3">
-          {(rankings ?? []).map((r: any, i: number) => {
-            const unit = (units ?? []).find((u: any) => u.unit_org_id === r.unit_org_id);
-            const medals = ["🥇", "🥈", "🥉"];
-            return (
-              <Card key={r.id} className={i < 3 ? "border-amber-500/20" : ""}>
-                <CardContent className="p-4 flex items-center gap-4">
-                  <span className="text-2xl w-10 text-center">{medals[i] || `#${r.position || i + 1}`}</span>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm">{unit?.name || "Unidade"}</p>
-                    <p className="text-xs text-muted-foreground">{unit?.city || ""}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold">{r.score ?? 0}</p>
-                    <p className="text-[10px] text-muted-foreground">pontos</p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+    <div className="space-y-6">
+      {/* Ranking Mensal */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-sm">Ranking Mensal — {now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</h3>
+        {(rankings ?? []).length === 0 ? (
+          <div className="text-center py-8"><Inbox className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" /><p className="text-sm text-muted-foreground">Nenhum dado de ranking disponível.</p></div>
+        ) : (
+          <div className="space-y-3">
+            {(rankings ?? []).map((r: any, i: number) => {
+              const unit = (units ?? []).find((u: any) => u.unit_org_id === r.unit_org_id);
+              const medals = ["🥇", "🥈", "🥉"];
+              return (
+                <Card key={r.id} className={i < 3 ? "border-amber-500/20" : ""}>
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <span className="text-2xl w-10 text-center">{medals[i] || `#${r.position || i + 1}`}</span>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">{unit?.name || "Unidade"}</p>
+                      <p className="text-xs text-muted-foreground">{unit?.city || ""}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold">{r.score ?? 0}</p>
+                      <p className="text-[10px] text-muted-foreground">pontos</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Troféus da Rede */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-sm flex items-center gap-2">
+          <Trophy className="w-4 h-4 text-amber-500" /> Troféus da Rede
+        </h3>
+        {loadingNetworkTrophies ? (
+          <div className="grid gap-3 sm:grid-cols-2"><Skeleton className="h-24" /><Skeleton className="h-24" /></div>
+        ) : !units?.length ? (
+          <p className="text-sm text-muted-foreground">Nenhuma unidade cadastrada.</p>
+        ) : (
+          <div className="space-y-3">
+            {(units ?? []).map((unit: any) => {
+              const unitTrophies = networkTrophies?.[unit.unit_org_id];
+              const unlockedCount = unitTrophies ? Object.values(unitTrophies).filter(t => t.unlocked).length : 0;
+              return (
+                <Card key={unit.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-sm font-semibold">{unit.name}</p>
+                        <p className="text-xs text-muted-foreground">{unlockedCount}/6 troféus</p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px]">{unit.city || "—"}</Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      {trophyDefs.map((td) => {
+                        const Icon = td.icon;
+                        const unlocked = unitTrophies?.[td.id]?.unlocked ?? false;
+                        return (
+                          <div
+                            key={td.id}
+                            title={td.title}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              unlocked ? "bg-yellow-500/15 text-yellow-400" : "bg-muted text-muted-foreground/40"
+                            }`}
+                          >
+                            {unlocked ? <Icon className="w-4 h-4" /> : <Lock className="w-3.5 h-3.5" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Time Interno da Matriz */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-sm flex items-center gap-2">
+          <Users className="w-4 h-4 text-blue-500" /> Time Interno da Matriz
+        </h3>
+        {!orgMembers?.length ? (
+          <p className="text-sm text-muted-foreground">Nenhum membro encontrado.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {orgMembers.map((member) => {
+              // Count goals assigned to this member
+              const memberGoals = activeGoals.filter((g: any) => g.assigned_to === member.user_id);
+              const memberAchieved = memberGoals.filter((g: any) => {
+                const gp = goalProgress?.[g.id];
+                return gp && gp.percent >= 100;
+              }).length;
+              return (
+                <Card key={member.user_id}>
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                      {(member.full_name || "?").charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{member.full_name || "Sem nome"}</p>
+                      <p className="text-xs text-muted-foreground">{member.job_title || member.role}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold">{memberGoals.length}</p>
+                      <p className="text-[10px] text-muted-foreground">{memberAchieved} atingidas</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -261,9 +413,9 @@ export default function MetasRanking() {
         </>
       )}
 
-      <Dialog open={showNewGoal} onOpenChange={setShowNewGoal}>
+      <Dialog open={showGoalDialog} onOpenChange={setShowGoalDialog}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Nova Meta</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingGoal ? "Editar Meta" : "Nova Meta"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Título</Label><Input value={goalForm.title} onChange={(e) => setGoalForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Faturamento Março" /></div>
             <div><Label>Tipo / Métrica</Label>
@@ -306,9 +458,9 @@ export default function MetasRanking() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewGoal(false)}>Cancelar</Button>
-            <Button onClick={handleCreateGoal} disabled={createGoal.isPending || !goalForm.title || !goalForm.target_value}>
-              {createGoal.isPending ? "Criando..." : "Criar"}
+            <Button variant="outline" onClick={() => setShowGoalDialog(false)}>Cancelar</Button>
+            <Button onClick={handleSaveGoal} disabled={(createGoal.isPending || updateGoal.isPending) || !goalForm.title || !goalForm.target_value}>
+              {(createGoal.isPending || updateGoal.isPending) ? "Salvando..." : editingGoal ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>
         </DialogContent>
