@@ -43,8 +43,11 @@ import {
   Layers,
   Map,
   Calculator,
+  Download,
+  Upload,
+  FileUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import {
   useStrategies,
@@ -67,6 +70,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
 
 // ── Field types ─────────────────────────────────────────────────
 
@@ -374,16 +378,51 @@ function DiagnosticForm({
   );
 }
 
+// ── PDF Export Helper ────────────────────────────────────────────
+
+function exportPdf(element: HTMLElement, title: string) {
+  import("html2pdf.js").then((html2pdfModule) => {
+    const html2pdf = html2pdfModule.default;
+    (html2pdf as any)()
+      .from(element)
+      .set({
+        margin: [10, 10, 10, 10],
+        filename: `${title.replace(/[^a-zA-Z0-9À-ú ]/g, "")}.pdf`,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .save();
+  });
+}
+
 // ── Strategy Result View ────────────────────────────────────────
 
-function StrategyResultView({ result }: { result: StrategyResult }) {
-  // Support both new and legacy formats
+function StrategyResultView({ result, title, showExport = true }: { result: StrategyResult; title?: string; showExport?: boolean }) {
+  const contentRef = useRef<HTMLDivElement>(null);
   const isNewFormat = !!result.diagnostico_negocio;
 
-  if (isNewFormat) {
-    return <NewStrategyResultView result={result} />;
-  }
-  return <LegacyStrategyResultView result={result} />;
+  const handleExportPdf = () => {
+    if (contentRef.current) {
+      exportPdf(contentRef.current, title || "Diagnóstico Estratégico");
+      toast.success("PDF gerado com sucesso!");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {showExport && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={handleExportPdf}>
+            <Download className="w-4 h-4 mr-1" /> Exportar PDF
+          </Button>
+        </div>
+      )}
+      <div ref={contentRef}>
+        {isNewFormat ? <NewStrategyResultView result={result} /> : <LegacyStrategyResultView result={result} />}
+      </div>
+    </div>
+  );
 }
 
 function NewStrategyResultView({ result }: { result: StrategyResult }) {
@@ -766,16 +805,130 @@ function LegacyStrategyResultView({ result }: { result: StrategyResult }) {
   );
 }
 
+// ── Upload Briefing Component ───────────────────────────────────
+
+function UploadBriefingForm({
+  onExtracted,
+}: {
+  onExtracted: (answers: Record<string, any>) => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [pastedText, setPastedText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [title, setTitle] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExtract = async () => {
+    let text = pastedText.trim();
+
+    if (file && !text) {
+      try {
+        text = await file.text();
+      } catch {
+        toast.error("Não foi possível ler o arquivo. Tente colar o texto diretamente.");
+        return;
+      }
+    }
+
+    if (!text || text.length < 20) {
+      toast.error("Texto muito curto. Cole ou envie um briefing mais completo.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("extract-strategy-answers", {
+        body: { text },
+      });
+
+      if (error) throw new Error(error.message || "Erro ao processar briefing");
+      if (data?.error) throw new Error(data.error);
+      if (!data?.answers) throw new Error("Resposta inválida da IA");
+
+      toast.success("Briefing processado! Revise as respostas extraídas.");
+      onExtracted(data.answers);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao processar briefing");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="glass-card">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+          <Upload className="w-4 h-4 text-primary" /> Upload de Briefing
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Envie um arquivo de texto ou cole o briefing abaixo. A IA irá extrair as informações e preencher o formulário automaticamente.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label className="text-xs font-medium text-muted-foreground mb-1 block">Arquivo (.txt)</Label>
+          <div
+            className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) setFile(f);
+              }}
+            />
+            <FileUp className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            {file ? (
+              <p className="text-sm font-medium text-primary">{file.name}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Clique para selecionar um arquivo .txt</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">ou cole o texto</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        <div>
+          <Label className="text-xs font-medium text-muted-foreground mb-1 block">Texto do Briefing</Label>
+          <Textarea
+            value={pastedText}
+            onChange={(e) => setPastedText(e.target.value)}
+            placeholder="Cole aqui o texto completo do briefing com as informações do cliente..."
+            rows={8}
+          />
+        </div>
+
+        <Button onClick={handleExtract} disabled={loading || (!file && pastedText.trim().length < 20)} className="w-full">
+          {loading ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
+          {loading ? "Processando briefing..." : "Extrair e Preencher Formulário"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Nova Estratégia Tab ─────────────────────────────────────────
 
 function NovaEstrategiaTab() {
   const [result, setResult] = useState<StrategyResult | null>(null);
+  const [resultTitle, setResultTitle] = useState("");
+  const [mode, setMode] = useState<"choose" | "manual" | "upload" | "review">("choose");
+  const [uploadedAnswers, setUploadedAnswers] = useState<Record<string, any> | null>(null);
   const createStrategy = useCreateStrategy();
 
   const handleSubmit = async (answers: Record<string, any>, title: string) => {
     try {
       const s = await createStrategy.mutateAsync({ title, answers });
       setResult(s.result);
+      setResultTitle(title);
       toast.success("Diagnóstico estratégico gerado com sucesso!");
     } catch (e: any) {
       toast.error(e.message || "Erro ao gerar diagnóstico");
@@ -785,15 +938,95 @@ function NovaEstrategiaTab() {
   if (result) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => setResult(null)}>
+        <Button variant="outline" size="sm" onClick={() => { setResult(null); setMode("choose"); setUploadedAnswers(null); }}>
           <RefreshCw className="w-4 h-4 mr-1" /> Novo Diagnóstico
         </Button>
-        <StrategyResultView result={result} />
+        <StrategyResultView result={result} title={resultTitle} />
       </div>
     );
   }
 
-  return <DiagnosticForm onSubmit={handleSubmit} loading={createStrategy.isPending} />;
+  if (mode === "choose") {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card
+          className="glass-card cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all group"
+          onClick={() => setMode("manual")}
+        >
+          <CardContent className="p-6 text-center space-y-3">
+            <div className="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+              <ClipboardCheck className="w-7 h-7 text-primary" />
+            </div>
+            <h3 className="text-sm font-bold">Preenchimento Manual</h3>
+            <p className="text-xs text-muted-foreground">
+              Responda às 8 etapas do diagnóstico SPIN + NOEXCUSE passo a passo
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="glass-card cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all group"
+          onClick={() => setMode("upload")}
+        >
+          <CardContent className="p-6 text-center space-y-3">
+            <div className="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+              <FileUp className="w-7 h-7 text-primary" />
+            </div>
+            <h3 className="text-sm font-bold">Upload de Briefing</h3>
+            <p className="text-xs text-muted-foreground">
+              Envie um arquivo de texto ou cole o briefing e a IA extrai as respostas automaticamente
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (mode === "upload") {
+    return (
+      <div className="space-y-4">
+        <Button variant="outline" size="sm" onClick={() => setMode("choose")}>
+          <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
+        </Button>
+        <UploadBriefingForm
+          onExtracted={(answers) => {
+            setUploadedAnswers(answers);
+            setMode("review");
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (mode === "review" && uploadedAnswers) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setMode("upload")}>
+            <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
+          </Button>
+          <Badge variant="outline" className="text-xs">
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Respostas extraídas — revise e gere
+          </Badge>
+        </div>
+        <DiagnosticForm
+          onSubmit={handleSubmit}
+          loading={createStrategy.isPending}
+          initialAnswers={uploadedAnswers}
+        />
+      </div>
+    );
+  }
+
+  // mode === "manual"
+  return (
+    <div className="space-y-4">
+      <Button variant="outline" size="sm" onClick={() => setMode("choose")}>
+        <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
+      </Button>
+      <DiagnosticForm onSubmit={handleSubmit} loading={createStrategy.isPending} />
+    </div>
+  );
 }
 
 // ── Meus Diagnósticos Tab ───────────────────────────────────────
@@ -934,10 +1167,12 @@ function MeusDiagnosticosTab() {
           </SheetHeader>
           {selected && (
             <div className="mt-4 space-y-4">
-              <Button variant="outline" size="sm" onClick={() => { setSelected(null); setEditingStrategy(selected); }}>
-                <Pencil className="w-4 h-4 mr-1" /> Editar e Regenerar
-              </Button>
-              {selected.result && <StrategyResultView result={selected.result} />}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => { setSelected(null); setEditingStrategy(selected); }}>
+                  <Pencil className="w-4 h-4 mr-1" /> Editar e Regenerar
+                </Button>
+              </div>
+              {selected.result && <StrategyResultView result={selected.result} title={selected.title} />}
             </div>
           )}
         </SheetContent>
