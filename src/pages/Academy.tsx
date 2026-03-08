@@ -9,6 +9,7 @@ import { AcademyModules } from "@/components/academy/AcademyModules";
 import { AcademyJourney } from "@/components/academy/AcademyJourney";
 import { AcademyCertificates } from "@/components/academy/AcademyCertificates";
 import { AcademyReports } from "@/components/academy/AcademyReports";
+import { AcademyQuizList } from "@/components/academy/AcademyQuizList";
 import { AcademyModulePlayer } from "@/components/academy/AcademyModulePlayer";
 
 type Tab = "modulos" | "jornada" | "provas" | "certificados" | "admin" | "relatorios";
