@@ -406,6 +406,9 @@ export default function Marketing() {
                     <Button variant="outline" size="sm" className="text-xs flex-1" onClick={() => asset.url && window.open(asset.url, "_blank")}>
                       <Download className="w-3.5 h-3.5 mr-1" /> Baixar
                     </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => setRenameAssetTarget({ id: asset.id, name: asset.name })}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
