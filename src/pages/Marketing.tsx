@@ -2,8 +2,9 @@ import { useState, useMemo, useRef } from "react";
 import {
   Inbox, Upload, Search, FolderOpen, ChevronRight, Image, Video, FileText, FileSpreadsheet, Presentation, File,
   Eye, Calendar, Tag, Filter, ArrowLeft, Palette, CalendarDays, Settings2, Share2, Megaphone, MonitorPlay,
-  Download, Plus, Trash2, FolderPlus,
+  Download, Plus, Trash2, FolderPlus, Pencil,
 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
