@@ -320,6 +320,7 @@ export default function Atendimento() {
       {selectedTicket && (
         <Dialog open={!!selectedTicket} onOpenChange={open => !open && setSelectedTicket(null)}>
           <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0">
+            <DialogHeader className="sr-only"><DialogTitle>{selectedTicket.title}</DialogTitle></DialogHeader>
             <div className="p-5 border-b border-border">
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
