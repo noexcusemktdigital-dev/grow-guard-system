@@ -79,7 +79,9 @@ export const useCalculator = () => {
       const newService: SelectedService = {
         serviceId,
         moduleId,
-        quantity: service.quantityType === 'quantity' ? (service.minQuantity || 1) : 1,
+        quantity: service.quantityType === 'quantity' || service.quantityType === 'youtube_time' ? (service.minQuantity || 1) : 1,
+        packageSize: service.quantityType === 'package' ? service.packages?.[0] : undefined,
+        youtubeMinutes: service.quantityType === 'youtube_time' ? 2 : undefined,
       };
 
       return { ...prev, selectedServices: [...prev.selectedServices, newService] };
