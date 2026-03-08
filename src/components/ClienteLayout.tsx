@@ -8,6 +8,7 @@ import { TrialCountdownBanner } from "./cliente/TrialCountdownBanner";
 import { ActionAlertsBanner } from "./cliente/ActionAlertsBanner";
 import { OnboardingTour } from "./cliente/OnboardingTour";
 import { CelebrationEffect } from "./CelebrationEffect";
+import { AnnouncementPopupDialog } from "./AnnouncementPopupDialog";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
