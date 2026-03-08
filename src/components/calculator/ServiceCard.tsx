@@ -32,7 +32,7 @@ export const ServiceCard = ({
   const calculateDisplayPrice = () => {
     if (!isSelected || !selection) return null;
     if (service.quantityType === 'youtube_time' && selection.youtubeMinutes) {
-      return formatPrice(getYoutubePrice(selection.youtubeMinutes));
+      return formatPrice(getYoutubePrice(selection.youtubeMinutes) * (selection.quantity || 1));
     }
     if (service.quantityType === 'package' && selection.packageSize) {
       return formatPrice(service.price * selection.packageSize);
