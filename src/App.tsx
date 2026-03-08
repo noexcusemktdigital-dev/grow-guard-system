@@ -74,7 +74,6 @@ import ClientePlanoCreditos from "./pages/cliente/ClientePlanoCreditos";
 import ClienteConfiguracoes from "./pages/cliente/ClienteConfiguracoes";
 import ClienteAvaliacoes from "./pages/cliente/ClienteAvaliacoes";
 import ClienteOnboardingCompany from "./pages/cliente/ClienteOnboardingCompany";
-import ClienteComunicados from "./pages/cliente/ClienteComunicados";
 import ClienteSuporte from "./pages/cliente/ClienteSuporte";
 
 const queryClient = new QueryClient({
