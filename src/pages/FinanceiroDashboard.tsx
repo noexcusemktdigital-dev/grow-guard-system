@@ -169,9 +169,14 @@ export default function FinanceiroDashboard() {
         <TabsContent value="receitas" className="space-y-4">
           <ReceitasTab
             asaasPayments={asaasPayments}
+            revenues={revenues}
             selectedMonth={selectedMonth}
             la={la}
             refetchAsaas={refetchAsaas}
+            createRevenue={createRevenue}
+            updateRevenue={updateRevenue}
+            deleteRevenue={deleteRevenue}
+            toast={toast}
           />
         </TabsContent>
 
