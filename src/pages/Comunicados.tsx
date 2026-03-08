@@ -85,6 +85,9 @@ export default function Comunicados() {
       published_at: new Date().toISOString(),
       expires_at: data.dataExpiracao || null,
       attachment_url: data.attachmentUrl || null,
+      show_dashboard: data.mostrarDashboard ?? true,
+      show_popup: data.mostrarPopup ?? false,
+      require_confirmation: data.exigirConfirmacao ?? false,
     };
     if (view === "edit" && selectedId) {
       updateAnnouncement.mutate({ id: selectedId, ...payload });
