@@ -65,8 +65,9 @@ export default function FinanceiroDashboard() {
   const qc = useQueryClient();
 
   const { data: expenses, isLoading: le } = useFinanceExpenses();
+  const { data: revenues, isLoading: lr } = useFinanceRevenues();
   const { data: contracts, isLoading: lc } = useNetworkContracts();
-  const { createExpense, updateExpense, deleteExpense } = useFinanceMutations();
+  const { createRevenue, updateRevenue, deleteRevenue, createExpense, updateExpense, deleteExpense } = useFinanceMutations();
   const chargeClient = useChargeClient();
   const { data: asaasPayments, isLoading: la, refetch: refetchAsaas } = useAsaasNetworkPayments();
   const { data: closings, isLoading: loadingClosings } = useFinanceClosings();
@@ -76,7 +77,7 @@ export default function FinanceiroDashboard() {
   const [selectedMonth, setSelectedMonth] = useState("all");
   const monthOptions = useMemo(getMonthOptions, []);
 
-  const isLoading = le || lc;
+  const isLoading = le || lc || lr;
   const activeContracts = useMemo(() => (contracts ?? []).filter((c: any) => c.status === "active" || c.status === "signed"), [contracts]);
 
   const filteredExpenses = useMemo(() => {
@@ -89,11 +90,26 @@ export default function FinanceiroDashboard() {
     return (asaasPayments ?? []).filter(p => (p.paymentDate || p.dueDate || "").startsWith(selectedMonth));
   }, [asaasPayments, selectedMonth]);
 
-  const totalRevenue = useMemo(() => filteredAsaas.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [filteredAsaas]);
+  const filteredRevenues = useMemo(() => {
+    if (selectedMonth === "all") return revenues ?? [];
+    return (revenues ?? []).filter((r: any) => (r.date || "").startsWith(selectedMonth));
+  }, [revenues, selectedMonth]);
+
+  const totalAsaasPaid = useMemo(() => filteredAsaas.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [filteredAsaas]);
+  const totalManualPaid = useMemo(() => filteredRevenues.filter((r: any) => r.status === "paid").reduce((s: number, r: any) => s + Number(r.amount), 0), [filteredRevenues]);
+  const totalRevenue = totalAsaasPaid + totalManualPaid;
   const totalExpenses = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const resultado = totalRevenue - totalExpenses;
   const networkMRR = activeContracts.reduce((s: number, c: any) => s + Number(c.monthly_value || 0), 0);
   const overdueCount = useMemo(() => (asaasPayments ?? []).filter(p => p.status === "OVERDUE").length, [asaasPayments]);
+
+  // Current month Asaas stats
+  const now = new Date();
+  const currentPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthAsaas = useMemo(() => (asaasPayments ?? []).filter(p => (p.dueDate || "").startsWith(currentPrefix)), [asaasPayments, currentPrefix]);
+  const monthTotal = useMemo(() => monthAsaas.reduce((s, p) => s + p.value, 0), [monthAsaas]);
+  const monthReceived = useMemo(() => monthAsaas.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [monthAsaas]);
+  const monthOverdue = useMemo(() => monthAsaas.filter(p => p.status === "OVERDUE").reduce((s, p) => s + p.value, 0), [monthAsaas]);
 
   if (isLoading) {
     return (
