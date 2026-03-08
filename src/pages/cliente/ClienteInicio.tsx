@@ -159,6 +159,11 @@ export default function ClienteInicio() {
   const wonThisMonth = useMemo(() => allLeads.filter(l => l.won_at && isAfter(new Date(l.won_at), monthStart)), [allLeads, monthStart]);
   const wonPrevMonth = useMemo(() => allLeads.filter(l => l.won_at && isAfter(new Date(l.won_at), prevMonthStart) && !isAfter(new Date(l.won_at), prevMonthEnd)), [allLeads, prevMonthStart, prevMonthEnd]);
 
+  // User-specific leads
+  const myLeads = useMemo(() => allLeads.filter(l => l.assigned_to === user?.id), [allLeads, user?.id]);
+  const myWonLeads = useMemo(() => myLeads.filter(l => !!l.won_at), [myLeads]);
+  const myPendingTasks = (myTasks ?? []).filter(t => t.status === "pending").length;
+
   const revenueThisMonth = wonThisMonth.reduce((s, l) => s + (Number(l.value) || 0), 0);
   const revenuePrevMonth = wonPrevMonth.reduce((s, l) => s + (Number(l.value) || 0), 0);
   const conversionRate = thisMonthLeads.length > 0 ? (wonThisMonth.length / thisMonthLeads.length) * 100 : 0;
@@ -172,12 +177,28 @@ export default function ClienteInicio() {
   const leadsTrend = prevMonthLeads.length > 0 ? ((thisMonthLeads.length - prevMonthLeads.length) / prevMonthLeads.length * 100) : 0;
   const convTrend = conversionRate - prevConversionRate;
 
-  const kpiValues = [
+  // Role-based KPI values
+  const kpiConfig = isAdmin ? adminKpiConfig : userKpiConfig;
+  const kpiValues = isAdmin ? [
     { value: formatCurrency(revenueThisMonth), rawValue: revenueThisMonth, sublabel: revenueTrend !== 0 ? `${revenueTrend > 0 ? "+" : ""}${revenueTrend.toFixed(0)}% vs mês anterior` : "sem dados anteriores", trend: revenueTrend > 0 ? "up" as const : revenueTrend < 0 ? "down" as const : "neutral" as const },
     { value: String(thisMonthLeads.length), rawValue: thisMonthLeads.length, sublabel: leadsTrend !== 0 ? `${leadsTrend > 0 ? "+" : ""}${leadsTrend.toFixed(0)}% vs mês anterior` : `${thisMonthLeads.length} leads no CRM`, trend: leadsTrend > 0 ? "up" as const : leadsTrend < 0 ? "down" as const : "neutral" as const },
     { value: `${conversionRate.toFixed(1)}%`, rawValue: conversionRate, sublabel: convTrend !== 0 ? `${convTrend > 0 ? "+" : ""}${convTrend.toFixed(1)}pp` : "taxa do mês", trend: convTrend > 0 ? "up" as const : convTrend < 0 ? "down" as const : "neutral" as const },
     { value: `${Math.min(goalPercent, 100).toFixed(0)}%`, rawValue: Math.min(goalPercent, 100), sublabel: primaryGoal ? `${formatCurrency(primaryProgress?.currentValue ?? 0)} / ${formatCurrency(primaryGoal.target_value)}` : "sem meta ativa", trend: goalPercent >= 70 ? "up" as const : goalPercent >= 40 ? "neutral" as const : "down" as const },
+  ] : [
+    { value: String(myLeads.length), rawValue: myLeads.length, sublabel: `${myLeads.filter(l => !l.won_at && !l.lost_at).length} ativos`, trend: myLeads.length > 0 ? "up" as const : "neutral" as const },
+    { value: String(myWonLeads.length), rawValue: myWonLeads.length, sublabel: `${myLeads.length > 0 ? ((myWonLeads.length / myLeads.length) * 100).toFixed(0) : 0}% de conversão`, trend: myWonLeads.length > 0 ? "up" as const : "neutral" as const },
+    { value: `${xp.toLocaleString()}`, rawValue: xp, sublabel: `Nível ${levelInfo.level} · ${levelInfo.title}`, trend: "up" as const },
+    { value: String(myPendingTasks), rawValue: myPendingTasks, sublabel: myPendingTasks === 0 ? "Tudo em dia! ✅" : `${myPendingTasks} pendente${myPendingTasks > 1 ? "s" : ""}`, trend: myPendingTasks === 0 ? "up" as const : myPendingTasks > 5 ? "down" as const : "neutral" as const },
   ];
+
+  // Unread announcements for inline display
+  const unreadAnnouncements = useMemo(() => {
+    if (!announcements || !announcementViews) return [];
+    const viewedIds = new Set((announcementViews as any[]).map((v: any) => v.announcement_id));
+    return (announcements as any[]).filter((a: any) =>
+      a.status === "active" && a.published_at && !viewedIds.has(a.id)
+    ).slice(0, 3);
+  }, [announcements, announcementViews]);
 
   const revenueData = useMemo(() => {
     const weeks = [
