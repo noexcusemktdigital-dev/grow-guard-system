@@ -455,9 +455,29 @@ export default function MetasRanking() {
                 </Select>
               </div>
             )}
-            <div>
-              <Label>Mês da Meta</Label>
-              <Input type="month" value={goalForm.period_month} onChange={(e) => setGoalForm(f => ({ ...f, period_month: e.target.value }))} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Mês</Label>
+                <Select value={goalForm.period_month_num} onValueChange={(v) => setGoalForm(f => ({ ...f, period_month_num: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Mês" /></SelectTrigger>
+                  <SelectContent>
+                    {["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"].map((m, i) => (
+                      <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Ano</Label>
+                <Select value={goalForm.period_year} onValueChange={(v) => setGoalForm(f => ({ ...f, period_year: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[currentYear, currentYear + 1, currentYear + 2].map(y => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>
