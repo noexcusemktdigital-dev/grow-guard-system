@@ -67,6 +67,16 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
   const humanUnread = humanContacts.reduce((s, c) => s + c.unread_count, 0);
 
+  // Stats: messages today and active contacts (last 24h)
+  const now = useMemo(() => new Date(), []);
+  const todayStart = useMemo(() => {
+    const d = new Date(now); d.setHours(0,0,0,0); return d.getTime();
+  }, [now]);
+  const activeToday = useMemo(() => contacts.filter(c => {
+    if (!c.last_message_at) return false;
+    return new Date(c.last_message_at).getTime() >= todayStart;
+  }).length, [contacts, todayStart]);
+
   return (
     <div className="flex flex-col h-full border-r border-border bg-card/50">
       {/* Header */}
