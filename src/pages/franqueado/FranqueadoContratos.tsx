@@ -317,8 +317,8 @@ export default function FranqueadoContratos() {
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="lista">Contratos</TabsTrigger>
-          <TabsTrigger value="novo"><Plus className="w-4 h-4 mr-1" />Novo Contrato</TabsTrigger>
+          <TabsTrigger value="novo"><Plus className="w-4 h-4 mr-1" />Gerar Contrato</TabsTrigger>
+          <TabsTrigger value="lista">Gestão de Contratos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lista" className="space-y-4">
