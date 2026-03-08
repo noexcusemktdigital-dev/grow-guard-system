@@ -50,7 +50,8 @@ export default function MetasRanking() {
 
   const [showGoalDialog, setShowGoalDialog] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
-  const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
+  const currentYear = new Date().getFullYear();
+  const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month_num: "", period_year: String(currentYear) });
 
   const isLoading = loadingGoals || loadingRankings;
 
@@ -66,20 +67,22 @@ export default function MetasRanking() {
 
   const openNewGoal = () => {
     setEditingGoal(null);
-    setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month: "" });
+    setGoalForm({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month_num: "", period_year: String(currentYear) });
     setShowGoalDialog(true);
   };
 
   const openEditGoal = (g: any) => {
     setEditingGoal(g);
-    const month = g.period_start ? g.period_start.substring(0, 7) : "";
+    const pMonth = g.period_start ? String(Number(g.period_start.substring(5, 7))) : "";
+    const pYear = g.period_start ? g.period_start.substring(0, 4) : String(currentYear);
     setGoalForm({
       title: g.title || "",
       type: g.type || g.metric || "faturamento",
       target_value: String(g.target_value || ""),
       scope: g.scope || "rede",
       unit_org_id: g.unit_org_id || "",
-      period_month: month,
+      period_month_num: pMonth,
+      period_year: pYear,
     });
     setShowGoalDialog(true);
   };
@@ -92,9 +95,9 @@ export default function MetasRanking() {
       target_value: Number(goalForm.target_value),
       scope: goalForm.scope,
       unit_org_id: goalForm.scope === "unidade" ? goalForm.unit_org_id : null,
-      period_start: goalForm.period_month ? `${goalForm.period_month}-01` : undefined,
-      period_end: goalForm.period_month
-        ? new Date(Number(goalForm.period_month.split("-")[0]), Number(goalForm.period_month.split("-")[1]), 0).toISOString().split("T")[0]
+      period_start: goalForm.period_month_num ? `${goalForm.period_year}-${goalForm.period_month_num.padStart(2, "0")}-01` : undefined,
+      period_end: goalForm.period_month_num
+        ? new Date(Number(goalForm.period_year), Number(goalForm.period_month_num), 0).toISOString().split("T")[0]
         : undefined,
       metric: goalForm.type,
     };
@@ -452,9 +455,29 @@ export default function MetasRanking() {
                 </Select>
               </div>
             )}
-            <div>
-              <Label>Mês da Meta</Label>
-              <Input type="month" value={goalForm.period_month} onChange={(e) => setGoalForm(f => ({ ...f, period_month: e.target.value }))} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Mês</Label>
+                <Select value={goalForm.period_month_num} onValueChange={(v) => setGoalForm(f => ({ ...f, period_month_num: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Mês" /></SelectTrigger>
+                  <SelectContent>
+                    {["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"].map((m, i) => (
+                      <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Ano</Label>
+                <Select value={goalForm.period_year} onValueChange={(v) => setGoalForm(f => ({ ...f, period_year: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[currentYear, currentYear + 1, currentYear + 2].map(y => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>

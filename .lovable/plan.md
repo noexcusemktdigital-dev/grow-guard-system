@@ -1,27 +1,31 @@
 
 
-## Plano: Corrigir seletor de mês na criação de metas
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Problema
-O campo `<Input type="month">` (linha 457) não é suportado em todos os navegadores — Safari e alguns mobile browsers não renderizam o seletor de mês nativo, mostrando apenas um campo de texto vazio.
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-### Solução
-Substituir o `<Input type="month">` por **dois Selects lado a lado**: um para o **mês** (Janeiro–Dezembro) e outro para o **ano** (atual e próximos 2 anos). Isso garante compatibilidade total.
+### Ações
 
-### Alterações em `src/pages/MetasRanking.tsx`
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-1. **State**: Trocar `period_month` (string "YYYY-MM") por dois campos no `goalForm`: `period_month_num` (1-12) e `period_year` (2025, 2026, 2027)
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-2. **UI** (linhas 455-458): Substituir o Input por dois Selects:
-   - Select "Mês" com opções Janeiro a Dezembro
-   - Select "Ano" com o ano atual e +2
+3. **Executar o teste** e analisar o resultado definitivo
 
-3. **handleSaveGoal** (linhas 95-98): Construir `period_start` e `period_end` a partir dos dois campos numéricos
+### Detalhe técnico
 
-4. **openEditGoal** (linhas 75-76): Extrair mês e ano do `period_start` existente para preencher os Selects
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+```
 
-### Arquivo
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/MetasRanking.tsx` | Substituir Input type="month" por dois Selects (mês + ano) |
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 
