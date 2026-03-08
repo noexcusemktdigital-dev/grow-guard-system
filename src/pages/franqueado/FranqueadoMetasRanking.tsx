@@ -201,10 +201,10 @@ export default function FranqueadoMetasRanking() {
                     <CardContent className="space-y-3">
                       <div className="flex items-end gap-1">
                         <span className="text-2xl font-bold">
-                          {isMonetary ? formatBRL(currentValue) : currentValue}
+                          {formatMetricValue(currentValue, goal.metric || goal.type || "")}
                         </span>
                         <span className="text-sm text-muted-foreground mb-0.5">
-                          / {isMonetary ? formatBRL(goal.target_value) : goal.target_value}
+                          / {formatMetricValue(goal.target_value, goal.metric || goal.type || "")}
                         </span>
                       </div>
                       <Progress value={pct} className="h-2" />

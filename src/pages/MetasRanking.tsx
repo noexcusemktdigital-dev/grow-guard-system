@@ -443,7 +443,7 @@ export default function MetasRanking() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Valor Alvo</Label><Input type="number" value={goalForm.target_value} onChange={(e) => setGoalForm(f => ({ ...f, target_value: e.target.value }))} placeholder="10000" /></div>
+            <div><Label>Valor Alvo</Label><Input type="text" inputMode="numeric" value={goalForm.target_value} onChange={(e) => setGoalForm(f => ({ ...f, target_value: formatInputNumber(e.target.value) }))} placeholder="10.000" /></div>
             <div><Label>Escopo</Label>
               <Select value={goalForm.scope} onValueChange={(v) => setGoalForm(f => ({ ...f, scope: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
