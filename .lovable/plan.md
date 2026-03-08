@@ -1,35 +1,31 @@
 
 
-## Plano: Implementar aba "Provas" no NOE Academy
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Contexto
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-A aba "Provas" (`case "provas"`) em `Academy.tsx` retorna `null`. Precisa exibir uma lista de todas as provas disponíveis (quizzes vinculados a módulos publicados), com status de tentativas do usuário e acesso direto ao quiz.
+### Ações
 
-### Componente novo: `AcademyQuizList.tsx`
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-Criar `src/components/academy/AcademyQuizList.tsx` que:
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-1. Busca todos os módulos publicados, quizzes, lessons, progress e quiz attempts do usuário
-2. Para cada módulo que tem quiz, exibe um card com:
-   - Nome do módulo e categoria (badge colorida)
-   - Progresso das aulas (X/Y concluídas)
-   - Status da prova: "Bloqueada" (aulas incompletas), "Disponível", "Aprovado" (score), "Reprovado"
-   - Botão para fazer/refazer a prova (abre o module player no modo quiz)
-   - Histórico de tentativas (score, data, aprovado/reprovado)
-3. Módulos sem quiz mostram "Sem prova cadastrada"
+3. **Executar o teste** e analisar o resultado definitivo
 
-### Mudança em `Academy.tsx`
+### Detalhe técnico
 
-- Importar `AcademyQuizList`
-- No `renderTabContent`, `case "provas"` retorna `<AcademyQuizList onStartQuiz={(moduleId) => setSelectedModuleId(moduleId)} />`
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+```
 
-### Hooks utilizados (já existentes)
-
-- `useAcademyModules`, `useAcademyQuizzes` (sem moduleId = todos), `useAcademyLessons` (sem moduleId = todos), `useAcademyProgress`, `useAcademyQuizAttempts` (sem quizId = todos)
-- `computeModuleProgress` para verificar se aulas estão completas
-
-### Nenhuma migração SQL necessária
-
-Todos os dados já estão disponíveis nas tabelas existentes.
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 
