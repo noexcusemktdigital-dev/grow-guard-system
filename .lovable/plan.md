@@ -1,31 +1,34 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Correções e Otimizações — Franqueadora & Franqueado
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### Problemas encontrados
 
-### Ações
+1. **Console Error: Select ref warning** — Na `AtividadeTab` (SaasDashboard.tsx, linha 304), o `Select` recebe um ref internamente que causa warning. O fix é envolver o `SelectTrigger` corretamente (já está, mas o componente pai pode estar passando ref). Na verdade o warning é benigno do Radix, mas podemos silenciá-lo garantindo que não há ref passado.
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+2. **Table Fragment sem key** — No `ErrosTab` (linha 193-251), cada iteração do `errors.map` usa `<>...</>` (Fragment) sem key. O `key` está no `TableRow` filho, mas o Fragment wrapper precisa do key. Isso causa warning de React e pode causar bugs de reconciliação.
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+3. **FranqueadoSidebar sem botão "Sair"** — O sidebar do Franqueado tem "Meu Perfil" e "Configurações" no popover do footer, mas **não tem botão de Sair/Logout**. O FranqueadoraSidebar tem. Isso força o franqueado a não ter como deslogar.
 
-3. **Executar o teste** e analisar o resultado definitivo
+4. **FranqueadoraSidebar sem botão "Configurações"** — Ao contrário do FranqueadoSidebar que tem "Configurações", o sidebar da Franqueadora não oferece essa opção no popover do footer.
 
-### Detalhe técnico
+### Mudanças
 
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
-```
+#### 1. Fix Fragment keys — `SaasDashboard.tsx`
+- Linha 194: Trocar `<>` por `<Fragment key={err.id}>` e mover o `key` do `TableRow` para o Fragment.
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+#### 2. Fix FranqueadoSidebar — Adicionar botão Sair
+- Importar `LogOut` de lucide-react e `useAuth` 
+- No popover do footer (após "Configurações"), adicionar botão "Sair" chamando `signOut()`
+
+#### 3. Fix FranqueadoraSidebar — Adicionar botão Configurações
+- No popover do footer (antes de "Sair"), adicionar botão "Configurações" apontando para `/franqueadora/configuracoes` (se existir) ou `/franqueadora/matriz`
+
+### Arquivos afetados
+
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/franqueadora/SaasDashboard.tsx` | Fix Fragment keys no map da ErrosTab |
+| `src/components/FranqueadoSidebar.tsx` | Adicionar botão "Sair" no popover footer |
+| `src/components/FranqueadoraSidebar.tsx` | Adicionar botão "Configurações" no popover footer |
 
