@@ -61,6 +61,8 @@ export default function Academy() {
         return <AcademyModules onSelectModule={(id) => setSelectedModuleId(id)} />;
       case "jornada":
         return <AcademyJourney onSelectModule={(id) => setSelectedModuleId(id)} onSelectLesson={(_, moduleId) => setSelectedModuleId(moduleId)} />;
+      case "provas":
+        return <AcademyQuizList onStartQuiz={(id) => setSelectedModuleId(id)} />;
       case "certificados":
         return <AcademyCertificates />;
       case "admin":
