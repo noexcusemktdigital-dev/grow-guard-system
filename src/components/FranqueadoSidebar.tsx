@@ -218,6 +218,13 @@ export function FranqueadoSidebarContent({ collapsed, setCollapsed, onNavigate }
               <Settings className="w-4 h-4" />
               Configurações
             </button>
+            <button
+              onClick={() => { signOut(); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[13px] rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </button>
           </PopoverContent>
         </Popover>
       </div>
