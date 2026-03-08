@@ -39,6 +39,7 @@ export function FranqueadoraLayout() {
         </div>
       </main>
       <FranqueadoraTour />
+      <AnnouncementPopupDialog />
     </div>
   );
 }

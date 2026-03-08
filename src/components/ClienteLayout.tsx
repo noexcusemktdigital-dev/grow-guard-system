@@ -58,6 +58,7 @@ export function ClienteLayout() {
       </div>
       <OnboardingTour />
       <CelebrationEffect />
+      <AnnouncementPopupDialog />
     </FeatureGateProvider>
   );
 }

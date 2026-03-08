@@ -39,7 +39,7 @@ export default function ClienteComunicados() {
   const read = useMemo(() => all.filter(a => viewedIds.has(a.id)), [all, viewedIds]);
 
   const criticalPending = useMemo(() => {
-    return (announcements ?? []).filter(a => a.priority === "Crítica" && !confirmedIds.has(a.id));
+    return (announcements ?? []).filter(a => ((a as any).require_confirmation || a.priority === "Crítica") && !confirmedIds.has(a.id));
   }, [announcements, confirmedIds]);
 
   function openDetail(item: any) {
