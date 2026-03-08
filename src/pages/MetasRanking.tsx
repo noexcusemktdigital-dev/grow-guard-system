@@ -19,6 +19,15 @@ import type { TrophyId } from "@/hooks/useTrophyProgress";
 import { toast } from "sonner";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const MONETARY_TYPES = ["faturamento", "avg_ticket", "revenue"];
+const isMonetaryType = (type: string) => MONETARY_TYPES.includes(type);
+const formatMetricValue = (v: number, type: string) => isMonetaryType(type) ? formatBRL(v) : v.toLocaleString("pt-BR");
+const parseFormattedNumber = (s: string) => Number(s.replace(/\./g, "").replace(",", ".")) || 0;
+const formatInputNumber = (s: string) => {
+  const digits = s.replace(/\D/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("pt-BR");
+};
 
 const tabs = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -78,7 +87,7 @@ export default function MetasRanking() {
     setGoalForm({
       title: g.title || "",
       type: g.type || g.metric || "faturamento",
-      target_value: String(g.target_value || ""),
+      target_value: g.target_value ? Number(g.target_value).toLocaleString("pt-BR") : "",
       scope: g.scope || "rede",
       unit_org_id: g.unit_org_id || "",
       period_month_num: pMonth,
@@ -92,7 +101,7 @@ export default function MetasRanking() {
     const payload: any = {
       title: goalForm.title,
       type: goalForm.type,
-      target_value: Number(goalForm.target_value),
+      target_value: parseFormattedNumber(goalForm.target_value),
       scope: goalForm.scope,
       unit_org_id: goalForm.scope === "unidade" ? goalForm.unit_org_id : null,
       period_start: goalForm.period_month_num ? `${goalForm.period_year}-${goalForm.period_month_num.padStart(2, "0")}-01` : undefined,
@@ -160,7 +169,7 @@ export default function MetasRanking() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{unit?.name || `Unidade ${i + 1}`}</p>
                     </div>
-                    <p className="text-sm font-bold">{r.score ?? 0} pts</p>
+                    <p className="text-sm font-bold">{(r.score ?? 0).toLocaleString("pt-BR")} pts</p>
                   </div>
                 );
               })}
@@ -207,8 +216,8 @@ export default function MetasRanking() {
                     </div>
                     <div className="flex items-start gap-2">
                       <div className="text-right">
-                        <p className="text-lg font-bold">{formatBRL(g.target_value)}</p>
-                        {gp && <p className={`text-xs font-medium ${statusColor}`}>Atual: {formatBRL(currentValue)}</p>}
+                        <p className="text-lg font-bold">{formatMetricValue(g.target_value, g.type || g.metric || "")}</p>
+                        {gp && <p className={`text-xs font-medium ${statusColor}`}>Atual: {formatMetricValue(currentValue, g.type || g.metric || "")}</p>}
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -236,7 +245,7 @@ export default function MetasRanking() {
                   </div>
                   {gp && gp.daysLeft > 0 && (
                     <p className="text-[10px] text-muted-foreground">
-                      Faltam {gp.daysLeft} dias • Ritmo necessário: {formatBRL(gp.requiredPacePerDay)}/dia
+                      Faltam {gp.daysLeft} dias • Ritmo necessário: {formatMetricValue(gp.requiredPacePerDay, g.type || g.metric || "")}/dia
                     </p>
                   )}
                   {g.period_start && (
@@ -275,7 +284,7 @@ export default function MetasRanking() {
                       <p className="text-xs text-muted-foreground">{unit?.city || ""}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold">{r.score ?? 0}</p>
+                      <p className="text-lg font-bold">{(r.score ?? 0).toLocaleString("pt-BR")}</p>
                       <p className="text-[10px] text-muted-foreground">pontos</p>
                     </div>
                   </CardContent>
@@ -434,7 +443,7 @@ export default function MetasRanking() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Valor Alvo</Label><Input type="number" value={goalForm.target_value} onChange={(e) => setGoalForm(f => ({ ...f, target_value: e.target.value }))} placeholder="10000" /></div>
+            <div><Label>Valor Alvo</Label><Input type="text" inputMode="numeric" value={goalForm.target_value} onChange={(e) => setGoalForm(f => ({ ...f, target_value: formatInputNumber(e.target.value) }))} placeholder="10.000" /></div>
             <div><Label>Escopo</Label>
               <Select value={goalForm.scope} onValueChange={(v) => setGoalForm(f => ({ ...f, scope: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>

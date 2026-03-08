@@ -35,6 +35,7 @@ const trophyDefs: TrophyItem[] = [
 ];
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const formatMetricValue = (v: number, type: string) => ["revenue", "faturamento", "avg_ticket"].includes(type) ? formatBRL(v) : v.toLocaleString("pt-BR");
 
 export default function FranqueadoMetasRanking() {
   const currentMonth = format(new Date(), "MMMM yyyy", { locale: ptBR });
@@ -187,7 +188,6 @@ export default function FranqueadoMetasRanking() {
                 const pct = gp ? Math.min(100, Math.round(gp.percent)) : 0;
                 const reached = pct >= 100;
                 const metricLabel = goal.title || goal.type || goal.metric || "Meta";
-                const isMonetary = ["revenue", "faturamento", "avg_ticket"].includes(goal.metric || goal.type);
 
                 return (
                   <Card key={goal.id} className={`border transition-colors ${reached ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
@@ -200,10 +200,10 @@ export default function FranqueadoMetasRanking() {
                     <CardContent className="space-y-3">
                       <div className="flex items-end gap-1">
                         <span className="text-2xl font-bold">
-                          {isMonetary ? formatBRL(currentValue) : currentValue}
+                          {formatMetricValue(currentValue, goal.metric || goal.type || "")}
                         </span>
                         <span className="text-sm text-muted-foreground mb-0.5">
-                          / {isMonetary ? formatBRL(goal.target_value) : goal.target_value}
+                          / {formatMetricValue(goal.target_value, goal.metric || goal.type || "")}
                         </span>
                       </div>
                       <Progress value={pct} className="h-2" />
