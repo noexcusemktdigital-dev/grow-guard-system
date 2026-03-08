@@ -3,17 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Shield, Plus, Inbox, Users, UserPlus, Building2 } from "lucide-react";
+import { Shield, Inbox, Users, UserPlus, Building2, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { usePermissionProfiles, usePermissionMutations } from "@/hooks/usePermissions";
 import MatrizEmpresa from "@/components/matriz/MatrizEmpresa";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,16 +21,24 @@ import { useQueryClient } from "@tanstack/react-query";
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
   admin: "Administrador",
-  franqueado: "Franqueado",
-  cliente_admin: "Cliente Admin",
-  cliente_user: "Cliente",
+  cliente_user: "Usuário",
+};
+
+const TEAM_COLORS: Record<string, string> = {
+  vendas: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  marketing: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  suporte: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
+  juridico: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  operacoes: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  financeiro: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
 export default function Matriz() {
-  const { data: profiles, isLoading: loadingProfiles } = usePermissionProfiles();
   const { data: members, isLoading: loadingMembers } = useOrgMembers();
-  const { createProfile } = usePermissionMutations();
   const { data: orgId } = useUserOrgId();
+  const { data: teams, isLoading: loadingTeams } = useOrgTeams();
+  const { data: teamMemberships } = useTeamMemberships();
+  const { setUserTeams } = useTeamMutations();
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -39,7 +47,22 @@ export default function Matriz() {
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<string>("admin");
+  const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
   const [inviteLoading, setInviteLoading] = useState(false);
+
+  // Edit teams state
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editTeamIds, setEditTeamIds] = useState<string[]>([]);
+
+  const getUserTeams = (userId: string) => {
+    if (!teamMemberships || !teams) return [];
+    const userTeamIds = teamMemberships.filter((tm) => tm.user_id === userId).map((tm) => tm.team_id);
+    return teams.filter((t) => userTeamIds.includes(t.id));
+  };
+
+  const toggleTeam = (teamId: string, list: string[], setter: (v: string[]) => void) => {
+    setter(list.includes(teamId) ? list.filter((id) => id !== teamId) : [...list, teamId]);
+  };
 
   const handleInvite = async () => {
     if (!inviteEmail.trim() || !orgId) {
@@ -54,6 +77,7 @@ export default function Matriz() {
           full_name: inviteName,
           role: inviteRole,
           organization_id: orgId,
+          team_ids: inviteTeamIds,
         },
       });
       if (error) throw error;
@@ -61,7 +85,10 @@ export default function Matriz() {
 
       toast({ title: "Convite enviado! O membro receberá um e-mail para definir sua senha." });
       setShowInvite(false);
-      setInviteName(""); setInviteEmail(""); setInviteRole("admin");
+      setInviteName("");
+      setInviteEmail("");
+      setInviteRole("admin");
+      setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
     } catch (err: any) {
       toast({ title: "Erro ao convidar", description: err.message, variant: "destructive" });
@@ -70,7 +97,24 @@ export default function Matriz() {
     }
   };
 
-  if (loadingProfiles || loadingMembers) {
+  const handleSaveTeams = async () => {
+    if (!editingUser) return;
+    try {
+      await setUserTeams.mutateAsync({ userId: editingUser, teamIds: editTeamIds });
+      toast({ title: "Times atualizados!" });
+      setEditingUser(null);
+    } catch (err: any) {
+      toast({ title: "Erro ao atualizar times", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const openEditTeams = (userId: string) => {
+    const current = getUserTeams(userId).map((t) => t.id);
+    setEditTeamIds(current);
+    setEditingUser(userId);
+  };
+
+  if (loadingMembers || loadingTeams) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-12 w-full" />
@@ -78,6 +122,28 @@ export default function Matriz() {
       </div>
     );
   }
+
+  const TeamSelector = ({ selectedIds, onToggle }: { selectedIds: string[]; onToggle: (id: string) => void }) => (
+    <div className="flex flex-wrap gap-2">
+      {(teams ?? []).map((team) => {
+        const isSelected = selectedIds.includes(team.id);
+        const color = TEAM_COLORS[team.slug] || "bg-muted text-muted-foreground";
+        return (
+          <button
+            key={team.id}
+            type="button"
+            onClick={() => onToggle(team.id)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+              isSelected ? `${color} border-transparent ring-2 ring-primary/30` : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+            }`}
+          >
+            {team.name}
+            {isSelected && <X className="w-3 h-3 inline ml-1" />}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -91,27 +157,28 @@ export default function Matriz() {
               <h1 className="page-header-title">Matriz</h1>
               <Badge variant="secondary">Franqueadora</Badge>
             </div>
-            <p className="text-sm text-muted-foreground">Gestão de usuários e permissões da franqueadora</p>
+            <p className="text-sm text-muted-foreground">Gestão de usuários, times e dados da franqueadora</p>
           </div>
         </div>
       </div>
 
       <Tabs defaultValue="empresa">
         <TabsList>
-          <TabsTrigger value="empresa" className="gap-1.5"><Building2 className="w-3.5 h-3.5" /> Empresa</TabsTrigger>
-          <TabsTrigger value="membros" className="gap-1.5"><Users className="w-3.5 h-3.5" /> Equipe</TabsTrigger>
-          <TabsTrigger value="perfis" className="gap-1.5"><Shield className="w-3.5 h-3.5" /> Perfis de Permissão</TabsTrigger>
+          <TabsTrigger value="empresa" className="gap-1.5">
+            <Building2 className="w-3.5 h-3.5" /> Empresa
+          </TabsTrigger>
+          <TabsTrigger value="equipe" className="gap-1.5">
+            <Users className="w-3.5 h-3.5" /> Equipe
+          </TabsTrigger>
         </TabsList>
 
-        {/* Empresa Tab */}
         <TabsContent value="empresa" className="mt-4">
           <MatrizEmpresa />
         </TabsContent>
 
-        {/* Members Tab */}
-        <TabsContent value="membros" className="mt-4">
+        <TabsContent value="equipe" className="mt-4">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">Membros da equipe da franqueadora</p>
+            <p className="text-sm text-muted-foreground">Membros da equipe e seus times</p>
             <Button size="sm" onClick={() => setShowInvite(true)}>
               <UserPlus className="w-4 h-4 mr-1" /> Convidar Membro
             </Button>
@@ -128,61 +195,49 @@ export default function Matriz() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {members!.map(m => (
-                <Card key={m.user_id} className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                        {(m.full_name || "?").slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{m.full_name || "Sem nome"}</p>
-                      {m.job_title && <p className="text-xs text-muted-foreground truncate">{m.job_title}</p>}
+              {members!.map((m) => {
+                const userTeams = getUserTeams(m.user_id);
+                return (
+                  <Card key={m.user_id} className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                          {(m.full_name || "?").slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{m.full_name || "Sem nome"}</p>
+                        {m.job_title && <p className="text-xs text-muted-foreground truncate">{m.job_title}</p>}
+                      </div>
+                      <Badge variant="outline" className="text-[10px] shrink-0">
+                        {ROLE_LABELS[m.role] || m.role}
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className="text-[10px] shrink-0">
-                      {ROLE_LABELS[m.role] || m.role}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Desde {new Date(m.created_at).toLocaleDateString("pt-BR")}
-                  </p>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
 
-        {/* Permission Profiles Tab */}
-        <TabsContent value="perfis" className="mt-4">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">Perfis de permissão para a equipe</p>
-            <Button size="sm" onClick={() => createProfile.mutate({ name: "Novo Perfil" })}>
-              <Plus className="w-4 h-4 mr-1" /> Novo Perfil
-            </Button>
-          </div>
+                    {/* Team badges */}
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {userTeams.length > 0 ? (
+                        userTeams.map((t) => (
+                          <span key={t.id} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${TEAM_COLORS[t.slug] || "bg-muted text-muted-foreground"}`}>
+                            {t.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground italic">Sem time atribuído</span>
+                      )}
+                    </div>
 
-          {(profiles ?? []).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-1">Nenhum perfil de permissão</h3>
-              <p className="text-sm text-muted-foreground mb-4">Crie perfis para gerenciar permissões da equipe.</p>
-              <Button onClick={() => createProfile.mutate({ name: "Super Admin", description: "Acesso total ao sistema" })}>
-                <Plus className="w-4 h-4 mr-1" /> Criar Primeiro Perfil
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {profiles!.map(p => (
-                <Card key={p.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">{p.name}</h3>
-                    {p.is_system && <Badge variant="outline" className="text-[10px]">Sistema</Badge>}
-                  </div>
-                  {p.description && <p className="text-sm text-muted-foreground">{p.description}</p>}
-                  <p className="text-xs text-muted-foreground mt-2">Criado em {new Date(p.created_at).toLocaleDateString("pt-BR")}</p>
-                </Card>
-              ))}
+                    <div className="flex items-center justify-between mt-3">
+                      <p className="text-xs text-muted-foreground">
+                        Desde {new Date(m.created_at).toLocaleDateString("pt-BR")}
+                      </p>
+                      <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => openEditTeams(m.user_id)}>
+                        Editar Times
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
@@ -191,25 +246,68 @@ export default function Matriz() {
       {/* Invite Dialog */}
       <Dialog open={showInvite} onOpenChange={setShowInvite}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Convidar Membro</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Nome Completo</Label><Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Nome do membro" /></div>
-            <div><Label>E-mail *</Label><Input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="email@exemplo.com" /></div>
+          <DialogHeader>
+            <DialogTitle>Convidar Membro</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome Completo</Label>
+              <Input value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Nome do membro" />
+            </div>
+            <div>
+              <Label>E-mail *</Label>
+              <Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="email@exemplo.com" />
+            </div>
             <div>
               <Label>Papel</Label>
               <Select value={inviteRole} onValueChange={setInviteRole}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="super_admin">Super Admin</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="cliente_user">Usuário</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {inviteRole === "super_admin" && "Acesso total: pode editar tudo, configurar e gerenciar permissões."}
+                {inviteRole === "admin" && "Acesso intermediário: gerencia operações mas não altera configurações críticas."}
+                {inviteRole === "cliente_user" && "Acesso operacional: utiliza as ferramentas do dia a dia."}
+              </p>
+            </div>
+            <div>
+              <Label>Times / Funções</Label>
+              <TeamSelector selectedIds={inviteTeamIds} onToggle={(id) => toggleTeam(id, inviteTeamIds, setInviteTeamIds)} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInvite(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setShowInvite(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleInvite} disabled={inviteLoading}>
               {inviteLoading ? "Convidando..." : "Convidar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Teams Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Times</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Selecione os times deste membro</Label>
+            <TeamSelector selectedIds={editTeamIds} onToggle={(id) => toggleTeam(id, editTeamIds, setEditTeamIds)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveTeams} disabled={setUserTeams.isPending}>
+              {setUserTeams.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
