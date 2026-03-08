@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useFinanceRevenues, useFinanceExpenses, useFinanceMutations, useFinanceClosings } from "@/hooks/useFinance";
+import { useFinanceExpenses, useFinanceMutations, useFinanceClosings } from "@/hooks/useFinance";
 import { useNetworkContracts } from "@/hooks/useContracts";
 import { useChargeClient, useAsaasNetworkPayments, type AsaasPayment } from "@/hooks/useClientPayments";
 import { useUnits } from "@/hooks/useUnits";
@@ -29,7 +29,6 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer,
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-const revCategories = ["Assessoria", "SaaS", "Franquia", "Royalties", "Sistema", "Outros"];
 const expCategories = ["Pessoas", "Plataformas", "Estrutura", "Empréstimos", "Investimentos", "Eventos", "Treinamentos", "Impostos"];
 const ASAAS_PAID_STATUSES = ["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"];
 const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--muted-foreground))"];
@@ -42,26 +41,6 @@ function getMonthOptions() {
     opts.push({ value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: `${months[d.getMonth()]} ${d.getFullYear()}` });
   }
   return opts;
-}
-
-interface UnifiedEntry {
-  id: string;
-  description: string;
-  amount: number;
-  category: string;
-  status: string;
-  date: string;
-  source: "manual" | "asaas";
-  invoiceUrl?: string | null;
-  bankSlipUrl?: string | null;
-  billingType?: string;
-  asaasStatus?: string;
-  raw?: any;
-}
-
-function mapAsaasStatus(s: string): string {
-  if (ASAAS_PAID_STATUSES.includes(s)) return "paid";
-  return "pending";
 }
 
 function asaasStatusLabel(s: string): { label: string; cls: string } {
@@ -85,10 +64,9 @@ export default function FinanceiroDashboard() {
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
 
-  const { data: revenues, isLoading: lr } = useFinanceRevenues();
   const { data: expenses, isLoading: le } = useFinanceExpenses();
   const { data: contracts, isLoading: lc } = useNetworkContracts();
-  const { createRevenue, updateRevenue, deleteRevenue, createExpense, updateExpense, deleteExpense } = useFinanceMutations();
+  const { createExpense, updateExpense, deleteExpense } = useFinanceMutations();
   const chargeClient = useChargeClient();
   const { data: asaasPayments, isLoading: la, refetch: refetchAsaas } = useAsaasNetworkPayments();
   const { data: closings, isLoading: loadingClosings } = useFinanceClosings();
@@ -98,30 +76,23 @@ export default function FinanceiroDashboard() {
   const [selectedMonth, setSelectedMonth] = useState("all");
   const monthOptions = useMemo(getMonthOptions, []);
 
-  const isLoading = lr || le || lc;
+  const isLoading = le || lc;
   const activeContracts = useMemo(() => (contracts ?? []).filter((c: any) => c.status === "active" || c.status === "signed"), [contracts]);
 
-  const filterByMonth = (date: string | null) => {
-    if (selectedMonth === "all" || !date) return true;
-    return date.startsWith(selectedMonth);
-  };
+  const filteredExpenses = useMemo(() => {
+    if (selectedMonth === "all") return expenses ?? [];
+    return (expenses ?? []).filter(e => (e.date || "").startsWith(selectedMonth));
+  }, [expenses, selectedMonth]);
 
-  const filteredRevenues = useMemo(() => (revenues ?? []).filter(r => filterByMonth(r.date)), [revenues, selectedMonth]);
-  const filteredExpenses = useMemo(() => (expenses ?? []).filter(e => filterByMonth(e.date)), [expenses, selectedMonth]);
-
-  const totalManualRev = filteredRevenues.reduce((s, r) => s + Number(r.amount), 0);
-  const totalAsaasPaid = useMemo(() => {
-    const filtered = selectedMonth === "all"
-      ? (asaasPayments ?? [])
-      : (asaasPayments ?? []).filter(p => (p.paymentDate || p.dueDate || "").startsWith(selectedMonth));
-    return filtered.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0);
+  const filteredAsaas = useMemo(() => {
+    if (selectedMonth === "all") return asaasPayments ?? [];
+    return (asaasPayments ?? []).filter(p => (p.paymentDate || p.dueDate || "").startsWith(selectedMonth));
   }, [asaasPayments, selectedMonth]);
-  const totalRevenue = totalManualRev + totalAsaasPaid;
+
+  const totalRevenue = useMemo(() => filteredAsaas.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [filteredAsaas]);
   const totalExpenses = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const resultado = totalRevenue - totalExpenses;
   const networkMRR = activeContracts.reduce((s: number, c: any) => s + Number(c.monthly_value || 0), 0);
-
-  // Overdue count
   const overdueCount = useMemo(() => (asaasPayments ?? []).filter(p => p.status === "OVERDUE").length, [asaasPayments]);
 
   if (isLoading) {
@@ -166,7 +137,7 @@ export default function FinanceiroDashboard() {
             resultado={resultado}
             networkMRR={networkMRR}
             overdueCount={overdueCount}
-            revenues={revenues}
+            asaasPayments={asaasPayments}
             expenses={expenses}
             activeContracts={activeContracts}
             selectedMonth={selectedMonth}
@@ -177,17 +148,10 @@ export default function FinanceiroDashboard() {
         {/* ══════════ RECEITAS ══════════ */}
         <TabsContent value="receitas" className="space-y-4">
           <ReceitasTab
-            revenues={revenues}
             asaasPayments={asaasPayments}
-            activeContracts={activeContracts}
             selectedMonth={selectedMonth}
             la={la}
             refetchAsaas={refetchAsaas}
-            createRevenue={createRevenue}
-            updateRevenue={updateRevenue}
-            deleteRevenue={deleteRevenue}
-            chargeClient={chargeClient}
-            toast={toast}
           />
         </TabsContent>
 
@@ -236,34 +200,36 @@ export default function FinanceiroDashboard() {
 /* DASHBOARD TAB                                                      */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, overdueCount, revenues, expenses, activeContracts, selectedMonth, monthOptions }: any) {
-  // Chart data: last 6 months
+function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, overdueCount, asaasPayments, expenses, activeContracts, selectedMonth, monthOptions }: any) {
+  // Chart data: last 6 months — receitas from Asaas, despesas from manual
   const chartData = useMemo(() => {
     const now = new Date();
     return Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
       const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const rec = (revenues ?? []).filter((r: any) => r.date?.startsWith(prefix)).reduce((s: number, r: any) => s + Number(r.amount), 0);
-      const desp = (expenses ?? []).filter((e: any) => e.date?.startsWith(prefix)).reduce((s: number, e: any) => s + Number(e.amount), 0);
+      const rec = (asaasPayments ?? [])
+        .filter((p: any) => (p.paymentDate || p.dueDate || "").startsWith(prefix) && ASAAS_PAID_STATUSES.includes(p.status))
+        .reduce((s: number, p: any) => s + p.value, 0);
+      const desp = (expenses ?? []).filter((e: any) => (e.date || "").startsWith(prefix)).reduce((s: number, e: any) => s + Number(e.amount), 0);
       return { name: months[d.getMonth()], receitas: rec, despesas: desp };
     });
-  }, [revenues, expenses]);
+  }, [asaasPayments, expenses]);
 
-  // Revenue composition
+  // Revenue composition by billing type from Asaas
   const pieData = useMemo(() => {
     const cats: Record<string, number> = {};
-    (revenues ?? []).forEach((r: any) => {
-      const cat = r.category || "Outros";
-      cats[cat] = (cats[cat] || 0) + Number(r.amount);
+    (asaasPayments ?? []).filter((p: any) => ASAAS_PAID_STATUSES.includes(p.status)).forEach((p: any) => {
+      const cat = p.billingType || "Outros";
+      cats[cat] = (cats[cat] || 0) + p.value;
     });
     return Object.entries(cats).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
-  }, [revenues]);
+  }, [asaasPayments]);
 
   return (
     <>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard label="MRR da Rede" value={formatBRL(networkMRR)} sublabel={`${activeContracts.length} contratos ativos`} accent />
-        <KpiCard label="Receitas" value={formatBRL(totalRevenue)} trend="up" sublabel={selectedMonth !== "all" ? monthOptions.find((o: any) => o.value === selectedMonth)?.label : undefined} />
+        <KpiCard label="Receitas (Asaas)" value={formatBRL(totalRevenue)} trend="up" sublabel={selectedMonth !== "all" ? monthOptions.find((o: any) => o.value === selectedMonth)?.label : undefined} />
         <KpiCard label="Despesas" value={formatBRL(totalExpenses)} sublabel={selectedMonth !== "all" ? monthOptions.find((o: any) => o.value === selectedMonth)?.label : undefined} />
         <KpiCard label="Resultado" value={formatBRL(resultado)} trend={resultado >= 0 ? "up" : "down"} />
         <KpiCard label="Inadimplentes" value={String(overdueCount)} sublabel={overdueCount > 0 ? "cobranças vencidas" : "nenhuma"} />
@@ -285,9 +251,9 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
           </ResponsiveContainer>
         </div>
 
-        {/* Pie chart */}
+        {/* Pie chart — by billing type */}
         <div className="glass-card p-6">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Composição de Receitas</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4">Receitas por Tipo de Cobrança</h3>
           {pieData.length === 0 ? (
             <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados</div>
           ) : (
@@ -330,80 +296,42 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
 }
 
 /* ═══════════════════════════════════════════════════════════════════ */
-/* RECEITAS TAB                                                       */
+/* RECEITAS TAB — Asaas only                                          */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function ReceitasTab({ revenues, asaasPayments, activeContracts, selectedMonth, la, refetchAsaas, createRevenue, updateRevenue, deleteRevenue, chargeClient, toast }: any) {
+function ReceitasTab({ asaasPayments, selectedMonth, la, refetchAsaas }: any) {
   const [search, setSearch] = useState("");
-  const [revDialog, setRevDialog] = useState(false);
-  const [editingRev, setEditingRev] = useState<any>(null);
-  const [revForm, setRevForm] = useState({ description: "", amount: 0, category: "Assessoria", status: "pending", date: "" });
-  const [viaAsaas, setViaAsaas] = useState(false);
-  const [asaasContractId, setAsaasContractId] = useState("");
-  const [asaasBillingType, setAsaasBillingType] = useState("PIX");
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-
-  const unifiedEntries: UnifiedEntry[] = useMemo(() => {
-    const manualEntries: UnifiedEntry[] = (revenues ?? [])
-      .filter((r: any) => selectedMonth === "all" || (r.date || "").startsWith(selectedMonth))
-      .map((r: any) => ({
-        id: r.id, description: r.description || "", amount: Number(r.amount),
-        category: r.category || "Outros", status: r.status || "pending",
-        date: r.date || "", source: "manual" as const, raw: r,
-      }));
-    const asaasEntries: UnifiedEntry[] = (asaasPayments ?? [])
-      .filter((p: any) => selectedMonth === "all" || (p.paymentDate || p.dueDate || "").startsWith(selectedMonth))
-      .map((p: any) => ({
-        id: p.id, description: p.description || p.orgName, amount: p.value,
-        category: "Asaas", status: mapAsaasStatus(p.status), date: p.paymentDate || p.dueDate || "",
-        source: "asaas" as const, invoiceUrl: p.invoiceUrl, bankSlipUrl: p.bankSlipUrl,
-        billingType: p.billingType, asaasStatus: p.status,
-      }));
-    return [...manualEntries, ...asaasEntries].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  }, [revenues, asaasPayments, selectedMonth]);
 
   const filtered = useMemo(() => {
-    if (!search) return unifiedEntries;
-    return unifiedEntries.filter(e => e.description?.toLowerCase().includes(search.toLowerCase()));
-  }, [unifiedEntries, search]);
-
-  const openNewRev = () => { setEditingRev(null); setRevForm({ description: "", amount: 0, category: "Assessoria", status: "pending", date: "" }); setViaAsaas(false); setAsaasContractId(""); setAsaasBillingType("PIX"); setRevDialog(true); };
-  const openEditRev = (r: any) => { setEditingRev(r); setRevForm({ description: r.description, amount: Number(r.amount), category: r.category || "Assessoria", status: r.status || "pending", date: r.date || "" }); setViaAsaas(false); setRevDialog(true); };
-
-  const saveRev = () => {
-    if (viaAsaas && !editingRev) {
-      if (!asaasContractId) { toast({ title: "Selecione um contrato", variant: "destructive" }); return; }
-      const contract = activeContracts.find((c: any) => c.id === asaasContractId);
-      if (!contract) return;
-      chargeClient.mutate({ contract_id: asaasContractId, billing_type: asaasBillingType, organization_id: contract.organization_id }, {
-        onSuccess: () => { setRevDialog(false); refetchAsaas(); toast({ title: "Cobrança Asaas gerada com sucesso" }); },
-      });
-      return;
+    let list = (asaasPayments ?? []) as AsaasPayment[];
+    if (selectedMonth !== "all") {
+      list = list.filter(p => (p.paymentDate || p.dueDate || "").startsWith(selectedMonth));
     }
-    if (!revForm.description.trim()) { toast({ title: "Informe a descrição", variant: "destructive" }); return; }
-    if (editingRev) { updateRevenue.mutate({ id: editingRev.id, ...revForm }); toast({ title: "Receita atualizada" }); }
-    else { createRevenue.mutate(revForm); toast({ title: "Receita adicionada" }); }
-    setRevDialog(false);
-  };
+    if (search) {
+      list = list.filter(p => (p.description || p.orgName || "").toLowerCase().includes(search.toLowerCase()));
+    }
+    return list.sort((a, b) => (b.dueDate || "").localeCompare(a.dueDate || ""));
+  }, [asaasPayments, selectedMonth, search]);
 
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
-    deleteRevenue.mutate(deleteTarget);
-    toast({ title: "Receita excluída" });
-    setDeleteTarget(null);
-  };
+  const totalPaid = useMemo(() => filtered.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [filtered]);
+  const totalPending = useMemo(() => filtered.filter(p => !ASAAS_PAID_STATUSES.includes(p.status) && p.status !== "REFUNDED").reduce((s, p) => s + p.value, 0), [filtered]);
 
   return (
     <>
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar por descrição..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Buscar por descrição ou cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Button variant="outline" size="sm" className="gap-2" onClick={() => refetchAsaas()} disabled={la}>
           <RefreshCw className={`w-4 h-4 ${la ? "animate-spin" : ""}`} /> Atualizar Asaas
         </Button>
-        <Button size="sm" onClick={openNewRev} className="gap-2"><Plus className="w-4 h-4" /> Nova Receita</Button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Recebido</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-emerald-600">{formatBRL(totalPaid)}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Pendente</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-yellow-600">{formatBRL(totalPending)}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Cobranças</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-foreground">{filtered.length}</span></CardContent></Card>
       </div>
 
       {la && !asaasPayments ? (
@@ -411,48 +339,38 @@ function ReceitasTab({ revenues, asaasPayments, activeContracts, selectedMonth, 
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center py-12 text-center">
           <Inbox className="w-10 h-10 text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</p>
+          <p className="text-sm text-muted-foreground">Nenhuma cobrança encontrada no Asaas.</p>
         </div>
       ) : (
         <div className="border rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b bg-muted/50">
-              <th className="text-left py-3 px-4 font-medium">Descrição</th>
-              <th className="text-left py-3 px-4 font-medium">Categoria</th>
+              <th className="text-left py-3 px-4 font-medium">Descrição / Cliente</th>
+              <th className="text-left py-3 px-4 font-medium">Tipo</th>
               <th className="text-right py-3 px-4 font-medium">Valor</th>
-              <th className="text-center py-3 px-4 font-medium">Origem</th>
               <th className="text-center py-3 px-4 font-medium">Status</th>
-              <th className="text-left py-3 px-4 font-medium">Data</th>
-              <th className="text-center py-3 px-4 font-medium">Ações</th>
+              <th className="text-left py-3 px-4 font-medium">Vencimento</th>
+              <th className="text-left py-3 px-4 font-medium">Pagamento</th>
+              <th className="text-center py-3 px-4 font-medium">Fatura</th>
             </tr></thead>
             <tbody>
-              {filtered.map(entry => {
-                const isAsaas = entry.source === "asaas";
-                const st = isAsaas && entry.asaasStatus
-                  ? asaasStatusLabel(entry.asaasStatus)
-                  : { label: entry.status === "paid" ? "Recebido" : "Pendente", cls: entry.status === "paid" ? "bg-emerald-500/15 text-emerald-500" : "bg-yellow-500/15 text-yellow-500" };
+              {filtered.map(p => {
+                const st = asaasStatusLabel(p.status);
                 return (
-                  <tr key={`${entry.source}-${entry.id}`} className="border-b hover:bg-muted/30">
-                    <td className="py-3 px-4 font-medium">{entry.description}</td>
+                  <tr key={p.id} className="border-b hover:bg-muted/30">
                     <td className="py-3 px-4">
-                      <Badge variant="secondary" className="text-[10px]">{entry.category}</Badge>
-                      {isAsaas && entry.billingType && <Badge variant="outline" className="text-[10px] ml-1">{entry.billingType}</Badge>}
+                      <div className="font-medium">{p.description || p.orgName || "—"}</div>
+                      {p.orgName && p.description && <div className="text-xs text-muted-foreground">{p.orgName}</div>}
                     </td>
-                    <td className="py-3 px-4 text-right text-emerald-500 font-medium">{formatBRL(entry.amount)}</td>
-                    <td className="py-3 px-4 text-center"><Badge variant={isAsaas ? "default" : "secondary"} className="text-[10px]">{isAsaas ? "Asaas" : "Manual"}</Badge></td>
+                    <td className="py-3 px-4"><Badge variant="outline" className="text-[10px]">{p.billingType || "—"}</Badge></td>
+                    <td className="py-3 px-4 text-right text-emerald-500 font-medium">{formatBRL(p.value)}</td>
                     <td className="py-3 px-4 text-center"><span className={`text-xs px-2 py-0.5 rounded ${st.cls}`}>{st.label}</span></td>
-                    <td className="py-3 px-4 text-muted-foreground">{entry.date ? new Date(entry.date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                    <td className="py-3 px-4 text-muted-foreground">{p.dueDate ? new Date(p.dueDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                    <td className="py-3 px-4 text-muted-foreground">{p.paymentDate ? new Date(p.paymentDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
                     <td className="py-3 px-4 text-center">
-                      {isAsaas ? (
-                        (entry.invoiceUrl || entry.bankSlipUrl) ? (
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(entry.invoiceUrl || entry.bankSlipUrl!, "_blank")}><ExternalLink className="w-3.5 h-3.5" /></Button>
-                        ) : <span className="text-xs text-muted-foreground">—</span>
-                      ) : (
-                        <div className="flex items-center justify-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditRev(entry.raw)}><Pencil className="w-3.5 h-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(entry.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                        </div>
-                      )}
+                      {(p.invoiceUrl || p.bankSlipUrl) ? (
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(p.invoiceUrl || p.bankSlipUrl!, "_blank")}><ExternalLink className="w-3.5 h-3.5" /></Button>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
                     </td>
                   </tr>
                 );
@@ -461,86 +379,6 @@ function ReceitasTab({ revenues, asaasPayments, activeContracts, selectedMonth, 
           </table>
         </div>
       )}
-
-      {/* Revenue Dialog */}
-      <Dialog open={revDialog} onOpenChange={setRevDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editingRev ? "Editar Receita" : "Nova Receita"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            {!editingRev && (
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label className="text-sm font-medium">Cobrar via Asaas?</Label>
-                  <p className="text-xs text-muted-foreground">Gera cobrança automática</p>
-                </div>
-                <Switch checked={viaAsaas} onCheckedChange={setViaAsaas} />
-              </div>
-            )}
-            {viaAsaas && !editingRev ? (
-              <>
-                <div><Label>Contrato Ativo *</Label>
-                  <Select value={asaasContractId} onValueChange={setAsaasContractId}>
-                    <SelectTrigger><SelectValue placeholder="Selecione um contrato" /></SelectTrigger>
-                    <SelectContent>{activeContracts.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.signer_name || c.title} — {c.monthly_value ? formatBRL(Number(c.monthly_value)) : "sem valor"}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Método de Pagamento</Label>
-                  <Select value={asaasBillingType} onValueChange={setAsaasBillingType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PIX">PIX</SelectItem>
-                      <SelectItem value="BOLETO">Boleto</SelectItem>
-                      <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            ) : (
-              <>
-                <div><Label>Descrição *</Label><Input value={revForm.description} onChange={e => setRevForm(f => ({ ...f, description: e.target.value }))} /></div>
-                <div><Label>Valor (R$)</Label><Input type="number" value={revForm.amount} onChange={e => setRevForm(f => ({ ...f, amount: Number(e.target.value) }))} /></div>
-                <div><Label>Data</Label><Input type="date" value={revForm.date} onChange={e => setRevForm(f => ({ ...f, date: e.target.value }))} /></div>
-                <div><Label>Categoria</Label>
-                  <Select value={revForm.category} onValueChange={v => setRevForm(f => ({ ...f, category: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{revCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Status</Label>
-                  <Select value={revForm.status} onValueChange={v => setRevForm(f => ({ ...f, status: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="paid">Recebido</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRevDialog(false)}>Cancelar</Button>
-            <Button onClick={saveRev} disabled={viaAsaas && chargeClient.isPending} className="gap-2">
-              {viaAsaas && chargeClient.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-              {viaAsaas && !editingRev ? "Gerar Cobrança" : editingRev ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirm */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>Deseja excluir esta receita?</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
