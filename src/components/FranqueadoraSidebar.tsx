@@ -53,18 +53,9 @@ const marketingSection: SidebarItem[] = [
 
 const adminSection: SidebarItem[] = [
   { label: "Contratos", icon: FileText, path: "/franqueadora/contratos" },
-  {
-    label: "Financeiro", icon: DollarSign, path: "/franqueadora/financeiro",
-    children: [
-      { label: "Dashboard", icon: BarChart3, path: "/franqueadora/financeiro" },
-      { label: "Controle", icon: Receipt, path: "/franqueadora/financeiro/controle" },
-      { label: "Repasse", icon: ArrowRightLeft, path: "/franqueadora/financeiro/repasse" },
-      { label: "Fechamentos", icon: FileSpreadsheet, path: "/franqueadora/financeiro/fechamentos" },
-    ],
-  },
+  { label: "Financeiro", icon: DollarSign, path: "/franqueadora/financeiro" },
   { label: "Matriz", icon: Shield, path: "/franqueadora/matriz" },
   { label: "SaaS", icon: Cloud, path: "/franqueadora/saas" },
-  
 ];
 
 function NavItem({ item, collapsed }: { item: SidebarItem; collapsed: boolean }) {

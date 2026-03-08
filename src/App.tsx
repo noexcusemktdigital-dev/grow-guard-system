@@ -17,9 +17,6 @@ import { FranqueadoraLayout } from "./components/FranqueadoraLayout";
 import { FranqueadoLayout } from "./components/FranqueadoLayout";
 import { ClienteLayout } from "./components/ClienteLayout";
 import FinanceiroDashboard from "./pages/FinanceiroDashboard";
-import FinanceiroControle from "./pages/FinanceiroControle";
-import FinanceiroRepasse from "./pages/FinanceiroRepasse";
-import FinanceiroFechamentos from "./pages/FinanceiroFechamentos";
 import ContratosGerador from "./pages/ContratosGerador";
 import Marketing from "./pages/Marketing";
 import Academy from "./pages/Academy";
@@ -107,9 +104,6 @@ const App = () => (
                 <Route index element={<Navigate to="/franqueadora/inicio" replace />} />
                 <Route path="inicio" element={<Home />} />
                 <Route path="financeiro" element={<FinanceiroDashboard />} />
-                <Route path="financeiro/controle" element={<FinanceiroControle />} />
-                <Route path="financeiro/repasse" element={<FinanceiroRepasse />} />
-                <Route path="financeiro/fechamentos" element={<FinanceiroFechamentos />} />
                 <Route path="contratos" element={<ContratosGerador />} />
                 <Route path="marketing" element={<Marketing />} />
                 <Route path="treinamentos" element={<Academy />} />
