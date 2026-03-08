@@ -109,10 +109,14 @@ function formatCurrency(value: number) {
 }
 
 export default function ClienteInicio() {
+  const { isAdmin } = useRoleAccess();
+  const { user } = useAuth();
+  const { data: announcements } = useAnnouncements();
+  const { data: announcementViews } = useAnnouncementViews();
+  const { data: myTasks } = useClienteTasks({ assigned_to: user?.id });
   const navigate = useNavigate();
   const { data: profile } = useUserProfile();
   const { data: orgData, isLoading: orgLoading } = useOrgProfile();
-  const { data: gamification } = useClienteGamification();
   const { toggleChecklistItem } = useClienteContentMutations();
 
   useEffect(() => {
