@@ -29,15 +29,26 @@ async function urlToBase64(url: string): Promise<string | null> {
 
 // --- Structured prompt result from chain-of-thought ---
 
+interface TextHierarchy {
+  headline: string;
+  highlight_headline: string;
+  supporting_text: string;
+  bullet_points: string;
+  cta: string;
+  brand: string;
+}
+
 interface StructuredPromptResult {
   scene: string;
   environment: string;
   design_layout: string;
+  layout_zones: string;
   color_palette: string;
   mood: string;
   style_closing: string;
   brand_design_elements: string;
-  text_overlay_instructions: string;
+  reference_style_replication: string;
+  text_hierarchy: TextHierarchy;
 }
 
 async function analyzeAndOptimizePrompt(
@@ -58,9 +69,14 @@ async function analyzeAndOptimizePrompt(
     manual_colors?: string;
     manual_style?: string;
     brand_name?: string;
-  }
+    supporting_text?: string;
+    bullet_points?: string;
+  },
+  referenceBase64s?: { type: string; image_url: { url: string } }[],
 ): Promise<StructuredPromptResult | null> {
   const { userPrompt, format, nivel, estilo, identidade_visual, persona } = context;
+
+  const hasRefs = referenceBase64s && referenceBase64s.length > 0;
 
   const systemPrompt = `You are an elite visual prompt engineer for AI image generation models. Your ONLY job is to produce a structured visual prompt in FLUENT ENGLISH that will generate a professional social media marketing image.
 
@@ -69,6 +85,8 @@ CRITICAL RULES:
 2. The image model renders text directly into the design — describe WHERE and HOW text should appear.
 3. Be hyper-specific about composition, colors, lighting, and spatial layout.
 4. Never use vague descriptions like "professional look" or "modern design". Be CONCRETE.
+${hasRefs ? `5. You have been given BRAND REFERENCE IMAGES. Analyze them carefully and extract the exact visual design system: color usage patterns, layout structures, card shapes, icon styles, typography approach, photographic vs graphic style. Your output must faithfully replicate this design language in a NEW scene.
+6. IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references. Create a NEW scene that follows the same brand design language.` : ""}
 
 The art_style determines the visual approach:
 - Styles starting with "grafica_" → FLAT GRAPHIC DESIGN (vector shapes, color blocks, geometric patterns, NO photographs)
@@ -84,26 +102,35 @@ OUTPUT SECTIONS (all in English):
 
 3. **design_layout**: Precise spatial composition — describe the exact layout grid. Example: "Upper 60%: hero photograph with subject off-center right. Lower 40%: solid dark card with rounded corners containing headline text centered, CTA button bottom-right."
 
-4. **color_palette**: List exact colors with hex codes and WHERE each appears (background, text, accents, shapes).
+4. **layout_zones**: Describe 2-3 distinct zones of the composition. Example: "Top portion: lifestyle photo with the couple. Bottom portion: dark rounded card layout with text and lime green highlights. Include three circular icon elements."
 
-5. **mood**: 5-8 mood keywords, comma-separated.
+5. **color_palette**: List exact colors with hex codes and WHERE each appears (background, text, accents, shapes).
 
-6. **style_closing**: One definitive style sentence. Examples: "Ultra-realistic editorial photography with integrated marketing typography" or "Bold flat graphic design with geometric shapes and clean sans-serif type."
+6. **mood**: 5-8 mood keywords, comma-separated.
 
-7. **brand_design_elements**: 5-8 specific design elements as comma-separated items. Example: "navy blue base, lime green accent highlights, rounded card containers, circular icon elements, bold sans-serif headlines, subtle grid pattern overlay."
+7. **style_closing**: One definitive style sentence. Examples: "Ultra-realistic editorial photography with modern marketing layout" or "Bold flat graphic design with geometric shapes and clean sans-serif type."
 
-8. **text_overlay_instructions**: Precise instructions for how text should be rendered in the image. Describe font style (bold, light, serif, sans-serif), size hierarchy (headline largest, subtext smaller), positioning (centered, left-aligned), and visual treatment (white on dark, colored accent on specific words). Example: "Large bold sans-serif headline 'BOOST YOUR SALES' in white, centered in the lower card. Below it, smaller regular weight subtext 'Start today' in light gray. Brand name 'ACME' in top-left corner, small caps, lime green."
+8. **brand_design_elements**: 5-8 specific design elements as comma-separated items. Example: "navy blue base, lime green accent highlights, rounded card containers, circular icon elements, bold sans-serif headlines, subtle grid pattern overlay."
 
-EXAMPLE OF EXCELLENT OUTPUT for a fitness brand post:
-- scene: "A dynamic composition featuring bold geometric shapes — a large circle in electric blue overlapping a diagonal stripe in coral. Inside the circle, a stylized dumbbell icon in white. Scattered small dots and lines create energy and movement."
-- design_layout: "Full bleed design. Left 40%: large overlapping geometric shapes. Right 60%: clean space with text stack. Bottom strip: accent color bar with CTA."
-- text_overlay_instructions: "Headline 'TRANSFORM YOUR BODY' in bold condensed sans-serif, white, right-aligned in the upper right quadrant. Subline '30 Day Challenge' in regular weight, coral color, directly below. CTA 'JOIN NOW →' in small bold caps inside the bottom coral bar, centered."`;
+9. **reference_style_replication**: ${hasRefs ? "Based on the reference images provided, list 6-10 SPECIFIC visual elements you observe that MUST be replicated. Example: 'black and white base layout, lime green highlight color, rounded card shapes, circular icon elements, modern financial consulting layout, clean sans-serif typography, marketing educational style'. Be extremely specific about what you see." : "Leave empty string if no reference images provided."}
+
+10. **text_hierarchy**: A structured object with EACH text element that should appear in the image:
+  - headline: The main large headline text (render exactly as provided, in Portuguese)
+  - highlight_headline: A secondary headline or emphasized portion (different color/weight)
+  - supporting_text: Body text or explanatory paragraph
+  - bullet_points: Listed items (if applicable)
+  - cta: Call-to-action text
+  - brand: Brand name for corner placement
+
+Each field should include the TEXT CONTENT and rendering instructions (font style, size, position, color).`;
 
   // Build structured briefing in English
   let structuredBrief = `USER REQUEST: ${userPrompt}`;
   if (context.tipo_postagem) structuredBrief += `\nPOST TYPE: ${context.tipo_postagem}`;
   if (context.headline) structuredBrief += `\nHEADLINE TEXT (render in image): "${context.headline}"`;
-  if (context.subheadline) structuredBrief += `\nSUBHEADLINE TEXT (render in image): "${context.subheadline}"`;
+  if (context.subheadline) structuredBrief += `\nSUBHEADLINE / HIGHLIGHT TEXT (render in image): "${context.subheadline}"`;
+  if (context.supporting_text) structuredBrief += `\nSUPPORTING TEXT (render in image): "${context.supporting_text}"`;
+  if (context.bullet_points) structuredBrief += `\nBULLET POINTS (render in image): "${context.bullet_points}"`;
   if (context.cta) structuredBrief += `\nCTA TEXT (render in image): "${context.cta}"`;
   if (context.cena) structuredBrief += `\nSCENE DESCRIPTION: ${context.cena}`;
   if (context.elementos_visuais) structuredBrief += `\nVISUAL ELEMENTS TO INCLUDE: ${context.elementos_visuais}`;
@@ -138,10 +165,22 @@ VISUAL STYLE: ${estilo || "modern professional"}
 ${identitySection || "No brand identity provided — use a clean, modern aesthetic."}
 
 ${persona ? `TARGET AUDIENCE: ${persona.nome ? `${persona.nome} — ` : ""}${persona.descricao || "general audience"}` : ""}
+${hasRefs ? "\nREFERENCE IMAGES: I have attached brand reference images. Analyze them carefully to extract the design system." : ""}
 
 Analyze everything above and produce the structured visual prompt sections. Remember: ALL in English, be SPECIFIC, describe text placement precisely.`;
 
   try {
+    // Build multimodal content if we have reference images
+    let messageContent: any;
+    if (hasRefs) {
+      messageContent = [
+        { type: "text", text: userMessage },
+        ...referenceBase64s!,
+      ];
+    } else {
+      messageContent = userMessage;
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -152,7 +191,7 @@ Analyze everything above and produce the structured visual prompt sections. Reme
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
+          { role: "user", content: messageContent },
         ],
         tools: [
           {
@@ -166,13 +205,28 @@ Analyze everything above and produce the structured visual prompt sections. Reme
                   scene: { type: "string", description: "Detailed scene description. 100-200 words. English only." },
                   environment: { type: "string", description: "Background, lighting, atmosphere with specific colors/hex codes." },
                   design_layout: { type: "string", description: "Precise spatial composition describing exact layout grid and element positions." },
+                  layout_zones: { type: "string", description: "2-3 distinct zones of the composition with specific descriptions of what goes in each zone." },
                   color_palette: { type: "string", description: "Exact colors with hex codes and where each appears." },
                   mood: { type: "string", description: "5-8 mood keywords, comma-separated." },
                   style_closing: { type: "string", description: "One definitive style sentence." },
                   brand_design_elements: { type: "string", description: "5-8 specific brand design elements, comma-separated." },
-                  text_overlay_instructions: { type: "string", description: "Precise instructions for text rendering: font style, size hierarchy, positioning, color, visual treatment for each text element." },
+                  reference_style_replication: { type: "string", description: "6-10 specific visual elements extracted from brand reference images that must be replicated. Empty if no references." },
+                  text_hierarchy: {
+                    type: "object",
+                    description: "Structured text elements to render in the image, each with content and rendering instructions.",
+                    properties: {
+                      headline: { type: "string", description: "Main headline with rendering instructions (font, size, position, color). Include the exact text in quotes." },
+                      highlight_headline: { type: "string", description: "Secondary/highlight headline with distinct styling (different color or weight). Include exact text in quotes." },
+                      supporting_text: { type: "string", description: "Body/explanatory text with rendering instructions. Include exact text in quotes." },
+                      bullet_points: { type: "string", description: "Listed items with rendering instructions. Include exact text in quotes." },
+                      cta: { type: "string", description: "Call-to-action text with rendering instructions (accent color, button style, position)." },
+                      brand: { type: "string", description: "Brand name with rendering instructions (small, corner placement)." },
+                    },
+                    required: ["headline"],
+                    additionalProperties: false,
+                  },
                 },
-                required: ["scene", "environment", "design_layout", "color_palette", "mood", "style_closing", "brand_design_elements", "text_overlay_instructions"],
+                required: ["scene", "environment", "design_layout", "layout_zones", "color_palette", "mood", "style_closing", "brand_design_elements", "reference_style_replication", "text_hierarchy"],
                 additionalProperties: false,
               },
             },
@@ -192,7 +246,7 @@ Analyze everything above and produce the structured visual prompt sections. Reme
 
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
-      console.log("✅ Chain-of-thought structured prompt:", JSON.stringify(parsed).slice(0, 400) + "...");
+      console.log("✅ Chain-of-thought structured prompt:", JSON.stringify(parsed).slice(0, 600) + "...");
       return parsed as StructuredPromptResult;
     }
 
@@ -268,40 +322,70 @@ async function getFeedbackHistory(supabase: any, organizationId: string): Promis
   }
 }
 
-// --- Build final image prompt from structured CoT result ---
+// --- Build final image prompt from structured CoT result (ChatGPT-quality structure) ---
 
 function buildFinalPrompt(
   optimized: StructuredPromptResult,
   qualityInstructions: string,
   artStyleInstructions: string,
   formatDescription: string,
+  hasRefs: boolean,
 ): string {
-  return `Create a ${formatDescription}.
+  // Build reference style replication block
+  let referenceBlock = "";
+  if (hasRefs && optimized.reference_style_replication) {
+    const elements = optimized.reference_style_replication.split(",").map((e: string) => e.trim()).filter(Boolean);
+    referenceBlock = `Use the attached images ONLY as brand style references for the visual identity.
+
+Replicate the brand design system including:
+${elements.map((e: string) => `- ${e}`).join("\n")}
+
+IMPORTANT:
+Do NOT recreate the same people, same scene or same composition from the references.
+Create a NEW scene that follows the same brand design language.
+
+`;
+  }
+
+  // Build text hierarchy block
+  const th = optimized.text_hierarchy;
+  let textBlock = "Text in Portuguese:";
+  if (th?.headline) textBlock += `\n\nHeadline:\n${th.headline}`;
+  if (th?.highlight_headline) textBlock += `\n\nHighlight headline:\n${th.highlight_headline}`;
+  if (th?.supporting_text) textBlock += `\n\nSupporting text:\n${th.supporting_text}`;
+  if (th?.bullet_points) textBlock += `\n\nBullet points:\n${th.bullet_points}`;
+  if (th?.cta) textBlock += `\n\nCTA:\n${th.cta}`;
+  if (th?.brand) textBlock += `\n\nBrand:\n${th.brand}`;
+
+  return `${referenceBlock}Scene:
+${optimized.scene}
+
+Environment:
+${optimized.environment}
+
+Design layout:
+${optimized.design_layout}
+${optimized.layout_zones ? `\nLayout zones:\n${optimized.layout_zones}` : ""}
+
+Color palette:
+${optimized.color_palette}
+
+Format:
+${formatDescription}
 
 ${qualityInstructions}
 ${artStyleInstructions ? `\n${artStyleInstructions}\n` : ""}
-SCENE:
-${optimized.scene}
 
-ENVIRONMENT:
-${optimized.environment}
+${textBlock}
 
-LAYOUT COMPOSITION:
-${optimized.design_layout}
+Mood:
+${optimized.mood}
 
-COLOR PALETTE:
-${optimized.color_palette}
-
-TEXT TO RENDER IN THE IMAGE:
-${optimized.text_overlay_instructions}
-
-MOOD: ${optimized.mood}
-
-STYLE: ${optimized.style_closing}
+${optimized.style_closing}
 
 IMPORTANT RENDERING RULES:
 - Text must be sharp, legible, and properly spelled
-- Maintain strong visual hierarchy between headline, subtext, and CTA
+- Maintain strong visual hierarchy between headline, highlight, subtext, and CTA
 - All text must have sufficient contrast against its background
 - Typography should feel intentional and designed, not auto-generated
 - The overall composition must be balanced and publication-ready`;
@@ -332,37 +416,39 @@ function buildFallbackPrompt(
 
   let textBlock = "";
   if (context.headline || context.subheadline || context.cta || context.brand_name) {
-    textBlock = "\nTEXT TO RENDER IN THE IMAGE:";
-    if (context.headline) textBlock += `\n- HEADLINE (large, bold, prominent): "${context.headline}"`;
-    if (context.subheadline) textBlock += `\n- SUBHEADLINE (medium, below headline): "${context.subheadline}"`;
-    if (context.supporting_text) textBlock += `\n- SUPPORTING TEXT (small, body copy): "${context.supporting_text}"`;
-    if (context.bullet_points) textBlock += `\n- BULLET POINTS (small, listed): "${context.bullet_points}"`;
-    if (context.cta) textBlock += `\n- CTA BUTTON or TEXT (accent color, bottom area): "${context.cta}"`;
-    if (context.brand_name) textBlock += `\n- BRAND NAME (small, corner placement): "${context.brand_name}"`;
-    textBlock += `\n- All text must be sharp, legible, correctly spelled, and have strong contrast.`;
+    textBlock = "\nText in Portuguese:";
+    if (context.headline) textBlock += `\n\nHeadline:\n"${context.headline}"`;
+    if (context.subheadline) textBlock += `\n\nHighlight headline:\n"${context.subheadline}"`;
+    if (context.supporting_text) textBlock += `\n\nSupporting text:\n"${context.supporting_text}"`;
+    if (context.bullet_points) textBlock += `\n\nBullet points:\n"${context.bullet_points}"`;
+    if (context.cta) textBlock += `\n\nCTA:\n"${context.cta}"`;
+    if (context.brand_name) textBlock += `\n\nBrand:\n"${context.brand_name}"`;
+    textBlock += `\n\nAll text must be sharp, legible, correctly spelled, and have strong contrast.`;
   }
 
   let colorInfo = "";
   if (identidade_visual?.paleta || identidade_visual?.palette) {
-    colorInfo = `\nBRAND COLORS: ${identidade_visual.paleta || identidade_visual.palette}`;
+    colorInfo = `\nColor palette:\n${identidade_visual.paleta || identidade_visual.palette}`;
   } else if (manual_colors) {
-    colorInfo = `\nBRAND COLORS: ${manual_colors}`;
+    colorInfo = `\nColor palette:\n${manual_colors}`;
   }
 
   let styleInfo = "";
   if (identidade_visual?.estilo || identidade_visual?.style) {
-    styleInfo = `\nBRAND STYLE: ${identidade_visual.estilo || identidade_visual.style}`;
+    styleInfo = `\nBrand style: ${identidade_visual.estilo || identidade_visual.style}`;
   } else if (manual_style) {
-    styleInfo = `\nBRAND STYLE: ${manual_style}`;
+    styleInfo = `\nBrand style: ${manual_style}`;
   }
 
-  return `Create a ${formatDescription}.
+  return `Scene:
+${scene}
+${context.elementos_visuais ? `\nVisual elements to include: ${context.elementos_visuais}` : ""}
+
+Format:
+${formatDescription}
 
 ${qualityInstructions}
 ${artStyleInstructions ? `\n${artStyleInstructions}\n` : ""}
-SCENE:
-${scene}
-${context.elementos_visuais ? `\nVisual elements to include: ${context.elementos_visuais}` : ""}
 ${colorInfo}
 ${styleInfo}
 ${textBlock}
@@ -427,13 +513,30 @@ serve(async (req) => {
     if (elementos_visuais) enrichedPrompt += `\nVisual elements: ${elementos_visuais}`;
     if (headline) enrichedPrompt += `\nHeadline: ${headline}`;
     if (subheadline) enrichedPrompt += `\nSubheadline: ${subheadline}`;
+    if (supporting_text) enrichedPrompt += `\nSupporting text: ${supporting_text}`;
+    if (bullet_points) enrichedPrompt += `\nBullet points: ${bullet_points}`;
     if (cta) enrichedPrompt += `\nCTA: ${cta}`;
     if (tipo_postagem) enrichedPrompt += `\nPost type: ${tipo_postagem}`;
     if (brand_name) enrichedPrompt += `\nBrand: ${brand_name}`;
     if (feedbackContext) enrichedPrompt += feedbackContext;
 
-    // Chain-of-Thought optimization
-    console.log(`🧠 Starting chain-of-thought for ${format} image...`);
+    // Convert reference images to base64 EARLY so CoT can use them too
+    const hasRefs = reference_images && reference_images.length > 0;
+    let base64Refs: { type: string; image_url: { url: string } }[] = [];
+
+    if (hasRefs) {
+      console.log(`📥 Converting ${Math.min(reference_images.length, 3)} reference images to base64...`);
+      for (const refUrl of reference_images.slice(0, 3)) {
+        const b64 = await urlToBase64(refUrl);
+        if (b64) {
+          base64Refs.push({ type: "image_url", image_url: { url: b64 } });
+        }
+      }
+      console.log(`✅ ${base64Refs.length} reference images converted`);
+    }
+
+    // Chain-of-Thought optimization (NOW receives reference images!)
+    console.log(`🧠 Starting chain-of-thought for ${format} image (refs for CoT: ${base64Refs.length})...`);
 
     const optimized = await analyzeAndOptimizePrompt(LOVABLE_API_KEY, {
       userPrompt: enrichedPrompt,
@@ -451,7 +554,9 @@ serve(async (req) => {
       manual_colors,
       manual_style,
       brand_name,
-    });
+      supporting_text,
+      bullet_points,
+    }, base64Refs.length > 0 ? base64Refs : undefined);
 
     // Quality and style instructions
     const qualityInstructions = getQualityInstructions(nivel || "simples");
@@ -469,7 +574,7 @@ serve(async (req) => {
     let fullPrompt: string;
 
     if (optimized) {
-      fullPrompt = buildFinalPrompt(optimized, qualityInstructions, artStyleInstructions, formatDescription);
+      fullPrompt = buildFinalPrompt(optimized, qualityInstructions, artStyleInstructions, formatDescription, hasRefs);
     } else {
       fullPrompt = buildFallbackPrompt(
         { prompt, cena, headline, subheadline, cta, brand_name, elementos_visuais, supporting_text, bullet_points },
@@ -478,41 +583,19 @@ serve(async (req) => {
       );
     }
 
-    console.log(`🎨 Generating ${format} image (refs: ${reference_images?.length || 0}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
-    console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 500)}...`);
+    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
+    console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
-    // Build message content with reference images
-    const hasRefs = reference_images && reference_images.length > 0;
-    const brandElements = optimized?.brand_design_elements
-      ? optimized.brand_design_elements
-      : "color palette, layout structure, card shapes, icon elements, typography style, overall design language";
-
-    const referenceInstruction = `BRAND STYLE REFERENCE IMAGES:
-The attached images are examples of the brand's existing visual identity. Study them carefully and replicate:
-${brandElements.split(",").map((e: string) => `• ${e.trim()}`).join("\n")}
-
-CRITICAL: Do NOT copy the exact scene, people, or composition from references.
-Create a COMPLETELY NEW design that follows the same visual language, color system, and layout patterns.`;
-
+    // Build message content with reference images for generation
     let messageContent: any = fullPrompt;
 
-    if (hasRefs) {
-      console.log(`📥 Converting ${Math.min(reference_images.length, 3)} reference images to base64...`);
-      const base64Refs: { type: string; image_url: { url: string } }[] = [];
-      for (const refUrl of reference_images.slice(0, 3)) {
-        const b64 = await urlToBase64(refUrl);
-        if (b64) {
-          base64Refs.push({ type: "image_url", image_url: { url: b64 } });
-        }
-      }
-      if (base64Refs.length > 0) {
-        console.log(`✅ ${base64Refs.length} reference images converted`);
-        messageContent = [
-          { type: "text", text: referenceInstruction },
-          ...base64Refs,
-          { type: "text", text: fullPrompt },
-        ];
-      }
+    if (base64Refs.length > 0) {
+      // The referenceInstruction is now INSIDE the prompt via buildFinalPrompt
+      // We just need to attach the images
+      messageContent = [
+        { type: "text", text: fullPrompt },
+        ...base64Refs,
+      ];
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
