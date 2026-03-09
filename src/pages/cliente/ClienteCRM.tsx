@@ -538,13 +538,19 @@ export default function ClienteCRM() {
                 {/* New Lead dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="gap-1">
+                    <Button size="sm" className="gap-1" disabled={atLimit}>
                       <Plus className="w-3.5 h-3.5" /> Novo Lead
                       <ChevronDown className="w-3 h-3 ml-0.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setNewLeadOpen(true)} className="gap-2 text-xs">
+                    <DropdownMenuItem onClick={() => {
+                      if (atLimit) {
+                        toast({ title: "Limite de leads atingido", description: "Faça upgrade do plano para adicionar mais leads.", variant: "destructive" });
+                        return;
+                      }
+                      setNewLeadOpen(true);
+                    }} className="gap-2 text-xs">
                       <Plus className="w-3.5 h-3.5" /> Criar Lead
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setCsvImportOpen(true)} className="gap-2 text-xs">
