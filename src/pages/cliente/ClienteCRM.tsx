@@ -28,6 +28,8 @@ import { useCrmFunnels } from "@/hooks/useClienteCrm";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useToast } from "@/hooks/use-toast";
+import { useLeadQuota } from "@/hooks/useLeadQuota";
+import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
