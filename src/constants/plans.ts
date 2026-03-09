@@ -192,6 +192,7 @@ export const TRIAL_PLAN: TrialPlan = {
   maxDispatches: 0,
   maxStrategies: 1,
   maxTrafficStrategies: 0,
+  maxLeads: 50,
 };
 
 // ── Combo Logic ─────────────────────────────────────────────────
