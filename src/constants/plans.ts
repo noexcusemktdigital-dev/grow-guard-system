@@ -221,6 +221,7 @@ export interface EffectiveLimits {
   maxSites: number;
   siteTypes: string[];
   maxTrafficStrategies: number;
+  maxLeads: number;
   hasSalesModule: boolean;
   hasMarketingModule: boolean;
 }
