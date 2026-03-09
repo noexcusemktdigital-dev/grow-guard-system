@@ -343,7 +343,7 @@ Deno.serve(async (req) => {
         contacts_created: contactsCreated,
         contacts_updated: contactsUpdated,
         contacts_removed: contactsRemoved,
-        total_chats_found: individualChats.length,
+        total_chats_found: validChats.length,
         timestamps_found: timestampsFound,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

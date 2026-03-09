@@ -126,19 +126,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Filter out groups, broadcasts, status updates and group-pattern phones
+    // Filter out broadcasts and status updates ONLY (keep groups and individuals)
     if (
-      isGroup || isBroadcast ||
-      /^\d+-\d{10,}$/.test(phone) ||
+      isBroadcast ||
       phone === "status" ||
       phone.includes("broadcast") ||
-      phone.endsWith("-group") ||
       rawChatId.includes("status@broadcast")
     ) {
-      return new Response(JSON.stringify({ ok: true, skipped: "group_or_broadcast_or_status" }), {
+      return new Response(JSON.stringify({ ok: true, skipped: "broadcast_or_status" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    
+    // Classify contact type
+    const contactType = isGroup || /^\d+-\d{10,}$/.test(phone) || phone.endsWith("-group") ? "group" : "individual";
 
     const senderName = body.senderName || body.pushName || null;
     const messageText = body.text?.message || body.text || body.caption || null;
