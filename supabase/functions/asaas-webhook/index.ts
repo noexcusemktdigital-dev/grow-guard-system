@@ -317,6 +317,11 @@ Deno.serve(async (req) => {
       if (refParts.length >= 3 && refParts[1] === "credits") {
         const packId = refParts[2];
         const packCreditsMap: Record<string, number> = {
+          // New unified packs
+          "pack-200": 200,
+          "pack-500": 500,
+          "pack-1000": 1000,
+          // Legacy packs
           "pack-5000": 5000,
           "pack-20000": 20000,
           "pack-50000": 50000,
