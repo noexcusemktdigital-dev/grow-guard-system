@@ -189,7 +189,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, "");
+    // For groups stored as -group, convert to @g.us for Z-API send endpoints
+    const isGroupPhone = phone.endsWith("-group");
+    const cleanPhone = isGroupPhone
+      ? phone.replace(/-group$/, "") + "@g.us"
+      : phone.replace(/[\s\-\+\(\)]/g, "");
     const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
     const zapiHeaders = {
       "Content-Type": "application/json",

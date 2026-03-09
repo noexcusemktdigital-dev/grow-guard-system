@@ -119,11 +119,11 @@ Deno.serve(async (req) => {
     const isGroup = rawChatId.includes("@g.us");
     const isBroadcast = rawChatId.includes("@broadcast");
 
-    // Extract phone - preserve @g.us for groups
+    // Extract phone - normalize groups to -group format (Z-API native from /chats)
     let phone = body.phone || rawChatId.replace("@c.us", "");
     if (isGroup) {
-      // For groups, keep the full ID with @g.us and optionally store as -group suffix
-      phone = rawChatId; // Keep full format: 120363254049865532@g.us
+      // Webhook sends @g.us but /chats uses -group — standardize to -group
+      phone = rawChatId.replace("@g.us", "") + "-group";
     }
     
     if (!phone) {

@@ -98,7 +98,7 @@ export function useWhatsAppContacts(filterInstanceId?: string | null) {
         // Use stored contact_type from DB; fallback to phone-pattern detection
         let contact_type: "individual" | "group" | "lid" = c.contact_type || "individual";
         if (contact_type === "individual") {
-          if (phone.includes("@g.us") || /^\d+-\d{10,}$/.test(phone)) {
+          if (phone.endsWith("-group") || phone.includes("@g.us") || /^\d+-\d{10,}$/.test(phone)) {
             contact_type = "group";
           } else if (phone.includes("@lid")) {
             contact_type = "lid";

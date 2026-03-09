@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
     // Configure webhooks on Z-API (received + status + send)
     try {
       const webhookEndpoints = [
-        "update-webhook-received",
+        "update-webhook-received-delivery",
         "update-webhook-status",
         "update-webhook-send",
       ];

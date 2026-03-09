@@ -248,10 +248,10 @@ Deno.serve(async (req) => {
         let phone = chat.phone;
         const contactType = getContactType(chat);
         
-        // Normalize phone format: groups must use @g.us
+        // Normalize phone format: groups must use -group (native Z-API format from /chats)
         if (contactType === "group") {
-          // Remove common suffixes and ensure @g.us format
-          phone = phone.replace('-group', '').replace('@g.us', '') + '@g.us';
+          // Ensure -group suffix, remove @g.us if present
+          phone = phone.replace('@g.us', '').replace(/-group$/, '') + '-group';
         }
         
         const name = chat.name || null;
