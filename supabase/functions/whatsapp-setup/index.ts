@@ -196,6 +196,9 @@ Deno.serve(async (req) => {
         "update-webhook-received-delivery",
         "update-webhook-status",
         "update-webhook-send",
+        "update-webhook-chat-presence",
+        "update-webhook-disconnected",
+        "update-webhook-connected",
       ];
       await Promise.all(
         webhookEndpoints.map((ep) =>
