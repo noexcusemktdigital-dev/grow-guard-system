@@ -1,58 +1,69 @@
 
 
-## Problema Identificado
+## Implementação: Previews Reais nas Conversas
 
-Os contatos no banco de dados têm `last_message_preview` como `null`, causando a lista mostrar apenas telefones em vez dos textos das mensagens reais. O campo está vazio porque:
-1. Contatos criados antes da atualização do webhook não têm preview
-2. O sync só atualiza preview se ele não existir E se a Z-API fornecer texto na resposta
-3. A Z-API nem sempre retorna o texto completo das mensagens no endpoint `/chats`
+### Problema
+Os previews no banco (`last_message_preview`) estão `null` para contatos antigos, então a UI mostra telefones em vez de mensagens reais como no WhatsApp.
 
-## Solução: Buscar Última Mensagem Real de Cada Contato
+### Solução
 
-### 1. Criar Hook Otimizado para Previews (`useWhatsApp.ts`)
+#### 1. Criar Função RPC no Supabase
+Migration SQL que cria função otimizada para buscar última mensagem por contato:
 
-Adicionar função `useContactPreviews` que:
-- Faz query JOIN entre `whatsapp_contacts` e `whatsapp_messages` 
-- Usa `DISTINCT ON (contact_id)` para pegar apenas a última mensagem de cada contato
-- Retorna mapa `contactId → preview formatado` em memória
-- Formata preview igual WhatsApp:
-  - Mensagens enviadas: "Você: {texto}" ou "✓✓ Você: {texto}" se lida
-  - Mensagens recebidas: texto direto
-  - Mídia: "📷 Foto", "🎤 Áudio", "📄 Documento", "📹 Vídeo"
-  - Trunca em 100 caracteres
-
-Query SQL proposta:
 ```sql
-SELECT DISTINCT ON (contact_id) 
-  contact_id,
-  content,
-  type,
-  direction,
-  status,
-  created_at
-FROM whatsapp_messages
-WHERE organization_id = $1
-  AND contact_id = ANY($2)
-ORDER BY contact_id, created_at DESC
+CREATE OR REPLACE FUNCTION public.get_contact_last_messages(
+  p_org_id uuid,
+  p_contact_ids uuid[]
+)
+RETURNS TABLE(
+  contact_id uuid,
+  content text,
+  type text,
+  direction text,
+  status text,
+  created_at timestamptz
+) 
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT DISTINCT ON (m.contact_id)
+    m.contact_id,
+    m.content,
+    m.type,
+    m.direction,
+    m.status,
+    m.created_at
+  FROM whatsapp_messages m
+  WHERE m.organization_id = p_org_id
+    AND m.contact_id = ANY(p_contact_ids)
+  ORDER BY m.contact_id, m.created_at DESC;
+$$;
 ```
 
-### 2. Integrar no `ClienteChat.tsx`
+#### 2. Hook `useContactPreviews` (`useWhatsApp.ts`)
+Novo hook que chama a RPC e retorna `Map<contactId, preview>` formatado:
+- Outbound: `"✓✓ Você: texto"` (read/delivered) ou `"✓ Você: texto"` (sent)
+- Inbound: texto direto
+- Mídia: ícones `"🎤 Áudio"`, `"📷 Foto"`, etc.
 
-- Remover o `useMemo` atual que lê `last_message_preview` da tabela de contatos
-- Chamar o novo `useContactPreviews(contactIds)` para buscar mensagens reais
-- Passar o mapa retornado para `ChatContactList`
+#### 3. Integrar em `ClienteChat.tsx`
+Substituir `useMemo` que lê `last_message_preview` por:
+```tsx
+const contactIds = useMemo(() => contacts.map(c => c.id), [contacts]);
+const { data: realPreviews } = useContactPreviews(contactIds);
+```
 
-### 3. Atualizar `ChatContactItem.tsx`
+Passar `realPreviews` para `<ChatContactList lastMessages={realPreviews} />`
 
-- Adicionar lógica de formatação visual:
-  - Checkmarks (✓ sent, ✓✓ delivered/read) para mensagens enviadas
-  - Prefixo "Você:" em bold para outbound
-  - Ícones de mídia com cor
-  - Texto em cinza mais claro para preview
+#### 4. Atualizar `ChatContactItem.tsx`
+Melhorar formatação visual:
+- Negrito no "Você:" se for outbound
+- Checkmarks (✓/✓✓) com cor verde
+- Ícones de mídia coloridos
+- Preview em cinza mais claro
 
-### 4. Backfill Automático (opcional, mas recomendado)
-
-Criar migration SQL que popula `last_message_preview` para todos os contatos existentes baseado na última mensagem real:
+#### 5. Backfill Migration (opcional)
+SQL para popular previews de contatos existentes:
 ```sql
 UPDATE whatsapp_contacts c
 SET last_message_preview = (
@@ -62,7 +73,11 @@ SET last_message_preview = (
       WHEN m.type = 'image' THEN '📷 Foto'
       WHEN m.type = 'video' THEN '📹 Vídeo'
       WHEN m.type = 'document' THEN '📄 Documento'
-      WHEN m.direction = 'outbound' THEN '✓ Você: ' || LEFT(m.content, 80)
+      WHEN m.direction = 'outbound' THEN 
+        CASE 
+          WHEN m.status IN ('read', 'delivered') THEN '✓✓ Você: ' || LEFT(m.content, 80)
+          ELSE '✓ Você: ' || LEFT(m.content, 80)
+        END
       ELSE LEFT(m.content, 100)
     END
   FROM whatsapp_messages m
@@ -73,21 +88,12 @@ SET last_message_preview = (
 WHERE c.last_message_preview IS NULL;
 ```
 
-### 5. Atualizar Webhook para Sempre Salvar Preview
+### Arquivos Modificados
+- Migration: Nova função RPC
+- `src/hooks/useWhatsApp.ts`: +70 linhas (novo hook)
+- `src/pages/cliente/ClienteChat.tsx`: ~10 linhas modificadas
+- `src/components/cliente/ChatContactItem.tsx`: ~20 linhas (formatação)
 
-No `whatsapp-webhook/index.ts`, garantir que o preview seja SEMPRE atualizado, não apenas quando vazio.
-
----
-
-## Resumo Técnico
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/hooks/useWhatsApp.ts` | Adicionar `useContactPreviews()` que faz query JOIN otimizada |
-| `src/pages/cliente/ClienteChat.tsx` | Substituir lógica de `lastMessages` para usar novo hook |
-| `src/components/cliente/ChatContactItem.tsx` | Melhorar formatação de preview (checkmarks, ícones, "Você:") |
-| `supabase/functions/whatsapp-webhook/index.ts` | Sempre atualizar preview (remover check `!existing.last_message_preview`) |
-| Migration SQL | Backfill de previews para contatos existentes |
-
-**Resultado**: Lista de conversas idêntica ao WhatsApp real, com textos atualizados em tempo real e formatação visual completa.
+### Resultado
+Lista de conversas **idêntica ao WhatsApp**, com previews reais em tempo real, checkmarks de status e formatação visual completa.
 
