@@ -13,6 +13,7 @@ import {
   useWhatsAppContacts,
   useWhatsAppMessages,
   useMarkContactRead,
+  useContactPreviews,
   type WhatsAppContact,
 } from "@/hooks/useWhatsApp";
 import { useClienteAgents } from "@/hooks/useClienteAgents";
