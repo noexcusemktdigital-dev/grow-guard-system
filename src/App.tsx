@@ -162,6 +162,7 @@ const App = () => (
                 <Route index element={<Navigate to="/cliente/inicio" replace />} />
                 <Route path="inicio" element={<ClienteInicio />} />
                 <Route path="checklist" element={<ClienteChecklist />} />
+                <Route path="agenda" element={<ClienteAgenda />} />
                 <Route path="notificacoes" element={<ClienteNotificacoes />} />
                 <Route path="gamificacao" element={<ClienteGamificacao />} />
                 <Route path="plano-vendas" element={<ClientePlanoVendas />} />
