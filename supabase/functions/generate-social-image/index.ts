@@ -593,17 +593,9 @@ serve(async (req) => {
     console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
-    // Build message content with reference images for generation
-    let messageContent: any = fullPrompt;
-
-    if (base64Refs.length > 0) {
-      // The referenceInstruction is now INSIDE the prompt via buildFinalPrompt
-      // We just need to attach the images
-      messageContent = [
-        { type: "text", text: fullPrompt },
-        ...base64Refs,
-      ];
-    }
+    // Build message content — reference images are already analyzed by CoT (Stage 1)
+    // Do NOT attach them to Stage 2 (image generation) to avoid exceeding token limits
+    const messageContent: any = fullPrompt;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
