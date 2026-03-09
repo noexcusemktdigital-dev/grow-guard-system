@@ -1,44 +1,46 @@
 
 
-## Plano: Teste P2Y COM Referências vs SEM Referências
+## Plano: Executar Teste P2Y COM Referências
 
-### Contexto
-O pipeline de geração já foi atualizado com CoT multimodal. Agora preciso executar o teste real com as 3 imagens de referência da P2Y que você enviou.
+### Problema
+A edge function `generate-social-image` precisa de URLs públicas para as imagens de referência. As imagens `user-uploads://` não são acessíveis diretamente pela edge function.
 
-### Etapas
+### Solução
 
-1. **Deploy do edge function atualizado** — garantir que `generate-social-image` com o CoT multimodal está live
+1. **Copiar as 3 imagens de referência para o projeto** em `public/test-refs/`
 
-2. **Upload das 3 referências para o storage** — salvar em `social-arts/references/p2y/ref1.png`, `ref2.png`, `ref3.png` via storage API
+2. **Usar o preview URL para construir URLs públicas** das referências:
+   - `https://id-preview--1d5802a2-4462-4bb6-a30e-a9b2d444f68e.lovable.app/test-refs/ref1.png`
 
-3. **Executar geração COM referências** — chamar `generate-social-image` com:
-   - As 3 URLs públicas no campo `reference_images`
-   - Briefing P2Y: crédito/consórcio, casal jovem, verde limão #C8D941, charcoal #2D2D2D
-   - Headline: "O problema não é parcelar."
-   - Highlight: "É parcelar sem planejamento!"
-   - Supporting text, bullet points (Tempo, Renda, Objetivo)
-   - Brand: "P2Y crédito e investimento"
-   - Format: portrait 4:5
-   - Style: foto_editorial (para foto realista + layout marketing)
-   - Salvar em `posts/test/test-p2y-with-refs.png`
+3. **Chamar a edge function com URLs públicas** no campo `reference_images`
 
-4. **Comparar resultados** — apresentar URLs dos dois testes (sem refs e com refs) lado a lado
-
-### Briefing do Teste (baseado no prompt de referência)
+### Execução
 
 ```text
-headline: "O problema não é parcelar."
-highlight_headline: "É parcelar sem planejamento!"
-supporting_text: "Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores."
-bullet_points: "Tempo / Renda / Objetivo"
-cta: "Fale com a P2Y"
-brand_name: "P2Y crédito e investimento"
-cena: "Brazilian couple sitting together at home planning finances on a laptop"
-elementos_visuais: "three circular icon elements representing time, income and financial goal"
-format: portrait (4:5)
-art_style: foto_editorial
-identidade_visual: { palette: "#C8D941, #2D2D2D, #FFFFFF", style: "modern financial consulting" }
+1. lov-copy user-uploads://Captura_de_Tela_2026-03-09_às_00.32.57-2.png → public/test-refs/p2y-ref1.png
+2. lov-copy user-uploads://Captura_de_Tela_2026-03-09_às_00.33.11-2.png → public/test-refs/p2y-ref2.png
+3. lov-copy user-uploads://Captura_de_Tela_2026-03-09_às_00.33.25-2.png → public/test-refs/p2y-ref3.png
+4. Chamar generate-social-image com URLs públicas das referências
 ```
 
-O CoT multimodal vai analisar as 3 referências e extrair o design system real (cards arredondados, ícones circulares, verde limão) antes de gerar o prompt estruturado.
+### Briefing do Teste (P2Y)
+
+O prompt estruturado seguirá o formato ChatGPT com:
+
+- **Headline**: "O problema não é parcelar."
+- **Highlight**: "É parcelar sem planejamento!"
+- **Supporting text**: "Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores."
+- **Bullet points**: "Tempo / Renda / Objetivo"
+- **CTA**: "Fale com a P2Y"
+- **Brand**: "P2Y crédito e investimento"
+- **Scene**: Brazilian couple planning finances
+- **Visual elements**: Three circular icons, dark rounded card, lime green accents
+- **Palette**: #C8D941, #2D2D2D, #FFFFFF, #1A1A1A
+- **Art style**: foto_editorial
+
+### Resultado Esperado
+
+- O CoT multimodal vai analisar as 3 referências e extrair: rounded cards, circular icons, lime green highlights, dark text zones, logo placement
+- O prompt final seguirá a estrutura do ChatGPT com "Use as style reference ONLY" + "Create NEW scene"
+- Comparar lado a lado com o teste SEM referências já gerado
 
