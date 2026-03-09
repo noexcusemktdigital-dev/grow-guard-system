@@ -6,7 +6,7 @@ import {
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
   ChevronDown, Link, CreditCard, Settings, Zap, Lock, Trophy, ClipboardCheck,
-  Headphones,
+  Headphones, Calendar,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
