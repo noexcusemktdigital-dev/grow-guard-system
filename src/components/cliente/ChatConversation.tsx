@@ -214,59 +214,8 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     };
   }, [orgId, contact?.phone]);
 
-  // Auto-load message history on first open of a contact (backfill)
-  useEffect(() => {
-    if (!contact?.phone || !instanceId) return;
-    if (isLoading) return;
-    if (historyLoaded.has(contact.id)) return;
-
-    const loadHistory = async () => {
-      setLoadingHistory(true);
-      try {
-        console.log(`[chat] Auto-loading history for ${contact.phone}`);
-        const { data, error } = await supabase.functions.invoke("whatsapp-load-history", {
-          body: { contactPhone: contact.phone, contactId: contact.id, instanceId, amount: 50 },
-        });
-        if (error) console.error("Load history error:", error);
-        if (data?.fallback) {
-          setHistoryFallback(prev => new Set(prev).add(contact.id));
-        }
-        if (data?.imported > 0) {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-        }
-      } catch (err) {
-        console.error("Load history failed:", err);
-      } finally {
-        setLoadingHistory(false);
-        setHistoryLoaded(prev => new Set(prev).add(contact.id));
-      }
-    };
-    loadHistory();
-  }, [contact?.id, contact?.phone, instanceId, isLoading, historyLoaded, queryClient]);
-
-  const handleLoadMoreHistory = async () => {
-    if (!contact?.phone || !instanceId || loadingHistory) return;
-    setLoadingHistory(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-load-history", {
-        body: { contactPhone: contact.phone, contactId: contact.id, instanceId, amount: 100 },
-      });
-      if (data?.fallback) {
-        setHistoryFallback(prev => new Set(prev).add(contact!.id));
-        toast({ title: "Histórico não disponível", description: "Mensagens anteriores à conexão não podem ser recuperadas nesta conta." });
-      } else if (data?.imported > 0) {
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
-        toast({ title: `${data.imported} mensagens carregadas` });
-      } else {
-        toast({ title: "Nenhuma mensagem nova encontrada" });
-      }
-    } catch (err: any) {
-      toast({ title: "Erro ao carregar histórico", description: err.message, variant: "destructive" });
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
+  // History loading disabled — Multi-Device accounts don't support chat-messages API.
+  // All messages are captured in real-time via webhooks (received-delivery + send).
 
   // Smart scroll: track if user is near bottom
   const handleScroll = useCallback(() => {
@@ -785,24 +734,12 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                 Carregar anteriores
               </Button>
             )}
-            {instanceId && contact && !historyFallback.has(contact.id) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[11px] text-muted-foreground rounded-full bg-muted/60 hover:bg-muted gap-1"
-                onClick={handleLoadMoreHistory}
-                disabled={loadingHistory}
-              >
-                {loadingHistory ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                Buscar histórico WhatsApp
-              </Button>
-            )}
           </div>
-          {/* Fallback notice for multi-device limitation */}
-          {contact && historyFallback.has(contact.id) && messages.length === 0 && (
+          {/* Multi-device: messages arrive only in real-time */}
+          {contact && messages.length === 0 && !isLoading && (
             <div className="text-center py-4 mb-2">
               <p className="text-xs text-muted-foreground bg-muted/60 inline-block px-4 py-2 rounded-xl max-w-xs">
-                📱 Mensagens anteriores à conexão não estão disponíveis. Novas mensagens aparecerão em tempo real.
+                📱 Mensagens aparecerão aqui em tempo real conforme forem enviadas ou recebidas.
               </p>
             </div>
           )}
