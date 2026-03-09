@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmContacts } from "@/hooks/useCrmContacts";
+import { useLeadQuota } from "@/hooks/useLeadQuota";
 import { useToast } from "@/hooks/use-toast";
 import { Search, UserCircle } from "lucide-react";
 
