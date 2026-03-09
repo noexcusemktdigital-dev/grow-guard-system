@@ -1,31 +1,24 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Situação Atual — Nenhuma mudança necessária
 
-### Status: ✅ Implementado
+O fluxo já está correto para o caso de uso padrão:
 
-### Resumo
+1. **Cadastro (`SaasAuth`)** → Nome, Email, Senha + Termos ✅
+2. **Onboarding (`ClienteOnboardingCompany`)** → CNPJ, Telefone, Segmento, etc. ✅  
+3. **Checkout (`ClientePlanoCreditos` → SubscriptionDialog)** → Escolha de plano + Campo de cupom + Pagamento ✅
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+O cupom de desconto já foi implementado no local correto: no momento do checkout/assinatura, onde o usuário escolhe o plano e o desconto é aplicado ao valor antes de enviar ao Asaas.
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+### Se quiser mudar algo
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+Existem duas opções caso queira antecipar o cupom:
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+**Opção A — Manter como está (recomendado)**
+Cupom no checkout faz sentido comercial: o usuário já decidiu assinar e aplica o desconto ali.
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+**Opção B — Cupom no onboarding**  
+Adicionar campo de cupom no Step 3 do `ClienteOnboardingCompany`, salvar na org, e auto-aplicar no checkout depois. Mais complexo, mas permite captar o cupom antes.
+
+Nenhuma implementação é necessária agora — tudo já está funcionando. Confirme se quer alterar o momento em que o cupom é solicitado.
+
