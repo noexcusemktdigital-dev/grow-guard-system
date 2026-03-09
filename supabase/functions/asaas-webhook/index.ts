@@ -213,11 +213,19 @@ Deno.serve(async (req) => {
         }
       }
 
-      // {orgId}|sub|{planId}|{modules} → subscription renewal
+      // {orgId}|sub|{salesPlan}|{marketingPlan}|{modules} → subscription renewal
       if (refParts.length >= 3 && refParts[1] === "sub") {
-        const planSlug = refParts[2];
-        const modules = refParts[3] || "comercial";
-        const planCreditsMap: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
+        const salesPlan = refParts[2] || "none";
+        const marketingPlan = refParts.length >= 4 ? refParts[3] : "none";
+        const modules = refParts.length >= 5 ? refParts[4] : (salesPlan !== "none" && marketingPlan !== "none" ? "combo" : salesPlan !== "none" ? "comercial" : "marketing");
+        
+        // Use primary plan slug for subscription record
+        const planSlug = salesPlan !== "none" ? salesPlan : marketingPlan;
+        
+        // Calculate credits from both modules
+        const SALES_CREDITS: Record<string, number> = { starter: 3000, professional: 15000, enterprise: 40000 };
+        const MARKETING_CREDITS: Record<string, number> = { starter: 2000, professional: 10000, enterprise: 30000 };
+        const totalCredits = (salesPlan !== "none" ? (SALES_CREDITS[salesPlan] || 0) : 0) + (marketingPlan !== "none" ? (MARKETING_CREDITS[marketingPlan] || 0) : 0);
 
         const newExpires = new Date();
         newExpires.setDate(newExpires.getDate() + 30);
