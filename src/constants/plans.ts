@@ -244,6 +244,7 @@ export function getEffectiveLimits(
       siteTypes: [],
       maxTrafficStrategies: TRIAL_PLAN.maxTrafficStrategies,
       maxDispatchRecipients: 0,
+      maxLeads: TRIAL_PLAN.maxLeads,
       hasSalesModule: true,
       hasMarketingModule: true,
     };
