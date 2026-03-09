@@ -184,6 +184,68 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
   );
 }
 
+const KANBAN_INITIAL_VISIBLE = 20;
+const KANBAN_LOAD_MORE = 20;
+
+// ===== Kanban Column with Lazy Loading =====
+function KanbanColumnContent({
+  stageLeads, stageColor, selectionMode, selectedLeadIds, toggleLeadSelection,
+  onClickLead, onCopyPhone, onMarkLost, onDelete, onUpdateTemperature,
+}: {
+  stageLeads: LeadRow[];
+  stageColor: string;
+  selectionMode: boolean;
+  selectedLeadIds: Set<string>;
+  toggleLeadSelection: (id: string) => void;
+  onClickLead: (lead: LeadRow) => void;
+  onCopyPhone: (lead: LeadRow) => void;
+  onMarkLost: (lead: LeadRow) => void;
+  onDelete: (lead: LeadRow) => void;
+  onUpdateTemperature: (lead: LeadRow, temp: string) => void;
+}) {
+  const [visibleCount, setVisibleCount] = useState(KANBAN_INITIAL_VISIBLE);
+  const visibleLeads = stageLeads.slice(0, visibleCount);
+  const hasMore = stageLeads.length > visibleCount;
+
+  return (
+    <>
+      {visibleLeads.map(lead => (
+        <div key={lead.id} className="relative group/check">
+          {selectionMode && (
+            <div className="absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
+              <Checkbox checked={selectedLeadIds.has(lead.id)} onCheckedChange={() => toggleLeadSelection(lead.id)} />
+            </div>
+          )}
+          <DraggableLeadCard
+            lead={lead}
+            onClick={() => onClickLead(lead)}
+            stageColor={stageColor}
+            onCopyPhone={() => onCopyPhone(lead)}
+            onMarkLost={() => onMarkLost(lead)}
+            onDelete={() => onDelete(lead)}
+            onUpdateTemperature={(temp) => onUpdateTemperature(lead, temp)}
+          />
+        </div>
+      ))}
+      {hasMore && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-xs text-muted-foreground h-7"
+          onClick={() => setVisibleCount(c => c + KANBAN_LOAD_MORE)}
+        >
+          Ver mais {stageLeads.length - visibleCount} leads
+        </Button>
+      )}
+      {stageLeads.length === 0 && (
+        <div className="text-center py-8 text-[11px] text-muted-foreground/50">
+          Arraste leads aqui
+        </div>
+      )}
+    </>
+  );
+}
+
 // ===== Main Component =====
 export default function ClienteCRM() {
   const navigate = useNavigate();
