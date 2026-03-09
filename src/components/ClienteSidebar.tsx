@@ -186,12 +186,11 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
 
   const currentBalance = wallet?.balance ?? 0;
   const isTrial = subscription?.status === "trial";
-  const salesPlan = (subscription as any)?.sales_plan as string | null;
-  const marketingPlan = (subscription as any)?.marketing_plan as string | null;
-  const limits = getEffectiveLimits(salesPlan, marketingPlan, isTrial);
-  const totalIncluded = limits.totalCredits || 1000;
+  const planId = subscription?.plan as string | null;
+  const limits = getEffectiveLimits(planId, isTrial);
+  const totalIncluded = limits.totalCredits || 500;
   const creditPercent = totalIncluded > 0 ? (currentBalance / totalIncluded) * 100 : 0;
-  const planLabel = isTrial ? "Trial" : [salesPlan && `V:${salesPlan}`, marketingPlan && `M:${marketingPlan}`].filter(Boolean).join(" + ") || "—";
+  const planLabel = isTrial ? "Trial" : (planId ? planId.charAt(0).toUpperCase() + planId.slice(1) : "—");
 
   return (
     <>

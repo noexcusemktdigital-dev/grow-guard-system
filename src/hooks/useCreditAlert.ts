@@ -17,10 +17,9 @@ export function useCreditAlert(): CreditAlertData {
   const { data: subscription, isLoading: sl } = useClienteSubscription();
 
   const isTrial = subscription?.status === "trial";
-  const salesPlan = (subscription as any)?.sales_plan as string | null;
-  const marketingPlan = (subscription as any)?.marketing_plan as string | null;
 
-  const limits = getEffectiveLimits(salesPlan, marketingPlan, isTrial);
+  const planId = (subscription as any)?.plan as string | null;
+  const limits = getEffectiveLimits(planId, isTrial);
   const total = limits.totalCredits || 1000;
   const balance = wallet?.balance ?? 0;
   const percent = total > 0 ? Math.min((balance / total) * 100, 100) : 0;

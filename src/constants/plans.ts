@@ -1,169 +1,84 @@
 /* ═══════════════════════════════════════════════════════════════
-   Plan Architecture — Modular (Vendas + Marketing + Combo)
+   Plan Architecture — Unified (Starter / Pro / Enterprise)
    ═══════════════════════════════════════════════════════════════ */
 
-// ── Sales Module (7 tools) ──────────────────────────────────────
-export interface SalesModulePlan {
+// ── Unified Plan ────────────────────────────────────────────────
+export interface UnifiedPlan {
   id: string;
   name: string;
   price: number;
   credits: number;
   maxUsers: number;
-  maxAgents: number;
-  maxDispatches: number;
-  maxDispatchRecipients: number;
-  maxStrategies: number;
-  maxLeads: number;
+  maxPipelines: number;
+  hasAiAgent: boolean;
+  hasWhatsApp: boolean;
+  hasDispatches: boolean;
   popular: boolean;
   features: string[];
 }
 
-export const SALES_PLANS: SalesModulePlan[] = [
+export const UNIFIED_PLANS: UnifiedPlan[] = [
   {
     id: "starter",
     name: "Starter",
-    price: 197,
-    credits: 3000,
-    maxUsers: 2,
-    maxAgents: 1,
-    maxDispatches: 0,
-    maxDispatchRecipients: 0,
-    maxStrategies: 1,
-    maxLeads: 500,
-    popular: false,
-    features: [
-      "CRM completo",
-      "Chat WhatsApp",
-      "1 Agente de IA",
-      "Scripts de vendas",
-      "3.000 créditos/mês",
-      "2 usuários inclusos",
-      "Suporte por chat",
-    ],
-  },
-  {
-    id: "professional",
-    name: "Professional",
-    price: 497,
-    credits: 15000,
-    maxUsers: 5,
-    maxAgents: 2,
-    maxDispatches: 1,
-    maxDispatchRecipients: 500,
-    maxStrategies: 2,
-    maxLeads: 5000,
-    popular: true,
-    features: [
-      "Tudo do Starter",
-      "15.000 créditos/mês",
-      "5 usuários inclusos",
-      "2 Agentes de IA",
-      "1 Disparo WhatsApp (500 dest.)",
-      "Plano de vendas avançado",
-      "Relatórios comerciais",
-    ],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 997,
-    credits: 40000,
-    maxUsers: 15,
-    maxAgents: 4,
-    maxDispatches: 3,
-    maxDispatchRecipients: 2000,
-    maxStrategies: 999,
-    maxLeads: 50000,
-    popular: false,
-    features: [
-      "Tudo do Professional",
-      "40.000 créditos/mês",
-      "15 usuários inclusos",
-      "4 Agentes de IA",
-      "3 Disparos WhatsApp (2.000 dest.)",
-      "API avançada",
-      "Gerente dedicado",
-    ],
-  },
-];
-
-// ── Marketing Module (5 tools) ──────────────────────────────────
-export interface MarketingModulePlan {
-  id: string;
-  name: string;
-  price: number;
-  credits: number;
-  maxContents: number;
-  maxSocialArts: number;
-  maxSites: number;
-  siteTypes: string[];
-  maxTrafficStrategies: number;
-  popular: boolean;
-  features: string[];
-}
-
-export const MARKETING_PLANS: MarketingModulePlan[] = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: 147,
-    credits: 2000,
-    maxContents: 8,
-    maxSocialArts: 4,
-    maxSites: 1,
-    siteTypes: ["lp"],
-    maxTrafficStrategies: 1,
-    popular: false,
-    features: [
-      "Estratégia de marketing IA",
-      "8 conteúdos/mês",
-      "4 artes sociais/mês",
-      "1 Landing Page",
-      "1 estratégia de tráfego",
-      "2.000 créditos/mês",
-      "Suporte por chat",
-    ],
-  },
-  {
-    id: "professional",
-    name: "Professional",
     price: 397,
-    credits: 10000,
-    maxContents: 12,
-    maxSocialArts: 8,
-    maxSites: 2,
-    siteTypes: ["lp", "3pages", "5pages"],
-    maxTrafficStrategies: 2,
+    credits: 500,
+    maxUsers: 10,
+    maxPipelines: 3,
+    hasAiAgent: false,
+    hasWhatsApp: false,
+    hasDispatches: false,
+    popular: false,
+    features: [
+      "CRM completo (3 pipelines)",
+      "Scripts de vendas",
+      "Relatórios comerciais",
+      "Marketing completo (conteúdos, artes, sites, tráfego)",
+      "Estratégia de marketing IA",
+      "500 créditos/mês",
+      "Até 10 usuários",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: 797,
+    credits: 1000,
+    maxUsers: 20,
+    maxPipelines: 10,
+    hasAiAgent: true,
+    hasWhatsApp: true,
+    hasDispatches: true,
     popular: true,
     features: [
       "Tudo do Starter",
-      "10.000 créditos/mês",
-      "12 conteúdos/mês",
-      "8 artes sociais/mês",
-      "2 Sites",
-      "2 estratégias de tráfego",
-      "Calendário editorial",
+      "Agente de IA",
+      "Chat WhatsApp",
+      "Disparos em massa",
+      "CRM com 10 pipelines",
+      "1.000 créditos/mês",
+      "Até 20 usuários",
     ],
   },
   {
     id: "enterprise",
     name: "Enterprise",
-    price: 797,
-    credits: 30000,
-    maxContents: 20,
-    maxSocialArts: 12,
-    maxSites: 3,
-    siteTypes: ["lp", "3pages", "5pages", "8pages"],
-    maxTrafficStrategies: 4,
+    price: 1497,
+    credits: 1500,
+    maxUsers: 9999,
+    maxPipelines: 9999,
+    hasAiAgent: true,
+    hasWhatsApp: true,
+    hasDispatches: true,
     popular: false,
     features: [
-      "Tudo do Professional",
-      "30.000 créditos/mês",
-      "20 conteúdos/mês",
-      "12 artes sociais/mês",
-      "3 Sites",
-      "4 estratégias de tráfego",
+      "Tudo do Pro",
+      "Usuários ilimitados",
+      "Pipelines ilimitados",
+      "1.500 créditos/mês",
       "Gerente dedicado",
+      "API avançada",
+      "Suporte prioritário",
     ],
   },
 ];
@@ -172,104 +87,43 @@ export const MARKETING_PLANS: MarketingModulePlan[] = [
 export interface TrialPlan {
   credits: number;
   maxUsers: number;
-  maxAgents: number;
-  maxContents: number;
-  maxSocialArts: number;
-  maxSites: number;
-  maxDispatches: number;
-  maxStrategies: number;
-  maxTrafficStrategies: number;
-  maxLeads: number;
+  maxPipelines: number;
+  durationDays: number;
+  hasAiAgent: boolean;
+  hasWhatsApp: boolean;
+  hasDispatches: boolean;
 }
 
 export const TRIAL_PLAN: TrialPlan = {
-  credits: 1000,
-  maxUsers: 1,
-  maxAgents: 1,
-  maxContents: 3,
-  maxSocialArts: 2,
-  maxSites: 0,
-  maxDispatches: 0,
-  maxStrategies: 1,
-  maxTrafficStrategies: 0,
-  maxLeads: 50,
+  credits: 200,
+  maxUsers: 2,
+  maxPipelines: 3,
+  durationDays: 7,
+  hasAiAgent: false,
+  hasWhatsApp: false,
+  hasDispatches: false,
 };
 
-// ── Combo Logic ─────────────────────────────────────────────────
-export const COMBO_DISCOUNT = 0.15; // 15%
-export const EXTRA_USER_PRICE = 29; // R$/mês
-
-export function getComboPrice(salesPrice: number, marketingPrice: number): number {
-  const sum = salesPrice + marketingPrice;
-  return Math.round(sum * (1 - COMBO_DISCOUNT));
-}
-
-export function getComboSavings(salesPrice: number, marketingPrice: number): number {
-  return (salesPrice + marketingPrice) - getComboPrice(salesPrice, marketingPrice);
-}
-
-// ── Effective Limits Calculator ─────────────────────────────────
-export interface EffectiveLimits {
-  totalCredits: number;
-  maxUsers: number;
-  maxAgents: number;
-  maxDispatches: number;
-  maxDispatchRecipients: number;
-  maxStrategies: number;
-  maxContents: number;
-  maxSocialArts: number;
-  maxSites: number;
-  siteTypes: string[];
-  maxTrafficStrategies: number;
-  maxLeads: number;
-  hasSalesModule: boolean;
-  hasMarketingModule: boolean;
-}
-
-export function getEffectiveLimits(
-  salesPlanId: string | null | undefined,
-  marketingPlanId: string | null | undefined,
-  isTrial: boolean = false,
-): EffectiveLimits {
-  if (isTrial) {
-    return {
-      totalCredits: TRIAL_PLAN.credits,
-      maxUsers: TRIAL_PLAN.maxUsers,
-      maxAgents: TRIAL_PLAN.maxAgents,
-      maxDispatches: TRIAL_PLAN.maxDispatches,
-      maxStrategies: TRIAL_PLAN.maxStrategies,
-      maxContents: TRIAL_PLAN.maxContents,
-      maxSocialArts: TRIAL_PLAN.maxSocialArts,
-      maxSites: TRIAL_PLAN.maxSites,
-      siteTypes: [],
-      maxTrafficStrategies: TRIAL_PLAN.maxTrafficStrategies,
-      maxDispatchRecipients: 0,
-      maxLeads: TRIAL_PLAN.maxLeads,
-      hasSalesModule: true,
-      hasMarketingModule: true,
-    };
-  }
-
-  const sales = SALES_PLANS.find((p) => p.id === salesPlanId);
-  const marketing = MARKETING_PLANS.find((p) => p.id === marketingPlanId);
-
-  return {
-    totalCredits: (sales?.credits ?? 0) + (marketing?.credits ?? 0),
-    maxUsers: Math.max(sales?.maxUsers ?? 0, marketing ? 1 : 0),
-    maxAgents: sales?.maxAgents ?? 0,
-    maxDispatches: sales?.maxDispatches ?? 0,
-    maxDispatchRecipients: sales?.maxDispatchRecipients ?? 0,
-    maxStrategies: sales?.maxStrategies ?? 0,
-    maxContents: marketing?.maxContents ?? 0,
-    maxSocialArts: marketing?.maxSocialArts ?? 0,
-    maxSites: marketing?.maxSites ?? 0,
-    siteTypes: marketing?.siteTypes ?? [],
-    maxTrafficStrategies: marketing?.maxTrafficStrategies ?? 0,
-    maxLeads: sales?.maxLeads ?? 500,
-    hasSalesModule: !!sales,
-    hasMarketingModule: !!marketing,
-  };
-}
+// ── Credit Costs ────────────────────────────────────────────────
+export const CREDIT_COSTS: Record<string, { cost: number; label: string }> = {
+  "generate-site":              { cost: 100, label: "Site" },
+  "generate-social-image":      { cost: 25,  label: "Arte social" },
+  "generate-content":           { cost: 30,  label: "Conteúdo" },
+  "generate-script":            { cost: 20,  label: "Script de vendas" },
+  "generate-strategy":          { cost: 50,  label: "Estratégia de marketing" },
+  "crm-automation":             { cost: 5,   label: "Automação CRM (por execução)" },
+  "ai-agent-reply":             { cost: 2,   label: "Agente IA (por mensagem)" },
+  "generate-traffic-strategy":  { cost: 50,  label: "Estratégia de tráfego" },
+  "generate-daily-checklist":   { cost: 5,   label: "Checklist diário IA" },
+  "generate-prospection":       { cost: 30,  label: "Plano de prospecção" },
+  "ai-generate-agent-config":   { cost: 10,  label: "Config. automática agente" },
+  "ai-agent-simulate":          { cost: 10,  label: "Simulação agente IA" },
+  "generate-social-briefing":   { cost: 0,   label: "Briefing de arte (gratuito)" },
+  "generate-video-briefing":    { cost: 0,   label: "Briefing de vídeo (gratuito)" },
+  "generate-social-concepts":   { cost: 25,  label: "Conceitos visuais" },
+  "generate-social-video":      { cost: 25,  label: "Vídeo social" },
+  "agent-followup-cron":        { cost: 2,   label: "Follow-up automático (por msg)" },
+};
 
 // ── Credit Packs ────────────────────────────────────────────────
 export interface CreditPack {
@@ -280,79 +134,73 @@ export interface CreditPack {
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "pack-5000", credits: 5000, price: 49, popular: false },
-  { id: "pack-20000", credits: 20000, price: 149, popular: true },
-  { id: "pack-50000", credits: 50000, price: 299, popular: false },
+  { id: "pack-200",  credits: 200,  price: 49,  popular: false },
+  { id: "pack-500",  credits: 500,  price: 99,  popular: true },
+  { id: "pack-1000", credits: 1000, price: 179, popular: false },
 ];
 
-// ── Credit Costs ────────────────────────────────────────────────
-export const CREDIT_COSTS: Record<string, { cost: number; label: string }> = {
-  "generate-content":           { cost: 200,  label: "Conteúdo aprovado (por peça)" },
-  "generate-site":              { cost: 500,  label: "Site aprovado" },
-  "generate-script":            { cost: 150,  label: "Script de vendas" },
-  "generate-strategy":          { cost: 300,  label: "Estratégia de marketing aprovada" },
-  "generate-prospection":       { cost: 250,  label: "Plano de prospecção" },
-  "generate-social-concepts":   { cost: 200,  label: "Conceitos visuais aprovados" },
-  "generate-social-image":      { cost: 100,  label: "Arte social aprovada" },
-  "generate-social-video":      { cost: 200,  label: "Vídeo social aprovado" },
-  "generate-traffic-strategy":  { cost: 200,  label: "Estratégia de tráfego aprovada" },
-  "ai-agent-simulate":          { cost: 100,  label: "Simular agente IA" },
-  "ai-generate-agent-config":   { cost: 100,  label: "Config. automática agente" },
-  "generate-daily-checklist":   { cost: 50,   label: "Checklist diário IA" },
-  "generate-social-briefing":   { cost: 0,    label: "Briefing de arte (gratuito)" },
-  "generate-video-briefing":    { cost: 0,    label: "Briefing de vídeo (gratuito)" },
-  "ai-agent-reply":             { cost: 0,    label: "Resposta agente (variável)" },
-  "agent-followup-cron":        { cost: 0,    label: "Follow-up automático (variável)" },
-};
+// ── Extra User ──────────────────────────────────────────────────
+export const EXTRA_USER_PRICE = 29;
 
-// ── Legacy helpers (backward compat) ────────────────────────────
-export type ModuleChoice = "comercial" | "marketing" | "combo";
-
-/** @deprecated — use SALES_PLANS / MARKETING_PLANS + getEffectiveLimits instead */
-export interface PlanConfig {
-  id: string;
-  name: string;
-  basePrice: number;
-  comboPrice: number;
-  credits: number;
+// ── Effective Limits Calculator ─────────────────────────────────
+export interface EffectiveLimits {
+  totalCredits: number;
   maxUsers: number;
-  popular: boolean;
-  features: string[];
+  maxPipelines: number;
+  hasAiAgent: boolean;
+  hasWhatsApp: boolean;
+  hasDispatches: boolean;
+  /** @deprecated — everything is credit-based now, unlimited generation */
   maxContents: number;
+  /** @deprecated */
   maxSocialArts: number;
+  /** @deprecated */
   maxSites: number;
-  siteTypes: string[];
-  maxAgents: number;
-  maxDispatches: number;
-  maxDispatchRecipients: number;
-  maxStrategies: number;
-  maxTrafficStrategies: number;
-  price: number;
+  /** @deprecated */
+  maxLeads: number;
 }
 
-/** @deprecated — use SALES_PLANS / MARKETING_PLANS */
-export const PLANS: PlanConfig[] = [
-  {
-    id: "trial", name: "Trial", basePrice: 0, comboPrice: 0, price: 0,
-    credits: 1000, maxUsers: 1, popular: false,
-    maxContents: 3, maxSocialArts: 2, maxSites: 0, siteTypes: [],
-    maxAgents: 1, maxDispatches: 0, maxDispatchRecipients: 0,
-    maxStrategies: 1, maxTrafficStrategies: 0,
-    features: ["CRM completo", "1.000 créditos", "1 usuário", "7 dias grátis"],
-  },
-];
+export function getEffectiveLimits(
+  planId: string | null | undefined,
+  isTrial: boolean = false,
+): EffectiveLimits {
+  if (isTrial) {
+    return {
+      totalCredits: TRIAL_PLAN.credits,
+      maxUsers: TRIAL_PLAN.maxUsers,
+      maxPipelines: TRIAL_PLAN.maxPipelines,
+      hasAiAgent: TRIAL_PLAN.hasAiAgent,
+      hasWhatsApp: TRIAL_PLAN.hasWhatsApp,
+      hasDispatches: TRIAL_PLAN.hasDispatches,
+      maxContents: 9999,
+      maxSocialArts: 9999,
+      maxSites: 9999,
+      maxLeads: 9999,
+    };
+  }
 
-/** @deprecated */
-export function getPlanBySlug(slug: string | undefined | null): PlanConfig | undefined {
-  return PLANS.find((p) => p.id === slug);
+  const plan = UNIFIED_PLANS.find((p) => p.id === planId);
+
+  return {
+    totalCredits: plan?.credits ?? 500,
+    maxUsers: plan?.maxUsers ?? 10,
+    maxPipelines: plan?.maxPipelines ?? 3,
+    hasAiAgent: plan?.hasAiAgent ?? false,
+    hasWhatsApp: plan?.hasWhatsApp ?? false,
+    hasDispatches: plan?.hasDispatches ?? false,
+    maxContents: 9999,
+    maxSocialArts: 9999,
+    maxSites: 9999,
+    maxLeads: 9999,
+  };
 }
 
-/** @deprecated */
-export function getPlanPrice(plan: PlanConfig, modules: ModuleChoice): number {
-  return modules === "combo" ? plan.comboPrice : plan.basePrice;
+// ── Lookup helper ───────────────────────────────────────────────
+export function getUnifiedPlan(id: string | null | undefined): UnifiedPlan | undefined {
+  return UNIFIED_PLANS.find((p) => p.id === id);
 }
 
-/** Distribui saldo de conteúdos proporcionalmente entre formatos */
+// ── Content distribution helper ─────────────────────────────────
 export function recommendContentDistribution(saldo: number): {
   feed: number; carrossel: number; reels: number; story: number;
 } {
@@ -370,11 +218,20 @@ export function recommendContentDistribution(saldo: number): {
   return { feed, carrossel, reels, story };
 }
 
-// ── Lookup helpers ──────────────────────────────────────────────
-export function getSalesPlan(id: string | null | undefined): SalesModulePlan | undefined {
-  return SALES_PLANS.find((p) => p.id === id);
-}
-
-export function getMarketingPlan(id: string | null | undefined): MarketingModulePlan | undefined {
-  return MARKETING_PLANS.find((p) => p.id === id);
-}
+// ── Legacy backward-compat exports ──────────────────────────────
+/** @deprecated — use UNIFIED_PLANS */
+export const SALES_PLANS = UNIFIED_PLANS;
+/** @deprecated — use UNIFIED_PLANS */
+export const MARKETING_PLANS = UNIFIED_PLANS;
+/** @deprecated */
+export const COMBO_DISCOUNT = 0;
+/** @deprecated */
+export type ModuleChoice = "comercial" | "marketing" | "combo";
+/** @deprecated */
+export function getComboPrice(a: number, _b: number): number { return a; }
+/** @deprecated */
+export function getComboSavings(_a: number, _b: number): number { return 0; }
+/** @deprecated */
+export function getSalesPlan(id: string | null | undefined) { return getUnifiedPlan(id); }
+/** @deprecated */
+export function getMarketingPlan(id: string | null | undefined) { return getUnifiedPlan(id); }

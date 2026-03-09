@@ -215,19 +215,30 @@ Deno.serve(async (req) => {
         }
       }
 
-      // {orgId}|sub|{salesPlan}|{marketingPlan}|{modules} → subscription renewal
+      // {orgId}|sub|{plan} → unified subscription renewal
+      // Also supports legacy: {orgId}|sub|{salesPlan}|{marketingPlan}|{modules}
       if (refParts.length >= 3 && refParts[1] === "sub") {
-        const salesPlan = refParts[2] || "none";
-        const marketingPlan = refParts.length >= 4 ? refParts[3] : "none";
-        const modules = refParts.length >= 5 ? refParts[4] : (salesPlan !== "none" && marketingPlan !== "none" ? "combo" : salesPlan !== "none" ? "comercial" : "marketing");
+        // Unified: refParts[2] is the plan id (starter/pro/enterprise)
+        // Legacy: refParts[2] is salesPlan, refParts[3] is marketingPlan
+        const PLAN_CREDITS: Record<string, number> = { starter: 500, pro: 1000, enterprise: 1500 };
         
-        // Use primary plan slug for subscription record
-        const planSlug = salesPlan !== "none" ? salesPlan : marketingPlan;
-        
-        // Calculate credits from both modules
-        const SALES_CREDITS: Record<string, number> = { starter: 3000, professional: 15000, enterprise: 40000 };
-        const MARKETING_CREDITS: Record<string, number> = { starter: 2000, professional: 10000, enterprise: 30000 };
-        const totalCredits = (salesPlan !== "none" ? (SALES_CREDITS[salesPlan] || 0) : 0) + (marketingPlan !== "none" ? (MARKETING_CREDITS[marketingPlan] || 0) : 0);
+        let planSlug: string;
+        let totalCredits: number;
+
+        if (refParts.length >= 4 && refParts[3] !== undefined) {
+          // Legacy format: {orgId}|sub|{salesPlan}|{marketingPlan}|{modules}
+          const salesPlan = refParts[2] || "none";
+          const marketingPlan = refParts[3] || "none";
+          planSlug = salesPlan !== "none" ? salesPlan : marketingPlan;
+          // Legacy credit mapping
+          const LEGACY_SC: Record<string, number> = { starter: 3000, professional: 15000, enterprise: 40000 };
+          const LEGACY_MC: Record<string, number> = { starter: 2000, professional: 10000, enterprise: 30000 };
+          totalCredits = (salesPlan !== "none" ? (LEGACY_SC[salesPlan] || 0) : 0) + (marketingPlan !== "none" ? (LEGACY_MC[marketingPlan] || 0) : 0);
+        } else {
+          // Unified format: {orgId}|sub|{plan}
+          planSlug = refParts[2];
+          totalCredits = PLAN_CREDITS[planSlug] || 500;
+        }
 
         const newExpires = new Date();
         newExpires.setDate(newExpires.getDate() + 30);
@@ -236,7 +247,6 @@ Deno.serve(async (req) => {
           .from("subscriptions")
           .update({
             plan: planSlug,
-            modules,
             status: "active",
             expires_at: newExpires.toISOString(),
           })
@@ -271,7 +281,6 @@ Deno.serve(async (req) => {
             status: "pending",
           });
 
-          // Register as finance_revenue for franchisee
           await adminClient.from("finance_revenues").insert({
             organization_id: clientOrg.parent_org_id,
             description: `Comissão SaaS — ${org.name} — ${currentMonth}`,
@@ -295,10 +304,10 @@ Deno.serve(async (req) => {
               type: "purchase",
               amount: totalCredits,
               balance_after: newBalance,
-              description: `Renovação ${modules === "combo" ? "combo" : `plano ${planSlug}`} — ${totalCredits.toLocaleString()} créditos`,
-              metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, sales_plan: salesPlan, marketing_plan: marketingPlan, modules, event },
+              description: `Renovação plano ${planSlug} — ${totalCredits} créditos`,
+              metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, plan: planSlug, event },
             });
-            console.log(`Subscription renewed for org ${org.id}: sales=${salesPlan}, marketing=${marketingPlan}, credits=${totalCredits}`);
+            console.log(`Subscription renewed for org ${org.id}: plan=${planSlug}, credits=${totalCredits}`);
           }
         }
         return jsonOk({ success: true, event, type: "subscription_renewal", plan: planSlug, credits: totalCredits });
@@ -308,6 +317,11 @@ Deno.serve(async (req) => {
       if (refParts.length >= 3 && refParts[1] === "credits") {
         const packId = refParts[2];
         const packCreditsMap: Record<string, number> = {
+          // New unified packs
+          "pack-200": 200,
+          "pack-500": 500,
+          "pack-1000": 1000,
+          // Legacy packs
           "pack-5000": 5000,
           "pack-20000": 20000,
           "pack-50000": 50000,

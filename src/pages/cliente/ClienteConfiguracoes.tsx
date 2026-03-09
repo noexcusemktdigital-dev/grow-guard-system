@@ -122,7 +122,7 @@ function UsersAndTeamsTab() {
   const { data: teams } = useOrgTeams();
   const { data: memberships } = useTeamMemberships();
   const { setUserTeams } = useTeamMutations();
-  const limits = getEffectiveLimits((subscription as any)?.sales_plan, (subscription as any)?.marketing_plan, subscription?.status === "trial");
+  const limits = getEffectiveLimits(subscription?.plan, subscription?.status === "trial");
   const maxUsers = limits.maxUsers || 2;
   const currentCount = members?.length ?? 0;
   const [inviteOpen, setInviteOpen] = useState(false);

@@ -9,11 +9,8 @@ export function useLeadQuota() {
   const { data: subscription } = useClienteSubscription();
 
   const isTrial = subscription?.plan === "trial" || subscription?.status === "trialing";
-  const limits = getEffectiveLimits(
-    subscription?.plan !== "trial" ? subscription?.plan : null,
-    null,
-    isTrial,
-  );
+  const planId = isTrial ? null : (subscription?.plan ?? null);
+  const limits = getEffectiveLimits(planId, isTrial);
 
   const { data: activeLeadCount = 0, isLoading } = useQuery({
     queryKey: ["crm-lead-count", orgId],

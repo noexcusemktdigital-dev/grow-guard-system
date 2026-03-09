@@ -1,10 +1,11 @@
 import { useState } from "react";
 import {
   CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3,
-  History, Package, FileText, ExternalLink, Receipt, Target, Megaphone,
+  History, Package, FileText, ExternalLink, Receipt, Calculator,
+  Lock, Bot, MessageSquare, Send,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -12,17 +13,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useCreditAlert } from "@/hooks/useCreditAlert";
 import { useCreditTransactions } from "@/hooks/useCreditTransactions";
 import {
-  SALES_PLANS, MARKETING_PLANS, CREDIT_PACKS, COMBO_DISCOUNT,
-  getComboPrice, getComboSavings, getEffectiveLimits,
-  getSalesPlan, getMarketingPlan,
-  SalesModulePlan, MarketingModulePlan, CreditPack, EXTRA_USER_PRICE,
+  UNIFIED_PLANS, CREDIT_PACKS, CREDIT_COSTS,
+  getEffectiveLimits, getUnifiedPlan,
+  UnifiedPlan, CreditPack, EXTRA_USER_PRICE,
 } from "@/constants/plans";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -287,23 +286,15 @@ function InlinePaymentView({ result, billingType, onClose }: { result: any; bill
   );
 }
 
-/* ── Subscription Dialog (new modular) ── */
-function ModularSubscriptionDialog({
-  salesPlanId, marketingPlanId, open, onOpenChange,
+/* ── Subscription Dialog (unified) ── */
+function SubscriptionDialog({
+  plan, open, onOpenChange,
 }: {
-  salesPlanId: string | null; marketingPlanId: string | null; open: boolean; onOpenChange: (o: boolean) => void;
+  plan: UnifiedPlan | null; open: boolean; onOpenChange: (o: boolean) => void;
 }) {
   const [billingType, setBillingType] = useState("CREDIT_CARD");
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
-
-  const sp = getSalesPlan(salesPlanId);
-  const mp = getMarketingPlan(marketingPlanId);
-  const isCombo = !!sp && !!mp;
-  const rawPrice = (sp?.price ?? 0) + (mp?.price ?? 0);
-  const finalPrice = isCombo ? getComboPrice(sp!.price, mp!.price) : rawPrice;
-  const savings = isCombo ? getComboSavings(sp!.price, mp!.price) : 0;
-  const totalCredits = (sp?.credits ?? 0) + (mp?.credits ?? 0);
 
   const subscribe = useMutation({
     mutationFn: async () => {
@@ -312,8 +303,7 @@ function ModularSubscriptionDialog({
       const { data, error } = await supabase.functions.invoke("asaas-create-subscription", {
         body: {
           organization_id: orgId,
-          sales_plan: salesPlanId,
-          marketing_plan: marketingPlanId,
+          plan: plan!.id,
           billing_type: billingType,
         },
       });
@@ -322,8 +312,7 @@ function ModularSubscriptionDialog({
       return data;
     },
     onSuccess: (data) => {
-      const label = [sp && `Vendas ${sp.name}`, mp && `Marketing ${mp.name}`].filter(Boolean).join(" + ");
-      toast.success(`Plano ${label} ativado!`);
+      toast.success(`Plano ${plan!.name} ativado!`);
       if (data?.payment_link) toast.info("Link de pagamento enviado.");
       qc.invalidateQueries({ queryKey: ["subscription"] });
       qc.invalidateQueries({ queryKey: ["credit-wallet"] });
@@ -339,26 +328,21 @@ function ModularSubscriptionDialog({
     },
   });
 
-  const moduleLabel = [sp && `Vendas ${sp.name}`, mp && `Marketing ${mp.name}`].filter(Boolean).join(" + ");
+  if (!plan) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Assinar {moduleLabel}</DialogTitle>
+          <DialogTitle>Assinar Plano {plan.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-foreground">R$ {finalPrice}</span>
+              <span className="text-3xl font-bold text-foreground">R$ {plan.price}</span>
               <span className="text-muted-foreground">/mês</span>
             </div>
-            {isCombo && savings > 0 && (
-              <p className="text-sm text-green-600 font-medium mt-1">
-                Combo -15% · Economia de R$ {savings}/mês
-              </p>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">{totalCredits.toLocaleString("pt-BR")} créditos/mês</p>
+            <p className="text-sm text-muted-foreground mt-1">{plan.credits.toLocaleString("pt-BR")} créditos/mês</p>
           </div>
           <div className="space-y-3">
             <Label className="text-sm font-medium">Forma de pagamento</Label>
@@ -466,11 +450,43 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
   );
 }
 
-/* ── Module Plan Card ── */
-function ModulePlanCard({
+/* ── Credit Calculator ── */
+function CreditCalculatorCard() {
+  const creditEntries = Object.values(CREDIT_COSTS).filter((c) => c.cost > 0).sort((a, b) => b.cost - a.cost);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Calculadora de Créditos</CardTitle>
+          <Calculator className="w-5 h-5 text-muted-foreground" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-xs text-muted-foreground mb-3">
+          Cada ação de IA e automação consome créditos do seu plano mensal. Veja quanto custa cada execução:
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {creditEntries.map((item) => (
+            <div key={item.label} className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-muted/30 border">
+              <span className="text-muted-foreground">{item.label}</span>
+              <span className="font-bold text-foreground">{item.cost} cr</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-3">
+          Briefings e planejamento são gratuitos. Créditos só são cobrados na execução/aprovação.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Plan Card ── */
+function PlanCard({
   plan, isCurrent, onSelect,
 }: {
-  plan: { id: string; name: string; price: number; credits: number; features: string[]; popular: boolean };
+  plan: UnifiedPlan;
   isCurrent: boolean;
   onSelect: () => void;
 }) {
@@ -495,7 +511,7 @@ function ModulePlanCard({
           <span className="text-3xl font-bold text-foreground">R$ {plan.price}</span>
           <span className="text-sm text-muted-foreground">/mês</span>
         </div>
-        <p className="text-sm text-muted-foreground">{plan.credits.toLocaleString("pt-BR")} créditos</p>
+        <p className="text-sm text-muted-foreground">{plan.credits.toLocaleString("pt-BR")} créditos/mês</p>
       </CardHeader>
       <CardContent className="space-y-3">
         <ul className="space-y-2">
@@ -506,6 +522,23 @@ function ModulePlanCard({
             </li>
           ))}
         </ul>
+
+        {/* Pro+ exclusive badges */}
+        {!plan.hasAiAgent && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {[
+              { icon: Bot, label: "Agente IA" },
+              { icon: MessageSquare, label: "WhatsApp" },
+              { icon: Send, label: "Disparos" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-1 px-2 py-1 rounded bg-muted/50 text-muted-foreground text-[10px]">
+                <Lock className="w-2.5 h-2.5" />
+                {item.label}
+              </div>
+            ))}
+          </div>
+        )}
+
         <Button className="w-full" variant={isCurrent ? "outline" : "default"} disabled={isCurrent} onClick={onSelect}>
           {isCurrent ? "Plano Atual" : "Escolher Plano"}
         </Button>
@@ -520,36 +553,21 @@ export default function ClientePlanoCreditos() {
   const { data: subscription, isLoading: subLoading } = useClienteSubscription();
   const isLoading = walletLoading || subLoading;
 
-  // Dialog state
-  const [dialogSalesPlan, setDialogSalesPlan] = useState<string | null>(null);
-  const [dialogMarketingPlan, setDialogMarketingPlan] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<UnifiedPlan | null>(null);
+  const [subDialogOpen, setSubDialogOpen] = useState(false);
   const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
   const [packDialogOpen, setPackDialogOpen] = useState(false);
 
   const isTrial = subscription?.status === "trial";
-  const currentSalesPlan = (subscription as any)?.sales_plan as string | null;
-  const currentMarketingPlan = (subscription as any)?.marketing_plan as string | null;
+  const currentPlanId = subscription?.plan as string | null;
+  const currentPlan = getUnifiedPlan(currentPlanId);
 
-  const limits = getEffectiveLimits(currentSalesPlan, currentMarketingPlan, isTrial);
+  const limits = getEffectiveLimits(currentPlanId, isTrial);
   const balance = wallet?.balance ?? 0;
-  const totalIncluded = limits.totalCredits || 1000;
+  const totalIncluded = limits.totalCredits || 500;
   const creditPercent = totalIncluded > 0 ? Math.min((balance / totalIncluded) * 100, 100) : 0;
 
-  const currentSalesObj = getSalesPlan(currentSalesPlan);
-  const currentMktObj = getMarketingPlan(currentMarketingPlan);
-  const isCombo = !!currentSalesObj && !!currentMktObj;
-  const currentPrice = isCombo
-    ? getComboPrice(currentSalesObj!.price, currentMktObj!.price)
-    : (currentSalesObj?.price ?? 0) + (currentMktObj?.price ?? 0);
-
-  const statusLabel = isTrial ? "Trial" : [currentSalesObj && `Vendas ${currentSalesObj.name}`, currentMktObj && `Mkt ${currentMktObj.name}`].filter(Boolean).join(" + ") || "Sem plano";
-
-  const openSubscription = (salesId: string | null, mktId: string | null) => {
-    setDialogSalesPlan(salesId);
-    setDialogMarketingPlan(mktId);
-    setDialogOpen(true);
-  };
+  const statusLabel = isTrial ? "Trial" : (currentPlan ? currentPlan.name : "Sem plano");
 
   if (isLoading) {
     return (
@@ -589,31 +607,34 @@ export default function ClientePlanoCreditos() {
                     {daysLeft > 0 ? `${daysLeft} dias restantes no trial` : "Trial expirado"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Início: {createdAt.toLocaleDateString("pt-BR")} · Expira: {trialEnd.toLocaleDateString("pt-BR")}
+                    200 créditos · 2 usuários · 7 dias
                   </p>
                 </div>
               );
             })()}
 
-            {currentSalesObj && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground flex items-center gap-1.5"><Target className="w-3.5 h-3.5" /> Vendas</span>
-                <span className="font-semibold text-foreground">{currentSalesObj.name} — R$ {currentSalesObj.price}/mês</span>
-              </div>
+            {currentPlan && !isTrial && (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Plano</span>
+                  <span className="font-semibold text-foreground">{currentPlan.name} — R$ {currentPlan.price}/mês</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Créditos/mês</span>
+                  <span className="font-semibold text-foreground">{currentPlan.credits.toLocaleString("pt-BR")}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Usuários</span>
+                  <span className="font-semibold text-foreground">até {currentPlan.maxUsers >= 9999 ? "∞" : currentPlan.maxUsers}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Agente IA / WhatsApp</span>
+                  <span className="font-semibold text-foreground">{currentPlan.hasAiAgent ? "✅ Incluso" : "❌ Não incluso"}</span>
+                </div>
+              </>
             )}
-            {currentMktObj && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground flex items-center gap-1.5"><Megaphone className="w-3.5 h-3.5" /> Marketing</span>
-                <span className="font-semibold text-foreground">{currentMktObj.name} — R$ {currentMktObj.price}/mês</span>
-              </div>
-            )}
-            {isCombo && (
-              <div className="flex items-center justify-between text-sm border-t pt-2">
-                <span className="text-muted-foreground">Total Combo (-15%)</span>
-                <span className="font-bold text-foreground">R$ {currentPrice}/mês</span>
-              </div>
-            )}
-            {!isTrial && !currentSalesObj && !currentMktObj && (
+
+            {!isTrial && !currentPlan && (
               <p className="text-sm text-muted-foreground">Nenhum plano ativo. Escolha abaixo para começar.</p>
             )}
 
@@ -651,157 +672,44 @@ export default function ClientePlanoCreditos() {
         </Card>
       </div>
 
-      {/* Plans — Modular */}
+      {/* Plans — Unified */}
       <div>
-        <Tabs defaultValue="vendas">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-foreground">Planos Disponíveis</h2>
-            <TabsList className="h-8">
-              <TabsTrigger value="vendas" className="text-xs px-3 h-7 gap-1"><Target className="w-3 h-3" /> Vendas</TabsTrigger>
-              <TabsTrigger value="marketing" className="text-xs px-3 h-7 gap-1"><Megaphone className="w-3 h-3" /> Marketing</TabsTrigger>
-              <TabsTrigger value="combo" className="text-xs px-3 h-7">🔥 Combo</TabsTrigger>
-            </TabsList>
-          </div>
-
-          {/* Sales */}
-          <TabsContent value="vendas">
-            <p className="text-sm text-muted-foreground mb-4">CRM, Chat WhatsApp, Agentes IA, Scripts, Disparos, Plano de Vendas, Checklist</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {SALES_PLANS.map((plan) => (
-                <ModulePlanCard
-                  key={plan.id}
-                  plan={plan}
-                  isCurrent={currentSalesPlan === plan.id}
-                  onSelect={() => openSubscription(plan.id, currentMarketingPlan)}
-                />
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* Marketing */}
-          <TabsContent value="marketing">
-            <p className="text-sm text-muted-foreground mb-4">Conteúdos, Artes Sociais, Sites, Tráfego Pago, Estratégia de Marketing</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {MARKETING_PLANS.map((plan) => (
-                <ModulePlanCard
-                  key={plan.id}
-                  plan={plan}
-                  isCurrent={currentMarketingPlan === plan.id}
-                  onSelect={() => openSubscription(currentSalesPlan, plan.id)}
-                />
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* Combo */}
-          <TabsContent value="combo">
-            <Card className="mb-4 border-primary/30 bg-primary/5">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Star className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Economize {Math.round(COMBO_DISCOUNT * 100)}% com o Combo!</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Contrate Vendas + Marketing juntos e desbloqueie todas as 12 ferramentas com desconto.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {SALES_PLANS.map((sp, i) => {
-                const mp = MARKETING_PLANS[i];
-                const combo = getComboPrice(sp.price, mp.price);
-                const savings = getComboSavings(sp.price, mp.price);
-                const totalCredits = sp.credits + mp.credits;
-                const isCurrent = currentSalesPlan === sp.id && currentMarketingPlan === mp.id;
-
-                return (
-                  <Card key={sp.id} className={`relative ${sp.popular ? "border-primary ring-2 ring-primary/20" : ""} ${isCurrent ? "bg-primary/5" : ""}`}>
-                    {sp.popular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <Badge className="gap-1 bg-primary text-primary-foreground"><Star className="w-3 h-3" /> Mais Popular</Badge>
-                      </div>
-                    )}
-                    {isCurrent && (
-                      <div className="absolute -top-3 right-4">
-                        <Badge variant="outline" className="gap-1 bg-card"><Check className="w-3 h-3" /> Atual</Badge>
-                      </div>
-                    )}
-                    <CardHeader className="pt-6">
-                      <CardTitle className="flex items-center gap-2">
-                        <Crown className="w-5 h-5 text-primary" />
-                        {sp.name} + {mp.name}
-                      </CardTitle>
-                      <div className="flex items-baseline gap-1 mt-2">
-                        <span className="text-3xl font-bold text-foreground">R$ {combo}</span>
-                        <span className="text-sm text-muted-foreground">/mês</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-sm text-muted-foreground line-through">R$ {sp.price + mp.price}</span>
-                        <Badge variant="secondary" className="text-[10px]">-R$ {savings}/mês</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{totalCredits.toLocaleString("pt-BR")} créditos · Vendas + Marketing</p>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <ul className="space-y-2">
-                        {[...sp.features.slice(0, 3), ...mp.features.slice(0, 3)].map((f, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-sm">
-                            <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                            <span className="text-foreground">{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <Button className="w-full" variant={isCurrent ? "outline" : "default"} disabled={isCurrent} onClick={() => openSubscription(sp.id, mp.id)}>
-                        {isCurrent ? "Plano Atual" : "Escolher Combo"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </TabsContent>
-        </Tabs>
+        <h2 className="text-xl font-semibold text-foreground mb-4">Planos Disponíveis</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {UNIFIED_PLANS.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              isCurrent={!isTrial && currentPlanId === plan.id}
+              onSelect={() => { setSelectedPlan(plan); setSubDialogOpen(true); }}
+            />
+          ))}
+        </div>
       </div>
+
+      {/* Credit Calculator */}
+      <CreditCalculatorCard />
 
       {/* Credit Packs */}
       <div>
-        <h2 className="text-xl font-semibold text-foreground mb-2 flex items-center gap-2">
-          <Package className="w-5 h-5 text-primary" /> Pacotes de Créditos Avulsos
+        <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Package className="w-5 h-5 text-primary" /> Pacotes de Recarga
         </h2>
-        <Card className="mb-4 border-dashed">
-          <CardContent className="p-4">
-            <p className="text-sm font-medium text-foreground mb-2">Para que servem os créditos?</p>
-            <p className="text-xs text-muted-foreground mb-3">
-              Créditos são consumidos por ações de IA como gerar conteúdos, criar sites, enviar disparos inteligentes e muito mais. Compre pacotes avulsos quando precisar de mais capacidade.
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {[
-                { label: "Gerar site", cost: 500 },
-                { label: "Estratégia comercial", cost: 300 },
-                { label: "Prospecção IA", cost: 250 },
-                { label: "Conteúdos (lote)", cost: 200 },
-                { label: "Script de vendas", cost: 150 },
-                { label: "Arte social", cost: 100 },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between text-xs p-2 rounded bg-muted/30">
-                  <span className="text-muted-foreground">{item.label}</span>
-                  <span className="font-semibold text-foreground">{item.cost} cr</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {CREDIT_PACKS.map((pack) => {
-            const equivContents = Math.floor(pack.credits / 200);
-            const equivSites = Math.floor(pack.credits / 500);
+            const equivContents = Math.floor(pack.credits / 30);
+            const equivSites = Math.floor(pack.credits / 100);
             return (
               <Card key={pack.id} className={pack.popular ? "border-primary ring-1 ring-primary/20" : ""}>
-                <CardContent className="p-5 text-center space-y-3">
+                {pack.popular && (
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                    <Badge className="text-[10px] bg-primary text-primary-foreground">Mais Popular</Badge>
+                  </div>
+                )}
+                <CardContent className="p-5 text-center space-y-3 relative">
                   <p className="text-2xl font-bold text-foreground">{pack.credits.toLocaleString("pt-BR")}</p>
                   <p className="text-sm text-muted-foreground">créditos</p>
-                  <p className="text-[10px] text-muted-foreground">≈ {equivContents} lotes de conteúdo ou {equivSites} sites</p>
+                  <p className="text-[10px] text-muted-foreground">≈ {equivContents} conteúdos ou {equivSites} sites</p>
                   <p className="text-xl font-bold text-foreground">R$ {pack.price}</p>
                   <Button className="w-full" variant={pack.popular ? "default" : "outline"} onClick={() => { setSelectedPack(pack); setPackDialogOpen(true); }}>
                     Comprar
@@ -821,7 +729,7 @@ export default function ClientePlanoCreditos() {
 
       <TransactionHistoryCard />
 
-      <ModularSubscriptionDialog salesPlanId={dialogSalesPlan} marketingPlanId={dialogMarketingPlan} open={dialogOpen} onOpenChange={setDialogOpen} />
+      <SubscriptionDialog plan={selectedPlan} open={subDialogOpen} onOpenChange={setSubDialogOpen} />
       <CreditPackDialog pack={selectedPack} open={packDialogOpen} onOpenChange={setPackDialogOpen} />
     </div>
   );
