@@ -95,22 +95,24 @@ export function useWhatsAppContacts(filterInstanceId?: string | null) {
       if (error) throw error;
       const enriched = (data || []).map((c: any) => {
         const phone = c.phone || "";
-        let contact_type: "individual" | "group" | "lid" = "individual";
-        if (phone.includes("@g.us") || /^\d+-\d{10,}$/.test(phone)) {
-          contact_type = "group";
-        } else if (phone.includes("@lid")) {
-          contact_type = "lid";
+        // Use stored contact_type from DB; fallback to phone-pattern detection
+        let contact_type: "individual" | "group" | "lid" = c.contact_type || "individual";
+        if (contact_type === "individual") {
+          if (phone.includes("@g.us") || /^\d+-\d{10,}$/.test(phone)) {
+            contact_type = "group";
+          } else if (phone.includes("@lid")) {
+            contact_type = "lid";
+          }
         }
         return { ...c, contact_type };
       });
+      // Only filter out broadcasts/status/lid — allow groups
       const filtered = enriched.filter((c: any) => {
         const phone = c.phone || "";
-        if (phone.endsWith("-group")) return false;
-        if (phone.includes("@g.us")) return false;
         if (phone.includes("@broadcast")) return false;
         if (phone.includes("@lid")) return false;
-        if (/^\d{12,}-\d{10,}$/.test(phone)) return false;
         if (phone === "status") return false;
+        if (phone.includes("status@broadcast")) return false;
         return true;
       });
       return filtered as unknown as WhatsAppContact[];
