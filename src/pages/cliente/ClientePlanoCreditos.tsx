@@ -381,10 +381,15 @@ function SubscriptionDialog({
               ))}
             </RadioGroup>
           </div>
+        {!hasCnpj && (
+          <p className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
+            ⚠️ Preencha o CNPJ/CPF da empresa em <strong>Configurações → Organização</strong> antes de assinar.
+          </p>
+        )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={subscribe.isPending}>Cancelar</Button>
-          <Button onClick={() => subscribe.mutate()} disabled={subscribe.isPending}>
+          <Button onClick={() => subscribe.mutate()} disabled={subscribe.isPending || !hasCnpj}>
             {subscribe.isPending ? "Processando..." : "Confirmar Assinatura"}
           </Button>
         </DialogFooter>
