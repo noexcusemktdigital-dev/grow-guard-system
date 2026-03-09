@@ -284,7 +284,7 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
               <div className="flex items-center gap-1.5 mt-2">
                 <Badge variant="outline" className="text-[9px] px-2 py-0 h-[18px] gap-1 border-sidebar-border text-sidebar-foreground rounded-full">
                   <Zap className="w-2.5 h-2.5 text-sidebar-primary" />
-                  {planName}{isTrialing && " · Trial"}
+                  {planLabel}{isTrialing && " · Trial"}
                 </Badge>
               </div>
             </>
