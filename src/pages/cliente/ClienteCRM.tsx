@@ -592,6 +592,14 @@ export default function ClienteCRM() {
       {/* ===== PIPELINE TAB ===== */}
       {activeTab === "pipeline" && (
         <>
+          {/* Lead Quota Banner */}
+          <UsageQuotaBanner
+            used={activeLeadCount}
+            limit={maxLeads}
+            label="leads"
+            planName={planName}
+          />
+
           {/* Pipeline Summary */}
           {allLeads.length > 0 && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
