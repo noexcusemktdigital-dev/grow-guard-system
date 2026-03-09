@@ -179,6 +179,7 @@ export interface TrialPlan {
   maxDispatches: number;
   maxStrategies: number;
   maxTrafficStrategies: number;
+  maxLeads: number;
 }
 
 export const TRIAL_PLAN: TrialPlan = {
