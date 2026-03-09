@@ -238,8 +238,8 @@ Deno.serve(async (req) => {
     let timestampsFound = 0;
 
     const BATCH_SIZE = 100;
-    for (let batchStart = 0; batchStart < individualChats.length; batchStart += BATCH_SIZE) {
-      const batch = individualChats.slice(batchStart, batchStart + BATCH_SIZE);
+    for (let batchStart = 0; batchStart < validChats.length; batchStart += BATCH_SIZE) {
+      const batch = validChats.slice(batchStart, batchStart + BATCH_SIZE);
       const inserts: any[] = [];
       const updates: { id: string; data: any }[] = [];
 
