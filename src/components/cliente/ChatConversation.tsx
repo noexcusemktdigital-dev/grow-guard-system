@@ -734,7 +734,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                 Carregar anteriores
               </Button>
             )}
-
+          </div>
           {/* Multi-device: messages arrive only in real-time */}
           {contact && messages.length === 0 && !isLoading && (
             <div className="text-center py-4 mb-2">
