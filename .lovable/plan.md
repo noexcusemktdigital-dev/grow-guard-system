@@ -1,41 +1,31 @@
 
 
-## Cupom de Desconto + Termos Simplificados
+## Plano: Arquitetura Unificada de Planos e Créditos
+
+### Status: ✅ Implementado
 
 ### Resumo
 
-Adicionar campo de cupom no checkout e atualizar o conteúdo dos Termos de Uso existentes com cláusulas LGPD/disparos. O checkbox no signup continua simples como já está.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-### 1. Cupom de Desconto
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**Tabela `discount_coupons`:**
-- `id`, `code` (unique), `discount_percent`, `max_uses`, `uses_count`, `expires_at`, `is_active`, `created_at`
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-**Nova Edge Function `validate-coupon`:**
-- Recebe `code`, valida existência, ativo, não expirado, usos disponíveis
-- Retorna `discount_percent`
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-**Atualizar `asaas-create-subscription`:**
-- Receber `coupon_code` opcional, validar server-side, aplicar desconto no valor, incrementar `uses_count`
-
-**UI em `ClientePlanoCreditos.tsx` (SubscriptionDialog):**
-- Campo de texto + botão "Aplicar"
-- Mostrar desconto aplicado no preço (ex: ~~R$ 797~~ R$ 717)
-
-### 2. Termos de Uso — Atualizar Conteúdo
-
-**Atualizar `TermosDeUso.tsx`** adicionando cláusulas:
-- LGPD: usuário é controlador, plataforma é operadora
-- Disparos/WhatsApp: risco de bloqueio é responsabilidade do usuário
-- IA: conteúdos gerados são sugestões, revisar antes de usar
-
-**Signup (`SaasAuth.tsx`)** — manter checkbox simples como está, sem mudanças.
-
-### Arquivos
-
-1. Nova migração — tabela `discount_coupons`
-2. Nova Edge Function `validate-coupon/index.ts`
-3. `asaas-create-subscription/index.ts` — suporte a cupom
-4. `ClientePlanoCreditos.tsx` — campo cupom no dialog
-5. `TermosDeUso.tsx` — novas cláusulas
-
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179

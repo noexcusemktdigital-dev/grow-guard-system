@@ -9,7 +9,7 @@ const TermosDeUso = () => (
       </Link>
 
       <h1 className="text-3xl font-bold mb-2">Termos de Uso</h1>
-      <p className="text-muted-foreground text-sm mb-8">Última atualização: 25 de fevereiro de 2026</p>
+      <p className="text-muted-foreground text-sm mb-8">Última atualização: 9 de março de 2026</p>
 
       <div className="prose prose-sm max-w-none space-y-6 text-foreground/80">
         <section>
@@ -48,17 +48,56 @@ const TermosDeUso = () => (
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground">8. Limitação de Responsabilidade</h2>
-          <p>A NoExcuse não se responsabiliza por danos indiretos, incidentais ou consequenciais decorrentes do uso da Plataforma. O serviço é fornecido "como está", sem garantias de qualquer tipo.</p>
+          <h2 className="text-xl font-semibold text-foreground">8. Proteção de Dados Pessoais (LGPD)</h2>
+          <p>Em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), as partes reconhecem que:</p>
+          <ul className="list-disc pl-5 space-y-2 mt-2">
+            <li><strong>Controlador dos dados:</strong> O usuário (pessoa física ou jurídica que contrata a Plataforma) é o controlador dos dados pessoais de seus clientes, leads e contatos inseridos na Plataforma. Cabe ao controlador garantir que possui base legal adequada para o tratamento dos dados (consentimento, legítimo interesse, execução contratual etc.).</li>
+            <li><strong>Operador dos dados:</strong> A NoExcuse atua como operadora dos dados, processando-os exclusivamente conforme as instruções do controlador e para a finalidade de prestação dos serviços contratados.</li>
+            <li><strong>Responsabilidade do controlador:</strong> O usuário é integralmente responsável por obter o consentimento prévio e inequívoco dos titulares dos dados antes de inserir suas informações na Plataforma, bem como por atender a eventuais solicitações de acesso, correção, exclusão ou portabilidade formuladas pelos titulares.</li>
+            <li><strong>Medidas de segurança:</strong> A NoExcuse emprega medidas técnicas e administrativas adequadas para proteger os dados pessoais contra acesso não autorizado, perda, alteração ou destruição.</li>
+            <li><strong>Compartilhamento:</strong> Os dados pessoais não serão compartilhados com terceiros, exceto quando necessário para a prestação do serviço (ex: processadores de pagamento) ou por exigência legal.</li>
+          </ul>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground">9. Alterações nos Termos</h2>
+          <h2 className="text-xl font-semibold text-foreground">9. Disparos de Mensagens e WhatsApp</h2>
+          <p>A Plataforma oferece funcionalidades de envio de mensagens em massa e integração com WhatsApp. Ao utilizar esses recursos, o usuário reconhece e aceita que:</p>
+          <ul className="list-disc pl-5 space-y-2 mt-2">
+            <li><strong>Risco de bloqueio:</strong> O envio de mensagens em massa via WhatsApp pode resultar no bloqueio temporário ou permanente do número utilizado pelo Meta/WhatsApp, conforme as políticas vigentes da plataforma. A NoExcuse <strong>não se responsabiliza por bloqueios, suspensões ou restrições</strong> aplicadas pelo WhatsApp, Meta ou qualquer outra plataforma de comunicação.</li>
+            <li><strong>Consentimento prévio (opt-in):</strong> É obrigação exclusiva do usuário garantir que todos os destinatários consentiram previamente em receber mensagens. O envio de mensagens não solicitadas (spam) é expressamente proibido e pode configurar violação da LGPD e do Marco Civil da Internet.</li>
+            <li><strong>Conteúdo das mensagens:</strong> O usuário é o único responsável pelo conteúdo, veracidade e legalidade das mensagens enviadas através da Plataforma.</li>
+            <li><strong>Boas práticas:</strong> Recomendamos o envio de mensagens com intervalos adequados, respeito aos horários comerciais e personalização do conteúdo para reduzir o risco de bloqueios.</li>
+            <li><strong>Isenção de responsabilidade:</strong> A NoExcuse não garante taxas de entrega, leitura ou resposta das mensagens enviadas, e não se responsabiliza por eventuais prejuízos decorrentes do uso impróprio dos recursos de disparo.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-foreground">10. Conteúdo Gerado por Inteligência Artificial</h2>
+          <p>A Plataforma utiliza modelos de inteligência artificial para gerar sugestões de conteúdo, scripts de vendas, estratégias de marketing e outros materiais. O usuário reconhece que:</p>
+          <ul className="list-disc pl-5 space-y-2 mt-2">
+            <li>Os conteúdos gerados por IA são <strong>sugestões</strong> e devem ser revisados, editados e aprovados pelo usuário antes de qualquer publicação ou uso externo.</li>
+            <li>A NoExcuse não garante a precisão, adequação, originalidade ou legalidade dos conteúdos gerados automaticamente.</li>
+            <li>O usuário é o único responsável pelo conteúdo final publicado ou distribuído, incluindo a verificação de direitos autorais, veracidade das informações e conformidade com legislações aplicáveis.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-foreground">11. Limitação de Responsabilidade</h2>
+          <p>A NoExcuse não se responsabiliza por danos indiretos, incidentais ou consequenciais decorrentes do uso da Plataforma. O serviço é fornecido "como está", sem garantias de qualquer tipo. Em especial, a NoExcuse não se responsabiliza por:</p>
+          <ul className="list-disc pl-5 space-y-2 mt-2">
+            <li>Perda de receita, oportunidades de negócio ou dados decorrentes do uso ou indisponibilidade da Plataforma.</li>
+            <li>Ações de terceiros (incluindo provedores de comunicação, redes sociais ou processadores de pagamento) que afetem o funcionamento dos serviços integrados.</li>
+            <li>Decisões comerciais tomadas com base em conteúdos, relatórios ou sugestões gerados pela Plataforma.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-foreground">12. Alterações nos Termos</h2>
           <p>Reservamo-nos o direito de modificar estes Termos a qualquer momento. Alterações significativas serão comunicadas por email ou notificação na Plataforma.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground">10. Contato</h2>
+          <h2 className="text-xl font-semibold text-foreground">13. Contato</h2>
           <p>Para dúvidas sobre estes Termos, entre em contato pelo email: suporte@noexcuse.com.br</p>
         </section>
       </div>

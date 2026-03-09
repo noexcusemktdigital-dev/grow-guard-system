@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
     const plan = body.plan || body.sales_plan || body.marketing_plan;
     const billing_type = body.billing_type;
     const organization_id = body.organization_id;
+    const coupon_code = body.coupon_code || null;
 
     if (!organization_id || !billing_type) {
       return new Response(JSON.stringify({ error: "organization_id and billing_type are required" }), {
@@ -122,10 +123,45 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Apply coupon discount if provided
+    let couponDiscountPercent = 0;
+    if (coupon_code) {
+      const { data: coupon, error: couponErr } = await adminClient
+        .from("discount_coupons")
+        .select("*")
+        .eq("code", coupon_code.trim().toUpperCase())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (couponErr) throw couponErr;
+
+      if (coupon) {
+        const notExpired = !coupon.expires_at || new Date(coupon.expires_at) >= new Date();
+        const hasUses = coupon.max_uses === null || coupon.uses_count < coupon.max_uses;
+
+        if (notExpired && hasUses) {
+          couponDiscountPercent = coupon.discount_percent || 0;
+          // Increment uses
+          await adminClient
+            .from("discount_coupons")
+            .update({ uses_count: coupon.uses_count + 1 })
+            .eq("id", coupon.id);
+          console.log(`Coupon ${coupon.code} applied: ${couponDiscountPercent}%`);
+        }
+      }
+    }
+
     let finalPrice = planPrice;
+    // Apply referral discount first
     if (discountPercent > 0) {
       finalPrice = Math.round(planPrice * (1 - discountPercent / 100) * 100) / 100;
-      console.log(`Discount applied: ${discountPercent}% → R$ ${planPrice} → R$ ${finalPrice}`);
+      console.log(`Referral discount: ${discountPercent}% → R$ ${planPrice} → R$ ${finalPrice}`);
+    }
+    // Then apply coupon discount on top
+    if (couponDiscountPercent > 0) {
+      const beforeCoupon = finalPrice;
+      finalPrice = Math.round(finalPrice * (1 - couponDiscountPercent / 100) * 100) / 100;
+      console.log(`Coupon discount: ${couponDiscountPercent}% → R$ ${beforeCoupon} → R$ ${finalPrice}`);
     }
 
     // Get or create Asaas customer

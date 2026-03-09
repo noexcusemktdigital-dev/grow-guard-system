@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3,
   History, Package, FileText, ExternalLink, Receipt, Calculator,
-  Lock, Bot, MessageSquare, Send,
+  Lock, Bot, MessageSquare, Send, Tag,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
@@ -293,6 +294,10 @@ function SubscriptionDialog({
   plan: UnifiedPlan | null; open: boolean; onOpenChange: (o: boolean) => void;
 }) {
   const [billingType, setBillingType] = useState("CREDIT_CARD");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState<number>(0);
+  const [couponValid, setCouponValid] = useState<boolean | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
 
@@ -312,6 +317,36 @@ function SubscriptionDialog({
 
   const hasCnpj = !!(orgData?.cnpj && orgData.cnpj.trim().length >= 11);
 
+  const applyCoupon = useCallback(async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponValid(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("validate-coupon", {
+        body: { code: couponCode.trim() },
+      });
+      if (error || data?.error) {
+        setCouponValid(false);
+        setCouponDiscount(0);
+        toast.error(data?.error || "Cupom inválido");
+      } else if (data?.valid) {
+        setCouponValid(true);
+        setCouponDiscount(data.discount_percent);
+        toast.success(`Cupom aplicado: ${data.discount_percent}% de desconto!`);
+      }
+    } catch {
+      setCouponValid(false);
+      setCouponDiscount(0);
+      toast.error("Erro ao validar cupom");
+    } finally {
+      setCouponLoading(false);
+    }
+  }, [couponCode]);
+
+  const finalPrice = plan
+    ? Math.round(plan.price * (1 - couponDiscount / 100) * 100) / 100
+    : 0;
+
   const subscribe = useMutation({
     mutationFn: async () => {
       if (!hasCnpj) {
@@ -324,6 +359,7 @@ function SubscriptionDialog({
           organization_id: orgId,
           plan: plan!.id,
           billing_type: billingType,
+          coupon_code: couponValid ? couponCode.trim().toUpperCase() : undefined,
         },
       });
       if (error) throw error;
@@ -358,11 +394,55 @@ function SubscriptionDialog({
         <div className="space-y-4 py-2">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-foreground">R$ {plan.price}</span>
+              {couponDiscount > 0 ? (
+                <>
+                  <span className="text-lg line-through text-muted-foreground">R$ {plan.price}</span>
+                  <span className="text-3xl font-bold text-foreground">R$ {finalPrice}</span>
+                </>
+              ) : (
+                <span className="text-3xl font-bold text-foreground">R$ {plan.price}</span>
+              )}
               <span className="text-muted-foreground">/mês</span>
             </div>
+            {couponDiscount > 0 && (
+              <Badge className="mt-1 text-xs" variant="secondary">
+                <Tag className="w-3 h-3 mr-1" /> {couponDiscount}% de desconto aplicado
+              </Badge>
+            )}
             <p className="text-sm text-muted-foreground mt-1">{plan.credits.toLocaleString("pt-BR")} créditos/mês</p>
           </div>
+
+          {/* Coupon field */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Cupom de desconto</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Digite o código"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase());
+                  if (couponValid !== null) {
+                    setCouponValid(null);
+                    setCouponDiscount(0);
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={applyCoupon}
+                disabled={couponLoading || !couponCode.trim()}
+                className="shrink-0"
+              >
+                {couponLoading ? "..." : "Aplicar"}
+              </Button>
+            </div>
+            {couponValid === false && (
+              <p className="text-xs text-destructive">Cupom inválido ou expirado</p>
+            )}
+          </div>
+
           <div className="space-y-3">
             <Label className="text-sm font-medium">Forma de pagamento</Label>
             <RadioGroup value={billingType} onValueChange={setBillingType} className="space-y-2">
