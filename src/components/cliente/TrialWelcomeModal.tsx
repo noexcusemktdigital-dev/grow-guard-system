@@ -4,21 +4,20 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Target, Users, Bot, Megaphone, CheckCircle2,
-  Lock, Globe, DollarSign, Send, ArrowRight, Sparkles,
+  Target, Users, Megaphone, CheckCircle2,
+  Lock, Bot, Send, ArrowRight, Sparkles, Zap,
 } from "lucide-react";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 
 const INCLUDED = [
   { icon: Users, label: "CRM completo", desc: "Gerencie leads e funil de vendas" },
   { icon: Target, label: "Plano de Vendas", desc: "Estratégia comercial personalizada" },
-  { icon: Bot, label: "1 Agente de IA", desc: "Atendimento automatizado 24/7" },
-  { icon: Megaphone, label: "Estratégia de Marketing", desc: "Planejamento inteligente com IA" },
+  { icon: Megaphone, label: "Marketing completo", desc: "Conteúdos, artes, sites e tráfego" },
+  { icon: Zap, label: "200 créditos", desc: "Para testar todas as ferramentas de IA" },
 ];
 
 const BLOCKED = [
-  { icon: Globe, label: "Sites" },
-  { icon: DollarSign, label: "Tráfego Pago" },
+  { icon: Bot, label: "Agente de IA" },
   { icon: Send, label: "Disparos WhatsApp" },
 ];
 
@@ -60,7 +59,8 @@ export function TrialWelcomeModal() {
             </div>
             <h2 className="text-xl font-bold text-foreground">Bem-vindo ao NOEXCUSE! 🎉</h2>
             <p className="text-sm text-muted-foreground">
-              Você tem <Badge variant="secondary" className="mx-1 font-bold">7 dias grátis</Badge> para explorar a plataforma.
+              Você tem <Badge variant="secondary" className="mx-1 font-bold">7 dias grátis</Badge> e
+              <Badge variant="secondary" className="mx-1 font-bold">200 créditos</Badge> para explorar.
             </p>
           </div>
         </div>
@@ -91,7 +91,7 @@ export function TrialWelcomeModal() {
           {/* Blocked */}
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-              🔒 Disponível nos planos pagos
+              🔒 Disponível a partir do Plano Pro
             </p>
             <div className="flex flex-wrap gap-2">
               {BLOCKED.map((item) => (

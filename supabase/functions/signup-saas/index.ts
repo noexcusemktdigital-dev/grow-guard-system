@@ -136,10 +136,10 @@ Deno.serve(async (req) => {
 
     if (subError) throw subError;
 
-    // 5. Create credit wallet
+    // 5. Create credit wallet (200 credits for trial)
     const { error: walletError } = await supabaseAdmin
       .from("credit_wallets")
-      .insert({ organization_id: org.id, balance: 1000 });
+      .insert({ organization_id: org.id, balance: 200 });
 
     if (walletError) throw walletError;
 
