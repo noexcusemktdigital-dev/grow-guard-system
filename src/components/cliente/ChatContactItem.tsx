@@ -84,9 +84,20 @@ export function ChatContactItem({ contact, isSelected, onSelect, stageLabel, pre
           </span>
         </div>
         <div className="flex items-center justify-between mt-0.5">
-          <p className="text-xs text-muted-foreground truncate pr-2">
-            {preview || contact.phone}
-          </p>
+          <div className="text-xs truncate pr-2 flex-1 min-w-0">
+            {preview ? (
+              <span
+                className="text-muted-foreground/80"
+                dangerouslySetInnerHTML={{
+                  __html: preview
+                    .replace(/^(✓✓?)\s*Você:/g, '<span class="text-emerald-500">$1</span> <span class="font-semibold text-foreground/70">Você:</span>')
+                    .replace(/^(🎤|📷|📹|📄)/g, '<span class="text-primary/80">$1</span>')
+                }}
+              />
+            ) : (
+              <span className="text-muted-foreground/60">{contact.phone}</span>
+            )}
+          </div>
           {contact.unread_count > 0 && (
             <Badge className="h-[18px] min-w-[18px] px-1 text-[9px] bg-primary text-primary-foreground shrink-0 rounded-full">
               {contact.unread_count}

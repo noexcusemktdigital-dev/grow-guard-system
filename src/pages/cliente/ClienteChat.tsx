@@ -97,15 +97,10 @@ export default function ClienteChat() {
   );
 
 
-  // Use last_message_preview from contacts directly (no separate DB fetch needed)
-  const lastMessages = useMemo(() => {
-    const map = new Map<string, string>();
-    contacts.forEach((c) => {
-      const preview = (c as any).last_message_preview;
-      if (preview) map.set(c.id, preview);
-    });
-    return map;
-  }, [contacts]);
+  // Fetch real message previews from the database
+  const contactIds = useMemo(() => contacts.map((c) => c.id), [contacts]);
+  const { data: realPreviews } = useContactPreviews(contactIds);
+  const lastMessages = realPreviews ?? new Map<string, string>();
 
   const handleSelectContact = (contact: WhatsAppContact) => {
     setSelectedContactId(contact.id);

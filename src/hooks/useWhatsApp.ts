@@ -322,3 +322,58 @@ export function useMarkWhatsAppRead() {
     },
   });
 }
+
+// Fetch real message previews for contacts
+export function useContactPreviews(contactIds: string[]) {
+  const { data: orgId } = useUserOrgId();
+
+  return useQuery({
+    queryKey: ["whatsapp-contact-previews", orgId, contactIds],
+    queryFn: async () => {
+      if (!orgId || contactIds.length === 0) return new Map<string, string>();
+
+      const { data, error } = await supabase.rpc("get_contact_last_messages", {
+        p_org_id: orgId,
+        p_contact_ids: contactIds,
+      });
+
+      if (error) throw error;
+
+      const map = new Map<string, string>();
+      (data || []).forEach((msg: any) => {
+        const preview = formatMessagePreview(msg);
+        if (preview) map.set(msg.contact_id, preview);
+      });
+
+      return map;
+    },
+    enabled: !!orgId && contactIds.length > 0,
+  });
+}
+
+// Format message preview like WhatsApp
+function formatMessagePreview(msg: {
+  content: string | null;
+  type: string;
+  direction: string;
+  status: string;
+}): string {
+  // Media types
+  if (msg.type === "audio") return "🎤 Áudio";
+  if (msg.type === "image") return "📷 Foto";
+  if (msg.type === "video") return "📹 Vídeo";
+  if (msg.type === "document") return "📄 Documento";
+
+  const text = msg.content || "";
+
+  // Outbound messages: add "Você:" prefix and checkmarks
+  if (msg.direction === "outbound") {
+    const checkmarks = msg.status === "read" || msg.status === "delivered" ? "✓✓" : "✓";
+    const truncated = text.length > 80 ? text.substring(0, 80) + "..." : text;
+    return `${checkmarks} Você: ${truncated}`;
+  }
+
+  // Inbound messages: just the text
+  const truncated = text.length > 100 ? text.substring(0, 100) + "..." : text;
+  return truncated;
+}
