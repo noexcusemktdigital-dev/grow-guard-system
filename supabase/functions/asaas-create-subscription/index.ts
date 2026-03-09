@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
     const plan = body.plan || body.sales_plan || body.marketing_plan;
     const billing_type = body.billing_type;
     const organization_id = body.organization_id;
+    const coupon_code = body.coupon_code || null;
 
     if (!organization_id || !billing_type) {
       return new Response(JSON.stringify({ error: "organization_id and billing_type are required" }), {
