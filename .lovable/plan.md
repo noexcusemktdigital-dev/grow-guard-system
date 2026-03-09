@@ -1,31 +1,73 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Análise da Situação
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+Identifiquei o problema: **o sistema atualmente filtra grupos propositalmente** em dois lugares:
 
-### Ações
+1. **Edge Function `whatsapp-sync-chats`** (linha 199-208):
+   - Verifica `chat.isGroup` e retorna `false`
+   - Filtra telefones com padrão de grupo (`@g.us`, `-group`, etc.)
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+2. **Frontend `useWhatsApp.ts`** (linhas 106-115):
+   - Remove contatos com `@g.us`, `@broadcast`, `-group` etc.
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+**Resultado**: Grupos não são sincronizados nem aparecem na interface.
 
-3. **Executar o teste** e analisar o resultado definitivo
+## Solução Proposta
 
-### Detalhe técnico
+### 1. Adicionar Coluna `contact_type` no Banco
+Migration SQL para classificar contatos:
+```sql
+ALTER TABLE whatsapp_contacts 
+ADD COLUMN contact_type text DEFAULT 'individual' CHECK (contact_type IN ('individual', 'group', 'broadcast'));
 
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+CREATE INDEX idx_whatsapp_contacts_type 
+ON whatsapp_contacts(organization_id, contact_type);
 ```
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+### 2. Modificar `whatsapp-sync-chats`
+- **Remover** filtro de grupos (linhas 199-208)
+- **Adicionar** lógica para classificar como `individual` ou `group`
+- Para grupos, extrair:
+  - Nome do grupo
+  - Número de participantes (se disponível na API)
+  - Foto do grupo
+
+### 3. Atualizar `useWhatsApp.ts`
+- **Remover** filtro frontend (linhas 106-115)
+- Manter apenas filtros de broadcast e status
+- Adicionar parâmetro opcional `includeGroups?: boolean`
+
+### 4. UI: Filtro de Grupos em `ChatContactList`
+Adicionar nova aba/filtro:
+```tsx
+{ key: "groups", label: "Grupos", icon: <Users className="w-3 h-3" /> }
+```
+
+### 5. UI: Indicador Visual em `ChatContactItem`
+- Ícone de grupo (👥 ou `Users`) para grupos
+- Badge com número de participantes
+- Estilo diferenciado (cor, borda)
+
+### 6. Webhook: Suportar Mensagens de Grupos
+Verificar se `whatsapp-webhook` já processa grupos corretamente (normalmente já funciona, mas revisar se há filtros).
+
+## Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| Migration SQL | Adicionar coluna `contact_type` |
+| `whatsapp-sync-chats/index.ts` | Remover filtro de grupos + classificação |
+| `src/hooks/useWhatsApp.ts` | Ajustar filtros frontend |
+| `src/components/cliente/ChatContactList.tsx` | Adicionar filtro "Grupos" |
+| `src/components/cliente/ChatContactItem.tsx` | Indicador visual para grupos |
+| `supabase/functions/whatsapp-webhook/index.ts` | Verificar/ajustar processamento de grupos |
+
+## Resultado
+
+✅ Grupos sincronizados do WhatsApp
+✅ Filtro dedicado para ver apenas grupos
+✅ Indicador visual claro (ícone + badge de participantes)
+✅ Mensagens de grupos exibidas normalmente
+✅ Compatível com API da Z-API (suporta grupos nativamente)
 
