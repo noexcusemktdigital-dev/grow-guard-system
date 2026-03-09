@@ -1,6 +1,6 @@
 import { useClienteWallet } from "./useClienteWallet";
 import { useClienteSubscription } from "./useClienteSubscription";
-import { getPlanBySlug } from "@/constants/plans";
+import { getEffectiveLimits } from "@/constants/plans";
 
 export type CreditAlertLevel = "normal" | "warning" | "critical" | "zero";
 
@@ -16,8 +16,12 @@ export function useCreditAlert(): CreditAlertData {
   const { data: wallet, isLoading: wl } = useClienteWallet();
   const { data: subscription, isLoading: sl } = useClienteSubscription();
 
-  const plan = getPlanBySlug(subscription?.plan);
-  const total = plan?.credits ?? 5000;
+  const isTrial = subscription?.status === "trial";
+  const salesPlan = (subscription as any)?.sales_plan as string | null;
+  const marketingPlan = (subscription as any)?.marketing_plan as string | null;
+
+  const limits = getEffectiveLimits(salesPlan, marketingPlan, isTrial);
+  const total = limits.totalCredits || 1000;
   const balance = wallet?.balance ?? 0;
   const percent = total > 0 ? Math.min((balance / total) * 100, 100) : 0;
 

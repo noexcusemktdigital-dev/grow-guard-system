@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
-import { getPlanBySlug } from "@/constants/plans";
+import { getEffectiveLimits } from "@/constants/plans";
 import { SitePreview } from "@/components/sites/SitePreview";
 import { SiteHistory, type SavedSite } from "@/components/sites/SiteHistory";
 import { useClienteSitesDB, useCreateClientSite } from "@/hooks/useClienteSitesDB";
@@ -176,8 +176,8 @@ function QualityBar({ filled, total }: { filled: number; total: number }) {
 
 export default function ClienteSites() {
   const { data: subscription } = useClienteSubscription();
-  const plan = getPlanBySlug(subscription?.plan);
-  const maxSites = plan?.maxSites || 1;
+  const limits = getEffectiveLimits((subscription as any)?.sales_plan, (subscription as any)?.marketing_plan, subscription?.status === "trial");
+  const maxSites = limits.maxSites || 1;
   const { data: orgId } = useUserOrgId();
 
   const { data: dbSites } = useClienteSitesDB();
@@ -752,7 +752,7 @@ export default function ClienteSites() {
   return (
     <div className="w-full space-y-6">
       <PageHeader title="Sites & Landing Pages" subtitle="Gere sites profissionais com IA e publique no seu domínio" icon={<Globe className="w-5 h-5 text-primary" />} />
-      <UsageQuotaBanner used={sites.length} limit={maxSites} label="sites ativos" planName={plan?.name ?? "Starter"} />
+      <UsageQuotaBanner used={sites.length} limit={maxSites} label="sites ativos" planName="Atual" />
       <Button className="w-full gap-2" size="lg" onClick={() => setCreating(true)} disabled={sites.length >= maxSites}>
         <Sparkles className="w-4 h-4" /> Criar Novo Site
       </Button>

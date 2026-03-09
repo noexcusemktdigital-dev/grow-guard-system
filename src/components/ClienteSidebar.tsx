@@ -19,7 +19,7 @@ import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
 import { useCreditAlert } from "@/hooks/useCreditAlert";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { getPlanBySlug } from "@/constants/plans";
+import { getEffectiveLimits } from "@/constants/plans";
 import { differenceInDays } from "date-fns";
 
 interface SidebarItem {
@@ -185,10 +185,13 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
   const trialUrgent = trialDays <= 3;
 
   const currentBalance = wallet?.balance ?? 0;
-  const planConfig = getPlanBySlug(subscription?.plan);
-  const totalIncluded = planConfig?.credits ?? 2000;
+  const isTrial = subscription?.status === "trial";
+  const salesPlan = (subscription as any)?.sales_plan as string | null;
+  const marketingPlan = (subscription as any)?.marketing_plan as string | null;
+  const limits = getEffectiveLimits(salesPlan, marketingPlan, isTrial);
+  const totalIncluded = limits.totalCredits || 1000;
   const creditPercent = totalIncluded > 0 ? (currentBalance / totalIncluded) * 100 : 0;
-  const planName = subscription?.plan ?? "—";
+  const planLabel = isTrial ? "Trial" : [salesPlan && `V:${salesPlan}`, marketingPlan && `M:${marketingPlan}`].filter(Boolean).join(" + ") || "—";
 
   return (
     <>
@@ -281,7 +284,7 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
               <div className="flex items-center gap-1.5 mt-2">
                 <Badge variant="outline" className="text-[9px] px-2 py-0 h-[18px] gap-1 border-sidebar-border text-sidebar-foreground rounded-full">
                   <Zap className="w-2.5 h-2.5 text-sidebar-primary" />
-                  {planName}{isTrialing && " · Trial"}
+                  {planLabel}{isTrialing && " · Trial"}
                 </Badge>
               </div>
             </>

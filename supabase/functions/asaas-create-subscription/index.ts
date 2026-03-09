@@ -10,11 +10,31 @@ const corsHeaders = {
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
-const PLAN_PRICES: Record<string, { base: number; combo: number }> = {
-  starter: { base: 197, combo: 297 },
-  growth: { base: 497, combo: 697 },
-  scale: { base: 997, combo: 1397 },
+const SALES_PRICES: Record<string, number> = {
+  starter: 197,
+  professional: 497,
+  enterprise: 997,
 };
+
+const MARKETING_PRICES: Record<string, number> = {
+  starter: 147,
+  professional: 397,
+  enterprise: 797,
+};
+
+const SALES_CREDITS: Record<string, number> = {
+  starter: 3000,
+  professional: 15000,
+  enterprise: 40000,
+};
+
+const MARKETING_CREDITS: Record<string, number> = {
+  starter: 2000,
+  professional: 10000,
+  enterprise: 30000,
+};
+
+const COMBO_DISCOUNT = 0.15;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -45,23 +65,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { organization_id, plan_id, billing_type, modules } = await req.json();
+    const { organization_id, sales_plan, marketing_plan, billing_type } = await req.json();
 
-    if (!organization_id || !plan_id || !billing_type) {
-      return new Response(JSON.stringify({ error: "organization_id, plan_id and billing_type are required" }), {
+    if (!organization_id || !billing_type) {
+      return new Response(JSON.stringify({ error: "organization_id and billing_type are required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const planPricing = PLAN_PRICES[plan_id];
-    if (!planPricing) {
-      return new Response(JSON.stringify({ error: "Invalid plan_id" }), {
+    if (!sales_plan && !marketing_plan) {
+      return new Response(JSON.stringify({ error: "At least one of sales_plan or marketing_plan is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const moduleChoice = modules === "combo" ? "combo" : (modules || "comercial");
-    let planPrice = moduleChoice === "combo" ? planPricing.combo : planPricing.base;
+    // Calculate price
+    const salesPrice = sales_plan ? (SALES_PRICES[sales_plan] ?? 0) : 0;
+    const marketingPrice = marketing_plan ? (MARKETING_PRICES[marketing_plan] ?? 0) : 0;
+
+    if ((sales_plan && !SALES_PRICES[sales_plan]) || (marketing_plan && !MARKETING_PRICES[marketing_plan])) {
+      return new Response(JSON.stringify({ error: "Invalid plan tier" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const isCombo = !!sales_plan && !!marketing_plan;
+    const rawPrice = salesPrice + marketingPrice;
+    let planPrice = isCombo ? Math.round(rawPrice * (1 - COMBO_DISCOUNT)) : rawPrice;
 
     const validBillingTypes = ["CREDIT_CARD", "BOLETO", "PIX"];
     if (!validBillingTypes.includes(billing_type)) {
@@ -86,7 +116,6 @@ Deno.serve(async (req) => {
     let discountPercent = 0;
     let referralOrgId: string | null = null;
 
-    // Get existing subscription to check stored discount
     const { data: existingSub } = await adminClient
       .from("subscriptions")
       .select("discount_percent, referral_org_id")
@@ -97,7 +126,6 @@ Deno.serve(async (req) => {
       discountPercent = existingSub.discount_percent;
       referralOrgId = existingSub.referral_org_id;
     } else if (org.parent_org_id) {
-      // Check if parent has referral discount config
       const { data: parentDiscount } = await adminClient
         .from("referral_discounts")
         .select("discount_percent, is_active")
@@ -111,7 +139,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Apply discount
     let finalPrice = planPrice;
     if (discountPercent > 0) {
       finalPrice = Math.round(planPrice * (1 - discountPercent / 100) * 100) / 100;
@@ -129,12 +156,18 @@ Deno.serve(async (req) => {
 
     const today = new Date();
     const nextDueDate = today.toISOString().split("T")[0];
-    const moduleLabel = moduleChoice === "combo" ? "Combo" : moduleChoice === "marketing" ? "Marketing" : "Comercial";
+
+    const moduleLabels: string[] = [];
+    if (sales_plan) moduleLabels.push(`Vendas ${sales_plan}`);
+    if (marketing_plan) moduleLabels.push(`Mkt ${marketing_plan}`);
+    const moduleLabel = moduleLabels.join(" + ");
+
+    // Determine modules value for legacy compat
+    const modulesValue = isCombo ? "combo" : (sales_plan ? "comercial" : "marketing");
 
     // Build split config if client is linked to a franchisee
     const splitConfig: any[] = [];
     if (referralOrgId) {
-      // Get franchisee's commission percent and wallet ID
       const { data: franchiseeOrg } = await adminClient
         .from("organizations")
         .select("saas_commission_percent, asaas_wallet_id")
@@ -144,7 +177,6 @@ Deno.serve(async (req) => {
       if (franchiseeOrg?.asaas_wallet_id) {
         const commissionPercent = franchiseeOrg.saas_commission_percent || 20;
         const commissionValue = Math.round(finalPrice * commissionPercent / 100 * 100) / 100;
-
         if (commissionValue > 0) {
           splitConfig.push({
             walletId: franchiseeOrg.asaas_wallet_id,
@@ -161,8 +193,8 @@ Deno.serve(async (req) => {
       value: finalPrice,
       cycle: "MONTHLY",
       nextDueDate,
-      description: `Plano ${plan_id.charAt(0).toUpperCase() + plan_id.slice(1)} ${moduleLabel} — NOE`,
-      externalReference: `${org.id}|sub|${plan_id}|${moduleChoice}`,
+      description: `${moduleLabel}${isCombo ? " (Combo)" : ""} — NOE`,
+      externalReference: `${org.id}|sub|${sales_plan || "none"}|${marketing_plan || "none"}|${modulesValue}`,
     };
 
     if (splitConfig.length > 0) {
@@ -189,9 +221,11 @@ Deno.serve(async (req) => {
     await adminClient
       .from("subscriptions")
       .update({
-        plan: plan_id,
+        plan: sales_plan || marketing_plan || "starter",
         status: "active",
-        modules: moduleChoice,
+        modules: modulesValue,
+        sales_plan: sales_plan || null,
+        marketing_plan: marketing_plan || null,
         asaas_subscription_id: subscriptionData.id,
         asaas_billing_type: billing_type,
         expires_at: expiresAt.toISOString(),
@@ -200,8 +234,8 @@ Deno.serve(async (req) => {
       })
       .eq("organization_id", org.id);
 
-    const planCredits: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
-    const credits = planCredits[plan_id] || 500;
+    // Calculate total credits
+    const totalCredits = (sales_plan ? (SALES_CREDITS[sales_plan] || 0) : 0) + (marketing_plan ? (MARKETING_CREDITS[marketing_plan] || 0) : 0);
 
     const { data: wallet } = await adminClient
       .from("credit_wallets")
@@ -209,19 +243,19 @@ Deno.serve(async (req) => {
       .eq("organization_id", org.id)
       .maybeSingle();
 
-    if (wallet) {
-      const newBalance = wallet.balance + credits;
+    if (wallet && totalCredits > 0) {
+      const newBalance = wallet.balance + totalCredits;
       await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
       await adminClient.from("credit_transactions").insert({
         organization_id: org.id,
         type: "purchase",
-        amount: credits,
+        amount: totalCredits,
         balance_after: newBalance,
-        description: `Ativação plano ${plan_id} ${moduleLabel} — ${credits} créditos`,
+        description: `Ativação ${moduleLabel} — ${totalCredits} créditos`,
       });
     }
 
-    console.log(`Subscription created for org ${org.id}: plan=${plan_id}, modules=${moduleChoice}, price=${finalPrice}, discount=${discountPercent}%, asaas_sub=${subscriptionData.id}`);
+    console.log(`Subscription created for org ${org.id}: sales=${sales_plan}, marketing=${marketing_plan}, price=${finalPrice}, discount=${discountPercent}%, asaas_sub=${subscriptionData.id}`);
 
     return new Response(JSON.stringify({
       success: true,

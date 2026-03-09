@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3,
-  History, Package, FileText, ExternalLink, Receipt,
+  History, Package, FileText, ExternalLink, Receipt, Target, Megaphone,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +18,12 @@ import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useCreditAlert } from "@/hooks/useCreditAlert";
 import { useCreditTransactions } from "@/hooks/useCreditTransactions";
-import { PLANS, CREDIT_PACKS, getPlanBySlug, getPlanPrice, PlanConfig, ModuleChoice, CreditPack } from "@/constants/plans";
+import {
+  SALES_PLANS, MARKETING_PLANS, CREDIT_PACKS, COMBO_DISCOUNT,
+  getComboPrice, getComboSavings, getEffectiveLimits,
+  getSalesPlan, getMarketingPlan,
+  SalesModulePlan, MarketingModulePlan, CreditPack, EXTRA_USER_PRICE,
+} from "@/constants/plans";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -211,31 +216,114 @@ function InvoicesCard() {
   );
 }
 
-/* ── Subscription Dialog ── */
-function PlanSubscriptionDialog({
-  plan, modules, open, onOpenChange,
+/* ── Inline Payment View ── */
+function InlinePaymentView({ result, billingType, onClose }: { result: any; billingType: string; onClose: () => void }) {
+  const copyPixCode = () => {
+    if (result.pix_copy_paste) {
+      navigator.clipboard.writeText(result.pix_copy_paste);
+      toast.success("Código PIX copiado!");
+    }
+  };
+
+  if (billingType === "PIX") {
+    return (
+      <div className="space-y-4 py-2 text-center">
+        <p className="text-sm text-muted-foreground">Escaneie o QR Code ou copie o código abaixo</p>
+        {result.pix_qr_code_base64 ? (
+          <img src={`data:image/png;base64,${result.pix_qr_code_base64}`} alt="QR Code PIX" className="mx-auto w-56 h-56 rounded-lg border" />
+        ) : result.pix_qr_code ? (
+          <img src={result.pix_qr_code} alt="QR Code PIX" className="mx-auto w-56 h-56 rounded-lg border" />
+        ) : (
+          <p className="text-sm text-muted-foreground">QR Code não disponível</p>
+        )}
+        {result.pix_copy_paste && (
+          <div className="space-y-2">
+            <div className="bg-muted rounded-lg p-3 text-xs font-mono break-all max-h-20 overflow-y-auto text-foreground">{result.pix_copy_paste}</div>
+            <Button onClick={copyPixCode} variant="outline" className="w-full">Copiar código PIX</Button>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-sm pt-2 border-t">
+          <span className="text-muted-foreground">Valor</span>
+          <span className="font-semibold text-foreground">R$ {result.value}</span>
+        </div>
+        <Button variant="secondary" onClick={onClose} className="w-full">Fechar</Button>
+      </div>
+    );
+  }
+
+  if (billingType === "BOLETO") {
+    return (
+      <div className="space-y-4 py-2">
+        <p className="text-sm text-muted-foreground text-center">Seu boleto foi gerado com sucesso</p>
+        {result.bank_slip_url ? (
+          <iframe src={result.bank_slip_url} className="w-full h-80 rounded-lg border" title="Boleto" />
+        ) : (
+          <p className="text-sm text-muted-foreground text-center">Boleto não disponível para visualização</p>
+        )}
+        <div className="flex items-center justify-between text-sm pt-2 border-t">
+          <span className="text-muted-foreground">Valor</span>
+          <span className="font-semibold text-foreground">R$ {result.value}</span>
+        </div>
+        <div className="flex gap-2">
+          {result.bank_slip_url && (
+            <Button variant="outline" className="flex-1" onClick={() => window.open(result.bank_slip_url, "_blank")}>Abrir Boleto</Button>
+          )}
+          <Button variant="secondary" onClick={onClose} className="flex-1">Fechar</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 py-2">
+      <p className="text-sm text-muted-foreground text-center">Complete o pagamento abaixo</p>
+      {result.invoice_url ? (
+        <iframe src={result.invoice_url} className="w-full h-96 rounded-lg border" title="Pagamento" />
+      ) : (
+        <p className="text-sm text-muted-foreground text-center">Link de pagamento não disponível</p>
+      )}
+      <Button variant="secondary" onClick={onClose} className="w-full">Fechar</Button>
+    </div>
+  );
+}
+
+/* ── Subscription Dialog (new modular) ── */
+function ModularSubscriptionDialog({
+  salesPlanId, marketingPlanId, open, onOpenChange,
 }: {
-  plan: PlanConfig | null; modules: ModuleChoice; open: boolean; onOpenChange: (o: boolean) => void;
+  salesPlanId: string | null; marketingPlanId: string | null; open: boolean; onOpenChange: (o: boolean) => void;
 }) {
   const [billingType, setBillingType] = useState("CREDIT_CARD");
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
-  const price = plan ? getPlanPrice(plan, modules) : 0;
+
+  const sp = getSalesPlan(salesPlanId);
+  const mp = getMarketingPlan(marketingPlanId);
+  const isCombo = !!sp && !!mp;
+  const rawPrice = (sp?.price ?? 0) + (mp?.price ?? 0);
+  const finalPrice = isCombo ? getComboPrice(sp!.price, mp!.price) : rawPrice;
+  const savings = isCombo ? getComboSavings(sp!.price, mp!.price) : 0;
+  const totalCredits = (sp?.credits ?? 0) + (mp?.credits ?? 0);
 
   const subscribe = useMutation({
     mutationFn: async () => {
-      // Refresh session to ensure fresh token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { data, error } = await supabase.functions.invoke("asaas-create-subscription", {
-        body: { organization_id: orgId, plan_id: plan!.id, billing_type: billingType, modules },
+        body: {
+          organization_id: orgId,
+          sales_plan: salesPlanId,
+          marketing_plan: marketingPlanId,
+          billing_type: billingType,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`Plano ${plan!.name} ativado!`);
+      const label = [sp && `Vendas ${sp.name}`, mp && `Marketing ${mp.name}`].filter(Boolean).join(" + ");
+      toast.success(`Plano ${label} ativado!`);
       if (data?.payment_link) toast.info("Link de pagamento enviado.");
       qc.invalidateQueries({ queryKey: ["subscription"] });
       qc.invalidateQueries({ queryKey: ["credit-wallet"] });
@@ -251,23 +339,26 @@ function PlanSubscriptionDialog({
     },
   });
 
-  if (!plan) return null;
-
-  const moduleLabel = modules === "combo" ? "Comercial + Marketing" : modules === "marketing" ? "Marketing" : "Comercial";
+  const moduleLabel = [sp && `Vendas ${sp.name}`, mp && `Marketing ${mp.name}`].filter(Boolean).join(" + ");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Assinar Plano {plan.name}</DialogTitle>
+          <DialogTitle>Assinar {moduleLabel}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-foreground">R$ {price}</span>
+              <span className="text-3xl font-bold text-foreground">R$ {finalPrice}</span>
               <span className="text-muted-foreground">/mês</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">{moduleLabel} · {plan.credits.toLocaleString("pt-BR")} créditos · {plan.maxUsers} usuários</p>
+            {isCombo && savings > 0 && (
+              <p className="text-sm text-green-600 font-medium mt-1">
+                Combo -15% · Economia de R$ {savings}/mês
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground mt-1">{totalCredits.toLocaleString("pt-BR")} créditos/mês</p>
           </div>
           <div className="space-y-3">
             <Label className="text-sm font-medium">Forma de pagamento</Label>
@@ -299,88 +390,6 @@ function PlanSubscriptionDialog({
   );
 }
 
-/* ── Inline Payment View ── */
-function InlinePaymentView({ result, billingType, onClose }: { result: any; billingType: string; onClose: () => void }) {
-  const copyPixCode = () => {
-    if (result.pix_copy_paste) {
-      navigator.clipboard.writeText(result.pix_copy_paste);
-      toast.success("Código PIX copiado!");
-    }
-  };
-
-  if (billingType === "PIX") {
-    return (
-      <div className="space-y-4 py-2 text-center">
-        <p className="text-sm text-muted-foreground">Escaneie o QR Code ou copie o código abaixo</p>
-        {result.pix_qr_code_base64 ? (
-          <img
-            src={`data:image/png;base64,${result.pix_qr_code_base64}`}
-            alt="QR Code PIX"
-            className="mx-auto w-56 h-56 rounded-lg border"
-          />
-        ) : result.pix_qr_code ? (
-          <img src={result.pix_qr_code} alt="QR Code PIX" className="mx-auto w-56 h-56 rounded-lg border" />
-        ) : (
-          <p className="text-sm text-muted-foreground">QR Code não disponível</p>
-        )}
-        {result.pix_copy_paste && (
-          <div className="space-y-2">
-            <div className="bg-muted rounded-lg p-3 text-xs font-mono break-all max-h-20 overflow-y-auto text-foreground">
-              {result.pix_copy_paste}
-            </div>
-            <Button onClick={copyPixCode} variant="outline" className="w-full">
-              Copiar código PIX
-            </Button>
-          </div>
-        )}
-        <div className="flex items-center justify-between text-sm pt-2 border-t">
-          <span className="text-muted-foreground">Valor</span>
-          <span className="font-semibold text-foreground">R$ {result.value}</span>
-        </div>
-        <Button variant="secondary" onClick={onClose} className="w-full">Fechar</Button>
-      </div>
-    );
-  }
-
-  if (billingType === "BOLETO") {
-    return (
-      <div className="space-y-4 py-2">
-        <p className="text-sm text-muted-foreground text-center">Seu boleto foi gerado com sucesso</p>
-        {result.bank_slip_url ? (
-          <iframe src={result.bank_slip_url} className="w-full h-80 rounded-lg border" title="Boleto" />
-        ) : (
-          <p className="text-sm text-muted-foreground text-center">Boleto não disponível para visualização</p>
-        )}
-        <div className="flex items-center justify-between text-sm pt-2 border-t">
-          <span className="text-muted-foreground">Valor</span>
-          <span className="font-semibold text-foreground">R$ {result.value}</span>
-        </div>
-        <div className="flex gap-2">
-          {result.bank_slip_url && (
-            <Button variant="outline" className="flex-1" onClick={() => window.open(result.bank_slip_url, "_blank")}>
-              Abrir Boleto
-            </Button>
-          )}
-          <Button variant="secondary" onClick={onClose} className="flex-1">Fechar</Button>
-        </div>
-      </div>
-    );
-  }
-
-  // CREDIT_CARD — hosted checkout in iframe
-  return (
-    <div className="space-y-4 py-2">
-      <p className="text-sm text-muted-foreground text-center">Complete o pagamento abaixo</p>
-      {result.invoice_url ? (
-        <iframe src={result.invoice_url} className="w-full h-96 rounded-lg border" title="Pagamento" />
-      ) : (
-        <p className="text-sm text-muted-foreground text-center">Link de pagamento não disponível</p>
-      )}
-      <Button variant="secondary" onClick={onClose} className="w-full">Fechar</Button>
-    </div>
-  );
-}
-
 /* ── Credit Pack Purchase Dialog ── */
 function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const [billingType, setBillingType] = useState("PIX");
@@ -389,16 +398,12 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
   const qc = useQueryClient();
 
   const handleClose = (o: boolean) => {
-    if (!o) {
-      setPaymentResult(null);
-      setBillingType("PIX");
-    }
+    if (!o) { setPaymentResult(null); setBillingType("PIX"); }
     onOpenChange(o);
   };
 
   const purchase = useMutation({
     mutationFn: async () => {
-      // Refresh session to ensure fresh token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { data, error } = await supabase.functions.invoke("asaas-create-charge", {
@@ -461,28 +466,90 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
   );
 }
 
+/* ── Module Plan Card ── */
+function ModulePlanCard({
+  plan, isCurrent, onSelect,
+}: {
+  plan: { id: string; name: string; price: number; credits: number; features: string[]; popular: boolean };
+  isCurrent: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Card className={`relative ${plan.popular ? "border-primary ring-2 ring-primary/20" : ""} ${isCurrent ? "bg-primary/5" : ""}`}>
+      {plan.popular && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+          <Badge className="gap-1 bg-primary text-primary-foreground"><Star className="w-3 h-3" /> Mais Popular</Badge>
+        </div>
+      )}
+      {isCurrent && (
+        <div className="absolute -top-3 right-4">
+          <Badge variant="outline" className="gap-1 bg-card"><Check className="w-3 h-3" /> Atual</Badge>
+        </div>
+      )}
+      <CardHeader className="pt-6">
+        <CardTitle className="flex items-center gap-2">
+          <Crown className="w-5 h-5 text-primary" />
+          {plan.name}
+        </CardTitle>
+        <div className="flex items-baseline gap-1 mt-2">
+          <span className="text-3xl font-bold text-foreground">R$ {plan.price}</span>
+          <span className="text-sm text-muted-foreground">/mês</span>
+        </div>
+        <p className="text-sm text-muted-foreground">{plan.credits.toLocaleString("pt-BR")} créditos</p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <ul className="space-y-2">
+          {plan.features.map((f, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm">
+              <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <span className="text-foreground">{f}</span>
+            </li>
+          ))}
+        </ul>
+        <Button className="w-full" variant={isCurrent ? "outline" : "default"} disabled={isCurrent} onClick={onSelect}>
+          {isCurrent ? "Plano Atual" : "Escolher Plano"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ── Main Page ── */
 export default function ClientePlanoCreditos() {
   const { data: wallet, isLoading: walletLoading } = useClienteWallet();
   const { data: subscription, isLoading: subLoading } = useClienteSubscription();
   const isLoading = walletLoading || subLoading;
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanConfig | null>(null);
+  // Dialog state
+  const [dialogSalesPlan, setDialogSalesPlan] = useState<string | null>(null);
+  const [dialogMarketingPlan, setDialogMarketingPlan] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [moduleToggle, setModuleToggle] = useState<ModuleChoice>("comercial");
   const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
   const [packDialogOpen, setPackDialogOpen] = useState(false);
 
-  const balance = wallet?.balance ?? 0;
-  const currentPlanSlug = subscription?.plan;
-  const currentModules = (subscription as any)?.modules as ModuleChoice || "comercial";
-  const planDetails = getPlanBySlug(currentPlanSlug);
-  const totalIncluded = planDetails?.credits ?? 2000;
-  const creditPercent = totalIncluded > 0 ? Math.min((balance / totalIncluded) * 100, 100) : 0;
-  const planName = planDetails?.name ?? "Sem plano";
-  const planPrice = planDetails ? getPlanPrice(planDetails, currentModules) : 0;
+  const isTrial = subscription?.status === "trial";
+  const currentSalesPlan = (subscription as any)?.sales_plan as string | null;
+  const currentMarketingPlan = (subscription as any)?.marketing_plan as string | null;
 
-  const moduleLabel = currentModules === "combo" ? "Comercial + Marketing" : currentModules === "marketing" ? "Marketing" : "Comercial";
+  const limits = getEffectiveLimits(currentSalesPlan, currentMarketingPlan, isTrial);
+  const balance = wallet?.balance ?? 0;
+  const totalIncluded = limits.totalCredits || 1000;
+  const creditPercent = totalIncluded > 0 ? Math.min((balance / totalIncluded) * 100, 100) : 0;
+
+  const currentSalesObj = getSalesPlan(currentSalesPlan);
+  const currentMktObj = getMarketingPlan(currentMarketingPlan);
+  const isCombo = !!currentSalesObj && !!currentMktObj;
+  const currentPrice = isCombo
+    ? getComboPrice(currentSalesObj!.price, currentMktObj!.price)
+    : (currentSalesObj?.price ?? 0) + (currentMktObj?.price ?? 0);
+
+  const statusLabel = isTrial ? "Trial" : [currentSalesObj && `Vendas ${currentSalesObj.name}`, currentMktObj && `Mkt ${currentMktObj.name}`].filter(Boolean).join(" + ") || "Sem plano";
+
+  const openSubscription = (salesId: string | null, mktId: string | null) => {
+    setDialogSalesPlan(salesId);
+    setDialogMarketingPlan(mktId);
+    setDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -506,16 +573,15 @@ export default function ClientePlanoCreditos() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Status do Plano</CardTitle>
-              <Badge variant={subscription?.status === "trial" ? "outline" : "default"} className="gap-1">
-                {subscription?.status === "trial" ? "🧪 Trial" : planName}
+              <Badge variant={isTrial ? "outline" : "default"} className="gap-1">
+                {isTrial ? "🧪 Trial" : statusLabel}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* Trial banner */}
-            {subscription?.status === "trial" && (() => {
+            {isTrial && (() => {
               const createdAt = subscription?.created_at ? new Date(subscription.created_at) : new Date();
-              const trialEnd = subscription?.expires_at ? new Date(subscription.expires_at) : new Date(createdAt.getTime() + 14 * 86400000);
+              const trialEnd = subscription?.expires_at ? new Date(subscription.expires_at) : new Date(createdAt.getTime() + 7 * 86400000);
               const daysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000));
               return (
                 <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1">
@@ -528,27 +594,37 @@ export default function ClientePlanoCreditos() {
                 </div>
               );
             })()}
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Plano</span>
-              <span className="font-semibold text-foreground">{planName} — R$ {planPrice}/mês</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Módulos</span>
-              <Badge variant="secondary" className="text-xs">{moduleLabel}</Badge>
-            </div>
-            {subscription?.expires_at && subscription?.status !== "trial" && (
+
+            {currentSalesObj && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-1.5"><Target className="w-3.5 h-3.5" /> Vendas</span>
+                <span className="font-semibold text-foreground">{currentSalesObj.name} — R$ {currentSalesObj.price}/mês</span>
+              </div>
+            )}
+            {currentMktObj && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-1.5"><Megaphone className="w-3.5 h-3.5" /> Marketing</span>
+                <span className="font-semibold text-foreground">{currentMktObj.name} — R$ {currentMktObj.price}/mês</span>
+              </div>
+            )}
+            {isCombo && (
+              <div className="flex items-center justify-between text-sm border-t pt-2">
+                <span className="text-muted-foreground">Total Combo (-15%)</span>
+                <span className="font-bold text-foreground">R$ {currentPrice}/mês</span>
+              </div>
+            )}
+            {!isTrial && !currentSalesObj && !currentMktObj && (
+              <p className="text-sm text-muted-foreground">Nenhum plano ativo. Escolha abaixo para começar.</p>
+            )}
+
+            {subscription?.expires_at && !isTrial && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Renovação</span>
                 <span className="text-foreground">{new Date(subscription.expires_at).toLocaleDateString("pt-BR")}</span>
               </div>
             )}
-            <Button className="w-full gap-2" onClick={() => {
-              const upgradePlan = PLANS.find((p) => p.id !== currentPlanSlug && p.basePrice > (planDetails?.basePrice ?? 0));
-              if (upgradePlan) { setSelectedPlan(upgradePlan); setDialogOpen(true); }
-              else toast.info("Você já está no plano mais avançado!");
-            }}>
-              <ArrowUpRight className="w-4 h-4" /> Fazer Upgrade
-            </Button>
+
+            <p className="text-xs text-muted-foreground">Usuário adicional: R$ {EXTRA_USER_PRICE}/mês</p>
           </CardContent>
         </Card>
 
@@ -575,98 +651,117 @@ export default function ClientePlanoCreditos() {
         </Card>
       </div>
 
-      {/* Plans */}
+      {/* Plans — Modular */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-foreground">Planos Disponíveis</h2>
-          <Tabs value={moduleToggle} onValueChange={(v) => setModuleToggle(v as ModuleChoice)} className="w-auto">
+        <Tabs defaultValue="vendas">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground">Planos Disponíveis</h2>
             <TabsList className="h-8">
-              <TabsTrigger value="comercial" className="text-xs px-3 h-7">Comercial</TabsTrigger>
-              <TabsTrigger value="marketing" className="text-xs px-3 h-7">Marketing</TabsTrigger>
+              <TabsTrigger value="vendas" className="text-xs px-3 h-7 gap-1"><Target className="w-3 h-3" /> Vendas</TabsTrigger>
+              <TabsTrigger value="marketing" className="text-xs px-3 h-7 gap-1"><Megaphone className="w-3 h-3" /> Marketing</TabsTrigger>
               <TabsTrigger value="combo" className="text-xs px-3 h-7">🔥 Combo</TabsTrigger>
             </TabsList>
-          </Tabs>
-        </div>
+          </div>
 
-        {moduleToggle === "combo" && (
-          <Card className="mb-4 border-primary/30 bg-primary/5">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Star className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Economize até 30% com o Combo!</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Ao escolher Comercial + Marketing juntos, você desbloqueia o CRM completo, geração de conteúdos, artes sociais, sites, scripts de vendas e estratégias — tudo em um só plano com desconto.
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {["CRM + Funis", "Conteúdos IA", "Sites", "Artes Sociais", "Scripts", "Estratégias"].map((b) => (
-                      <Badge key={b} variant="secondary" className="text-[10px]">{b}</Badge>
-                    ))}
+          {/* Sales */}
+          <TabsContent value="vendas">
+            <p className="text-sm text-muted-foreground mb-4">CRM, Chat WhatsApp, Agentes IA, Scripts, Disparos, Plano de Vendas, Checklist</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {SALES_PLANS.map((plan) => (
+                <ModulePlanCard
+                  key={plan.id}
+                  plan={plan}
+                  isCurrent={currentSalesPlan === plan.id}
+                  onSelect={() => openSubscription(plan.id, currentMarketingPlan)}
+                />
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Marketing */}
+          <TabsContent value="marketing">
+            <p className="text-sm text-muted-foreground mb-4">Conteúdos, Artes Sociais, Sites, Tráfego Pago, Estratégia de Marketing</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {MARKETING_PLANS.map((plan) => (
+                <ModulePlanCard
+                  key={plan.id}
+                  plan={plan}
+                  isCurrent={currentMarketingPlan === plan.id}
+                  onSelect={() => openSubscription(currentSalesPlan, plan.id)}
+                />
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Combo */}
+          <TabsContent value="combo">
+            <Card className="mb-4 border-primary/30 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Star className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Economize {Math.round(COMBO_DISCOUNT * 100)}% com o Combo!</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Contrate Vendas + Marketing juntos e desbloqueie todas as 12 ferramentas com desconto.
+                    </p>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {SALES_PLANS.map((sp, i) => {
+                const mp = MARKETING_PLANS[i];
+                const combo = getComboPrice(sp.price, mp.price);
+                const savings = getComboSavings(sp.price, mp.price);
+                const totalCredits = sp.credits + mp.credits;
+                const isCurrent = currentSalesPlan === sp.id && currentMarketingPlan === mp.id;
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {PLANS.map((plan) => {
-            const isCurrent = plan.id === currentPlanSlug;
-            const displayPrice = getPlanPrice(plan, moduleToggle);
-            const comboSavings = moduleToggle === "combo" ? Math.round((1 - plan.comboPrice / (plan.basePrice * 2)) * 100) : 0;
-            return (
-              <Card key={plan.id} className={`relative ${plan.popular ? "border-primary ring-2 ring-primary/20" : ""} ${isCurrent ? "bg-primary/5" : ""}`}>
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="gap-1 bg-primary text-primary-foreground"><Star className="w-3 h-3" /> Mais Popular</Badge>
-                  </div>
-                )}
-                {isCurrent && (
-                  <div className="absolute -top-3 right-4">
-                    <Badge variant="outline" className="gap-1 bg-card"><Check className="w-3 h-3" /> Atual</Badge>
-                  </div>
-                )}
-                <CardHeader className="pt-6">
-                  <CardTitle className="flex items-center gap-2">
-                    <Crown className="w-5 h-5 text-primary" />
-                    {plan.name}
-                  </CardTitle>
-                  <div className="flex items-baseline gap-1 mt-2">
-                    <span className="text-3xl font-bold text-foreground">R$ {displayPrice}</span>
-                    <span className="text-sm text-muted-foreground">/mês</span>
-                  </div>
-                  {moduleToggle === "combo" && comboSavings > 0 && (
-                    <Badge variant="secondary" className="text-[10px] w-fit mt-1">Economize {comboSavings}%</Badge>
-                  )}
-                  <p className="text-sm text-muted-foreground">
-                    {plan.credits.toLocaleString("pt-BR")} créditos · {plan.maxUsers} usuários
-                  </p>
-                  {moduleToggle === "combo" && (
-                    <p className="text-xs text-primary font-medium">Comercial + Marketing inclusos</p>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <ul className="space-y-2">
-                    {plan.features.map((f, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                        <span className="text-foreground">{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    className="w-full"
-                    variant={isCurrent ? "outline" : "default"}
-                    disabled={isCurrent}
-                    onClick={() => { setSelectedPlan(plan); setModuleToggle(moduleToggle); setDialogOpen(true); }}
-                  >
-                    {isCurrent ? "Plano Atual" : "Escolher Plano"}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                return (
+                  <Card key={sp.id} className={`relative ${sp.popular ? "border-primary ring-2 ring-primary/20" : ""} ${isCurrent ? "bg-primary/5" : ""}`}>
+                    {sp.popular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Badge className="gap-1 bg-primary text-primary-foreground"><Star className="w-3 h-3" /> Mais Popular</Badge>
+                      </div>
+                    )}
+                    {isCurrent && (
+                      <div className="absolute -top-3 right-4">
+                        <Badge variant="outline" className="gap-1 bg-card"><Check className="w-3 h-3" /> Atual</Badge>
+                      </div>
+                    )}
+                    <CardHeader className="pt-6">
+                      <CardTitle className="flex items-center gap-2">
+                        <Crown className="w-5 h-5 text-primary" />
+                        {sp.name} + {mp.name}
+                      </CardTitle>
+                      <div className="flex items-baseline gap-1 mt-2">
+                        <span className="text-3xl font-bold text-foreground">R$ {combo}</span>
+                        <span className="text-sm text-muted-foreground">/mês</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm text-muted-foreground line-through">R$ {sp.price + mp.price}</span>
+                        <Badge variant="secondary" className="text-[10px]">-R$ {savings}/mês</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{totalCredits.toLocaleString("pt-BR")} créditos · Vendas + Marketing</p>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <ul className="space-y-2">
+                        {[...sp.features.slice(0, 3), ...mp.features.slice(0, 3)].map((f, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm">
+                            <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                            <span className="text-foreground">{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Button className="w-full" variant={isCurrent ? "outline" : "default"} disabled={isCurrent} onClick={() => openSubscription(sp.id, mp.id)}>
+                        {isCurrent ? "Plano Atual" : "Escolher Combo"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Credit Packs */}
@@ -726,7 +821,7 @@ export default function ClientePlanoCreditos() {
 
       <TransactionHistoryCard />
 
-      <PlanSubscriptionDialog plan={selectedPlan} modules={moduleToggle} open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ModularSubscriptionDialog salesPlanId={dialogSalesPlan} marketingPlanId={dialogMarketingPlan} open={dialogOpen} onOpenChange={setDialogOpen} />
       <CreditPackDialog pack={selectedPack} open={packDialogOpen} onOpenChange={setPackDialogOpen} />
     </div>
   );

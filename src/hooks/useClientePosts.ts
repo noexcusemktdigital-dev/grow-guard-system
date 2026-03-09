@@ -4,7 +4,7 @@ import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useClienteSubscription } from "./useClienteSubscription";
-import { getPlanBySlug } from "@/constants/plans";
+import { getEffectiveLimits } from "@/constants/plans";
 
 export interface PostItem {
   id: string;
@@ -258,8 +258,9 @@ export function usePostQuota() {
   const { data: orgId } = useUserOrgId();
   const { data: subscription } = useClienteSubscription();
 
-  const plan = getPlanBySlug(subscription?.plan);
-  const maxPosts = plan?.maxSocialArts ?? 4;
+  const isTrial = subscription?.status === "trial";
+  const limits = getEffectiveLimits((subscription as any)?.sales_plan, (subscription as any)?.marketing_plan, isTrial);
+  const maxPosts = limits.maxSocialArts || 4;
 
   const query = useQuery({
     queryKey: ["post-quota", orgId],

@@ -4542,10 +4542,12 @@ export type Database = {
           discount_percent: number | null
           expires_at: string | null
           id: string
+          marketing_plan: string | null
           modules: string
           organization_id: string
           plan: string
           referral_org_id: string | null
+          sales_plan: string | null
           started_at: string
           status: string
           updated_at: string
@@ -4557,10 +4559,12 @@ export type Database = {
           discount_percent?: number | null
           expires_at?: string | null
           id?: string
+          marketing_plan?: string | null
           modules?: string
           organization_id: string
           plan?: string
           referral_org_id?: string | null
+          sales_plan?: string | null
           started_at?: string
           status?: string
           updated_at?: string
@@ -4572,10 +4576,12 @@ export type Database = {
           discount_percent?: number | null
           expires_at?: string | null
           id?: string
+          marketing_plan?: string | null
           modules?: string
           organization_id?: string
           plan?: string
           referral_org_id?: string | null
+          sales_plan?: string | null
           started_at?: string
           status?: string
           updated_at?: string

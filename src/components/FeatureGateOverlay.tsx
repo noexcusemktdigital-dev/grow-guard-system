@@ -72,6 +72,16 @@ export function FeatureGateOverlay() {
       accent: "from-primary/90 to-primary/70",
       iconBg: "bg-primary/15 text-primary",
     },
+    module_locked: {
+      icon: Lock,
+      title: "Módulo não contratado",
+      description:
+        "Você não possui este módulo no seu plano atual. Contrate o módulo de Vendas ou Marketing para desbloquear estas ferramentas.",
+      cta: "Ver planos disponíveis",
+      ctaPath: "/cliente/plano-creditos",
+      accent: "from-primary/90 to-primary/70",
+      iconBg: "bg-primary/15 text-primary",
+    },
   }[reason];
 
   const Icon = config.icon;
