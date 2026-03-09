@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
     console.log(`[sync] ${validChats.length} valid chats after filtering`);
 
     // Collect all phones from Z-API for orphan detection
-    const zapiPhones = new Set<string>(individualChats.map((c: any) => c.phone));
+    const zapiPhones = new Set<string>(validChats.map((c: any) => c.phone));
 
     // Get existing contacts in ONE query
     const { data: existingContacts } = await adminClient
