@@ -1,31 +1,44 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Teste P2Y COM Referências vs SEM Referências
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### Contexto
+O pipeline de geração já foi atualizado com CoT multimodal. Agora preciso executar o teste real com as 3 imagens de referência da P2Y que você enviou.
 
-### Ações
+### Etapas
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+1. **Deploy do edge function atualizado** — garantir que `generate-social-image` com o CoT multimodal está live
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+2. **Upload das 3 referências para o storage** — salvar em `social-arts/references/p2y/ref1.png`, `ref2.png`, `ref3.png` via storage API
 
-3. **Executar o teste** e analisar o resultado definitivo
+3. **Executar geração COM referências** — chamar `generate-social-image` com:
+   - As 3 URLs públicas no campo `reference_images`
+   - Briefing P2Y: crédito/consórcio, casal jovem, verde limão #C8D941, charcoal #2D2D2D
+   - Headline: "O problema não é parcelar."
+   - Highlight: "É parcelar sem planejamento!"
+   - Supporting text, bullet points (Tempo, Renda, Objetivo)
+   - Brand: "P2Y crédito e investimento"
+   - Format: portrait 4:5
+   - Style: foto_editorial (para foto realista + layout marketing)
+   - Salvar em `posts/test/test-p2y-with-refs.png`
 
-### Detalhe técnico
+4. **Comparar resultados** — apresentar URLs dos dois testes (sem refs e com refs) lado a lado
+
+### Briefing do Teste (baseado no prompt de referência)
 
 ```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+headline: "O problema não é parcelar."
+highlight_headline: "É parcelar sem planejamento!"
+supporting_text: "Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores."
+bullet_points: "Tempo / Renda / Objetivo"
+cta: "Fale com a P2Y"
+brand_name: "P2Y crédito e investimento"
+cena: "Brazilian couple sitting together at home planning finances on a laptop"
+elementos_visuais: "three circular icon elements representing time, income and financial goal"
+format: portrait (4:5)
+art_style: foto_editorial
+identidade_visual: { palette: "#C8D941, #2D2D2D, #FFFFFF", style: "modern financial consulting" }
 ```
 
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
+O CoT multimodal vai analisar as 3 referências e extrair o design system real (cards arredondados, ícones circulares, verde limão) antes de gerar o prompt estruturado.
 
