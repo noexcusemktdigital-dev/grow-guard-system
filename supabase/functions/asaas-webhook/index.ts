@@ -283,24 +283,23 @@ Deno.serve(async (req) => {
           console.log(`SaaS commission registered: franchisee=${clientOrg.parent_org_id}, client=${org.id}, value=R$${commissionValue}`);
         }
 
-        const planCredits = planCreditsMap[planSlug];
-        if (planCredits) {
+        if (totalCredits > 0) {
           const wallet = await getOrCreateWallet(adminClient, org.id);
           if (wallet) {
-            const newBalance = wallet.balance + planCredits;
+            const newBalance = wallet.balance + totalCredits;
             await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
             await adminClient.from("credit_transactions").insert({
               organization_id: org.id,
               type: "purchase",
-              amount: planCredits,
+              amount: totalCredits,
               balance_after: newBalance,
-              description: `Renovação plano ${planSlug} — ${planCredits.toLocaleString()} créditos`,
-              metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, plan: planSlug, modules, event },
+              description: `Renovação ${modules === "combo" ? "combo" : `plano ${planSlug}`} — ${totalCredits.toLocaleString()} créditos`,
+              metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, sales_plan: salesPlan, marketing_plan: marketingPlan, modules, event },
             });
-            console.log(`Subscription renewed for org ${org.id}: plan=${planSlug}, credits=${planCredits}`);
+            console.log(`Subscription renewed for org ${org.id}: sales=${salesPlan}, marketing=${marketingPlan}, credits=${totalCredits}`);
           }
-          return jsonOk({ success: true, event, type: "subscription_renewal", plan: planSlug, credits: planCredits });
         }
+        return jsonOk({ success: true, event, type: "subscription_renewal", plan: planSlug, credits: totalCredits });
       }
 
       // {orgId}|credits|{packId} → credit pack purchase
