@@ -483,8 +483,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Pre-check credits
-    if (organization_id) {
+    // Pre-check credits (skip for test orgs)
+    const isTestOrg = typeof organization_id === "string" && organization_id.startsWith("test-");
+    if (organization_id && !isTestOrg) {
       const { data: wallet } = await supabase
         .from("credit_wallets")
         .select("balance")
