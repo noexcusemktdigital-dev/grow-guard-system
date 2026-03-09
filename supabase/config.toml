@@ -120,5 +120,8 @@ verify_jwt = false
 [functions.crm-run-automations]
 verify_jwt = false
 
-[functions.extract-strategy-answers]
+  [functions.extract-strategy-answers]
+verify_jwt = false
+
+[functions.asaas-buy-credits]
 verify_jwt = false
