@@ -1,31 +1,31 @@
 
 
-## Plano: Diagnóstico definitivo da conexão Asaas
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Causa mais provável
-O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
+### Status: ✅ Implementado
 
-### Ações
+### Resumo
 
-1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
-   - Logar a URL exata sendo chamada
-   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
-   - Logar o response body completo como string raw
-   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
-   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-3. **Executar o teste** e analisar o resultado definitivo
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-### Detalhe técnico
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-```text
-Possível fluxo atual:
-  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
-  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
-  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
-```
-
-O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
-
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
