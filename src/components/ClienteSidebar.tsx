@@ -6,7 +6,7 @@ import {
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
   ChevronDown, Link, CreditCard, Settings, Zap, Lock, Trophy, ClipboardCheck,
-  Headphones,
+  Headphones, Calendar,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
@@ -33,6 +33,7 @@ interface SidebarItem {
 const globalSection: SidebarItem[] = [
   { label: "Início", icon: LayoutDashboard, path: "/cliente/inicio" },
   { label: "Tarefas", icon: CheckSquare, path: "/cliente/checklist" },
+  { label: "Agenda", icon: Calendar, path: "/cliente/agenda" },
   { label: "Gamificação", icon: Trophy, path: "/cliente/gamificacao" },
 ];
 

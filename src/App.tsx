@@ -75,6 +75,7 @@ import ClienteConfiguracoes from "./pages/cliente/ClienteConfiguracoes";
 import ClienteAvaliacoes from "./pages/cliente/ClienteAvaliacoes";
 import ClienteOnboardingCompany from "./pages/cliente/ClienteOnboardingCompany";
 import ClienteSuporte from "./pages/cliente/ClienteSuporte";
+import ClienteAgenda from "./pages/cliente/ClienteAgenda";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -161,6 +162,7 @@ const App = () => (
                 <Route index element={<Navigate to="/cliente/inicio" replace />} />
                 <Route path="inicio" element={<ClienteInicio />} />
                 <Route path="checklist" element={<ClienteChecklist />} />
+                <Route path="agenda" element={<ClienteAgenda />} />
                 <Route path="notificacoes" element={<ClienteNotificacoes />} />
                 <Route path="gamificacao" element={<ClienteGamificacao />} />
                 <Route path="plano-vendas" element={<ClientePlanoVendas />} />
