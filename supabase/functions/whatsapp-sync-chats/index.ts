@@ -195,17 +195,23 @@ Deno.serve(async (req) => {
 
     console.log(`[sync] Fetched ${allChats.length} chats from Z-API`);
 
-    // Filter out groups, broadcasts, status
-    let individualChats = allChats.filter((chat: any) => {
-      if (chat.isGroup) return false;
+    // Classify chats by type (individual, group, broadcast) but keep all except broadcast/status
+    let validChats = allChats.filter((chat: any) => {
       const phone = chat.phone || "";
       if (!phone) return false;
       if (phone.includes("broadcast")) return false;
       if (phone === "status") return false;
-      if (/^\d+-\d{10,}$/.test(phone)) return false;
-      if (phone.endsWith("-group")) return false;
+      if (phone.includes("status@broadcast")) return false;
       return true;
     });
+    
+    // Detect contact type
+    const getContactType = (chat: any): string => {
+      if (chat.isGroup) return "group";
+      const phone = chat.phone || "";
+      if (phone.includes("@g.us") || /^\d+-\d{10,}$/.test(phone) || phone.endsWith("-group")) return "group";
+      return "individual";
+    };
 
     if (filterPhone) {
       individualChats = individualChats.filter((c: any) => c.phone === filterPhone);
