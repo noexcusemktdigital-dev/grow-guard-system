@@ -231,11 +231,10 @@ export function useCrmLeadMutations() {
       cutoff.setDate(cutoff.getDate() - 90);
       const { error } = await supabase
         .from("crm_leads")
-        .update({ archived_at: new Date().toISOString() })
+        .update({ archived_at: new Date().toISOString() } as any)
         .eq("organization_id", orgId!)
         .not("lost_at", "is", null)
-        .lt("lost_at", cutoff.toISOString())
-        .is("archived_at", null);
+        .lt("lost_at", cutoff.toISOString());
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
