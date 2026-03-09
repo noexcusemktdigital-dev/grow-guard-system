@@ -59,6 +59,10 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage }: CrmNewLea
   };
 
   const handleCreate = () => {
+    if (atLimit) {
+      toast({ title: "Limite de leads atingido", description: "Faça upgrade do plano para adicionar mais leads.", variant: "destructive" });
+      return;
+    }
     if (!name.trim()) {
       toast({ title: "Informe o nome do lead", variant: "destructive" });
       return;
@@ -73,6 +77,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage }: CrmNewLea
       source: source || undefined,
       stage: defaultStage,
       tags: tags.length > 0 ? tags : undefined,
+      _maxLeads: maxLeads,
     } as any);
     reset();
     onOpenChange(false);
