@@ -249,6 +249,8 @@ Deno.serve(async (req) => {
         const name = chat.name || null;
         const photoUrl = chat.imgUrl || chat.profileThumbnail || null;
         const unreadCount = parseInt(chat.unreadCount ?? chat.unreadMessages ?? chat.unread ?? chat.unreadQtd ?? "0") || 0;
+        const contactType = getContactType(chat);
+        const participantCount = contactType === "group" ? (chat.participants?.length || null) : null;
 
         const lastMsgTime = extractTimestamp(chat);
         if (lastMsgTime) timestampsFound++;
@@ -260,12 +262,14 @@ Deno.serve(async (req) => {
           const upd: any = {
             instance_id: instance.id,
             unread_count: unreadCount,
+            contact_type: contactType,
           };
           // Do NOT overwrite last_message_at — the webhook sets it accurately.
           // Z-API /chats timestamps are imprecise and break ordering.
           if (name) upd.name = name;
           if (photoUrl) upd.photo_url = photoUrl;
           if (preview && !existing.last_message_preview) upd.last_message_preview = preview;
+          if (participantCount !== null) upd.participant_count = participantCount;
           updates.push({ id: existing.id, data: upd });
           contactsUpdated++;
         } else {
@@ -276,11 +280,13 @@ Deno.serve(async (req) => {
             last_message_at: lastMsgTime || new Date().toISOString(),
             unread_count: unreadCount,
             instance_id: instance.id,
-            attending_mode: "ai",
+            attending_mode: contactType === "group" ? "human" : "ai",
             photo_url: photoUrl,
             last_message_preview: preview,
+            contact_type: contactType,
+            participant_count: participantCount,
           });
-          existingMap.set(phone, { id: "pending", attending_mode: "ai" });
+          existingMap.set(phone, { id: "pending", attending_mode: contactType === "group" ? "human" : "ai", last_message_preview: preview });
           contactsCreated++;
         }
       }
