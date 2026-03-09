@@ -44,8 +44,8 @@ export function useContentQuota() {
   const { data: subscription } = useClienteSubscription();
 
   const isTrial = subscription?.status === "trial";
-  const limits = getEffectiveLimits((subscription as any)?.sales_plan, (subscription as any)?.marketing_plan, isTrial);
-  const maxContents = limits.maxContents || 8;
+  const limits = getEffectiveLimits(subscription?.plan, isTrial);
+  const maxContents = limits.maxContents || 9999;
 
   const query = useQuery({
     queryKey: ["content-quota", orgId],

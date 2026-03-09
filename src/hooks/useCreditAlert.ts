@@ -17,8 +17,6 @@ export function useCreditAlert(): CreditAlertData {
   const { data: subscription, isLoading: sl } = useClienteSubscription();
 
   const isTrial = subscription?.status === "trial";
-  const salesPlan = (subscription as any)?.sales_plan as string | null;
-  const marketingPlan = (subscription as any)?.marketing_plan as string | null;
 
   const planId = (subscription as any)?.plan as string | null;
   const limits = getEffectiveLimits(planId, isTrial);

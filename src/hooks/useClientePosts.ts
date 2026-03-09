@@ -259,8 +259,8 @@ export function usePostQuota() {
   const { data: subscription } = useClienteSubscription();
 
   const isTrial = subscription?.status === "trial";
-  const limits = getEffectiveLimits((subscription as any)?.sales_plan, (subscription as any)?.marketing_plan, isTrial);
-  const maxPosts = limits.maxSocialArts || 4;
+  const limits = getEffectiveLimits(subscription?.plan, isTrial);
+  const maxPosts = limits.maxSocialArts || 9999;
 
   const query = useQuery({
     queryKey: ["post-quota", orgId],

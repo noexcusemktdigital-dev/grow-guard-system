@@ -6,18 +6,17 @@ import { useSalesPlanCompleted } from "@/hooks/useSalesPlan";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEffectiveLimits } from "@/constants/plans";
 
-type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | "admin_only" | "module_locked" | null;
+type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | "admin_only" | "plan_locked" | null;
 
 interface FeatureGateContextType {
   isTrialExpired: boolean;
   hasNoCredits: boolean;
   salesPlanCompleted: boolean;
   hasActiveStrategy: boolean;
-  hasSalesModule: boolean;
-  hasMarketingModule: boolean;
-  /** Check if a specific route/feature is gated */
+  hasAiAgent: boolean;
+  hasWhatsApp: boolean;
+  hasDispatches: boolean;
   getGateReason: (feature: string) => GateReason;
-  /** For demo: toggle states */
   simulateTrialExpired: boolean;
   setSimulateTrialExpired: (v: boolean) => void;
   simulateNoCredits: boolean;
@@ -83,24 +82,15 @@ const ADMIN_ONLY_ROUTES = [
   "/cliente/plano-creditos",
 ];
 
-// Routes belonging to Sales module
-const SALES_MODULE_ROUTES = [
-  "/cliente/crm",
-  "/cliente/chat",
+// Routes requiring AI Agent (Pro+ only)
+const AI_AGENT_ROUTES = [
   "/cliente/agentes-ia",
-  "/cliente/scripts",
-  "/cliente/disparos",
-  "/cliente/plano-vendas",
-  "/cliente/dashboard",
+  "/cliente/chat",
 ];
 
-// Routes belonging to Marketing module
-const MARKETING_MODULE_ROUTES = [
-  "/cliente/conteudos",
-  "/cliente/redes-sociais",
-  "/cliente/sites",
-  "/cliente/trafego-pago",
-  "/cliente/plano-marketing",
+// Routes requiring WhatsApp/Dispatches (Pro+ only)
+const DISPATCH_ROUTES = [
+  "/cliente/disparos",
 ];
 
 export function FeatureGateProvider({ children }: { children: ReactNode }) {
@@ -113,9 +103,8 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const hasActiveStrategy = useHasActiveStrategy();
   const isTrial = subscription?.status === "trial";
 
-  const salesPlan = (subscription as any)?.sales_plan as string | null;
-  const marketingPlan = (subscription as any)?.marketing_plan as string | null;
-  const limits = getEffectiveLimits(salesPlan, marketingPlan, isTrial);
+  const planId = subscription?.plan as string | null;
+  const limits = getEffectiveLimits(planId, isTrial);
 
   const isTrialExpired =
     simulateTrialExpired ||
@@ -143,13 +132,13 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
     if (isTrial && TRIAL_BLOCKED.some((r) => feature.startsWith(r)))
       return "trial_limited";
 
-    // Module lock: block Sales tools if no sales module (and not trial)
-    if (!isTrial && !limits.hasSalesModule && SALES_MODULE_ROUTES.some((r) => feature.startsWith(r)))
-      return "module_locked";
+    // Plan lock: AI Agent requires Pro+
+    if (!limits.hasAiAgent && AI_AGENT_ROUTES.some((r) => feature.startsWith(r)))
+      return "plan_locked";
 
-    // Module lock: block Marketing tools if no marketing module (and not trial)
-    if (!isTrial && !limits.hasMarketingModule && MARKETING_MODULE_ROUTES.some((r) => feature.startsWith(r)))
-      return "module_locked";
+    // Plan lock: Dispatches requires Pro+
+    if (!limits.hasDispatches && DISPATCH_ROUTES.some((r) => feature.startsWith(r)))
+      return "plan_locked";
 
     if (!salesPlanCompleted && SALES_PLAN_REQUIRED.some((r) => feature.startsWith(r)))
       return "no_sales_plan";
@@ -170,8 +159,9 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
         hasNoCredits,
         salesPlanCompleted,
         hasActiveStrategy,
-        hasSalesModule: limits.hasSalesModule,
-        hasMarketingModule: limits.hasMarketingModule,
+        hasAiAgent: limits.hasAiAgent,
+        hasWhatsApp: limits.hasWhatsApp,
+        hasDispatches: limits.hasDispatches,
         getGateReason,
         simulateTrialExpired,
         setSimulateTrialExpired,
