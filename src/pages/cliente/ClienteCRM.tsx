@@ -368,16 +368,9 @@ export default function ClienteCRM() {
   const handleBulkAddTag = () => {
     if (!bulkTagInput.trim()) return;
     const tag = bulkTagInput.trim();
-    const idsToUpdate = allLeads
-      .filter(l => selectedLeadIds.has(l.id) && !(l.tags || []).includes(tag))
-      .map(l => l.id);
-
-    if (idsToUpdate.length > 0) {
-      // Use bulk update — tags merge must still be per-lead since each has different existing tags
-      idsToUpdate.forEach(id => {
-        const lead = allLeads.find(l => l.id === id);
-        if (lead) updateLead.mutate({ id, tags: [...(lead.tags || []), tag] });
-      });
+    const ids = Array.from(selectedLeadIds);
+    if (ids.length > 0) {
+      bulkAddTag.mutate({ ids, tag });
     }
     setBulkTagInput("");
     setSelectedLeadIds(new Set());
