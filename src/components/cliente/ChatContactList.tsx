@@ -51,11 +51,14 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
     });
   }, [filtered]);
 
+  const groupCount = useMemo(() => contacts.filter((c) => (c as any).contact_type === "group").length, [contacts]);
+
   const modeButtons: { key: ModeFilter; label: string; icon?: React.ReactNode }[] = [
     { key: "all", label: "Todos" },
     { key: "ai", label: "IA", icon: <Bot className="w-3 h-3" /> },
     { key: "human", label: "Humano", icon: <User className="w-3 h-3" /> },
     { key: "waiting", label: "Espera", icon: <Clock className="w-3 h-3" /> },
+    { key: "groups", label: "Grupos", icon: <Users className="w-3 h-3" /> },
   ];
 
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
