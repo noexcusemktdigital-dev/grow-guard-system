@@ -5333,6 +5333,17 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_contact_last_messages: {
+        Args: { p_contact_ids: string[]; p_org_id: string }
+        Returns: {
+          contact_id: string
+          content: string
+          created_at: string
+          direction: string
+          status: string
+          type: string
+        }[]
+      }
       get_contract_templates_with_parent: {
         Args: { _org_id: string }
         Returns: {
