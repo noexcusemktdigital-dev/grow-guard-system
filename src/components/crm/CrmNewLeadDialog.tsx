@@ -22,6 +22,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage }: CrmNewLea
   const { toast } = useToast();
   const { createLead } = useCrmLeadMutations();
   const { data: contacts } = useCrmContacts();
+  const { maxLeads, atLimit } = useLeadQuota();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
