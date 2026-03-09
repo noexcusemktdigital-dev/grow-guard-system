@@ -13,6 +13,7 @@ export interface SalesModulePlan {
   maxDispatches: number;
   maxDispatchRecipients: number;
   maxStrategies: number;
+  maxLeads: number;
   popular: boolean;
   features: string[];
 }
