@@ -4,7 +4,7 @@ import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useClienteSubscription } from "./useClienteSubscription";
-import { getPlanBySlug } from "@/constants/plans";
+import { getEffectiveLimits } from "@/constants/plans";
 
 export interface PostItem {
   id: string;
