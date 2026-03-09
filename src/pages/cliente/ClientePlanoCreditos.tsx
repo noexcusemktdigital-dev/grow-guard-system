@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3,
   History, Package, FileText, ExternalLink, Receipt, Calculator,
-  Lock, Bot, MessageSquare, Send,
+  Lock, Bot, MessageSquare, Send, Tag,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
