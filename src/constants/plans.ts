@@ -29,6 +29,7 @@ export const SALES_PLANS: SalesModulePlan[] = [
     maxDispatches: 0,
     maxDispatchRecipients: 0,
     maxStrategies: 1,
+    maxLeads: 500,
     popular: false,
     features: [
       "CRM completo",
