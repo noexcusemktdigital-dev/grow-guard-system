@@ -758,44 +758,33 @@ export default function ClienteCRM() {
                         )}
                       </div>
                       <DroppableColumn stageKey={stage.key}>
-                        {stageLeads.map(lead => (
-                          <div key={lead.id} className="relative group/check">
-                            {selectionMode && (
-                              <div className="absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
-                                <Checkbox checked={selectedLeadIds.has(lead.id)} onCheckedChange={() => toggleLeadSelection(lead.id)} />
-                              </div>
-                            )}
-                            <DraggableLeadCard
-                              lead={lead}
-                              onClick={() => setSelectedLead(lead)}
-                              stageColor={stage.color}
-                              onCopyPhone={() => {
-                                if (lead.phone) {
-                                  navigator.clipboard.writeText(lead.phone);
-                                  toast({ title: "Telefone copiado" });
-                                } else {
-                                  toast({ title: "Lead sem telefone", variant: "destructive" });
-                                }
-                              }}
-                              onMarkLost={() => {
-                                markAsLost.mutate({ id: lead.id });
-                                toast({ title: "Lead marcado como perdido" });
-                              }}
-                              onDelete={() => {
-                                deleteLead.mutate(lead.id);
-                                toast({ title: "Lead excluído" });
-                              }}
-                              onUpdateTemperature={(temp) => {
-                                updateLead.mutate({ id: lead.id, temperature: temp });
-                              }}
-                            />
-                          </div>
-                        ))}
-                        {stageLeads.length === 0 && (
-                          <div className="text-center py-8 text-[11px] text-muted-foreground/50">
-                            Arraste leads aqui
-                          </div>
-                        )}
+                        <KanbanColumnContent
+                          stageLeads={stageLeads}
+                          stageColor={stage.color}
+                          selectionMode={selectionMode}
+                          selectedLeadIds={selectedLeadIds}
+                          toggleLeadSelection={toggleLeadSelection}
+                          onClickLead={(lead) => setSelectedLead(lead)}
+                          onCopyPhone={(lead) => {
+                            if (lead.phone) {
+                              navigator.clipboard.writeText(lead.phone);
+                              toast({ title: "Telefone copiado" });
+                            } else {
+                              toast({ title: "Lead sem telefone", variant: "destructive" });
+                            }
+                          }}
+                          onMarkLost={(lead) => {
+                            markAsLost.mutate({ id: lead.id });
+                            toast({ title: "Lead marcado como perdido" });
+                          }}
+                          onDelete={(lead) => {
+                            deleteLead.mutate(lead.id);
+                            toast({ title: "Lead excluído" });
+                          }}
+                          onUpdateTemperature={(lead, temp) => {
+                            updateLead.mutate({ id: lead.id, temperature: temp });
+                          }}
+                        />
                       </DroppableColumn>
                     </div>
                   );
