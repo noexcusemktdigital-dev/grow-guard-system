@@ -108,12 +108,25 @@ Deno.serve(async (req) => {
     const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
     const zapiHeaders: Record<string, string> = { "Client-Token": instance.client_token };
 
+    // Detect if it's a group
+    const isGroup = contactPhone.includes('-group') || contactPhone.includes('@g.us');
+    
+    // Convert phone format for Z-API (groups use @g.us, individuals use phone numbers)
+    let zapiPhone = contactPhone;
+    if (isGroup) {
+      // Remove -group suffix and ensure @g.us format
+      zapiPhone = contactPhone.replace('-group', '') + '@g.us';
+      if (zapiPhone.includes('@g.us@g.us')) {
+        zapiPhone = zapiPhone.replace('@g.us@g.us', '@g.us');
+      }
+    }
+
     // Try primary endpoint
     let rawMessages: any[] = [];
     let usedFallback = false;
 
-    console.log(`[load-history] Trying chat-messages for ${contactPhone}`);
-    const primaryRes = await fetch(`${zapiBase}/chat-messages/${contactPhone}?amount=${amount}`, {
+    console.log(`[load-history] Trying chat-messages for ${zapiPhone} (isGroup: ${isGroup})`);
+    const primaryRes = await fetch(`${zapiBase}/chat-messages/${zapiPhone}?amount=${amount}`, {
       headers: zapiHeaders,
     });
 
@@ -124,17 +137,22 @@ Deno.serve(async (req) => {
     } else {
       console.log(`[load-history] Primary failed: ${primaryRes.status}`);
 
-      // Try alternative endpoint
-      const altRes = await fetch(`${zapiBase}/get-messages-phone/${contactPhone}?amount=${amount}`, {
-        headers: zapiHeaders,
-      });
+      // Try alternative endpoint (only for non-groups)
+      if (!isGroup) {
+        const altRes = await fetch(`${zapiBase}/get-messages-phone/${zapiPhone}?amount=${amount}`, {
+          headers: zapiHeaders,
+        });
 
-      if (altRes.ok) {
-        const altData = await altRes.json();
-        rawMessages = Array.isArray(altData) ? altData : (altData?.messages || []);
-        console.log(`[load-history] Alternative: ${rawMessages.length} messages`);
+        if (altRes.ok) {
+          const altData = await altRes.json();
+          rawMessages = Array.isArray(altData) ? altData : (altData?.messages || []);
+          console.log(`[load-history] Alternative: ${rawMessages.length} messages`);
+        } else {
+          console.log(`[load-history] Both failed — fallback`);
+          usedFallback = true;
+        }
       } else {
-        console.log(`[load-history] Both failed — fallback`);
+        console.log(`[load-history] Group endpoint failed — no fallback available`);
         usedFallback = true;
       }
     }

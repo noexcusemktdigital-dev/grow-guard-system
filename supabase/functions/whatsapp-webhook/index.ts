@@ -119,7 +119,13 @@ Deno.serve(async (req) => {
     const isGroup = rawChatId.includes("@g.us");
     const isBroadcast = rawChatId.includes("@broadcast");
 
-    const phone = body.phone || rawChatId.replace("@c.us", "").replace("@g.us", "");
+    // Extract phone - preserve @g.us for groups
+    let phone = body.phone || rawChatId.replace("@c.us", "");
+    if (isGroup) {
+      // For groups, keep the full ID with @g.us and optionally store as -group suffix
+      phone = rawChatId; // Keep full format: 120363254049865532@g.us
+    }
+    
     if (!phone) {
       return new Response(JSON.stringify({ ok: true, skipped: "no phone" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -139,7 +145,7 @@ Deno.serve(async (req) => {
     }
     
     // Classify contact type
-    const contactType = isGroup || /^\d+-\d{10,}$/.test(phone) || phone.endsWith("-group") ? "group" : "individual";
+    const contactType = isGroup ? "group" : "individual";
 
     const senderName = body.senderName || body.pushName || null;
     const messageText = body.text?.message || body.text || body.caption || null;

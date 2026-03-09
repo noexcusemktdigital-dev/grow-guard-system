@@ -245,11 +245,18 @@ Deno.serve(async (req) => {
 
       for (let i = 0; i < batch.length; i++) {
         const chat = batch[i];
-        const phone = chat.phone;
+        let phone = chat.phone;
+        const contactType = getContactType(chat);
+        
+        // Normalize phone format: groups must use @g.us
+        if (contactType === "group") {
+          // Remove common suffixes and ensure @g.us format
+          phone = phone.replace('-group', '').replace('@g.us', '') + '@g.us';
+        }
+        
         const name = chat.name || null;
         const photoUrl = chat.imgUrl || chat.profileThumbnail || null;
         const unreadCount = parseInt(chat.unreadCount ?? chat.unreadMessages ?? chat.unread ?? chat.unreadQtd ?? "0") || 0;
-        const contactType = getContactType(chat);
         const participantCount = contactType === "group" ? (chat.participants?.length || null) : null;
 
         const lastMsgTime = extractTimestamp(chat);
