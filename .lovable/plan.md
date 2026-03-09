@@ -1,46 +1,31 @@
 
 
-## Plano: Executar Teste P2Y COM Referências
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Problema
-A edge function `generate-social-image` precisa de URLs públicas para as imagens de referência. As imagens `user-uploads://` não são acessíveis diretamente pela edge function.
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-### Solução
+### Ações
 
-1. **Copiar as 3 imagens de referência para o projeto** em `public/test-refs/`
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-2. **Usar o preview URL para construir URLs públicas** das referências:
-   - `https://id-preview--1d5802a2-4462-4bb6-a30e-a9b2d444f68e.lovable.app/test-refs/ref1.png`
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-3. **Chamar a edge function com URLs públicas** no campo `reference_images`
+3. **Executar o teste** e analisar o resultado definitivo
 
-### Execução
+### Detalhe técnico
 
 ```text
-1. lov-copy user-uploads://Captura_de_Tela_2026-03-09_às_00.32.57-2.png → public/test-refs/p2y-ref1.png
-2. lov-copy user-uploads://Captura_de_Tela_2026-03-09_às_00.33.11-2.png → public/test-refs/p2y-ref2.png
-3. lov-copy user-uploads://Captura_de_Tela_2026-03-09_às_00.33.25-2.png → public/test-refs/p2y-ref3.png
-4. Chamar generate-social-image com URLs públicas das referências
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
 ```
 
-### Briefing do Teste (P2Y)
-
-O prompt estruturado seguirá o formato ChatGPT com:
-
-- **Headline**: "O problema não é parcelar."
-- **Highlight**: "É parcelar sem planejamento!"
-- **Supporting text**: "Parcelar pode ser estratégia ou armadilha. Tudo depende de três fatores."
-- **Bullet points**: "Tempo / Renda / Objetivo"
-- **CTA**: "Fale com a P2Y"
-- **Brand**: "P2Y crédito e investimento"
-- **Scene**: Brazilian couple planning finances
-- **Visual elements**: Three circular icons, dark rounded card, lime green accents
-- **Palette**: #C8D941, #2D2D2D, #FFFFFF, #1A1A1A
-- **Art style**: foto_editorial
-
-### Resultado Esperado
-
-- O CoT multimodal vai analisar as 3 referências e extrair: rounded cards, circular icons, lime green highlights, dark text zones, logo placement
-- O prompt final seguirá a estrutura do ChatGPT com "Use as style reference ONLY" + "Create NEW scene"
-- Comparar lado a lado com o teste SEM referências já gerado
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 

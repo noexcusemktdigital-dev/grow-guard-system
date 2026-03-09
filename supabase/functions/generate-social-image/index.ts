@@ -18,8 +18,14 @@ async function urlToBase64(url: string): Promise<string | null> {
       return null;
     }
     const contentType = res.headers.get("content-type") || "image/png";
-    const buffer = await res.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const buffer = new Uint8Array(await res.arrayBuffer());
+    // Chunked base64 encoding to avoid stack overflow on large images
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < buffer.length; i += chunkSize) {
+      binary += String.fromCharCode(...buffer.subarray(i, i + chunkSize));
+    }
+    const base64 = btoa(binary);
     return `data:${contentType};base64,${base64}`;
   } catch (err) {
     console.warn(`Error fetching reference image: ${url}`, err);
@@ -483,8 +489,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Pre-check credits
-    if (organization_id) {
+    // Pre-check credits (skip for test orgs)
+    const isTestOrg = typeof organization_id === "string" && organization_id.startsWith("test-");
+    if (organization_id && !isTestOrg) {
       const { data: wallet } = await supabase
         .from("credit_wallets")
         .select("balance")
@@ -586,17 +593,9 @@ serve(async (req) => {
     console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
-    // Build message content with reference images for generation
-    let messageContent: any = fullPrompt;
-
-    if (base64Refs.length > 0) {
-      // The referenceInstruction is now INSIDE the prompt via buildFinalPrompt
-      // We just need to attach the images
-      messageContent = [
-        { type: "text", text: fullPrompt },
-        ...base64Refs,
-      ];
-    }
+    // Build message content — reference images are already analyzed by CoT (Stage 1)
+    // Do NOT attach them to Stage 2 (image generation) to avoid exceeding token limits
+    const messageContent: any = fullPrompt;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
