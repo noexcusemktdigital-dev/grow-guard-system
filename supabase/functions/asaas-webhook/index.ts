@@ -98,8 +98,12 @@ Deno.serve(async (req) => {
         const packCreditsMap: Record<string, number> = { "pack-5000": 5000, "pack-20000": 20000, "pack-50000": 50000 };
         creditsToRemove = packCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
       } else if (refParts.length >= 3 && refParts[1] === "sub") {
-        const planCreditsMap: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
-        creditsToRemove = planCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
+        const SC: Record<string, number> = { starter: 3000, professional: 15000, enterprise: 40000 };
+        const MC: Record<string, number> = { starter: 2000, professional: 10000, enterprise: 30000 };
+        const sp = refParts[2] || "none";
+        const mp = refParts.length >= 4 ? refParts[3] : "none";
+        creditsToRemove = (sp !== "none" ? (SC[sp] || 0) : 0) + (mp !== "none" ? (MC[mp] || 0) : 0);
+        if (creditsToRemove === 0) creditsToRemove = valueToCreditAmount(paymentValue);
       } else {
         creditsToRemove = valueToCreditAmount(paymentValue);
       }
@@ -111,10 +115,8 @@ Deno.serve(async (req) => {
         await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
       }
 
-      // 3. Update payment status to "chargeback" based on externalReference (NEW)
       await updatePaymentStatus(adminClient, externalRef, refParts, payment.id, "chargeback");
 
-      // 4. Register credit_transaction (existing, improved)
       await adminClient.from("credit_transactions").insert({
         organization_id: org.id,
         type: "chargeback",
