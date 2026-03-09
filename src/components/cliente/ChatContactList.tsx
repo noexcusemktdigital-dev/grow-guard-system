@@ -20,7 +20,7 @@ interface Props {
   isSyncing?: boolean;
 }
 
-type ModeFilter = "all" | "ai" | "human" | "waiting";
+type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
 
 export function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone, onSync, isSyncing }: Props) {
   const [search, setSearch] = useState("");
@@ -32,9 +32,12 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
     const matchSearch = !q || (c.name?.toLowerCase().includes(q) || c.phone.includes(q));
     const contactAny = c as any;
     const mode = contactAny.attending_mode || "ai";
+    const contactType = contactAny.contact_type || "individual";
+    const isGroup = contactType === "group";
     let matchMode = true;
-    if (modeFilter === "ai") matchMode = mode === "ai";
-    else if (modeFilter === "human") matchMode = mode === "human";
+    if (modeFilter === "groups") matchMode = isGroup;
+    else if (modeFilter === "ai") matchMode = mode === "ai" && !isGroup;
+    else if (modeFilter === "human") matchMode = mode === "human" && !isGroup;
     else if (modeFilter === "waiting") matchMode = c.unread_count > 0;
     const matchAgent = !agentFilter || contactAny.agent_id === agentFilter;
     return matchSearch && matchMode && matchAgent;
