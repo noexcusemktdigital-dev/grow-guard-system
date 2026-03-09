@@ -2076,6 +2076,7 @@ export type Database = {
       }
       crm_leads: {
         Row: {
+          archived_at: string | null
           assigned_to: string | null
           company: string | null
           contact_id: string | null
@@ -2099,6 +2100,7 @@ export type Database = {
           won_at: string | null
         }
         Insert: {
+          archived_at?: string | null
           assigned_to?: string | null
           company?: string | null
           contact_id?: string | null
@@ -2122,6 +2124,7 @@ export type Database = {
           won_at?: string | null
         }
         Update: {
+          archived_at?: string | null
           assigned_to?: string | null
           company?: string | null
           contact_id?: string | null
@@ -5244,6 +5247,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bulk_add_tag: {
+        Args: { _ids: string[]; _tag: string }
+        Returns: undefined
+      }
       debit_credits: {
         Args: {
           _amount: number

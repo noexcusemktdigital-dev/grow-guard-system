@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users, Plus, Phone, Search, LayoutGrid, List, Clock,
@@ -184,6 +184,68 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
   );
 }
 
+const KANBAN_INITIAL_VISIBLE = 20;
+const KANBAN_LOAD_MORE = 20;
+
+// ===== Kanban Column with Lazy Loading =====
+function KanbanColumnContent({
+  stageLeads, stageColor, selectionMode, selectedLeadIds, toggleLeadSelection,
+  onClickLead, onCopyPhone, onMarkLost, onDelete, onUpdateTemperature,
+}: {
+  stageLeads: LeadRow[];
+  stageColor: string;
+  selectionMode: boolean;
+  selectedLeadIds: Set<string>;
+  toggleLeadSelection: (id: string) => void;
+  onClickLead: (lead: LeadRow) => void;
+  onCopyPhone: (lead: LeadRow) => void;
+  onMarkLost: (lead: LeadRow) => void;
+  onDelete: (lead: LeadRow) => void;
+  onUpdateTemperature: (lead: LeadRow, temp: string) => void;
+}) {
+  const [visibleCount, setVisibleCount] = useState(KANBAN_INITIAL_VISIBLE);
+  const visibleLeads = stageLeads.slice(0, visibleCount);
+  const hasMore = stageLeads.length > visibleCount;
+
+  return (
+    <>
+      {visibleLeads.map(lead => (
+        <div key={lead.id} className="relative group/check">
+          {selectionMode && (
+            <div className="absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
+              <Checkbox checked={selectedLeadIds.has(lead.id)} onCheckedChange={() => toggleLeadSelection(lead.id)} />
+            </div>
+          )}
+          <DraggableLeadCard
+            lead={lead}
+            onClick={() => onClickLead(lead)}
+            stageColor={stageColor}
+            onCopyPhone={() => onCopyPhone(lead)}
+            onMarkLost={() => onMarkLost(lead)}
+            onDelete={() => onDelete(lead)}
+            onUpdateTemperature={(temp) => onUpdateTemperature(lead, temp)}
+          />
+        </div>
+      ))}
+      {hasMore && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-xs text-muted-foreground h-7"
+          onClick={() => setVisibleCount(c => c + KANBAN_LOAD_MORE)}
+        >
+          Ver mais {stageLeads.length - visibleCount} leads
+        </Button>
+      )}
+      {stageLeads.length === 0 && (
+        <div className="text-center py-8 text-[11px] text-muted-foreground/50">
+          Arraste leads aqui
+        </div>
+      )}
+    </>
+  );
+}
+
 // ===== Main Component =====
 export default function ClienteCRM() {
   const navigate = useNavigate();
@@ -209,7 +271,7 @@ export default function ClienteCRM() {
   }, [accessibleFunnels, selectedFunnelId]);
 
   const { data: leads, isLoading: leadsLoading } = useCrmLeads(selectedFunnelId || undefined);
-  const { updateLead, deleteLead, markAsLost, bulkUpdateLeads, bulkDeleteLeads } = useCrmLeadMutations();
+  const { updateLead, deleteLead, markAsLost, bulkUpdateLeads, bulkDeleteLeads, bulkAddTag } = useCrmLeadMutations();
 
   const [activeTab, setActiveTab] = useState<"pipeline" | "contatos">("pipeline");
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -368,16 +430,9 @@ export default function ClienteCRM() {
   const handleBulkAddTag = () => {
     if (!bulkTagInput.trim()) return;
     const tag = bulkTagInput.trim();
-    const idsToUpdate = allLeads
-      .filter(l => selectedLeadIds.has(l.id) && !(l.tags || []).includes(tag))
-      .map(l => l.id);
-
-    if (idsToUpdate.length > 0) {
-      // Use bulk update — tags merge must still be per-lead since each has different existing tags
-      idsToUpdate.forEach(id => {
-        const lead = allLeads.find(l => l.id === id);
-        if (lead) updateLead.mutate({ id, tags: [...(lead.tags || []), tag] });
-      });
+    const ids = Array.from(selectedLeadIds);
+    if (ids.length > 0) {
+      bulkAddTag.mutate({ ids, tag });
     }
     setBulkTagInput("");
     setSelectedLeadIds(new Set());
@@ -765,44 +820,33 @@ export default function ClienteCRM() {
                         )}
                       </div>
                       <DroppableColumn stageKey={stage.key}>
-                        {stageLeads.map(lead => (
-                          <div key={lead.id} className="relative group/check">
-                            {selectionMode && (
-                              <div className="absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
-                                <Checkbox checked={selectedLeadIds.has(lead.id)} onCheckedChange={() => toggleLeadSelection(lead.id)} />
-                              </div>
-                            )}
-                            <DraggableLeadCard
-                              lead={lead}
-                              onClick={() => setSelectedLead(lead)}
-                              stageColor={stage.color}
-                              onCopyPhone={() => {
-                                if (lead.phone) {
-                                  navigator.clipboard.writeText(lead.phone);
-                                  toast({ title: "Telefone copiado" });
-                                } else {
-                                  toast({ title: "Lead sem telefone", variant: "destructive" });
-                                }
-                              }}
-                              onMarkLost={() => {
-                                markAsLost.mutate({ id: lead.id });
-                                toast({ title: "Lead marcado como perdido" });
-                              }}
-                              onDelete={() => {
-                                deleteLead.mutate(lead.id);
-                                toast({ title: "Lead excluído" });
-                              }}
-                              onUpdateTemperature={(temp) => {
-                                updateLead.mutate({ id: lead.id, temperature: temp });
-                              }}
-                            />
-                          </div>
-                        ))}
-                        {stageLeads.length === 0 && (
-                          <div className="text-center py-8 text-[11px] text-muted-foreground/50">
-                            Arraste leads aqui
-                          </div>
-                        )}
+                        <KanbanColumnContent
+                          stageLeads={stageLeads}
+                          stageColor={stage.color}
+                          selectionMode={selectionMode}
+                          selectedLeadIds={selectedLeadIds}
+                          toggleLeadSelection={toggleLeadSelection}
+                          onClickLead={(lead) => setSelectedLead(lead)}
+                          onCopyPhone={(lead) => {
+                            if (lead.phone) {
+                              navigator.clipboard.writeText(lead.phone);
+                              toast({ title: "Telefone copiado" });
+                            } else {
+                              toast({ title: "Lead sem telefone", variant: "destructive" });
+                            }
+                          }}
+                          onMarkLost={(lead) => {
+                            markAsLost.mutate({ id: lead.id });
+                            toast({ title: "Lead marcado como perdido" });
+                          }}
+                          onDelete={(lead) => {
+                            deleteLead.mutate(lead.id);
+                            toast({ title: "Lead excluído" });
+                          }}
+                          onUpdateTemperature={(lead, temp) => {
+                            updateLead.mutate({ id: lead.id, temperature: temp });
+                          }}
+                        />
                       </DroppableColumn>
                     </div>
                   );
