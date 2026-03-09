@@ -19,7 +19,7 @@ import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
 import { useCreditAlert } from "@/hooks/useCreditAlert";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { getPlanBySlug } from "@/constants/plans";
+import { getEffectiveLimits } from "@/constants/plans";
 import { differenceInDays } from "date-fns";
 
 interface SidebarItem {
