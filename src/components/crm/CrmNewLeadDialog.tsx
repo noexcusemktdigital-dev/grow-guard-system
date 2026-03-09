@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmContacts } from "@/hooks/useCrmContacts";
+import { useLeadQuota } from "@/hooks/useLeadQuota";
 import { useToast } from "@/hooks/use-toast";
 import { Search, UserCircle } from "lucide-react";
 
@@ -21,6 +22,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage }: CrmNewLea
   const { toast } = useToast();
   const { createLead } = useCrmLeadMutations();
   const { data: contacts } = useCrmContacts();
+  const { maxLeads, atLimit } = useLeadQuota();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -57,6 +59,10 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage }: CrmNewLea
   };
 
   const handleCreate = () => {
+    if (atLimit) {
+      toast({ title: "Limite de leads atingido", description: "Faça upgrade do plano para adicionar mais leads.", variant: "destructive" });
+      return;
+    }
     if (!name.trim()) {
       toast({ title: "Informe o nome do lead", variant: "destructive" });
       return;
@@ -71,6 +77,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage }: CrmNewLea
       source: source || undefined,
       stage: defaultStage,
       tags: tags.length > 0 ? tags : undefined,
+      _maxLeads: maxLeads,
     } as any);
     reset();
     onOpenChange(false);

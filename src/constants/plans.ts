@@ -13,6 +13,7 @@ export interface SalesModulePlan {
   maxDispatches: number;
   maxDispatchRecipients: number;
   maxStrategies: number;
+  maxLeads: number;
   popular: boolean;
   features: string[];
 }
@@ -28,6 +29,7 @@ export const SALES_PLANS: SalesModulePlan[] = [
     maxDispatches: 0,
     maxDispatchRecipients: 0,
     maxStrategies: 1,
+    maxLeads: 500,
     popular: false,
     features: [
       "CRM completo",
@@ -49,6 +51,7 @@ export const SALES_PLANS: SalesModulePlan[] = [
     maxDispatches: 1,
     maxDispatchRecipients: 500,
     maxStrategies: 2,
+    maxLeads: 5000,
     popular: true,
     features: [
       "Tudo do Starter",
@@ -70,6 +73,7 @@ export const SALES_PLANS: SalesModulePlan[] = [
     maxDispatches: 3,
     maxDispatchRecipients: 2000,
     maxStrategies: 999,
+    maxLeads: 50000,
     popular: false,
     features: [
       "Tudo do Professional",
@@ -175,6 +179,7 @@ export interface TrialPlan {
   maxDispatches: number;
   maxStrategies: number;
   maxTrafficStrategies: number;
+  maxLeads: number;
 }
 
 export const TRIAL_PLAN: TrialPlan = {
@@ -187,6 +192,7 @@ export const TRIAL_PLAN: TrialPlan = {
   maxDispatches: 0,
   maxStrategies: 1,
   maxTrafficStrategies: 0,
+  maxLeads: 50,
 };
 
 // ── Combo Logic ─────────────────────────────────────────────────
@@ -215,6 +221,7 @@ export interface EffectiveLimits {
   maxSites: number;
   siteTypes: string[];
   maxTrafficStrategies: number;
+  maxLeads: number;
   hasSalesModule: boolean;
   hasMarketingModule: boolean;
 }
@@ -237,6 +244,7 @@ export function getEffectiveLimits(
       siteTypes: [],
       maxTrafficStrategies: TRIAL_PLAN.maxTrafficStrategies,
       maxDispatchRecipients: 0,
+      maxLeads: TRIAL_PLAN.maxLeads,
       hasSalesModule: true,
       hasMarketingModule: true,
     };
@@ -257,6 +265,7 @@ export function getEffectiveLimits(
     maxSites: marketing?.maxSites ?? 0,
     siteTypes: marketing?.siteTypes ?? [],
     maxTrafficStrategies: marketing?.maxTrafficStrategies ?? 0,
+    maxLeads: sales?.maxLeads ?? 500,
     hasSalesModule: !!sales,
     hasMarketingModule: !!marketing,
   };

@@ -89,10 +89,25 @@ export function useCrmLeadMutations() {
       value?: number;
       funnel_id?: string;
       tags?: string[];
+      _maxLeads?: number; // injected by caller to enforce limit
     }) => {
+      // Enforce lead limit if provided
+      if (lead._maxLeads && lead._maxLeads > 0) {
+        const { count, error: countErr } = await supabase
+          .from("crm_leads")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", orgId!)
+          .is("archived_at", null);
+        if (countErr) throw countErr;
+        if ((count ?? 0) >= lead._maxLeads) {
+          throw new Error("LEAD_LIMIT_REACHED");
+        }
+      }
+      const { _maxLeads, ...leadData } = lead;
+
       const { data, error } = await supabase
         .from("crm_leads")
-        .insert({ ...lead, organization_id: orgId! })
+        .insert({ ...leadData, organization_id: orgId! })
         .select()
         .single();
       if (error) throw error;

@@ -1,38 +1,31 @@
 
 
-## Plano: Limite Máximo de Leads por Plano
+## Plano: Diagnóstico definitivo da conexão Asaas
 
-### Mudanças
+### Causa mais provável
+O secret **`ASAAS_BASE_URL`** pode estar apontando para `https://sandbox.asaas.com/v3` enquanto a chave é de produção. Isso causa exatamente o erro `invalid_access_token` — a chave existe mas pertence ao ambiente errado.
 
-**1. `src/constants/plans.ts`** — Adicionar `maxLeads` em todas as interfaces e planos:
+### Ações
 
-| Plano | maxLeads |
-|-------|----------|
-| Trial | 50 |
-| Starter | 500 |
-| Professional | 5.000 |
-| Enterprise | 50.000 |
+1. **Verificar e corrigir `ASAAS_BASE_URL`** — garantir que o valor seja `https://api.asaas.com/v3` (produção)
 
-- Adicionar `maxLeads` em `SalesModulePlan`, `TrialPlan`, `EffectiveLimits`
-- Adicionar nos 3 objetos de `SALES_PLANS`, no `TRIAL_PLAN`, e no retorno de `getEffectiveLimits`
+2. **Reescrever `asaas-test-connection/index.ts`** com diagnóstico completo:
+   - Logar a URL exata sendo chamada
+   - Logar todos os headers enviados (nomes e primeiros chars dos valores)
+   - Logar o response body completo como string raw
+   - Remover as linhas duplicadas de `error`/`error_code`/`error_hint` no JSON de resposta (bug atual — linhas 82-84 são sobrescritas pelas 89-91)
+   - Testar com `fetch` direto (sem `asaasFetch`) para eliminar o helper como variável
 
-**2. `src/hooks/useCrmLeads.ts`** — Bloquear criação quando limite atingido:
-- No `createLead.mutationFn`, antes do insert, fazer um `SELECT count` de leads ativos (não arquivados) da org
-- Comparar com `maxLeads` do plano (obtido via subscription)
-- Se atingido, lançar erro `LEAD_LIMIT_REACHED`
+3. **Executar o teste** e analisar o resultado definitivo
 
-**3. `src/pages/cliente/ClienteCRM.tsx`** — Exibir banner de uso:
-- Mostrar barra de progresso "X / Y leads" no topo do CRM
-- Quando >= 90%, exibir alerta amarelo "Você está próximo do limite"
-- Quando 100%, desabilitar botão "Novo Lead" e mostrar CTA de upgrade
+### Detalhe técnico
 
-**4. `src/components/crm/CrmNewLeadDialog.tsx`** — Verificar limite antes de abrir:
-- Se limite atingido, mostrar toast de erro com link para upgrade em vez de abrir o dialog
+```text
+Possível fluxo atual:
+  ASAAS_BASE_URL = "https://sandbox.asaas.com/v3"  ← secret configurado
+  ASAAS_API_KEY  = "$aact_prod_000M..."              ← chave de produção
+  → Asaas sandbox recebe chave de produção → rejeita como invalid_access_token
+```
 
-### Valores Propostos
-
-Os limites foram calibrados para:
-- **Starter (500)**: Operação pequena, 1-2 vendedores, não sobrecarrega
-- **Professional (5.000)**: Equipe média, suporta volume comercial robusto
-- **Enterprise (50.000)**: Grandes operações com múltiplos times
+O teste reescrito vai fazer UMA chamada direta com `fetch()` (sem proxy, sem helper) para `https://api.asaas.com/v3/customers?limit=1` com a chave raw, eliminando todas as variáveis intermediárias.
 

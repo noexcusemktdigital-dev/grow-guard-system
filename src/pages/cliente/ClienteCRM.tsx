@@ -28,6 +28,8 @@ import { useCrmFunnels } from "@/hooks/useClienteCrm";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useToast } from "@/hooks/use-toast";
+import { useLeadQuota } from "@/hooks/useLeadQuota";
+import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
@@ -253,6 +255,7 @@ export default function ClienteCRM() {
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();
   const { data: crmSettings } = useCrmSettings();
   const { data: team } = useCrmTeam();
+  const { activeLeadCount, maxLeads, atLimit, planName } = useLeadQuota();
 
   const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
 
@@ -535,13 +538,19 @@ export default function ClienteCRM() {
                 {/* New Lead dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="gap-1">
+                    <Button size="sm" className="gap-1" disabled={atLimit}>
                       <Plus className="w-3.5 h-3.5" /> Novo Lead
                       <ChevronDown className="w-3 h-3 ml-0.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setNewLeadOpen(true)} className="gap-2 text-xs">
+                    <DropdownMenuItem onClick={() => {
+                      if (atLimit) {
+                        toast({ title: "Limite de leads atingido", description: "Faça upgrade do plano para adicionar mais leads.", variant: "destructive" });
+                        return;
+                      }
+                      setNewLeadOpen(true);
+                    }} className="gap-2 text-xs">
                       <Plus className="w-3.5 h-3.5" /> Criar Lead
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setCsvImportOpen(true)} className="gap-2 text-xs">
@@ -583,6 +592,14 @@ export default function ClienteCRM() {
       {/* ===== PIPELINE TAB ===== */}
       {activeTab === "pipeline" && (
         <>
+          {/* Lead Quota Banner */}
+          <UsageQuotaBanner
+            used={activeLeadCount}
+            limit={maxLeads}
+            label="leads"
+            planName={planName}
+          />
+
           {/* Pipeline Summary */}
           {allLeads.length > 0 && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
