@@ -122,8 +122,8 @@ function UsersAndTeamsTab() {
   const { data: teams } = useOrgTeams();
   const { data: memberships } = useTeamMemberships();
   const { setUserTeams } = useTeamMutations();
-  const plan = getPlanBySlug(subscription?.plan);
-  const maxUsers = plan?.maxUsers ?? 2;
+  const limits = getEffectiveLimits((subscription as any)?.sales_plan, (subscription as any)?.marketing_plan, subscription?.status === "trial");
+  const maxUsers = limits.maxUsers || 2;
   const currentCount = members?.length ?? 0;
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });

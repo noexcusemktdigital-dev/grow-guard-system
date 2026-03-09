@@ -176,8 +176,8 @@ function QualityBar({ filled, total }: { filled: number; total: number }) {
 
 export default function ClienteSites() {
   const { data: subscription } = useClienteSubscription();
-  const plan = getPlanBySlug(subscription?.plan);
-  const maxSites = plan?.maxSites || 1;
+  const limits = getEffectiveLimits((subscription as any)?.sales_plan, (subscription as any)?.marketing_plan, subscription?.status === "trial");
+  const maxSites = limits.maxSites || 1;
   const { data: orgId } = useUserOrgId();
 
   const { data: dbSites } = useClienteSitesDB();
