@@ -75,6 +75,7 @@ import ClienteConfiguracoes from "./pages/cliente/ClienteConfiguracoes";
 import ClienteAvaliacoes from "./pages/cliente/ClienteAvaliacoes";
 import ClienteOnboardingCompany from "./pages/cliente/ClienteOnboardingCompany";
 import ClienteSuporte from "./pages/cliente/ClienteSuporte";
+import ClienteAgenda from "./pages/cliente/ClienteAgenda";
 
 const queryClient = new QueryClient({
   defaultOptions: {
