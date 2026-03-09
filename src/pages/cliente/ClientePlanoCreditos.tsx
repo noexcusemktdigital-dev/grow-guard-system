@@ -296,8 +296,27 @@ function SubscriptionDialog({
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
 
+  const { data: orgData } = useQuery({
+    queryKey: ["org-cnpj-check", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("cnpj")
+        .eq("id", orgId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orgId && open,
+  });
+
+  const hasCnpj = !!(orgData?.cnpj && orgData.cnpj.trim().length >= 11);
+
   const subscribe = useMutation({
     mutationFn: async () => {
+      if (!hasCnpj) {
+        throw new Error("Preencha o CNPJ/CPF da empresa em Configurações antes de assinar um plano.");
+      }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { data, error } = await supabase.functions.invoke("asaas-create-subscription", {

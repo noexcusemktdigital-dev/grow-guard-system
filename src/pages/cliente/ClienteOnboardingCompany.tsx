@@ -110,6 +110,7 @@ export default function ClienteOnboardingCompany() {
 
       await update.mutateAsync({
         name: form.name,
+        cnpj: form.cnpj || undefined,
         phone: form.phone,
         city: form.city,
         state: form.state,
