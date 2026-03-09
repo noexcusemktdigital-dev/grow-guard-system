@@ -214,10 +214,10 @@ Deno.serve(async (req) => {
     };
 
     if (filterPhone) {
-      individualChats = individualChats.filter((c: any) => c.phone === filterPhone);
+      validChats = validChats.filter((c: any) => c.phone === filterPhone);
     }
 
-    console.log(`[sync] ${individualChats.length} individual chats after filtering`);
+    console.log(`[sync] ${validChats.length} valid chats after filtering`);
 
     // Collect all phones from Z-API for orphan detection
     const zapiPhones = new Set<string>(individualChats.map((c: any) => c.phone));
