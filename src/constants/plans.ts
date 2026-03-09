@@ -265,6 +265,7 @@ export function getEffectiveLimits(
     maxSites: marketing?.maxSites ?? 0,
     siteTypes: marketing?.siteTypes ?? [],
     maxTrafficStrategies: marketing?.maxTrafficStrategies ?? 0,
+    maxLeads: sales?.maxLeads ?? 500,
     hasSalesModule: !!sales,
     hasMarketingModule: !!marketing,
   };
