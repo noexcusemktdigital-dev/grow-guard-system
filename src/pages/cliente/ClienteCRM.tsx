@@ -255,6 +255,7 @@ export default function ClienteCRM() {
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();
   const { data: crmSettings } = useCrmSettings();
   const { data: team } = useCrmTeam();
+  const { activeLeadCount, maxLeads, atLimit, planName } = useLeadQuota();
 
   const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
 
