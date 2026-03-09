@@ -406,8 +406,8 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
     mutationFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
-      const { data, error } = await supabase.functions.invoke("asaas-create-charge", {
-        body: { organization_id: orgId, charge_type: "credits", billing_type: billingType, pack_id: pack!.id },
+      const { data, error } = await supabase.functions.invoke("asaas-buy-credits", {
+        body: { organization_id: orgId, pack_id: pack!.id, billing_type: billingType },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

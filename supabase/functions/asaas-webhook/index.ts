@@ -98,8 +98,12 @@ Deno.serve(async (req) => {
         const packCreditsMap: Record<string, number> = { "pack-5000": 5000, "pack-20000": 20000, "pack-50000": 50000 };
         creditsToRemove = packCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
       } else if (refParts.length >= 3 && refParts[1] === "sub") {
-        const planCreditsMap: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
-        creditsToRemove = planCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
+        const SC: Record<string, number> = { starter: 3000, professional: 15000, enterprise: 40000 };
+        const MC: Record<string, number> = { starter: 2000, professional: 10000, enterprise: 30000 };
+        const sp = refParts[2] || "none";
+        const mp = refParts.length >= 4 ? refParts[3] : "none";
+        creditsToRemove = (sp !== "none" ? (SC[sp] || 0) : 0) + (mp !== "none" ? (MC[mp] || 0) : 0);
+        if (creditsToRemove === 0) creditsToRemove = valueToCreditAmount(paymentValue);
       } else {
         creditsToRemove = valueToCreditAmount(paymentValue);
       }
@@ -111,10 +115,8 @@ Deno.serve(async (req) => {
         await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
       }
 
-      // 3. Update payment status to "chargeback" based on externalReference (NEW)
       await updatePaymentStatus(adminClient, externalRef, refParts, payment.id, "chargeback");
 
-      // 4. Register credit_transaction (existing, improved)
       await adminClient.from("credit_transactions").insert({
         organization_id: org.id,
         type: "chargeback",
@@ -213,11 +215,19 @@ Deno.serve(async (req) => {
         }
       }
 
-      // {orgId}|sub|{planId}|{modules} → subscription renewal
+      // {orgId}|sub|{salesPlan}|{marketingPlan}|{modules} → subscription renewal
       if (refParts.length >= 3 && refParts[1] === "sub") {
-        const planSlug = refParts[2];
-        const modules = refParts[3] || "comercial";
-        const planCreditsMap: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
+        const salesPlan = refParts[2] || "none";
+        const marketingPlan = refParts.length >= 4 ? refParts[3] : "none";
+        const modules = refParts.length >= 5 ? refParts[4] : (salesPlan !== "none" && marketingPlan !== "none" ? "combo" : salesPlan !== "none" ? "comercial" : "marketing");
+        
+        // Use primary plan slug for subscription record
+        const planSlug = salesPlan !== "none" ? salesPlan : marketingPlan;
+        
+        // Calculate credits from both modules
+        const SALES_CREDITS: Record<string, number> = { starter: 3000, professional: 15000, enterprise: 40000 };
+        const MARKETING_CREDITS: Record<string, number> = { starter: 2000, professional: 10000, enterprise: 30000 };
+        const totalCredits = (salesPlan !== "none" ? (SALES_CREDITS[salesPlan] || 0) : 0) + (marketingPlan !== "none" ? (MARKETING_CREDITS[marketingPlan] || 0) : 0);
 
         const newExpires = new Date();
         newExpires.setDate(newExpires.getDate() + 30);
@@ -275,24 +285,23 @@ Deno.serve(async (req) => {
           console.log(`SaaS commission registered: franchisee=${clientOrg.parent_org_id}, client=${org.id}, value=R$${commissionValue}`);
         }
 
-        const planCredits = planCreditsMap[planSlug];
-        if (planCredits) {
+        if (totalCredits > 0) {
           const wallet = await getOrCreateWallet(adminClient, org.id);
           if (wallet) {
-            const newBalance = wallet.balance + planCredits;
+            const newBalance = wallet.balance + totalCredits;
             await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
             await adminClient.from("credit_transactions").insert({
               organization_id: org.id,
               type: "purchase",
-              amount: planCredits,
+              amount: totalCredits,
               balance_after: newBalance,
-              description: `Renovação plano ${planSlug} — ${planCredits.toLocaleString()} créditos`,
-              metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, plan: planSlug, modules, event },
+              description: `Renovação ${modules === "combo" ? "combo" : `plano ${planSlug}`} — ${totalCredits.toLocaleString()} créditos`,
+              metadata: { source: "asaas_webhook", asaas_payment_id: payment.id, sales_plan: salesPlan, marketing_plan: marketingPlan, modules, event },
             });
-            console.log(`Subscription renewed for org ${org.id}: plan=${planSlug}, credits=${planCredits}`);
+            console.log(`Subscription renewed for org ${org.id}: sales=${salesPlan}, marketing=${marketingPlan}, credits=${totalCredits}`);
           }
-          return jsonOk({ success: true, event, type: "subscription_renewal", plan: planSlug, credits: planCredits });
         }
+        return jsonOk({ success: true, event, type: "subscription_renewal", plan: planSlug, credits: totalCredits });
       }
 
       // {orgId}|credits|{packId} → credit pack purchase
@@ -365,8 +374,12 @@ Deno.serve(async (req) => {
         const packCreditsMap: Record<string, number> = { "pack-5000": 5000, "pack-20000": 20000, "pack-50000": 50000 };
         creditsToRemove = packCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
       } else if (refParts.length >= 3 && refParts[1] === "sub") {
-        const planCreditsMap: Record<string, number> = { starter: 5000, growth: 20000, scale: 50000 };
-        creditsToRemove = planCreditsMap[refParts[2]] || valueToCreditAmount(paymentValue);
+        const SC: Record<string, number> = { starter: 3000, professional: 15000, enterprise: 40000 };
+        const MC: Record<string, number> = { starter: 2000, professional: 10000, enterprise: 30000 };
+        const sp = refParts[2] || "none";
+        const mp = refParts.length >= 4 ? refParts[3] : "none";
+        creditsToRemove = (sp !== "none" ? (SC[sp] || 0) : 0) + (mp !== "none" ? (MC[mp] || 0) : 0);
+        if (creditsToRemove === 0) creditsToRemove = valueToCreditAmount(paymentValue);
       } else {
         creditsToRemove = valueToCreditAmount(paymentValue);
       }
