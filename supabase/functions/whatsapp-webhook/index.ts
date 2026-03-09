@@ -198,12 +198,13 @@ Deno.serve(async (req) => {
         .insert({
           organization_id: orgId,
           phone,
-          name: senderName,
+          name: senderName || (contactType === "group" ? phone : null),
           last_message_at: new Date().toISOString(),
           last_message_preview: (isFromMe ? "Você: " : "") + previewText,
           unread_count: isFromMe ? 0 : 1,
           instance_id: instance.id,
-          attending_mode: "ai",
+          attending_mode: contactType === "group" ? "human" : "ai",
+          contact_type: contactType,
         })
         .select("id")
         .single();
