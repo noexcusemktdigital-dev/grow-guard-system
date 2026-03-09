@@ -5048,6 +5048,7 @@ export type Database = {
         Row: {
           agent_id: string | null
           attending_mode: string
+          contact_type: string | null
           created_at: string
           crm_lead_id: string | null
           followup_config: Json | null
@@ -5057,6 +5058,7 @@ export type Database = {
           last_message_preview: string | null
           name: string | null
           organization_id: string
+          participant_count: number | null
           phone: string
           photo_url: string | null
           unread_count: number
@@ -5065,6 +5067,7 @@ export type Database = {
         Insert: {
           agent_id?: string | null
           attending_mode?: string
+          contact_type?: string | null
           created_at?: string
           crm_lead_id?: string | null
           followup_config?: Json | null
@@ -5074,6 +5077,7 @@ export type Database = {
           last_message_preview?: string | null
           name?: string | null
           organization_id: string
+          participant_count?: number | null
           phone: string
           photo_url?: string | null
           unread_count?: number
@@ -5082,6 +5086,7 @@ export type Database = {
         Update: {
           agent_id?: string | null
           attending_mode?: string
+          contact_type?: string | null
           created_at?: string
           crm_lead_id?: string | null
           followup_config?: Json | null
@@ -5091,6 +5096,7 @@ export type Database = {
           last_message_preview?: string | null
           name?: string | null
           organization_id?: string
+          participant_count?: number | null
           phone?: string
           photo_url?: string | null
           unread_count?: number
