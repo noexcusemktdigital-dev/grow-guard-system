@@ -21,7 +21,7 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
-import { getPlanBySlug } from "@/constants/plans";
+import { getEffectiveLimits } from "@/constants/plans";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
