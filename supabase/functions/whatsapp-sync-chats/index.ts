@@ -195,26 +195,32 @@ Deno.serve(async (req) => {
 
     console.log(`[sync] Fetched ${allChats.length} chats from Z-API`);
 
-    // Filter out groups, broadcasts, status
-    let individualChats = allChats.filter((chat: any) => {
-      if (chat.isGroup) return false;
+    // Classify chats by type (individual, group, broadcast) but keep all except broadcast/status
+    let validChats = allChats.filter((chat: any) => {
       const phone = chat.phone || "";
       if (!phone) return false;
       if (phone.includes("broadcast")) return false;
       if (phone === "status") return false;
-      if (/^\d+-\d{10,}$/.test(phone)) return false;
-      if (phone.endsWith("-group")) return false;
+      if (phone.includes("status@broadcast")) return false;
       return true;
     });
+    
+    // Detect contact type
+    const getContactType = (chat: any): string => {
+      if (chat.isGroup) return "group";
+      const phone = chat.phone || "";
+      if (phone.includes("@g.us") || /^\d+-\d{10,}$/.test(phone) || phone.endsWith("-group")) return "group";
+      return "individual";
+    };
 
     if (filterPhone) {
-      individualChats = individualChats.filter((c: any) => c.phone === filterPhone);
+      validChats = validChats.filter((c: any) => c.phone === filterPhone);
     }
 
-    console.log(`[sync] ${individualChats.length} individual chats after filtering`);
+    console.log(`[sync] ${validChats.length} valid chats after filtering`);
 
     // Collect all phones from Z-API for orphan detection
-    const zapiPhones = new Set<string>(individualChats.map((c: any) => c.phone));
+    const zapiPhones = new Set<string>(validChats.map((c: any) => c.phone));
 
     // Get existing contacts in ONE query
     const { data: existingContacts } = await adminClient
@@ -232,8 +238,8 @@ Deno.serve(async (req) => {
     let timestampsFound = 0;
 
     const BATCH_SIZE = 100;
-    for (let batchStart = 0; batchStart < individualChats.length; batchStart += BATCH_SIZE) {
-      const batch = individualChats.slice(batchStart, batchStart + BATCH_SIZE);
+    for (let batchStart = 0; batchStart < validChats.length; batchStart += BATCH_SIZE) {
+      const batch = validChats.slice(batchStart, batchStart + BATCH_SIZE);
       const inserts: any[] = [];
       const updates: { id: string; data: any }[] = [];
 
@@ -243,6 +249,8 @@ Deno.serve(async (req) => {
         const name = chat.name || null;
         const photoUrl = chat.imgUrl || chat.profileThumbnail || null;
         const unreadCount = parseInt(chat.unreadCount ?? chat.unreadMessages ?? chat.unread ?? chat.unreadQtd ?? "0") || 0;
+        const contactType = getContactType(chat);
+        const participantCount = contactType === "group" ? (chat.participants?.length || null) : null;
 
         const lastMsgTime = extractTimestamp(chat);
         if (lastMsgTime) timestampsFound++;
@@ -254,12 +262,14 @@ Deno.serve(async (req) => {
           const upd: any = {
             instance_id: instance.id,
             unread_count: unreadCount,
+            contact_type: contactType,
           };
           // Do NOT overwrite last_message_at — the webhook sets it accurately.
           // Z-API /chats timestamps are imprecise and break ordering.
           if (name) upd.name = name;
           if (photoUrl) upd.photo_url = photoUrl;
           if (preview && !existing.last_message_preview) upd.last_message_preview = preview;
+          if (participantCount !== null) upd.participant_count = participantCount;
           updates.push({ id: existing.id, data: upd });
           contactsUpdated++;
         } else {
@@ -270,11 +280,13 @@ Deno.serve(async (req) => {
             last_message_at: lastMsgTime || new Date().toISOString(),
             unread_count: unreadCount,
             instance_id: instance.id,
-            attending_mode: "ai",
+            attending_mode: contactType === "group" ? "human" : "ai",
             photo_url: photoUrl,
             last_message_preview: preview,
+            contact_type: contactType,
+            participant_count: participantCount,
           });
-          existingMap.set(phone, { id: "pending", attending_mode: "ai" });
+          existingMap.set(phone, { id: "pending", attending_mode: contactType === "group" ? "human" : "ai", last_message_preview: preview });
           contactsCreated++;
         }
       }
@@ -331,7 +343,7 @@ Deno.serve(async (req) => {
         contacts_created: contactsCreated,
         contacts_updated: contactsUpdated,
         contacts_removed: contactsRemoved,
-        total_chats_found: individualChats.length,
+        total_chats_found: validChats.length,
         timestamps_found: timestampsFound,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

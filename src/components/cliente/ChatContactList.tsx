@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, RefreshCw, Clock, MessageCircle, Wifi, Bot, User } from "lucide-react";
+import { Search, RefreshCw, Clock, MessageCircle, Wifi, Bot, User, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,7 +20,7 @@ interface Props {
   isSyncing?: boolean;
 }
 
-type ModeFilter = "all" | "ai" | "human" | "waiting";
+type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
 
 export function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone, onSync, isSyncing }: Props) {
   const [search, setSearch] = useState("");
@@ -32,9 +32,12 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
     const matchSearch = !q || (c.name?.toLowerCase().includes(q) || c.phone.includes(q));
     const contactAny = c as any;
     const mode = contactAny.attending_mode || "ai";
+    const contactType = contactAny.contact_type || "individual";
+    const isGroup = contactType === "group";
     let matchMode = true;
-    if (modeFilter === "ai") matchMode = mode === "ai";
-    else if (modeFilter === "human") matchMode = mode === "human";
+    if (modeFilter === "groups") matchMode = isGroup;
+    else if (modeFilter === "ai") matchMode = mode === "ai" && !isGroup;
+    else if (modeFilter === "human") matchMode = mode === "human" && !isGroup;
     else if (modeFilter === "waiting") matchMode = c.unread_count > 0;
     const matchAgent = !agentFilter || contactAny.agent_id === agentFilter;
     return matchSearch && matchMode && matchAgent;
@@ -48,11 +51,14 @@ export function ChatContactList({ contacts, selectedId, onSelect, agents = [], i
     });
   }, [filtered]);
 
+  const groupCount = useMemo(() => contacts.filter((c) => (c as any).contact_type === "group").length, [contacts]);
+
   const modeButtons: { key: ModeFilter; label: string; icon?: React.ReactNode }[] = [
     { key: "all", label: "Todos" },
     { key: "ai", label: "IA", icon: <Bot className="w-3 h-3" /> },
     { key: "human", label: "Humano", icon: <User className="w-3 h-3" /> },
     { key: "waiting", label: "Espera", icon: <Clock className="w-3 h-3" /> },
+    { key: "groups", label: "Grupos", icon: <Users className="w-3 h-3" /> },
   ];
 
   const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
