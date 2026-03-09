@@ -18,8 +18,14 @@ async function urlToBase64(url: string): Promise<string | null> {
       return null;
     }
     const contentType = res.headers.get("content-type") || "image/png";
-    const buffer = await res.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const buffer = new Uint8Array(await res.arrayBuffer());
+    // Chunked base64 encoding to avoid stack overflow on large images
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < buffer.length; i += chunkSize) {
+      binary += String.fromCharCode(...buffer.subarray(i, i + chunkSize));
+    }
+    const base64 = btoa(binary);
     return `data:${contentType};base64,${base64}`;
   } catch (err) {
     console.warn(`Error fetching reference image: ${url}`, err);
