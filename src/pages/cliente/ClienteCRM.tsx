@@ -209,7 +209,7 @@ export default function ClienteCRM() {
   }, [accessibleFunnels, selectedFunnelId]);
 
   const { data: leads, isLoading: leadsLoading } = useCrmLeads(selectedFunnelId || undefined);
-  const { updateLead, deleteLead, markAsLost, bulkUpdateLeads, bulkDeleteLeads } = useCrmLeadMutations();
+  const { updateLead, deleteLead, markAsLost, bulkUpdateLeads, bulkDeleteLeads, bulkAddTag } = useCrmLeadMutations();
 
   const [activeTab, setActiveTab] = useState<"pipeline" | "contatos">("pipeline");
   const [view, setView] = useState<"kanban" | "list">("kanban");
