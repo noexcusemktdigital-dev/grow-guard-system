@@ -51,6 +51,7 @@ export const SALES_PLANS: SalesModulePlan[] = [
     maxDispatches: 1,
     maxDispatchRecipients: 500,
     maxStrategies: 2,
+    maxLeads: 5000,
     popular: true,
     features: [
       "Tudo do Starter",
