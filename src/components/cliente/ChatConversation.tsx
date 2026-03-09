@@ -734,24 +734,12 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                 Carregar anteriores
               </Button>
             )}
-            {instanceId && contact && !historyFallback.has(contact.id) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[11px] text-muted-foreground rounded-full bg-muted/60 hover:bg-muted gap-1"
-                onClick={handleLoadMoreHistory}
-                disabled={loadingHistory}
-              >
-                {loadingHistory ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                Buscar histórico WhatsApp
-              </Button>
-            )}
-          </div>
-          {/* Fallback notice for multi-device limitation */}
-          {contact && historyFallback.has(contact.id) && messages.length === 0 && (
+
+          {/* Multi-device: messages arrive only in real-time */}
+          {contact && messages.length === 0 && !isLoading && (
             <div className="text-center py-4 mb-2">
               <p className="text-xs text-muted-foreground bg-muted/60 inline-block px-4 py-2 rounded-xl max-w-xs">
-                📱 Mensagens anteriores à conexão não estão disponíveis. Novas mensagens aparecerão em tempo real.
+                📱 Mensagens aparecerão aqui em tempo real conforme forem enviadas ou recebidas.
               </p>
             </div>
           )}
