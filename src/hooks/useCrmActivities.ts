@@ -3,18 +3,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function useCrmActivities(leadId: string | undefined) {
+const ACTIVITY_LIMIT = 50;
+
+export function useCrmActivities(leadId: string | undefined, limit = ACTIVITY_LIMIT) {
   const { data: orgId } = useUserOrgId();
 
   return useQuery({
-    queryKey: ["crm-activities", leadId],
+    queryKey: ["crm-activities", leadId, limit],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crm_activities")
         .select("*")
         .eq("lead_id", leadId!)
         .eq("organization_id", orgId!)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(limit);
       if (error) throw error;
       return data;
     },

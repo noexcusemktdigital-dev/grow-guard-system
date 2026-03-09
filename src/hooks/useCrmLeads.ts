@@ -1,29 +1,59 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
 import { playSound } from "@/lib/sounds";
+import { useState, useCallback } from "react";
+
+const PAGE_SIZE = 200;
 
 export function useCrmLeads(funnelId?: string, stage?: string) {
   const { data: orgId } = useUserOrgId();
+  const [page, setPage] = useState(0);
 
   const query = useQuery({
-    queryKey: ["crm-leads", orgId, funnelId, stage],
+    queryKey: ["crm-leads", orgId, funnelId, stage, page],
     queryFn: async () => {
       let q = supabase
         .from("crm_leads")
-        .select("*")
+        .select("id, name, phone, email, company, value, stage, source, tags, created_at, won_at, lost_at, lost_reason, assigned_to, funnel_id, temperature, whatsapp_contact_id, updated_at, archived_at", { count: "exact" })
         .eq("organization_id", orgId!)
-        .order("created_at", { ascending: false });
+        .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (funnelId) q = q.eq("funnel_id", funnelId);
       if (stage) q = q.eq("stage", stage);
-      const { data, error } = await q;
+      const { data, error, count } = await q;
       if (error) throw error;
-      return data;
+      return { data: data ?? [], count: count ?? 0, page, pageSize: PAGE_SIZE };
     },
     enabled: !!orgId,
+    placeholderData: keepPreviousData,
   });
 
-  return query;
+  const nextPage = useCallback(() => {
+    const total = query.data?.count ?? 0;
+    if ((page + 1) * PAGE_SIZE < total) setPage(p => p + 1);
+  }, [page, query.data?.count]);
+
+  const prevPage = useCallback(() => {
+    if (page > 0) setPage(p => p - 1);
+  }, [page]);
+
+  const resetPage = useCallback(() => setPage(0), []);
+
+  return {
+    ...query,
+    // Flatten for backward compat — consumers use `data` as array
+    data: query.data?.data,
+    totalCount: query.data?.count ?? 0,
+    page,
+    pageSize: PAGE_SIZE,
+    nextPage,
+    prevPage,
+    resetPage,
+    hasNextPage: query.data ? (page + 1) * PAGE_SIZE < query.data.count : false,
+    hasPrevPage: page > 0,
+  };
 }
 
 export function useCrmLeadById(id: string | undefined) {
@@ -99,7 +129,6 @@ export function useCrmLeadMutations() {
           }
         }
       } catch (e) {
-        // Roulette is best-effort, don't fail lead creation
         console.warn("Roulette assignment failed:", e);
       }
 
@@ -108,7 +137,6 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       playSound("success");
-      // Notification is now created automatically by DB trigger
     },
   });
 
@@ -190,5 +218,29 @@ export function useCrmLeadMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
   });
 
-  return { createLead, updateLead, deleteLead, markAsWon, markAsLost, bulkUpdateLeads, bulkDeleteLeads };
+  const bulkAddTag = useMutation({
+    mutationFn: async ({ ids, tag }: { ids: string[]; tag: string }) => {
+      const { error } = await supabase.rpc("bulk_add_tag", { _ids: ids, _tag: tag });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+  });
+
+  const archiveOldLeads = useMutation({
+    mutationFn: async () => {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 90);
+      const { error } = await supabase
+        .from("crm_leads")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("organization_id", orgId!)
+        .not("lost_at", "is", null)
+        .lt("lost_at", cutoff.toISOString())
+        .is("archived_at", null);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+  });
+
+  return { createLead, updateLead, deleteLead, markAsWon, markAsLost, bulkUpdateLeads, bulkDeleteLeads, bulkAddTag, archiveOldLeads };
 }

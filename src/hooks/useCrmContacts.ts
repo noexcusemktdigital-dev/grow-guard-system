@@ -1,6 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "./useUserOrgId";
+import { useState, useCallback } from "react";
+
+const PAGE_SIZE = 200;
 
 export interface CrmContact {
   id: string;
@@ -23,24 +26,47 @@ export interface CrmContact {
 
 export function useCrmContacts(search?: string) {
   const { data: orgId } = useUserOrgId();
+  const [page, setPage] = useState(0);
 
-  return useQuery({
-    queryKey: ["crm-contacts", orgId, search],
+  const query = useQuery({
+    queryKey: ["crm-contacts", orgId, search, page],
     queryFn: async () => {
       let q = supabase
         .from("crm_contacts")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("organization_id", orgId!)
-        .order("name");
+        .order("name")
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (search) {
         q = q.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
       }
-      const { data, error } = await q;
+      const { data, error, count } = await q;
       if (error) throw error;
-      return data as CrmContact[];
+      return { data: (data as CrmContact[]) ?? [], count: count ?? 0 };
     },
     enabled: !!orgId,
+    placeholderData: keepPreviousData,
   });
+
+  const nextPage = useCallback(() => {
+    const total = query.data?.count ?? 0;
+    if ((page + 1) * PAGE_SIZE < total) setPage(p => p + 1);
+  }, [page, query.data?.count]);
+
+  const prevPage = useCallback(() => {
+    if (page > 0) setPage(p => p - 1);
+  }, [page]);
+
+  return {
+    ...query,
+    data: query.data?.data,
+    totalCount: query.data?.count ?? 0,
+    page,
+    nextPage,
+    prevPage,
+    hasNextPage: query.data ? (page + 1) * PAGE_SIZE < query.data.count : false,
+    hasPrevPage: page > 0,
+  };
 }
 
 export function useCrmContactMutations() {
