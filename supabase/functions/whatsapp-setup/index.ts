@@ -202,14 +202,18 @@ Deno.serve(async (req) => {
       // Check connection state
       let connStatus = "disconnected";
       try {
+        console.log("[connect] Evolution checking state at", `${cleanBaseUrl}/instance/connectionState/${instanceName}`);
         const stateRes = await fetch(`${cleanBaseUrl}/instance/connectionState/${instanceName}`, {
           headers: { apikey: apiKey },
         });
         const stateData = await stateRes.json();
-        if (stateData?.instance?.state === "open" || stateData?.state === "open") {
+        console.log("[connect] Evolution connectionState:", JSON.stringify(stateData));
+        if (stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED") {
           connStatus = "connected";
         }
-      } catch {}
+      } catch (err) {
+        console.error("[connect] Evolution connectionState error:", err);
+      }
 
       // Upsert instance
       const { data: existing } = await adminClient
