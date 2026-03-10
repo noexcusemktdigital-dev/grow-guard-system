@@ -243,11 +243,12 @@ function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation, refet
 }
 
 /* ── Instance Card ── */
-function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, isPending }: {
+function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconnect, isPending }: {
   instance: WhatsAppInstance;
   onCheckStatus: () => void;
   onDisconnect: () => void;
   onEdit: () => void;
+  onReconnect?: () => void;
   isPending: boolean;
 }) {
   const isConn = instance.status === "connected";
@@ -273,6 +274,11 @@ function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, isPending
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {!isConn && onReconnect && (
+              <Button variant="default" size="sm" onClick={onReconnect} disabled={isPending} title="Reconectar" className="gap-1">
+                <Zap className="w-3.5 h-3.5" /> Reconectar
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={onEdit} disabled={isPending} title="Editar">
               <Pencil className="w-3.5 h-3.5" />
             </Button>
@@ -368,6 +374,34 @@ export default function ClienteIntegracoes() {
     }
   };
 
+  const handleReconnect = async (inst: WhatsAppInstance) => {
+    try {
+      if (inst.provider === "evolution") {
+        await setupMutation.mutateAsync({
+          action: "connect",
+          provider: "evolution",
+          baseUrl: inst.base_url,
+          apiKey: inst.client_token,
+          instanceName: inst.instance_id,
+          label: inst.label,
+        });
+      } else {
+        await setupMutation.mutateAsync({
+          action: "connect",
+          provider: "zapi",
+          instanceId: inst.instance_id,
+          instanceToken: inst.token,
+          clientToken: inst.client_token,
+          label: inst.label,
+        });
+      }
+      refetch();
+      toast.success("Reconexão realizada!");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const webhookUrl = orgId ? `https://${projectId}.supabase.co/functions/v1/crm-lead-webhook?org_id=${orgId}` : "";
 
@@ -428,7 +462,7 @@ export default function ClienteIntegracoes() {
               <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância Z-API configurada.</p></CardContent></Card>
             ) : (
               zapiInstances.map(inst => (
-                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} isPending={setupMutation.isPending} />
+                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} onReconnect={() => handleReconnect(inst)} isPending={setupMutation.isPending} />
               ))
             )}
 
@@ -460,7 +494,7 @@ export default function ClienteIntegracoes() {
               <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância Evolution configurada.</p></CardContent></Card>
             ) : (
               evoInstances.map(inst => (
-                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} isPending={setupMutation.isPending} />
+                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} onReconnect={() => handleReconnect(inst)} isPending={setupMutation.isPending} />
               ))
             )}
           </div>

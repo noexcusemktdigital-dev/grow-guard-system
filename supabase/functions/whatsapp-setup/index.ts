@@ -98,6 +98,34 @@ Deno.serve(async (req) => {
             const stateData = await stateRes.json();
             console.log("[check-status] Evolution connectionState for", inst.instance_id, ":", JSON.stringify(stateData));
             connected = stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED";
+
+            // Fallback: if 404 (instance not found), try listing all instances
+            if (!connected && (stateRes.status === 404 || stateData?.error || stateData?.message?.includes("does not exist"))) {
+              console.log("[check-status] Evolution instance not found, trying fetchInstances fallback");
+              try {
+                const listRes = await fetch(`${inst.base_url}/instance/fetchInstances`, {
+                  headers: { apikey: inst.client_token },
+                });
+                if (listRes.ok) {
+                  const allInstances = await listRes.json();
+                  console.log("[check-status] Evolution all instances:", JSON.stringify(allInstances?.map?.((i: any) => i.instance?.instanceName || i.instanceName) || allInstances));
+                  // Find by case-insensitive name match
+                  const match = (Array.isArray(allInstances) ? allInstances : []).find((i: any) => {
+                    const name = i.instance?.instanceName || i.instanceName || "";
+                    return name.toLowerCase() === inst.instance_id.toLowerCase();
+                  });
+                  if (match) {
+                    const matchState = match.instance?.state || match.state || "";
+                    connected = matchState === "open" || matchState === "CONNECTED";
+                    console.log("[check-status] Evolution fallback matched:", match.instance?.instanceName || match.instanceName, "state:", matchState, "connected:", connected);
+                  } else {
+                    console.log("[check-status] Evolution fallback: no match found for", inst.instance_id);
+                  }
+                }
+              } catch (fallbackErr) {
+                console.error("[check-status] Evolution fetchInstances fallback error:", fallbackErr);
+              }
+            }
           } else {
             // Z-API status check
             const statusRes = await fetch(
