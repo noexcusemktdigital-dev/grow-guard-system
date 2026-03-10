@@ -159,15 +159,15 @@ Deno.serve(async (req) => {
     let resolvedType = type;
 
     if (instance.provider === "evolution") {
-      // Evolution API send
+      // Evolution API v1 send
       const baseUrl = (instance.base_url || "").replace(/\/+$/, "");
       const evHeaders = { "Content-Type": "application/json", apikey: instance.client_token };
 
-      // Normalize phone for Evolution (uses remoteJid format)
+      // Evolution v1 uses clean phone number (no @s.whatsapp.net)
       const isGroupPhone = phone.endsWith("-group");
-      const remoteJid = isGroupPhone
+      const cleanEvPhone = isGroupPhone
         ? phone.replace(/-group$/, "") + "@g.us"
-        : phone.replace(/[\s\-\+\(\)]/g, "") + "@s.whatsapp.net";
+        : phone.replace(/[\s\-\+\(\)]/g, "");
 
       if (mediaUrl) {
         resolvedType = type === "audio" || mediaUrl.match(/\.(webm|ogg|mp3|m4a|mp4)(\?|$)/i) ? "audio" : (type || "image");
@@ -176,17 +176,22 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: evHeaders,
           body: JSON.stringify({
-            number: remoteJid,
-            mediatype: mediaType,
-            media: mediaUrl,
-            caption: message || "",
+            number: cleanEvPhone,
+            mediaMessage: {
+              mediaType,
+              media: mediaUrl,
+              caption: message || "",
+            },
           }),
         });
       } else {
         apiRes = await fetch(`${baseUrl}/message/sendText/${instance.instance_id}`, {
           method: "POST",
           headers: evHeaders,
-          body: JSON.stringify({ number: remoteJid, text: message }),
+          body: JSON.stringify({
+            number: cleanEvPhone,
+            textMessage: { text: message },
+          }),
         });
       }
 
