@@ -365,10 +365,14 @@ export default function ClienteIntegracoes() {
 
   const handleEditSave = async (data: any) => {
     try {
-      await setupMutation.mutateAsync(data);
+      const res = await setupMutation.mutateAsync(data);
       refetch();
       setEditInstance(null);
-      toast.success("Instância atualizada e reconectada!");
+      if (res?.status === "connected") {
+        toast.success("Instância atualizada e conectada!");
+      } else {
+        toast.warning("Instância salva, mas status: " + (res?.status || "desconectado"), { description: "Verifique as credenciais ou o nome da instância no servidor." });
+      }
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -376,8 +380,9 @@ export default function ClienteIntegracoes() {
 
   const handleReconnect = async (inst: WhatsAppInstance) => {
     try {
+      let res: any;
       if (inst.provider === "evolution") {
-        await setupMutation.mutateAsync({
+        res = await setupMutation.mutateAsync({
           action: "connect",
           provider: "evolution",
           baseUrl: inst.base_url,
@@ -386,7 +391,7 @@ export default function ClienteIntegracoes() {
           label: inst.label,
         });
       } else {
-        await setupMutation.mutateAsync({
+        res = await setupMutation.mutateAsync({
           action: "connect",
           provider: "zapi",
           instanceId: inst.instance_id,
@@ -396,9 +401,15 @@ export default function ClienteIntegracoes() {
         });
       }
       refetch();
-      toast.success("Reconexão realizada!");
+      if (res?.status === "connected") {
+        toast.success("Reconexão realizada — conectado!");
+      } else {
+        toast.warning("Reconexão executada, mas status: " + (res?.status || "desconectado"), {
+          description: "A instância pode não existir no servidor ou o nome está diferente. Use o Diagnóstico para verificar.",
+        });
+      }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error("Erro na reconexão: " + err.message);
     }
   };
 
