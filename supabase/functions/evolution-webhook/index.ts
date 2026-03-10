@@ -1,0 +1,247 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Extract org_id from URL path: /evolution-webhook/{org_id}
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split("/");
+    const orgId = pathParts[pathParts.length - 1];
+
+    if (!orgId || orgId === "evolution-webhook") {
+      return new Response(JSON.stringify({ error: "org_id required in path" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json();
+    console.log("Evolution webhook payload:", JSON.stringify(body).slice(0, 500));
+
+    const event = body.event;
+
+    // Find Evolution instance for this org
+    const { data: instances } = await adminClient
+      .from("whatsapp_instances")
+      .select("*")
+      .eq("organization_id", orgId)
+      .eq("provider", "evolution");
+
+    if (!instances || instances.length === 0) {
+      return new Response(JSON.stringify({ error: "No evolution instances found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Match instance by instance_id (instanceName in Evolution)
+    const instanceName = body.instance || body.instanceName || "";
+    let instance = instances.find((i: any) => i.instance_id === instanceName) || instances[0];
+
+    // ─── CONNECTION_UPDATE ───
+    if (event === "CONNECTION_UPDATE") {
+      const state = body.data?.state || body.state || "";
+      const connected = state === "open";
+      await adminClient
+        .from("whatsapp_instances")
+        .update({ status: connected ? "connected" : "disconnected" })
+        .eq("id", instance.id);
+
+      return new Response(JSON.stringify({ ok: true, connection: state }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── MESSAGES_UPSERT ───
+    if (event === "MESSAGES_UPSERT") {
+      const messages = body.data || [];
+      for (const msg of messages) {
+        const key = msg.key || {};
+        const isFromMe = key.fromMe === true;
+        const remoteJid = key.remoteJid || "";
+
+        // Skip status/broadcast
+        if (remoteJid.includes("@broadcast") || remoteJid === "status@broadcast") continue;
+
+        const isGroup = remoteJid.endsWith("@g.us");
+        let phone = remoteJid.replace("@s.whatsapp.net", "").replace("@c.us", "");
+        if (isGroup) {
+          phone = remoteJid.replace("@g.us", "") + "-group";
+        }
+
+        if (!phone) continue;
+
+        const contactType = isGroup ? "group" : "individual";
+        const msgContent = msg.message || {};
+        const messageText =
+          msgContent.conversation ||
+          msgContent.extendedTextMessage?.text ||
+          msgContent.imageMessage?.caption ||
+          msgContent.videoMessage?.caption ||
+          null;
+
+        let messageType = "text";
+        let mediaUrl: string | null = null;
+
+        if (msgContent.imageMessage) {
+          messageType = "image";
+          mediaUrl = msgContent.imageMessage.url || null;
+        } else if (msgContent.audioMessage) {
+          messageType = "audio";
+          mediaUrl = msgContent.audioMessage.url || null;
+        } else if (msgContent.videoMessage) {
+          messageType = "video";
+          mediaUrl = msgContent.videoMessage.url || null;
+        } else if (msgContent.documentMessage) {
+          messageType = "document";
+          mediaUrl = msgContent.documentMessage.url || null;
+        } else if (msgContent.stickerMessage) {
+          messageType = "sticker";
+        }
+
+        const senderName = msg.pushName || null;
+
+        // Build preview
+        const previewText = messageText
+          ? messageText.substring(0, 100)
+          : messageType === "audio" ? "🎤 Áudio"
+          : messageType === "image" ? "📷 Imagem"
+          : messageType === "video" ? "🎬 Vídeo"
+          : messageType === "document" ? "📄 Documento"
+          : messageType === "sticker" ? "🏷️ Sticker"
+          : "📎 Mídia";
+
+        // Upsert contact
+        const { data: existingContact } = await adminClient
+          .from("whatsapp_contacts")
+          .select("id, unread_count, photo_url")
+          .eq("organization_id", orgId)
+          .eq("phone", phone)
+          .maybeSingle();
+
+        let contactId: string;
+
+        if (existingContact) {
+          contactId = existingContact.id;
+          const updateData: any = {
+            name: senderName || undefined,
+            last_message_at: new Date().toISOString(),
+            last_message_preview: (isFromMe ? "Você: " : "") + previewText,
+            instance_id: instance.id,
+          };
+          if (!isFromMe) {
+            updateData.unread_count = (existingContact.unread_count || 0) + 1;
+          }
+          await adminClient.from("whatsapp_contacts").update(updateData).eq("id", contactId);
+        } else {
+          const { data: newContact } = await adminClient
+            .from("whatsapp_contacts")
+            .insert({
+              organization_id: orgId,
+              phone,
+              name: senderName || (contactType === "group" ? phone : null),
+              last_message_at: new Date().toISOString(),
+              last_message_preview: (isFromMe ? "Você: " : "") + previewText,
+              unread_count: isFromMe ? 0 : 1,
+              instance_id: instance.id,
+              attending_mode: contactType === "group" ? "human" : "ai",
+              contact_type: contactType,
+            })
+            .select("id")
+            .single();
+          contactId = newContact!.id;
+        }
+
+        // Insert message
+        const direction = isFromMe ? "outbound" : "inbound";
+        const msgStatus = isFromMe ? "sent" : "received";
+
+        await adminClient.from("whatsapp_messages").insert({
+          organization_id: orgId,
+          contact_id: contactId,
+          message_id_zapi: key.id || null,
+          direction,
+          type: messageType,
+          content: messageText,
+          media_url: mediaUrl,
+          status: msgStatus,
+          metadata: msg,
+        });
+
+        // Trigger AI agent reply for inbound
+        if (!isFromMe && (messageText || mediaUrl)) {
+          try {
+            const aiReplyUrl = `${supabaseUrl}/functions/v1/ai-agent-reply`;
+            fetch(aiReplyUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${serviceRoleKey}`,
+              },
+              body: JSON.stringify({
+                organization_id: orgId,
+                contact_id: contactId,
+                message_text: messageText,
+                message_type: messageType,
+                media_url: mediaUrl,
+                contact_phone: phone,
+              }),
+            }).catch((e) => console.error("AI reply trigger error:", e));
+          } catch (e) {
+            console.error("AI reply trigger setup error:", e);
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── MESSAGES_UPDATE (status changes) ───
+    if (event === "MESSAGES_UPDATE") {
+      const updates = body.data || [];
+      for (const upd of updates) {
+        const key = upd.key || {};
+        const status = upd.update?.status;
+        if (key.id && status !== undefined) {
+          const statusMap: Record<number, string> = {
+            0: "error", 1: "pending", 2: "sent", 3: "delivered", 4: "read", 5: "played",
+          };
+          await adminClient
+            .from("whatsapp_messages")
+            .update({ status: statusMap[status] || String(status) })
+            .eq("message_id_zapi", key.id)
+            .eq("organization_id", orgId);
+        }
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Unhandled event
+    return new Response(JSON.stringify({ ok: true, event: event || "unknown" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("Evolution webhook error:", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
