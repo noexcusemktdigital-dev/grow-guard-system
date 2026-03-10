@@ -66,12 +66,15 @@ export function useWhatsAppInstances() {
   });
 }
 
-// Legacy alias — returns the first instance (backward compat)
+// Legacy alias — returns the first connected instance (or first available)
 export function useWhatsAppInstance() {
   const { data: instances, ...rest } = useWhatsAppInstances();
+  const best = instances && instances.length > 0
+    ? instances.find((i) => i.status === "connected") || instances[0]
+    : null;
   return {
     ...rest,
-    data: instances && instances.length > 0 ? instances[0] : null,
+    data: best,
   };
 }
 
