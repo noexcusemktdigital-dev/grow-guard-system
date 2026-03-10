@@ -91,12 +91,13 @@ Deno.serve(async (req) => {
 
           if (inst.provider === "evolution") {
             // Evolution API status check
+            console.log("[check-status] Evolution calling", `${inst.base_url}/instance/connectionState/${inst.instance_id}`);
             const stateRes = await fetch(`${inst.base_url}/instance/connectionState/${inst.instance_id}`, {
               headers: { apikey: inst.client_token },
             });
             const stateData = await stateRes.json();
             console.log("[check-status] Evolution connectionState for", inst.instance_id, ":", JSON.stringify(stateData));
-            connected = stateData?.instance?.state === "open" || stateData?.state === "open";
+            connected = stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED";
           } else {
             // Z-API status check
             const statusRes = await fetch(
