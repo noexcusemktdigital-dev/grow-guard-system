@@ -374,6 +374,34 @@ export default function ClienteIntegracoes() {
     }
   };
 
+  const handleReconnect = async (inst: WhatsAppInstance) => {
+    try {
+      if (inst.provider === "evolution") {
+        await setupMutation.mutateAsync({
+          action: "connect",
+          provider: "evolution",
+          baseUrl: inst.base_url,
+          apiKey: inst.client_token,
+          instanceName: inst.instance_id,
+          label: inst.label,
+        });
+      } else {
+        await setupMutation.mutateAsync({
+          action: "connect",
+          provider: "zapi",
+          instanceId: inst.instance_id,
+          instanceToken: inst.token,
+          clientToken: inst.client_token,
+          label: inst.label,
+        });
+      }
+      refetch();
+      toast.success("Reconexão realizada!");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const webhookUrl = orgId ? `https://${projectId}.supabase.co/functions/v1/crm-lead-webhook?org_id=${orgId}` : "";
 
