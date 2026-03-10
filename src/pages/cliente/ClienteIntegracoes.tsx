@@ -462,7 +462,7 @@ export default function ClienteIntegracoes() {
               <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância Z-API configurada.</p></CardContent></Card>
             ) : (
               zapiInstances.map(inst => (
-                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} isPending={setupMutation.isPending} />
+                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} onReconnect={() => handleReconnect(inst)} isPending={setupMutation.isPending} />
               ))
             )}
 
