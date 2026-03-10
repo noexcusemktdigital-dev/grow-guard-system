@@ -50,59 +50,65 @@ Deno.serve(async (req) => {
 
     const { contactPhone, contactId, message, type = "text", mediaUrl, quotedMessageId, action } = await req.json();
 
-    // Action: mark messages as read on WhatsApp
+    // ─── Helper: resolve instance from contact or org ───
+    async function resolveInstance(cId?: string): Promise<any> {
+      let inst: any = null;
+      if (cId) {
+        const { data: contact } = await adminClient.from("whatsapp_contacts").select("instance_id").eq("id", cId).maybeSingle();
+        if (contact?.instance_id) {
+          const { data: i } = await adminClient.from("whatsapp_instances").select("*").eq("id", contact.instance_id).eq("status", "connected").maybeSingle();
+          if (i) inst = i;
+        }
+      }
+      if (!inst) {
+        const { data: insts } = await adminClient.from("whatsapp_instances").select("*").eq("organization_id", orgId).eq("status", "connected").order("created_at", { ascending: true }).limit(1);
+        inst = insts && insts.length > 0 ? insts[0] : null;
+      }
+      return inst;
+    }
+
+    // ─── Action: mark as read ───
     if (action === "read") {
       if (!contactPhone && !contactId) {
         return new Response(JSON.stringify({ error: "contactPhone or contactId required for read action" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Resolve phone
       let readPhone = contactPhone;
       if (contactId && !readPhone) {
         const { data: ct } = await adminClient.from("whatsapp_contacts").select("phone").eq("id", contactId).single();
         if (ct) readPhone = ct.phone;
       }
-
       if (!readPhone) {
         return new Response(JSON.stringify({ error: "Could not resolve phone" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Get connected instance
-      let readInstance: any = null;
-      if (contactId) {
-        const { data: ct } = await adminClient.from("whatsapp_contacts").select("instance_id").eq("id", contactId).maybeSingle();
-        if (ct?.instance_id) {
-          const { data: inst } = await adminClient.from("whatsapp_instances").select("*").eq("id", ct.instance_id).eq("status", "connected").maybeSingle();
-          if (inst) readInstance = inst;
-        }
-      }
-      if (!readInstance) {
-        const { data: insts } = await adminClient.from("whatsapp_instances").select("*").eq("organization_id", orgId).eq("status", "connected").order("created_at", { ascending: true }).limit(1);
-        readInstance = insts && insts.length > 0 ? insts[0] : null;
-      }
-
+      const readInstance = await resolveInstance(contactId);
       if (!readInstance) {
         return new Response(JSON.stringify({ error: "No connected instance" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const cleanReadPhone = readPhone.replace(/[\s\-\+\(\)]/g, "");
-      const zapiReadBase = `https://api.z-api.io/instances/${readInstance.instance_id}/token/${readInstance.token}`;
 
+      if (readInstance.provider === "evolution") {
+        // Evolution doesn't have a direct read-message endpoint commonly — skip gracefully
+        return new Response(JSON.stringify({ success: true, zapi: { note: "read not supported on Evolution" } }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Z-API read
+      const zapiReadBase = `https://api.z-api.io/instances/${readInstance.instance_id}/token/${readInstance.token}`;
       const readRes = await fetch(`${zapiReadBase}/read-message`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Client-Token": readInstance.client_token },
         body: JSON.stringify({ phone: cleanReadPhone }),
       });
-
       const readData = await readRes.json().catch(() => ({}));
 
       return new Response(JSON.stringify({ success: true, zapi: readData }), {
@@ -110,48 +116,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── Validate send params ───
     if ((!message && !mediaUrl) || (!contactPhone && !contactId)) {
       return new Response(JSON.stringify({ error: "message or mediaUrl, and contactPhone or contactId required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get Z-API instance
-    let instance: any = null;
-
-    if (contactId) {
-      const { data: contact } = await adminClient
-        .from("whatsapp_contacts")
-        .select("instance_id")
-        .eq("id", contactId)
-        .maybeSingle();
-      if (contact?.instance_id) {
-        const { data: inst } = await adminClient
-          .from("whatsapp_instances")
-          .select("*")
-          .eq("id", contact.instance_id)
-          .eq("status", "connected")
-          .maybeSingle();
-        if (inst) instance = inst;
-      }
-    }
-
-    if (!instance) {
-      const { data: instances } = await adminClient
-        .from("whatsapp_instances")
-        .select("*")
-        .eq("organization_id", orgId)
-        .eq("status", "connected")
-        .order("created_at", { ascending: true })
-        .limit(1);
-      instance = instances && instances.length > 0 ? instances[0] : null;
-    }
-
+    // Get instance
+    const instance = await resolveInstance(contactId);
     if (!instance || instance.status !== "connected") {
       return new Response(JSON.stringify({ error: "No connected WhatsApp instance" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -160,122 +136,135 @@ Deno.serve(async (req) => {
     let resolvedContactId = contactId;
 
     if (contactId && !contactPhone) {
-      const { data: contact } = await adminClient
-        .from("whatsapp_contacts")
-        .select("phone")
-        .eq("id", contactId)
-        .single();
+      const { data: contact } = await adminClient.from("whatsapp_contacts").select("phone").eq("id", contactId).single();
       if (contact) phone = contact.phone;
     }
 
     // Upsert contact if needed
     if (!resolvedContactId && phone) {
-      const { data: existing } = await adminClient
-        .from("whatsapp_contacts")
-        .select("id")
-        .eq("organization_id", orgId)
-        .eq("phone", phone)
-        .maybeSingle();
-
+      const { data: existing } = await adminClient.from("whatsapp_contacts").select("id").eq("organization_id", orgId).eq("phone", phone).maybeSingle();
       if (existing) {
         resolvedContactId = existing.id;
       } else {
-        const { data: newContact } = await adminClient
-          .from("whatsapp_contacts")
-          .insert({ organization_id: orgId, phone, last_message_at: new Date().toISOString(), instance_id: instance.id })
-          .select("id")
-          .single();
+        const { data: newContact } = await adminClient.from("whatsapp_contacts").insert({
+          organization_id: orgId, phone, last_message_at: new Date().toISOString(), instance_id: instance.id,
+        }).select("id").single();
         if (newContact) resolvedContactId = newContact.id;
       }
     }
 
-    // For groups stored as -group, convert to @g.us for Z-API send endpoints
-    const isGroupPhone = phone.endsWith("-group");
-    const cleanPhone = isGroupPhone
-      ? phone.replace(/-group$/, "") + "@g.us"
-      : phone.replace(/[\s\-\+\(\)]/g, "");
-    const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
-    const zapiHeaders = {
-      "Content-Type": "application/json",
-      "Client-Token": instance.client_token,
-    };
-
-    let zapiUrl: string;
-    let zapiBody: Record<string, unknown>;
+    // ─── Send via provider ───
+    let apiRes: Response;
+    let apiData: any;
     let resolvedType = type;
 
-    if (mediaUrl && (type === "audio" || mediaUrl.match(/\.(webm|ogg|mp3|m4a|mp4)(\?|$)/i))) {
-      // Send audio via Z-API
-      zapiUrl = `${zapiBase}/send-audio`;
-      zapiBody = { phone: cleanPhone, audio: mediaUrl };
-      resolvedType = "audio";
-    } else if (mediaUrl) {
-      // Send image/document via Z-API
-      zapiUrl = `${zapiBase}/send-image`;
-      zapiBody = { phone: cleanPhone, image: mediaUrl, caption: message || "" };
-      resolvedType = type || "image";
+    if (instance.provider === "evolution") {
+      // Evolution API send
+      const baseUrl = (instance.base_url || "").replace(/\/+$/, "");
+      const evHeaders = { "Content-Type": "application/json", apikey: instance.client_token };
+
+      // Normalize phone for Evolution (uses remoteJid format)
+      const isGroupPhone = phone.endsWith("-group");
+      const remoteJid = isGroupPhone
+        ? phone.replace(/-group$/, "") + "@g.us"
+        : phone.replace(/[\s\-\+\(\)]/g, "") + "@s.whatsapp.net";
+
+      if (mediaUrl) {
+        resolvedType = type === "audio" || mediaUrl.match(/\.(webm|ogg|mp3|m4a|mp4)(\?|$)/i) ? "audio" : (type || "image");
+        const mediaType = resolvedType === "audio" ? "audio" : resolvedType === "video" ? "video" : resolvedType === "document" ? "document" : "image";
+        apiRes = await fetch(`${baseUrl}/message/sendMedia/${instance.instance_id}`, {
+          method: "POST",
+          headers: evHeaders,
+          body: JSON.stringify({
+            number: remoteJid,
+            mediatype: mediaType,
+            media: mediaUrl,
+            caption: message || "",
+          }),
+        });
+      } else {
+        apiRes = await fetch(`${baseUrl}/message/sendText/${instance.instance_id}`, {
+          method: "POST",
+          headers: evHeaders,
+          body: JSON.stringify({ number: remoteJid, text: message }),
+        });
+      }
+
+      apiData = await apiRes.json();
     } else {
-      // Send text
-      zapiUrl = `${zapiBase}/send-text`;
-      zapiBody = { phone: cleanPhone, message };
+      // Z-API send (original logic)
+      const isGroupPhone = phone.endsWith("-group");
+      const cleanPhone = isGroupPhone
+        ? phone.replace(/-group$/, "") + "@g.us"
+        : phone.replace(/[\s\-\+\(\)]/g, "");
+      const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
+      const zapiHeaders = { "Content-Type": "application/json", "Client-Token": instance.client_token };
+
+      let zapiUrl: string;
+      let zapiBody: Record<string, unknown>;
+
+      if (mediaUrl && (type === "audio" || mediaUrl.match(/\.(webm|ogg|mp3|m4a|mp4)(\?|$)/i))) {
+        zapiUrl = `${zapiBase}/send-audio`;
+        zapiBody = { phone: cleanPhone, audio: mediaUrl };
+        resolvedType = "audio";
+      } else if (mediaUrl) {
+        zapiUrl = `${zapiBase}/send-image`;
+        zapiBody = { phone: cleanPhone, image: mediaUrl, caption: message || "" };
+        resolvedType = type || "image";
+      } else {
+        zapiUrl = `${zapiBase}/send-text`;
+        zapiBody = { phone: cleanPhone, message };
+      }
+
+      if (quotedMessageId) {
+        zapiBody.messageId = quotedMessageId;
+      }
+
+      apiRes = await fetch(zapiUrl, {
+        method: "POST",
+        headers: zapiHeaders,
+        body: JSON.stringify(zapiBody),
+      });
+
+      apiData = await apiRes.json();
     }
 
-    // Add quoted message if present
-    if (quotedMessageId) {
-      zapiBody.messageId = quotedMessageId;
-    }
-
-    const zapiRes = await fetch(zapiUrl, {
-      method: "POST",
-      headers: zapiHeaders,
-      body: JSON.stringify(zapiBody),
-    });
-
-    const zapiData = await zapiRes.json();
-    const messageStatus = zapiRes.ok ? "sent" : "failed";
+    const messageStatus = apiRes.ok ? "sent" : "failed";
 
     // Build metadata
-    const msgMetadata: Record<string, unknown> = { ...(zapiData || {}) };
-    if (quotedMessageId) {
-      msgMetadata.quotedMessageId = quotedMessageId;
-    }
+    const msgMetadata: Record<string, unknown> = { ...(apiData || {}) };
+    if (quotedMessageId) msgMetadata.quotedMessageId = quotedMessageId;
 
     // Save message
-    const { data: savedMsg } = await adminClient
-      .from("whatsapp_messages")
-      .insert({
-        organization_id: orgId,
-        contact_id: resolvedContactId,
-        message_id_zapi: zapiData?.messageId || null,
-        direction: "outbound",
-        type: resolvedType,
-        content: message || null,
-        media_url: mediaUrl || null,
-        status: messageStatus,
-        metadata: msgMetadata,
-      })
-      .select()
-      .single();
+    const { data: savedMsg } = await adminClient.from("whatsapp_messages").insert({
+      organization_id: orgId,
+      contact_id: resolvedContactId,
+      message_id_zapi: apiData?.messageId || apiData?.key?.id || null,
+      direction: "outbound",
+      type: resolvedType,
+      content: message || null,
+      media_url: mediaUrl || null,
+      status: messageStatus,
+      metadata: msgMetadata,
+    }).select().single();
 
     // Update contact
     if (resolvedContactId) {
-      const updateData: Record<string, unknown> = { last_message_at: new Date().toISOString() };
       const preview = message ? message.substring(0, 100) : (resolvedType === "audio" ? "🎤 Áudio" : "📎 Mídia");
-      updateData.last_message_preview = preview;
-      await adminClient
-        .from("whatsapp_contacts")
-        .update(updateData)
-        .eq("id", resolvedContactId);
+      await adminClient.from("whatsapp_contacts").update({
+        last_message_at: new Date().toISOString(),
+        last_message_preview: preview,
+      }).eq("id", resolvedContactId);
     }
 
-    if (!zapiRes.ok) {
+    if (!apiRes.ok) {
       return new Response(
-        JSON.stringify({ error: "Failed to send via Z-API", details: zapiData }),
+        JSON.stringify({ error: "Failed to send message", details: apiData }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    return new Response(JSON.stringify({ success: true, message: savedMsg, zapi: zapiData }), {
+    return new Response(JSON.stringify({ success: true, message: savedMsg, zapi: apiData }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

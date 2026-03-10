@@ -5170,6 +5170,7 @@ export type Database = {
       }
       whatsapp_instances: {
         Row: {
+          base_url: string | null
           client_token: string
           created_at: string
           id: string
@@ -5177,12 +5178,14 @@ export type Database = {
           label: string | null
           organization_id: string
           phone_number: string | null
+          provider: string
           status: string
           token: string
           updated_at: string
           webhook_url: string | null
         }
         Insert: {
+          base_url?: string | null
           client_token: string
           created_at?: string
           id?: string
@@ -5190,12 +5193,14 @@ export type Database = {
           label?: string | null
           organization_id: string
           phone_number?: string | null
+          provider?: string
           status?: string
           token: string
           updated_at?: string
           webhook_url?: string | null
         }
         Update: {
+          base_url?: string | null
           client_token?: string
           created_at?: string
           id?: string
@@ -5203,6 +5208,7 @@ export type Database = {
           label?: string | null
           organization_id?: string
           phone_number?: string | null
+          provider?: string
           status?: string
           token?: string
           updated_at?: string

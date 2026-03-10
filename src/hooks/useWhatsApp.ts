@@ -12,6 +12,8 @@ export interface WhatsAppInstance {
   phone_number: string | null;
   webhook_url: string | null;
   label: string | null;
+  provider: "zapi" | "evolution";
+  base_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -86,7 +88,6 @@ export function useWhatsAppContacts(filterInstanceId?: string | null) {
         .eq("organization_id", orgId)
         .order("last_message_at", { ascending: false, nullsFirst: false });
 
-      // Filter by instance if provided
       if (filterInstanceId) {
         query = query.eq("instance_id", filterInstanceId);
       }
@@ -95,7 +96,6 @@ export function useWhatsAppContacts(filterInstanceId?: string | null) {
       if (error) throw error;
       const enriched = (data || []).map((c: any) => {
         const phone = c.phone || "";
-        // Use stored contact_type from DB; fallback to phone-pattern detection
         let contact_type: "individual" | "group" | "lid" = c.contact_type || "individual";
         if (contact_type === "individual") {
           if (phone.endsWith("-group") || phone.includes("@g.us") || /^\d+-\d{10,}$/.test(phone)) {
@@ -106,7 +106,6 @@ export function useWhatsAppContacts(filterInstanceId?: string | null) {
         }
         return { ...c, contact_type };
       });
-      // Only filter out broadcasts/status/lid — allow groups
       const filtered = enriched.filter((c: any) => {
         const phone = c.phone || "";
         if (phone.includes("@broadcast")) return false;
@@ -137,7 +136,6 @@ export function useWhatsAppMessages(contactId: string | null) {
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
-      // Reverse to show oldest first
       return ((data || []) as unknown as WhatsAppMessage[]).reverse();
     },
     enabled: !!orgId && !!contactId,
@@ -150,11 +148,15 @@ export function useSetupWhatsApp() {
 
   return useMutation({
     mutationFn: async (params: {
-      instanceId: string;
-      instanceToken: string;
-      clientToken: string;
+      instanceId?: string;
+      instanceToken?: string;
+      clientToken?: string;
       action?: string;
       label?: string;
+      provider?: "zapi" | "evolution";
+      baseUrl?: string;
+      apiKey?: string;
+      instanceName?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("whatsapp-setup", {
         body: params,
@@ -299,7 +301,7 @@ export function useFindLeadByPhone(phone: string | null) {
   });
 }
 
-// Send typing indicator to Z-API (debounced by caller)
+// Send typing indicator
 export function useSendTypingIndicator() {
   return useMutation({
     mutationFn: async (contactPhone: string) => {
@@ -312,7 +314,7 @@ export function useSendTypingIndicator() {
   });
 }
 
-// Mark messages as read on WhatsApp via Z-API
+// Mark messages as read on WhatsApp
 export function useMarkWhatsAppRead() {
   return useMutation({
     mutationFn: async (params: { contactPhone?: string; contactId?: string }) => {
@@ -353,14 +355,12 @@ export function useContactPreviews(contactIds: string[]) {
   });
 }
 
-// Format message preview like WhatsApp
 function formatMessagePreview(msg: {
   content: string | null;
   type: string;
   direction: string;
   status: string;
 }): string {
-  // Media types
   if (msg.type === "audio") return "🎤 Áudio";
   if (msg.type === "image") return "📷 Foto";
   if (msg.type === "video") return "📹 Vídeo";
@@ -368,14 +368,12 @@ function formatMessagePreview(msg: {
 
   const text = msg.content || "";
 
-  // Outbound messages: add "Você:" prefix and checkmarks
   if (msg.direction === "outbound") {
     const checkmarks = msg.status === "read" || msg.status === "delivered" ? "✓✓" : "✓";
     const truncated = text.length > 80 ? text.substring(0, 80) + "..." : text;
     return `${checkmarks} Você: ${truncated}`;
   }
 
-  // Inbound messages: just the text
   const truncated = text.length > 100 ? text.substring(0, 100) + "..." : text;
   return truncated;
 }

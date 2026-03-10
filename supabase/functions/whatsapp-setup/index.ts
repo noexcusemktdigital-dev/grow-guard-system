@@ -49,46 +49,30 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { instanceId, instanceToken, clientToken, action, label } = body;
+    const { instanceId, instanceToken, clientToken, action, label, provider = "zapi", baseUrl, apiKey, instanceName } = body;
 
-    // Action: disconnect a specific instance
+    const isEvolution = provider === "evolution";
+
+    // ─── Action: disconnect ───
     if (action === "disconnect") {
       if (instanceId) {
-        await adminClient
-          .from("whatsapp_instances")
-          .delete()
-          .eq("instance_id", instanceId)
-          .eq("organization_id", orgId);
+        await adminClient.from("whatsapp_instances").delete().eq("instance_id", instanceId).eq("organization_id", orgId);
       } else {
-        // Legacy fallback: disconnect all
-        await adminClient
-          .from("whatsapp_instances")
-          .delete()
-          .eq("organization_id", orgId);
+        await adminClient.from("whatsapp_instances").delete().eq("organization_id", orgId);
       }
-
       return new Response(JSON.stringify({ success: true, status: "disconnected" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Action: check-status for a specific instance or all
+    // ─── Action: check-status ───
     if (action === "check-status") {
       let instances: any[] = [];
-
       if (instanceId) {
-        const { data } = await adminClient
-          .from("whatsapp_instances")
-          .select("*")
-          .eq("organization_id", orgId)
-          .eq("instance_id", instanceId)
-          .maybeSingle();
+        const { data } = await adminClient.from("whatsapp_instances").select("*").eq("organization_id", orgId).eq("instance_id", instanceId).maybeSingle();
         if (data) instances = [data];
       } else {
-        const { data } = await adminClient
-          .from("whatsapp_instances")
-          .select("*")
-          .eq("organization_id", orgId);
+        const { data } = await adminClient.from("whatsapp_instances").select("*").eq("organization_id", orgId);
         instances = data || [];
       }
 
@@ -100,73 +84,72 @@ Deno.serve(async (req) => {
 
       const results: any[] = [];
 
-      for (const instance of instances) {
+      for (const inst of instances) {
         try {
-          const statusRes = await fetch(
-            `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/status`,
-            { headers: { "Client-Token": instance.client_token } }
-          );
-          const statusData = await statusRes.json();
-          console.log("[check-status] /status response for", instance.instance_id, ":", JSON.stringify(statusData));
-          const connected = statusData.connected === true;
-          let phoneNumber = instance.phone_number || null;
+          let connected = false;
+          let phoneNumber = inst.phone_number || null;
 
-          if (connected) {
-            try {
-              // Try /device first
-              const deviceRes = await fetch(
-                `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/device`,
-                { headers: { "Client-Token": instance.client_token } }
-              );
-              const deviceData = await deviceRes.json();
-              console.log("[check-status] /device response for", instance.instance_id, ":", JSON.stringify(deviceData));
-              if (deviceData.phone) {
-                phoneNumber = deviceData.phone;
-              }
-            } catch (err) {
-              console.error("Failed to fetch device info:", err);
-            }
+          if (inst.provider === "evolution") {
+            // Evolution API status check
+            const stateRes = await fetch(`${inst.base_url}/instance/connectionState/${inst.instance_id}`, {
+              headers: { apikey: inst.client_token },
+            });
+            const stateData = await stateRes.json();
+            console.log("[check-status] Evolution connectionState for", inst.instance_id, ":", JSON.stringify(stateData));
+            connected = stateData?.instance?.state === "open" || stateData?.state === "open";
+          } else {
+            // Z-API status check
+            const statusRes = await fetch(
+              `https://api.z-api.io/instances/${inst.instance_id}/token/${inst.token}/status`,
+              { headers: { "Client-Token": inst.client_token } }
+            );
+            const statusData = await statusRes.json();
+            console.log("[check-status] Z-API /status for", inst.instance_id, ":", JSON.stringify(statusData));
+            connected = statusData.connected === true;
 
-            // Fallback: try /phone endpoint if device didn't return a phone
-            if (!phoneNumber) {
+            if (connected) {
               try {
-                const phoneRes = await fetch(
-                  `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/phone`,
-                  { headers: { "Client-Token": instance.client_token } }
+                const deviceRes = await fetch(
+                  `https://api.z-api.io/instances/${inst.instance_id}/token/${inst.token}/device`,
+                  { headers: { "Client-Token": inst.client_token } }
                 );
-                const phoneData = await phoneRes.json();
-                console.log("[check-status] /phone fallback for", instance.instance_id, ":", JSON.stringify(phoneData));
-                if (phoneData.phone) {
-                  phoneNumber = phoneData.phone;
-                }
-              } catch (err) {
-                console.error("Failed to fetch phone fallback:", err);
+                const deviceData = await deviceRes.json();
+                if (deviceData.phone) phoneNumber = deviceData.phone;
+              } catch {}
+              if (!phoneNumber) {
+                try {
+                  const phoneRes = await fetch(
+                    `https://api.z-api.io/instances/${inst.instance_id}/token/${inst.token}/phone`,
+                    { headers: { "Client-Token": inst.client_token } }
+                  );
+                  const phoneData = await phoneRes.json();
+                  if (phoneData.phone) phoneNumber = phoneData.phone;
+                } catch {}
               }
             }
           }
 
-          await adminClient
-            .from("whatsapp_instances")
-            .update({
-              status: connected ? "connected" : "disconnected",
-              phone_number: phoneNumber,
-            })
-            .eq("id", instance.id);
+          await adminClient.from("whatsapp_instances").update({
+            status: connected ? "connected" : "disconnected",
+            phone_number: phoneNumber,
+          }).eq("id", inst.id);
 
           results.push({
-            id: instance.id,
-            instance_id: instance.instance_id,
+            id: inst.id,
+            instance_id: inst.instance_id,
             status: connected ? "connected" : "disconnected",
             phone: phoneNumber,
-            label: instance.label,
+            label: inst.label,
+            provider: inst.provider,
           });
         } catch {
           results.push({
-            id: instance.id,
-            instance_id: instance.instance_id,
-            status: instance.status,
-            phone: instance.phone_number,
-            label: instance.label,
+            id: inst.id,
+            instance_id: inst.instance_id,
+            status: inst.status,
+            phone: inst.phone_number,
+            label: inst.label,
+            provider: inst.provider,
           });
         }
       }
@@ -180,7 +163,89 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Action: connect (default) — save credentials + configure webhooks
+    // ─── Action: connect (default) ───
+    if (isEvolution) {
+      // Evolution API connect
+      if (!baseUrl || !apiKey || !instanceName) {
+        return new Response(JSON.stringify({ error: "baseUrl, apiKey, and instanceName are required for Evolution" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
+      const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
+
+      // Configure webhook on Evolution API
+      try {
+        await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: apiKey },
+          body: JSON.stringify({
+            url: webhookUrl,
+            webhook_by_events: false,
+            webhook_base64: false,
+            events: [
+              "MESSAGES_UPSERT",
+              "MESSAGES_UPDATE",
+              "CONNECTION_UPDATE",
+              "QRCODE_UPDATED",
+            ],
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to configure Evolution webhooks:", err);
+      }
+
+      // Check connection state
+      let connStatus = "disconnected";
+      try {
+        const stateRes = await fetch(`${cleanBaseUrl}/instance/connectionState/${instanceName}`, {
+          headers: { apikey: apiKey },
+        });
+        const stateData = await stateRes.json();
+        if (stateData?.instance?.state === "open" || stateData?.state === "open") {
+          connStatus = "connected";
+        }
+      } catch {}
+
+      // Upsert instance
+      const { data: existing } = await adminClient
+        .from("whatsapp_instances")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("instance_id", instanceName)
+        .eq("provider", "evolution")
+        .maybeSingle();
+
+      const instanceData = {
+        token: apiKey,
+        client_token: apiKey,
+        status: connStatus,
+        phone_number: null,
+        webhook_url: webhookUrl,
+        label: label || instanceName,
+        provider: "evolution",
+        base_url: cleanBaseUrl,
+      };
+
+      if (existing) {
+        await adminClient.from("whatsapp_instances").update(instanceData).eq("id", existing.id);
+      } else {
+        await adminClient.from("whatsapp_instances").insert({
+          ...instanceData,
+          organization_id: orgId,
+          instance_id: instanceName,
+        });
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, status: connStatus, phone: null, webhookUrl }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ─── Z-API connect (original logic) ───
     if (!instanceId || !instanceToken || !clientToken) {
       return new Response(JSON.stringify({ error: "instanceId, instanceToken, and clientToken are required" }), {
         status: 400,
@@ -190,7 +255,7 @@ Deno.serve(async (req) => {
 
     const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook/${orgId}`;
 
-    // Configure webhooks on Z-API (received + status + send)
+    // Configure webhooks on Z-API
     try {
       const webhookEndpoints = [
         "update-webhook-received-delivery",
@@ -233,19 +298,12 @@ Deno.serve(async (req) => {
             { headers: { "Client-Token": clientToken } }
           );
           const deviceData = await deviceRes.json();
-          console.log("[connect] /device response:", JSON.stringify(deviceData));
-          if (deviceData.phone) {
-            phoneNumber = deviceData.phone;
-          }
-        } catch {
-          // device endpoint failed, continue without phone
-        }
+          if (deviceData.phone) phoneNumber = deviceData.phone;
+        } catch {}
       }
-    } catch {
-      // keep disconnected
-    }
+    } catch {}
 
-    // Upsert by instance_id (not organization_id) to support multiple instances
+    // Upsert by instance_id
     const { data: existing } = await adminClient
       .from("whatsapp_instances")
       .select("id")
@@ -253,31 +311,25 @@ Deno.serve(async (req) => {
       .eq("instance_id", instanceId)
       .maybeSingle();
 
+    const instanceData = {
+      token: instanceToken,
+      client_token: clientToken,
+      status: connStatus,
+      phone_number: phoneNumber,
+      webhook_url: webhookUrl,
+      label: label || null,
+      provider: "zapi",
+      base_url: null,
+    };
+
     if (existing) {
-      await adminClient
-        .from("whatsapp_instances")
-        .update({
-          token: instanceToken,
-          client_token: clientToken,
-          status: connStatus,
-          phone_number: phoneNumber,
-          webhook_url: webhookUrl,
-          label: label || null,
-        })
-        .eq("id", existing.id);
+      await adminClient.from("whatsapp_instances").update(instanceData).eq("id", existing.id);
     } else {
-      await adminClient
-        .from("whatsapp_instances")
-        .insert({
-          organization_id: orgId,
-          instance_id: instanceId,
-          token: instanceToken,
-          client_token: clientToken,
-          status: connStatus,
-          phone_number: phoneNumber,
-          webhook_url: webhookUrl,
-          label: label || null,
-        });
+      await adminClient.from("whatsapp_instances").insert({
+        ...instanceData,
+        organization_id: orgId,
+        instance_id: instanceId,
+      });
     }
 
     return new Response(
