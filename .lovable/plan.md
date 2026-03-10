@@ -1,31 +1,34 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Criar instância Evolution antes de configurar
 
-### Status: ✅ Implementado
+### Problema
+Os logs confirmam: `The "NOEXCUSE" instance does not exist` (404). O fluxo de connect nunca cria a instância no servidor Evolution.
 
-### Resumo
+### Correção
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+**`supabase/functions/whatsapp-setup/index.ts`** — No bloco Evolution connect (após linha 178), adicionar criação da instância antes de configurar webhooks:
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+1. **Criar instância** via `POST {baseUrl}/instance/create` com body:
+```json
+{
+  "instanceName": "<instanceName>",
+  "token": "<apiKey>",
+  "qrcode": true
+}
+```
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+2. **Ignorar se já existir** (status 403/409) — logar e continuar normalmente.
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+3. Manter fluxo existente: webhook → connectionState → upsert DB.
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### Fluxo corrigido
+```text
+1. POST /instance/create          ← NOVO
+2. POST /webhook/set/{name}       (existente)
+3. GET /instance/connectionState  (existente)
+4. Upsert no banco                (existente)
+```
+
+Apenas 1 arquivo modificado.
+
