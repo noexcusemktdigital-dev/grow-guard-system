@@ -143,7 +143,8 @@ Deno.serve(async (req) => {
             label: inst.label,
             provider: inst.provider,
           });
-        } catch {
+        } catch (err) {
+          console.error("[check-status] Error checking instance", inst.instance_id, "provider", inst.provider, ":", err);
           results.push({
             id: inst.id,
             instance_id: inst.instance_id,
