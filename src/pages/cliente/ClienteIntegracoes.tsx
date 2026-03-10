@@ -494,7 +494,7 @@ export default function ClienteIntegracoes() {
               <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância Evolution configurada.</p></CardContent></Card>
             ) : (
               evoInstances.map(inst => (
-                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} isPending={setupMutation.isPending} />
+                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} onReconnect={() => handleReconnect(inst)} isPending={setupMutation.isPending} />
               ))
             )}
           </div>
