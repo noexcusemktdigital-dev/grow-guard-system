@@ -178,7 +178,24 @@ Deno.serve(async (req) => {
       const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
       const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
 
-      // Configure webhook on Evolution API
+      // Step 1: Create instance on Evolution API (ignore if already exists)
+      try {
+        console.log("[connect] Evolution creating instance:", instanceName);
+        const createRes = await fetch(`${cleanBaseUrl}/instance/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: apiKey },
+          body: JSON.stringify({ instanceName, token: apiKey, qrcode: true }),
+        });
+        const createData = await createRes.json();
+        console.log("[connect] Evolution create response:", createRes.status, JSON.stringify(createData));
+        if (!createRes.ok && createRes.status !== 403 && createRes.status !== 409) {
+          console.warn("[connect] Evolution create non-fatal error:", createRes.status);
+        }
+      } catch (err) {
+        console.error("[connect] Failed to create Evolution instance:", err);
+      }
+
+      // Step 2: Configure webhook on Evolution API
       try {
         await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
           method: "POST",
