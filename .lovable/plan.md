@@ -1,31 +1,29 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Espelhamento completo do WhatsApp — remover filtros restritivos
 
-### Status: ✅ Implementado
+### Problema
+Existem filtros em 3 camadas que impedem o espelhamento completo das conversas do WhatsApp:
 
-### Resumo
+1. **`useWhatsApp.ts` (frontend)** — filtra contatos `@lid`, `@broadcast`, `status` na query dos contatos (linhas 109-116)
+2. **`whatsapp-webhook/index.ts` (webhook)** — descarta mensagens de contatos `@lid` e broadcasts (linhas 136-143 implicitamente via filtro no frontend)
+3. **`whatsapp-sync-chats/index.ts` (sync)** — filtra chats `broadcast` e `status` (linhas 199-205)
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+O filtro de `@lid` no frontend é o mais prejudicial — contatos do tipo "lid" são contatos legítimos do WhatsApp (lead IDs gerados pelo WhatsApp Business) que deveriam aparecer normalmente.
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+### Correções
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+#### 1. `src/hooks/useWhatsApp.ts`
+- **Remover o filtro `@lid`** da lista de contatos (linha 112) — contatos lid são conversas legítimas
+- **Manter apenas** os filtros de `@broadcast` e `status@broadcast` que são listas de transmissão (não conversas reais)
+- **Remover `enabled: !!filterInstanceId`** — permitir carregar contatos mesmo sem filtro de instância (linha 119), usar apenas `!!orgId`
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+#### 2. `supabase/functions/whatsapp-webhook/index.ts`
+- Sem mudanças — o webhook já aceita tudo exceto broadcast/status, que é correto
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+#### 3. `supabase/functions/whatsapp-sync-chats/index.ts`
+- Sem mudanças — já mantém tudo exceto broadcast/status
+
+### Resumo de arquivos
+- `src/hooks/useWhatsApp.ts` — remover filtro `@lid`, ajustar `enabled` condition
+
