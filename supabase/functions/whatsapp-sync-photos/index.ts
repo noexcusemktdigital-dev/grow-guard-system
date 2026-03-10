@@ -52,18 +52,25 @@ Deno.serve(async (req) => {
     const limit = body.limit || 50;
     const syncPreviews = body.syncPreviews !== false; // default true
 
-    // Find connected instance
+    // Find connected Z-API instance (sync-photos uses Z-API endpoints only)
     const { data: instance } = await adminClient
       .from("whatsapp_instances")
       .select("*")
       .eq("organization_id", orgId)
       .eq("status", "connected")
+      .eq("provider", "zapi")
       .limit(1)
       .maybeSingle();
 
     if (!instance) {
-      return new Response(JSON.stringify({ error: "No connected instance" }), {
-        status: 400,
+      // No Z-API instance connected — skip gracefully instead of erroring
+      return new Response(JSON.stringify({
+        success: true,
+        photos_updated: 0,
+        previews_updated: 0,
+        photos_failed: 0,
+        skipped: "no_zapi_instance",
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

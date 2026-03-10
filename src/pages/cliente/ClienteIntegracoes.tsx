@@ -243,11 +243,12 @@ function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation, refet
 }
 
 /* ── Instance Card ── */
-function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, isPending }: {
+function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconnect, isPending }: {
   instance: WhatsAppInstance;
   onCheckStatus: () => void;
   onDisconnect: () => void;
   onEdit: () => void;
+  onReconnect?: () => void;
   isPending: boolean;
 }) {
   const isConn = instance.status === "connected";
@@ -273,6 +274,11 @@ function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, isPending
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {!isConn && onReconnect && (
+              <Button variant="default" size="sm" onClick={onReconnect} disabled={isPending} title="Reconectar" className="gap-1">
+                <Zap className="w-3.5 h-3.5" /> Reconectar
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={onEdit} disabled={isPending} title="Editar">
               <Pencil className="w-3.5 h-3.5" />
             </Button>
