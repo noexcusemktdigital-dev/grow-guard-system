@@ -109,14 +109,13 @@ export function useWhatsAppContacts(filterInstanceId?: string | null) {
       const filtered = enriched.filter((c: any) => {
         const phone = c.phone || "";
         if (phone.includes("@broadcast")) return false;
-        if (phone.includes("@lid")) return false;
         if (phone === "status") return false;
         if (phone.includes("status@broadcast")) return false;
         return true;
       });
       return filtered as unknown as WhatsAppContact[];
     },
-    enabled: !!orgId && !!filterInstanceId,
+    enabled: !!orgId,
     refetchInterval: 30000,
   });
 }
