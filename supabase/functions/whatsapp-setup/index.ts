@@ -91,12 +91,13 @@ Deno.serve(async (req) => {
 
           if (inst.provider === "evolution") {
             // Evolution API status check
+            console.log("[check-status] Evolution calling", `${inst.base_url}/instance/connectionState/${inst.instance_id}`);
             const stateRes = await fetch(`${inst.base_url}/instance/connectionState/${inst.instance_id}`, {
               headers: { apikey: inst.client_token },
             });
             const stateData = await stateRes.json();
             console.log("[check-status] Evolution connectionState for", inst.instance_id, ":", JSON.stringify(stateData));
-            connected = stateData?.instance?.state === "open" || stateData?.state === "open";
+            connected = stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED";
           } else {
             // Z-API status check
             const statusRes = await fetch(
@@ -142,7 +143,8 @@ Deno.serve(async (req) => {
             label: inst.label,
             provider: inst.provider,
           });
-        } catch {
+        } catch (err) {
+          console.error("[check-status] Error checking instance", inst.instance_id, "provider", inst.provider, ":", err);
           results.push({
             id: inst.id,
             instance_id: inst.instance_id,
@@ -200,14 +202,18 @@ Deno.serve(async (req) => {
       // Check connection state
       let connStatus = "disconnected";
       try {
+        console.log("[connect] Evolution checking state at", `${cleanBaseUrl}/instance/connectionState/${instanceName}`);
         const stateRes = await fetch(`${cleanBaseUrl}/instance/connectionState/${instanceName}`, {
           headers: { apikey: apiKey },
         });
         const stateData = await stateRes.json();
-        if (stateData?.instance?.state === "open" || stateData?.state === "open") {
+        console.log("[connect] Evolution connectionState:", JSON.stringify(stateData));
+        if (stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED") {
           connStatus = "connected";
         }
-      } catch {}
+      } catch (err) {
+        console.error("[connect] Evolution connectionState error:", err);
+      }
 
       // Upsert instance
       const { data: existing } = await adminClient
