@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
         console.error("Failed to configure Evolution webhooks:", err);
       }
 
-      // Check connection state
+      // Check connection state (with fetchInstances fallback)
       let connStatus = "disconnected";
       try {
         console.log("[connect] Evolution checking state at", `${cleanBaseUrl}/instance/connectionState/${instanceName}`);
@@ -255,6 +255,37 @@ Deno.serve(async (req) => {
         console.log("[connect] Evolution connectionState:", JSON.stringify(stateData));
         if (stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED") {
           connStatus = "connected";
+        }
+
+        // Fallback: if instance not found, try listing all instances
+        if (connStatus === "disconnected" && (stateRes.status === 404 || stateData?.response?.message?.[0]?.includes("does not exist"))) {
+          console.log("[connect] Evolution instance not found, trying fetchInstances fallback");
+          try {
+            const listRes = await fetch(`${cleanBaseUrl}/instance/fetchInstances`, {
+              headers: { apikey: apiKey },
+            });
+            if (listRes.ok) {
+              const allInstances = await listRes.json();
+              const names = (Array.isArray(allInstances) ? allInstances : []).map((i: any) => i.instance?.instanceName || i.instanceName || "?");
+              console.log("[connect] Evolution available instances:", JSON.stringify(names));
+              const match = (Array.isArray(allInstances) ? allInstances : []).find((i: any) => {
+                const name = i.instance?.instanceName || i.instanceName || "";
+                return name.toLowerCase() === instanceName.toLowerCase();
+              });
+              if (match) {
+                const matchState = match.instance?.state || match.state || "";
+                connStatus = (matchState === "open" || matchState === "CONNECTED") ? "connected" : "disconnected";
+                console.log("[connect] Evolution fallback matched:", match.instance?.instanceName || match.instanceName, "state:", matchState, "connected:", connStatus);
+              } else {
+                console.log("[connect] Evolution fallback: no match for", instanceName, "— available:", JSON.stringify(names));
+              }
+            } else {
+              const listBody = await listRes.text();
+              console.error("[connect] Evolution fetchInstances failed:", listRes.status, listBody);
+            }
+          } catch (fallbackErr) {
+            console.error("[connect] Evolution fetchInstances error:", fallbackErr);
+          }
         }
       } catch (err) {
         console.error("[connect] Evolution connectionState error:", err);
