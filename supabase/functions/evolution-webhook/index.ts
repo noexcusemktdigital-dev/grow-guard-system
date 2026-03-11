@@ -244,9 +244,15 @@ Deno.serve(async (req) => {
             PLAYED: "played",
             ERROR: "error",
           };
+          const normalizedStatusKey = String(status).toUpperCase();
+          const mappedStatus =
+            statusMap[normalizedStatusKey] ||
+            statusMap[String(status)] ||
+            String(status).toLowerCase();
+
           await adminClient
             .from("whatsapp_messages")
-            .update({ status: statusMap[status] || String(status) })
+            .update({ status: mappedStatus })
             .eq("message_id_zapi", key.id)
             .eq("organization_id", orgId);
         }
