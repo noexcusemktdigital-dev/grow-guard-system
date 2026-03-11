@@ -1,31 +1,30 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Problema
 
-### Status: ✅ Implementado
+O `ai-agent-reply` gera a resposta da IA corretamente, mas na hora de **enviar a mensagem para o WhatsApp** (linhas 730-751), ele usa **sempre a API do Z-API** — hardcoded. Para instâncias Evolution API, a chamada falha silenciosamente (URL errada, autenticação errada), e a mensagem nunca chega ao WhatsApp.
 
-### Resumo
+O mesmo problema afeta o **typing indicator** (linha 735), que também usa Z-API hardcoded.
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+## Solução
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+Adicionar lógica multi-provedor no `ai-agent-reply/index.ts`, similar ao que já existe no `whatsapp-send/index.ts`:
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+### 1. Typing indicator — suportar Evolution
+- Se `instance.provider === "evolution"`: não enviar typing (Evolution não tem endpoint nativo para isso), ou silenciar.
+- Se Z-API: manter lógica atual.
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+### 2. Envio de mensagem — suportar Evolution
+- Se `instance.provider === "evolution"`:
+  - URL: `${instance.base_url}/message/sendText/${instance.instance_id}`
+  - Headers: `{ apikey: instance.client_token }`
+  - Body: `{ number: cleanPhone, text: cleanReply }`
+  - Message ID no response: `apiData?.key?.id`
+- Se Z-API (padrão atual): manter lógica existente.
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### 3. Tratar grupos
+- Para contatos com phone terminando em `-group`, converter para `@g.us` no envio Evolution.
+
+### Arquivo alterado
+- `supabase/functions/ai-agent-reply/index.ts` — linhas 730-761
+
