@@ -1,42 +1,24 @@
 
 
-## Plano: Registrar instância "noexcuse" para envio de mensagens
+## Plano: Corrigir criação de novos usuários via convite
 
-### Contexto
-A instância "noexcuse" já existe e está conectada na Evolution API (`http://129.121.44.154:8080`). O webhook aponta para outro projeto (`mdmhsqcfmpyufohxjsrv`) — isso é correto e não deve ser alterado. Este projeto precisa apenas de um registro local na tabela `whatsapp_instances` para enviar mensagens via `whatsapp-send`.
+### Problema
+A Edge Function `invite-user` consulta a tabela `client_subscriptions` (que não existe) para verificar o limite de usuários do plano. Como não encontra nada, assume `maxUsers = 2`. Com o admin já contando como 1 membro, o limite é atingido rapidamente e o convite falha.
 
-### O que será feito
+### Correção
 
-**1. Inserir registro na tabela `whatsapp_instances`**
+**Arquivo:** `supabase/functions/invite-user/index.ts`
 
-Campos:
-- `organization_id`: `adb09618-e9f3-4dbd-a89c-29e3eb1bec9f` (NOEXCUSE)
-- `instance_id`: `noexcuse`
-- `token`: (vazio — não usado para Evolution)
-- `client_token`: `99808b60-2f06-4f00-94b7-89765259b66d` (apikey da Evolution)
-- `status`: `connected`
-- `provider`: `evolution`
-- `base_url`: `http://129.121.44.154:8080`
-- `label`: `noexcuse`
-- `webhook_url`: `https://mdmhsqcfmpyufohxjsrv.supabase.co/functions/v1/evolution-webhook` (somente referência — não será alterado)
+1. **Trocar `client_subscriptions` por `subscriptions`** (linhas 60-64):
+   - Mudar a query de `.from("client_subscriptions")` para `.from("subscriptions")`
+   
+2. **Atualizar os limites de plano** para refletir os planos reais do sistema:
+   - Trocar `{ starter: 2, growth: 5, scale: 15 }` por `{ starter: 10, pro: 20, enterprise: 9999, trial: 2 }`
+   - Esses valores correspondem ao `UNIFIED_PLANS` e `TRIAL_PLAN` em `src/constants/plans.ts`
 
-**2. Verificar que `whatsapp-send` já funciona corretamente**
-
-O edge function `whatsapp-send` já:
-- Resolve a instância pelo `organization_id`
-- Para provider `evolution`, usa `base_url` + `client_token` (apikey header)
-- Envia via `POST {base_url}/message/sendText/{instance_id}`
-- Não toca no webhook
-
-Nenhuma alteração no código do `whatsapp-send` é necessária.
-
-**3. Garantir que `whatsapp-setup` não reconfigure o webhook**
-
-Já verificado: o `check-status` atual é **read-only** — apenas loga divergência de webhook sem sobrescrever. As ações `reconfigure-webhook` e `check-webhook` são manuais (requerem action explícito), não automáticas.
+3. **Deploy** da edge function para aplicar a correção imediatamente.
 
 ### Resultado
-- A tela `/cliente/chat` vai detectar a instância como `connected`
-- O envio de mensagens funcionará via Evolution API
-- Mensagens recebidas NÃO chegarão neste projeto (webhook aponta para outro) — isso é esperado
-- Nenhum código será alterado, apenas um INSERT no banco
+- O admin poderá convidar novos usuários respeitando o limite real do plano
+- Trial: até 2 usuários | Starter: 10 | Pro: 20 | Enterprise: ilimitado
 
