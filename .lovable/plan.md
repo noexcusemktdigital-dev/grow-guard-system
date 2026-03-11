@@ -1,34 +1,31 @@
 
 
-## Plano: Cancelar e Editar Cobranças do Asaas
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Situação Atual
-- O sistema permite **emitir** cobranças e **cancelar assinaturas**, mas **não permite cancelar ou editar cobranças individuais**.
-- A API do Asaas suporta `DELETE /payments/{id}` para cancelar e `PUT /payments/{id}` para editar cobranças pendentes.
+### Status: ✅ Implementado
 
-### O que vamos implementar
+### Resumo
 
-**1. Nova Edge Function `asaas-manage-payment`**
-Função unificada que suporta duas ações:
-- **cancel**: `DELETE /payments/{id}` — cancela cobrança pendente/vencida
-- **update**: `PUT /payments/{id}` — edita valor, vencimento ou descrição de cobranças pendentes
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**2. UI no FinanceiroDashboard — Ações por cobrança**
-Na lista de cobranças expandida de cada cliente (aba Clientes), adicionar:
-- Botão **"Cancelar"** (com confirmação AlertDialog) para cobranças com status PENDING ou OVERDUE
-- Botão **"Editar"** (Dialog com formulário) para alterar valor, vencimento e descrição de cobranças pendentes
-- Cobranças já pagas/confirmadas não mostram ações de edição
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**3. Hook `useManagePayment`**
-Mutation que invoca a Edge Function e invalida o cache de pagamentos após sucesso.
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-### Arquivos a criar/editar
-1. `supabase/functions/asaas-manage-payment/index.ts` — nova Edge Function (cancel + update)
-2. `src/hooks/useClientPayments.ts` — adicionar hook `useManagePayment`
-3. `src/pages/FinanceiroDashboard.tsx` — botões Cancelar/Editar na tabela de cobranças expandida
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-### Restrições de segurança
-- Autenticação via `getUser()` obrigatória
-- Apenas cobranças com status PENDING ou OVERDUE podem ser canceladas/editadas
-- Confirmação obrigatória antes de cancelar
-
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
