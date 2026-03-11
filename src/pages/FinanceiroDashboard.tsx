@@ -1012,10 +1012,36 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
 /* CLIENTES TAB                                                       */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function ClientesTab({ activeContracts, chargeClient, refetchAsaas }: any) {
+function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, activeContracts, selectedMonth }: any) {
+  const [search, setSearch] = useState("");
+  const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
   const [chargeContract, setChargeContract] = useState<any>(null);
   const [chargeBillingType, setChargeBillingType] = useState("PIX");
   const [chargeResult, setChargeResult] = useState<any>(null);
+
+  const byCustomer = useMemo(() => {
+    const map = new Map<string, { name: string; customerAsaasId: string; payments: AsaasPayment[]; total: number; received: number; pending: number; overdue: number }>();
+    const payments = (asaasPayments ?? []) as AsaasPayment[];
+    const filtered = selectedMonth === "all" ? payments : payments.filter((p: AsaasPayment) => (p.dueDate || p.paymentDate || "").startsWith(selectedMonth));
+    filtered.forEach((p: AsaasPayment) => {
+      const key = p.customerAsaasId || p.orgName;
+      if (!key) return;
+      if (!map.has(key)) map.set(key, { name: p.orgName, customerAsaasId: key, payments: [], total: 0, received: 0, pending: 0, overdue: 0 });
+      const entry = map.get(key)!;
+      entry.payments.push(p);
+      entry.total += p.value;
+      if (ASAAS_PAID_STATUSES.includes(p.status)) entry.received += p.value;
+      else if (p.status === "OVERDUE") entry.overdue += p.value;
+      else entry.pending += p.value;
+    });
+    let list = [...map.values()].sort((a, b) => b.total - a.total);
+    if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+    return list;
+  }, [asaasPayments, selectedMonth, search]);
+
+  const totalReceived = useMemo(() => byCustomer.reduce((s, c) => s + c.received, 0), [byCustomer]);
+  const totalPending = useMemo(() => byCustomer.reduce((s, c) => s + c.pending, 0), [byCustomer]);
+  const totalOverdue = useMemo(() => byCustomer.reduce((s, c) => s + c.overdue, 0), [byCustomer]);
 
   const submitCharge = () => {
     if (!chargeContract) return;
@@ -1030,48 +1056,122 @@ function ClientesTab({ activeContracts, chargeClient, refetchAsaas }: any) {
 
   const copyPixCode = (code: string) => { navigator.clipboard.writeText(code); sonnerToast.success("Código PIX copiado!"); };
 
-  if (activeContracts.length === 0) {
-    return (
-      <div className="flex flex-col items-center py-16 text-center">
-        <Users className="w-12 h-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-1">Nenhum cliente vinculado</h3>
-        <p className="text-sm text-muted-foreground">Adicione contratos ativos para visualizar seus clientes.</p>
-      </div>
-    );
-  }
-
   return (
     <>
-      <p className="text-sm text-muted-foreground">Todos os clientes vinculados a contratos ativos (internos, SaaS, franquias)</p>
-
-      <div className="border rounded-lg overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead><tr className="border-b bg-muted/50">
-            <th className="text-left py-3 px-4 font-medium">Cliente (Signatário)</th>
-            <th className="text-left py-3 px-4 font-medium">Contrato</th>
-            <th className="text-left py-3 px-4 font-medium">Unidade</th>
-            <th className="text-right py-3 px-4 font-medium">Valor Mensal</th>
-            <th className="text-center py-3 px-4 font-medium">Tipo</th>
-            <th className="text-center py-3 px-4 font-medium">Ações</th>
-          </tr></thead>
-          <tbody>
-            {activeContracts.map((c: any) => (
-              <tr key={c.id} className="border-b hover:bg-muted/30">
-                <td className="py-3 px-4 font-medium">{c.signer_name || "—"}</td>
-                <td className="py-3 px-4 text-muted-foreground">{c.title}</td>
-                <td className="py-3 px-4 text-muted-foreground">{c.org_name || "Matriz"}</td>
-                <td className="py-3 px-4 text-right text-emerald-500 font-medium">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}</td>
-                <td className="py-3 px-4 text-center"><Badge variant="outline" className="text-[10px] capitalize">{c.contract_type || "—"}</Badge></td>
-                <td className="py-3 px-4 text-center">
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => { setChargeContract(c); setChargeBillingType("PIX"); setChargeResult(null); }} disabled={!c.monthly_value || Number(c.monthly_value) <= 0}>
-                    <CreditCard className="w-3.5 h-3.5" /> Emitir Cobrança
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => refetchAsaas()} disabled={la}>
+          <RefreshCw className={`w-4 h-4 ${la ? "animate-spin" : ""}`} /> Sincronizar Asaas
+        </Button>
       </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Clientes</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-foreground">{byCustomer.length}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Recebido</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-primary">{formatBRL(totalReceived)}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Pendente</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-muted-foreground">{formatBRL(totalPending)}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Vencido</CardTitle></CardHeader><CardContent><span className="text-xl font-bold text-destructive">{formatBRL(totalOverdue)}</span></CardContent></Card>
+      </div>
+
+      {byCustomer.length === 0 ? (
+        <div className="flex flex-col items-center py-16 text-center">
+          <Users className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-1">{la ? "Carregando cobranças do Asaas..." : "Nenhuma cobrança encontrada"}</h3>
+          <p className="text-sm text-muted-foreground">{la ? "Aguarde a sincronização." : "Nenhum pagamento registrado no período."}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {byCustomer.map(customer => {
+            const isExpanded = expandedCustomer === customer.customerAsaasId;
+            return (
+              <Card key={customer.customerAsaasId} className="overflow-hidden">
+                <button
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/30 transition-colors"
+                  onClick={() => setExpandedCustomer(isExpanded ? null : customer.customerAsaasId)}
+                >
+                  <div className="flex items-center gap-3">
+                    <Building2 className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">{customer.name || "Cliente sem nome"}</p>
+                      <p className="text-xs text-muted-foreground">{customer.payments.length} cobrança{customer.payments.length !== 1 ? "s" : ""}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    {customer.overdue > 0 && <span className="text-destructive font-medium">{formatBRL(customer.overdue)} vencido</span>}
+                    {customer.pending > 0 && <span className="text-muted-foreground">{formatBRL(customer.pending)} pendente</span>}
+                    <span className="text-primary font-semibold">{formatBRL(customer.received)} recebido</span>
+                    <ArrowRight className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                  </div>
+                </button>
+                {isExpanded && (
+                  <div className="border-t">
+                    <table className="w-full text-sm">
+                      <thead><tr className="bg-muted/30">
+                        <th className="text-left py-2 px-4 font-medium text-xs">Descrição</th>
+                        <th className="text-left py-2 px-4 font-medium text-xs">Vencimento</th>
+                        <th className="text-left py-2 px-4 font-medium text-xs">Pagamento</th>
+                        <th className="text-right py-2 px-4 font-medium text-xs">Valor</th>
+                        <th className="text-right py-2 px-4 font-medium text-xs">Líquido</th>
+                        <th className="text-center py-2 px-4 font-medium text-xs">Tipo</th>
+                        <th className="text-center py-2 px-4 font-medium text-xs">Status</th>
+                        <th className="text-center py-2 px-4 font-medium text-xs">Ações</th>
+                      </tr></thead>
+                      <tbody>
+                        {customer.payments.sort((a, b) => (b.dueDate || "").localeCompare(a.dueDate || "")).map(p => {
+                          const st = asaasStatusLabel(p.status);
+                          return (
+                            <tr key={p.id} className="border-t border-border/30 hover:bg-muted/20">
+                              <td className="py-2 px-4">{p.description || "—"}</td>
+                              <td className="py-2 px-4 text-muted-foreground">{p.dueDate ? new Date(p.dueDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                              <td className="py-2 px-4 text-muted-foreground">{p.paymentDate ? new Date(p.paymentDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                              <td className="py-2 px-4 text-right font-medium">{formatBRL(p.value)}</td>
+                              <td className="py-2 px-4 text-right text-muted-foreground">{formatBRL(p.netValue)}</td>
+                              <td className="py-2 px-4 text-center"><Badge variant="outline" className="text-[10px]">{p.billingType}</Badge></td>
+                              <td className="py-2 px-4 text-center"><span className={`text-xs px-2 py-0.5 rounded ${st.cls}`}>{st.label}</span></td>
+                              <td className="py-2 px-4 text-center">
+                                {(p.invoiceUrl || p.bankSlipUrl) && (
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(p.invoiceUrl || p.bankSlipUrl!, "_blank")}><ExternalLink className="w-3.5 h-3.5" /></Button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Emitir Cobrança section for contracts */}
+      {activeContracts.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Emitir Nova Cobrança (contratos)</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {activeContracts.slice(0, 10).map((c: any) => (
+                <div key={c.id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                  <div>
+                    <span className="text-sm font-medium">{c.signer_name || c.title}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{c.org_name || "Matriz"}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-primary font-medium">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}</span>
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => { setChargeContract(c); setChargeBillingType("PIX"); setChargeResult(null); }} disabled={!c.monthly_value || Number(c.monthly_value) <= 0}>
+                      <CreditCard className="w-3.5 h-3.5" /> Cobrar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Charge Dialog */}
       <Dialog open={!!chargeContract} onOpenChange={(open) => { if (!open) { setChargeContract(null); setChargeResult(null); } }}>
@@ -1082,7 +1182,7 @@ function ClientesTab({ activeContracts, chargeClient, refetchAsaas }: any) {
           </DialogHeader>
           {!chargeResult ? (
             <div className="space-y-4">
-              <div><Label>Valor</Label><p className="text-lg font-semibold text-emerald-500">{chargeContract?.monthly_value ? formatBRL(Number(chargeContract.monthly_value)) : "—"}</p></div>
+              <div><Label>Valor</Label><p className="text-lg font-semibold text-primary">{chargeContract?.monthly_value ? formatBRL(Number(chargeContract.monthly_value)) : "—"}</p></div>
               <div><Label>Método de Pagamento</Label>
                 <Select value={chargeBillingType} onValueChange={setChargeBillingType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
