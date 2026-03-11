@@ -512,6 +512,9 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
 
 function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, deleteExpense, toast }: any) {
   const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterType, setFilterType] = useState("all");
   const [expDialog, setExpDialog] = useState(false);
   const [editingExp, setEditingExp] = useState<any>(null);
   const [expForm, setExpForm] = useState({ description: "", amount: 0, category: "Plataformas", status: "pending", is_recurring: false, date: "" });
@@ -520,8 +523,11 @@ function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, de
   const filtered = useMemo(() => {
     let list = (expenses ?? []).filter((e: any) => selectedMonth === "all" || (e.date || "").startsWith(selectedMonth));
     if (search) list = list.filter((e: any) => e.description?.toLowerCase().includes(search.toLowerCase()));
+    if (filterCategory !== "all") list = list.filter((e: any) => e.category === filterCategory);
+    if (filterStatus !== "all") list = list.filter((e: any) => e.status === filterStatus);
+    if (filterType !== "all") list = list.filter((e: any) => filterType === "recurring" ? e.is_recurring : !e.is_recurring);
     return list;
-  }, [expenses, selectedMonth, search]);
+  }, [expenses, selectedMonth, search, filterCategory, filterStatus, filterType]);
 
   const openNewExp = () => { setEditingExp(null); setExpForm({ description: "", amount: 0, category: "Plataformas", status: "pending", is_recurring: false, date: "" }); setExpDialog(true); };
   const openEditExp = (e: any) => { setEditingExp(e); setExpForm({ description: e.description, amount: Number(e.amount), category: e.category || "Plataformas", status: e.status || "pending", is_recurring: !!e.is_recurring, date: e.date || "" }); setExpDialog(true); };
