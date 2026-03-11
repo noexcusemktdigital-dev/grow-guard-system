@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
               }
             }
 
-            // Self-heal webhook target when another system overrides it
+            // Read-only webhook check (no self-heal — instance may belong to another project)
             if (connected) {
               const expectedWebhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
               webhookSynced = false;
@@ -147,56 +147,14 @@ Deno.serve(async (req) => {
                 webhookSynced = configuredWebhookUrl === expectedWebhookUrl;
 
                 if (!webhookSynced) {
-                  console.warn("[check-status] Evolution webhook mismatch, reconfiguring", {
+                  console.log("[check-status] Evolution webhook points elsewhere (read-only, not overriding)", {
                     instance: inst.instance_id,
                     configuredWebhookUrl,
                     expectedWebhookUrl,
                   });
-
-                  const events = ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"];
-                  const payloadAttempts = [
-                    {
-                      webhook: {
-                        enabled: true,
-                        url: expectedWebhookUrl,
-                        byEvents: true,
-                        base64: true,
-                        events,
-                        headers: { "x-evolution-secret": inst.client_token },
-                      },
-                    },
-                    {
-                      url: expectedWebhookUrl,
-                      webhook_by_events: true,
-                      webhook_base64: true,
-                      events,
-                    },
-                  ];
-
-                  for (const payload of payloadAttempts) {
-                    const setRes = await fetch(`${inst.base_url}/webhook/set/${inst.instance_id}`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", apikey: inst.client_token },
-                      body: JSON.stringify(payload),
-                    });
-                    const rawSetBody = await setRes.text();
-                    console.log("[check-status] Evolution webhook self-heal response:", setRes.status, rawSetBody);
-                    if (setRes.ok) {
-                      webhookSynced = true;
-                      configuredWebhookUrl = expectedWebhookUrl;
-                      break;
-                    }
-                  }
-                }
-
-                if (webhookSynced) {
-                  await adminClient
-                    .from("whatsapp_instances")
-                    .update({ webhook_url: expectedWebhookUrl })
-                    .eq("id", inst.id);
                 }
               } catch (webhookErr) {
-                console.error("[check-status] Evolution webhook verification/self-heal error:", webhookErr);
+                console.error("[check-status] Evolution webhook read error:", webhookErr);
               }
             }
           } else {
