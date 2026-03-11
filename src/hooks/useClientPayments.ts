@@ -130,3 +130,29 @@ export function useAsaasNetworkPayments() {
     staleTime: 1000 * 60 * 2,
   });
 }
+
+export function useManagePayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { action: "cancel" | "update"; payment_id: string; value?: number; dueDate?: string; description?: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada. Faça login novamente.");
+      const { data, error } = await supabase.functions.invoke("asaas-manage-payment", { body: params });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["asaas-network-payments"] });
+      if (variables.action === "cancel") {
+        toast.success("Cobrança cancelada com sucesso!");
+      } else {
+        toast.success("Cobrança atualizada com sucesso!");
+      }
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Erro ao processar ação");
+    },
+  });
+}

@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.asaas-buy-credits]
 verify_jwt = false
+
+[functions.asaas-manage-payment]
+verify_jwt = false
