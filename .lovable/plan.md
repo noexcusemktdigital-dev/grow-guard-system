@@ -1,33 +1,31 @@
 
 
-## Plano: 3 Correções no Financeiro
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema 1: Dashboard mostra "Receita de Contratos Ativos" (dados fake)
-O bloco na DashboardTab (linhas 302-320) lista contratos internos (`activeContracts`) que incluem contratos fake. O MRR também é calculado a partir desses contratos (linha 103).
+### Status: ✅ Implementado
 
-**Correção:**
-- Remover o bloco "Receita de Contratos Ativos" inteiro do Dashboard
-- Calcular MRR a partir dos pagamentos reais do Asaas (soma dos valores de cobranças recorrentes confirmadas) em vez dos contratos internos
-- Remover a sublabel "X contratos ativos" do KPI de MRR
+### Resumo
 
-### Problema 2: KPI Cards cortando números
-Os cards usam `grid-cols-2 lg:grid-cols-6` (linha 259) — 6 colunas em tela grande fica muito apertado. O valor usa `text-2xl` que pode ser grande demais para cards estreitos.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**Correção:**
-- Mudar o grid do Dashboard para `grid-cols-2 md:grid-cols-3 lg:grid-cols-6` para melhor responsividade
-- No KpiCard, reduzir o tamanho do valor de `text-2xl` para `text-xl` e aplicar `truncate` para evitar corte
-- Reduzir o padding do KpiCard de `p-6` para `p-4` na CSS para dar mais espaço ao conteúdo
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-### Problema 3: FinanceiroReceitas sem edição/exclusão
-A página standalone `/financeiro/receitas` (FinanceiroReceitas.tsx) só tem criação. Faltam botões de editar e excluir nas linhas da tabela, e falta usar `updateRevenue`/`deleteRevenue` do hook.
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-**Correção:**
-- Importar `updateRevenue` e `deleteRevenue` do `useFinanceMutations`
-- Adicionar botões Editar (abre dialog preenchido) e Excluir (com confirmação) em cada linha
-- Reutilizar o dialog existente para modo edição (como já funciona na aba Receitas do Dashboard)
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-### Arquivos a editar
-1. `src/pages/FinanceiroDashboard.tsx` — remover bloco de contratos fake, ajustar grid dos KPIs, recalcular MRR via Asaas
-2. `src/components/KpiCard.tsx` — reduzir tamanho do valor, adicionar truncate
-3. `src/pages/FinanceiroReceitas.tsx` — adicionar edição e exclusão de receitas
-
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179

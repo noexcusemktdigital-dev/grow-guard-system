@@ -198,7 +198,7 @@
 
   /* ── KPI Card ── */
   .kpi-card {
-    @apply glass-card p-6 flex flex-col gap-1.5 hover-lift cursor-default relative overflow-hidden;
+    @apply glass-card p-4 flex flex-col gap-1.5 hover-lift cursor-default relative overflow-hidden;
     border-radius: 1.5rem;
   }
 

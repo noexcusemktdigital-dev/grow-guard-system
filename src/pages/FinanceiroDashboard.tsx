@@ -100,7 +100,13 @@ export default function FinanceiroDashboard() {
   const totalRevenue = totalAsaasPaid + totalManualPaid;
   const totalExpenses = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const resultado = totalRevenue - totalExpenses;
-  const networkMRR = activeContracts.reduce((s: number, c: any) => s + Number(c.monthly_value || 0), 0);
+  const networkMRR = useMemo(() => {
+    // Calculate MRR from real Asaas recurring payments (current month confirmed/received)
+    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    return (asaasPayments ?? [])
+      .filter(p => ASAAS_PAID_STATUSES.includes(p.status) && (p.dueDate || "").startsWith(currentMonth))
+      .reduce((s, p) => s + p.value, 0);
+  }, [asaasPayments]);
   const overdueCount = useMemo(() => (asaasPayments ?? []).filter(p => p.status === "OVERDUE").length, [asaasPayments]);
 
   // Current month Asaas stats
@@ -256,8 +262,8 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
 
   return (
     <>
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <KpiCard label="MRR da Rede" value={formatBRL(networkMRR)} sublabel={`${activeContracts.length} contratos ativos`} accent />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <KpiCard label="MRR da Rede" value={formatBRL(networkMRR)} accent />
         <KpiCard label="Cobranças do Mês" value={formatBRL(monthTotal)} sublabel="total no período" />
         <KpiCard label="Recebidas" value={formatBRL(monthReceived)} trend="up" sublabel="confirmadas" />
         <KpiCard label="Atrasadas" value={formatBRL(monthOverdue)} sublabel={overdueCount > 0 ? `${overdueCount} cobranças` : "nenhuma"} />
@@ -299,25 +305,7 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
         </div>
       </div>
 
-      <div className="glass-card p-6">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Receita de Contratos Ativos</h3>
-        {activeContracts.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nenhum contrato ativo na rede.</p>
-        ) : (
-          <div className="space-y-2">
-            {activeContracts.slice(0, 8).map((c: any) => (
-              <div key={c.id} className="flex justify-between py-2 border-b border-border/30 last:border-0">
-                <div>
-                  <span className="text-sm font-medium">{c.signer_name || c.title}</span>
-                  <span className="text-xs text-muted-foreground ml-2">{c.org_name || "Matriz"}</span>
-                </div>
-                <span className="text-sm font-medium text-primary">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}/mês</span>
-              </div>
-            ))}
-            {activeContracts.length > 8 && <p className="text-xs text-muted-foreground text-center pt-2">+{activeContracts.length - 8} contratos</p>}
-          </div>
-        )}
-      </div>
+      {/* Block removed — contract revenue was displaying non-real data */}
     </>
   );
 }
