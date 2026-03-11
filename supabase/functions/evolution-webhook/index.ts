@@ -16,20 +16,37 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    const body = await req.json();
+    console.log("Evolution webhook payload:", JSON.stringify(body).slice(0, 500));
+
     // Extract org_id from URL path: /evolution-webhook/{org_id}
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/").filter(Boolean);
-    const orgId = pathParts[pathParts.length - 1];
+    let orgId = pathParts[pathParts.length - 1];
 
+    // If last segment is the function name itself, resolve org from instance name
     if (!orgId || orgId === "evolution-webhook") {
-      return new Response(JSON.stringify({ error: "org_id required in path" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const instanceName = body.instance || body.instanceName || "";
+      if (!instanceName) {
+        return new Response(JSON.stringify({ error: "org_id or instance name required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: found } = await adminClient
+        .from("whatsapp_instances")
+        .select("organization_id")
+        .eq("instance_id", instanceName)
+        .eq("provider", "evolution")
+        .maybeSingle();
+      if (!found) {
+        return new Response(JSON.stringify({ error: `No instance found for name: ${instanceName}` }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      orgId = found.organization_id;
     }
-
-    const body = await req.json();
-    console.log("Evolution webhook payload:", JSON.stringify(body).slice(0, 500));
 
     const rawEvent = String(body.event || "").trim();
     const event = rawEvent.toUpperCase().replace(/[.\s-]/g, "_");
