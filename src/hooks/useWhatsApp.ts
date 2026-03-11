@@ -119,7 +119,8 @@ export function useWhatsAppContacts(filterInstanceId?: string | null) {
       return filtered as unknown as WhatsAppContact[];
     },
     enabled: !!orgId,
-    refetchInterval: 30000,
+    staleTime: 2000,
+    refetchInterval: 15000,
   });
 }
 
