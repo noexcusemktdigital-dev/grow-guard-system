@@ -1,31 +1,19 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Inserir despesas de Março/2026
 
-### Status: ✅ Implementado
+Vou inserir 5 registros na tabela `finance_expenses` para Março/2026, com os mesmos dados de categoria e tipo (recorrente/variável) dos registros de Fevereiro que já existem:
 
-### Resumo
+| Descrição | Valor | Categoria | Tipo | Data |
+|---|---|---|---|---|
+| Aluguel + Estrutura | R$ 5.192,25 | Estrutura | Recorrente | 2026-03-01 |
+| Empréstimo 9/60 | R$ 2.197,00 | Empréstimos | Recorrente | 2026-03-01 |
+| CNP parcela 12/12 | R$ 2.533,00 | Investimentos | Variável | 2026-03-01 |
+| RH Angelica | R$ 1.733,33 | Estrutura | Recorrente | 2026-03-01 |
+| Empréstimo 3/12 | R$ 1.885,60 | Empréstimos | Recorrente | 2026-03-01 |
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+### Ação
+- Inserir via SQL (`INSERT INTO finance_expenses`) com `organization_id` = `4206c8f4-dc9b-414d-9535-0c6d5f2d80b4`, status `pending` (pois é mês corrente)
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+Nenhuma alteração de código necessária — apenas inserção de dados.
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
-
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
-
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
