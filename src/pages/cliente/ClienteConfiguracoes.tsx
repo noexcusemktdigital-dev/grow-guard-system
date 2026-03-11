@@ -25,6 +25,46 @@ import { getEffectiveLimits } from "@/constants/plans";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+function SetPasswordSection() {
+  const { user } = useAuth();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const isGoogleUser = user?.app_metadata?.provider === "google";
+  if (!isGoogleUser) return null;
+
+  const handleSetPassword = async () => {
+    if (password.length < 6) return toast.error("A senha deve ter pelo menos 6 caracteres");
+    if (password !== confirm) return toast.error("As senhas não coincidem");
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      toast.success("Senha definida! Agora você pode fazer login por e-mail também.");
+      setPassword("");
+      setConfirm("");
+    } catch (err: any) { toast.error(err.message || "Erro ao definir senha"); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Definir Senha de Acesso</CardTitle>
+        <CardDescription>Você entrou via Google. Defina uma senha para também poder fazer login por e-mail.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2"><Label>Nova Senha</Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" /></div>
+          <div className="space-y-2"><Label>Confirmar Senha</Label><Input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha" /></div>
+        </div>
+        <Button onClick={handleSetPassword} disabled={saving || !password}>{saving ? "Salvando..." : "Definir Senha"}</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ProfileTab() {
   const { user } = useAuth();
   const { data: profile, isLoading, update } = useUserProfile();
@@ -56,36 +96,39 @@ function ProfileTab() {
   const initials = (form.full_name || "U").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
   return (
-    <Card>
-      <CardHeader><CardTitle>Seu Perfil</CardTitle><CardDescription>Informações pessoais da sua conta</CardDescription></CardHeader>
-      <CardContent className="space-y-5">
-        <div className="flex items-center gap-4">
-          <div className="relative group">
-            <Avatar className="h-16 w-16">
-              {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt="Foto" /> : null}
-              <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">{initials}</AvatarFallback>
-            </Avatar>
-            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-              <Camera className="w-5 h-5 text-white" />
-            </button>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+    <div className="space-y-6">
+      <Card>
+        <CardHeader><CardTitle>Seu Perfil</CardTitle><CardDescription>Informações pessoais da sua conta</CardDescription></CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <Avatar className="h-16 w-16">
+                {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt="Foto" /> : null}
+                <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">{initials}</AvatarFallback>
+              </Avatar>
+              <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <Camera className="w-5 h-5 text-white" />
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">{form.full_name || "Usuário"}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
+              {uploading && <p className="text-xs text-primary animate-pulse">Enviando foto...</p>}
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-foreground">{form.full_name || "Usuário"}</p>
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
-            {uploading && <p className="text-xs text-primary animate-pulse">Enviando foto...</p>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2"><Label>Nome</Label><Input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} /></div>
+            <div className="space-y-2"><Label>E-mail</Label><Input value={user?.email || ""} readOnly className="bg-muted" /></div>
+            <div className="space-y-2"><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" /></div>
+            <div className="space-y-2"><Label>Cargo</Label><Input value={form.job_title} onChange={e => setForm({ ...form, job_title: e.target.value })} placeholder="CEO" /></div>
           </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2"><Label>Nome</Label><Input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} /></div>
-          <div className="space-y-2"><Label>E-mail</Label><Input value={user?.email || ""} readOnly className="bg-muted" /></div>
-          <div className="space-y-2"><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" /></div>
-          <div className="space-y-2"><Label>Cargo</Label><Input value={form.job_title} onChange={e => setForm({ ...form, job_title: e.target.value })} placeholder="CEO" /></div>
-        </div>
-        <Button onClick={() => update.mutate(form)} disabled={update.isPending}>{update.isPending ? "Salvando..." : "Salvar Alterações"}</Button>
-      </CardContent>
-    </Card>
+          <Button onClick={() => update.mutate(form)} disabled={update.isPending}>{update.isPending ? "Salvando..." : "Salvar Alterações"}</Button>
+        </CardContent>
+      </Card>
+      <SetPasswordSection />
+    </div>
   );
 }
 
