@@ -492,6 +492,7 @@ export default function ClienteCRM() {
   const draggingLead = draggingId ? allLeads.find(l => l.id === draggingId) : null;
 
   const handleCreateLeadFromContact = (contact: any) => {
+    setNewLeadContact(contact);
     setActiveTab("pipeline");
     setNewLeadOpen(true);
   };
