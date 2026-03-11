@@ -1000,7 +1000,7 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
 /* CLIENTES TAB                                                       */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, activeContracts, selectedMonth }: any) {
+function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMonth }: any) {
   const [search, setSearch] = useState("");
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
   const [chargeContract, setChargeContract] = useState<any>(null);
