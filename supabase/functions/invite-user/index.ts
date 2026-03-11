@@ -123,19 +123,19 @@ Deno.serve(async (req) => {
       .update({ full_name: full_name || email.split("@")[0] })
       .eq("id", userId);
 
-    // Create membership
-    await adminClient.from("organization_memberships").insert({
+    // Create membership (ignore if already exists)
+    await adminClient.from("organization_memberships").upsert({
       user_id: userId,
       organization_id,
-    });
+    }, { onConflict: "user_id,organization_id", ignoreDuplicates: true });
 
-    // Set role
+    // Set role (upsert to handle existing users)
     const allowedRoles = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
     const validRole = allowedRoles.includes(role) ? role : "cliente_user";
-    await adminClient.from("user_roles").insert({
+    await adminClient.from("user_roles").upsert({
       user_id: userId,
       role: validRole,
-    });
+    }, { onConflict: "user_id,role", ignoreDuplicates: true });
 
     // Assign to teams if provided
     if (Array.isArray(team_ids) && team_ids.length > 0) {
