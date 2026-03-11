@@ -58,13 +58,13 @@ Deno.serve(async (req) => {
 
     // ---- Validate maxUsers server-side ----
     const { data: sub } = await adminClient
-      .from("client_subscriptions")
-      .select("plan")
+      .from("subscriptions")
+      .select("plan, status")
       .eq("organization_id", organization_id)
       .maybeSingle();
 
-    const planLimits: Record<string, number> = { starter: 2, growth: 5, scale: 15 };
-    const maxUsers = planLimits[sub?.plan ?? ""] ?? 2;
+    const planLimits: Record<string, number> = { starter: 10, pro: 20, enterprise: 9999, trial: 2 };
+    const maxUsers = planLimits[sub?.plan ?? ""] ?? 10;
 
     const { count: currentMembers } = await adminClient
       .from("organization_memberships")

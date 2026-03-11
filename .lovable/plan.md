@@ -1,24 +1,31 @@
 
 
-## Plano: Corrigir criação de novos usuários via convite
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
-A Edge Function `invite-user` consulta a tabela `client_subscriptions` (que não existe) para verificar o limite de usuários do plano. Como não encontra nada, assume `maxUsers = 2`. Com o admin já contando como 1 membro, o limite é atingido rapidamente e o convite falha.
+### Status: ✅ Implementado
 
-### Correção
+### Resumo
 
-**Arquivo:** `supabase/functions/invite-user/index.ts`
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-1. **Trocar `client_subscriptions` por `subscriptions`** (linhas 60-64):
-   - Mudar a query de `.from("client_subscriptions")` para `.from("subscriptions")`
-   
-2. **Atualizar os limites de plano** para refletir os planos reais do sistema:
-   - Trocar `{ starter: 2, growth: 5, scale: 15 }` por `{ starter: 10, pro: 20, enterprise: 9999, trial: 2 }`
-   - Esses valores correspondem ao `UNIFIED_PLANS` e `TRIAL_PLAN` em `src/constants/plans.ts`
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-3. **Deploy** da edge function para aplicar a correção imediatamente.
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-### Resultado
-- O admin poderá convidar novos usuários respeitando o limite real do plano
-- Trial: até 2 usuários | Starter: 10 | Pro: 20 | Enterprise: ilimitado
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
