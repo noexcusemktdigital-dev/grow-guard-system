@@ -220,13 +220,29 @@ Deno.serve(async (req) => {
 
     // ─── MESSAGES_UPDATE (status changes) ───
     if (event === "MESSAGES_UPDATE") {
-      const updates = body.data || [];
+      const rawUpdates = body.data ?? body.messages ?? [];
+      const updates = Array.isArray(rawUpdates)
+        ? rawUpdates
+        : rawUpdates
+          ? [rawUpdates]
+          : [];
+
       for (const upd of updates) {
         const key = upd.key || {};
         const status = upd.update?.status;
         if (key.id && status !== undefined) {
-          const statusMap: Record<number, string> = {
-            0: "error", 1: "pending", 2: "sent", 3: "delivered", 4: "read", 5: "played",
+          const statusMap: Record<string, string> = {
+            "0": "error",
+            "1": "pending",
+            "2": "sent",
+            "3": "delivered",
+            "4": "read",
+            "5": "played",
+            SERVER_ACK: "sent",
+            DELIVERY_ACK: "delivered",
+            READ: "read",
+            PLAYED: "played",
+            ERROR: "error",
           };
           await adminClient
             .from("whatsapp_messages")
