@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Sparkles, Pencil, ArrowRight, ArrowLeft, Loader2, RefreshCw, Save,
-  Crosshair, ShieldQuestion, Handshake, Target, Ban, Info, Link, Plus, X,
+  Crosshair, ShieldQuestion, Handshake, Target, Ban, Link, Plus, X,
   GraduationCap, BookOpen, ChevronDown, ChevronUp, FileText
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,10 +14,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useCrmProducts } from "@/hooks/useCrmProducts";
-import { useCrmFunnels } from "@/hooks/useCrmFunnels";
-import { useSalesPlan } from "@/hooks/useSalesPlan";
-import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
@@ -145,28 +141,32 @@ interface Props {
   initialStage?: string;
 }
 
-export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, initialStage }: Props) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [mode, setMode] = useState<"ai" | "manual">("ai");
-  const [stage, setStage] = useState(initialStage || "prospeccao");
-  const [briefing, setBriefing] = useState<Record<string, string>>({});
-  const [generatedContent, setGeneratedContent] = useState("");
-  const [generatedTitle, setGeneratedTitle] = useState("");
-  const [generatedTags, setGeneratedTags] = useState<string[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(true);
-  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+// ─── Briefing Step (lazy-loads CRM/Sales data only when needed) ───
+import { useCrmProducts } from "@/hooks/useCrmProducts";
+import { useCrmFunnels } from "@/hooks/useCrmFunnels";
+import { useSalesPlan } from "@/hooks/useSalesPlan";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
 
-  // Links & documents context
-  const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
+interface BriefingStepProps {
+  stage: string;
+  briefing: Record<string, string>;
+  setBriefing: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  referenceLinks: string[];
+  setReferenceLinks: React.Dispatch<React.SetStateAction<string[]>>;
+  additionalContext: string;
+  setAdditionalContext: (v: string) => void;
+  isGenerating: boolean;
+  onBack: () => void;
+  onGenerate: (autoContext: any, orgId: string | null) => void;
+}
+
+function BriefingStep({
+  stage, briefing, setBriefing,
+  referenceLinks, setReferenceLinks,
+  additionalContext, setAdditionalContext,
+  isGenerating, onBack, onGenerate,
+}: BriefingStepProps) {
   const [newLink, setNewLink] = useState("");
-  const [additionalContext, setAdditionalContext] = useState("");
-
-  // Manual mode fields
-  const [manualTitle, setManualTitle] = useState("");
-  const [manualContent, setManualContent] = useState("");
-
-  // Auto context from CRM + Sales Plan
   const { data: products } = useCrmProducts();
   const { data: funnels } = useCrmFunnels();
   const { data: salesPlan } = useSalesPlan();
@@ -190,27 +190,6 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
 
   const hasContext = autoContext.products.length > 0 || autoContext.segment || autoContext.channels.length > 0 || autoContext.diferenciais;
 
-  const reset = () => {
-    setStep(1);
-    setMode("ai");
-    setStage(initialStage || "prospeccao");
-    setBriefing({});
-    setGeneratedContent("");
-    setGeneratedTitle("");
-    setGeneratedTags([]);
-    setManualTitle("");
-    setManualContent("");
-    setReferenceLinks([]);
-    setNewLink("");
-    setAdditionalContext("");
-    setShowTutorial(true);
-  };
-
-  const handleOpenChange = (v: boolean) => {
-    if (!v) reset();
-    onOpenChange(v);
-  };
-
   const addLink = () => {
     const trimmed = newLink.trim();
     if (trimmed && !referenceLinks.includes(trimmed)) {
@@ -219,7 +198,171 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
     }
   };
 
-  const handleGenerate = async () => {
+  return (
+    <div className="space-y-5">
+      {hasContext && (
+        <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+            <BookOpen className="w-3.5 h-3.5" />
+            Contexto automático do Plano de Vendas
+          </div>
+          {autoContext.segment && (
+            <p className="text-xs text-muted-foreground">Segmento: <span className="font-medium text-foreground">{autoContext.segment}</span></p>
+          )}
+          {autoContext.produtosServicos && (
+            <p className="text-xs text-muted-foreground">Produtos: <span className="font-medium text-foreground">{autoContext.produtosServicos.substring(0, 100)}</span></p>
+          )}
+          {autoContext.diferenciais && (
+            <p className="text-xs text-muted-foreground">Diferenciais: <span className="font-medium text-foreground">{autoContext.diferenciais.substring(0, 100)}</span></p>
+          )}
+          {autoContext.dorPrincipal && (
+            <p className="text-xs text-muted-foreground">Dor do cliente: <span className="font-medium text-foreground">{autoContext.dorPrincipal.substring(0, 100)}</span></p>
+          )}
+          {autoContext.products.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              CRM: {autoContext.products.map(p => p.name).join(", ")}
+            </p>
+          )}
+          {autoContext.channels.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Canais: {autoContext.channels.join(", ")}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {briefingQuestions[stage]?.map(q => (
+          <div key={q.key}>
+            <Label className="text-xs">{q.label}</Label>
+            <Input
+              className="mt-1"
+              placeholder={q.placeholder}
+              value={briefing[q.key] || ""}
+              onChange={e => setBriefing(prev => ({ ...prev, [q.key]: e.target.value }))}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-2 pt-2 border-t">
+        <div className="flex items-center gap-1.5">
+          <Link className="w-3.5 h-3.5 text-primary" />
+          <Label className="text-xs font-medium">Links de Referência</Label>
+          <span className="text-[10px] text-muted-foreground">(opcional)</span>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Adicione links de concorrentes, artigos ou materiais que a IA deve considerar ao gerar o script.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            className="flex-1"
+            placeholder="https://exemplo.com/material-referencia"
+            value={newLink}
+            onChange={e => setNewLink(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && addLink()}
+          />
+          <Button size="sm" variant="outline" onClick={addLink} disabled={!newLink.trim()}>
+            <Plus className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+        {referenceLinks.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {referenceLinks.map((link, i) => (
+              <Badge key={i} variant="secondary" className="text-[10px] gap-1 max-w-[200px]">
+                <Link className="w-2.5 h-2.5 shrink-0" />
+                <span className="truncate">{link.replace(/^https?:\/\//, "").substring(0, 30)}</span>
+                <button onClick={() => setReferenceLinks(prev => prev.filter((_, j) => j !== i))}>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5 text-primary" />
+          <Label className="text-xs font-medium">Contexto Adicional</Label>
+          <span className="text-[10px] text-muted-foreground">(opcional)</span>
+        </div>
+        <Textarea
+          rows={3}
+          className="text-xs"
+          placeholder="Cole aqui trechos de documentos, dados de pesquisa, informações sobre o mercado ou qualquer contexto adicional que a IA deve usar para personalizar o script..."
+          value={additionalContext}
+          onChange={e => setAdditionalContext(e.target.value)}
+        />
+      </div>
+
+      {!hasContext && (
+        <div className="space-y-3 pt-2 border-t">
+          <p className="text-[10px] text-muted-foreground">
+            💡 Preencha o Plano de Vendas para contexto automático, ou informe abaixo:
+          </p>
+          <div>
+            <Label className="text-xs">Segmento do negócio</Label>
+            <Input
+              className="mt-1"
+              placeholder="Ex: Tecnologia SaaS, Consultoria, E-commerce"
+              value={briefing["Segmento"] || ""}
+              onChange={e => setBriefing(prev => ({ ...prev, Segmento: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Produto/Serviço principal</Label>
+            <Input
+              className="mt-1"
+              placeholder="Ex: Software de gestão, consultoria financeira"
+              value={briefing["Produto"] || ""}
+              onChange={e => setBriefing(prev => ({ ...prev, Produto: e.target.value }))}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={onBack} className="gap-1">
+          <ArrowLeft className="w-4 h-4" /> Voltar
+        </Button>
+        <Button onClick={() => onGenerate(autoContext, orgId ?? null)} disabled={isGenerating} className="gap-1">
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" /> Gerando...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" /> Gerar Script
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Dialog ───
+
+export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, initialStage }: Props) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [mode, setMode] = useState<"ai" | "manual">("ai");
+  const [stage, setStage] = useState(initialStage || "prospeccao");
+  const [briefing, setBriefing] = useState<Record<string, string>>({});
+  const [generatedContent, setGeneratedContent] = useState("");
+  const [generatedTitle, setGeneratedTitle] = useState("");
+  const [generatedTags, setGeneratedTags] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(true);
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+  const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
+  const [additionalContext, setAdditionalContext] = useState("");
+
+  // Manual mode fields
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualContent, setManualContent] = useState("");
+
+  const handleGenerate = async (autoContext: any, orgId: string | null) => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-script", {
@@ -271,7 +414,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
         tags: generatedTags,
       });
     }
-    handleOpenChange(false);
+    onOpenChange(false);
   };
 
   const selectedStage = funnelStages.find(s => s.key === stage)!;
@@ -279,7 +422,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
 
   return (
     <>
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -335,7 +478,6 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
               </div>
             </div>
 
-            {/* Tutorial section for selected stage */}
             <Collapsible open={showTutorial} onOpenChange={setShowTutorial}>
               <CollapsibleTrigger asChild>
                 <button className="flex items-center gap-2 w-full p-3 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-left">
@@ -415,153 +557,20 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
           </div>
         )}
 
-        {/* STEP 2: Briefing (AI mode only) */}
+        {/* STEP 2: Briefing (AI mode only) — hooks load only here */}
         {step === 2 && mode === "ai" && (
-          <div className="space-y-5">
-            {/* Auto context from Sales Plan */}
-            {hasContext && (
-              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Contexto automático do Plano de Vendas
-                </div>
-                {autoContext.segment && (
-                  <p className="text-xs text-muted-foreground">Segmento: <span className="font-medium text-foreground">{autoContext.segment}</span></p>
-                )}
-                {autoContext.produtosServicos && (
-                  <p className="text-xs text-muted-foreground">Produtos: <span className="font-medium text-foreground">{autoContext.produtosServicos.substring(0, 100)}</span></p>
-                )}
-                {autoContext.diferenciais && (
-                  <p className="text-xs text-muted-foreground">Diferenciais: <span className="font-medium text-foreground">{autoContext.diferenciais.substring(0, 100)}</span></p>
-                )}
-                {autoContext.dorPrincipal && (
-                  <p className="text-xs text-muted-foreground">Dor do cliente: <span className="font-medium text-foreground">{autoContext.dorPrincipal.substring(0, 100)}</span></p>
-                )}
-                {autoContext.products.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    CRM: {autoContext.products.map(p => p.name).join(", ")}
-                  </p>
-                )}
-                {autoContext.channels.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Canais: {autoContext.channels.join(", ")}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Briefing questions */}
-            <div className="space-y-3">
-              {briefingQuestions[stage]?.map(q => (
-                <div key={q.key}>
-                  <Label className="text-xs">{q.label}</Label>
-                  <Input
-                    className="mt-1"
-                    placeholder={q.placeholder}
-                    value={briefing[q.key] || ""}
-                    onChange={e => setBriefing(prev => ({ ...prev, [q.key]: e.target.value }))}
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Reference links & documents */}
-            <div className="space-y-2 pt-2 border-t">
-              <div className="flex items-center gap-1.5">
-                <Link className="w-3.5 h-3.5 text-primary" />
-                <Label className="text-xs font-medium">Links de Referência</Label>
-                <span className="text-[10px] text-muted-foreground">(opcional)</span>
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                Adicione links de concorrentes, artigos ou materiais que a IA deve considerar ao gerar o script.
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  className="flex-1"
-                  placeholder="https://exemplo.com/material-referencia"
-                  value={newLink}
-                  onChange={e => setNewLink(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && addLink()}
-                />
-                <Button size="sm" variant="outline" onClick={addLink} disabled={!newLink.trim()}>
-                  <Plus className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-              {referenceLinks.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {referenceLinks.map((link, i) => (
-                    <Badge key={i} variant="secondary" className="text-[10px] gap-1 max-w-[200px]">
-                      <Link className="w-2.5 h-2.5 shrink-0" />
-                      <span className="truncate">{link.replace(/^https?:\/\//, "").substring(0, 30)}</span>
-                      <button onClick={() => setReferenceLinks(prev => prev.filter((_, j) => j !== i))}>
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Additional context */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-primary" />
-                <Label className="text-xs font-medium">Contexto Adicional</Label>
-                <span className="text-[10px] text-muted-foreground">(opcional)</span>
-              </div>
-              <Textarea
-                rows={3}
-                className="text-xs"
-                placeholder="Cole aqui trechos de documentos, dados de pesquisa, informações sobre o mercado ou qualquer contexto adicional que a IA deve usar para personalizar o script..."
-                value={additionalContext}
-                onChange={e => setAdditionalContext(e.target.value)}
-              />
-            </div>
-
-            {/* Extra context fields if no auto-context */}
-            {!hasContext && (
-              <div className="space-y-3 pt-2 border-t">
-                <p className="text-[10px] text-muted-foreground">
-                  💡 Preencha o Plano de Vendas para contexto automático, ou informe abaixo:
-                </p>
-                <div>
-                  <Label className="text-xs">Segmento do negócio</Label>
-                  <Input
-                    className="mt-1"
-                    placeholder="Ex: Tecnologia SaaS, Consultoria, E-commerce"
-                    value={briefing["Segmento"] || ""}
-                    onChange={e => setBriefing(prev => ({ ...prev, Segmento: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Produto/Serviço principal</Label>
-                  <Input
-                    className="mt-1"
-                    placeholder="Ex: Software de gestão, consultoria financeira"
-                    value={briefing["Produto"] || ""}
-                    onChange={e => setBriefing(prev => ({ ...prev, Produto: e.target.value }))}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(1)} className="gap-1">
-                <ArrowLeft className="w-4 h-4" /> Voltar
-              </Button>
-              <Button onClick={handleGenerate} disabled={isGenerating} className="gap-1">
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Gerando...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" /> Gerar Script
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+          <BriefingStep
+            stage={stage}
+            briefing={briefing}
+            setBriefing={setBriefing}
+            referenceLinks={referenceLinks}
+            setReferenceLinks={setReferenceLinks}
+            additionalContext={additionalContext}
+            setAdditionalContext={setAdditionalContext}
+            isGenerating={isGenerating}
+            onBack={() => setStep(1)}
+            onGenerate={handleGenerate}
+          />
         )}
 
         {/* STEP 3: Preview / Manual edit */}
@@ -624,7 +633,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
               </Button>
               <div className="flex gap-2">
                 {mode === "ai" && (
-                  <Button variant="outline" onClick={handleGenerate} disabled={isGenerating} className="gap-1">
+                  <Button variant="outline" onClick={() => handleGenerate({}, null)} disabled={isGenerating} className="gap-1">
                     <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? "animate-spin" : ""}`} />
                     Regenerar
                   </Button>
