@@ -1126,6 +1126,7 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
 
 function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMonth }: any) {
   const [search, setSearch] = useState("");
+  const [filterClientStatus, setFilterClientStatus] = useState("all");
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
   const [chargeContract, setChargeContract] = useState<any>(null);
   const [chargeBillingType, setChargeBillingType] = useState("PIX");
