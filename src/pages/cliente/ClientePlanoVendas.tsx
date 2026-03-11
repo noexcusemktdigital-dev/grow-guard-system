@@ -1105,7 +1105,7 @@ export default function ClientePlanoVendas() {
                 if (!activeGoals.length) return;
                 const rows = activeGoals.map(g => {
                   const p = goalProgress?.[g.id];
-                  return [g.title, g.metric, g.target_value, p?.current ?? 0, p?.percent ?? 0, g.scope, g.priority].join(",");
+                  return [g.title, g.metric, g.target_value, p?.currentValue ?? 0, p?.percent ?? 0, g.scope, g.priority].join(",");
                 });
                 const csv = "Meta,Métrica,Alvo,Atual,%,Escopo,Prioridade\n" + rows.join("\n");
                 const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
