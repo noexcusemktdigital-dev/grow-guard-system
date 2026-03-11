@@ -229,6 +229,9 @@ export default function Home() {
             </div>
           )}
 
+          {/* AI & Credits Control */}
+          {aiUsage && <HomeAICreditsAlert data={aiUsage} />}
+
           {/* Goals + Commercial */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="glass-card p-6">
