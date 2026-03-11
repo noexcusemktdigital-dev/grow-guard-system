@@ -429,11 +429,14 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "500k+", label: "R$ 500 mil+" },
     ],
   },
-  { id: "receita_novos", section: "Financeiro Comercial", agentMessage: "Quanto da receita vem de novos clientes vs recorrência?", inputType: "select", helpText: "Ajuda a identificar se depende de novos clientes ou tem base recorrente saudável.",
+  { id: "tem_recorrencia", section: "Financeiro Comercial", agentMessage: "Você tem clientes que compram mais de uma vez? 🔄", inputType: "select", helpText: "Recorrência é a base de um negócio previsível e escalável.",
     options: [
-      { value: "90_novos", label: "90%+ novos" }, { value: "70_30", label: "70% novos / 30% recorrente" },
-      { value: "50_50", label: "50/50" }, { value: "30_70", label: "30% novos / 70% recorrente" },
+      { value: "sim", label: "Sim, boa parte volta" }, { value: "parcialmente", label: "Parcialmente" },
+      { value: "nao", label: "Não, sempre clientes novos" },
     ],
+  },
+  { id: "ciclo_recompra", section: "Financeiro Comercial", agentMessage: "Qual o ciclo médio de recompra dos seus clientes? Descreva como funciona a fidelização no seu negócio. 🔁", inputType: "textarea", helpText: "Entender seu ciclo de recompra ajuda a projetar receita recorrente e estratégias de retenção.",
+    placeholder: "Ex: Clientes voltam a cada 3 meses para manutenção. Oferecemos plano mensal com desconto...",
   },
 
   // ── 3. Equipe e Estrutura
