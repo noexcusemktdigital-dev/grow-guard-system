@@ -190,6 +190,7 @@ Use estas informações para personalizar os conteúdos.`;
 
 ${estrategiaCtx}
 ${manualCtx}
+${salesPlanCtx}
 
 DISTRIBUIÇÃO DE FORMATOS: ${formatDist || "decidir pela IA"}
 OBJETIVOS SELECIONADOS: ${objList || "educar, autoridade, engajamento, vender"}
