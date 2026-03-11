@@ -1,32 +1,31 @@
 
 
-## Análise: Contratos — Status Atual e Melhorias Necessárias
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### O que já funciona
-- **PDF em A4**: Sim, ambos os arquivos (`ContratosGerador.tsx` e `FranqueadoContratos.tsx`) já geram PDF em formato A4 via `jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }`.
-- **Logo no PDF**: A logo NoExcuse já é embutida via Base64 no cabeçalho do HTML antes da conversão para PDF.
-- **Salvar no sistema**: Contratos são salvos no banco (tabela `contracts`) com status "draft" ou "active".
-- **Download**: Botão de download PDF disponível na tabela de gestão.
+### Status: ✅ Implementado
 
-### O que precisa melhorar
-O design atual do PDF é **muito simples** — apenas logo pequena, título e texto corrido com fonte serifada. Falta um **timbrado profissional** com identidade visual marcante.
+### Resumo
 
-### Plano de Melhoria Visual do PDF
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-Criar um timbrado profissional compartilhado entre Franqueadora e Franqueado, refatorando a função `formatContractHtml` em um utilitário único:
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**Novo design do timbrado:**
-- **Header**: Faixa escura (#111) com logo NoExcuse à esquerda e dados da empresa à direita (CNPJ, endereço, contato)
-- **Linha decorativa**: Gradiente laranja/dourado abaixo do header (cor da marca)
-- **Título do contrato**: Centralizado com badge de tipo (Franquia/Assessoria)
-- **Corpo**: Mantém tipografia serifada, texto justificado, cláusulas com destaque
-- **Footer**: Linha separadora + "NOEXCUSE Marketing Digital" + data de geração + numeração de página
-- **Bordas laterais sutis**: Linha fina cinza nas laterais para enquadramento
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-**Arquivos a editar:**
-1. **Criar** `src/lib/contractPdfTemplate.ts` — função `formatContractHtml` e `downloadContractPdf` reutilizáveis
-2. **Editar** `src/pages/ContratosGerador.tsx` — importar do utilitário, remover funções duplicadas
-3. **Editar** `src/pages/franqueado/FranqueadoContratos.tsx` — importar do utilitário, remover funções duplicadas
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-**Preview in-app**: Atualizar o preview do contrato (atualmente `<pre>` com texto puro) para renderizar o HTML formatado usando `dangerouslySetInnerHTML`, mostrando exatamente como ficará o PDF.
-
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179

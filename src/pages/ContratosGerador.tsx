@@ -27,7 +27,7 @@ import {
   SERVICE_CONTENT, SERVICE_PLACEHOLDERS,
   FRANCHISE_CONTENT, FRANCHISE_PLACEHOLDERS,
 } from "@/constants/contractTemplates";
-import logoNoExcuse from "@/assets/logo-noexcuse.png";
+import { downloadContractPdf, getPreviewHtml } from "@/lib/contractPdfTemplate";
 
 // ─── Constants ───
 
@@ -63,75 +63,6 @@ function buildContent(form: Record<string, string>, type: string) {
     result = result.split(p.key).join(form[key] || p.key);
   }
   return result;
-}
-
-async function getLogoBase64(): Promise<string> {
-  try {
-    const resp = await fetch(logoNoExcuse);
-    const blob = await resp.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return "";
-  }
-}
-
-function formatContractHtml(content: string, logoBase64: string, title: string): string {
-  const paragraphs = content.split("\n").map(line => {
-    const trimmed = line.trim();
-    if (!trimmed) return "";
-    if (/^CLÁUSULA\s/i.test(trimmed) || /^CONTRATO\s/i.test(trimmed) || /^[IVXL]+\s*[-–—]\s/i.test(trimmed)) {
-      return `<h2 style="font-size:13px;font-weight:bold;text-transform:uppercase;margin:28px 0 10px;letter-spacing:0.5px;color:#1a1a1a;">${trimmed}</h2>`;
-    }
-    if (trimmed.startsWith("____")) {
-      return `<p style="font-size:12px;margin:4px 0;color:#333;">${trimmed}</p>`;
-    }
-    if (/^[a-z]\)/.test(trimmed) || /^\d+\./.test(trimmed)) {
-      return `<p style="font-size:11.5px;margin:4px 0 4px 16px;text-align:justify;line-height:1.7;color:#222;">${trimmed}</p>`;
-    }
-    return `<p style="font-size:11.5px;margin:6px 0;text-align:justify;line-height:1.7;color:#222;">${trimmed}</p>`;
-  }).join("\n");
-
-  return `
-    <div style="font-family:Georgia,'Times New Roman',serif;max-width:700px;margin:0 auto;padding:50px 40px;color:#1a1a1a;">
-      <div style="text-align:center;margin-bottom:30px;">
-        ${logoBase64 ? `<img src="${logoBase64}" style="height:60px;margin-bottom:16px;" />` : ""}
-        <h1 style="font-size:16px;font-weight:bold;text-transform:uppercase;letter-spacing:3px;margin:0;color:#111;">${title}</h1>
-        <div style="width:60px;height:2px;background:#333;margin:10px auto 0;"></div>
-      </div>
-      ${paragraphs}
-      <p style="text-align:center;font-size:9px;color:#aaa;margin-top:40px;border-top:1px solid #eee;padding-top:10px;">
-        Documento gerado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")} — NOEXCUSE Marketing Digital
-      </p>
-    </div>
-  `;
-}
-
-async function downloadContractPdf(contract: any) {
-  const { default: html2pdf } = await import("html2pdf.js");
-  const logoBase64 = await getLogoBase64();
-  const content = contract.content || "Conteúdo do contrato não disponível.";
-  const pdfTitle = contract.contract_type === "franquia"
-    ? "CONTRATO DE FRANQUIA EMPRESARIAL"
-    : "CONTRATO DE PRESTAÇÃO DE SERVIÇO";
-  const html = formatContractHtml(content, logoBase64, pdfTitle);
-
-  const el = document.createElement("div");
-  el.innerHTML = html;
-
-  html2pdf()
-    .set({
-      margin: [15, 15, 15, 15],
-      filename: `${contract.title || "Contrato"}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    })
-    .from(el)
-    .save();
 }
 
 // ─── Service Contract Form ───
@@ -327,9 +258,9 @@ function ServiceContractForm({ onSuccess, initialProposalId }: { onSuccess: () =
       </div>
 
       {showPreview && (
-        <Card className="glass-card">
-          <CardContent className="p-6">
-            <pre className="whitespace-pre-wrap text-xs leading-relaxed font-serif text-foreground/80">{previewContent}</pre>
+        <Card className="glass-card overflow-hidden">
+          <CardContent className="p-0">
+            <div className="bg-white" dangerouslySetInnerHTML={{ __html: getPreviewHtml(previewContent, "assessoria") }} />
           </CardContent>
         </Card>
       )}
@@ -480,9 +411,9 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       {showPreview && (
-        <Card className="glass-card">
-          <CardContent className="p-6">
-            <pre className="whitespace-pre-wrap text-xs leading-relaxed font-serif text-foreground/80">{previewContent}</pre>
+        <Card className="glass-card overflow-hidden">
+          <CardContent className="p-0">
+            <div className="bg-white" dangerouslySetInnerHTML={{ __html: getPreviewHtml(previewContent, "franquia") }} />
           </CardContent>
         </Card>
       )}
