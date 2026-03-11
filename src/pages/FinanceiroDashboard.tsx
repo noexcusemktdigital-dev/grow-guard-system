@@ -680,6 +680,9 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
   const [billingType, setBillingType] = useState("BOLETO");
   const [pixDialog, setPixDialog] = useState<{ open: boolean; paymentId: string | null }>({ open: false, paymentId: null });
   const [copied, setCopied] = useState(false);
+  const [searchFranqueado, setSearchFranqueado] = useState("");
+  const [filterRepasseStatus, setFilterRepasseStatus] = useState("all");
+  const [filterRepasseMonth, setFilterRepasseMonth] = useState("all");
 
   const { data: charges, isLoading } = useQuery({
     queryKey: ["franchisee-charges", orgId],
@@ -694,6 +697,20 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
     },
     enabled: !!orgId,
   });
+
+  const repasseMonthOptions = useMemo(() => {
+    const ms = new Set<string>();
+    (charges ?? []).forEach((c: any) => { if (c.month) ms.add(c.month); });
+    return [...ms].sort().reverse();
+  }, [charges]);
+
+  const filteredCharges = useMemo(() => {
+    let list = charges ?? [];
+    if (searchFranqueado) list = list.filter((c: any) => (c.franchisee_org?.name || "").toLowerCase().includes(searchFranqueado.toLowerCase()));
+    if (filterRepasseStatus !== "all") list = list.filter((c: any) => c.status === filterRepasseStatus);
+    if (filterRepasseMonth !== "all") list = list.filter((c: any) => c.month === filterRepasseMonth);
+    return list;
+  }, [charges, searchFranqueado, filterRepasseStatus, filterRepasseMonth]);
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
