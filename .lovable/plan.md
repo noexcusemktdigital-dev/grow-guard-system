@@ -1,31 +1,32 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Corrigir Scripts & Testar Importação CSV
 
-### Status: ✅ Implementado
+### Problemas Identificados nos Scripts
 
-### Resumo
+Analisei os arquivos `ClienteScripts.tsx` e `ScriptGeneratorDialog.tsx` e identifiquei as causas do flickering:
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+1. **Hooks de data-fetching dentro do Dialog**: `useCrmProducts`, `useCrmFunnels`, `useSalesPlan` e `useUserOrgId` executam queries toda vez que o componente renderiza, mesmo com o dialog fechado. Cada query resolvida causa re-render do dialog inteiro.
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+2. **Reset massivo de estados no `handleOpenChange`**: A função `reset()` altera 11 estados simultaneamente ao abrir/fechar, causando múltiplos re-renders em cascata.
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+3. **Dialog sempre montado no DOM**: O `ScriptGeneratorDialog` é renderizado permanentemente (mesmo quando `open=false`), então os hooks internos ficam ativos o tempo todo, disparando queries desnecessárias.
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+### Correções Planejadas
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+**1. Renderização condicional do Dialog**
+- Em `ClienteScripts.tsx`, envolver o `ScriptGeneratorDialog` com `{showCreate && <ScriptGeneratorDialog ... />}` para que os hooks só executem quando o dialog está aberto. Isso elimina queries desnecessárias e o flickering principal.
+
+**2. Estado inicial via `key` prop**
+- Usar `key={showCreate ? "open" : "closed"}` para forçar unmount/remount limpo, eliminando a necessidade do `reset()` manual com 11 `setState` calls.
+
+**3. Mover hooks para dentro do step correto**
+- Os hooks `useCrmProducts`, `useCrmFunnels`, `useSalesPlan` só são usados no Step 2 (AI mode). Criar um sub-componente `BriefingStep` que encapsula esses hooks, evitando queries no Step 1 e Step 3.
+
+### Arquivos a editar
+- `src/pages/cliente/ClienteScripts.tsx` — renderização condicional do dialog
+- `src/components/cliente/ScriptGeneratorDialog.tsx` — refatorar hooks e reset
+
+### Teste CSV de Leads
+Após as correções, posso testar a importação CSV no CRM do cliente usando o browser.
+
