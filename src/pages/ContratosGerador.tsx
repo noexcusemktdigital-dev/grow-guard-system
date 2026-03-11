@@ -27,7 +27,7 @@ import {
   SERVICE_CONTENT, SERVICE_PLACEHOLDERS,
   FRANCHISE_CONTENT, FRANCHISE_PLACEHOLDERS,
 } from "@/constants/contractTemplates";
-import logoNoExcuse from "@/assets/logo-noexcuse.png";
+import { downloadContractPdf, getPreviewHtml } from "@/lib/contractPdfTemplate";
 
 // ─── Constants ───
 

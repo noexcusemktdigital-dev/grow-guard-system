@@ -20,7 +20,7 @@ import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
 import { SERVICE_CONTENT, SERVICE_PLACEHOLDERS } from "@/constants/contractTemplates";
-import logoNoExcuse from "@/assets/logo-noexcuse.png";
+import { downloadContractPdf, getPreviewHtml } from "@/lib/contractPdfTemplate";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
