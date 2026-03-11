@@ -243,12 +243,13 @@ function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation, refet
 }
 
 /* ── Instance Card ── */
-function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconnect, isPending }: {
+function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconnect, onReconfigureWebhook, isPending }: {
   instance: WhatsAppInstance;
   onCheckStatus: () => void;
   onDisconnect: () => void;
   onEdit: () => void;
   onReconnect?: () => void;
+  onReconfigureWebhook?: () => void;
   isPending: boolean;
 }) {
   const isConn = instance.status === "connected";

@@ -192,6 +192,117 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── Action: reconfigure-webhook (Evolution only) ───
+    if (action === "reconfigure-webhook") {
+      const { data: inst } = await adminClient
+        .from("whatsapp_instances")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("instance_id", instanceName || instanceId)
+        .eq("provider", "evolution")
+        .maybeSingle();
+
+      if (!inst) {
+        return new Response(JSON.stringify({ error: "Evolution instance not found in database" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const cleanBase = (inst.base_url || baseUrl || "").replace(/\/+$/, "");
+      const key = apiKey || inst.client_token;
+      const webhookUrlEv = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
+
+      // Set webhook
+      try {
+        const setRes = await fetch(`${cleanBase}/webhook/set/${inst.instance_id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: key },
+          body: JSON.stringify({
+            url: webhookUrlEv,
+            webhook_by_events: true,
+            webhook_base64: true,
+            events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"],
+          }),
+        });
+        const setData = await setRes.json();
+        console.log("[reconfigure-webhook] set response:", setRes.status, JSON.stringify(setData));
+      } catch (err) {
+        console.error("[reconfigure-webhook] set error:", err);
+        return new Response(JSON.stringify({ error: "Failed to set webhook on Evolution server", detail: String(err) }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify by finding current webhook config
+      let currentWebhook: any = null;
+      try {
+        const findRes = await fetch(`${cleanBase}/webhook/find/${inst.instance_id}`, {
+          headers: { apikey: key },
+        });
+        currentWebhook = await findRes.json();
+        console.log("[reconfigure-webhook] current webhook:", JSON.stringify(currentWebhook));
+      } catch (err) {
+        console.error("[reconfigure-webhook] find error:", err);
+      }
+
+      // Update DB
+      await adminClient.from("whatsapp_instances").update({ webhook_url: webhookUrlEv }).eq("id", inst.id);
+
+      return new Response(JSON.stringify({
+        success: true,
+        webhookUrl: webhookUrlEv,
+        currentWebhook,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── Action: check-webhook (Evolution only) ───
+    if (action === "check-webhook") {
+      const { data: inst } = await adminClient
+        .from("whatsapp_instances")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("instance_id", instanceName || instanceId)
+        .eq("provider", "evolution")
+        .maybeSingle();
+
+      if (!inst) {
+        return new Response(JSON.stringify({ error: "Evolution instance not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const cleanBase = (inst.base_url || baseUrl || "").replace(/\/+$/, "");
+      const key = apiKey || inst.client_token;
+      const expectedUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
+
+      let currentWebhook: any = null;
+      try {
+        const findRes = await fetch(`${cleanBase}/webhook/find/${inst.instance_id}`, {
+          headers: { apikey: key },
+        });
+        currentWebhook = await findRes.json();
+      } catch (err) {
+        console.error("[check-webhook] find error:", err);
+      }
+
+      const configuredUrl = currentWebhook?.url || currentWebhook?.webhook?.url || null;
+      const isCorrect = configuredUrl === expectedUrl;
+
+      return new Response(JSON.stringify({
+        expectedUrl,
+        configuredUrl,
+        isCorrect,
+        currentWebhook,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ─── Action: connect (default) ───
     if (isEvolution) {
       // Evolution API connect
