@@ -969,21 +969,21 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
     }
   };
 
-      const closingYears = useMemo(() => {
-        const ys = new Set<string>();
-        (closings ?? []).forEach((cl: any) => { if (cl.year) ys.add(String(cl.year)); });
-        return [...ys].sort().reverse();
-      }, [closings]);
+  const closingYears = useMemo(() => {
+    const ys = new Set<string>();
+    (closings ?? []).forEach((cl: any) => { if (cl.year) ys.add(String(cl.year)); });
+    return [...ys].sort().reverse();
+  }, [closings]);
 
-      const filteredClosings = useMemo(() => {
-        let list = closings ?? [];
-        if (filterUnit !== "all") list = list.filter((cl: any) => cl.unit_id === filterUnit);
-        if (filterYear !== "all") list = list.filter((cl: any) => String(cl.year) === filterYear);
-        if (filterClosingStatus !== "all") list = list.filter((cl: any) => cl.status === filterClosingStatus);
-        return list;
-      }, [closings, filterUnit, filterYear, filterClosingStatus]);
+  const filteredClosings = useMemo(() => {
+    let list = closings ?? [];
+    if (filterUnit !== "all") list = list.filter((cl: any) => cl.unit_id === filterUnit);
+    if (filterYear !== "all") list = list.filter((cl: any) => String(cl.year) === filterYear);
+    if (filterClosingStatus !== "all") list = list.filter((cl: any) => cl.status === filterClosingStatus);
+    return list;
+  }, [closings, filterUnit, filterYear, filterClosingStatus]);
 
-      return (
+  return (
     <>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3 flex-wrap">
