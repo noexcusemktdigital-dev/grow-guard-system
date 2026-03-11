@@ -318,6 +318,8 @@ const revCategories = ["Serviço", "Consultoria", "Licença", "Comissão", "Outr
 
 function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas, createRevenue, updateRevenue, deleteRevenue, toast }: any) {
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterSource, setFilterSource] = useState("all");
   const [revDialog, setRevDialog] = useState(false);
   const [editingRev, setEditingRev] = useState<any>(null);
   const [revForm, setRevForm] = useState({ description: "", amount: 0, category: "Serviço", status: "pending", date: "", payment_method: "" });
@@ -340,8 +342,10 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
     let list = [...asaasList, ...manualList];
     if (selectedMonth !== "all") list = list.filter(e => e.date.startsWith(selectedMonth));
     if (search) list = list.filter(e => e.description.toLowerCase().includes(search.toLowerCase()) || (e.orgName || "").toLowerCase().includes(search.toLowerCase()));
+    if (filterStatus !== "all") list = list.filter(e => e.status === filterStatus);
+    if (filterSource !== "all") list = list.filter(e => e.source === filterSource);
     return list.sort((a, b) => b.date.localeCompare(a.date));
-  }, [asaasPayments, revenues, selectedMonth, search]);
+  }, [asaasPayments, revenues, selectedMonth, search, filterStatus, filterSource]);
 
   const totalPaid = useMemo(() => unified.filter(e => e.status === "paid").reduce((s, e) => s + e.value, 0), [unified]);
   const totalPending = useMemo(() => unified.filter(e => e.status === "pending").reduce((s, e) => s + e.value, 0), [unified]);
