@@ -178,8 +178,8 @@ ${sitesContext}
 
 CRIATIVOS DISPONÍVEIS:
 ${postsContext}
+${salesPlanContext}
 
-Para CADA plataforma selecionada, retorne um objeto JSON com:
 - platform: nome da plataforma
 - objective: objetivo específico da campanha nessa plataforma
 - audience: público-alvo detalhado (idade, interesses, comportamentos, localização)
