@@ -144,21 +144,69 @@ Deno.serve(async (req) => {
 
         let messageType = "text";
         let mediaUrl: string | null = null;
+        let mediaExt = "bin";
 
         if (msgContent.imageMessage) {
           messageType = "image";
           mediaUrl = msgContent.imageMessage.url || null;
+          mediaExt = "jpg";
         } else if (msgContent.audioMessage) {
           messageType = "audio";
           mediaUrl = msgContent.audioMessage.url || null;
+          mediaExt = "ogg";
         } else if (msgContent.videoMessage) {
           messageType = "video";
           mediaUrl = msgContent.videoMessage.url || null;
+          mediaExt = "mp4";
         } else if (msgContent.documentMessage) {
           messageType = "document";
           mediaUrl = msgContent.documentMessage.url || null;
+          const docName = msgContent.documentMessage.fileName || "";
+          mediaExt = docName.split(".").pop() || "pdf";
         } else if (msgContent.stickerMessage) {
           messageType = "sticker";
+          mediaExt = "webp";
+        }
+
+        // Download media via Evolution API and upload to storage for permanent URLs
+        if (messageType !== "text" && messageType !== "sticker" && key.id) {
+          try {
+            const baseUrl = (instance.base_url || "").replace(/\/+$/, "");
+            const evApiKey = instance.client_token || instance.token || "";
+            const b64Res = await fetch(
+              `${baseUrl}/chat/getBase64FromMediaMessage/${instance.instance_id}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json", apikey: evApiKey },
+                body: JSON.stringify({ message: { key: msg.key }, convertToMp4: messageType === "audio" }),
+              }
+            );
+            if (b64Res.ok) {
+              const b64Data = await b64Res.json();
+              const base64String = b64Data.base64 || b64Data.data || "";
+              const mimeType = b64Data.mimetype || b64Data.mediaType || `application/octet-stream`;
+              if (base64String) {
+                // Decode and upload to storage
+                const binaryStr = atob(base64String.replace(/^data:[^;]+;base64,/, ""));
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+                const storagePath = `${orgId}/${Date.now()}_${key.id}.${mediaExt}`;
+                const { error: upErr } = await adminClient.storage
+                  .from("chat-media")
+                  .upload(storagePath, bytes.buffer, { contentType: mimeType, upsert: true });
+                if (!upErr) {
+                  const { data: pubUrl } = adminClient.storage.from("chat-media").getPublicUrl(storagePath);
+                  mediaUrl = pubUrl.publicUrl;
+                } else {
+                  console.error("Storage upload error:", JSON.stringify(upErr));
+                }
+              }
+            } else {
+              console.warn("Evolution getBase64 failed:", b64Res.status, await b64Res.text().catch(() => ""));
+            }
+          } catch (dlErr) {
+            console.error("Media download error:", dlErr);
+          }
         }
 
         const senderName = msg.pushName || null;
