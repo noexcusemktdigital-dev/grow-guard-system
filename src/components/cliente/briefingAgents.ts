@@ -524,13 +524,8 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "parcial", label: "Sim, parcialmente" }, { value: "sim", label: "Sim, toda equipe usa" },
     ],
   },
-  { id: "etapas_funil", section: "Processo de Vendas", agentMessage: "Quais etapas do funil utiliza?", inputType: "multi-select", helpText: "Um funil bem definido permite identificar gargalos.",
-    options: [
-      { value: "prospeccao", label: "Prospecção" }, { value: "qualificacao", label: "Qualificação" },
-      { value: "apresentacao", label: "Apresentação" }, { value: "proposta", label: "Proposta" },
-      { value: "negociacao", label: "Negociação" }, { value: "fechamento", label: "Fechamento" },
-      { value: "nenhum", label: "Não tenho funil definido" },
-    ],
+  { id: "etapas_funil", section: "Processo de Vendas", agentMessage: "Descreva as etapas do seu processo de vendas, da prospecção ao fechamento. Pode ser como quiser! 🎯", inputType: "textarea", helpText: "Um funil bem definido permite identificar gargalos. Vamos criar seu funil automaticamente a partir dessas etapas!",
+    placeholder: "Ex: Prospecção → Qualificação → Reunião → Proposta → Negociação → Fechamento",
   },
   { id: "reuniao_recorrente", section: "Processo de Vendas", agentMessage: "Tem reunião comercial recorrente?", inputType: "select", helpText: "Reuniões de alinhamento garantem foco nas prioridades e metas.",
     options: [

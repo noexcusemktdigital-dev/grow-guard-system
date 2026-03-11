@@ -395,7 +395,12 @@ function computeScores(answers: Answers) {
   else if (scripts === "tem_nao_segue") scoreMap["Processo"] += 1;
 
   const etapas = answers.etapas_funil;
-  if (Array.isArray(etapas) && !etapas.includes("nenhum")) scoreMap["Processo"] += Math.min(etapas.length, 3);
+  if (typeof etapas === "string" && etapas.trim().length > 0) {
+    const parsed = etapas.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean);
+    scoreMap["Processo"] += Math.min(parsed.length, 3);
+  } else if (Array.isArray(etapas) && !etapas.includes("nenhum")) {
+    scoreMap["Processo"] += Math.min(etapas.length, 3);
+  }
 
   const reuniao = answers.reuniao_recorrente as string;
   if (reuniao === "diaria") scoreMap["Processo"] += 3;
