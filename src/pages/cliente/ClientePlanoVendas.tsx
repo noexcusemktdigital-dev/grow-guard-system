@@ -30,6 +30,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sounds";
 import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
+import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
+import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { supabase } from "@/integrations/supabase/client";
 import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
@@ -152,12 +156,17 @@ const salesSections: StrategySection[] = [
         ],
       },
       {
-        id: "receita_novos", question: "Percentual da receita de novos clientes vs recorrência?", type: "choice",
-        helpText: "Ajuda a identificar se você depende de novos clientes ou tem base recorrente saudável.",
+        id: "tem_recorrencia", question: "Você tem clientes que compram mais de uma vez?", type: "choice",
+        helpText: "Recorrência é a base de um negócio previsível e escalável.",
         options: [
-          { label: "90%+ novos", value: "90_novos" }, { label: "70% novos / 30% recorrente", value: "70_30" },
-          { label: "50/50", value: "50_50" }, { label: "30% novos / 70% recorrente", value: "30_70" },
+          { label: "Sim, boa parte volta", value: "sim" }, { label: "Parcialmente", value: "parcialmente" },
+          { label: "Não, sempre clientes novos", value: "nao" },
         ],
+      },
+      {
+        id: "ciclo_recompra", question: "Ciclo médio de recompra e fidelização", type: "text",
+        helpText: "Descreva como funciona a recompra e fidelização no seu negócio.",
+        placeholder: "Ex: Clientes voltam a cada 3 meses para manutenção...",
       },
     ],
   },
@@ -288,14 +297,9 @@ const salesSections: StrategySection[] = [
         ],
       },
       {
-        id: "etapas_funil", question: "Quais etapas do funil utiliza?", type: "multi-choice",
-        helpText: "Um funil bem definido permite identificar gargalos e melhorar a conversão em cada etapa.",
-        options: [
-          { label: "Prospecção", value: "prospeccao" }, { label: "Qualificação", value: "qualificacao" },
-          { label: "Apresentação", value: "apresentacao" }, { label: "Proposta", value: "proposta" },
-          { label: "Negociação", value: "negociacao" }, { label: "Fechamento", value: "fechamento" },
-          { label: "Não tenho funil definido", value: "nenhum" },
-        ],
+        id: "etapas_funil", question: "Descreva as etapas do seu processo de vendas", type: "text",
+        helpText: "Um funil bem definido permite identificar gargalos. Vamos criar seu funil automaticamente!",
+        placeholder: "Ex: Prospecção → Qualificação → Reunião → Proposta → Negociação → Fechamento",
       },
       {
         id: "reuniao_recorrente", question: "Tem reunião comercial recorrente?", type: "choice",
@@ -395,7 +399,12 @@ function computeScores(answers: Answers) {
   else if (scripts === "tem_nao_segue") scoreMap["Processo"] += 1;
 
   const etapas = answers.etapas_funil;
-  if (Array.isArray(etapas) && !etapas.includes("nenhum")) scoreMap["Processo"] += Math.min(etapas.length, 3);
+  if (typeof etapas === "string" && etapas.trim().length > 0) {
+    const parsed = etapas.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean);
+    scoreMap["Processo"] += Math.min(parsed.length, 3);
+  } else if (Array.isArray(etapas) && !etapas.includes("nenhum")) {
+    scoreMap["Processo"] += Math.min(etapas.length, 3);
+  }
 
   const reuniao = answers.reuniao_recorrente as string;
   if (reuniao === "diaria") scoreMap["Processo"] += 3;
@@ -716,13 +725,89 @@ export default function ClientePlanoVendas() {
   const progValues = goalProgress ? Object.values(goalProgress) : [];
   const hasGoals = activeGoals && activeGoals.length > 0;
 
-  // ── ChatBriefing handler ──
-  const handleChatComplete = (chatAnswers: Record<string, any>) => {
+  // ── Auto funnel + scripts hooks ──
+  const { data: existingFunnels } = useCrmFunnels();
+  const { createFunnel } = useCrmFunnelMutations();
+  const { createScript } = useClienteScriptMutations();
+  const { data: orgId } = useUserOrgId();
+
+  const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f97316", "#6366f1", "#14b8a6"];
+
+  const parseFunnelStages = (text: string): { id: string; name: string; color: string }[] => {
+    const parts = text.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean);
+    return parts.map((name, i) => ({
+      id: String(i + 1),
+      name,
+      color: STAGE_COLORS[i % STAGE_COLORS.length],
+    }));
+  };
+
+  const handleChatComplete = async (chatAnswers: Record<string, any>) => {
     const ans = chatAnswers as Answers;
     setAnswers(ans);
     setCompleted(true);
     const { percentage: pct } = computeScores(ans);
     saveSalesPlan.mutate({ answers: ans, score: Math.round(pct) });
+
+    // ── Auto-create CRM funnel from etapas_funil ──
+    const etapasText = ans.etapas_funil;
+    if (typeof etapasText === "string" && etapasText.trim().length > 0 && (!existingFunnels || existingFunnels.length === 0)) {
+      const stages = parseFunnelStages(etapasText);
+      if (stages.length >= 2) {
+        try {
+          await createFunnel.mutateAsync({
+            name: "Funil Principal",
+            description: "Criado automaticamente a partir do Plano de Vendas",
+            stages,
+            is_default: true,
+          });
+          toast({ title: "Funil CRM criado automaticamente!", description: `${stages.length} etapas configuradas.` });
+        } catch (e) {
+          console.error("Auto-funnel error:", e);
+        }
+      }
+    }
+
+    // ── Auto-generate initial scripts (background) ──
+    if (orgId) {
+      const scriptStages = ["prospeccao", "diagnostico", "fechamento"];
+      const context = {
+        segment: ans.segmento,
+        modeloNegocio: ans.modelo_negocio,
+        produtosServicos: ans.produtos_servicos,
+        diferenciais: ans.diferenciais,
+        dorPrincipal: ans.dor_principal,
+        ticketMedio: ans.ticket_medio,
+        etapasFunil: typeof etapasText === "string" ? etapasText.split(/→|->|,|\n/).map((s: string) => s.trim()).filter(Boolean) : [],
+        tempoFechamento: ans.tempo_fechamento,
+      };
+
+      // Fire and forget — don't block UI
+      (async () => {
+        let created = 0;
+        for (const stage of scriptStages) {
+          try {
+            const { data, error } = await supabase.functions.invoke("generate-script", {
+              body: { stage, briefing: {}, context, organization_id: orgId },
+            });
+            if (!error && data?.content) {
+              await createScript.mutateAsync({
+                title: data.title || `Script de ${stage}`,
+                content: data.content,
+                category: stage,
+                tags: data.tags || [stage],
+              });
+              created++;
+            }
+          } catch (e) {
+            console.error(`Auto-script ${stage} error:`, e);
+          }
+        }
+        if (created > 0) {
+          toast({ title: `${created} scripts gerados automaticamente!`, description: "Acesse a seção de Scripts para revisá-los." });
+        }
+      })();
+    }
   };
 
   const handleRestart = () => {

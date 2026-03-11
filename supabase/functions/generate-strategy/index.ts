@@ -240,6 +240,23 @@ serve(async (req) => {
       }
     }
 
+    // Fetch sales plan for unified context
+    const serviceClient2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    let salesPlanContext = "";
+    if (organization_id) {
+      const { data: salesPlan } = await serviceClient2
+        .from("sales_plans")
+        .select("answers")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+      if (salesPlan?.answers && Object.keys(salesPlan.answers).length > 3) {
+        const spText = Object.entries(salesPlan.answers as Record<string, any>)
+          .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+          .join("\n");
+        salesPlanContext = `\n\nCONTEXTO DO PLANO DE VENDAS (já preenchido pelo usuário):\n${spText}\n\nUse esses dados para enriquecer o diagnóstico e as recomendações.`;
+      }
+    }
+
     const answersText = Object.entries(answers)
       .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
       .join("\n");
@@ -248,6 +265,7 @@ serve(async (req) => {
 
 RESPOSTAS DO DIAGNÓSTICO:
 ${answersText}
+${salesPlanContext}
 
 INSTRUÇÕES:
 1. Use as autoavaliações do termômetro (1-5) como base para os scores do radar
@@ -308,14 +326,29 @@ Use a ferramenta generate_strategy para retornar.`;
           typeof toolCall.function.arguments === "string"
             ? JSON.parse(toolCall.function.arguments)
             : toolCall.function.arguments;
-      } catch {
-        console.error("Failed to parse tool call arguments");
+      } catch (e) {
+        console.error("Failed to parse tool call arguments:", e);
+      }
+    }
+
+    // Fallback: if tool_calls is empty, try parsing message.content as JSON
+    if (!result) {
+      const messageContent = aiData.choices?.[0]?.message?.content;
+      if (messageContent) {
+        try {
+          const cleaned = messageContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+          result = JSON.parse(cleaned);
+          console.log("Parsed result from message.content fallback");
+        } catch (e) {
+          console.error("Fallback JSON parse failed:", e, "Content preview:", messageContent?.substring(0, 300));
+        }
       }
     }
 
     if (!result) {
+      console.error("Full AI response:", JSON.stringify(aiData).substring(0, 1000));
       return new Response(
-        JSON.stringify({ error: "Falha ao estruturar resposta da IA" }),
+        JSON.stringify({ error: "Falha ao estruturar resposta da IA. Tente novamente." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -116,6 +116,27 @@ Deno.serve(async (req) => {
       .eq("status", "done")
       .limit(10);
 
+    // Fetch sales plan
+    const { data: salesPlan } = await adminClient
+      .from("sales_plans")
+      .select("answers")
+      .eq("organization_id", organization_id)
+      .maybeSingle();
+
+    let salesPlanContext = "";
+    if (salesPlan?.answers && Object.keys(salesPlan.answers).length > 3) {
+      const sp = salesPlan.answers as Record<string, any>;
+      const parts: string[] = [];
+      if (sp.produtos_servicos) parts.push(`Produtos/Serviços: ${sp.produtos_servicos}`);
+      if (sp.diferenciais) parts.push(`Diferenciais: ${sp.diferenciais}`);
+      if (sp.dor_principal) parts.push(`Dor do cliente: ${sp.dor_principal}`);
+      if (sp.modelo_negocio) parts.push(`Modelo: ${sp.modelo_negocio}`);
+      if (sp.ticket_medio) parts.push(`Ticket médio: ${sp.ticket_medio}`);
+      if (sp.etapas_funil) parts.push(`Etapas do funil: ${sp.etapas_funil}`);
+      if (sp.tem_recorrencia) parts.push(`Recorrência: ${sp.tem_recorrencia}`);
+      salesPlanContext = `\nPLANO DE VENDAS:\n${parts.map(p => `- ${p}`).join("\n")}`;
+    }
+
     const strategyContext = strategy?.answers ? JSON.stringify(strategy.answers) : "Nenhuma estratégia de marketing definida";
     const contentsContext = contents?.length
       ? contents.map((c: any) => `${c.title} (${c.type}, ${c.platform}) - ${c.main_message || ""}`).join("; ")
@@ -157,8 +178,8 @@ ${sitesContext}
 
 CRIATIVOS DISPONÍVEIS:
 ${postsContext}
+${salesPlanContext}
 
-Para CADA plataforma selecionada, retorne um objeto JSON com:
 - platform: nome da plataforma
 - objective: objetivo específico da campanha nessa plataforma
 - audience: público-alvo detalhado (idade, interesses, comportamentos, localização)

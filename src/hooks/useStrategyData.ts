@@ -1,15 +1,19 @@
 import { useActiveStrategy } from "./useMarketingStrategy";
+import { useSalesPlan } from "./useSalesPlan";
 
 /**
  * Shared hook for other tools to consume strategy data.
  * Used by: Conteúdos, Artes, Scripts, Tráfego Pago, CRM.
+ * Now also exposes Sales Plan data for unified knowledge base.
  */
 export function useStrategyData() {
   const { data: strategy, isLoading } = useActiveStrategy();
+  const { data: salesPlan, isLoading: salesLoading } = useSalesPlan();
   const result = strategy?.strategy_result;
+  const spAnswers = (salesPlan?.answers || {}) as Record<string, any>;
 
   return {
-    isLoading,
+    isLoading: isLoading || salesLoading,
     hasStrategy: !!result,
     strategyId: strategy?.id,
     status: strategy?.status,
@@ -51,6 +55,17 @@ export function useStrategyData() {
     // Objetivos
     objetivoPrincipal: result?.objetivo_principal || null,
     canalPrioritario: result?.canal_prioritario || null,
+
+    // Sales Plan (unified knowledge base)
+    hasSalesPlan: Object.keys(spAnswers).length > 5,
+    salesPlanAnswers: spAnswers,
+    salesPlanProducts: spAnswers.produtos_servicos || null,
+    salesPlanDiferenciais: spAnswers.diferenciais || null,
+    salesPlanDorPrincipal: spAnswers.dor_principal || null,
+    salesPlanSegmento: spAnswers.segmento || null,
+    salesPlanModeloNegocio: spAnswers.modelo_negocio || null,
+    salesPlanTicketMedio: spAnswers.ticket_medio || null,
+    salesPlanEtapasFunil: spAnswers.etapas_funil || null,
 
     // Full result for advanced usage
     fullResult: result,

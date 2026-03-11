@@ -120,6 +120,33 @@ ${sections.map(s => `- ${s}`).join("\n")}
 IMPORTANTE: Use TODOS estes dados para personalizar cada conteúdo. Respeite o tom de voz, use as palavras indicadas, aborde as dores e desejos do público, e evite as palavras listadas.`;
     }
 
+    // ── SALES PLAN CONTEXT ──
+    let salesPlanCtx = "";
+    if (organization_id) {
+      const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: salesPlan } = await adminClient
+        .from("sales_plans")
+        .select("answers")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+      if (salesPlan?.answers && Object.keys(salesPlan.answers).length > 3) {
+        const sp = salesPlan.answers as Record<string, any>;
+        const parts: string[] = [];
+        if (sp.produtos_servicos) parts.push(`Produtos/Serviços: ${sp.produtos_servicos}`);
+        if (sp.diferenciais) parts.push(`Diferenciais: ${sp.diferenciais}`);
+        if (sp.dor_principal) parts.push(`Dor do cliente: ${sp.dor_principal}`);
+        if (sp.segmento) parts.push(`Segmento: ${sp.segmento}`);
+        if (sp.modelo_negocio) parts.push(`Modelo: ${sp.modelo_negocio}`);
+        if (sp.ticket_medio) parts.push(`Ticket médio: ${sp.ticket_medio}`);
+        if (parts.length > 0) {
+          salesPlanCtx = `
+CONTEXTO DO PLANO DE VENDAS:
+${parts.map(p => `- ${p}`).join("\n")}
+Use estas informações para personalizar os conteúdos com dados reais do negócio.`;
+        }
+      }
+    }
+
     // ── MANUAL BUSINESS INFO (when no strategy) ──
     let manualCtx = "";
     if (!estrategia && (nomeEmpresa || produto || diferencial || doresPublico || desejosPublico)) {
@@ -163,6 +190,7 @@ Use estas informações para personalizar os conteúdos.`;
 
 ${estrategiaCtx}
 ${manualCtx}
+${salesPlanCtx}
 
 DISTRIBUIÇÃO DE FORMATOS: ${formatDist || "decidir pela IA"}
 OBJETIVOS SELECIONADOS: ${objList || "educar, autoridade, engajamento, vender"}
