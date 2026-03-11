@@ -72,6 +72,14 @@ Deno.serve(async (req) => {
     }
 
     const cleanPhone = contactPhone.replace(/[\s\-\+\(\)]/g, "");
+
+    // Evolution API doesn't have a native typing endpoint — return success silently
+    if (instance.provider === "evolution") {
+      return new Response(JSON.stringify({ ok: true, provider: "evolution", note: "typing not supported" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
 
     const res = await fetch(`${zapiBase}/typing`, {
