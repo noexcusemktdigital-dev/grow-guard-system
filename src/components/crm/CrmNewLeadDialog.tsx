@@ -16,9 +16,10 @@ interface CrmNewLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultStage: string;
+  prefillContact?: { id?: string; name: string; phone?: string; email?: string; company?: string } | null;
 }
 
-export function CrmNewLeadDialog({ open, onOpenChange, defaultStage }: CrmNewLeadDialogProps) {
+export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, prefillContact }: CrmNewLeadDialogProps) {
   const { toast } = useToast();
   const { createLead } = useCrmLeadMutations();
   const { data: contacts } = useCrmContacts();
@@ -34,6 +35,21 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage }: CrmNewLea
   const [contactSearch, setContactSearch] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [showContactList, setShowContactList] = useState(false);
+
+  // Auto-fill from prefillContact
+  const [prefilled, setPrefilled] = useState(false);
+  if (open && prefillContact && !prefilled) {
+    setName(prefillContact.name || "");
+    setPhone(prefillContact.phone || "");
+    setEmail(prefillContact.email || "");
+    setCompany(prefillContact.company || "");
+    setSelectedContactId(prefillContact.id || null);
+    setContactSearch(prefillContact.name || "");
+    setPrefilled(true);
+  }
+  if (!open && prefilled) {
+    setPrefilled(false);
+  }
 
   const filteredContacts = useMemo(() => {
     if (!contactSearch || !contacts) return [];
