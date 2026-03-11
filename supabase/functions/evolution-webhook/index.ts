@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-evolution-secret",
 };
 
 Deno.serve(async (req) => {
@@ -12,6 +12,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Validate webhook secret if configured
+    const expectedSecret = Deno.env.get("EVOLUTION_WEBHOOK_SECRET");
+    if (expectedSecret) {
+      const receivedSecret = req.headers.get("x-evolution-secret") || "";
+      if (receivedSecret !== expectedSecret) {
+        console.warn("Evolution webhook: invalid secret received");
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);

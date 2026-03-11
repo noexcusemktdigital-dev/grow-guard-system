@@ -1,30 +1,31 @@
 
 
-## Adicionar Validação de Segredo no Evolution Webhook
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Situação atual
-O `evolution-webhook` **não valida** o header `x-evolution-secret` — aceita qualquer payload. Os logs mostram que mensagens estão sendo recebidas e processadas normalmente. O problema anterior (contatos invisíveis) já foi resolvido.
+### Status: ✅ Implementado
 
-### O que fazer
+### Resumo
 
-**A. Adicionar o segredo ao projeto**
-- Configurar `EVOLUTION_WEBHOOK_SECRET` = `izitech_evo_key_2026` nos segredos do projeto usando a ferramenta de segredos
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**B. Atualizar `evolution-webhook/index.ts`**
-- Antes de processar o payload, verificar o header `x-evolution-secret`
-- Se o segredo não bater, retornar 401 Unauthorized
-- Se o segredo não estiver configurado no projeto (env var ausente), aceitar tudo (fallback para comportamento atual)
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-```text
-Request chega → Verifica x-evolution-secret
-  ├── Header bate com ENV → processa normalmente
-  ├── ENV não configurada → processa normalmente (fallback)
-  └── Header não bate → retorna 401
-```
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-**C. Atualizar CORS headers**
-- Adicionar `x-evolution-secret` à lista de headers permitidos
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-### Resultado
-Webhook fica protegido contra payloads não autorizados, mantendo compatibilidade retroativa.
-
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
