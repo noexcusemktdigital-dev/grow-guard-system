@@ -44,6 +44,7 @@ export default function Home() {
   const { data: goals } = useActiveGoals("network");
   const { data: goalProgress } = useGoalProgress(goals);
   const { data: clientStats } = useNetworkClientStats();
+  const { data: aiUsage } = useNetworkAIUsage();
 
   const hoje = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const hojeCapitalized = hoje.charAt(0).toUpperCase() + hoje.slice(1);
