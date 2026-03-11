@@ -142,7 +142,8 @@ export function useWhatsAppMessages(contactId: string | null) {
       return ((data || []) as unknown as WhatsAppMessage[]).reverse();
     },
     enabled: !!orgId && !!contactId,
-    refetchInterval: 30000,
+    staleTime: 1000,
+    refetchInterval: 15000,
   });
 }
 
