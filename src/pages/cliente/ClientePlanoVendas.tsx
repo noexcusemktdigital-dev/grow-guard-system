@@ -1094,15 +1094,38 @@ export default function ClientePlanoVendas() {
 
         {/* ═══════ TAB: METAS ═══════ */}
         <TabsContent value="metas" className="space-y-6 mt-4">
-          {/* Header + Filters */}
+          {/* Header + Filters + Export */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <p className="text-sm font-semibold">Metas Comerciais</p>
               <p className="text-xs text-muted-foreground">Acompanhe suas metas com dados reais do CRM · {MESES_COMPLETOS[new Date().getMonth()]} {anoAtual}</p>
             </div>
-            <Button size="sm" className="gap-1" onClick={() => setNovaMetaOpen(true)}>
-              <Plus className="w-3 h-3" /> Nova Meta
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => {
+                if (!activeGoals.length) return;
+                const rows = activeGoals.map(g => {
+                  const p = goalProgress?.[g.id];
+                  return [g.title, g.metric, g.target_value, p?.current ?? 0, p?.percent ?? 0, g.scope, g.priority].join(",");
+                });
+                const csv = "Meta,Métrica,Alvo,Atual,%,Escopo,Prioridade\n" + rows.join("\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a"); a.href = url; a.download = `metas-${anoAtual}.csv`; a.click(); URL.revokeObjectURL(url);
+              }}>
+                <FileText className="w-3 h-3" /> CSV
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={async () => {
+                const el = document.getElementById("metas-report-area");
+                if (!el) return;
+                const html2pdf = (await import("html2pdf.js")).default;
+                html2pdf().set({ margin: 0.5, filename: `relatorio-metas-${anoAtual}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: "in", format: "a4" } }).from(el).save();
+              }}>
+                <Receipt className="w-3 h-3" /> PDF
+              </Button>
+              <Button size="sm" className="gap-1" onClick={() => setNovaMetaOpen(true)}>
+                <Plus className="w-3 h-3" /> Nova Meta
+              </Button>
+            </div>
           </div>
 
           {/* Scope Filters */}

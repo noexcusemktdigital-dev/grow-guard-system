@@ -36,6 +36,21 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, prefillCont
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [showContactList, setShowContactList] = useState(false);
 
+  // Auto-fill from prefillContact
+  const [prefilled, setPrefilled] = useState(false);
+  if (open && prefillContact && !prefilled) {
+    setName(prefillContact.name || "");
+    setPhone(prefillContact.phone || "");
+    setEmail(prefillContact.email || "");
+    setCompany(prefillContact.company || "");
+    setSelectedContactId(prefillContact.id || null);
+    setContactSearch(prefillContact.name || "");
+    setPrefilled(true);
+  }
+  if (!open && prefilled) {
+    setPrefilled(false);
+  }
+
   const filteredContacts = useMemo(() => {
     if (!contactSearch || !contacts) return [];
     const q = contactSearch.toLowerCase();

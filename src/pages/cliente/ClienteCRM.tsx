@@ -929,7 +929,7 @@ export default function ClienteCRM() {
       <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} />
 
       {/* New Lead Dialog */}
-      <CrmNewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} defaultStage={stages[0]?.key || "novo"} />
+      <CrmNewLeadDialog open={newLeadOpen} onOpenChange={(o) => { setNewLeadOpen(o); if (!o) setNewLeadContact(null); }} defaultStage={stages[0]?.key || "novo"} prefillContact={newLeadContact} />
 
       {/* Funnel Manager */}
       <CrmFunnelManager open={funnelManagerOpen} onOpenChange={setFunnelManagerOpen} />
