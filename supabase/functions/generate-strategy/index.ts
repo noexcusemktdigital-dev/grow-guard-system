@@ -326,14 +326,29 @@ Use a ferramenta generate_strategy para retornar.`;
           typeof toolCall.function.arguments === "string"
             ? JSON.parse(toolCall.function.arguments)
             : toolCall.function.arguments;
-      } catch {
-        console.error("Failed to parse tool call arguments");
+      } catch (e) {
+        console.error("Failed to parse tool call arguments:", e);
+      }
+    }
+
+    // Fallback: if tool_calls is empty, try parsing message.content as JSON
+    if (!result) {
+      const messageContent = aiData.choices?.[0]?.message?.content;
+      if (messageContent) {
+        try {
+          const cleaned = messageContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+          result = JSON.parse(cleaned);
+          console.log("Parsed result from message.content fallback");
+        } catch (e) {
+          console.error("Fallback JSON parse failed:", e, "Content preview:", messageContent?.substring(0, 300));
+        }
       }
     }
 
     if (!result) {
+      console.error("Full AI response:", JSON.stringify(aiData).substring(0, 1000));
       return new Response(
-        JSON.stringify({ error: "Falha ao estruturar resposta da IA" }),
+        JSON.stringify({ error: "Falha ao estruturar resposta da IA. Tente novamente." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
