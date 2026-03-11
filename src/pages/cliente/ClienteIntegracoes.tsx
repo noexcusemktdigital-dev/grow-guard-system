@@ -243,12 +243,13 @@ function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation, refet
 }
 
 /* ── Instance Card ── */
-function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconnect, isPending }: {
+function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconnect, onReconfigureWebhook, isPending }: {
   instance: WhatsAppInstance;
   onCheckStatus: () => void;
   onDisconnect: () => void;
   onEdit: () => void;
   onReconnect?: () => void;
+  onReconfigureWebhook?: () => void;
   isPending: boolean;
 }) {
   const isConn = instance.status === "connected";
@@ -277,6 +278,11 @@ function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconne
             {!isConn && onReconnect && (
               <Button variant="default" size="sm" onClick={onReconnect} disabled={isPending} title="Reconectar" className="gap-1">
                 <Zap className="w-3.5 h-3.5" /> Reconectar
+              </Button>
+            )}
+            {isEvo && onReconfigureWebhook && (
+              <Button variant="outline" size="sm" onClick={onReconfigureWebhook} disabled={isPending} title="Reconfigurar Webhook" className="gap-1">
+                <Webhook className="w-3.5 h-3.5" /> Webhook
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={onEdit} disabled={isPending} title="Editar">
@@ -413,6 +419,26 @@ export default function ClienteIntegracoes() {
     }
   };
 
+  const handleReconfigureWebhook = async (inst: WhatsAppInstance) => {
+    try {
+      const res = await setupMutation.mutateAsync({
+        action: "reconfigure-webhook",
+        provider: "evolution",
+        instanceName: inst.instance_id,
+        baseUrl: inst.base_url || undefined,
+        apiKey: inst.client_token || undefined,
+      });
+      refetch();
+      if (res?.success) {
+        toast.success("Webhook reconfigurado com sucesso!", { description: `URL: ${res.webhookUrl}` });
+      } else {
+        toast.warning("Webhook pode não ter sido configurado corretamente");
+      }
+    } catch (err: any) {
+      toast.error("Erro ao reconfigurar webhook: " + err.message);
+    }
+  };
+
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const webhookUrl = orgId ? `https://${projectId}.supabase.co/functions/v1/crm-lead-webhook/${orgId}` : "";
 
@@ -505,7 +531,7 @@ export default function ClienteIntegracoes() {
               <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância Evolution configurada.</p></CardContent></Card>
             ) : (
               evoInstances.map(inst => (
-                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} onReconnect={() => handleReconnect(inst)} isPending={setupMutation.isPending} />
+                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} onReconnect={() => handleReconnect(inst)} onReconfigureWebhook={() => handleReconfigureWebhook(inst)} isPending={setupMutation.isPending} />
               ))
             )}
           </div>
