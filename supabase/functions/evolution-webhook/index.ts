@@ -32,13 +32,25 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log("Evolution webhook payload:", JSON.stringify(body).slice(0, 500));
 
-    // Extract org_id from URL path: /evolution-webhook/{org_id}
+    // Extract org_id from URL path.
+    // Supports both:
+    // - /evolution-webhook/{org_id}
+    // - /evolution-webhook/{org_id}/messages-upsert|messages-update
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/").filter(Boolean);
-    let orgId = pathParts[pathParts.length - 1];
+    const webhookIndex = pathParts.lastIndexOf("evolution-webhook");
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-    // If last segment is the function name itself, resolve org from instance name
-    if (!orgId || orgId === "evolution-webhook") {
+    const orgCandidate =
+      webhookIndex >= 0 && pathParts.length > webhookIndex + 1
+        ? pathParts[webhookIndex + 1]
+        : pathParts[pathParts.length - 1];
+
+    let orgId = orgCandidate && uuidRegex.test(orgCandidate) ? orgCandidate : "";
+
+    // Fallback: resolve org from instance name when org_id is not present in path
+    if (!orgId) {
       const instanceName = body.instance || body.instanceName || "";
       if (!instanceName) {
         return new Response(JSON.stringify({ error: "org_id or instance name required" }), {
