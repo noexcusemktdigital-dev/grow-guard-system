@@ -969,10 +969,47 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
     }
   };
 
-  return (
+      const closingYears = useMemo(() => {
+        const ys = new Set<string>();
+        (closings ?? []).forEach((cl: any) => { if (cl.year) ys.add(String(cl.year)); });
+        return [...ys].sort().reverse();
+      }, [closings]);
+
+      const filteredClosings = useMemo(() => {
+        let list = closings ?? [];
+        if (filterUnit !== "all") list = list.filter((cl: any) => cl.unit_id === filterUnit);
+        if (filterYear !== "all") list = list.filter((cl: any) => String(cl.year) === filterYear);
+        if (filterClosingStatus !== "all") list = list.filter((cl: any) => cl.status === filterClosingStatus);
+        return list;
+      }, [closings, filterUnit, filterYear, filterClosingStatus]);
+
+      return (
     <>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Consolidação mensal por unidade — royalties e taxas</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Select value={filterUnit} onValueChange={setFilterUnit}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Unidade" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas Unidades</SelectItem>
+              {(units ?? []).map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterYear} onValueChange={setFilterYear}>
+            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Ano" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Anos</SelectItem>
+              {closingYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterClosingStatus} onValueChange={setFilterClosingStatus}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Status</SelectItem>
+              <SelectItem value="published">Publicado</SelectItem>
+              <SelectItem value="pending">Pendente</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Button onClick={() => { setSelectedUnitId(""); setMonth(String(new Date().getMonth() + 1)); setYear(String(new Date().getFullYear())); setTitle(""); setNotes(""); setFile(null); setDialogOpen(true); }} className="gap-2">
           <Plus className="w-4 h-4" /> Novo Fechamento
         </Button>
