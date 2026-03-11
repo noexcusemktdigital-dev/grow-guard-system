@@ -1143,9 +1143,10 @@ export default function ClientePlanoVendas() {
             ))}
           </div>
 
+          <div id="metas-report-area">
           {/* KPI Summary */}
           {hasGoals && goalProgress && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               {(() => {
                 const total = activeGoals.length;
                 const achieved = progValues.filter(p => p.percent >= 100).length;
