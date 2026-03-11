@@ -1,31 +1,34 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Diagnóstico: Mensagens não chegam da Evolution API
 
-### Status: ✅ Implementado
+### Problema
+A instância **noexcuse** está **conectada** (state: open) no servidor Evolution (`http://129.121.44.154:8080`), mas o webhook `evolution-webhook` tem **zero logs** — ou seja, o servidor Evolution não está enviando eventos para a URL do sistema.
 
-### Resumo
+A URL correta do webhook deveria ser:
+```
+https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/evolution-webhook/adb09618-e9f3-4dbd-a89c-29e3eb1bec9f
+```
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+### Causa Provável
+O webhook foi configurado durante o `connect`, mas pode ter sido perdido ou sobrescrito no servidor Evolution. Não existe uma ação no sistema para **reconfigurar o webhook** sem reconectar toda a instância.
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+### Solução
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+**1. Adicionar ação `reconfigure-webhook` no `whatsapp-setup`**
+- Nova action que chama `POST /webhook/set/{instanceName}` na Evolution para reconfigurar a URL do webhook sem precisar desconectar/reconectar
+- Também adicionar `MESSAGES_UPDATE` aos eventos monitorados (para status de entrega)
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+**2. Adicionar botão "Reconfigurar Webhook" na UI de integração**
+- No `WhatsAppSetupWizard.tsx`, quando a instância está conectada mas sem mensagens, permitir reconfigurar o webhook com um clique
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+**3. Verificar webhook atual via Evolution API**
+- Chamar `GET /webhook/find/{instanceName}` para mostrar ao usuário qual URL está configurada atualmente no servidor Evolution
+
+### Arquivos a editar
+- `supabase/functions/whatsapp-setup/index.ts` — adicionar action `reconfigure-webhook`
+- `src/components/cliente/WhatsAppSetupWizard.tsx` — botão para reconfigurar webhook
+
+### Alternativa imediata
+Se quiser testar agora, posso reconfigurar o webhook diretamente chamando a Evolution API via curl do edge function, sem precisar mudar código. Basta aprovar o plano.
+
