@@ -176,11 +176,9 @@ Deno.serve(async (req) => {
           headers: evHeaders,
           body: JSON.stringify({
             number: cleanEvPhone,
-            mediaMessage: {
-              mediaType,
-              media: mediaUrl,
-              caption: message || "",
-            },
+            mediatype: mediaType,
+            media: mediaUrl,
+            caption: message || "",
           }),
         });
       } else {
@@ -189,7 +187,7 @@ Deno.serve(async (req) => {
           headers: evHeaders,
           body: JSON.stringify({
             number: cleanEvPhone,
-            textMessage: { text: message },
+            text: message,
           }),
         });
       }

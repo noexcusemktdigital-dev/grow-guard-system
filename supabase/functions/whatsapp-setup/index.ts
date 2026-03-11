@@ -235,19 +235,15 @@ Deno.serve(async (req) => {
 
       // Step 2: Configure webhook on Evolution API
       try {
+        const webhookUrlSet = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
         await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", apikey: apiKey },
           body: JSON.stringify({
-            url: webhookUrl,
-            webhook_by_events: false,
-            webhook_base64: false,
-            events: [
-              "MESSAGES_UPSERT",
-              "MESSAGES_UPDATE",
-              "CONNECTION_UPDATE",
-              "QRCODE_UPDATED",
-            ],
+            url: webhookUrlSet,
+            webhook_by_events: true,
+            webhook_base64: true,
+            events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT"],
           }),
         });
       } catch (err) {
