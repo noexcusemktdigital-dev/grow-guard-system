@@ -105,6 +105,27 @@ serve(async (req) => {
       }
     }
 
+    // Fetch sales plan for enrichment
+    let salesPlanCtx = "";
+    if (organization_id) {
+      const { data: salesPlan } = await supabaseAdmin
+        .from("sales_plans")
+        .select("answers")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+      if (salesPlan?.answers && Object.keys(salesPlan.answers).length > 3) {
+        const sp = salesPlan.answers as Record<string, any>;
+        const parts: string[] = [];
+        if (sp.produtos_servicos) parts.push(`Products: ${sp.produtos_servicos}`);
+        if (sp.diferenciais) parts.push(`Differentials: ${sp.diferenciais}`);
+        if (sp.dor_principal) parts.push(`Customer pain: ${sp.dor_principal}`);
+        if (parts.length > 0) {
+          salesPlanCtx = `\n\nSALES PLAN CONTEXT:\n${parts.map(p => `- ${p}`).join("\n")}\nUse these business details to make visuals and copy more relevant and specific.`;
+        }
+      }
+    }
+
+
     const tipoGuide = getVisualGuideByType(tipo_post || "institucional");
     const nivelGuide = getNivelInstructions(nivel || "simples");
 
