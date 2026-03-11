@@ -16,7 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinanceExpenses, useFinanceRevenues, useFinanceMutations, useFinanceClosings } from "@/hooks/useFinance";
 import { useNetworkContracts } from "@/hooks/useContracts";
-import { useChargeClient, useAsaasNetworkPayments, type AsaasPayment } from "@/hooks/useClientPayments";
+import { useChargeClient, useAsaasNetworkPayments, useManagePayment, type AsaasPayment } from "@/hooks/useClientPayments";
 import { useUnits } from "@/hooks/useUnits";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
