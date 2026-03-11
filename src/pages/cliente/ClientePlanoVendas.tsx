@@ -293,14 +293,9 @@ const salesSections: StrategySection[] = [
         ],
       },
       {
-        id: "etapas_funil", question: "Quais etapas do funil utiliza?", type: "multi-choice",
-        helpText: "Um funil bem definido permite identificar gargalos e melhorar a conversão em cada etapa.",
-        options: [
-          { label: "Prospecção", value: "prospeccao" }, { label: "Qualificação", value: "qualificacao" },
-          { label: "Apresentação", value: "apresentacao" }, { label: "Proposta", value: "proposta" },
-          { label: "Negociação", value: "negociacao" }, { label: "Fechamento", value: "fechamento" },
-          { label: "Não tenho funil definido", value: "nenhum" },
-        ],
+        id: "etapas_funil", question: "Descreva as etapas do seu processo de vendas", type: "text",
+        helpText: "Um funil bem definido permite identificar gargalos. Vamos criar seu funil automaticamente!",
+        placeholder: "Ex: Prospecção → Qualificação → Reunião → Proposta → Negociação → Fechamento",
       },
       {
         id: "reuniao_recorrente", question: "Tem reunião comercial recorrente?", type: "choice",
