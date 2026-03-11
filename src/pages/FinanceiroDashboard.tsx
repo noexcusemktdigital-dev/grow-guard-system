@@ -764,21 +764,38 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
 
   return (
     <>
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <p className="text-sm text-muted-foreground">Cobranças automáticas de royalties e sistema para franqueados</p>
-        <div className="flex items-center gap-3">
-          <Select value={billingType} onValueChange={setBillingType}>
-            <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="BOLETO">Boleto</SelectItem>
-              <SelectItem value="PIX">PIX</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => generateCharges.mutate()} disabled={generateCharges.isPending} className="gap-2">
-            {generateCharges.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Gerar Cobranças do Mês
-          </Button>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar franqueado..." className="pl-9" value={searchFranqueado} onChange={e => setSearchFranqueado(e.target.value)} />
         </div>
+        <Select value={filterRepasseStatus} onValueChange={setFilterRepasseStatus}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+            <SelectItem value="paid">Pago</SelectItem>
+            <SelectItem value="overdue">Vencido</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterRepasseMonth} onValueChange={setFilterRepasseMonth}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Meses</SelectItem>
+            {repasseMonthOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={billingType} onValueChange={setBillingType}>
+          <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="BOLETO">Boleto</SelectItem>
+            <SelectItem value="PIX">PIX</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={() => generateCharges.mutate()} disabled={generateCharges.isPending} className="gap-2">
+          {generateCharges.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          Gerar Cobranças
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
