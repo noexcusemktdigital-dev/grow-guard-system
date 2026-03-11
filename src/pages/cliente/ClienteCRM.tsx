@@ -282,6 +282,7 @@ export default function ClienteCRM() {
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
+  const [newLeadContact, setNewLeadContact] = useState<any>(null);
   const [funnelManagerOpen, setFunnelManagerOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
