@@ -15,7 +15,7 @@ export function HelpTooltip({ text, className }: HelpTooltipProps) {
             <HelpCircle className="w-3.5 h-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+        <TooltipContent side="right" sideOffset={8} avoidCollisions className="z-[200] max-w-xs text-xs leading-relaxed">
           {text}
         </TooltipContent>
       </Tooltip>

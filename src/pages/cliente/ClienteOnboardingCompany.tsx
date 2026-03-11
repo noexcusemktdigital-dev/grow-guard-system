@@ -78,7 +78,7 @@ export default function ClienteOnboardingCompany() {
   if (org && !prefilled) {
     setForm(prev => ({
       ...prev,
-      name: org.name || prev.name,
+      name: (org.name && !org.name.includes("'s Company") && !org.name.includes("'s Company")) ? org.name : "",
       cnpj: (org as any).cnpj || prev.cnpj,
       phone: (org as any).phone || prev.phone,
       city: (org as any).city || prev.city,
