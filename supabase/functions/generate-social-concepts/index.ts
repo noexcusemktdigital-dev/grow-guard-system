@@ -236,6 +236,7 @@ ${referenciasTipoContext}
 ${referenceImageContext}
 ${artStyleContext}
 ${videoStyleContext}
+${salesPlanCtx}
 
 Cada conceito DEVE ter:
 - titulo: título curto e chamativo do post (máx 60 caracteres)
