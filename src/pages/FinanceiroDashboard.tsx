@@ -898,6 +898,9 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [filterUnit, setFilterUnit] = useState("all");
+  const [filterYear, setFilterYear] = useState("all");
+  const [filterClosingStatus, setFilterClosingStatus] = useState("all");
 
   const unitFeeMap = useMemo(() => {
     const map: Record<string, number> = {};
