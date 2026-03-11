@@ -256,8 +256,8 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
 
   return (
     <>
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <KpiCard label="MRR da Rede" value={formatBRL(networkMRR)} sublabel={`${activeContracts.length} contratos ativos`} accent />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <KpiCard label="MRR da Rede" value={formatBRL(networkMRR)} accent />
         <KpiCard label="Cobranças do Mês" value={formatBRL(monthTotal)} sublabel="total no período" />
         <KpiCard label="Recebidas" value={formatBRL(monthReceived)} trend="up" sublabel="confirmadas" />
         <KpiCard label="Atrasadas" value={formatBRL(monthOverdue)} sublabel={overdueCount > 0 ? `${overdueCount} cobranças` : "nenhuma"} />
