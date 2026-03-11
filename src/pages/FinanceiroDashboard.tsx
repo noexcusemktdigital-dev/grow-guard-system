@@ -306,11 +306,6 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
       </div>
 
       {/* Block removed — contract revenue was displaying non-real data */}
-            ))}
-            {activeContracts.length > 8 && <p className="text-xs text-muted-foreground text-center pt-2">+{activeContracts.length - 8} contratos</p>}
-          </div>
-        )}
-      </div>
     </>
   );
 }
