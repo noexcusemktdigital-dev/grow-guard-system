@@ -1186,30 +1186,6 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
         </div>
       )}
 
-      {/* Emitir Cobrança section for contracts */}
-      {activeContracts.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle className="text-sm">Emitir Nova Cobrança (contratos)</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {activeContracts.slice(0, 10).map((c: any) => (
-                <div key={c.id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
-                  <div>
-                    <span className="text-sm font-medium">{c.signer_name || c.title}</span>
-                    <span className="text-xs text-muted-foreground ml-2">{c.org_name || "Matriz"}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-primary font-medium">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}</span>
-                    <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => { setChargeContract(c); setChargeBillingType("PIX"); setChargeResult(null); }} disabled={!c.monthly_value || Number(c.monthly_value) <= 0}>
-                      <CreditCard className="w-3.5 h-3.5" /> Cobrar
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Charge Dialog */}
       <Dialog open={!!chargeContract} onOpenChange={(open) => { if (!open) { setChargeContract(null); setChargeResult(null); } }}>
