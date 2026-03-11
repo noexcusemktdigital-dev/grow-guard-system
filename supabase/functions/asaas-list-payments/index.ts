@@ -9,6 +9,23 @@ const corsHeaders = {
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
+async function fetchAllPages(baseUrl: string, apiKey: string): Promise<any[]> {
+  const all: any[] = [];
+  let offset = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const sep = baseUrl.includes("?") ? "&" : "?";
+    const url = `${baseUrl}${sep}limit=100&offset=${offset}`;
+    const res = await asaasFetch(url, { headers: { access_token: apiKey, "User-Agent": "NOE-Platform" } });
+    const data = await res.json();
+    const items = data.data ?? [];
+    all.push(...items);
+    hasMore = data.hasMore === true && items.length > 0;
+    offset += 100;
+  }
+  return all;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -40,17 +57,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { organization_id, network, all, startDate, endDate } = await req.json();
+    const { organization_id, network, all, startDate, endDate, status: statusFilter } = await req.json();
 
-    // ── MODE: all ── fetch ALL payments from the account
+    // ── MODE: all ── fetch ALL payments from the account with full pagination
     if (all) {
-      let url = `${ASAAS_BASE}/payments?limit=100&offset=0`;
-      if (startDate) url += `&dateCreated[ge]=${startDate}`;
-      if (endDate) url += `&dateCreated[le]=${endDate}`;
+      let url = `${ASAAS_BASE}/payments?`;
+      const params: string[] = [];
+      if (startDate) params.push(`dateCreated[ge]=${startDate}`);
+      if (endDate) params.push(`dateCreated[le]=${endDate}`);
+      if (statusFilter) params.push(`status=${statusFilter}`);
+      url += params.join("&");
 
-      const res = await asaasFetch(url, { headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" } });
-      const data = await res.json();
-      const rawPayments = data.data ?? [];
+      const rawPayments = await fetchAllPages(url, asaasApiKey);
+      console.log(`[asaas-list-payments] Fetched ${rawPayments.length} payments (all mode)`);
 
       const uniqueCustomerIds = [...new Set(rawPayments.map((p: any) => p.customer).filter(Boolean))] as string[];
       const customerNameMap: Record<string, string> = {};
@@ -69,11 +88,13 @@ Deno.serve(async (req) => {
       );
 
       const allPayments = rawPayments.map((p: any) => ({
-        id: p.id, value: p.value, status: p.status,
+        id: p.id, value: p.value, netValue: p.netValue ?? p.value,
+        status: p.status,
         dueDate: p.dueDate, paymentDate: p.paymentDate,
         billingType: p.billingType, description: p.description,
         invoiceUrl: p.invoiceUrl, bankSlipUrl: p.bankSlipUrl,
         pixQrCode: p.pixQrCodeUrl,
+        externalReference: p.externalReference || null,
         orgName: customerNameMap[p.customer] || "",
         orgId: null, customerAsaasId: p.customer,
       }));
@@ -119,19 +140,22 @@ Deno.serve(async (req) => {
     const allPayments: any[] = [];
     await Promise.all(
       orgsToQuery.map(async (org) => {
-        let url = `${ASAAS_BASE}/payments?customer=${org.asaas_customer_id}&limit=100&offset=0`;
+        let url = `${ASAAS_BASE}/payments?customer=${org.asaas_customer_id}`;
         if (startDate) url += `&dateCreated[ge]=${startDate}`;
         if (endDate) url += `&dateCreated[le]=${endDate}`;
         try {
-          const res = await asaasFetch(url, { headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" } });
-          const data = await res.json();
-          for (const p of data.data ?? []) {
+          const items = await fetchAllPages(url, asaasApiKey);
+          for (const p of items) {
             allPayments.push({
-              id: p.id, value: p.value, status: p.status,
+              id: p.id, value: p.value, netValue: p.netValue ?? p.value,
+              status: p.status,
               dueDate: p.dueDate, paymentDate: p.paymentDate,
               billingType: p.billingType, description: p.description,
               invoiceUrl: p.invoiceUrl, bankSlipUrl: p.bankSlipUrl,
-              pixQrCode: p.pixQrCodeUrl, orgName: org.name, orgId: org.id,
+              pixQrCode: p.pixQrCodeUrl,
+              externalReference: p.externalReference || null,
+              orgName: org.name, orgId: org.id,
+              customerAsaasId: org.asaas_customer_id,
             });
           }
         } catch (e: any) {

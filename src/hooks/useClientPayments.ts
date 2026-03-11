@@ -96,6 +96,7 @@ export function useChargeClient() {
 export interface AsaasPayment {
   id: string;
   value: number;
+  netValue: number;
   status: string;
   dueDate: string | null;
   paymentDate: string | null;
@@ -104,13 +105,16 @@ export interface AsaasPayment {
   invoiceUrl: string | null;
   bankSlipUrl: string | null;
   pixQrCode: string | null;
+  externalReference: string | null;
+  customerAsaasId: string | null;
   orgName: string;
-  orgId: string;
+  orgId: string | null;
 }
 
 export function useAsaasNetworkPayments() {
+  // Fetch last 12 months for full overview
   const now = new Date();
-  const start = format(startOfMonth(now), "yyyy-MM-dd");
+  const start = format(new Date(now.getFullYear(), now.getMonth() - 11, 1), "yyyy-MM-dd");
   const end = format(endOfMonth(now), "yyyy-MM-dd");
 
   return useQuery({
