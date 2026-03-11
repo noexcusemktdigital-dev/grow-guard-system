@@ -78,22 +78,18 @@ export function useWhatsAppInstance() {
   };
 }
 
-export function useWhatsAppContacts(filterInstanceId?: string | null) {
+export function useWhatsAppContacts(_filterInstanceId?: string | null) {
   const { data: orgId } = useUserOrgId();
 
   return useQuery({
-    queryKey: ["whatsapp-contacts", orgId, filterInstanceId],
+    queryKey: ["whatsapp-contacts", orgId],
     queryFn: async () => {
       if (!orgId) return [];
-      let query = supabase
+      const query = supabase
         .from("whatsapp_contacts" as any)
         .select("*")
         .eq("organization_id", orgId)
         .order("last_message_at", { ascending: false, nullsFirst: false });
-
-      if (filterInstanceId) {
-        query = query.eq("instance_id", filterInstanceId);
-      }
 
       const { data, error } = await query;
       if (error) throw error;

@@ -1,43 +1,31 @@
 
 
-## Diagnóstico: Mensagens não aparecem no Chat
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema identificado
+### Status: ✅ Implementado
 
-Há **dois problemas distintos**:
+### Resumo
 
-**1. Mensagens perdidas durante janela de deploy (15:42-15:44 UTC)**
-O webhook estava sendo redeployado quando as mensagens chegaram. Testei manualmente e o webhook funciona agora — a mensagem de teste foi salva com sucesso.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**2. Filtro de `instance_id` bloqueando contatos (PROBLEMA PRINCIPAL)**
-O hook `useWhatsAppContacts` filtra contatos por `instance_id`. Dos **649 contatos**, apenas **1** tem `instance_id` preenchido (o que recebeu minha mensagem de teste). Os outros 648 ficam invisíveis no chat.
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-```text
-ClienteChat.tsx linha 33:
-  useWhatsAppContacts(instance?.id)  →  filtra por instance_id = UUID
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-whatsapp_contacts no banco:
-  649 contatos totais
-  648 com instance_id = NULL  →  NÃO aparecem
-  1   com instance_id = UUID  →  aparece
-```
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-### Plano de correção
-
-**A. Atualizar contatos sem instance_id (migração SQL)**
-```sql
-UPDATE whatsapp_contacts 
-SET instance_id = '76967807-c7f1-49d3-9d12-e64b9a83320e'
-WHERE organization_id = 'adb09618-e9f3-4dbd-a89c-29e3eb1bec9f' 
-  AND instance_id IS NULL;
-```
-
-**B. Tornar o filtro de instance_id resiliente**
-Em `useWhatsAppContacts`, remover o filtro por `instance_id` — como a query já filtra por `organization_id`, o filtro extra é desnecessário e causa esse tipo de problema quando contatos são criados sem vincular à instância.
-
-**C. Garantir que o webhook sempre seta instance_id**
-O código já faz isso (linha 167: `instance_id: instance.id`), mas preciso confirmar que funciona para contatos novos e existentes — o que já está implementado.
-
-### Resultado esperado
-Todos os 649 contatos voltam a aparecer no chat, e novas mensagens são salvas e exibidas em tempo real.
-
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
