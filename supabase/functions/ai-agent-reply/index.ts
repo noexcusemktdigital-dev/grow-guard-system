@@ -727,37 +727,59 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
       });
     }
 
-    const cleanPhone = contact.phone.replace(/[\s\-\+\(\)]/g, "");
+    const isGroup = contact.phone.endsWith("-group");
+    const cleanPhone = isGroup
+      ? contact.phone.replace(/-group$/, "")
+      : contact.phone.replace(/[\s\-\+\(\)]/g, "");
 
     // ─── Simulate human typing delay ───
     const delayMs = Math.min(Math.max(Math.round((cleanReply.length / 40) * 1000 + 1500), 2000), 12000);
     try {
-      const typingUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/send-typing`;
-      await fetch(typingUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Client-Token": instance.client_token },
-        body: JSON.stringify({ phone: cleanPhone }),
-      });
+      if (instance.provider === "evolution") {
+        // Evolution API doesn't have a native typing endpoint — skip silently
+        console.log("Typing indicator skipped for Evolution API");
+      } else {
+        const typingUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/send-typing`;
+        await fetch(typingUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Client-Token": instance.client_token },
+          body: JSON.stringify({ phone: cleanPhone }),
+        });
+      }
     } catch (e) {
       console.error("Failed to send typing indicator:", e);
     }
     await new Promise(resolve => setTimeout(resolve, delayMs));
 
-    const zapiUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/send-text`;
-    const zapiRes = await fetch(zapiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Client-Token": instance.client_token },
-      body: JSON.stringify({ phone: cleanPhone, message: cleanReply }),
-    });
+    let sendRes: Response;
+    let sendData: any;
 
-    const zapiData = await zapiRes.json();
-    const messageStatus = zapiRes.ok ? "sent" : "failed";
+    if (instance.provider === "evolution") {
+      const baseUrl = (instance.base_url || "").replace(/\/+$/, "");
+      const evNumber = isGroup ? cleanPhone + "@g.us" : cleanPhone;
+      sendRes = await fetch(`${baseUrl}/message/sendText/${instance.instance_id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: instance.client_token },
+        body: JSON.stringify({ number: evNumber, text: cleanReply }),
+      });
+      sendData = await sendRes.json();
+    } else {
+      const zapiUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/send-text`;
+      sendRes = await fetch(zapiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Client-Token": instance.client_token },
+        body: JSON.stringify({ phone: cleanPhone, message: cleanReply }),
+      });
+      sendData = await sendRes.json();
+    }
+
+    const messageStatus = sendRes.ok ? "sent" : "failed";
 
     await adminClient.from("whatsapp_messages").insert({
       organization_id, contact_id,
-      message_id_zapi: zapiData?.messageId || null,
+      message_id_zapi: sendData?.messageId || sendData?.key?.id || null,
       direction: "outbound", type: "text", content: cleanReply, status: messageStatus,
-      metadata: { ...zapiData, ai_generated: true, agent_id: agent.id, agent_role: agent.role, ai_actions: actions.length > 0 ? actions : undefined },
+      metadata: { ...sendData, ai_generated: true, agent_id: agent.id, agent_role: agent.role, ai_actions: actions.length > 0 ? actions : undefined },
     });
 
     await adminClient.from("whatsapp_contacts").update({ last_message_at: new Date().toISOString() }).eq("id", contact_id);
