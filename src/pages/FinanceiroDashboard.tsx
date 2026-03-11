@@ -1216,6 +1216,15 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <Select value={filterClientStatus} onValueChange={setFilterClientStatus}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="received">Com recebidos</SelectItem>
+            <SelectItem value="pending">Com pendentes</SelectItem>
+            <SelectItem value="overdue">Com vencidos</SelectItem>
+          </SelectContent>
+        </Select>
         <Button variant="outline" size="sm" className="gap-2" onClick={() => refetchAsaas()} disabled={la}>
           <RefreshCw className={`w-4 h-4 ${la ? "animate-spin" : ""}`} /> Sincronizar Asaas
         </Button>
