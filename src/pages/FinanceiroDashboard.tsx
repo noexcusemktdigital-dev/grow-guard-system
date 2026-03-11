@@ -318,6 +318,8 @@ const revCategories = ["Serviço", "Consultoria", "Licença", "Comissão", "Outr
 
 function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas, createRevenue, updateRevenue, deleteRevenue, toast }: any) {
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterSource, setFilterSource] = useState("all");
   const [revDialog, setRevDialog] = useState(false);
   const [editingRev, setEditingRev] = useState<any>(null);
   const [revForm, setRevForm] = useState({ description: "", amount: 0, category: "Serviço", status: "pending", date: "", payment_method: "" });
@@ -340,8 +342,10 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
     let list = [...asaasList, ...manualList];
     if (selectedMonth !== "all") list = list.filter(e => e.date.startsWith(selectedMonth));
     if (search) list = list.filter(e => e.description.toLowerCase().includes(search.toLowerCase()) || (e.orgName || "").toLowerCase().includes(search.toLowerCase()));
+    if (filterStatus !== "all") list = list.filter(e => e.status === filterStatus);
+    if (filterSource !== "all") list = list.filter(e => e.source === filterSource);
     return list.sort((a, b) => b.date.localeCompare(a.date));
-  }, [asaasPayments, revenues, selectedMonth, search]);
+  }, [asaasPayments, revenues, selectedMonth, search, filterStatus, filterSource]);
 
   const totalPaid = useMemo(() => unified.filter(e => e.status === "paid").reduce((s, e) => s + e.value, 0), [unified]);
   const totalPending = useMemo(() => unified.filter(e => e.status === "pending").reduce((s, e) => s + e.value, 0), [unified]);
@@ -371,6 +375,23 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar por descrição ou cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="paid">Recebido</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+            <SelectItem value="overdue">Vencido</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterSource} onValueChange={setFilterSource}>
+          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Origem" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas Origens</SelectItem>
+            <SelectItem value="asaas">Asaas</SelectItem>
+            <SelectItem value="manual">Manual</SelectItem>
+          </SelectContent>
+        </Select>
         <Button variant="outline" size="sm" className="gap-2" onClick={() => refetchAsaas()} disabled={la}>
           <RefreshCw className={`w-4 h-4 ${la ? "animate-spin" : ""}`} /> Atualizar Asaas
         </Button>
@@ -491,6 +512,9 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
 
 function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, deleteExpense, toast }: any) {
   const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterType, setFilterType] = useState("all");
   const [expDialog, setExpDialog] = useState(false);
   const [editingExp, setEditingExp] = useState<any>(null);
   const [expForm, setExpForm] = useState({ description: "", amount: 0, category: "Plataformas", status: "pending", is_recurring: false, date: "" });
@@ -499,8 +523,11 @@ function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, de
   const filtered = useMemo(() => {
     let list = (expenses ?? []).filter((e: any) => selectedMonth === "all" || (e.date || "").startsWith(selectedMonth));
     if (search) list = list.filter((e: any) => e.description?.toLowerCase().includes(search.toLowerCase()));
+    if (filterCategory !== "all") list = list.filter((e: any) => e.category === filterCategory);
+    if (filterStatus !== "all") list = list.filter((e: any) => e.status === filterStatus);
+    if (filterType !== "all") list = list.filter((e: any) => filterType === "recurring" ? e.is_recurring : !e.is_recurring);
     return list;
-  }, [expenses, selectedMonth, search]);
+  }, [expenses, selectedMonth, search, filterCategory, filterStatus, filterType]);
 
   const openNewExp = () => { setEditingExp(null); setExpForm({ description: "", amount: 0, category: "Plataformas", status: "pending", is_recurring: false, date: "" }); setExpDialog(true); };
   const openEditExp = (e: any) => { setEditingExp(e); setExpForm({ description: e.description, amount: Number(e.amount), category: e.category || "Plataformas", status: e.status || "pending", is_recurring: !!e.is_recurring, date: e.date || "" }); setExpDialog(true); };
@@ -526,6 +553,29 @@ function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, de
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar despesa..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas Categorias</SelectItem>
+            {expCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="paid">Pago</SelectItem>
+            <SelectItem value="pending">Previsto</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Tipos</SelectItem>
+            <SelectItem value="recurring">Fixa</SelectItem>
+            <SelectItem value="variable">Variável</SelectItem>
+          </SelectContent>
+        </Select>
         <Button size="sm" onClick={openNewExp} className="gap-2"><Plus className="w-4 h-4" /> Nova Despesa</Button>
       </div>
 
@@ -630,6 +680,9 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
   const [billingType, setBillingType] = useState("BOLETO");
   const [pixDialog, setPixDialog] = useState<{ open: boolean; paymentId: string | null }>({ open: false, paymentId: null });
   const [copied, setCopied] = useState(false);
+  const [searchFranqueado, setSearchFranqueado] = useState("");
+  const [filterRepasseStatus, setFilterRepasseStatus] = useState("all");
+  const [filterRepasseMonth, setFilterRepasseMonth] = useState("all");
 
   const { data: charges, isLoading } = useQuery({
     queryKey: ["franchisee-charges", orgId],
@@ -644,6 +697,20 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
     },
     enabled: !!orgId,
   });
+
+  const repasseMonthOptions = useMemo(() => {
+    const ms = new Set<string>();
+    (charges ?? []).forEach((c: any) => { if (c.month) ms.add(c.month); });
+    return [...ms].sort().reverse();
+  }, [charges]);
+
+  const filteredCharges = useMemo(() => {
+    let list = charges ?? [];
+    if (searchFranqueado) list = list.filter((c: any) => (c.franchisee_org?.name || "").toLowerCase().includes(searchFranqueado.toLowerCase()));
+    if (filterRepasseStatus !== "all") list = list.filter((c: any) => c.status === filterRepasseStatus);
+    if (filterRepasseMonth !== "all") list = list.filter((c: any) => c.month === filterRepasseMonth);
+    return list;
+  }, [charges, searchFranqueado, filterRepasseStatus, filterRepasseMonth]);
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -697,21 +764,38 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
 
   return (
     <>
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <p className="text-sm text-muted-foreground">Cobranças automáticas de royalties e sistema para franqueados</p>
-        <div className="flex items-center gap-3">
-          <Select value={billingType} onValueChange={setBillingType}>
-            <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="BOLETO">Boleto</SelectItem>
-              <SelectItem value="PIX">PIX</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => generateCharges.mutate()} disabled={generateCharges.isPending} className="gap-2">
-            {generateCharges.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Gerar Cobranças do Mês
-          </Button>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar franqueado..." className="pl-9" value={searchFranqueado} onChange={e => setSearchFranqueado(e.target.value)} />
         </div>
+        <Select value={filterRepasseStatus} onValueChange={setFilterRepasseStatus}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+            <SelectItem value="paid">Pago</SelectItem>
+            <SelectItem value="overdue">Vencido</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterRepasseMonth} onValueChange={setFilterRepasseMonth}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Meses</SelectItem>
+            {repasseMonthOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={billingType} onValueChange={setBillingType}>
+          <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="BOLETO">Boleto</SelectItem>
+            <SelectItem value="PIX">PIX</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={() => generateCharges.mutate()} disabled={generateCharges.isPending} className="gap-2">
+          {generateCharges.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          Gerar Cobranças
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -720,11 +804,11 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Cobranças Geradas</CardTitle></CardHeader><CardContent><span className="text-2xl font-bold text-foreground">{charges?.length ?? 0}</span></CardContent></Card>
       </div>
 
-      {!charges || charges.length === 0 ? (
+      {filteredCharges.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-1">Nenhuma cobrança gerada</h3>
-          <p className="text-sm text-muted-foreground">Clique em "Gerar Cobranças do Mês" para criar cobranças automáticas.</p>
+          <h3 className="text-lg font-semibold mb-1">Nenhuma cobrança encontrada</h3>
+          <p className="text-sm text-muted-foreground">{!charges || charges.length === 0 ? 'Clique em "Gerar Cobranças" para criar cobranças automáticas.' : "Nenhum resultado para os filtros selecionados."}</p>
         </div>
       ) : (
         <Card>
@@ -743,7 +827,7 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {charges.map((charge: any) => {
+                {filteredCharges.map((charge: any) => {
                   const st = statusConfig[charge.status] || statusConfig.pending;
                   const franchiseeName = charge.franchisee_org?.name || "—";
                   const canShowPix = charge.asaas_payment_id && charge.status === "pending";
@@ -814,6 +898,9 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [filterUnit, setFilterUnit] = useState("all");
+  const [filterYear, setFilterYear] = useState("all");
+  const [filterClosingStatus, setFilterClosingStatus] = useState("all");
 
   const unitFeeMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -882,10 +969,47 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
     }
   };
 
+  const closingYears = useMemo(() => {
+    const ys = new Set<string>();
+    (closings ?? []).forEach((cl: any) => { if (cl.year) ys.add(String(cl.year)); });
+    return [...ys].sort().reverse();
+  }, [closings]);
+
+  const filteredClosings = useMemo(() => {
+    let list = closings ?? [];
+    if (filterUnit !== "all") list = list.filter((cl: any) => cl.unit_id === filterUnit);
+    if (filterYear !== "all") list = list.filter((cl: any) => String(cl.year) === filterYear);
+    if (filterClosingStatus !== "all") list = list.filter((cl: any) => cl.status === filterClosingStatus);
+    return list;
+  }, [closings, filterUnit, filterYear, filterClosingStatus]);
+
   return (
     <>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Consolidação mensal por unidade — royalties e taxas</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Select value={filterUnit} onValueChange={setFilterUnit}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Unidade" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas Unidades</SelectItem>
+              {(units ?? []).map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterYear} onValueChange={setFilterYear}>
+            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Ano" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Anos</SelectItem>
+              {closingYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterClosingStatus} onValueChange={setFilterClosingStatus}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Status</SelectItem>
+              <SelectItem value="published">Publicado</SelectItem>
+              <SelectItem value="pending">Pendente</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Button onClick={() => { setSelectedUnitId(""); setMonth(String(new Date().getMonth() + 1)); setYear(String(new Date().getFullYear())); setTitle(""); setNotes(""); setFile(null); setDialogOpen(true); }} className="gap-2">
           <Plus className="w-4 h-4" /> Novo Fechamento
         </Button>
@@ -933,10 +1057,10 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
         </div>
       )}
 
-      {(closings ?? []).length > 0 && (
+      {filteredClosings.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">Arquivos de Fechamento</h3>
-          {closings.map((cl: any) => (
+          {filteredClosings.map((cl: any) => (
             <Card key={cl.id} className="glass-card">
               <CardContent className="flex items-center justify-between py-4">
                 <div className="flex items-center gap-4">
@@ -1002,6 +1126,7 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
 
 function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMonth }: any) {
   const [search, setSearch] = useState("");
+  const [filterClientStatus, setFilterClientStatus] = useState("all");
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
   const [chargeContract, setChargeContract] = useState<any>(null);
   const [chargeBillingType, setChargeBillingType] = useState("PIX");
@@ -1034,8 +1159,11 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
     });
     let list = [...map.values()].sort((a, b) => b.total - a.total);
     if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+    if (filterClientStatus === "received") list = list.filter(c => c.received > 0);
+    else if (filterClientStatus === "pending") list = list.filter(c => c.pending > 0);
+    else if (filterClientStatus === "overdue") list = list.filter(c => c.overdue > 0);
     return list;
-  }, [asaasPayments, selectedMonth, search]);
+  }, [asaasPayments, selectedMonth, search, filterClientStatus]);
 
   const totalReceived = useMemo(() => byCustomer.reduce((s, c) => s + c.received, 0), [byCustomer]);
   const totalPending = useMemo(() => byCustomer.reduce((s, c) => s + c.pending, 0), [byCustomer]);
@@ -1088,6 +1216,15 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <Select value={filterClientStatus} onValueChange={setFilterClientStatus}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="received">Com recebidos</SelectItem>
+            <SelectItem value="pending">Com pendentes</SelectItem>
+            <SelectItem value="overdue">Com vencidos</SelectItem>
+          </SelectContent>
+        </Select>
         <Button variant="outline" size="sm" className="gap-2" onClick={() => refetchAsaas()} disabled={la}>
           <RefreshCw className={`w-4 h-4 ${la ? "animate-spin" : ""}`} /> Sincronizar Asaas
         </Button>

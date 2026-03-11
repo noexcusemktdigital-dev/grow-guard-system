@@ -1,42 +1,31 @@
 
 
-## Plano: Adicionar filtros específicos em cada aba do Financeiro
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Estado atual dos filtros
-- **Global**: filtro de mês no topo (já existe)
-- **Receitas**: busca por texto (já existe)
-- **Despesas**: busca por texto (já existe)
-- **Repasse**: nenhum filtro
-- **Fechamentos**: nenhum filtro
-- **Clientes**: busca por texto (já existe)
+### Status: ✅ Implementado
 
-### Filtros a adicionar por aba
+### Resumo
 
-**Receitas** (ReceitasTab)
-- Filtro de **status**: Todos / Recebido / Pendente / Vencido
-- Filtro de **origem**: Todos / Asaas / Manual
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**Despesas** (DespesasTab)
-- Filtro de **categoria**: Todas / Pessoas / Plataformas / Estrutura / Empréstimos / etc.
-- Filtro de **status**: Todos / Pago / Previsto
-- Filtro de **tipo**: Todos / Fixa / Variável
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**Repasse** (RepasseTab)
-- Busca por **nome do franqueado**
-- Filtro de **status**: Todos / Pendente / Pago / Vencido
-- Filtro de **mês** (select com os meses disponíveis)
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-**Fechamentos** (FechamentosTab)
-- Filtro de **unidade** (select com as unidades)
-- Filtro de **ano** (select)
-- Filtro de **status**: Todos / Publicado / Pendente
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-**Clientes** (ClientesTab)
-- Filtro de **status**: Todos / Recebido / Pendente / Vencido
-
-### Implementação
-Todos os filtros serão `Select` inline ao lado da barra de busca existente, usando o mesmo padrão visual. A filtragem acontece via `useMemo` no lado do cliente (sem queries adicionais).
-
-### Arquivo a editar
-- `src/pages/FinanceiroDashboard.tsx` — adicionar estados e lógica de filtro em cada tab component
-
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
