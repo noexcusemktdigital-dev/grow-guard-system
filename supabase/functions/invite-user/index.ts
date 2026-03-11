@@ -84,17 +84,38 @@ Deno.serve(async (req) => {
       data: { full_name: full_name || email.split("@")[0] },
       redirectTo,
     });
+    let userId: string;
+
     if (createErr) {
       if (createErr.message?.includes("already been registered")) {
-        return new Response(JSON.stringify({ error: "Este e-mail já está cadastrado" }), {
-          status: 409,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        // User exists (e.g. signed up via Google OAuth) — link to org instead of rejecting
+        const { data: listData, error: listErr } = await adminClient.auth.admin.listUsers();
+        if (listErr) throw listErr;
+        const existingUser = listData.users.find((u: any) => u.email === email);
+        if (!existingUser) {
+          return new Response(JSON.stringify({ error: "Usuário existe mas não foi encontrado" }), {
+            status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        // Check if already a member of this org
+        const { data: existingMembership } = await adminClient
+          .from("organization_memberships")
+          .select("id")
+          .eq("user_id", existingUser.id)
+          .eq("organization_id", organization_id)
+          .maybeSingle();
+        if (existingMembership) {
+          return new Response(JSON.stringify({ error: "Este usuário já é membro desta organização" }), {
+            status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        userId = existingUser.id;
+      } else {
+        throw createErr;
       }
-      throw createErr;
+    } else {
+      userId = newUser.user.id;
     }
-
-    const userId = newUser.user.id;
 
     // Update profile
     await adminClient
@@ -102,19 +123,19 @@ Deno.serve(async (req) => {
       .update({ full_name: full_name || email.split("@")[0] })
       .eq("id", userId);
 
-    // Create membership
-    await adminClient.from("organization_memberships").insert({
+    // Create membership (ignore if already exists)
+    await adminClient.from("organization_memberships").upsert({
       user_id: userId,
       organization_id,
-    });
+    }, { onConflict: "user_id,organization_id", ignoreDuplicates: true });
 
-    // Set role
+    // Set role (upsert to handle existing users)
     const allowedRoles = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
     const validRole = allowedRoles.includes(role) ? role : "cliente_user";
-    await adminClient.from("user_roles").insert({
+    await adminClient.from("user_roles").upsert({
       user_id: userId,
       role: validRole,
-    });
+    }, { onConflict: "user_id,role", ignoreDuplicates: true });
 
     // Assign to teams if provided
     if (Array.isArray(team_ids) && team_ids.length > 0) {
