@@ -411,9 +411,9 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       {showPreview && (
-        <Card className="glass-card">
-          <CardContent className="p-6">
-            <pre className="whitespace-pre-wrap text-xs leading-relaxed font-serif text-foreground/80">{previewContent}</pre>
+        <Card className="glass-card overflow-hidden">
+          <CardContent className="p-0">
+            <div className="bg-white" dangerouslySetInnerHTML={{ __html: getPreviewHtml(previewContent, "franquia") }} />
           </CardContent>
         </Card>
       )}
