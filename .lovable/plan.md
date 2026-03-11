@@ -1,19 +1,42 @@
 
 
-## Plano: Inserir despesas de Março/2026
+## Plano: Adicionar filtros específicos em cada aba do Financeiro
 
-Vou inserir 5 registros na tabela `finance_expenses` para Março/2026, com os mesmos dados de categoria e tipo (recorrente/variável) dos registros de Fevereiro que já existem:
+### Estado atual dos filtros
+- **Global**: filtro de mês no topo (já existe)
+- **Receitas**: busca por texto (já existe)
+- **Despesas**: busca por texto (já existe)
+- **Repasse**: nenhum filtro
+- **Fechamentos**: nenhum filtro
+- **Clientes**: busca por texto (já existe)
 
-| Descrição | Valor | Categoria | Tipo | Data |
-|---|---|---|---|---|
-| Aluguel + Estrutura | R$ 5.192,25 | Estrutura | Recorrente | 2026-03-01 |
-| Empréstimo 9/60 | R$ 2.197,00 | Empréstimos | Recorrente | 2026-03-01 |
-| CNP parcela 12/12 | R$ 2.533,00 | Investimentos | Variável | 2026-03-01 |
-| RH Angelica | R$ 1.733,33 | Estrutura | Recorrente | 2026-03-01 |
-| Empréstimo 3/12 | R$ 1.885,60 | Empréstimos | Recorrente | 2026-03-01 |
+### Filtros a adicionar por aba
 
-### Ação
-- Inserir via SQL (`INSERT INTO finance_expenses`) com `organization_id` = `4206c8f4-dc9b-414d-9535-0c6d5f2d80b4`, status `pending` (pois é mês corrente)
+**Receitas** (ReceitasTab)
+- Filtro de **status**: Todos / Recebido / Pendente / Vencido
+- Filtro de **origem**: Todos / Asaas / Manual
 
-Nenhuma alteração de código necessária — apenas inserção de dados.
+**Despesas** (DespesasTab)
+- Filtro de **categoria**: Todas / Pessoas / Plataformas / Estrutura / Empréstimos / etc.
+- Filtro de **status**: Todos / Pago / Previsto
+- Filtro de **tipo**: Todos / Fixa / Variável
+
+**Repasse** (RepasseTab)
+- Busca por **nome do franqueado**
+- Filtro de **status**: Todos / Pendente / Pago / Vencido
+- Filtro de **mês** (select com os meses disponíveis)
+
+**Fechamentos** (FechamentosTab)
+- Filtro de **unidade** (select com as unidades)
+- Filtro de **ano** (select)
+- Filtro de **status**: Todos / Publicado / Pendente
+
+**Clientes** (ClientesTab)
+- Filtro de **status**: Todos / Recebido / Pendente / Vencido
+
+### Implementação
+Todos os filtros serão `Select` inline ao lado da barra de busca existente, usando o mesmo padrão visual. A filtragem acontece via `useMemo` no lado do cliente (sem queries adicionais).
+
+### Arquivo a editar
+- `src/pages/FinanceiroDashboard.tsx` — adicionar estados e lógica de filtro em cada tab component
 
