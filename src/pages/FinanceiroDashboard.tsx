@@ -553,6 +553,29 @@ function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, de
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar despesa..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas Categorias</SelectItem>
+            {expCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="paid">Pago</SelectItem>
+            <SelectItem value="pending">Previsto</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Tipos</SelectItem>
+            <SelectItem value="recurring">Fixa</SelectItem>
+            <SelectItem value="variable">Variável</SelectItem>
+          </SelectContent>
+        </Select>
         <Button size="sm" onClick={openNewExp} className="gap-2"><Plus className="w-4 h-4" /> Nova Despesa</Button>
       </div>
 
