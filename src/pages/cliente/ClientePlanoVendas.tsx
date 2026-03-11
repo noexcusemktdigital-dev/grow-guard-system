@@ -725,13 +725,89 @@ export default function ClientePlanoVendas() {
   const progValues = goalProgress ? Object.values(goalProgress) : [];
   const hasGoals = activeGoals && activeGoals.length > 0;
 
-  // ── ChatBriefing handler ──
-  const handleChatComplete = (chatAnswers: Record<string, any>) => {
+  // ── Auto funnel + scripts hooks ──
+  const { data: existingFunnels } = useCrmFunnels();
+  const { createFunnel } = useCrmFunnelMutations();
+  const { createScript } = useClienteScriptMutations();
+  const { data: orgId } = useUserOrgId();
+
+  const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f97316", "#6366f1", "#14b8a6"];
+
+  const parseFunnelStages = (text: string): { id: string; name: string; color: string }[] => {
+    const parts = text.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean);
+    return parts.map((name, i) => ({
+      id: String(i + 1),
+      name,
+      color: STAGE_COLORS[i % STAGE_COLORS.length],
+    }));
+  };
+
+  const handleChatComplete = async (chatAnswers: Record<string, any>) => {
     const ans = chatAnswers as Answers;
     setAnswers(ans);
     setCompleted(true);
     const { percentage: pct } = computeScores(ans);
     saveSalesPlan.mutate({ answers: ans, score: Math.round(pct) });
+
+    // ── Auto-create CRM funnel from etapas_funil ──
+    const etapasText = ans.etapas_funil;
+    if (typeof etapasText === "string" && etapasText.trim().length > 0 && (!existingFunnels || existingFunnels.length === 0)) {
+      const stages = parseFunnelStages(etapasText);
+      if (stages.length >= 2) {
+        try {
+          await createFunnel.mutateAsync({
+            name: "Funil Principal",
+            description: "Criado automaticamente a partir do Plano de Vendas",
+            stages,
+            is_default: true,
+          });
+          toast({ title: "Funil CRM criado automaticamente!", description: `${stages.length} etapas configuradas.` });
+        } catch (e) {
+          console.error("Auto-funnel error:", e);
+        }
+      }
+    }
+
+    // ── Auto-generate initial scripts (background) ──
+    if (orgId) {
+      const scriptStages = ["prospeccao", "diagnostico", "fechamento"];
+      const context = {
+        segment: ans.segmento,
+        modeloNegocio: ans.modelo_negocio,
+        produtosServicos: ans.produtos_servicos,
+        diferenciais: ans.diferenciais,
+        dorPrincipal: ans.dor_principal,
+        ticketMedio: ans.ticket_medio,
+        etapasFunil: typeof etapasText === "string" ? etapasText.split(/→|->|,|\n/).map((s: string) => s.trim()).filter(Boolean) : [],
+        tempoFechamento: ans.tempo_fechamento,
+      };
+
+      // Fire and forget — don't block UI
+      (async () => {
+        let created = 0;
+        for (const stage of scriptStages) {
+          try {
+            const { data, error } = await supabase.functions.invoke("generate-script", {
+              body: { stage, briefing: {}, context, organization_id: orgId },
+            });
+            if (!error && data?.content) {
+              await createScript.mutateAsync({
+                title: data.title || `Script de ${stage}`,
+                content: data.content,
+                category: stage,
+                tags: data.tags || [stage],
+              });
+              created++;
+            }
+          } catch (e) {
+            console.error(`Auto-script ${stage} error:`, e);
+          }
+        }
+        if (created > 0) {
+          toast({ title: `${created} scripts gerados automaticamente!`, description: "Acesse a seção de Scripts para revisá-los." });
+        }
+      })();
+    }
   };
 
   const handleRestart = () => {
