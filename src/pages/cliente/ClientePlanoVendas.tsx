@@ -30,6 +30,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sounds";
 import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
+import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
+import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { supabase } from "@/integrations/supabase/client";
 import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
