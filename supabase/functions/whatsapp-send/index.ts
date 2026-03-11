@@ -28,15 +28,14 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized", detail: userError?.message }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
@@ -177,11 +176,9 @@ Deno.serve(async (req) => {
           headers: evHeaders,
           body: JSON.stringify({
             number: cleanEvPhone,
-            mediaMessage: {
-              mediaType,
-              media: mediaUrl,
-              caption: message || "",
-            },
+            mediatype: mediaType,
+            media: mediaUrl,
+            caption: message || "",
           }),
         });
       } else {
@@ -190,7 +187,7 @@ Deno.serve(async (req) => {
           headers: evHeaders,
           body: JSON.stringify({
             number: cleanEvPhone,
-            textMessage: { text: message },
+            text: message,
           }),
         });
       }

@@ -208,10 +208,21 @@ Deno.serve(async (req) => {
       // Step 1: Create instance on Evolution API (ignore if already exists)
       try {
         console.log("[connect] Evolution creating instance:", instanceName);
+        const webhookUrlEv = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
         const createRes = await fetch(`${cleanBaseUrl}/instance/create`, {
           method: "POST",
           headers: { "Content-Type": "application/json", apikey: apiKey },
-          body: JSON.stringify({ instanceName, token: apiKey, qrcode: true }),
+          body: JSON.stringify({
+            instanceName,
+            integration: "WHATSAPP-BAILEYS",
+            qrcode: true,
+            webhook: {
+              url: webhookUrlEv,
+              byEvents: true,
+              base64: true,
+              events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT"],
+            },
+          }),
         });
         const createData = await createRes.json();
         console.log("[connect] Evolution create response:", createRes.status, JSON.stringify(createData));
@@ -224,19 +235,15 @@ Deno.serve(async (req) => {
 
       // Step 2: Configure webhook on Evolution API
       try {
+        const webhookUrlSet = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
         await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", apikey: apiKey },
           body: JSON.stringify({
-            url: webhookUrl,
-            webhook_by_events: false,
-            webhook_base64: false,
-            events: [
-              "MESSAGES_UPSERT",
-              "MESSAGES_UPDATE",
-              "CONNECTION_UPDATE",
-              "QRCODE_UPDATED",
-            ],
+            url: webhookUrlSet,
+            webhook_by_events: true,
+            webhook_base64: true,
+            events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT"],
           }),
         });
       } catch (err) {
