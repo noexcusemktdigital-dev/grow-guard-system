@@ -42,10 +42,9 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) return jsonRes({ error: "Unauthorized" }, 401);
-    const userId = claimsData.claims.sub;
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return jsonRes({ error: "Unauthorized" }, 401);
+    const userId = user.id;
 
     const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });

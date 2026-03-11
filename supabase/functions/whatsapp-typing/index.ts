@@ -28,15 +28,14 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: orgId } = await adminClient.rpc("get_user_org_id", { _user_id: userId });
@@ -73,6 +72,14 @@ Deno.serve(async (req) => {
     }
 
     const cleanPhone = contactPhone.replace(/[\s\-\+\(\)]/g, "");
+
+    // Evolution API doesn't have a native typing endpoint — return success silently
+    if (instance.provider === "evolution") {
+      return new Response(JSON.stringify({ ok: true, provider: "evolution", note: "typing not supported" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
 
     const res = await fetch(`${zapiBase}/typing`, {
