@@ -1057,10 +1057,10 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
         </div>
       )}
 
-      {(closings ?? []).length > 0 && (
+      {filteredClosings.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">Arquivos de Fechamento</h3>
-          {closings.map((cl: any) => (
+          {filteredClosings.map((cl: any) => (
             <Card key={cl.id} className="glass-card">
               <CardContent className="flex items-center justify-between py-4">
                 <div className="flex items-center gap-4">
