@@ -24,6 +24,8 @@ import { useContracts } from "@/hooks/useContracts";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useNetworkClientStats } from "@/hooks/useNetworkClientStats";
+import { useNetworkAIUsage } from "@/hooks/useNetworkAIUsage";
+import { HomeAICreditsAlert } from "@/components/home/HomeAICreditsAlert";
 
 const quickActionIcons: Record<string, React.ElementType> = {
   MessageSquare, Calendar, Megaphone, TrendingUp,
@@ -42,6 +44,7 @@ export default function Home() {
   const { data: goals } = useActiveGoals("network");
   const { data: goalProgress } = useGoalProgress(goals);
   const { data: clientStats } = useNetworkClientStats();
+  const { data: aiUsage } = useNetworkAIUsage();
 
   const hoje = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const hojeCapitalized = hoje.charAt(0).toUpperCase() + hoje.slice(1);
@@ -84,8 +87,12 @@ export default function Home() {
       items.push({ icon: Calendar, label: `${todayEvents.length} evento${todayEvents.length > 1 ? "s" : ""} hoje`, detail: todayEvents[0]?.title || "", path: "/franqueadora/agenda", variant: "info" });
     }
 
-    return items.slice(0, 3);
-  }, [tickets, announcements, leads, events]);
+    if (aiUsage && aiUsage.orgs_zero_credits > 0) {
+      items.unshift({ icon: AlertTriangle, label: `${aiUsage.orgs_zero_credits} org${aiUsage.orgs_zero_credits > 1 ? "s" : ""} com créditos zerados`, detail: "IA pausada — ação necessária", path: "/franqueadora/saas", variant: "destructive" });
+    }
+
+    return items.slice(0, 4);
+  }, [tickets, announcements, leads, events, aiUsage]);
 
   // Commercial summary
   const comercialData = useMemo(() => {
@@ -225,6 +232,9 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* AI & Credits Control */}
+          {aiUsage && <HomeAICreditsAlert data={aiUsage} />}
 
           {/* Goals + Commercial */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

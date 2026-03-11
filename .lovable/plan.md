@@ -1,41 +1,64 @@
 
 
-## Plano: Alertas de Créditos e IA para Administradores da Matriz
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Contexto
+### Status: ✅ Implementado
 
-Atualmente, o dashboard Home da franqueadora (`src/pages/Home.tsx`) exibe alertas inteligentes (tickets urgentes, comunicados críticos, leads parados), mas **não possui nenhum alerta sobre créditos da rede ou uso de IA**. O `useNetworkClientStats` já retorna `total_credits` da rede, mas esse dado não é usado para gerar alertas.
+### Resumo
 
-### O que será feito
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**1. Novo hook `useNetworkAIUsage`** — Consulta agregada que retorna:
-- Total de créditos da rede (todas as orgs clientes)
-- Orgs com créditos zerados ou abaixo de 10%
-- Total de mensagens IA nas últimas 24h/7d (da tabela `ai_conversation_logs`)
-- Tokens consumidos no período (para calcular custo real estimado)
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**2. Componente `AICreditsAlertPanel`** — Painel de alertas no Home da franqueadora com:
-- Alerta vermelho se alguma org cliente tem créditos **zerados** (IA pausada)
-- Alerta amarelo se orgs têm créditos **abaixo de 10%**
-- KPI cards: Total créditos rede, msgs IA 24h, custo estimado IA (R$), orgs em risco
-- Link direto para o gerenciamento SaaS
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-**3. Integrar no `smartAlerts` do Home.tsx** — Adicionar alertas de créditos ao sistema de prioridades inteligentes existente, aparecendo como alerta destrutivo quando há orgs com créditos zerados.
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-**4. Alerta de saldo Lovable (informativo)** — Banner fixo no topo do painel admin lembrando que o saldo Lovable Cloud deve ser monitorado em Settings → Cloud & AI balance, com link para a documentação. Como não é possível consultar o saldo Lovable programaticamente, será um alerta estático/informativo configurável.
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-### Arquivos
+---
 
-| Arquivo | Ação |
-|---|---|
-| `src/hooks/useNetworkAIUsage.ts` | Criar — hook com queries agregadas |
-| `src/components/home/HomeAICreditsAlert.tsx` | Criar — painel de alertas IA/créditos |
-| `src/pages/Home.tsx` | Editar — integrar alertas no smartAlerts e adicionar o painel |
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-### Dados consultados (já existem no banco)
+### Status: ✅ Documentado
 
-- `credit_wallets` — saldo por org
-- `ai_conversation_logs` — msgs IA com `tokens_used`
-- `organizations` — filtro por `parent_org_id` e `type = 'cliente'`
-- `subscriptions` — plano ativo para calcular % de créditos restantes
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual
