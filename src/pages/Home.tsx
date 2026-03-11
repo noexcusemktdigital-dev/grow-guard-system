@@ -87,8 +87,12 @@ export default function Home() {
       items.push({ icon: Calendar, label: `${todayEvents.length} evento${todayEvents.length > 1 ? "s" : ""} hoje`, detail: todayEvents[0]?.title || "", path: "/franqueadora/agenda", variant: "info" });
     }
 
-    return items.slice(0, 3);
-  }, [tickets, announcements, leads, events]);
+    if (aiUsage && aiUsage.orgs_zero_credits > 0) {
+      items.unshift({ icon: AlertTriangle, label: `${aiUsage.orgs_zero_credits} org${aiUsage.orgs_zero_credits > 1 ? "s" : ""} com créditos zerados`, detail: "IA pausada — ação necessária", path: "/franqueadora/saas", variant: "destructive" });
+    }
+
+    return items.slice(0, 4);
+  }, [tickets, announcements, leads, events, aiUsage]);
 
   // Commercial summary
   const comercialData = useMemo(() => {
