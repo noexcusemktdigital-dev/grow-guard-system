@@ -115,8 +115,7 @@ export function useWhatsAppContacts(_filterInstanceId?: string | null) {
       return filtered as unknown as WhatsAppContact[];
     },
     enabled: !!orgId,
-    staleTime: 2000,
-    refetchInterval: 15000,
+    staleTime: 5000,
   });
 }
 
@@ -138,8 +137,7 @@ export function useWhatsAppMessages(contactId: string | null) {
       return ((data || []) as unknown as WhatsAppMessage[]).reverse();
     },
     enabled: !!orgId && !!contactId,
-    staleTime: 1000,
-    refetchInterval: 15000,
+    staleTime: 3000,
   });
 }
 
