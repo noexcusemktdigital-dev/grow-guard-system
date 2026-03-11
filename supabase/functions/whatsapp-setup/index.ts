@@ -388,16 +388,42 @@ Deno.serve(async (req) => {
       // Step 2: Configure webhook on Evolution API
       try {
         const webhookUrlSet = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
-        await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", apikey: apiKey },
-          body: JSON.stringify({
+        const events = ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"];
+        const payloadAttempts = [
+          {
+            webhook: {
+              enabled: true,
+              url: webhookUrlSet,
+              byEvents: true,
+              base64: true,
+              events,
+              headers: { "x-evolution-secret": apiKey },
+            },
+          },
+          {
             url: webhookUrlSet,
             webhook_by_events: true,
             webhook_base64: true,
-            events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"],
-          }),
-        });
+            events,
+          },
+        ];
+
+        for (const payload of payloadAttempts) {
+          const setRes = await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", apikey: apiKey },
+            body: JSON.stringify(payload),
+          });
+
+          const rawSetBody = await setRes.text();
+          let parsedSetBody: any = rawSetBody;
+          try {
+            parsedSetBody = rawSetBody ? JSON.parse(rawSetBody) : null;
+          } catch {}
+
+          console.log("[connect] Evolution webhook set response:", setRes.status, JSON.stringify(parsedSetBody));
+          if (setRes.ok) break;
+        }
       } catch (err) {
         console.error("Failed to configure Evolution webhooks:", err);
       }
