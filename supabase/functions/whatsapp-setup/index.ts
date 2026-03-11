@@ -87,6 +87,8 @@ Deno.serve(async (req) => {
         try {
           let connected = false;
           let phoneNumber = inst.phone_number || null;
+          let webhookSynced: boolean | null = null;
+          let configuredWebhookUrl: string | null = null;
 
           if (inst.provider === "evolution") {
             // Evolution API status check
@@ -123,6 +125,78 @@ Deno.serve(async (req) => {
                 }
               } catch (fallbackErr) {
                 console.error("[check-status] Evolution fetchInstances fallback error:", fallbackErr);
+              }
+            }
+
+            // Self-heal webhook target when another system overrides it
+            if (connected) {
+              const expectedWebhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
+              webhookSynced = false;
+
+              try {
+                const findRes = await fetch(`${inst.base_url}/webhook/find/${inst.instance_id}`, {
+                  headers: { apikey: inst.client_token },
+                });
+                const rawFindBody = await findRes.text();
+                let findData: any = rawFindBody;
+                try {
+                  findData = rawFindBody ? JSON.parse(rawFindBody) : null;
+                } catch {}
+
+                configuredWebhookUrl = findData?.url || findData?.webhook?.url || null;
+                webhookSynced = configuredWebhookUrl === expectedWebhookUrl;
+
+                if (!webhookSynced) {
+                  console.warn("[check-status] Evolution webhook mismatch, reconfiguring", {
+                    instance: inst.instance_id,
+                    configuredWebhookUrl,
+                    expectedWebhookUrl,
+                  });
+
+                  const events = ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"];
+                  const payloadAttempts = [
+                    {
+                      webhook: {
+                        enabled: true,
+                        url: expectedWebhookUrl,
+                        byEvents: true,
+                        base64: true,
+                        events,
+                        headers: { "x-evolution-secret": inst.client_token },
+                      },
+                    },
+                    {
+                      url: expectedWebhookUrl,
+                      webhook_by_events: true,
+                      webhook_base64: true,
+                      events,
+                    },
+                  ];
+
+                  for (const payload of payloadAttempts) {
+                    const setRes = await fetch(`${inst.base_url}/webhook/set/${inst.instance_id}`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", apikey: inst.client_token },
+                      body: JSON.stringify(payload),
+                    });
+                    const rawSetBody = await setRes.text();
+                    console.log("[check-status] Evolution webhook self-heal response:", setRes.status, rawSetBody);
+                    if (setRes.ok) {
+                      webhookSynced = true;
+                      configuredWebhookUrl = expectedWebhookUrl;
+                      break;
+                    }
+                  }
+                }
+
+                if (webhookSynced) {
+                  await adminClient
+                    .from("whatsapp_instances")
+                    .update({ webhook_url: expectedWebhookUrl })
+                    .eq("id", inst.id);
+                }
+              } catch (webhookErr) {
+                console.error("[check-status] Evolution webhook verification/self-heal error:", webhookErr);
               }
             }
           } else {
@@ -169,6 +243,8 @@ Deno.serve(async (req) => {
             phone: phoneNumber,
             label: inst.label,
             provider: inst.provider,
+            webhook_synced: webhookSynced,
+            configured_webhook_url: configuredWebhookUrl,
           });
         } catch (err) {
           console.error("[check-status] Error checking instance", inst.instance_id, "provider", inst.provider, ":", err);
