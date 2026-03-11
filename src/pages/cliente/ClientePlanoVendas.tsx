@@ -1329,6 +1329,7 @@ export default function ClientePlanoVendas() {
               ))}
             </div>
           )}
+          </div>{/* close metas-report-area */}
 
           {/* Historic */}
           {historicGoals && historicGoals.length > 0 && (
