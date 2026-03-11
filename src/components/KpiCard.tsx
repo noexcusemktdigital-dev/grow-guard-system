@@ -30,7 +30,7 @@ export function KpiCard({ label, value, sublabel, trend, accent, icon: Icon, del
         )}
       </div>
       <div className="flex items-end gap-2.5 mt-1 relative">
-        <span className={`text-2xl font-black tracking-tight transition-colors duration-300 group-hover:text-primary ${
+        <span className={`text-xl font-black tracking-tight transition-colors duration-300 group-hover:text-primary truncate ${
           trend === "up" ? "text-kpi-positive" : 
           trend === "down" ? "text-kpi-negative" : 
           "text-foreground"

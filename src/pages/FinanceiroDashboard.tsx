@@ -305,20 +305,7 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
         </div>
       </div>
 
-      <div className="glass-card p-6">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Receita de Contratos Ativos</h3>
-        {activeContracts.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nenhum contrato ativo na rede.</p>
-        ) : (
-          <div className="space-y-2">
-            {activeContracts.slice(0, 8).map((c: any) => (
-              <div key={c.id} className="flex justify-between py-2 border-b border-border/30 last:border-0">
-                <div>
-                  <span className="text-sm font-medium">{c.signer_name || c.title}</span>
-                  <span className="text-xs text-muted-foreground ml-2">{c.org_name || "Matriz"}</span>
-                </div>
-                <span className="text-sm font-medium text-primary">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}/mês</span>
-              </div>
+      {/* Block removed — contract revenue was displaying non-real data */}
             ))}
             {activeContracts.length > 8 && <p className="text-xs text-muted-foreground text-center pt-2">+{activeContracts.length - 8} contratos</p>}
           </div>
