@@ -100,7 +100,13 @@ export default function FinanceiroDashboard() {
   const totalRevenue = totalAsaasPaid + totalManualPaid;
   const totalExpenses = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const resultado = totalRevenue - totalExpenses;
-  const networkMRR = activeContracts.reduce((s: number, c: any) => s + Number(c.monthly_value || 0), 0);
+  const networkMRR = useMemo(() => {
+    // Calculate MRR from real Asaas recurring payments (current month confirmed/received)
+    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    return (asaasPayments ?? [])
+      .filter(p => ASAAS_PAID_STATUSES.includes(p.status) && (p.dueDate || "").startsWith(currentMonth))
+      .reduce((s, p) => s + p.value, 0);
+  }, [asaasPayments]);
   const overdueCount = useMemo(() => (asaasPayments ?? []).filter(p => p.status === "OVERDUE").length, [asaasPayments]);
 
   // Current month Asaas stats
