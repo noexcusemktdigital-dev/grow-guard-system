@@ -24,6 +24,8 @@ import { useContracts } from "@/hooks/useContracts";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useNetworkClientStats } from "@/hooks/useNetworkClientStats";
+import { useNetworkAIUsage } from "@/hooks/useNetworkAIUsage";
+import { HomeAICreditsAlert } from "@/components/home/HomeAICreditsAlert";
 
 const quickActionIcons: Record<string, React.ElementType> = {
   MessageSquare, Calendar, Megaphone, TrendingUp,
