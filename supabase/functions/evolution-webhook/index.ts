@@ -68,7 +68,13 @@ Deno.serve(async (req) => {
 
     // ─── MESSAGES_UPSERT ───
     if (event === "MESSAGES_UPSERT") {
-      const messages = body.data || [];
+      const rawMessages = body.data ?? body.messages ?? [];
+      const messages = Array.isArray(rawMessages)
+        ? rawMessages
+        : rawMessages
+          ? [rawMessages]
+          : [];
+
       for (const msg of messages) {
         const key = msg.key || {};
         const isFromMe = key.fromMe === true;
