@@ -1159,8 +1159,11 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
     });
     let list = [...map.values()].sort((a, b) => b.total - a.total);
     if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+    if (filterClientStatus === "received") list = list.filter(c => c.received > 0);
+    else if (filterClientStatus === "pending") list = list.filter(c => c.pending > 0);
+    else if (filterClientStatus === "overdue") list = list.filter(c => c.overdue > 0);
     return list;
-  }, [asaasPayments, selectedMonth, search]);
+  }, [asaasPayments, selectedMonth, search, filterClientStatus]);
 
   const totalReceived = useMemo(() => byCustomer.reduce((s, c) => s + c.received, 0), [byCustomer]);
   const totalPending = useMemo(() => byCustomer.reduce((s, c) => s + c.pending, 0), [byCustomer]);
