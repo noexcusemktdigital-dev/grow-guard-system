@@ -804,11 +804,11 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Cobranças Geradas</CardTitle></CardHeader><CardContent><span className="text-2xl font-bold text-foreground">{charges?.length ?? 0}</span></CardContent></Card>
       </div>
 
-      {!charges || charges.length === 0 ? (
+      {filteredCharges.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-1">Nenhuma cobrança gerada</h3>
-          <p className="text-sm text-muted-foreground">Clique em "Gerar Cobranças do Mês" para criar cobranças automáticas.</p>
+          <h3 className="text-lg font-semibold mb-1">Nenhuma cobrança encontrada</h3>
+          <p className="text-sm text-muted-foreground">{!charges || charges.length === 0 ? 'Clique em "Gerar Cobranças" para criar cobranças automáticas.' : "Nenhum resultado para os filtros selecionados."}</p>
         </div>
       ) : (
         <Card>
@@ -827,7 +827,7 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {charges.map((charge: any) => {
+                {filteredCharges.map((charge: any) => {
                   const st = statusConfig[charge.status] || statusConfig.pending;
                   const franchiseeName = charge.franchisee_org?.name || "—";
                   const canShowPix = charge.asaas_payment_id && charge.status === "pending";
