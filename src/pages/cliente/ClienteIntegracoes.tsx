@@ -419,6 +419,26 @@ export default function ClienteIntegracoes() {
     }
   };
 
+  const handleReconfigureWebhook = async (inst: WhatsAppInstance) => {
+    try {
+      const res = await setupMutation.mutateAsync({
+        action: "reconfigure-webhook",
+        provider: "evolution",
+        instanceName: inst.instance_id,
+        baseUrl: inst.base_url || undefined,
+        apiKey: inst.client_token || undefined,
+      });
+      refetch();
+      if (res?.success) {
+        toast.success("Webhook reconfigurado com sucesso!", { description: `URL: ${res.webhookUrl}` });
+      } else {
+        toast.warning("Webhook pode não ter sido configurado corretamente");
+      }
+    } catch (err: any) {
+      toast.error("Erro ao reconfigurar webhook: " + err.message);
+    }
+  };
+
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const webhookUrl = orgId ? `https://${projectId}.supabase.co/functions/v1/crm-lead-webhook/${orgId}` : "";
 
