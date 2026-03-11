@@ -399,7 +399,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
 
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop() || "bin";
+      const ext = (file.name.split(".").pop() || "bin").toLowerCase();
       const path = `${contact.organization_id}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("chat-media").upload(path, file);
       if (uploadError) throw uploadError;
@@ -407,8 +407,19 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
       const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(path);
       const publicUrl = urlData.publicUrl;
 
+      // Detect correct media type from extension
+      const imageExts = ["jpg","jpeg","png","gif","webp","bmp","svg"];
+      const videoExts = ["mp4","avi","mov","mkv","webm"];
+      const audioExts = ["mp3","ogg","m4a","wav","aac","wma","webm"];
+      const docExts = ["pdf","doc","docx","xls","xlsx","ppt","pptx","txt","csv","zip","rar"];
+      let fileType = "image";
+      if (docExts.includes(ext)) fileType = "document";
+      else if (videoExts.includes(ext)) fileType = "video";
+      else if (audioExts.includes(ext)) fileType = "audio";
+      else if (imageExts.includes(ext)) fileType = "image";
+
       sendMutation.mutate(
-        { contactId: contact.id, contactPhone: contact.phone, message: "", mediaUrl: publicUrl, type: "image" },
+        { contactId: contact.id, contactPhone: contact.phone, message: "", mediaUrl: publicUrl, type: fileType },
         {
           onSuccess: () => { isNearBottomRef.current = true; },
           onError: (err: any) =>

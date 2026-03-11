@@ -79,10 +79,12 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
     }
 
     const Icon = message.type === "video" ? Video : message.type === "document" ? FileText : ImageIcon;
+    const label = message.type === "video" ? "Vídeo" : message.type === "document" ? "📄 Abrir documento" : "Mídia";
     return (
       <a href={resolvedMediaUrl} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
-        <div className={`w-48 h-32 rounded-md flex items-center justify-center ${isOutbound ? "bg-[#d4edda]" : "bg-muted"}`}>
-          <Icon className={`w-8 h-8 ${isOutbound ? "text-emerald-700/40" : "text-muted-foreground/40"}`} />
+        <div className={`w-52 rounded-md flex items-center gap-2 px-3 py-3 ${isOutbound ? "bg-[#d4edda]" : "bg-muted"}`}>
+          <Icon className={`w-6 h-6 shrink-0 ${isOutbound ? "text-emerald-700/60" : "text-muted-foreground/60"}`} />
+          <span className="text-xs font-medium truncate">{label}</span>
         </div>
       </a>
     );
