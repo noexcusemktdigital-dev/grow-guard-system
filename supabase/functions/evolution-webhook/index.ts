@@ -178,23 +178,28 @@ Deno.serve(async (req) => {
         if (existingContact) {
           contactId = existingContact.id;
           const updateData: any = {
-            name: senderName || undefined,
             last_message_at: new Date().toISOString(),
             last_message_preview: (isFromMe ? "Você: " : "") + previewText,
             instance_id: instance.id,
           };
+          // Only update name from inbound messages (pushName = contact's real name)
+          if (!isFromMe && senderName) {
+            updateData.name = senderName;
+          }
           if (!isFromMe) {
             updateData.unread_count = (existingContact.unread_count || 0) + 1;
           }
           const { error: updateErr } = await adminClient.from("whatsapp_contacts").update(updateData).eq("id", contactId);
-          if (updateErr) console.error("Contact update error:", updateErr);
+          if (updateErr) console.error("Contact update error:", JSON.stringify(updateErr));
         } else {
+          // For new contacts from outbound, don't use sender's pushName
+          const contactName = isFromMe ? null : (senderName || null);
           const { data: newContact, error: insertErr } = await adminClient
             .from("whatsapp_contacts")
             .insert({
               organization_id: orgId,
               phone,
-              name: senderName || (contactType === "group" ? phone : null),
+              name: contactName || (contactType === "group" ? phone : null),
               last_message_at: new Date().toISOString(),
               last_message_preview: (isFromMe ? "Você: " : "") + previewText,
               unread_count: isFromMe ? 0 : 1,
@@ -205,15 +210,25 @@ Deno.serve(async (req) => {
             .select("id")
             .single();
           if (insertErr) {
-            console.error("Contact insert error:", insertErr);
+            console.error("Contact insert error:", JSON.stringify(insertErr));
             continue;
           }
           contactId = newContact!.id;
         }
 
-        // Insert message
+        // Insert message — strip heavy binary fields from metadata to prevent insert failures
         const direction = isFromMe ? "outbound" : "inbound";
         const msgStatus = isFromMe ? "sent" : "received";
+
+        // Sanitize metadata: keep only essential fields, drop binary blobs
+        const safeMeta: Record<string, unknown> = {
+          key: msg.key,
+          pushName: msg.pushName,
+          messageType: msg.messageType,
+          messageTimestamp: msg.messageTimestamp,
+          source: msg.source,
+          instanceId: msg.instanceId,
+        };
 
         const { error: msgInsertErr } = await adminClient.from("whatsapp_messages").insert({
           organization_id: orgId,
@@ -224,9 +239,9 @@ Deno.serve(async (req) => {
           content: messageText,
           media_url: mediaUrl,
           status: msgStatus,
-          metadata: msg,
+          metadata: safeMeta,
         });
-        if (msgInsertErr) console.error("Message insert error:", msgInsertErr);
+        if (msgInsertErr) console.error("Message insert error:", JSON.stringify(msgInsertErr));
 
         // Trigger AI agent reply for inbound
         if (!isFromMe && (messageText || mediaUrl)) {
