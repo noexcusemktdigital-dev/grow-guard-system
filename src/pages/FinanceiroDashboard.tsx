@@ -209,7 +209,7 @@ export default function FinanceiroDashboard() {
 
         {/* ══════════ CLIENTES ══════════ */}
         <TabsContent value="clientes" className="space-y-6">
-          <ClientesTab activeContracts={activeContracts} chargeClient={chargeClient} refetchAsaas={refetchAsaas} />
+          <ClientesTab asaasPayments={asaasPayments} la={la} refetchAsaas={refetchAsaas} chargeClient={chargeClient} activeContracts={activeContracts} selectedMonth={selectedMonth} />
         </TabsContent>
 
         {/* ══════════ CONFIGURAÇÕES ══════════ */}
