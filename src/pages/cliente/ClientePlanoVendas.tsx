@@ -152,12 +152,17 @@ const salesSections: StrategySection[] = [
         ],
       },
       {
-        id: "receita_novos", question: "Percentual da receita de novos clientes vs recorrência?", type: "choice",
-        helpText: "Ajuda a identificar se você depende de novos clientes ou tem base recorrente saudável.",
+        id: "tem_recorrencia", question: "Você tem clientes que compram mais de uma vez?", type: "choice",
+        helpText: "Recorrência é a base de um negócio previsível e escalável.",
         options: [
-          { label: "90%+ novos", value: "90_novos" }, { label: "70% novos / 30% recorrente", value: "70_30" },
-          { label: "50/50", value: "50_50" }, { label: "30% novos / 70% recorrente", value: "30_70" },
+          { label: "Sim, boa parte volta", value: "sim" }, { label: "Parcialmente", value: "parcialmente" },
+          { label: "Não, sempre clientes novos", value: "nao" },
         ],
+      },
+      {
+        id: "ciclo_recompra", question: "Ciclo médio de recompra e fidelização", type: "text",
+        helpText: "Descreva como funciona a recompra e fidelização no seu negócio.",
+        placeholder: "Ex: Clientes voltam a cada 3 meses para manutenção...",
       },
     ],
   },
