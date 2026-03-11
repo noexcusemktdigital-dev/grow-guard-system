@@ -280,6 +280,11 @@ function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconne
                 <Zap className="w-3.5 h-3.5" /> Reconectar
               </Button>
             )}
+            {isEvo && onReconfigureWebhook && (
+              <Button variant="outline" size="sm" onClick={onReconfigureWebhook} disabled={isPending} title="Reconfigurar Webhook" className="gap-1">
+                <Webhook className="w-3.5 h-3.5" /> Webhook
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={onEdit} disabled={isPending} title="Editar">
               <Pencil className="w-3.5 h-3.5" />
             </Button>
