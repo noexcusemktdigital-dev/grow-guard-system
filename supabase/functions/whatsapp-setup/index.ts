@@ -213,24 +213,65 @@ Deno.serve(async (req) => {
       const key = apiKey || inst.client_token;
       const webhookUrlEv = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
 
-      // Set webhook
-      try {
-        const setRes = await fetch(`${cleanBase}/webhook/set/${inst.instance_id}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", apikey: key },
-          body: JSON.stringify({
+      // Set webhook (Evolution versions vary in accepted payload shape)
+      const events = ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"];
+      const payloadAttempts = [
+        {
+          webhook: {
+            enabled: true,
             url: webhookUrlEv,
-            webhook_by_events: true,
-            webhook_base64: true,
-            events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"],
-          }),
-        });
-        const setData = await setRes.json();
-        console.log("[reconfigure-webhook] set response:", setRes.status, JSON.stringify(setData));
-      } catch (err) {
-        console.error("[reconfigure-webhook] set error:", err);
-        return new Response(JSON.stringify({ error: "Failed to set webhook on Evolution server", detail: String(err) }), {
-          status: 500,
+            byEvents: true,
+            base64: true,
+            events,
+            headers: { "x-evolution-secret": key },
+          },
+        },
+        {
+          url: webhookUrlEv,
+          webhook_by_events: true,
+          webhook_base64: true,
+          events,
+        },
+      ];
+
+      let setOk = false;
+      let lastSetStatus = 0;
+      let lastSetBody: any = null;
+
+      for (const payload of payloadAttempts) {
+        try {
+          const setRes = await fetch(`${cleanBase}/webhook/set/${inst.instance_id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", apikey: key },
+            body: JSON.stringify(payload),
+          });
+
+          lastSetStatus = setRes.status;
+          const rawSetBody = await setRes.text();
+          try {
+            lastSetBody = rawSetBody ? JSON.parse(rawSetBody) : null;
+          } catch {
+            lastSetBody = rawSetBody;
+          }
+
+          console.log("[reconfigure-webhook] set response:", setRes.status, JSON.stringify(lastSetBody));
+          if (setRes.ok) {
+            setOk = true;
+            break;
+          }
+        } catch (err) {
+          lastSetBody = String(err);
+          console.error("[reconfigure-webhook] set attempt error:", err);
+        }
+      }
+
+      if (!setOk) {
+        return new Response(JSON.stringify({
+          error: "Failed to set webhook on Evolution server",
+          status: lastSetStatus,
+          detail: lastSetBody,
+        }), {
+          status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
