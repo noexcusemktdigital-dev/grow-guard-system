@@ -240,6 +240,23 @@ serve(async (req) => {
       }
     }
 
+    // Fetch sales plan for unified context
+    const serviceClient2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    let salesPlanContext = "";
+    if (organization_id) {
+      const { data: salesPlan } = await serviceClient2
+        .from("sales_plans")
+        .select("answers")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+      if (salesPlan?.answers && Object.keys(salesPlan.answers).length > 3) {
+        const spText = Object.entries(salesPlan.answers as Record<string, any>)
+          .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+          .join("\n");
+        salesPlanContext = `\n\nCONTEXTO DO PLANO DE VENDAS (já preenchido pelo usuário):\n${spText}\n\nUse esses dados para enriquecer o diagnóstico e as recomendações.`;
+      }
+    }
+
     const answersText = Object.entries(answers)
       .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
       .join("\n");
@@ -248,6 +265,7 @@ serve(async (req) => {
 
 RESPOSTAS DO DIAGNÓSTICO:
 ${answersText}
+${salesPlanContext}
 
 INSTRUÇÕES:
 1. Use as autoavaliações do termômetro (1-5) como base para os scores do radar
