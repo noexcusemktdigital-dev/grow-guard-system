@@ -1,31 +1,42 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Registrar instância "noexcuse" para envio de mensagens
 
-### Status: ✅ Implementado
+### Contexto
+A instância "noexcuse" já existe e está conectada na Evolution API (`http://129.121.44.154:8080`). O webhook aponta para outro projeto (`mdmhsqcfmpyufohxjsrv`) — isso é correto e não deve ser alterado. Este projeto precisa apenas de um registro local na tabela `whatsapp_instances` para enviar mensagens via `whatsapp-send`.
 
-### Resumo
+### O que será feito
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+**1. Inserir registro na tabela `whatsapp_instances`**
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+Campos:
+- `organization_id`: `adb09618-e9f3-4dbd-a89c-29e3eb1bec9f` (NOEXCUSE)
+- `instance_id`: `noexcuse`
+- `token`: (vazio — não usado para Evolution)
+- `client_token`: `99808b60-2f06-4f00-94b7-89765259b66d` (apikey da Evolution)
+- `status`: `connected`
+- `provider`: `evolution`
+- `base_url`: `http://129.121.44.154:8080`
+- `label`: `noexcuse`
+- `webhook_url`: `https://mdmhsqcfmpyufohxjsrv.supabase.co/functions/v1/evolution-webhook` (somente referência — não será alterado)
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+**2. Verificar que `whatsapp-send` já funciona corretamente**
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+O edge function `whatsapp-send` já:
+- Resolve a instância pelo `organization_id`
+- Para provider `evolution`, usa `base_url` + `client_token` (apikey header)
+- Envia via `POST {base_url}/message/sendText/{instance_id}`
+- Não toca no webhook
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+Nenhuma alteração no código do `whatsapp-send` é necessária.
+
+**3. Garantir que `whatsapp-setup` não reconfigure o webhook**
+
+Já verificado: o `check-status` atual é **read-only** — apenas loga divergência de webhook sem sobrescrever. As ações `reconfigure-webhook` e `check-webhook` são manuais (requerem action explícito), não automáticas.
+
+### Resultado
+- A tela `/cliente/chat` vai detectar a instância como `connected`
+- O envio de mensagens funcionará via Evolution API
+- Mensagens recebidas NÃO chegarão neste projeto (webhook aponta para outro) — isso é esperado
+- Nenhum código será alterado, apenas um INSERT no banco
+
