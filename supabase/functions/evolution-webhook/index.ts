@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
 
     // Extract org_id from URL path: /evolution-webhook/{org_id}
     const url = new URL(req.url);
-    const pathParts = url.pathname.split("/");
+    const pathParts = url.pathname.split("/").filter(Boolean);
     const orgId = pathParts[pathParts.length - 1];
 
     if (!orgId || orgId === "evolution-webhook") {
@@ -31,7 +31,8 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log("Evolution webhook payload:", JSON.stringify(body).slice(0, 500));
 
-    const event = body.event;
+    const rawEvent = String(body.event || "").trim();
+    const event = rawEvent.toUpperCase().replace(/[.\s-]/g, "_");
 
     // Find Evolution instance for this org
     const { data: instances } = await adminClient
@@ -67,7 +68,13 @@ Deno.serve(async (req) => {
 
     // ─── MESSAGES_UPSERT ───
     if (event === "MESSAGES_UPSERT") {
-      const messages = body.data || [];
+      const rawMessages = body.data ?? body.messages ?? [];
+      const messages = Array.isArray(rawMessages)
+        ? rawMessages
+        : rawMessages
+          ? [rawMessages]
+          : [];
+
       for (const msg of messages) {
         const key = msg.key || {};
         const isFromMe = key.fromMe === true;
@@ -213,17 +220,39 @@ Deno.serve(async (req) => {
 
     // ─── MESSAGES_UPDATE (status changes) ───
     if (event === "MESSAGES_UPDATE") {
-      const updates = body.data || [];
+      const rawUpdates = body.data ?? body.messages ?? [];
+      const updates = Array.isArray(rawUpdates)
+        ? rawUpdates
+        : rawUpdates
+          ? [rawUpdates]
+          : [];
+
       for (const upd of updates) {
         const key = upd.key || {};
         const status = upd.update?.status;
         if (key.id && status !== undefined) {
-          const statusMap: Record<number, string> = {
-            0: "error", 1: "pending", 2: "sent", 3: "delivered", 4: "read", 5: "played",
+          const statusMap: Record<string, string> = {
+            "0": "error",
+            "1": "pending",
+            "2": "sent",
+            "3": "delivered",
+            "4": "read",
+            "5": "played",
+            SERVER_ACK: "sent",
+            DELIVERY_ACK: "delivered",
+            READ: "read",
+            PLAYED: "played",
+            ERROR: "error",
           };
+          const normalizedStatusKey = String(status).toUpperCase();
+          const mappedStatus =
+            statusMap[normalizedStatusKey] ||
+            statusMap[String(status)] ||
+            String(status).toLowerCase();
+
           await adminClient
             .from("whatsapp_messages")
-            .update({ status: statusMap[status] || String(status) })
+            .update({ status: mappedStatus })
             .eq("message_id_zapi", key.id)
             .eq("organization_id", orgId);
         }
