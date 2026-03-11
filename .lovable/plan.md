@@ -1,31 +1,23 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Recarregar Créditos — NOEXCUSE
 
-### Status: ✅ Implementado
+### Situação Atual
+A organização **NOEXCUSE** (`adb09618-e9f3-4dbd-a89c-29e3eb1bec9f`) está com **0 créditos**. O agente de IA não responde por causa disso.
 
-### Resumo
+### Ação
+Executar duas operações no banco de dados:
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+1. **Atualizar saldo da carteira** para 1.000 créditos
+2. **Registrar a transação** na tabela `credit_transactions` para manter o histórico
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+```sql
+UPDATE credit_wallets SET balance = 1000, updated_at = now()
+WHERE organization_id = 'adb09618-e9f3-4dbd-a89c-29e3eb1bec9f';
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+INSERT INTO credit_transactions (organization_id, type, amount, balance_after, description, metadata)
+VALUES ('adb09618-e9f3-4dbd-a89c-29e3eb1bec9f', 'purchase', 1000, 1000, 'Recarga manual — 1000 créditos Pro', '{"source": "manual_recharge"}');
+```
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+Nenhum arquivo de código será alterado.
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
