@@ -5508,6 +5508,20 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_network_ai_usage: {
+        Args: { _org_id: string }
+        Returns: {
+          ai_messages_24h: number
+          ai_messages_7d: number
+          low_credit_orgs: Json
+          orgs_low_credits: number
+          orgs_zero_credits: number
+          tokens_24h: number
+          tokens_7d: number
+          total_credits: number
+          zero_credit_orgs: Json
+        }[]
+      }
       get_network_client_stats: {
         Args: { _org_id: string }
         Returns: {
