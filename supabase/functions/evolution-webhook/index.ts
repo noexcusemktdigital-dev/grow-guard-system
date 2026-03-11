@@ -162,12 +162,16 @@ Deno.serve(async (req) => {
           : "📎 Mídia";
 
         // Upsert contact
-        const { data: existingContact } = await adminClient
+        const { data: existingContact, error: contactQueryErr } = await adminClient
           .from("whatsapp_contacts")
           .select("id, unread_count, photo_url")
           .eq("organization_id", orgId)
           .eq("phone", phone)
           .maybeSingle();
+
+        if (contactQueryErr) {
+          console.error("Contact query error:", contactQueryErr);
+        }
 
         let contactId: string;
 
@@ -182,9 +186,10 @@ Deno.serve(async (req) => {
           if (!isFromMe) {
             updateData.unread_count = (existingContact.unread_count || 0) + 1;
           }
-          await adminClient.from("whatsapp_contacts").update(updateData).eq("id", contactId);
+          const { error: updateErr } = await adminClient.from("whatsapp_contacts").update(updateData).eq("id", contactId);
+          if (updateErr) console.error("Contact update error:", updateErr);
         } else {
-          const { data: newContact } = await adminClient
+          const { data: newContact, error: insertErr } = await adminClient
             .from("whatsapp_contacts")
             .insert({
               organization_id: orgId,
@@ -199,6 +204,10 @@ Deno.serve(async (req) => {
             })
             .select("id")
             .single();
+          if (insertErr) {
+            console.error("Contact insert error:", insertErr);
+            continue;
+          }
           contactId = newContact!.id;
         }
 
@@ -206,7 +215,7 @@ Deno.serve(async (req) => {
         const direction = isFromMe ? "outbound" : "inbound";
         const msgStatus = isFromMe ? "sent" : "received";
 
-        await adminClient.from("whatsapp_messages").insert({
+        const { error: msgInsertErr } = await adminClient.from("whatsapp_messages").insert({
           organization_id: orgId,
           contact_id: contactId,
           message_id_zapi: key.id || null,
@@ -217,6 +226,7 @@ Deno.serve(async (req) => {
           status: msgStatus,
           metadata: msg,
         });
+        if (msgInsertErr) console.error("Message insert error:", msgInsertErr);
 
         // Trigger AI agent reply for inbound
         if (!isFromMe && (messageText || mediaUrl)) {
