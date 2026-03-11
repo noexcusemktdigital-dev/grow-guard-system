@@ -1019,6 +1019,16 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, activeCont
   const [chargeBillingType, setChargeBillingType] = useState("PIX");
   const [chargeResult, setChargeResult] = useState<any>(null);
 
+  // Manage payment (cancel/edit)
+  const managePayment = useManagePayment();
+  const [cancelPaymentId, setCancelPaymentId] = useState<string | null>(null);
+  const [editPayment, setEditPayment] = useState<AsaasPayment | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+
+  const EDITABLE_STATUSES = ["PENDING", "OVERDUE"];
+
   const byCustomer = useMemo(() => {
     const map = new Map<string, { name: string; customerAsaasId: string; payments: AsaasPayment[]; total: number; received: number; pending: number; overdue: number }>();
     const payments = (asaasPayments ?? []) as AsaasPayment[];
@@ -1055,6 +1065,33 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, activeCont
   };
 
   const copyPixCode = (code: string) => { navigator.clipboard.writeText(code); sonnerToast.success("Código PIX copiado!"); };
+
+  const handleCancelConfirm = () => {
+    if (!cancelPaymentId) return;
+    managePayment.mutate({ action: "cancel", payment_id: cancelPaymentId }, {
+      onSuccess: () => { setCancelPaymentId(null); refetchAsaas(); },
+      onSettled: () => setCancelPaymentId(null),
+    });
+  };
+
+  const openEditDialog = (p: AsaasPayment) => {
+    setEditPayment(p);
+    setEditValue(String(p.value));
+    setEditDueDate(p.dueDate || "");
+    setEditDescription(p.description || "");
+  };
+
+  const handleEditSubmit = () => {
+    if (!editPayment) return;
+    const params: any = { action: "update", payment_id: editPayment.id };
+    const newVal = parseFloat(editValue);
+    if (!isNaN(newVal) && newVal !== editPayment.value) params.value = newVal;
+    if (editDueDate && editDueDate !== editPayment.dueDate) params.dueDate = editDueDate;
+    if (editDescription !== (editPayment.description || "")) params.description = editDescription;
+    managePayment.mutate(params, {
+      onSuccess: () => { setEditPayment(null); refetchAsaas(); },
+    });
+  };
 
   return (
     <>
@@ -1121,6 +1158,7 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, activeCont
                       <tbody>
                         {customer.payments.sort((a, b) => (b.dueDate || "").localeCompare(a.dueDate || "")).map(p => {
                           const st = asaasStatusLabel(p.status);
+                          const canManage = EDITABLE_STATUSES.includes(p.status);
                           return (
                             <tr key={p.id} className="border-t border-border/30 hover:bg-muted/20">
                               <td className="py-2 px-4">{p.description || "—"}</td>
@@ -1131,9 +1169,21 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, activeCont
                               <td className="py-2 px-4 text-center"><Badge variant="outline" className="text-[10px]">{p.billingType}</Badge></td>
                               <td className="py-2 px-4 text-center"><span className={`text-xs px-2 py-0.5 rounded ${st.cls}`}>{st.label}</span></td>
                               <td className="py-2 px-4 text-center">
-                                {(p.invoiceUrl || p.bankSlipUrl) && (
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(p.invoiceUrl || p.bankSlipUrl!, "_blank")}><ExternalLink className="w-3.5 h-3.5" /></Button>
-                                )}
+                                <div className="flex items-center justify-center gap-1">
+                                  {canManage && (
+                                    <>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar cobrança" onClick={() => openEditDialog(p)}>
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Cancelar cobrança" onClick={() => setCancelPaymentId(p.id)}>
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </>
+                                  )}
+                                  {(p.invoiceUrl || p.bankSlipUrl) && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(p.invoiceUrl || p.bankSlipUrl!, "_blank")}><ExternalLink className="w-3.5 h-3.5" /></Button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -1226,6 +1276,53 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, activeCont
               <DialogFooter><Button variant="outline" onClick={() => { setChargeContract(null); setChargeResult(null); }}>Fechar</Button></DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={!!cancelPaymentId} onOpenChange={(open) => { if (!open) setCancelPaymentId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Cobrança</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja cancelar esta cobrança? Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelConfirm} disabled={managePayment.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {managePayment.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Cancelar Cobrança
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Payment Dialog */}
+      <Dialog open={!!editPayment} onOpenChange={(open) => { if (!open) setEditPayment(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Cobrança</DialogTitle>
+            <DialogDescription>Altere o valor, vencimento ou descrição da cobrança.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Valor (R$)</Label>
+              <Input type="number" step="0.01" min="0" value={editValue} onChange={e => setEditValue(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Vencimento</Label>
+              <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Descrição</Label>
+              <Input value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Descrição da cobrança" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPayment(null)}>Cancelar</Button>
+            <Button onClick={handleEditSubmit} disabled={managePayment.isPending} className="gap-2">
+              {managePayment.isPending && <Loader2 className="w-4 h-4 animate-spin" />} Salvar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
