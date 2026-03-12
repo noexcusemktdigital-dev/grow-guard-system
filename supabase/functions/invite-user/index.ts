@@ -88,34 +88,14 @@ Deno.serve(async (req) => {
 
     if (createErr) {
       if (createErr.message?.includes("already been registered")) {
-        // User exists (e.g. signed up via Google OAuth) — link to org instead of rejecting
-        const { data: listData, error: listErr } = await adminClient.auth.admin.listUsers();
-        if (listErr) throw listErr;
-        const existingUser = listData.users.find((u: any) => u.email === email);
-        if (!existingUser) {
-          return new Response(JSON.stringify({ error: "Usuário existe mas não foi encontrado" }), {
-            status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        // Check if already a member of this org
-        const { data: existingMembership } = await adminClient
-          .from("organization_memberships")
-          .select("id")
-          .eq("user_id", existingUser.id)
-          .eq("organization_id", organization_id)
-          .maybeSingle();
-        if (existingMembership) {
-          return new Response(JSON.stringify({ error: "Este usuário já é membro desta organização" }), {
-            status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        userId = existingUser.id;
-      } else {
-        throw createErr;
+        return new Response(
+          JSON.stringify({ error: "Este e-mail já está cadastrado no sistema. O usuário deve acessar /acessofranquia e usar 'Esqueci minha senha' para redefinir sua senha." }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-    } else {
-      userId = newUser.user.id;
+      throw createErr;
     }
+    userId = newUser.user.id;
 
     // Update profile
     await adminClient
