@@ -1,64 +1,43 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Implementar Templates de E-mail de Autenticação com Marca NoExcuse
 
-### Status: ✅ Implementado
+### Contexto
+- Domínio de e-mail `notify.sistema.noexcusedigital.com` configurado (DNS em propagação)
+- Plano de personalização já aprovado anteriormente
+- Os templates podem ser criados agora — só precisam do DNS verificado para enviar
 
-### Resumo
+### Etapas
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+**1. Scaffold dos templates de autenticação**
+- Chamar `scaffold_auth_email_templates` para criar a edge function `auth-email-hook` e os 6 templates (signup, magic-link, recovery, invite, email-change, reauthentication)
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+**2. Personalizar visual com marca NoExcuse**
+- Cor primária (botões): `hsl(355, 78%, 50%)` — vermelho NoExcuse
+- Cor de fundo: `#ffffff`
+- Texto principal: cor escura do tema
+- Border radius: `0.75rem`
+- Fonte: Inter, sans-serif
+- Upload do logo `logo-noexcuse.png` para bucket `email-assets`
+- Logo no topo de cada template
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+**3. Personalizar textos em português**
+Todos os templates em PT-BR, tom direto e profissional:
+- **Convite**: "Você foi convidado para a plataforma NoExcuse Digital. Defina sua senha para começar."
+- **Recovery**: "Recebemos uma solicitação para redefinir sua senha."
+- **Signup**: "Confirme seu e-mail para ativar sua conta."
+- **Magic Link**: "Clique no link abaixo para acessar sua conta."
+- **Email Change**: "Confirme a alteração do seu e-mail."
+- **Reauthentication**: "Use o código abaixo para confirmar sua identidade."
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+**4. Deploy da edge function `auth-email-hook`**
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+**5. Verificar ativação**
+- Os e-mails personalizados ativam automaticamente quando o DNS for verificado
+- Enquanto isso, os e-mails padrão continuam funcionando
 
----
+### Arquivos criados/modificados
+- `supabase/functions/auth-email-hook/index.ts`
+- `supabase/functions/auth-email-hook/deno.json`
+- `supabase/functions/_shared/email-templates/*.tsx` (6 templates)
 
-## Análise: Custo Real Lovable vs Receita dos Planos
-
-### Status: ✅ Documentado
-
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
-
-### Margem por Plano
-
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
