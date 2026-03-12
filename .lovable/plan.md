@@ -1,44 +1,47 @@
 
 
-## Plano: Limpar Matriz e Testar Convite por E-mail
+## Plano: Adicionar Edição Completa de Usuários nos 3 Portais
 
-### Situação Atual
+### Problema
+Atualmente, os 3 portais (Matriz, Franqueado, SaaS/Cliente) só permitem **convidar** e **editar times**. Não há como editar o **papel (role)**, **nome**, **cargo** ou **remover** um membro existente.
 
-**Membros na Matriz (org `4206c8f4`):**
-| Usuário | Role | Ação |
-|---|---|---|
-| Davi Tesch (`2eb15325`) | super_admin | **Manter** |
-| Suporte NOE (`bcd55f36`) | cliente_user | **Remover** |
+### Solução
 
-### Problema Crítico: E-mail de Convite
+#### 1. Nova Edge Function `update-member`
+Criar `supabase/functions/update-member/index.ts` que:
+- Recebe `{ user_id, organization_id, role?, full_name?, job_title?, action? }`
+- Valida que o chamador é membro (ou pai) da org via `is_member_or_parent_of_org`
+- Valida que o chamador tem role admin/super_admin (não permite que `cliente_user` edite outros)
+- Suporta ações:
+  - **update**: Atualiza `profiles.full_name`, `profiles.job_title`, e `user_roles.role`
+  - **remove**: Remove o membro de `organization_memberships`, `org_team_memberships` e `user_roles`
+- Não permite remover a si mesmo nem rebaixar o último super_admin
 
-O domínio de e-mail **não está configurado** no projeto. Isso significa que o `inviteUserByEmail` usará o remetente padrão genérico do sistema, que pode:
-- Cair no spam
-- Não ser entregue em alguns provedores
+#### 2. Matriz (`src/pages/Matriz.tsx`)
+- Trocar o botão "Editar Times" por "Editar" que abre um dialog completo
+- Dialog de edição com: Nome, Cargo, Papel (Super Admin / Admin / Usuário), Times
+- Botão "Remover Membro" com confirmação
+- Chamar `update-member` edge function
 
-Para garantir entrega confiável, recomendo configurar o domínio de e-mail primeiro (ex: `notify.noexcusedigital.com`). Isso leva ~5 minutos e requer adicionar registros DNS.
+#### 3. Franqueado (`src/pages/franqueado/FranqueadoConfiguracoes.tsx`)
+- Adicionar botão "Editar" em cada membro da equipe da unidade
+- Dialog para editar nome, cargo, papel (Admin / Operador)
+- Botão remover com confirmação
 
-### Etapas
+#### 4. SaaS/Cliente (`src/pages/cliente/ClienteConfiguracoes.tsx`)
+- Adicionar botão "Editar" em cada membro (visível apenas para admins via `useRoleAccess`)
+- Dialog para editar nome, cargo, papel (Admin / Usuário), times
+- Botão remover com confirmação
 
-**1. Remover o usuário "Suporte NOE" da Matriz**
-- Deletar de `org_team_memberships` (se houver registros remanescentes)
-- Deletar de `user_roles`
-- Deletar de `organization_memberships`
-- Deletar conta de `auth.users` (para permitir novo convite limpo, já que a edge function agora bloqueia e-mails já cadastrados)
+#### 5. Config TOML
+- Adicionar `[functions.update-member]` com `verify_jwt = false`
 
-**2. Configurar domínio de e-mail (recomendado)**
-- Configurar um subdomínio para envio de e-mails via Lovable Cloud
-- Adicionar registros DNS (SPF, DKIM, DMARC) no provedor de DNS
-- Isso garante que o e-mail de convite chegue na caixa de entrada
-
-**3. Testar o fluxo**
-- Você convida um novo e-mail pela aba Equipe da Matriz
-- O sistema envia e-mail com link para definir senha
-- O usuário clica no link, define a senha e acessa o portal
-
-### Decisão necessária
-
-Antes de prosseguir, preciso saber:
-- Devo **deletar a conta auth** do Suporte NOE (para poder reconvidar o mesmo e-mail)? Ou você vai usar um e-mail diferente para o teste?
-- Quer configurar o domínio de e-mail agora, ou testar primeiro com o remetente padrão?
+### Escopo de cada dialog de edição
+| Campo | Matriz | Franqueado | SaaS |
+|-------|--------|-----------|------|
+| Nome | ✓ | ✓ | ✓ |
+| Cargo | ✓ | ✓ | ✓ |
+| Papel | super_admin/admin/cliente_user | franqueado/cliente_user | cliente_admin/cliente_user |
+| Times | ✓ | — | ✓ |
+| Remover | ✓ | ✓ | ✓ |
 
