@@ -255,6 +255,9 @@ function UsersAndTeamsTab() {
                     <Badge variant="outline" className="gap-1 bg-primary/10 text-primary border-primary/20">
                       <Shield className="w-3 h-3" />{roleLabels[m.role] || m.role}
                     </Badge>
+                    {m.user_id !== user?.id && (
+                      <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setEditMember(m)}>Editar</Button>
+                    )}
                   </div>
                 </div>
               ))}
