@@ -21,6 +21,7 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
+import { EditMemberDialog } from "@/components/EditMemberDialog";
 import { getEffectiveLimits } from "@/constants/plans";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -159,6 +160,7 @@ function OrgTab() {
 }
 
 function UsersAndTeamsTab() {
+  const { user } = useAuth();
   const { data: members, isLoading } = useOrgMembers();
   const { data: subscription } = useClienteSubscription();
   const { data: orgId } = useUserOrgId();
@@ -170,7 +172,13 @@ function UsersAndTeamsTab() {
   const currentCount = members?.length ?? 0;
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
+  const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
+
+  const CLIENTE_ROLE_OPTIONS = [
+    { value: "cliente_admin", label: "Admin" },
+    { value: "cliente_user", label: "Usuário" },
+  ];
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
@@ -247,6 +255,9 @@ function UsersAndTeamsTab() {
                     <Badge variant="outline" className="gap-1 bg-primary/10 text-primary border-primary/20">
                       <Shield className="w-3 h-3" />{roleLabels[m.role] || m.role}
                     </Badge>
+                    {m.user_id !== user?.id && (
+                      <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setEditMember(m)}>Editar</Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -280,6 +291,9 @@ function UsersAndTeamsTab() {
                       <Badge key={t.id} variant="secondary" className="text-[9px]">{t.name}</Badge>
                     ))}
                     <Badge variant="outline" className="gap-1"><Shield className="w-3 h-3" />Usuário</Badge>
+                    {m.user_id !== user?.id && (
+                      <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setEditMember(m)}>Editar</Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -357,6 +371,15 @@ function UsersAndTeamsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EditMemberDialog
+        open={!!editMember}
+        onOpenChange={(open) => { if (!open) setEditMember(null); }}
+        member={editMember}
+        organizationId={orgId || ""}
+        roleOptions={CLIENTE_ROLE_OPTIONS}
+        onSuccess={() => setEditMember(null)}
+      />
     </div>
   );
 }

@@ -1,47 +1,64 @@
 
 
-## Plano: Adicionar Edição Completa de Usuários nos 3 Portais
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
-Atualmente, os 3 portais (Matriz, Franqueado, SaaS/Cliente) só permitem **convidar** e **editar times**. Não há como editar o **papel (role)**, **nome**, **cargo** ou **remover** um membro existente.
+### Status: ✅ Implementado
 
-### Solução
+### Resumo
 
-#### 1. Nova Edge Function `update-member`
-Criar `supabase/functions/update-member/index.ts` que:
-- Recebe `{ user_id, organization_id, role?, full_name?, job_title?, action? }`
-- Valida que o chamador é membro (ou pai) da org via `is_member_or_parent_of_org`
-- Valida que o chamador tem role admin/super_admin (não permite que `cliente_user` edite outros)
-- Suporta ações:
-  - **update**: Atualiza `profiles.full_name`, `profiles.job_title`, e `user_roles.role`
-  - **remove**: Remove o membro de `organization_memberships`, `org_team_memberships` e `user_roles`
-- Não permite remover a si mesmo nem rebaixar o último super_admin
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-#### 2. Matriz (`src/pages/Matriz.tsx`)
-- Trocar o botão "Editar Times" por "Editar" que abre um dialog completo
-- Dialog de edição com: Nome, Cargo, Papel (Super Admin / Admin / Usuário), Times
-- Botão "Remover Membro" com confirmação
-- Chamar `update-member` edge function
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-#### 3. Franqueado (`src/pages/franqueado/FranqueadoConfiguracoes.tsx`)
-- Adicionar botão "Editar" em cada membro da equipe da unidade
-- Dialog para editar nome, cargo, papel (Admin / Operador)
-- Botão remover com confirmação
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-#### 4. SaaS/Cliente (`src/pages/cliente/ClienteConfiguracoes.tsx`)
-- Adicionar botão "Editar" em cada membro (visível apenas para admins via `useRoleAccess`)
-- Dialog para editar nome, cargo, papel (Admin / Usuário), times
-- Botão remover com confirmação
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-#### 5. Config TOML
-- Adicionar `[functions.update-member]` com `verify_jwt = false`
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-### Escopo de cada dialog de edição
-| Campo | Matriz | Franqueado | SaaS |
-|-------|--------|-----------|------|
-| Nome | ✓ | ✓ | ✓ |
-| Cargo | ✓ | ✓ | ✓ |
-| Papel | super_admin/admin/cliente_user | franqueado/cliente_user | cliente_admin/cliente_user |
-| Times | ✓ | — | ✓ |
-| Remover | ✓ | ✓ | ✓ |
+---
 
+## Análise: Custo Real Lovable vs Receita dos Planos
+
+### Status: ✅ Documentado
+
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

@@ -11,12 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import MatrizEmpresa from "@/components/matriz/MatrizEmpresa";
+import { EditMemberDialog } from "@/components/EditMemberDialog";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
@@ -50,9 +52,10 @@ export default function Matriz() {
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
   const [inviteLoading, setInviteLoading] = useState(false);
 
-  // Edit teams state
-  const [editingUser, setEditingUser] = useState<string | null>(null);
+  // Edit member state
+  const [editingMember, setEditingMember] = useState<typeof members extends (infer T)[] | undefined ? T | null : never>(null);
   const [editTeamIds, setEditTeamIds] = useState<string[]>([]);
+  const { user } = useAuth();
 
   const getUserTeams = (userId: string) => {
     if (!teamMemberships || !teams) return [];
@@ -98,21 +101,26 @@ export default function Matriz() {
   };
 
   const handleSaveTeams = async () => {
-    if (!editingUser) return;
+    if (!editingMember) return;
     try {
-      await setUserTeams.mutateAsync({ userId: editingUser, teamIds: editTeamIds });
+      await setUserTeams.mutateAsync({ userId: editingMember.user_id, teamIds: editTeamIds });
       toast({ title: "Times atualizados!" });
-      setEditingUser(null);
     } catch (err: any) {
       toast({ title: "Erro ao atualizar times", description: err.message, variant: "destructive" });
     }
   };
 
-  const openEditTeams = (userId: string) => {
-    const current = getUserTeams(userId).map((t) => t.id);
+  const openEditMember = (m: any) => {
+    const current = getUserTeams(m.user_id).map((t) => t.id);
     setEditTeamIds(current);
-    setEditingUser(userId);
+    setEditingMember(m);
   };
+
+  const MATRIZ_ROLE_OPTIONS = [
+    { value: "super_admin", label: "Super Admin" },
+    { value: "admin", label: "Administrador" },
+    { value: "cliente_user", label: "Usuário" },
+  ];
 
   if (loadingMembers || loadingTeams) {
     return (
@@ -231,9 +239,11 @@ export default function Matriz() {
                       <p className="text-xs text-muted-foreground">
                         Desde {new Date(m.created_at).toLocaleDateString("pt-BR")}
                       </p>
-                      <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => openEditTeams(m.user_id)}>
-                        Editar Times
-                      </Button>
+                      {m.user_id !== user?.id && (
+                        <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => openEditMember(m)}>
+                          Editar
+                        </Button>
+                      )}
                     </div>
                   </Card>
                 );
@@ -292,26 +302,24 @@ export default function Matriz() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Teams Dialog */}
-      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Times</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Label>Selecione os times deste membro</Label>
+      {/* Edit Member Dialog */}
+      <EditMemberDialog
+        open={!!editingMember}
+        onOpenChange={(open) => { if (!open) setEditingMember(null); }}
+        member={editingMember}
+        organizationId={orgId || ""}
+        roleOptions={MATRIZ_ROLE_OPTIONS}
+        onSuccess={() => {
+          handleSaveTeams();
+          setEditingMember(null);
+        }}
+        extraContent={
+          <div className="space-y-2">
+            <Label>Times / Funções</Label>
             <TeamSelector selectedIds={editTeamIds} onToggle={(id) => toggleTeam(id, editTeamIds, setEditTeamIds)} />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingUser(null)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveTeams} disabled={setUserTeams.isPending}>
-              {setUserTeams.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+      />
     </div>
   );
 }

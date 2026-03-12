@@ -17,6 +17,7 @@ import { useUnits, useUnitMutations } from "@/hooks/useUnits";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useContracts } from "@/hooks/useContracts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { EditMemberDialog } from "@/components/EditMemberDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -108,11 +109,18 @@ function UnitDataTab() {
 
 /* ── Aba Equipe ── */
 function TeamTab() {
+  const { user } = useAuth();
   const { data: members, isLoading } = useOrgMembers();
   const { data: orgId } = useUserOrgId();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
+  const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
+
+  const FRANQUEADO_ROLE_OPTIONS = [
+    { value: "franqueado", label: "Admin (Franqueado)" },
+    { value: "cliente_user", label: "Operador" },
+  ];
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
@@ -176,10 +184,17 @@ function TeamTab() {
                     <p className="text-xs text-muted-foreground">{m.job_title || "—"}</p>
                   </div>
                 </div>
-                <Badge variant="outline" className="gap-1">
-                  <Shield className="w-3 h-3" />
-                  {roleLabels[m.role] || m.role}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="gap-1">
+                    <Shield className="w-3 h-3" />
+                    {roleLabels[m.role] || m.role}
+                  </Badge>
+                  {m.user_id !== user?.id && (
+                    <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setEditMember(m)}>
+                      Editar
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -219,6 +234,15 @@ function TeamTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EditMemberDialog
+        open={!!editMember}
+        onOpenChange={(open) => { if (!open) setEditMember(null); }}
+        member={editMember}
+        organizationId={orgId || ""}
+        roleOptions={FRANQUEADO_ROLE_OPTIONS}
+        onSuccess={() => setEditMember(null)}
+      />
     </>
   );
 }
