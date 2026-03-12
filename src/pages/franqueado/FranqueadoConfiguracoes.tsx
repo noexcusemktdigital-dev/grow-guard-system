@@ -184,10 +184,17 @@ function TeamTab() {
                     <p className="text-xs text-muted-foreground">{m.job_title || "—"}</p>
                   </div>
                 </div>
-                <Badge variant="outline" className="gap-1">
-                  <Shield className="w-3 h-3" />
-                  {roleLabels[m.role] || m.role}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="gap-1">
+                    <Shield className="w-3 h-3" />
+                    {roleLabels[m.role] || m.role}
+                  </Badge>
+                  {m.user_id !== user?.id && (
+                    <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setEditMember(m)}>
+                      Editar
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
