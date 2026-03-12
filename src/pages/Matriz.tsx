@@ -239,9 +239,11 @@ export default function Matriz() {
                       <p className="text-xs text-muted-foreground">
                         Desde {new Date(m.created_at).toLocaleDateString("pt-BR")}
                       </p>
-                      <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => openEditTeams(m.user_id)}>
-                        Editar Times
-                      </Button>
+                      {m.user_id !== user?.id && (
+                        <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => openEditMember(m)}>
+                          Editar
+                        </Button>
+                      )}
                     </div>
                   </Card>
                 );
