@@ -234,6 +234,15 @@ function TeamTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EditMemberDialog
+        open={!!editMember}
+        onOpenChange={(open) => { if (!open) setEditMember(null); }}
+        member={editMember}
+        organizationId={orgId || ""}
+        roleOptions={FRANQUEADO_ROLE_OPTIONS}
+        onSuccess={() => setEditMember(null)}
+      />
     </>
   );
 }

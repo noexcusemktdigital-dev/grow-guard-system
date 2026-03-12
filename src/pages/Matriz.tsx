@@ -302,26 +302,24 @@ export default function Matriz() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Teams Dialog */}
-      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Times</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Label>Selecione os times deste membro</Label>
+      {/* Edit Member Dialog */}
+      <EditMemberDialog
+        open={!!editingMember}
+        onOpenChange={(open) => { if (!open) setEditingMember(null); }}
+        member={editingMember}
+        organizationId={orgId || ""}
+        roleOptions={MATRIZ_ROLE_OPTIONS}
+        onSuccess={() => {
+          handleSaveTeams();
+          setEditingMember(null);
+        }}
+        extraContent={
+          <div className="space-y-2">
+            <Label>Times / Funções</Label>
             <TeamSelector selectedIds={editTeamIds} onToggle={(id) => toggleTeam(id, editTeamIds, setEditTeamIds)} />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingUser(null)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveTeams} disabled={setUserTeams.isPending}>
-              {setUserTeams.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+      />
     </div>
   );
 }

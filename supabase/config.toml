@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.asaas-manage-payment]
 verify_jwt = false
+
+[functions.update-member]
+verify_jwt = false

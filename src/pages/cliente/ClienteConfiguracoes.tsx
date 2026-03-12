@@ -371,6 +371,15 @@ function UsersAndTeamsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EditMemberDialog
+        open={!!editMember}
+        onOpenChange={(open) => { if (!open) setEditMember(null); }}
+        member={editMember}
+        organizationId={orgId || ""}
+        roleOptions={CLIENTE_ROLE_OPTIONS}
+        onSuccess={() => setEditMember(null)}
+      />
     </div>
   );
 }
