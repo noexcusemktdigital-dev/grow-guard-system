@@ -101,21 +101,26 @@ export default function Matriz() {
   };
 
   const handleSaveTeams = async () => {
-    if (!editingUser) return;
+    if (!editingMember) return;
     try {
-      await setUserTeams.mutateAsync({ userId: editingUser, teamIds: editTeamIds });
+      await setUserTeams.mutateAsync({ userId: editingMember.user_id, teamIds: editTeamIds });
       toast({ title: "Times atualizados!" });
-      setEditingUser(null);
     } catch (err: any) {
       toast({ title: "Erro ao atualizar times", description: err.message, variant: "destructive" });
     }
   };
 
-  const openEditTeams = (userId: string) => {
-    const current = getUserTeams(userId).map((t) => t.id);
+  const openEditMember = (m: any) => {
+    const current = getUserTeams(m.user_id).map((t) => t.id);
     setEditTeamIds(current);
-    setEditingUser(userId);
+    setEditingMember(m);
   };
+
+  const MATRIZ_ROLE_OPTIONS = [
+    { value: "super_admin", label: "Super Admin" },
+    { value: "admin", label: "Administrador" },
+    { value: "cliente_user", label: "Usuário" },
+  ];
 
   if (loadingMembers || loadingTeams) {
     return (
