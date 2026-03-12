@@ -109,11 +109,18 @@ function UnitDataTab() {
 
 /* ── Aba Equipe ── */
 function TeamTab() {
+  const { user } = useAuth();
   const { data: members, isLoading } = useOrgMembers();
   const { data: orgId } = useUserOrgId();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
+  const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
+
+  const FRANQUEADO_ROLE_OPTIONS = [
+    { value: "franqueado", label: "Admin (Franqueado)" },
+    { value: "cliente_user", label: "Operador" },
+  ];
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
