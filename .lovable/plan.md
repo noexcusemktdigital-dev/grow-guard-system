@@ -1,25 +1,64 @@
 
 
-## Plano: Bloquear convite se usuário já existir
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
-O `inviteUserByEmail` retorna erro 422 quando o e-mail já existe no sistema. O código atual silenciosamente vincula o usuário existente sem enviar nenhum e-mail, e o frontend exibe "Convite enviado!" mesmo sem e-mail ter sido disparado.
+### Status: ✅ Implementado
 
-### Solução
-Alterar a edge function `invite-user` para **rejeitar** convites quando o e-mail já está cadastrado, retornando uma mensagem clara orientando a usar "Esqueci minha senha". O frontend já trata `data.error` como erro, então basta retornar a mensagem correta.
+### Resumo
 
-### Alterações
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**1. Edge Function `supabase/functions/invite-user/index.ts`**
-- No bloco `catch` do `inviteUserByEmail` (linha 89-115), quando detectar `already been registered`:
-  - Retornar erro 409 com mensagem: `"Este e-mail já está cadastrado no sistema. O usuário deve acessar /acessofranquia e usar 'Esqueci minha senha' para redefinir sua senha."`
-  - Remover toda a lógica de "vincular silenciosamente" (busca do usuário existente, criação de membership, etc.)
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**2. Frontend `src/pages/Matriz.tsx`**
-- Nenhuma alteração necessária - o `handleInvite` já exibe `data.error` como toast de erro via `if (data?.error) throw new Error(data.error)`.
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-### Resultado
-- Convite só funciona para e-mails novos (envia e-mail de definição de senha)
-- E-mails já cadastrados recebem mensagem clara de erro
-- Usuário existente deve usar "Esqueci minha senha" em `/acessofranquia`
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
+
+---
+
+## Análise: Custo Real Lovable vs Receita dos Planos
+
+### Status: ✅ Documentado
+
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual
