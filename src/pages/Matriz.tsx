@@ -52,9 +52,10 @@ export default function Matriz() {
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
   const [inviteLoading, setInviteLoading] = useState(false);
 
-  // Edit teams state
-  const [editingUser, setEditingUser] = useState<string | null>(null);
+  // Edit member state
+  const [editingMember, setEditingMember] = useState<typeof members extends (infer T)[] | undefined ? T | null : never>(null);
   const [editTeamIds, setEditTeamIds] = useState<string[]>([]);
+  const { user } = useAuth();
 
   const getUserTeams = (userId: string) => {
     if (!teamMemberships || !teams) return [];
