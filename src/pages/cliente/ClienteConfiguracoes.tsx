@@ -160,6 +160,7 @@ function OrgTab() {
 }
 
 function UsersAndTeamsTab() {
+  const { user } = useAuth();
   const { data: members, isLoading } = useOrgMembers();
   const { data: subscription } = useClienteSubscription();
   const { data: orgId } = useUserOrgId();
@@ -171,7 +172,13 @@ function UsersAndTeamsTab() {
   const currentCount = members?.length ?? 0;
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
+  const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
+
+  const CLIENTE_ROLE_OPTIONS = [
+    { value: "cliente_admin", label: "Admin" },
+    { value: "cliente_user", label: "Usuário" },
+  ];
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
