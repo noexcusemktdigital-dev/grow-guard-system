@@ -98,7 +98,7 @@ const App = () => (
             {/* Auth routes */}
             <Route path="/acessofranquia" element={<Auth />} />
             <Route path="/app" element={<SaasAuth />} />
-            <Route path="/landing" element={<SaasLanding />} />
+            <Route path="/landing" element={<Navigate to="/" replace />} />
             <Route path="/termos" element={<TermosDeUso />} />
             <Route path="/privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/reset-password" element={<ResetPassword />} />
