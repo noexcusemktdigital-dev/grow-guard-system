@@ -1,39 +1,64 @@
 
 
-## Plano: Separar criação de unidade da criação de usuário + Editar membros dos franqueados pela Matriz
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema atual
+### Status: ✅ Implementado
 
-A Edge Function `provision-unit` cria automaticamente um usuário (auth + membership + role) no momento do provisionamento da unidade. O fluxo correto é: criar a unidade primeiro, e depois convidar usuários separadamente pela aba "Usuários" da unidade.
+### Resumo
 
-Além disso, a Matriz não consegue editar os membros das unidades filhas — precisa poder alterar nome, cargo, papel e remover membros.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-### Mudanças
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-#### 1. Edge Function `provision-unit` — remover criação automática de usuário
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-- Remover steps 2–5 (createUser, update profile, membership, role)
-- Remover campos `manager_email` e `manager_name` como obrigatórios (manter opcionais apenas para registro na tabela `units`)
-- Retorno não inclui mais `temp_password` ou `user_id`
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-#### 2. Wizard de criação (Unidades.tsx) — simplificar para 2 passos
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-- **Passo 1**: Dados da unidade (nome, cidade, estado, endereço, telefone) + dados do responsável (nome, email — apenas informativos, salvos na tabela `units`)
-- **Passo 2**: Configuração financeira (royalties, mensalidade)
-- Remover passo de "credenciais temporárias" (step 4) — substituir por mensagem de sucesso orientando a convidar membros pela aba Usuários
-- Unificar manager_name/email no passo 1 como campos opcionais
+---
 
-#### 3. Aba Usuários da unidade (UnidadeUsuariosReal.tsx) — adicionar edição pela Matriz
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-- Quando `isFranqueadoView` é `false` (visão da Matriz), adicionar botão de editar em cada linha da tabela
-- Ao clicar, abrir o `EditMemberDialog` já existente, passando o `unitOrgId` como `organizationId`
-- Permite alterar nome, cargo, papel e remover o membro
+### Status: ✅ Documentado
 
-### Arquivos afetados
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/provision-unit/index.ts` | Remover criação automática de usuário |
-| `src/pages/Unidades.tsx` | Simplificar wizard (2 passos + sucesso) |
-| `src/components/unidades/UnidadeUsuariosReal.tsx` | Adicionar botão editar + integrar `EditMemberDialog` |
+### Margem por Plano
 
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual
