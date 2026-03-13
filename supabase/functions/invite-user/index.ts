@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     }
 
     // Invite user via email
-    const redirectTo = Deno.env.get("SITE_URL") || supabaseUrl.replace(".supabase.co", ".supabase.co");
+    const redirectTo = Deno.env.get("SITE_URL") || "https://grow-guard-system.lovable.app";
     const { data: newUser, error: createErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
       data: { full_name: full_name || email.split("@")[0] },
       redirectTo,
