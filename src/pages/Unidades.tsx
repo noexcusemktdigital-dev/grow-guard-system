@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, LayoutGrid, List, Check } from "lucide-react";
+import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, LayoutGrid, List, Check, Trash2 } from "lucide-react";
 import { UnidadeDadosEdit } from "@/components/unidades/UnidadeDadosEdit";
 import { UnidadeUsuariosReal } from "@/components/unidades/UnidadeUsuariosReal";
 import { UnidadeDocumentosReal } from "@/components/unidades/UnidadeDocumentosReal";
@@ -11,9 +11,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useUnits } from "@/hooks/useUnits";
+import { useUnits, useUnitMutations } from "@/hooks/useUnits";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";

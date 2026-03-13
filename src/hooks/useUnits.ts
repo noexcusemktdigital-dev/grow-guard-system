@@ -37,5 +37,17 @@ export function useUnitMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["units"] }),
   });
 
-  return { createUnit, updateUnit };
+  const deleteUnit = useMutation({
+    mutationFn: async (unitId: string) => {
+      const { data, error } = await supabase.functions.invoke("delete-unit", {
+        body: { unit_id: unitId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["units"] }),
+  });
+
+  return { createUnit, updateUnit, deleteUnit };
 }
