@@ -1,64 +1,33 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Diagnóstico: 3 problemas encontrados
 
-### Status: ✅ Implementado
+### Problema 1: Coluna errada no onboarding checklist
+A Edge Function `provision-unit` insere com coluna `phase`, mas a tabela `onboarding_checklist` usa `category`. Isso faz o checklist falhar silenciosamente (log: `Could not find the 'phase' column`). A unidade é criada, mas sem o checklist de onboarding.
 
-### Resumo
+### Problema 2: Convite falha para emails já cadastrados
+O log mostra erro `422: A user with this email address has already been registered`. O `invite-user` já trata isso e retorna mensagem orientando o uso de "Esqueci minha senha". Mas pode ser que o usuário esteja tentando convidar um email novo e o erro real seja outro — vou melhorar o tratamento de erro para mostrar mensagens mais claras.
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
-
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
-
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
-
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
-
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### Problema 3: DNS do email pendente
+O domínio `notify.sistema.noexcusedigital.com` está com status **Pending** — os registros DNS não foram configurados. Isso significa que os emails de convite enviados pelo sistema de autenticação **não estão sendo entregues** pelo domínio personalizado. Os emails padrão do sistema ainda funcionam, mas sem o branding personalizado.
 
 ---
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+## Plano de correção
 
-### Status: ✅ Documentado
+### 1. Corrigir `provision-unit` — trocar `phase` por `category`
+Substituir o campo `phase` por `category` nos 16 itens do checklist padrão para que o insert funcione corretamente.
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+### 2. Melhorar tratamento de erro no convite
+Atualizar `UnidadeUsuariosReal.tsx` para exibir mensagens de erro mais claras quando o convite falha, especialmente para o caso de email já cadastrado.
 
-### Margem por Plano
+### 3. DNS do email
+Orientar sobre a configuração dos registros DNS para o domínio `notify.sistema.noexcusedigital.com` — sem isso, os emails personalizados não são enviados.
 
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+### Arquivos afetados
 
-### Custo por funcionalidade
+| Arquivo | Mudança |
+|---------|---------|
+| `supabase/functions/provision-unit/index.ts` | Trocar `phase` por `category` no checklist |
+| `src/components/unidades/UnidadeUsuariosReal.tsx` | Melhorar mensagens de erro no convite |
 
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
