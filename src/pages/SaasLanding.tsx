@@ -63,8 +63,8 @@ const FAQ = [
 /* ── Animation helpers ────────────────────────────────────────── */
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i: number = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as number[] } }),
+  hidden: { opacity: 0, y: 30 } as const,
+  visible: (i: number = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5 } }),
 };
 
 /* ── Component ────────────────────────────────────────────────── */
