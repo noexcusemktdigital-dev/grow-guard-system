@@ -6,7 +6,7 @@ const corsHeaders = {
 }
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
-const FROM_ADDRESS = 'NoExcuse Digital <noreply@noexcusedigital.com>'
+const FROM_ADDRESS = 'NoExcuse Digital <noreply@noexcusedigital.com.br>'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

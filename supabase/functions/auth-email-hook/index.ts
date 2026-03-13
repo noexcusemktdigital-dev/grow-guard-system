@@ -34,8 +34,8 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 const SITE_NAME = "NoExcuse Digital"
-const SENDER_DOMAIN = "noexcusedigital.com"
-const ROOT_DOMAIN = "sistema.noexcusedigital.com"
+const SENDER_DOMAIN = "noexcusedigital.com.br"
+const ROOT_DOMAIN = "sistema.noexcusedigital.com.br"
 const FROM_ADDRESS = `NoExcuse Digital <noreply@${SENDER_DOMAIN}>`
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
