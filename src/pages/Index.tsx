@@ -12,18 +12,7 @@ const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redirect based on role on initial load
-  useEffect(() => {
-    if (role && location.pathname === "/") {
-      if (role === "super_admin" || role === "admin") {
-        navigate("/franqueadora/inicio", { replace: true });
-      } else if (role === "franqueado") {
-        navigate("/franqueado/inicio", { replace: true });
-      } else {
-        navigate("/cliente/inicio", { replace: true });
-      }
-    }
-  }, [role, location.pathname, navigate]);
+  // No longer needed — routing is handled by App.tsx wildcard routes
 
   return (
     <div className="min-h-screen bg-background">
