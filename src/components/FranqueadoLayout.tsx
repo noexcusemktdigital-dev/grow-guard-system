@@ -41,6 +41,7 @@ export function FranqueadoLayout() {
       </main>
       <FranqueadoTour />
       <AnnouncementPopupDialog />
+      <FranqueadoWelcomeModal />
     </div>
   );
 }
