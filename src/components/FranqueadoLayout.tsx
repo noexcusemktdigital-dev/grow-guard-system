@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { FranqueadoSidebar, FranqueadoSidebarContent } from "./FranqueadoSidebar";
 import { FranqueadoTour } from "./FranqueadoTour";
 import { AnnouncementPopupDialog } from "./AnnouncementPopupDialog";
+import { FranqueadoWelcomeModal } from "./FranqueadoWelcomeModal";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
