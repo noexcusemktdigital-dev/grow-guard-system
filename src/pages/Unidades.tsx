@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, LayoutGrid, List, Check } from "lucide-react";
+import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, LayoutGrid, List, Check, Trash2 } from "lucide-react";
 import { UnidadeDadosEdit } from "@/components/unidades/UnidadeDadosEdit";
 import { UnidadeUsuariosReal } from "@/components/unidades/UnidadeUsuariosReal";
 import { UnidadeDocumentosReal } from "@/components/unidades/UnidadeDocumentosReal";
@@ -11,9 +11,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useUnits } from "@/hooks/useUnits";
+import { useUnits, useUnitMutations } from "@/hooks/useUnits";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -21,11 +22,13 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export default function Unidades() {
   const { data: units, isLoading } = useUnits();
+  const { deleteUnit } = useUnitMutations();
   const { data: orgId } = useUserOrgId();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
+  const [deleting, setDeleting] = useState(false);
 
   // Wizard state
   const [showWizard, setShowWizard] = useState(false);
@@ -116,7 +119,42 @@ export default function Unidades() {
             </p>
           </div>
         </div>
-        {!selected && (
+        {selected ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={deleting}>
+                <Trash2 className="w-4 h-4 mr-1" /> Excluir Unidade
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir unidade</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir a unidade <strong>{selected.name}</strong>? Todos os dados relacionados (usuários, documentos, financeiro, onboarding) serão removidos permanentemente. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    setDeleting(true);
+                    try {
+                      await deleteUnit.mutateAsync(selected.id);
+                      setSelectedId(null);
+                      toast({ title: "Unidade excluída com sucesso" });
+                    } catch (err: any) {
+                      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+                    } finally {
+                      setDeleting(false);
+                    }
+                  }}
+                >
+                  {deleting ? "Excluindo..." : "Sim, excluir"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
           <div className="flex items-center gap-2">
             <div className="flex gap-0.5 p-0.5 rounded-lg bg-muted/50 border">
               <Button variant={viewMode === "card" ? "default" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("card")}>

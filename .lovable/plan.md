@@ -1,43 +1,64 @@
 
 
-## Plano: Editar e Excluir Unidades + Confirmar Onboarding Automático
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Situação atual
+### Status: ✅ Implementado
 
-- **Edição**: A aba "Dados" (`UnidadeDadosEdit`) já permite editar campos da unidade. Funciona.
-- **Exclusão**: Não existe nenhum botão ou lógica de exclusão de unidade.
-- **Onboarding automático**: A Edge Function `provision-unit` **já cria** o onboarding e o checklist automaticamente (steps 4-5). Isso já está funcionando.
+### Resumo
 
-### Mudanças necessárias
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-#### 1. Adicionar botão "Excluir Unidade" na página `Unidades.tsx`
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-Quando uma unidade está selecionada (visão de detalhe), exibir um botão "Excluir Unidade" com ícone de lixeira no header. Ao clicar:
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-- Abre um `AlertDialog` de confirmação com mensagem clara: "Tem certeza que deseja excluir a unidade **{nome}**? Esta ação não pode ser desfeita."
-- Ao confirmar, chama a Edge Function `delete-unit` que faz a limpeza completa.
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-#### 2. Criar Edge Function `delete-unit`
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-A exclusão de uma unidade envolve dados em várias tabelas (organization, memberships, onboarding, etc.). Usar uma Edge Function com `service_role` para:
+---
 
-- Validar que o caller é membro da org pai
-- Deletar registros relacionados: `onboarding_checklist`, `onboarding_units`, `franchisee_system_payments`, `referral_discounts`, `organization_memberships` (da unit_org_id), `user_roles` (dos membros), a própria `units` row, e por fim a `organizations` row da unidade
-- Retornar sucesso
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-#### 3. Adicionar mutation `deleteUnit` no hook `useUnits.ts`
+### Status: ✅ Documentado
 
-Nova mutation que invoca `delete-unit` e invalida as queries.
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
-### Arquivos afetados
+### Margem por Plano
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/delete-unit/index.ts` | Nova Edge Function para exclusão segura |
-| `src/hooks/useUnits.ts` | Adicionar `deleteUnit` mutation |
-| `src/pages/Unidades.tsx` | Botão excluir + AlertDialog de confirmação |
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
 
-### Sobre o onboarding automático
+### Custo por funcionalidade
 
-A Edge Function `provision-unit` já cria automaticamente o registro em `onboarding_units` com status `in_progress`, prazo de 30 dias, e popula as 16 etapas padrão do checklist. Não é necessária nenhuma mudança — já está funcionando conforme desejado.
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
 
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual
