@@ -98,17 +98,17 @@ const App = () => (
             {/* Auth routes */}
             <Route path="/acessofranquia" element={<Auth />} />
             <Route path="/app" element={<SaasAuth />} />
-            <Route path="/landing" element={<SaasLanding />} />
+            <Route path="/landing" element={<Navigate to="/" replace />} />
             <Route path="/termos" element={<TermosDeUso />} />
             <Route path="/privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Protected app shell */}
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>}>
-              <Route index element={<Navigate to="/franqueadora/inicio" replace />} />
+            <Route path="/" element={<SaasLanding />} />
 
+            {/* Protected app shell — uses wildcard so /franqueadora/*, /franqueado/*, /cliente/* all match */}
+            <Route path="/franqueadora/*" element={<ProtectedRoute><Index /></ProtectedRoute>}>
               {/* Franqueadora — super_admin + admin */}
-              <Route path="franqueadora" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><FranqueadoraLayout /></ProtectedRoute>}>
+              <Route path="*" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><FranqueadoraLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/franqueadora/inicio" replace />} />
                 <Route path="inicio" element={<Home />} />
                 <Route path="financeiro" element={<FinanceiroDashboard />} />
@@ -130,9 +130,10 @@ const App = () => (
                 <Route path="perfil" element={<FranqueadoraPerfil />} />
                 <Route path="notificacoes" element={<NotificacoesPage />} />
               </Route>
+            </Route>
 
-              {/* Franqueado */}
-              <Route path="franqueado" element={<ProtectedRoute allowedRoles={["franqueado"]}><FranqueadoLayout /></ProtectedRoute>}>
+            <Route path="/franqueado/*" element={<ProtectedRoute><Index /></ProtectedRoute>}>
+              <Route path="*" element={<ProtectedRoute allowedRoles={["franqueado"]}><FranqueadoLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/franqueado/inicio" replace />} />
                 <Route path="inicio" element={<FranqueadoDashboard />} />
                 <Route path="agenda" element={<FranqueadoAgenda />} />
@@ -153,12 +154,13 @@ const App = () => (
                 <Route path="configuracoes" element={<FranqueadoConfiguracoes />} />
                 <Route path="notificacoes" element={<NotificacoesPage />} />
               </Route>
+            </Route>
 
-              {/* Cliente onboarding (full-screen, no sidebar) */}
-              <Route path="cliente/onboarding" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteOnboardingCompany /></ProtectedRoute>} />
+            {/* Cliente onboarding (full-screen, no sidebar) */}
+            <Route path="/cliente/onboarding" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteOnboardingCompany /></ProtectedRoute>} />
 
-              {/* Cliente Final */}
-              <Route path="cliente" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteLayout /></ProtectedRoute>}>
+            <Route path="/cliente/*" element={<ProtectedRoute><Index /></ProtectedRoute>}>
+              <Route path="*" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/cliente/inicio" replace />} />
                 <Route path="inicio" element={<ClienteInicio />} />
                 <Route path="checklist" element={<ClienteChecklist />} />
@@ -169,7 +171,6 @@ const App = () => (
                 <Route path="chat" element={<ClienteChat />} />
                 <Route path="crm" element={<ClienteCRM />} />
                 <Route path="crm/config" element={<CrmConfigPage />} />
-                
                 <Route path="agentes-ia" element={<ClienteAgentesIA />} />
                 <Route path="scripts" element={<ClienteScripts />} />
                 <Route path="disparos" element={<ClienteDisparos />} />
@@ -177,8 +178,6 @@ const App = () => (
                 <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
                 <Route path="conteudos" element={<ClienteConteudos />} />
                 <Route path="redes-sociais" element={<ClienteRedesSociais />} />
-                
-                
                 <Route path="sites" element={<ClienteSites />} />
                 <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
                 <Route path="integracoes" element={<ClienteIntegracoes />} />
