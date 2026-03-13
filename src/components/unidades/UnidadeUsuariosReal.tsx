@@ -58,7 +58,14 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
       queryClient.invalidateQueries({ queryKey: ["unit-members", unitOrgId] });
       setInviteSuccess(true);
     } catch (e: any) {
-      toast.error(e.message || "Erro ao convidar membro");
+      const msg = e.message || "";
+      if (msg.includes("já está cadastrado") || msg.includes("already been registered")) {
+        toast.error("Este e-mail já está cadastrado. O usuário deve acessar /acessofranquia e usar 'Esqueci minha senha' para redefinir o acesso.");
+      } else if (msg.includes("Limite de")) {
+        toast.error(msg);
+      } else {
+        toast.error(msg || "Erro ao convidar membro. Verifique os dados e tente novamente.");
+      }
     }
     setInviting(false);
   }
