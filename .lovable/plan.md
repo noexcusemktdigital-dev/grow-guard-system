@@ -1,64 +1,45 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Landing Page robusta na raiz + Logout role-aware
 
-### Status: ✅ Implementado
+### 1. Rota `/` → Landing Page (SaasLanding)
 
-### Resumo
+Alterar `App.tsx` para que a rota raiz `/` renderize a landing page (atualmente em `/landing`). A landing page atual é básica — vamos reconstruí-la em `SaasLanding.tsx` com seções robustas:
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+- **Nav** — Logo + "Entrar" (→ `/app`) + CTA "Começar grátis" (→ `/app`)
+- **Hero** — Headline impactante, badge "7 dias grátis", CTA principal → `/app`
+- **Seção "Como funciona"** — 3 passos visuais (Cadastre-se, Configure, Venda)
+- **Seção Features** — Grid de funcionalidades com ícones (CRM, WhatsApp, IA, Marketing, Automação, Relatórios)
+- **Seção Social Proof / Números** — Métricas de impacto (ex: "+500 empresas", "10M leads gerenciados")
+- **Seção Depoimentos** — Cards com testemunhos fictícios de clientes
+- **Seção Planos** — Cards dos 3 planos (Starter/Pro/Enterprise) com CTAs → `/app`
+- **Seção FAQ** — Accordion com perguntas frequentes
+- **Seção CTA final** — Banner de conversão com botão → `/app`
+- **Footer** — Links (Termos, Privacidade), copyright
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+Estética: Dark premium consistente com o design system atual (`bg-[hsl(225,20%,4%)]`, vermelho `hsl(355,78%,50%)`), animações com framer-motion.
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+### 2. Ajuste de rotas em `App.tsx`
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+- Rota `/` → `<SaasLanding />` (pública, fora do ProtectedRoute)
+- Rota `/landing` → remover ou redirect para `/`
+- Rota default do ProtectedRoute index → manter redirect por role (já existe no `Index.tsx`)
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### 3. Logout role-aware no `UserMenu.tsx`
 
----
+Atualmente o `handleLogout` sempre navega para `/acessofranquia`. Alterar para:
+- Se `role` é `cliente_admin` ou `cliente_user` → navegar para `/app`
+- Caso contrário (`super_admin`, `admin`, `franqueado`) → navegar para `/acessofranquia`
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+### 4. Redirect de usuários autenticados na landing
 
-### Status: ✅ Documentado
+Na `SaasLanding`, se o usuário já estiver logado, redirecionar automaticamente para o dashboard correto baseado no role (mesmo padrão do `Index.tsx`).
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+### Arquivos afetados
 
-### Margem por Plano
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/SaasLanding.tsx` | Reconstrução completa com ~8 seções |
+| `src/App.tsx` | Rota `/` → SaasLanding, remover `/landing` |
+| `src/components/UserMenu.tsx` | Logout condicional por role |
 
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
