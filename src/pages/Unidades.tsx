@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, LayoutGrid, List } from "lucide-react";
+import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, LayoutGrid, List, Check } from "lucide-react";
 import { UnidadeDadosEdit } from "@/components/unidades/UnidadeDadosEdit";
 import { UnidadeUsuariosReal } from "@/components/unidades/UnidadeUsuariosReal";
 import { UnidadeDocumentosReal } from "@/components/unidades/UnidadeDocumentosReal";
@@ -31,20 +31,17 @@ export default function Unidades() {
   const [showWizard, setShowWizard] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [wizardLoading, setWizardLoading] = useState(false);
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
 
-  // Step 1 — unit data
+  // Step 1 — unit data + manager info (optional)
   const [unitName, setUnitName] = useState("");
   const [unitCity, setUnitCity] = useState("");
   const [unitState, setUnitState] = useState("");
   const [unitAddress, setUnitAddress] = useState("");
   const [unitPhone, setUnitPhone] = useState("");
-
-  // Step 2 — manager data
   const [managerName, setManagerName] = useState("");
   const [managerEmail, setManagerEmail] = useState("");
 
-  // Step 3 — financial config
+  // Step 2 — financial config
   const [royaltyPercent, setRoyaltyPercent] = useState("5");
   const [systemFee, setSystemFee] = useState("299");
 
@@ -55,7 +52,6 @@ export default function Unidades() {
     setUnitName(""); setUnitCity(""); setUnitState(""); setUnitAddress(""); setUnitPhone("");
     setManagerName(""); setManagerEmail("");
     setRoyaltyPercent("5"); setSystemFee("299");
-    setTempPassword(null);
     setWizardLoading(false);
   };
 
@@ -70,8 +66,8 @@ export default function Unidades() {
           state: unitState,
           address: unitAddress,
           phone: unitPhone,
-          manager_name: managerName,
-          manager_email: managerEmail,
+          manager_name: managerName || undefined,
+          manager_email: managerEmail || undefined,
           royalty_percent: parseFloat(royaltyPercent),
           system_fee: parseFloat(systemFee),
           parent_org_id: orgId,
@@ -80,8 +76,7 @@ export default function Unidades() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setTempPassword(data.temp_password);
-      setWizardStep(4); // success step
+      setWizardStep(3); // success step
       qc.invalidateQueries({ queryKey: ["units"] });
       toast({ title: "Unidade provisionada com sucesso!" });
     } catch (err: any) {
@@ -211,7 +206,7 @@ export default function Unidades() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {wizardStep === 4 ? "Unidade Criada!" : `Nova Unidade — Passo ${wizardStep} de 3`}
+              {wizardStep === 3 ? "Unidade Criada!" : `Nova Unidade — Passo ${wizardStep} de 2`}
             </DialogTitle>
           </DialogHeader>
 
@@ -224,18 +219,17 @@ export default function Unidades() {
               </div>
               <div><Label>Endereço</Label><Input value={unitAddress} onChange={e => setUnitAddress(e.target.value)} placeholder="Rua, número, bairro" /></div>
               <div><Label>Telefone</Label><Input value={unitPhone} onChange={e => setUnitPhone(e.target.value)} placeholder="(11) 99999-0000" /></div>
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground mb-2">Responsável (opcional — informativo)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Nome</Label><Input value={managerName} onChange={e => setManagerName(e.target.value)} placeholder="Nome do responsável" /></div>
+                  <div><Label>E-mail</Label><Input type="email" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} placeholder="email@exemplo.com" /></div>
+                </div>
+              </div>
             </div>
           )}
 
           {wizardStep === 2 && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Dados do responsável que será o administrador da unidade.</p>
-              <div><Label>Nome do Responsável *</Label><Input value={managerName} onChange={e => setManagerName(e.target.value)} placeholder="Nome completo" /></div>
-              <div><Label>E-mail do Responsável *</Label><Input type="email" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} placeholder="email@exemplo.com" /></div>
-            </div>
-          )}
-
-          {wizardStep === 3 && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">Configurações financeiras da unidade.</p>
               <div className="grid grid-cols-2 gap-3">
@@ -245,35 +239,32 @@ export default function Unidades() {
             </div>
           )}
 
-          {wizardStep === 4 && (
+          {wizardStep === 3 && (
             <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                <p className="text-sm font-medium text-green-800 dark:text-green-200">✅ Unidade provisionada com sucesso!</p>
-                <p className="text-xs text-green-700 dark:text-green-300 mt-1">Organização, usuário e vinculação criados automaticamente.</p>
+              <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center space-y-3">
+                <Check className="w-8 h-8 text-emerald-600 mx-auto" />
+                <p className="text-sm font-medium">Unidade provisionada com sucesso!</p>
+                <p className="text-xs text-muted-foreground">A organização e o onboarding foram criados automaticamente.</p>
               </div>
-              {tempPassword && (
-                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Credenciais temporárias</p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">E-mail: <strong>{managerEmail}</strong></p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300">Senha: <strong className="font-mono">{tempPassword}</strong></p>
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-2">⚠️ Compartilhe estas credenciais com o responsável. A senha deve ser alterada no primeiro acesso.</p>
-                </div>
-              )}
+              <div className="p-3 rounded-lg bg-muted/50 border">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Próximo passo:</strong> acesse a aba <strong>Usuários</strong> da unidade para convidar os membros que terão acesso ao sistema.
+                </p>
+              </div>
             </div>
           )}
 
           <DialogFooter className="gap-2">
-            {wizardStep === 4 ? (
+            {wizardStep === 3 ? (
               <Button onClick={() => setShowWizard(false)}>Fechar</Button>
             ) : (
               <>
                 {wizardStep > 1 && <Button variant="outline" onClick={() => setWizardStep(s => s - 1)}>Voltar</Button>}
-                {wizardStep < 3 ? (
+                {wizardStep < 2 ? (
                   <Button
                     onClick={() => {
-                      if (wizardStep === 1 && !unitName.trim()) { toast({ title: "Informe o nome da unidade", variant: "destructive" }); return; }
-                      if (wizardStep === 2 && (!managerName.trim() || !managerEmail.trim())) { toast({ title: "Informe nome e email do responsável", variant: "destructive" }); return; }
-                      setWizardStep(s => s + 1);
+                      if (!unitName.trim()) { toast({ title: "Informe o nome da unidade", variant: "destructive" }); return; }
+                      setWizardStep(2);
                     }}
                   >
                     Próximo

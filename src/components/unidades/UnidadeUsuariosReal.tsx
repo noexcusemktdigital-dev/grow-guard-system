@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Mail, Plus, Check } from "lucide-react";
+import { Users, Mail, Plus, Check, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EditMemberDialog } from "@/components/EditMemberDialog";
 import { useUnitMembers } from "@/hooks/useUnitMembers";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +32,15 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
   const [invRole, setInvRole] = useState("cliente_user");
   const [inviting, setInviting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+
+  // Edit member state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editMember, setEditMember] = useState<{
+    user_id: string;
+    full_name: string | null;
+    job_title: string | null;
+    role: string;
+  } | null>(null);
 
   const canInvite = !maxUsers || !members || members.length < maxUsers;
 
@@ -61,7 +71,6 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
 
   if (isLoading) return <Skeleton className="h-48 w-full" />;
 
-  // For franchisee view, only show admin and user roles
   const roleOptions = isFranqueadoView
     ? [
         { value: "franqueado", label: "Administrador" },
@@ -72,6 +81,16 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
         { value: "cliente_admin", label: "Administrador" },
         { value: "cliente_user", label: "Usuário" },
       ];
+
+  function handleEditClick(m: any) {
+    setEditMember({
+      user_id: m.user_id,
+      full_name: m.profiles?.full_name || null,
+      job_title: m.profiles?.job_title || null,
+      role: m.role || "cliente_user",
+    });
+    setEditOpen(true);
+  }
 
   return (
     <>
@@ -100,6 +119,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
                 <TableHead>Membro</TableHead>
                 <TableHead>Função</TableHead>
                 <TableHead>Desde</TableHead>
+                {!isFranqueadoView && <TableHead className="w-10" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -125,6 +145,13 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
                   <TableCell className="text-muted-foreground text-xs">
                     {new Date(m.created_at).toLocaleDateString("pt-BR")}
                   </TableCell>
+                  {!isFranqueadoView && (
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditClick(m)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -176,6 +203,18 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Member Dialog (Matriz view) */}
+      {!isFranqueadoView && unitOrgId && (
+        <EditMemberDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          member={editMember}
+          organizationId={unitOrgId}
+          roleOptions={roleOptions}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["unit-members", unitOrgId] })}
+        />
+      )}
     </>
   );
 }

@@ -61,9 +61,9 @@ Deno.serve(async (req) => {
       saas_commission_percent,
     } = await req.json();
 
-    if (!unit_name || !manager_email || !parent_org_id) {
+    if (!unit_name || !parent_org_id) {
       return new Response(
-        JSON.stringify({ error: "unit_name, manager_email and parent_org_id are required" }),
+        JSON.stringify({ error: "unit_name and parent_org_id are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -82,7 +82,6 @@ Deno.serve(async (req) => {
 
     // Generate unique referral code
     let referralCode = generateReferralCode(unit_name);
-    // Check uniqueness, append random suffix if needed
     const { data: existingRef } = await adminClient
       .from("organizations")
       .select("id")
@@ -116,55 +115,7 @@ Deno.serve(async (req) => {
       uses_count: 0,
     });
 
-    // 2. Create user for the franchisee manager
-    const tempPassword = crypto.randomUUID().slice(0, 12) + "A1!";
-    const { data: newUser, error: userErr } = await adminClient.auth.admin.createUser({
-      email: manager_email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: { full_name: manager_name || manager_email.split("@")[0] },
-    });
-
-    let userId: string;
-    let userAlreadyExists = false;
-
-    if (userErr) {
-      if (userErr.message?.includes("already been registered")) {
-        const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-        const existing = existingUsers?.users?.find((u: any) => u.email === manager_email);
-        if (!existing) throw new Error("User exists but could not be found");
-        userId = existing.id;
-        userAlreadyExists = true;
-      } else {
-        throw userErr;
-      }
-    } else {
-      userId = newUser.user.id;
-    }
-
-    // 3. Update profile
-    if (!userAlreadyExists) {
-      await adminClient
-        .from("profiles")
-        .update({ full_name: manager_name || manager_email.split("@")[0] })
-        .eq("id", userId);
-    }
-
-    // 4. Create membership for the new org
-    const { error: memErr } = await adminClient.from("organization_memberships").insert({
-      user_id: userId,
-      organization_id: orgId,
-    });
-    if (memErr && !memErr.message?.includes("duplicate")) throw memErr;
-
-    // 5. Set role to franqueado
-    const { error: roleErr } = await adminClient.from("user_roles").insert({
-      user_id: userId,
-      role: "franqueado",
-    });
-    if (roleErr && !roleErr.message?.includes("duplicate")) throw roleErr;
-
-    // 6. Create the unit record linked to this org
+    // 2. Create the unit record linked to this org
     const { data: unitData, error: unitErr } = await adminClient
       .from("units")
       .insert({
@@ -174,7 +125,7 @@ Deno.serve(async (req) => {
         address: address || null,
         phone: phone || null,
         manager_name: manager_name || null,
-        email: manager_email,
+        email: manager_email || null,
         organization_id: parent_org_id,
         unit_org_id: orgId,
         status: "active",
@@ -183,7 +134,7 @@ Deno.serve(async (req) => {
       .single();
     if (unitErr) throw unitErr;
 
-    // 7. Create franchisee system payment config if system_fee provided
+    // 3. Create franchisee system payment config if system_fee provided
     if (system_fee && system_fee > 0) {
       await adminClient.from("franchisee_system_payments").insert({
         organization_id: orgId,
@@ -193,7 +144,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 8. Create onboarding unit automatically
+    // 4. Create onboarding unit automatically
     const startDate = new Date().toISOString().slice(0, 10);
     const targetDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
@@ -212,7 +163,7 @@ Deno.serve(async (req) => {
       .single();
     if (obErr) console.error("onboarding_units insert error:", obErr);
 
-    // 9. Populate default onboarding checklist
+    // 5. Populate default onboarding checklist
     if (onboardingUnit) {
       const defaultChecklist = [
         { phase: "Pré-Implantação", title: "Assinatura do contrato", sort_order: 1 },
@@ -242,16 +193,13 @@ Deno.serve(async (req) => {
       if (clErr) console.error("onboarding_checklist insert error:", clErr);
     }
 
-    console.log(`Unit provisioned: ${unit_name} -> org ${orgId}, user ${userId}, referral=${referralCode}, onboarding=${onboardingUnit?.id}`);
+    console.log(`Unit provisioned: ${unit_name} -> org ${orgId}, referral=${referralCode}, onboarding=${onboardingUnit?.id}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         unit_id: unitData.id,
         organization_id: orgId,
-        user_id: userId,
-        temp_password: userAlreadyExists ? null : tempPassword,
-        user_already_exists: userAlreadyExists,
         referral_code: referralCode,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
