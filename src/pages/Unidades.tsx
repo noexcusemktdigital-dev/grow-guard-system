@@ -119,7 +119,42 @@ export default function Unidades() {
             </p>
           </div>
         </div>
-        {!selected && (
+        {selected ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={deleting}>
+                <Trash2 className="w-4 h-4 mr-1" /> Excluir Unidade
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir unidade</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir a unidade <strong>{selected.name}</strong>? Todos os dados relacionados (usuários, documentos, financeiro, onboarding) serão removidos permanentemente. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    setDeleting(true);
+                    try {
+                      await deleteUnit.mutateAsync(selected.id);
+                      setSelectedId(null);
+                      toast({ title: "Unidade excluída com sucesso" });
+                    } catch (err: any) {
+                      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+                    } finally {
+                      setDeleting(false);
+                    }
+                  }}
+                >
+                  {deleting ? "Excluindo..." : "Sim, excluir"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
           <div className="flex items-center gap-2">
             <div className="flex gap-0.5 p-0.5 rounded-lg bg-muted/50 border">
               <Button variant={viewMode === "card" ? "default" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("card")}>
