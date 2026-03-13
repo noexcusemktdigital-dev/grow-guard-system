@@ -35,8 +35,9 @@ export function UserMenu() {
     .slice(0, 2);
 
   const handleLogout = async () => {
+    const isSaasUser = role === "cliente_admin" || role === "cliente_user";
     await signOut();
-    navigate("/acessofranquia");
+    navigate(isSaasUser ? "/app" : "/acessofranquia");
     toast.success("Logout realizado com sucesso");
   };
 

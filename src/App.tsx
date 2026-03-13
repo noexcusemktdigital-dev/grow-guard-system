@@ -103,8 +103,10 @@ const App = () => (
             <Route path="/privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
+            <Route path="/" element={<SaasLanding />} />
+
             {/* Protected app shell */}
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>}>
+            <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>}>
               <Route index element={<Navigate to="/franqueadora/inicio" replace />} />
 
               {/* Franqueadora — super_admin + admin */}
