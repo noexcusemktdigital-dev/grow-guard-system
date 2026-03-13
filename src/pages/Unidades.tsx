@@ -22,11 +22,13 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export default function Unidades() {
   const { data: units, isLoading } = useUnits();
+  const { deleteUnit } = useUnitMutations();
   const { data: orgId } = useUserOrgId();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
+  const [deleting, setDeleting] = useState(false);
 
   // Wizard state
   const [showWizard, setShowWizard] = useState(false);
