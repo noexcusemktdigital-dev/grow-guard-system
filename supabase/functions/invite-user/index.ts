@@ -6,6 +6,55 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const RESEND_API_URL = "https://api.resend.com/emails";
+const FROM_ADDRESS = "NoExcuse Digital <noreply@noexcusedigital.com.br>";
+
+function buildInviteHtml(confirmationUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:'Inter',Arial,sans-serif;">
+  <div style="padding:40px 25px;max-width:560px;margin:0 auto;">
+    <img src="https://gxrhdpbbxfipeopdyygn.supabase.co/storage/v1/object/public/email-assets/logo-noexcuse.png" alt="NoExcuse Digital" width="160" style="margin:0 0 24px;display:block;" />
+    <h1 style="font-size:22px;font-weight:bold;color:#141a24;margin:0 0 20px;">Você foi convidado</h1>
+    <p style="font-size:14px;color:#6c7280;line-height:1.6;margin:0 0 25px;">
+      Você foi convidado para a plataforma <strong>NoExcuse Digital</strong>. Clique no botão abaixo para definir sua senha e começar a usar o sistema.
+    </p>
+    <a href="${confirmationUrl}" style="display:inline-block;background-color:#E2233B;color:#ffffff;font-size:14px;border-radius:12px;padding:12px 24px;text-decoration:none;font-weight:500;">
+      Definir minha senha
+    </a>
+    <p style="font-size:12px;color:#999999;margin:30px 0 0;">
+      Se você não esperava este convite, pode ignorar este e-mail com segurança.
+    </p>
+  </div>
+</body>
+</html>`;
+}
+
+async function sendViaResend(to: string, html: string): Promise<void> {
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendApiKey) throw new Error("RESEND_API_KEY not configured");
+
+  const response = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: FROM_ADDRESS,
+      to: [to],
+      subject: "Você foi convidado(a) — NoExcuse Digital",
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Resend API error [${response.status}]: ${errorBody}`);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -14,7 +63,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // Validate caller auth
@@ -78,24 +126,73 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Invite user via email
-    const redirectTo = Deno.env.get("SITE_URL") || "https://grow-guard-system.lovable.app";
-    const { data: newUser, error: createErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: full_name || email.split("@")[0] },
-      redirectTo,
-    });
+    // ---- Create user (instead of inviteUserByEmail) ----
+    // First check if user already exists
+    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find((u: any) => u.email === email);
+
     let userId: string;
 
-    if (createErr) {
-      if (createErr.message?.includes("already been registered")) {
+    if (existingUser) {
+      // User already exists in auth - check if already in this org
+      const { data: existingMembership } = await adminClient
+        .from("organization_memberships")
+        .select("id")
+        .eq("user_id", existingUser.id)
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+
+      if (existingMembership) {
         return new Response(
-          JSON.stringify({ error: "Este e-mail já está cadastrado no sistema. O usuário deve acessar /acessofranquia e usar 'Esqueci minha senha' para redefinir sua senha." }),
+          JSON.stringify({ error: "Este usuário já é membro desta organização." }),
           { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      throw createErr;
+
+      userId = existingUser.id;
+    } else {
+      // Create new user with email already confirmed
+      const tempPassword = crypto.randomUUID() + "Aa1!";
+      const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { full_name: full_name || email.split("@")[0] },
+      });
+
+      if (createErr) {
+        console.error("createUser error:", createErr);
+        throw createErr;
+      }
+      userId = newUser.user.id;
     }
-    userId = newUser.user.id;
+
+    // Generate a password recovery link so the user can set their own password
+    const siteUrl = Deno.env.get("SITE_URL") || "https://grow-guard-system.lovable.app";
+    const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: `${siteUrl}/acessofranquia` },
+    });
+
+    if (linkErr) {
+      console.error("generateLink error:", linkErr);
+      throw linkErr;
+    }
+
+    // Send invite email via Resend directly
+    const recoveryUrl = linkData?.properties?.action_link;
+    if (recoveryUrl) {
+      try {
+        await sendViaResend(email, buildInviteHtml(recoveryUrl));
+        console.log(`Invite email sent via Resend to ${email}`);
+      } catch (emailErr) {
+        console.error("Failed to send invite email via Resend:", emailErr);
+        // Don't block the user creation - log the error but continue
+      }
+    } else {
+      console.warn("No recovery URL generated, skipping email send");
+    }
 
     // Update profile
     await adminClient

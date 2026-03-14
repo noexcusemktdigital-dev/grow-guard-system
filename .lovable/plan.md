@@ -1,34 +1,64 @@
 
 
-## Diagnóstico: Emails de convite não chegam no Gmail
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Causa raiz
+### Status: ✅ Implementado
 
-O `invite-user` usa `inviteUserByEmail()` do Supabase Auth, que depende do sistema de email do Supabase para enviar o convite. O `auth-email-hook` (que interceptaria e enviaria via Resend) **não está sendo chamado** — os logs não mostram nenhum processamento de email. O domínio de email `notify.sistema.noexcusedigital.com` está com DNS "Pending", bloqueando todo o pipeline de email customizado.
+### Resumo
 
-Resultado: os convites ficam no limbo — o usuário é criado no banco, mas o email nunca chega.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-### Solução
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-Mudar a estratégia do `invite-user`: em vez de depender do `inviteUserByEmail` (que precisa do pipeline de email funcionando), vamos:
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-1. **Criar o usuário** com `admin.createUser()` com senha temporária
-2. **Gerar um link de redefinição de senha** com `admin.generateLink({ type: 'recovery' })`
-3. **Enviar o email diretamente via Resend** dentro do próprio `invite-user`, usando o template de convite que já existe
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-Isso elimina completamente a dependência do DNS pendente e do auth-email-hook para convites.
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-### Arquivo afetado
+---
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/invite-user/index.ts` | Trocar `inviteUserByEmail` por `createUser` + `generateLink` + envio direto via Resend |
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-### Detalhes técnicos
+### Status: ✅ Documentado
 
-- Usa `admin.createUser({ email, email_confirm: true })` para criar o usuário já confirmado
-- Gera link de recovery via `admin.generateLink({ type: 'recovery', email })` para o usuário definir sua senha
-- Envia o email usando a API do Resend diretamente (secret `RESEND_API_KEY` já configurada), remetente `NoExcuse Digital <noreply@noexcusedigital.com.br>`
-- O template de email é HTML inline com o link de "Definir senha", sem precisar importar React Email (mantém a function simples)
-- Se o email já existir, mantém o tratamento atual (erro 409)
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual
