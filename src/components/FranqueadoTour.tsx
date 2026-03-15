@@ -57,11 +57,22 @@ export function FranqueadoTour() {
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const done = localStorage.getItem(STORAGE_KEY);
-    if (!done) {
+    if (localStorage.getItem(STORAGE_KEY)) return;
+
+    // Wait for welcome modal to be dismissed before showing tour
+    const welcomeKey = "franqueado_welcome_seen";
+    if (localStorage.getItem(welcomeKey)) {
       const timer = setTimeout(() => setOpen(true), 1000);
       return () => clearTimeout(timer);
     }
+
+    const interval = setInterval(() => {
+      if (localStorage.getItem(welcomeKey)) {
+        clearInterval(interval);
+        setTimeout(() => setOpen(true), 500);
+      }
+    }, 500);
+    return () => clearInterval(interval);
   }, []);
 
   const positionTooltip = useCallback(() => {
