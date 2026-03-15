@@ -31,15 +31,23 @@ const quickActionIcons: Record<string, React.ElementType> = { UserPlus, Headphon
 export default function FranqueadoDashboard() {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const [showSecondary, setShowSecondary] = useState(false);
+
   const { data: leads, isLoading: loadingLeads } = useCrmLeads();
   const { data: announcements, isLoading: loadingAnn } = useAnnouncements();
   const { data: views } = useAnnouncementViews();
   const { data: events, isLoading: loadingEv } = useCalendarEvents();
   const { data: contracts } = useContracts();
   const { data: dailyMessage } = useDailyMessages();
+  // Secondary queries — deferred
   const { data: goals } = useActiveGoals();
   const { data: goalProgress } = useGoalProgress(goals);
   const { data: clientStats } = useNetworkClientStats();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSecondary(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
