@@ -1,64 +1,40 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Otimização de Performance Mobile
 
-### Status: ✅ Implementado
+### Problema
+O app carrega **todas as ~60+ páginas** de forma síncrona no `App.tsx`. Isso significa que ao abrir o app no mobile, o navegador precisa baixar, parsear e executar o JavaScript de TODAS as páginas antes de mostrar qualquer coisa. Além disso, o header com `backdrop-blur-xl` causa repaint caro em dispositivos móveis.
 
-### Resumo
+### Solução: 3 frentes de otimização
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+#### 1. Lazy Loading de todas as páginas (impacto principal)
+Trocar todos os imports estáticos em `App.tsx` por `React.lazy()` + `Suspense`. Isso faz com que apenas o código da página atual seja carregado, reduzindo o bundle inicial drasticamente.
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+**Arquivo:** `src/App.tsx`
+- Converter ~40 imports de páginas para `const Page = lazy(() => import("./pages/Page"))`
+- Envolver as rotas com `<Suspense fallback={<Loader />}>`
+- Também lazy-load os 3 layouts (`FranqueadoraLayout`, `FranqueadoLayout`, `ClienteLayout`)
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+#### 2. Reduzir CSS pesado no mobile
+**Arquivo:** `src/pages/Index.tsx`
+- Trocar `backdrop-blur-xl` por `backdrop-blur-sm` ou remover no mobile (blur é muito caro em GPUs mobile)
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+**Arquivo:** `src/index.css`
+- Verificar animações `page-enter` e simplificar para mobile
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+#### 3. Otimizar queries paralelas nos dashboards
+**Arquivos:** `src/pages/Home.tsx`, `src/pages/franqueado/FranqueadoDashboard.tsx`
+- Ambos disparam 8-10 queries simultaneamente ao carregar. No mobile com conexão lenta, isso trava a UI.
+- Priorizar dados visíveis acima da dobra e usar `enabled` condicional para dados secundários
 
----
+### Resumo de mudanças
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+| Arquivo | Mudança |
+|---------|---------|
+| `src/App.tsx` | Lazy loading de todas as páginas e layouts |
+| `src/pages/Index.tsx` | Reduzir `backdrop-blur-xl` para `backdrop-blur-sm` |
+| `src/pages/Home.tsx` | Adiar queries secundárias |
+| `src/pages/franqueado/FranqueadoDashboard.tsx` | Adiar queries secundárias |
 
-### Status: ✅ Documentado
+O lazy loading sozinho deve reduzir o tempo de carregamento inicial em 60-70% no mobile.
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
-
-### Margem por Plano
-
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
