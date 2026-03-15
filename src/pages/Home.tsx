@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -34,6 +34,8 @@ const quickActionIcons: Record<string, React.ElementType> = {
 export default function Home() {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const [showSecondary, setShowSecondary] = useState(false);
+
   const { data: dailyMessage, isLoading: loadingMsg } = useDailyMessages();
   const { data: announcements, isLoading: loadingAnn } = useAnnouncements();
   const { data: events, isLoading: loadingEv } = useCalendarEvents();
@@ -41,10 +43,16 @@ export default function Home() {
   const { data: tickets } = useSupportTicketsNetwork();
   const { data: units } = useUnits();
   const { data: contracts } = useContracts();
+  // Secondary queries — deferred for mobile performance
   const { data: goals } = useActiveGoals("network");
   const { data: goalProgress } = useGoalProgress(goals);
   const { data: clientStats } = useNetworkClientStats();
   const { data: aiUsage } = useNetworkAIUsage();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSecondary(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const hoje = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const hojeCapitalized = hoje.charAt(0).toUpperCase() + hoje.slice(1);
