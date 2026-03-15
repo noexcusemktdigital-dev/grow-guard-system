@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("[invite-user] Function invoked at", new Date().toISOString());
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
