@@ -1,41 +1,64 @@
 
 
-## Diagnóstico: Convite mostra sucesso mas email não chega (Gmail)
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Causa raiz provável
+### Status: ✅ Implementado
 
-A Edge Function `invite-user` foi editada no código mas **pode não ter sido re-deployada** após as mudanças. Os logs da função estão completamente vazios, o que indica que ou a versão deployada ainda é a antiga (que usava `inviteUserByEmail`) ou a função não está respondendo como esperado.
+### Resumo
 
-Além disso, há um problema de escalabilidade: `adminClient.auth.admin.listUsers()` busca **todos os usuários** sem paginação. Com muitos usuários, isso pode causar timeout silencioso antes de chegar ao envio do email — o frontend recebe sucesso parcial.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-### Solução
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-1. **Re-deploy da Edge Function** `invite-user` para garantir que o código atualizado (createUser + Resend direto) está ativo
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-2. **Corrigir busca de usuário existente** — trocar `listUsers()` por uma busca específica usando `listUsers({ filter })` ou tentando criar diretamente e tratando o erro de duplicata. Isso evita timeout com bases grandes.
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-3. **Adicionar log estruturado** no início e fim da função para facilitar diagnóstico futuro
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-### Mudanças
+---
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/invite-user/index.ts` | Trocar `listUsers()` por busca específica por email; adicionar logs de diagnóstico |
-| Deploy | Re-deploy obrigatório da function |
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-### Detalhe técnico
+### Status: ✅ Documentado
 
-Trocar:
-```typescript
-const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-const existingUser = existingUsers?.users?.find((u) => u.email === email);
-```
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
-Por:
-```typescript
-const { data: { users } } = await adminClient.auth.admin.listUsers({ filter: email });
-const existingUser = users?.find((u) => u.email === email);
-```
+### Margem por Plano
 
-Isso faz uma busca filtrada no servidor em vez de baixar toda a base de usuários.
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
 
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

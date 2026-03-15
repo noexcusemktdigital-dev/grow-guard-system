@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("[invite-user] Function invoked at", new Date().toISOString());
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -127,9 +128,14 @@ Deno.serve(async (req) => {
     }
 
     // ---- Create user (instead of inviteUserByEmail) ----
-    // First check if user already exists
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find((u: any) => u.email === email);
+    // Search for existing user by email (filtered server-side to avoid timeout)
+    console.log("[invite-user] Checking if user exists:", email);
+    const { data: { users: matchedUsers } } = await adminClient.auth.admin.listUsers({
+      filter: email,
+      page: 1,
+      perPage: 1,
+    });
+    const existingUser = matchedUsers?.find((u: any) => u.email === email);
 
     let userId: string;
 
@@ -182,6 +188,7 @@ Deno.serve(async (req) => {
 
     // Send invite email via Resend directly
     const recoveryUrl = linkData?.properties?.action_link;
+    console.log("[invite-user] Recovery URL generated:", recoveryUrl ? "YES" : "NO");
     if (recoveryUrl) {
       try {
         await sendViaResend(email, buildInviteHtml(recoveryUrl));
