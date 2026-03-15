@@ -1,64 +1,39 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Problema
 
-### Status: ✅ Implementado
+O `FranqueadoWelcomeModal` abre em 800ms e o `FranqueadoTour` abre em 1000ms. Os dois se sobrepõem. O tour usa `z-[9999]` com um overlay que captura os cliques, impedindo que o botão "Entendi, vamos lá!" do welcome modal funcione. O modal fica preso atrás do tour.
 
-### Resumo
+## Solução
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+Coordenar os dois componentes para que o tour só abra **depois** que o welcome modal for fechado.
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+### Mudanças
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+**`FranqueadoTour.tsx`** (linhas 59-65):
+- Antes de abrir o tour, verificar se `franqueado_welcome_seen` já existe no localStorage
+- Se não existir, escutar mudanças no localStorage (via `storage` event ou polling) e só abrir quando o welcome for fechado
+- Alternativa mais simples: aumentar o delay do tour para 2000ms E verificar se o welcome já foi visto
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+**Abordagem escolhida** (mais robusta): Usar um intervalo curto que checa se o welcome já foi dismissado antes de mostrar o tour:
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+```typescript
+useEffect(() => {
+  if (localStorage.getItem(STORAGE_KEY)) return;
+  const interval = setInterval(() => {
+    // Only show tour after welcome modal is dismissed
+    if (localStorage.getItem("franqueado_welcome_seen")) {
+      clearInterval(interval);
+      setTimeout(() => setOpen(true), 500);
+    }
+  }, 500);
+  return () => clearInterval(interval);
+}, []);
+```
 
----
+Se o welcome já foi visto em uma sessão anterior, o tour abre normalmente após 1s como hoje.
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/FranqueadoTour.tsx` | Esperar welcome modal fechar antes de abrir |
 
-### Status: ✅ Documentado
-
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
-
-### Margem por Plano
-
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
