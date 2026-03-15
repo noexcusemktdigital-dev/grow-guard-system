@@ -188,6 +188,7 @@ Deno.serve(async (req) => {
 
     // Send invite email via Resend directly
     const recoveryUrl = linkData?.properties?.action_link;
+    console.log("[invite-user] Recovery URL generated:", recoveryUrl ? "YES" : "NO");
     if (recoveryUrl) {
       try {
         await sendViaResend(email, buildInviteHtml(recoveryUrl));
