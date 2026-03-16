@@ -1,64 +1,49 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Sessões independentes por portal (Franquia vs SaaS)
 
-### Status: ✅ Implementado
+### Problema
+O sistema usa um único cliente Supabase com uma única chave de armazenamento no `localStorage`. Quando o usuário loga no portal Franquia (`/acessofranquia`) e no portal SaaS (`/app`) no mesmo navegador, a segunda sessão sobrescreve a primeira — impossibilitando uso simultâneo.
 
-### Resumo
+### Causa raiz
+O arquivo `client.ts` (auto-gerado, não editável) cria um único `createClient` com o `storageKey` padrão. Todos os 108 arquivos do projeto importam `supabase` desse módulo. Resultado: uma sessão por navegador.
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+### Solução: Cliente com storageKey por portal
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+**1. Criar `src/lib/supabase.ts`** — novo módulo que detecta o portal pela URL e cria o cliente com um `storageKey` diferente:
+- Rotas `/cliente/*`, `/app`, `/landing`, `/` → storageKey `noe-saas-auth`
+- Rotas `/franqueadora/*`, `/franqueado/*`, `/acessofranquia` → storageKey `noe-franchise-auth`
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+```text
+const isSaas = path.startsWith('/cliente') || path.startsWith('/app') || path === '/';
+storageKey: isSaas ? 'noe-saas-auth' : 'noe-franchise-auth'
+```
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+**2. Atualizar todos os imports** (~108 arquivos: 66 hooks, 30 pages, 11 components, 1 lib)
+- De: `import { supabase } from "@/integrations/supabase/client"`
+- Para: `import { supabase } from "@/lib/supabase"`
+- Mudança mecânica sem lógica nova
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+**3. Tratar Google OAuth** — O `lovable/index.ts` (auto-gerado) usa `client.ts` para `setSession`. Após redirect do Google OAuth no SaaS, a sessão é salva na chave padrão do `client.ts`. No `AuthContext`, ao detectar portal SaaS sem sessão no cliente portal mas com sessão no cliente padrão, transferir a sessão automaticamente.
 
----
+**4. AuthContext** — Importar de `@/lib/supabase` para que `onAuthStateChange` e `getSession` usem o cliente correto do portal.
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+### Resultado esperado
+```text
+Tab 1: /acessofranquia → login → sessão salva em 'noe-franchise-auth'
+Tab 2: /app → login → sessão salva em 'noe-saas-auth'
+→ Ambas funcionam independentemente, sem conflito
+```
 
-### Status: ✅ Documentado
+### Arquivos impactados
+| Categoria | Qtd | Tipo de mudança |
+|-----------|-----|-----------------|
+| `src/lib/supabase.ts` | 1 | Novo arquivo |
+| `src/contexts/AuthContext.tsx` | 1 | Import + lógica de transferência OAuth |
+| `src/lib/portalRoleGuard.ts` | 1 | Trocar import |
+| `src/hooks/*.ts` | 66 | Trocar import (mecânico) |
+| `src/pages/*.tsx` | 30 | Trocar import (mecânico) |
+| `src/components/*.tsx` | 11 | Trocar import (mecânico) |
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+Total: ~110 arquivos editados, sendo 108 apenas troca de import.
 
-### Margem por Plano
-
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
