@@ -17,7 +17,7 @@ import {
   Share2, Plus, ArrowLeft, Image, Video, Check, RefreshCw, Download,
   Sparkles, Loader2, Upload, X, Clock, Eye, Type, Film, Smartphone,
   Monitor, LayoutGrid, Square, RectangleVertical, Palette, Box,
-  FileText, Wand2, AlertTriangle, FileDown
+  FileText, Wand2, AlertTriangle, FileDown, Trash2, CheckSquare
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
