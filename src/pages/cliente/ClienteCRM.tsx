@@ -868,6 +868,7 @@ export default function ClienteCRM() {
                           }}
                         />
                       </DroppableColumn>
+                      </div>
                     </div>
                   );
                 })}

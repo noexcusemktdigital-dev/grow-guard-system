@@ -490,6 +490,7 @@ export default function CrmExpansao() {
                         ))}
                         {stageLeads.length === 0 && <div className="text-center py-8 text-[11px] text-muted-foreground/50">Arraste leads aqui</div>}
                       </DroppableColumn>
+                      </div>
                     </div>
                   );
                 })}

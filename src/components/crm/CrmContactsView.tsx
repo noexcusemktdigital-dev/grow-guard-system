@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Users, Plus, Search, Upload, UserPlus, Filter, X, MoreHorizontal, Copy, Trash2, Tag, Building2, MapPin } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Users, Plus, Search, Upload, UserPlus, Filter, X, MoreHorizontal, Copy, Trash2, Tag, Building2, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,9 +16,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useCrmContacts, useCrmContactMutations, type CrmContact } from "@/hooks/useCrmContacts";
-import { useCrmLeads } from "@/hooks/useClienteCrm";
+import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useClienteCrm";
+import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useToast } from "@/hooks/use-toast";
 import { CrmCsvImportDialog } from "./CrmCsvImportDialog";
+import { DEFAULT_STAGES, type FunnelStage } from "@/components/crm/CrmStageSystem";
+
+const CONTACTS_PER_PAGE = 25;
 
 function ContactForm({ form, setForm }: { form: any; setForm: (f: any) => void }) {
   return (
@@ -64,6 +68,8 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
   const { data: contacts, isLoading } = useCrmContacts();
   const { data: leads } = useCrmLeads();
   const { createContact, updateContact, deleteContact, bulkUpdateContacts, bulkDeleteContacts } = useCrmContactMutations();
+  const { createLead } = useCrmLeadMutations();
+  const { data: funnelsData } = useCrmFunnels();
 
   const [search, setSearch] = useState("");
   const [newOpen, setNewOpen] = useState(false);
@@ -82,11 +88,50 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
   const [bulkTagInput, setBulkTagInput] = useState("");
   const [bulkSourceInput, setBulkSourceInput] = useState("");
   const [bulkCompanyInput, setBulkCompanyInput] = useState("");
+  const [page, setPage] = useState(0);
+
+  // Funnel/stage dialog for creating leads
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [convertContacts, setConvertContacts] = useState<CrmContact[]>([]);
+  const [selectedFunnelId, setSelectedFunnelId] = useState("");
+  const [selectedStage, setSelectedStage] = useState("");
 
   const [form, setForm] = useState(emptyForm);
   const resetForm = () => setForm(emptyForm);
 
   const allContacts = contacts || [];
+
+  const funnels = funnelsData || [];
+
+  const selectedFunnelStages: FunnelStage[] = useMemo(() => {
+    if (!selectedFunnelId) return [];
+    const funnel = funnels.find(f => f.id === selectedFunnelId);
+    if (!funnel) return DEFAULT_STAGES;
+    const dbStages = funnel.stages as any[];
+    if (Array.isArray(dbStages) && dbStages.length > 0) {
+      return dbStages.map((s: any) => ({
+        key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || "stage",
+        label: s.label || "Etapa",
+        color: s.color || "blue",
+        icon: s.icon || "circle-dot",
+      }));
+    }
+    return DEFAULT_STAGES;
+  }, [selectedFunnelId, funnels]);
+
+  // Auto-select first funnel and stage
+  useEffect(() => {
+    if (convertDialogOpen && funnels.length > 0 && !selectedFunnelId) {
+      const def = funnels.find(f => f.is_default) || funnels[0];
+      setSelectedFunnelId(def.id);
+    }
+  }, [convertDialogOpen, funnels, selectedFunnelId]);
+
+  useEffect(() => {
+    if (selectedFunnelStages.length > 0 && !selectedStage) {
+      setSelectedStage(selectedFunnelStages[0].key);
+    }
+  }, [selectedFunnelStages, selectedStage]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -143,12 +188,25 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
     return result;
   }, [allContacts, search, filterTag, filterSource, filterCompany, filterPosition, filterDateFrom, filterDateTo, filterHasLeads, leadsCountByContact]);
 
-  const allSelected = filtered.length > 0 && filtered.every(c => selectedIds.has(c.id));
+  // Reset page when filters/search change
+  useEffect(() => { setPage(0); }, [search, filterTag, filterSource, filterCompany, filterPosition, filterDateFrom, filterDateTo, filterHasLeads]);
+
+  const totalPages = Math.ceil(filtered.length / CONTACTS_PER_PAGE);
+  const paginatedContacts = filtered.slice(page * CONTACTS_PER_PAGE, (page + 1) * CONTACTS_PER_PAGE);
+
+  const allSelected = paginatedContacts.length > 0 && paginatedContacts.every(c => selectedIds.has(c.id));
   const someSelected = selectedIds.size > 0;
 
   const toggleAll = () => {
-    if (allSelected) setSelectedIds(new Set());
-    else setSelectedIds(new Set(filtered.map(c => c.id)));
+    if (allSelected) {
+      const next = new Set(selectedIds);
+      paginatedContacts.forEach(c => next.delete(c.id));
+      setSelectedIds(next);
+    } else {
+      const next = new Set(selectedIds);
+      paginatedContacts.forEach(c => next.add(c.id));
+      setSelectedIds(next);
+    }
   };
   const toggleOne = (id: string) => {
     const next = new Set(selectedIds);
@@ -194,11 +252,18 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
     setEditContact(c);
   };
 
+  // Open convert dialog
+  const openConvertDialog = (contactsToConvert: CrmContact[]) => {
+    setConvertContacts(contactsToConvert);
+    setSelectedFunnelId("");
+    setSelectedStage("");
+    setConvertDialogOpen(true);
+  };
+
   // Bulk actions
   const handleBulkAddTag = () => {
     if (!bulkTagInput.trim()) return;
     const ids = Array.from(selectedIds);
-    // We need to add the tag to each contact's existing tags - do individual updates
     const contactsToUpdate = allContacts.filter(c => selectedIds.has(c.id));
     contactsToUpdate.forEach(c => {
       const existingTags = c.tags || [];
@@ -235,11 +300,30 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
   };
 
   const handleBulkCreateLeads = () => {
-    if (!onCreateLeadFromContact) return;
     const contactsToConvert = allContacts.filter(c => selectedIds.has(c.id));
-    contactsToConvert.forEach(c => onCreateLeadFromContact(c));
+    openConvertDialog(contactsToConvert);
+  };
+
+  const handleConfirmConvertLeads = () => {
+    if (!selectedFunnelId || !selectedStage) {
+      toast({ title: "Selecione funil e etapa", variant: "destructive" });
+      return;
+    }
+    convertContacts.forEach(c => {
+      createLead.mutate({
+        name: c.name,
+        email: c.email || undefined,
+        phone: c.phone || undefined,
+        company: c.company || undefined,
+        source: c.source || undefined,
+        funnel_id: selectedFunnelId,
+        stage: selectedStage,
+      });
+    });
+    toast({ title: `${convertContacts.length} lead(s) criado(s) no funil selecionado` });
+    setConvertDialogOpen(false);
+    setConvertContacts([]);
     setSelectedIds(new Set());
-    toast({ title: `${contactsToConvert.length} leads criados a partir dos contatos` });
   };
 
   if (isLoading) return <Skeleton className="h-64" />;
@@ -267,11 +351,9 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
             <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkUpdateCompany} disabled={!bulkCompanyInput.trim()}><Building2 className="w-3 h-3 mr-1" /> Empresa</Button>
           </div>
 
-          {onCreateLeadFromContact && (
-            <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkCreateLeads}>
-              <UserPlus className="w-3 h-3 mr-1" /> Criar Leads
-            </Button>
-          )}
+          <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkCreateLeads}>
+            <UserPlus className="w-3 h-3 mr-1" /> Criar Leads
+          </Button>
 
           <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => setBulkDeleteOpen(true)}>
             <Trash2 className="w-3 h-3 mr-1" /> Excluir
@@ -415,7 +497,7 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
               </span>
             </div>
             <div className="divide-y">
-              {filtered.map(c => (
+              {paginatedContacts.map(c => (
                 <div key={c.id} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/30 transition-colors group">
                   <Checkbox checked={selectedIds.has(c.id)} onCheckedChange={() => toggleOne(c.id)} onClick={e => e.stopPropagation()} className="shrink-0" />
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0 cursor-pointer" onClick={() => openEdit(c)}>
@@ -440,11 +522,9 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
                       <DropdownMenuItem className="text-xs gap-2" onClick={() => openEdit(c)}>
                         <Users className="w-3 h-3" /> Editar
                       </DropdownMenuItem>
-                      {onCreateLeadFromContact && (
-                        <DropdownMenuItem className="text-xs gap-2" onClick={() => onCreateLeadFromContact(c)}>
-                          <UserPlus className="w-3 h-3" /> Criar Lead
-                        </DropdownMenuItem>
-                      )}
+                      <DropdownMenuItem className="text-xs gap-2" onClick={() => openConvertDialog([c])}>
+                        <UserPlus className="w-3 h-3" /> Criar Lead
+                      </DropdownMenuItem>
                       {c.phone && (
                         <DropdownMenuItem className="text-xs gap-2" onClick={() => { navigator.clipboard.writeText(c.phone!); toast({ title: "Telefone copiado" }); }}>
                           <Copy className="w-3 h-3" /> Copiar telefone
@@ -464,6 +544,23 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
                 </div>
               ))}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+                <span className="text-[11px] text-muted-foreground">
+                  Página {page + 1} de {totalPages} · {filtered.length} contato(s)
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
+                    <ChevronLeft className="w-3 h-3" /> Anterior
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
+                    Próximo <ChevronRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -509,6 +606,57 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Convert to Lead Dialog - Funnel & Stage selection */}
+      <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar Lead(s) no CRM</DialogTitle>
+            <DialogDescription>
+              {convertContacts.length} contato(s) serão convertidos em leads. Selecione o funil e a etapa de destino.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs font-semibold">Funil</Label>
+              <Select value={selectedFunnelId} onValueChange={v => { setSelectedFunnelId(v); setSelectedStage(""); }}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione o funil" /></SelectTrigger>
+                <SelectContent>
+                  {funnels.map(f => (
+                    <SelectItem key={f.id} value={f.id} className="text-sm">{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedFunnelStages.length > 0 && (
+              <div>
+                <Label className="text-xs font-semibold">Etapa inicial</Label>
+                <Select value={selectedStage} onValueChange={setSelectedStage}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger>
+                  <SelectContent>
+                    {selectedFunnelStages.map(s => (
+                      <SelectItem key={s.key} value={s.key} className="text-sm">{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {convertContacts.length <= 5 && (
+              <div className="text-xs text-muted-foreground space-y-0.5">
+                {convertContacts.map(c => (
+                  <p key={c.id}>• {c.name} {c.email ? `(${c.email})` : ""}</p>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConvertDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmConvertLeads} disabled={!selectedFunnelId || !selectedStage}>
+              <UserPlus className="w-4 h-4 mr-1" /> Criar {convertContacts.length} Lead(s)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
