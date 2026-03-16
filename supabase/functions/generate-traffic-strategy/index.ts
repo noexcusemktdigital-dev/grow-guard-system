@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     }
 
     // Pre-check credits (200 for traffic strategy)
-    const CREDIT_COST = 200;
+    const CREDIT_COST = 50;
     {
       const { data: wallet } = await adminClient
         .from("credit_wallets")

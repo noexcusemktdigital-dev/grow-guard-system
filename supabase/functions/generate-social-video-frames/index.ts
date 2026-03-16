@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CREDIT_COST_PER_FRAME = 100;
+const CREDIT_COST_PER_FRAME = 25;
 
 const STYLE_LABELS: Record<string, string> = {
   corporativo_moderno: "clean corporate advertising style with modern aesthetics",
