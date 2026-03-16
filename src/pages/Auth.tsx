@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
+import { validatePortalAccess } from "@/lib/portalRoleGuard";
 
 const PHRASES = [
   "SEM DESCULPAS.\nSÓ RESULTADOS.",
@@ -40,13 +41,20 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      setLoading(false);
       toast.error("Credenciais inválidas. Verifique seu email e senha.");
-    } else {
-      navigate("/");
+      return;
     }
+    // Block SaaS users from franchise portal
+    const check = await validatePortalAccess(data.user.id, "franchise");
+    setLoading(false);
+    if (!check.allowed) {
+      toast.error(check.message);
+      return;
+    }
+    navigate("/");
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

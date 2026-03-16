@@ -6,13 +6,21 @@ import { BrowserRouter } from "react-router-dom";
 // Mock supabase
 const mockSignIn = vi.fn();
 const mockResetPassword = vi.fn();
+const mockSignOut = vi.fn();
+const mockSelectRole = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: {
       signInWithPassword: (...args: any[]) => mockSignIn(...args),
       resetPasswordForEmail: (...args: any[]) => mockResetPassword(...args),
+      signOut: (...args: any[]) => mockSignOut(...args),
     },
+    from: () => ({
+      select: () => ({
+        eq: () => mockSelectRole(),
+      }),
+    }),
   },
 }));
 
@@ -42,6 +50,9 @@ function renderAuth() {
 describe("Auth (Franqueadora/Franqueado login)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: login succeeds and role is allowed (franqueado)
+    mockSignIn.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mockSelectRole.mockResolvedValue({ data: [{ role: "franqueado" }] });
   });
 
   it("renders email and password fields", () => {
@@ -56,7 +67,6 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
   });
 
   it("submits login with credentials", async () => {
-    mockSignIn.mockResolvedValue({ error: null });
     renderAuth();
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@test.com" } });
@@ -69,7 +79,7 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
   });
 
   it("shows error toast on login failure", async () => {
-    mockSignIn.mockResolvedValue({ error: { message: "Invalid" } });
+    mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Invalid" } });
     renderAuth();
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "bad@test.com" } });

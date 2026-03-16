@@ -12,6 +12,7 @@ import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
 import SaasBrandingPanel from "@/components/SaasBrandingPanel";
+import { validatePortalAccess } from "@/lib/portalRoleGuard";
 
 const BENEFITS = [
   "CRM completo para nunca perder uma venda",
@@ -67,17 +68,24 @@ const SaasAuth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      setLoading(false);
       if (error.message.includes("Email not confirmed")) {
         toast.error("Confirme seu email antes de entrar. Verifique sua caixa de entrada.");
       } else {
         toast.error("Credenciais inválidas. Verifique seu email e senha.");
       }
-    } else {
-      navigate("/cliente/inicio");
+      return;
     }
+    // Block franchise users from SaaS portal
+    const check = await validatePortalAccess(data.user.id, "saas");
+    setLoading(false);
+    if (!check.allowed) {
+      toast.error(check.message);
+      return;
+    }
+    navigate("/cliente/inicio");
   };
 
   const handleSignup = async (e: React.FormEvent) => {
