@@ -56,7 +56,7 @@ import {
   type Prospection,
 } from "@/hooks/useFranqueadoProspections";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 

@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { useCrmLeads } from "@/hooks/useClienteCrm";
 import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import {
   RadialBarChart, RadialBar, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,

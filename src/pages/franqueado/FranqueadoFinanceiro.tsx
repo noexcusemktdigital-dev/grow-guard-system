@@ -19,7 +19,7 @@ import { useFinanceClosings } from "@/hooks/useFinance";
 import { useClientPayments } from "@/hooks/useClientPayments";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];

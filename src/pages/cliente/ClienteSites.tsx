@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getEffectiveLimits } from "@/constants/plans";
 import { SitePreview } from "@/components/sites/SitePreview";

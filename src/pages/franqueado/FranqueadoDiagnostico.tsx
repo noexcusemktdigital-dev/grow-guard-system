@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ClipboardCheck, Save, Sparkles, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCrmLeads } from "@/hooks/useCrmLeads";

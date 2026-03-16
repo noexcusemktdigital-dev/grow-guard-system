@@ -70,7 +70,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 // ── Field types ─────────────────────────────────────────────────
 

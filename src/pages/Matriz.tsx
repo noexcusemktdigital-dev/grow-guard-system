@@ -15,7 +15,7 @@ import { EditMemberDialog } from "@/components/EditMemberDialog";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";

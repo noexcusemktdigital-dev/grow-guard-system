@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useContracts } from "@/hooks/useContracts";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { differenceInDays } from "date-fns";
 import { toast } from "sonner";
 

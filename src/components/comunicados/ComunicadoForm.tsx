@@ -20,7 +20,7 @@ import {
   CalendarClock, CalendarX, Building2, Upload, X, Loader2,
 } from "lucide-react";
 import { useUnits } from "@/hooks/useUnits";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 const tipoOptions: ComunicadoTipo[] = [
   "Informativo", "Atualização de sistema", "Alerta operacional", "Campanha", "Institucional", "Urgente",
