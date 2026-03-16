@@ -154,6 +154,38 @@ export default function ClienteRedesSociais() {
   const approvePost = useApprovePost();
   const generateBriefing = useGenerateBriefing();
   const generateVideoBriefing = useGenerateVideoBriefing();
+  const deletePost = useDeletePost();
+  const bulkDelete = useBulkDeletePosts();
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteSingle = (id: string) => {
+    deletePost.mutate(id, {
+      onSuccess: () => {
+        setDeleteTargetId(null);
+        if (generatedResult?.post.id === id) {
+          setGeneratedResult(null);
+          setView("history");
+        }
+      },
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    bulkDelete.mutate(Array.from(selectedIds), {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+        setSelectionMode(false);
+      },
+    });
+  };
 
   const fillTextFromContent = (content: ContentItem) => {
     const res = content.result as any;
