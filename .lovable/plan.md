@@ -1,41 +1,64 @@
 
 
-## Plano: Otimizar Plano de Vendas (Rafael) — de 33 para ~18 blocos
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
-O briefing do Rafael exibe "X/33" no header, o que assusta o usuário. São 4 intros + 29 perguntas, muitas redundantes com o que a plataforma já resolve.
+### Status: ✅ Implementado
 
-### Análise dos 33 blocos atuais
+### Resumo
 
-| Seção | Blocos | Ação |
-|-------|--------|------|
-| Intros (info) | 4 | Condensar em 1 |
-| Sobre o Negócio | 4 | Manter 4 |
-| Financeiro Comercial | 5 | Manter 4 (ciclo_recompra condicional) |
-| Equipe e Estrutura | 4 | Manter 3 (remover processo_documentado) |
-| Gestão de Leads | 4 | Manter 3 (remover qtd_leads_mes) |
-| Canais e Prospecção | 3 | Manter 2 (remover mede_roi) |
-| Processo de Vendas | 3 | Manter 1 (só etapas_funil — scripts e reunião são da plataforma) |
-| Ferramentas e Automação | 3 | Remover seção inteira (a plataforma substitui) |
-| Metas e Performance | 3+2 cond | Manter 2 + 2 condicionais |
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**Resultado: ~18 blocos** (vs 33 atuais), sem perder dados essenciais para a geração de estratégia.
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-### Mudanças
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-**1. `src/components/cliente/briefingAgents.ts`**
-- Condensar 4 intros em 1 mensagem única
-- Remover perguntas de baixo valor: `processo_documentado`, `qtd_leads_mes`, `mede_roi`, `usa_scripts`, `reuniao_recorrente`, `ferramentas_usadas`, `tem_automacoes`, `usa_agente_ia`, `relatorios`
-- Tornar `ciclo_recompra` condicional (`skipIf: tem_recorrencia === "nao"`)
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-**2. `src/components/cliente/ChatBriefing.tsx`**
-- Trocar o badge "X/33" por exibição da **seção atual** (ex: "Sobre o Negócio")
-- Ou mostrar apenas a barra de progresso sem o contador numérico
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-### Arquivos impactados
+---
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/cliente/briefingAgents.ts` | Reduzir RAFAEL_STEPS de 33 → ~18 |
-| `src/components/cliente/ChatBriefing.tsx` | Esconder contador "X/Y", mostrar seção |
+## Análise: Custo Real Lovable vs Receita dos Planos
 
+### Status: ✅ Documentado
+
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

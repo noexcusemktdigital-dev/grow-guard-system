@@ -320,9 +320,11 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
           <p className="text-[10px] text-muted-foreground">{agent.role}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[9px] tabular-nums">
-            {Math.min(currentStepIdx + 1, activeSteps.length)}/{activeSteps.length}
-          </Badge>
+          {currentStep?.section && (
+            <Badge variant="outline" className="text-[9px]">
+              {currentStep.section}
+            </Badge>
+          )}
           <Button variant="ghost" size="sm" className="h-7 text-[10px] text-muted-foreground" onClick={onCancel}>
             Cancelar
           </Button>
