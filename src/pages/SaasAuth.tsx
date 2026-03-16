@@ -381,7 +381,7 @@ const SaasAuth = () => {
                       <Link to="/privacidade" target="_blank" className="text-[hsl(355,78%,60%)] hover:underline">Política de Privacidade</Link>
                     </label>
                   </div>
-                  <Button type="submit" className="w-full bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white" disabled={loading || !acceptedTerms}>
+                  <Button type="submit" className="w-full bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white" disabled={loading || !acceptedTerms || !isPasswordValid}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Criar conta grátis
                   </Button>
                 </form>
