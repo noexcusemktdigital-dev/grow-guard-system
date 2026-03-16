@@ -13,7 +13,7 @@ import { useAnnouncementViews, useAnnouncementViewMutations } from "@/hooks/useA
 import { AlertTriangle, CheckCircle2, Download, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
-export function AnnouncementPopupDialog() {
+export function AnnouncementPopupDialog({ enabled = true }: { enabled?: boolean }) {
   const { data: announcements } = useAnnouncements();
   const { data: views } = useAnnouncementViews();
   const { markViewed, confirmRead } = useAnnouncementViewMutations();
