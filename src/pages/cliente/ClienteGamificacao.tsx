@@ -20,7 +20,7 @@ import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useMyEvaluations } from "@/hooks/useEvaluations";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useClienteContent, useClienteDispatches, useClienteSites } from "@/hooks/useClienteContent";
 import { useClienteAgents } from "@/hooks/useClienteAgents";

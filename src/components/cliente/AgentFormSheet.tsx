@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, Brain, BookOpen, Cog, Play, Plus, X, Sparkles, Upload, FileText, Link, MessageSquare, Send, Loader2, User, Camera, Trash2, Lock, ChevronRight, Clock, Shield, RotateCcw, History } from "lucide-react";
 import { useAgentStats } from "@/hooks/useClienteAgents";
 import { Switch } from "@/components/ui/switch";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useWhatsAppInstances } from "@/hooks/useWhatsApp";
 import { useQueryClient } from "@tanstack/react-query";

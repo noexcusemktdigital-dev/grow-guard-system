@@ -26,7 +26,7 @@ import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { CelebrationEffect, triggerCelebration } from "@/components/CelebrationEffect";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 const categoryConfig: Record<string, { color: string; icon: string }> = {
   comercial: { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: "💼" },

@@ -20,7 +20,7 @@ import { useClienteAgents } from "@/hooks/useClienteAgents";
 import { useCrmLeads } from "@/hooks/useClienteCrm";
 import { useCrmLeadMutations, useCrmFunnels } from "@/hooks/useClienteCrm";
 import { useLinkContactToCrmLead } from "@/hooks/useWhatsApp";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";

@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { usePostHistory, useGeneratePost, useApprovePost, useDeletePost, useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing, PostItem } from "@/hooks/useClientePosts";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useSearchParams } from "react-router-dom";
 import {

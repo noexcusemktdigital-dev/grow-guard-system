@@ -16,7 +16,7 @@ import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useCrmSettings, useCrmSettingsMutations } from "@/hooks/useCrmSettings";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,

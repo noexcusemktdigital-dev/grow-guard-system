@@ -11,7 +11,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUnits } from "@/hooks/useUnits";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { differenceInDays } from "date-fns";
 import { toast } from "sonner";
 

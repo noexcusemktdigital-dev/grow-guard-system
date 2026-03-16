@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClienteScripts, useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 import { useStrategyData } from "@/hooks/useStrategyData";

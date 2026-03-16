@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
+import { supabase as defaultClient } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface Profile {
@@ -125,13 +126,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-      if (existingSession?.user) {
+    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+      if (existingSession) {
+        setSession(existingSession);
+        setUser(existingSession.user);
         fetchProfileAndRole(existingSession.user);
+        setLoading(false);
+      } else {
+        // Check default client for OAuth redirect sessions (Google OAuth stores in default key)
+        const { data: { session: defaultSession } } = await defaultClient.auth.getSession();
+        if (defaultSession) {
+          console.log("[Auth] Transferring OAuth session from default client to portal client");
+          const { data: { session: transferred } } = await supabase.auth.setSession({
+            access_token: defaultSession.access_token,
+            refresh_token: defaultSession.refresh_token,
+          });
+          // Sign out from default client to avoid conflicts
+          await defaultClient.auth.signOut();
+          if (transferred) {
+            setSession(transferred);
+            setUser(transferred.user);
+            fetchProfileAndRole(transferred.user);
+          }
+        }
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();

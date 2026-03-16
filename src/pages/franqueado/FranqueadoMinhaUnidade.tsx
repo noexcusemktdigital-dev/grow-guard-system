@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { UnidadeDadosEdit } from "@/components/unidades/UnidadeDadosEdit";
 import { UnidadeUsuariosReal } from "@/components/unidades/UnidadeUsuariosReal";
 import { UnidadeDocumentosReal } from "@/components/unidades/UnidadeDocumentosReal";
