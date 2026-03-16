@@ -127,24 +127,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ---- Create user (instead of inviteUserByEmail) ----
-    // Search for existing user by email (filtered server-side to avoid timeout)
-    console.log("[invite-user] Checking if user exists:", email);
-    const { data: { users: matchedUsers } } = await adminClient.auth.admin.listUsers({
-      filter: email,
-      page: 1,
-      perPage: 1,
+    // ---- Create user (try-first approach) ----
+    console.log("[invite-user] Attempting to create user:", email);
+    const tempPassword = crypto.randomUUID() + "Aa1!";
+    const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { full_name: full_name || email.split("@")[0] },
     });
-    const existingUser = matchedUsers?.find((u: any) => u.email === email);
 
     let userId: string;
 
-    if (existingUser) {
-      // User already exists in auth - check if already in this org
+    if (createErr && (createErr as any).code === "email_exists") {
+      // User already exists — find them
+      console.log("[invite-user] User already exists, looking up:", email);
+      const { data: { users } } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 50 });
+      const existing = users?.find((u: any) => u.email === email);
+      if (!existing) throw new Error("Usuário existe mas não foi encontrado na listagem");
+
+      // Check if already member of this org
       const { data: existingMembership } = await adminClient
         .from("organization_memberships")
         .select("id")
-        .eq("user_id", existingUser.id)
+        .eq("user_id", existing.id)
         .eq("organization_id", organization_id)
         .maybeSingle();
 
@@ -155,21 +161,11 @@ Deno.serve(async (req) => {
         );
       }
 
-      userId = existingUser.id;
+      userId = existing.id;
+    } else if (createErr) {
+      console.error("createUser error:", createErr);
+      throw createErr;
     } else {
-      // Create new user with email already confirmed
-      const tempPassword = crypto.randomUUID() + "Aa1!";
-      const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: { full_name: full_name || email.split("@")[0] },
-      });
-
-      if (createErr) {
-        console.error("createUser error:", createErr);
-        throw createErr;
-      }
       userId = newUser.user.id;
     }
 
