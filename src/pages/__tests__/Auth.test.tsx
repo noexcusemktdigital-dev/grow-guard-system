@@ -6,13 +6,21 @@ import { BrowserRouter } from "react-router-dom";
 // Mock supabase
 const mockSignIn = vi.fn();
 const mockResetPassword = vi.fn();
+const mockSignOut = vi.fn();
+const mockSelectRole = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: {
       signInWithPassword: (...args: any[]) => mockSignIn(...args),
       resetPasswordForEmail: (...args: any[]) => mockResetPassword(...args),
+      signOut: (...args: any[]) => mockSignOut(...args),
     },
+    from: () => ({
+      select: () => ({
+        eq: () => mockSelectRole(),
+      }),
+    }),
   },
 }));
 
