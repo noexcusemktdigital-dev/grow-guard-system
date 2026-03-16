@@ -142,6 +142,9 @@ export default function ClienteRedesSociais() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [showContentPicker, setShowContentPicker] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const { data: orgId } = useUserOrgId();
   const { data: posts, isLoading: postsLoading } = usePostHistory();
