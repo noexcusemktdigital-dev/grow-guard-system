@@ -24,6 +24,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, prefillCont
   const { toast } = useToast();
   const { createLead } = useCrmLeadMutations();
   const { data: contacts } = useCrmContacts();
+  const { data: funnelsData } = useCrmFunnels();
   const { maxLeads, atLimit } = useLeadQuota();
 
   const [name, setName] = useState("");
