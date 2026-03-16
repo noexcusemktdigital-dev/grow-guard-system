@@ -30,7 +30,6 @@ import { toast } from "sonner";
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { CrmLeadDetailSheet } from "@/components/franqueado/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
-import { CrmFunnelManager } from "@/components/crm/CrmFunnelManager";
 import { CrmContactsView } from "@/components/crm/CrmContactsView";
 import { CrmCsvImportDialog } from "@/components/crm/CrmCsvImportDialog";
 import { CrmTutorial } from "@/components/crm/CrmTutorial";
@@ -157,7 +156,6 @@ export default function FranqueadoCRM() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
-  const [funnelManagerOpen, setFunnelManagerOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
@@ -297,7 +295,7 @@ export default function FranqueadoCRM() {
               </div>
             </>
           )}
-          <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setFunnelManagerOpen(true)}><Settings2 className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>Gerenciar Funis</TooltipContent></Tooltip></TooltipProvider>
+          <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigate("/franqueado/crm/config")}><Settings2 className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>Configurações do CRM</TooltipContent></Tooltip></TooltipProvider>
         </div>
       </div>
 
@@ -305,6 +303,24 @@ export default function FranqueadoCRM() {
 
       {activeTab === "pipeline" && (
         <>
+          {/* Empty State: No funnels */}
+          {!funnelsLoading && accessibleFunnels.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Settings2 className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Configure seu primeiro funil</h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-md">
+                  Antes de adicionar leads, crie pelo menos um funil com as etapas do seu processo comercial.
+                </p>
+                <Button onClick={() => navigate("/franqueado/crm/config")} className="gap-2">
+                  <Settings2 className="w-4 h-4" /> Criar Funil
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+          <>
           {/* Pipeline Summary */}
           {allLeads.length > 0 && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -533,12 +549,13 @@ export default function FranqueadoCRM() {
               </CardContent>
             </Card>
           )}
+          </>
+          )}
         </>
       )}
 
       <CrmLeadDetailSheet lead={selectedLead} open={detailOpen} onOpenChange={setDetailOpen} />
       <CrmNewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} defaultStage={stages[0]?.key || "novo"} />
-      <CrmFunnelManager open={funnelManagerOpen} onOpenChange={setFunnelManagerOpen} />
       <CrmCsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
 
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>

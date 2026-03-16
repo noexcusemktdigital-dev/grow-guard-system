@@ -138,6 +138,7 @@ const App = () => (
                   <Route path="metas" element={<MetasRanking />} />
                   <Route path="unidades" element={<Unidades />} />
                   <Route path="crm" element={<CrmExpansao />} />
+                  <Route path="crm/config" element={<CrmConfigPage />} />
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="atendimento" element={<Atendimento />} />
                   <Route path="comunicados" element={<Comunicados />} />
@@ -164,6 +165,7 @@ const App = () => (
                   <Route path="estrategia" element={<FranqueadoEstrategia />} />
                   <Route path="propostas" element={<FranqueadoPropostas />} />
                   <Route path="crm" element={<FranqueadoCRM />} />
+                  <Route path="crm/config" element={<CrmConfigPage />} />
                   <Route path="materiais" element={<FranqueadoMateriais />} />
                   <Route path="academy" element={<FranqueadoAcademy />} />
                   <Route path="financeiro" element={<FranqueadoFinanceiro />} />

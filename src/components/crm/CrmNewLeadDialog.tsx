@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmContacts } from "@/hooks/useCrmContacts";
+import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useLeadQuota } from "@/hooks/useLeadQuota";
 import { useToast } from "@/hooks/use-toast";
 import { Search, UserCircle } from "lucide-react";
@@ -23,6 +24,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, prefillCont
   const { toast } = useToast();
   const { createLead } = useCrmLeadMutations();
   const { data: contacts } = useCrmContacts();
+  const { data: funnelsData } = useCrmFunnels();
   const { maxLeads, atLimit } = useLeadQuota();
 
   const [name, setName] = useState("");
@@ -75,6 +77,10 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, prefillCont
   };
 
   const handleCreate = () => {
+    if (!funnelsData || funnelsData.length === 0) {
+      toast({ title: "Nenhum funil configurado", description: "Crie pelo menos um funil nas configurações do CRM antes de adicionar leads.", variant: "destructive" });
+      return;
+    }
     if (atLimit) {
       toast({ title: "Limite de leads atingido", description: "Faça upgrade do plano para adicionar mais leads.", variant: "destructive" });
       return;
