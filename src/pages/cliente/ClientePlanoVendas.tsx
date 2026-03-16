@@ -1055,79 +1055,120 @@ export default function ClientePlanoVendas() {
                     </div>
                   </div>
 
-                  {/* Projeção Leads */}
-                  <Card className="glass-card">
-                    <CardContent className="py-6">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">PROJEÇÃO DE LEADS</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-2">Sem Estratégia</p>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={leadsProjection}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                                <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                                <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" domain={[0, Math.max(...leadsProjection.map(d => d.comEstrategia))]} />
-                                <RechartsTooltip />
-                                <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted) / 0.3)" strokeWidth={2} name="Cenário Atual" strokeDasharray="5 5" />
-                              </AreaChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-primary mb-2">Com Estratégia</p>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={leadsProjection}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                                <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                                <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" domain={[0, Math.max(...leadsProjection.map(d => d.comEstrategia))]} />
-                                <RechartsTooltip />
-                                <Area type="monotone" dataKey="comEstrategia" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.1)" strokeWidth={2} name="Com Estratégia" />
-                              </AreaChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* ═══ KPI Cards de Impacto ═══ */}
+                  {(() => {
+                    const lastLead = leadsProjection[leadsProjection.length - 1];
+                    const lastRev = revenueProjection[revenueProjection.length - 1];
+                    const leadGrowth = lastLead.atual > 0 ? Math.round(((lastLead.comEstrategia - lastLead.atual) / lastLead.atual) * 100) : 0;
+                    const revGrowth = lastRev.atual > 0 ? Math.round(((lastRev.comEstrategia - lastRev.atual) / lastRev.atual) * 100) : 0;
+                    const ticketMap2: Record<string, number> = { "0-200": 150, "200-1k": 600, "1-5k": 3000, "5-15k": 10000, "15k+": 20000 };
+                    const ticket2 = ticketMap2[answers.ticket_medio as string] || 600;
+                    const conv2 = 0.1;
+                    const closingsM6 = Math.round(lastLead.comEstrategia * conv2);
+                    const funnelData = [
+                      { stage: "Leads", value: lastLead.comEstrategia, fill: "hsl(var(--primary))" },
+                      { stage: "Qualificados", value: Math.round(lastLead.comEstrategia * 0.5), fill: "hsl(var(--chart-1))" },
+                      { stage: "Propostas", value: Math.round(lastLead.comEstrategia * 0.2), fill: "hsl(var(--chart-2))" },
+                      { stage: "Fechamentos", value: closingsM6, fill: "hsl(var(--chart-3))" },
+                    ];
 
-                  {/* Projeção Receita */}
-                  <Card className="glass-card">
-                    <CardContent className="py-6">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">PROJEÇÃO DE RECEITA</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-2">Sem Estratégia</p>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={revenueProjection}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                                <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                                <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" domain={[0, Math.max(...revenueProjection.map(d => d.comEstrategia))]} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                                <RechartsTooltip formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, ""]} />
-                                <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted) / 0.3)" strokeWidth={2} name="Cenário Atual" strokeDasharray="5 5" />
-                              </AreaChart>
-                            </ResponsiveContainer>
-                          </div>
+                    return (
+                      <>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {[
+                            { label: "Receita Projetada M6", value: `R$ ${(lastRev.comEstrategia / 1000).toFixed(0)}k`, sublabel: `vs R$ ${(lastRev.atual / 1000).toFixed(0)}k atual` },
+                            { label: "Crescimento Receita", value: `+${revGrowth}%`, sublabel: "em 6 meses" },
+                            { label: "Leads Projetados M6", value: `${lastLead.comEstrategia}`, sublabel: `vs ${lastLead.atual} atual` },
+                            { label: "Fechamentos M6", value: `${closingsM6}`, sublabel: `${Math.round(conv2 * 100)}% conversão` },
+                          ].map((kpi, i) => (
+                            <Card key={i} className="glass-card border-primary/10 overflow-hidden group relative">
+                              <div className="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-150 transition-transform duration-500" />
+                              <CardContent className="py-4 px-4 relative">
+                                <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">{kpi.label}</p>
+                                <div className="flex items-end gap-2 mt-1">
+                                  <span className="text-xl font-black tracking-tight text-kpi-positive">{kpi.value}</span>
+                                  <TrendingUp className="w-3.5 h-3.5 text-kpi-positive mb-1" />
+                                </div>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">{kpi.sublabel}</p>
+                              </CardContent>
+                            </Card>
+                          ))}
                         </div>
-                        <div>
-                          <p className="text-xs font-medium text-emerald-500 mb-2">Com Estratégia</p>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={revenueProjection}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                                <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                                <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" domain={[0, Math.max(...revenueProjection.map(d => d.comEstrategia))]} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                                <RechartsTooltip formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, ""]} />
-                                <Area type="monotone" dataKey="comEstrategia" stroke="hsl(var(--chart-3))" fill="hsl(var(--chart-3) / 0.1)" strokeWidth={2} name="Com Estratégia" />
-                              </AreaChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+
+                        {/* ═══ Gráfico Receita Sobreposto ═══ */}
+                        <Card className="glass-card">
+                          <CardContent className="py-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">PROJEÇÃO DE RECEITA — 6 MESES</p>
+                              <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="text-[9px] gap-1 border-muted-foreground/30">
+                                  <span className="w-2 h-0.5 bg-muted-foreground inline-block" style={{ borderTop: "2px dashed" }} /> Cenário Atual
+                                </Badge>
+                                <Badge className="text-[9px] gap-1 bg-primary/10 text-primary border-primary/20 hover:bg-primary/10">
+                                  <span className="w-2 h-2 rounded-full bg-primary inline-block" /> Com Estratégia
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="h-64 relative">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={revenueProjection} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                  <defs>
+                                    <linearGradient id="gradRevStrategy" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+                                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                                    </linearGradient>
+                                  </defs>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                                  <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} />
+                                  <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                                  <RechartsTooltip
+                                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                                    formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR")}`, ""]}
+                                  />
+                                  <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="transparent" strokeWidth={2} strokeDasharray="6 4" name="Cenário Atual" />
+                                  <Area type="monotone" dataKey="comEstrategia" stroke="hsl(var(--primary))" fill="url(#gradRevStrategy)" strokeWidth={2.5} name="Com Estratégia" />
+                                </AreaChart>
+                              </ResponsiveContainer>
+                              {/* Floating growth badge */}
+                              <div className="absolute top-2 right-4 flex flex-col items-end gap-1">
+                                <Badge className="bg-kpi-positive/10 text-kpi-positive border-kpi-positive/20 hover:bg-kpi-positive/10 text-xs font-bold">
+                                  +{revGrowth}%
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground">crescimento projetado</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* ═══ Funil de Conversão Horizontal ═══ */}
+                        <Card className="glass-card">
+                          <CardContent className="py-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">FUNIL DE CONVERSÃO PROJETADO — MÊS 6</p>
+                              <Badge variant="outline" className="text-[9px]">Ticket: R$ {ticket2.toLocaleString("pt-BR")}</Badge>
+                            </div>
+                            <div className="h-52">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={funnelData} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                                  <XAxis type="number" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} />
+                                  <YAxis type="category" dataKey="stage" tick={{ fontSize: 11, fontWeight: 600 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} width={90} />
+                                  <RechartsTooltip
+                                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                                  />
+                                  <Bar dataKey="value" radius={[0, 6, 6, 0]} name="Quantidade" barSize={28}>
+                                    {funnelData.map((entry, idx) => (
+                                      <Cell key={idx} fill={entry.fill} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
               </CollapsibleContent>
