@@ -39,6 +39,7 @@ const Agenda = lazy(() => import("./pages/Agenda"));
 const Matriz = lazy(() => import("./pages/Matriz"));
 const SaasDashboard = lazy(() => import("./pages/franqueadora/SaasDashboard"));
 const FranqueadoraPropostas = lazy(() => import("./pages/franqueadora/FranqueadoraPropostas"));
+const Playbooks = lazy(() => import("./pages/franqueadora/Playbooks"));
 const FranqueadoraPerfil = lazy(() => import("./pages/franqueadora/FranqueadoraPerfil"));
 const NotificacoesPage = lazy(() => import("./pages/NotificacoesPage"));
 
