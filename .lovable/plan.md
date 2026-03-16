@@ -1,64 +1,35 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Separação de Portais de Login por Papel (Role)
 
-### Status: ✅ Implementado
+### Problema
+Ambos os portais (`/app` e `/acessofranquia`) usam a mesma autenticação. Um usuário da Matriz consegue logar via `/app` e ser redirecionado para o sistema, quando deveria ser bloqueado.
 
-### Resumo
+### Regra
+- `/app` (SaasAuth): aceita **apenas** `cliente_admin` e `cliente_user`
+- `/acessofranquia` (Auth): aceita **apenas** `super_admin`, `admin` e `franqueado`
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+### Solução
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/SaasAuth.tsx` | Após login com sucesso, buscar role do usuário. Se for `super_admin`/`admin`/`franqueado`, fazer signOut e mostrar erro "Esta conta pertence ao portal da franquia. Acesse /acessofranquia" |
+| `src/pages/Auth.tsx` | Após login com sucesso, buscar role do usuário. Se for `cliente_admin`/`cliente_user`, fazer signOut e mostrar erro "Esta conta pertence ao portal SaaS. Acesse /app" |
+| `src/pages/SaasAuth.tsx` | No useEffect de sessão existente (se houver), também validar role e redirecionar/bloquear |
+| `src/pages/Auth.tsx` | Idem |
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+### Fluxo pós-login
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+```text
+Login → signInWithPassword → sucesso
+  → buscar role via user_roles
+  → role compatível com portal? 
+    SIM → navigate normalmente
+    NÃO → signOut() + toast.error("Acesse pelo portal correto")
+```
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### Detalhes
+- A validação será feita logo após o `signInWithPassword` retornar sucesso, antes do `navigate()`
+- Para Google OAuth no `/app`, a validação acontecerá no `onAuthStateChange` (o usuário já é criado como cliente, então conflito é improvável, mas será protegido)
+- A busca de role será uma query simples: `supabase.from("user_roles").select("role").eq("user_id", user.id)`
 
----
-
-## Análise: Custo Real Lovable vs Receita dos Planos
-
-### Status: ✅ Documentado
-
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
-
-### Margem por Plano
-
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
