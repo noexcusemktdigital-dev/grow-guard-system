@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles, CheckCircle2, Check, X, AlertTriangle } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
 import SaasBrandingPanel from "@/components/SaasBrandingPanel";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
@@ -88,10 +88,21 @@ const SaasAuth = () => {
     navigate("/cliente/inicio");
   };
 
+  const passwordChecks = [
+    { label: "Mínimo 8 caracteres", ok: password.length >= 8 },
+    { label: "Letra maiúscula (A-Z)", ok: /[A-Z]/.test(password) },
+    { label: "Número (0-9)", ok: /[0-9]/.test(password) },
+    { label: "Caractere especial (!@#$...)", ok: /[^A-Za-z0-9]/.test(password) },
+  ];
+  const passedChecks = passwordChecks.filter(c => c.ok).length;
+  const passwordStrength = passedChecks <= 1 ? "fraca" : passedChecks <= 3 ? "média" : "forte";
+  const strengthColor = passwordStrength === "fraca" ? "hsl(0,72%,51%)" : passwordStrength === "média" ? "hsl(45,93%,52%)" : "hsl(142,71%,45%)";
+  const isPasswordValid = password.length >= 8;
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.");
+    if (!isPasswordValid) {
+      toast.error("A senha deve ter pelo menos 8 caracteres.");
       return;
     }
     if (!acceptedTerms) {
@@ -189,10 +200,16 @@ const SaasAuth = () => {
               <CheckCircle2 className="h-8 w-8 text-[hsl(355,78%,50%)]" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Verifique seu email</h2>
-            <p className="text-white/50 text-sm mb-6">
+            <p className="text-white/50 text-sm mb-4">
               Enviamos um link de confirmação para <span className="text-white font-medium">{email}</span>. 
               Clique no link para ativar sua conta e começar seu período de teste gratuito.
             </p>
+            <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-6">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <p className="text-xs text-amber-300/90 text-left">
+                Não encontrou? Verifique sua pasta de <strong>Spam</strong> ou <strong>Lixo eletrônico</strong>.
+              </p>
+            </div>
             <div className="space-y-3">
               <Button
                 variant="outline"
@@ -326,8 +343,35 @@ const SaasAuth = () => {
                     <Label htmlFor="signup-password" className="text-white/70">Senha</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                      <Input id="signup-password" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
+                      <Input id="signup-password" type="password" placeholder="Mínimo 8 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
                     </div>
+                    {password.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{ width: `${(passedChecks / 4) * 100}%`, backgroundColor: strengthColor }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-medium" style={{ color: strengthColor }}>
+                            {passwordStrength === "fraca" ? "Fraca" : passwordStrength === "média" ? "Média" : "Forte"}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                          {passwordChecks.map((c) => (
+                            <div key={c.label} className="flex items-center gap-1.5">
+                              {c.ok ? (
+                                <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                              ) : (
+                                <X className="w-3 h-3 text-white/25 shrink-0" />
+                              )}
+                              <span className={`text-[10px] ${c.ok ? "text-emerald-400" : "text-white/35"}`}>{c.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-start space-x-2">
                     <Checkbox
@@ -343,7 +387,7 @@ const SaasAuth = () => {
                       <Link to="/privacidade" target="_blank" className="text-[hsl(355,78%,60%)] hover:underline">Política de Privacidade</Link>
                     </label>
                   </div>
-                  <Button type="submit" className="w-full bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white" disabled={loading || !acceptedTerms}>
+                  <Button type="submit" className="w-full bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white" disabled={loading || !acceptedTerms || !isPasswordValid}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Criar conta grátis
                   </Button>
                 </form>

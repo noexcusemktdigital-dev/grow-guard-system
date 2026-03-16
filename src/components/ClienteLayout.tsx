@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { ClienteSidebar, ClienteSidebarContent } from "./ClienteSidebar";
 import { FeatureGateProvider } from "@/contexts/FeatureGateContext";
@@ -7,6 +7,7 @@ import { CreditAlertBanner } from "./cliente/CreditAlertBanner";
 import { TrialCountdownBanner } from "./cliente/TrialCountdownBanner";
 import { ActionAlertsBanner } from "./cliente/ActionAlertsBanner";
 import { OnboardingTour } from "./cliente/OnboardingTour";
+import { TrialWelcomeModal } from "./cliente/TrialWelcomeModal";
 import { CelebrationEffect } from "./CelebrationEffect";
 import { AnnouncementPopupDialog } from "./AnnouncementPopupDialog";
 import { Menu } from "lucide-react";
@@ -16,6 +17,13 @@ export function ClienteLayout() {
   const location = useLocation();
   const isChatRoute = location.pathname === "/cliente/chat";
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Sequence: Welcome Modal → Tour → Announcements
+  const [welcomeDone, setWelcomeDone] = useState(false);
+  const [tourDone, setTourDone] = useState(false);
+
+  const handleWelcomeDone = useCallback(() => setWelcomeDone(true), []);
+  const handleTourDone = useCallback(() => setTourDone(true), []);
 
   return (
     <FeatureGateProvider>
@@ -56,9 +64,10 @@ export function ClienteLayout() {
           <FeatureGateOverlay />
         </main>
       </div>
-      <OnboardingTour />
+      <TrialWelcomeModal onComplete={handleWelcomeDone} />
+      <OnboardingTour enabled={welcomeDone} onComplete={handleTourDone} />
       <CelebrationEffect />
-      <AnnouncementPopupDialog />
+      <AnnouncementPopupDialog enabled={tourDone} />
     </FeatureGateProvider>
   );
 }

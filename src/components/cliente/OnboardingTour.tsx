@@ -57,7 +57,7 @@ const STEPS: TourStep[] = [
   },
 ];
 
-export function OnboardingTour() {
+export function OnboardingTour({ enabled = true, onComplete }: { enabled?: boolean; onComplete?: () => void }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
@@ -65,12 +65,15 @@ export function OnboardingTour() {
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     const done = localStorage.getItem(STORAGE_KEY);
     if (!done) {
       const timer = setTimeout(() => setOpen(true), 1000);
       return () => clearTimeout(timer);
+    } else {
+      onComplete?.();
     }
-  }, []);
+  }, [enabled]);
 
   const positionTooltip = useCallback(() => {
     const current = STEPS[step];
@@ -135,6 +138,7 @@ export function OnboardingTour() {
   const handleClose = () => {
     setOpen(false);
     localStorage.setItem(STORAGE_KEY, "true");
+    onComplete?.();
   };
 
   const handleNext = () => {
