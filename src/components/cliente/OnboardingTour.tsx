@@ -138,6 +138,7 @@ export function OnboardingTour({ enabled = true, onComplete }: { enabled?: boole
   const handleClose = () => {
     setOpen(false);
     localStorage.setItem(STORAGE_KEY, "true");
+    onComplete?.();
   };
 
   const handleNext = () => {

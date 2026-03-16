@@ -34,11 +34,11 @@ export function AnnouncementPopupDialog({ enabled = true }: { enabled?: boolean 
   }, [announcements, viewedIds]);
 
   useEffect(() => {
-    if (popupAnnouncements.length > 0) {
+    if (enabled && popupAnnouncements.length > 0) {
       setOpen(true);
       setCurrentIndex(0);
     }
-  }, [popupAnnouncements.length]);
+  }, [popupAnnouncements.length, enabled]);
 
   const current = popupAnnouncements[currentIndex];
   if (!current) return null;

@@ -23,7 +23,7 @@ const BLOCKED = [
 
 const STORAGE_KEY = "trial_welcome_seen";
 
-export function TrialWelcomeModal() {
+export function TrialWelcomeModal({ onComplete }: { onComplete?: () => void }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const { data: subscription } = useClienteSubscription();
@@ -32,12 +32,16 @@ export function TrialWelcomeModal() {
     if (subscription?.status === "trial" && !localStorage.getItem(STORAGE_KEY)) {
       const timer = setTimeout(() => setOpen(true), 800);
       return () => clearTimeout(timer);
+    } else if (subscription !== undefined) {
+      // Not trial or already seen — signal done immediately
+      onComplete?.();
     }
   }, [subscription]);
 
   const handleClose = () => {
     localStorage.setItem(STORAGE_KEY, "1");
     setOpen(false);
+    onComplete?.();
   };
 
   const handleStart = () => {

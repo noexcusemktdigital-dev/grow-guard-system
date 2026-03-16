@@ -200,10 +200,16 @@ const SaasAuth = () => {
               <CheckCircle2 className="h-8 w-8 text-[hsl(355,78%,50%)]" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Verifique seu email</h2>
-            <p className="text-white/50 text-sm mb-6">
+            <p className="text-white/50 text-sm mb-4">
               Enviamos um link de confirmação para <span className="text-white font-medium">{email}</span>. 
               Clique no link para ativar sua conta e começar seu período de teste gratuito.
             </p>
+            <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-6">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <p className="text-xs text-amber-300/90 text-left">
+                Não encontrou? Verifique sua pasta de <strong>Spam</strong> ou <strong>Lixo eletrônico</strong>.
+              </p>
+            </div>
             <div className="space-y-3">
               <Button
                 variant="outline"
