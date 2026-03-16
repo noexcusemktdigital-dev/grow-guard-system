@@ -540,7 +540,21 @@ export default function ClienteRedesSociais() {
           title="Postagens"
           subtitle="Gere artes e vídeos para redes sociais"
           icon={<Share2 className="w-5 h-5 text-primary" />}
-          actions={<Button onClick={() => setView("wizard")}><Plus className="w-4 h-4 mr-1" /> Nova Postagem</Button>}
+          actions={
+            <div className="flex items-center gap-2">
+              {posts && posts.length > 0 && (
+                <Button
+                  variant={selectionMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => { setSelectionMode(!selectionMode); setSelectedIds(new Set()); }}
+                >
+                  <CheckSquare className="w-4 h-4 mr-1" />
+                  {selectionMode ? "Cancelar" : "Selecionar"}
+                </Button>
+              )}
+              <Button onClick={() => setView("wizard")}><Plus className="w-4 h-4 mr-1" /> Nova Postagem</Button>
+            </div>
+          }
         />
         <StrategyBanner toolName="suas postagens" dataUsed="Tom de voz, persona e estilo visual" />
         {postsLoading ? (
