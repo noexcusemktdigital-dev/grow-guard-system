@@ -453,7 +453,7 @@ export default function FranqueadoCRM() {
                     const stageLeads = leadsByStage[stage.key] || [];
                     const colorStyle = getColorStyle(stage.color);
                     return (
-                      <div key={stage.key} className="min-w-[260px] max-w-[280px] flex-shrink-0">
+                      <div key={stage.key} className="min-w-[260px] max-w-[280px] flex-shrink-0 flex flex-col">
                         <div className={`flex items-center gap-2 px-3 py-2 rounded-t-xl border-b-2 ${colorStyle.border} bg-gradient-to-r ${colorStyle.gradient}`}>
                           <div className={`w-6 h-6 rounded-md ${colorStyle.light} flex items-center justify-center ${colorStyle.text}`}>
                             {STAGE_ICONS[stage.icon] || <CircleDot className="w-3.5 h-3.5" />}
@@ -467,6 +467,7 @@ export default function FranqueadoCRM() {
                             {totalPipelineValue > 0 && <Progress value={(stageValues[stage.key] / totalPipelineValue) * 100} className="h-1" />}
                           </div>
                         )}
+                        <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
                         <DroppableColumn stageKey={stage.key}>
                           {stageLeads.map((lead: any) => (
                             <div key={lead.id} className="relative group/check">
@@ -487,6 +488,7 @@ export default function FranqueadoCRM() {
                           ))}
                           {stageLeads.length === 0 && <div className="text-center py-8 text-[11px] text-muted-foreground/50">Arraste leads aqui</div>}
                         </DroppableColumn>
+                        </div>
                       </div>
                     );
                   })}
