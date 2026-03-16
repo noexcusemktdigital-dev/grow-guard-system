@@ -154,7 +154,6 @@ export default function CrmExpansao() {
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
-  const [funnelManagerOpen, setFunnelManagerOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());

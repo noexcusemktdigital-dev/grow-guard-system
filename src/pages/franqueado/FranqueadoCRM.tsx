@@ -157,7 +157,6 @@ export default function FranqueadoCRM() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
-  const [funnelManagerOpen, setFunnelManagerOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
