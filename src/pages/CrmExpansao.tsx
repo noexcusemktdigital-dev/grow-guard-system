@@ -305,6 +305,24 @@ export default function CrmExpansao() {
 
       {activeTab === "pipeline" && (
         <>
+          {/* Empty State: No funnels */}
+          {!funnelsLoading && accessibleFunnels.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Settings2 className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Configure seu primeiro funil</h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-md">
+                  Antes de adicionar leads, crie pelo menos um funil com as etapas do seu processo comercial.
+                </p>
+                <Button onClick={() => navigate("/franqueadora/crm/config")} className="gap-2">
+                  <Settings2 className="w-4 h-4" /> Criar Funil
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+          <>
           {/* Pipeline Summary */}
           {allLeads.length > 0 && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
