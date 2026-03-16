@@ -67,7 +67,6 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
   });
 
   it("submits login with credentials", async () => {
-    mockSignIn.mockResolvedValue({ error: null });
     renderAuth();
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@test.com" } });
