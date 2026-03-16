@@ -1,40 +1,64 @@
 
 
-## Plano: Corrigir isolamento de sessão entre portais
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
-Mesmo com storageKeys separados (`noe-saas-auth` / `noe-franchise-auth`), ao logar em um portal o outro é deslogado. A causa são chamadas `signOut()` sem `scope: 'local'` — o padrão revoga o refresh token **no servidor**, invalidando a sessão do outro portal.
+### Status: ✅ Implementado
 
-### Pontos de conflito encontrados
+### Resumo
 
-| Local | Problema |
-|-------|----------|
-| `portalRoleGuard.ts` L29 | `signOut()` sem scope — revoga token no servidor, mata sessão do outro portal |
-| `AuthContext.tsx` L145 | `defaultClient.auth.signOut()` sem scope — mesma revogação |
-| `AuthContext.tsx` L166 (signOut fn) | `signOut()` sem scope — ao fazer logout em um portal, revoga o token no servidor |
-| `ProtectedRoute.tsx` L31 | Redireciona sempre para `/acessofranquia` mesmo para usuários SaaS sem sessão |
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-### Solução
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**1. Todas as chamadas `signOut()` devem usar `scope: 'local'`**
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-Isso remove apenas a sessão local (localStorage) sem revogar o refresh token no servidor. Assim, a sessão do outro portal continua válida.
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-```typescript
-await supabase.auth.signOut({ scope: 'local' });
-```
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-**2. `ProtectedRoute` deve redirecionar para o portal correto**
+---
 
-Se o usuário está em rota `/cliente/*` sem sessão, redirecionar para `/app` (SaaS login), não `/acessofranquia`.
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-### Arquivos
+### Status: ✅ Documentado
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/lib/portalRoleGuard.ts` | `signOut({ scope: 'local' })` |
-| `src/contexts/AuthContext.tsx` | `signOut({ scope: 'local' })` em ambos os locais (defaultClient e signOut function) |
-| `src/components/ProtectedRoute.tsx` | Redirect baseado no path atual (SaaS → `/app`, Franchise → `/acessofranquia`) |
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
-Total: 3 arquivos, mudanças cirúrgicas.
+### Margem por Plano
 
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

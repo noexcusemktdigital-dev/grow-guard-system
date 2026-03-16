@@ -142,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             refresh_token: defaultSession.refresh_token,
           });
           // Sign out from default client to avoid conflicts
-          await defaultClient.auth.signOut();
+          await defaultClient.auth.signOut({ scope: 'local' });
           if (transferred) {
             setSession(transferred);
             setUser(transferred.user);
@@ -157,7 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     setUser(null);
     setSession(null);
     setProfile(null);
