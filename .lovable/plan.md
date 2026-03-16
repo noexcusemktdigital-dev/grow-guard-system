@@ -1,64 +1,46 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Rebalancear Custos de Créditos em Todas as Edge Functions
 
-### Status: ✅ Implementado
+### Problema encontrado
 
-### Resumo
+Os custos REAIS nas Edge Functions estão **completamente desalinhados** com o que está documentado em `plans.ts`. Um usuário com 500 créditos (Starter) não consegue nem completar o fluxo básico.
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+| Ferramenta | Custo em `plans.ts` | Custo REAL (Edge Function) | Fator |
+|-----------|--------------------|-----------------------------|-------|
+| generate-strategy (Plano de Vendas) | 50 | **300** | 6x |
+| generate-script | 20 | **150** | 7.5x |
+| generate-content | 30/unidade | **200/unidade** | 6.7x |
+| generate-site | 100 | **500** | 5x |
+| generate-social-image | 25 | **100** | 4x |
+| generate-traffic-strategy | 50 | **200** | 4x |
+| generate-prospection | 30 | **250** | 8.3x |
+| generate-daily-checklist | 5 | **50** | 10x |
+| generate-social-video-frames | 25/frame | **100/frame** | 4x |
+| ai-generate-agent-config | 10 | OK (10) | ✓ |
+| ai-agent-simulate | 10 | OK (10) | ✓ |
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+**Cenário atual (Starter 500cr):** Fazer o plano de vendas (300) + 1 script (150) = 450 créditos. Sobram 50. Não dá pra fazer mais nada.
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+**Cenário corrigido (Starter 500cr):** Plano de vendas (50) + 3 scripts (60) + 1 estratégia marketing (50) + 2 artes (50) + 1 conteúdo (30) + 2 checklists (10) = 250. Sobram 250 para explorar mais.
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+### Solução
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+Alinhar os custos nas Edge Functions com os valores definidos em `plans.ts`. Apenas alterar a constante `CREDIT_COST` em cada arquivo.
 
----
+### Arquivos impactados (9 Edge Functions)
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+| Arquivo | De → Para |
+|---------|-----------|
+| `supabase/functions/generate-strategy/index.ts` | 300 → **50** |
+| `supabase/functions/generate-script/index.ts` | 150 → **20** |
+| `supabase/functions/generate-content/index.ts` | 200 → **30** |
+| `supabase/functions/generate-site/index.ts` | 500 → **100** |
+| `supabase/functions/generate-social-image/index.ts` | 100 → **25** |
+| `supabase/functions/generate-traffic-strategy/index.ts` | 200 → **50** |
+| `supabase/functions/generate-prospection/index.ts` | 250 → **30** |
+| `supabase/functions/generate-daily-checklist/index.ts` | 50 → **5** |
+| `supabase/functions/generate-social-video-frames/index.ts` | 100/frame → **25/frame** |
 
-### Status: ✅ Documentado
+Cada mudança é 1 linha (a constante `CREDIT_COST`). Nenhuma lógica adicional muda.
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
-
-### Margem por Plano
-
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
