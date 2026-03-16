@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles, CheckCircle2, Check, X, AlertTriangle } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
 import SaasBrandingPanel from "@/components/SaasBrandingPanel";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
