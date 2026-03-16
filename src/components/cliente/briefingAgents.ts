@@ -382,13 +382,10 @@ export const SOFIA_STEPS: BriefingStep[] = [
    ══════════════════════════════════════════════ */
 
 export const RAFAEL_STEPS: BriefingStep[] = [
-  // ── Intro conversacional (info steps — user just clicks "Continuar")
-  { id: "_intro_rafael_1", agentMessage: "Oi! 👋 Eu sou o Rafael, seu consultor comercial aqui na NoExcuse. Prazer em te conhecer!", inputType: "info" },
-  { id: "_intro_rafael_2", agentMessage: "Meu trabalho é entender a fundo a sua operação de vendas e criar um plano comercial 100% personalizado para o seu negócio. Nada genérico — tudo baseado na SUA realidade.", inputType: "info" },
-  { id: "_intro_rafael_3", agentMessage: "Em poucos minutos, você vai ter um diagnóstico completo com score por área, insights acionáveis e um plano de ação pronto para executar. Tudo isso vai alimentar as ferramentas da plataforma: CRM, Scripts, Marketing e mais. 🚀", inputType: "info" },
-  { id: "_intro_rafael_4", agentMessage: "Bora começar? Vou te fazer algumas perguntas rápidas sobre seu negócio. Relaxa que é tranquilo! 😎", inputType: "info" },
+  // ── Intro (condensada em 1 só)
+  { id: "_intro_rafael", agentMessage: "Oi! 👋 Eu sou o Rafael, seu consultor comercial. Em poucos minutos vou entender sua operação de vendas e criar um plano 100% personalizado que vai alimentar seu CRM, scripts e marketing. Bora lá? 😎🚀", inputType: "info" },
 
-  // ── 1. Sobre o Negócio
+  // ── 1. Sobre o Negócio (4 perguntas)
   { id: "segmento", section: "Sobre o Negócio", agentMessage: "Qual é o segmento da sua empresa?", inputType: "select", helpText: "Identifique o setor principal de atuação para personalizar as recomendações.",
     options: SEGMENTO_OPTIONS,
   },
@@ -398,16 +395,14 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "ambos", label: "Ambos" },
     ],
   },
-  // Open-ended: produtos/serviços (replaces tempo_mercado closed question)
   { id: "produtos_servicos", section: "Sobre o Negócio", agentMessage: "Me conta quais são seus principais produtos ou serviços? Pode listar à vontade! 📝", inputType: "textarea", helpText: "Quanto mais detalhes, melhor personalizamos seu plano comercial e scripts de vendas.",
     placeholder: "Ex: Consultoria em gestão, treinamentos corporativos, mentoria individual...",
   },
-  // Open-ended: diferenciais (replaces num_funcionarios closed question)
   { id: "diferenciais", section: "Sobre o Negócio", agentMessage: "E o que te diferencia da concorrência? O que faz o cliente escolher VOCÊ? 💪", inputType: "textarea", helpText: "Seu diferencial será usado nos scripts de vendas, conteúdos e abordagem comercial.",
     placeholder: "Ex: Atendimento 24h, entrega em 2h, garantia vitalícia, 15 anos de experiência...",
   },
 
-  // ── 2. Financeiro Comercial
+  // ── 2. Financeiro Comercial (4 perguntas, ciclo_recompra condicional)
   { id: "faturamento", section: "Financeiro Comercial", agentMessage: "Qual o faturamento mensal aproximado?", inputType: "select", helpText: "Usado para calcular projeções de crescimento.",
     options: [
       { value: "0-10k", label: "Até R$ 10 mil" }, { value: "10-30k", label: "R$ 10-30 mil" },
@@ -435,11 +430,12 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "nao", label: "Não, sempre clientes novos" },
     ],
   },
-  { id: "ciclo_recompra", section: "Financeiro Comercial", agentMessage: "Qual o ciclo médio de recompra dos seus clientes? Descreva como funciona a fidelização no seu negócio. 🔁", inputType: "textarea", helpText: "Entender seu ciclo de recompra ajuda a projetar receita recorrente e estratégias de retenção.",
-    placeholder: "Ex: Clientes voltam a cada 3 meses para manutenção. Oferecemos plano mensal com desconto...",
+  { id: "ciclo_recompra", section: "Financeiro Comercial", agentMessage: "Qual o ciclo médio de recompra dos seus clientes? 🔁", inputType: "textarea", helpText: "Entender seu ciclo de recompra ajuda a projetar receita recorrente e estratégias de retenção.",
+    placeholder: "Ex: Clientes voltam a cada 3 meses para manutenção...",
+    skipIf: (ans) => ans.tem_recorrencia === "nao",
   },
 
-  // ── 3. Equipe e Estrutura
+  // ── 3. Equipe e Estrutura (3 perguntas — removido processo_documentado)
   { id: "tamanho_equipe", section: "Equipe e Estrutura", agentMessage: "Qual o tamanho da equipe comercial?", inputType: "select", helpText: "Quantas pessoas estão envolvidas em vendas e prospecção.",
     options: [
       { value: "1", label: "Só eu" }, { value: "2-3", label: "2-3 pessoas" },
@@ -454,12 +450,6 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "nenhuma", label: "Nenhuma definida" },
     ],
   },
-  { id: "processo_documentado", section: "Equipe e Estrutura", agentMessage: "O processo comercial está documentado?", inputType: "select", helpText: "Processos documentados permitem treinar novos vendedores e escalar.",
-    options: [
-      { value: "nao", label: "Não existe" }, { value: "parcial", label: "Parcial / informal" },
-      { value: "sim", label: "Sim, documentado" }, { value: "completo", label: "Sim, com playbook completo" },
-    ],
-  },
   { id: "tempo_fechamento", section: "Equipe e Estrutura", agentMessage: "Tempo médio pra fechar uma venda?", inputType: "select", helpText: "Ciclos mais longos exigem automação e cadências de follow-up robustas.",
     options: [
       { value: "mesmo_dia", label: "No mesmo dia" }, { value: "1-7", label: "1 a 7 dias" },
@@ -468,7 +458,7 @@ export const RAFAEL_STEPS: BriefingStep[] = [
     ],
   },
 
-  // ── 4. Gestão de Leads
+  // ── 4. Gestão de Leads (3 perguntas — removido qtd_leads_mes)
   { id: "usa_crm", section: "Gestão de Leads", agentMessage: "Usa algum CRM atualmente?", inputType: "select", helpText: "CRM centraliza informações e evita perda de oportunidades.",
     options: [
       { value: "nao", label: "Não uso nada" }, { value: "planilha", label: "Planilha / anotações" },
@@ -481,19 +471,11 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "cadencia", label: "Sim, com cadência definida" }, { value: "auto", label: "Sim, automatizado" },
     ],
   },
-  // Open-ended: dor do cliente (replaces cadencia_followup)
   { id: "dor_principal", section: "Gestão de Leads", agentMessage: "Qual a maior dor ou necessidade do seu cliente ideal? O que faz ele procurar uma solução como a sua? 🎯", inputType: "textarea", helpText: "Entender a dor do cliente é essencial para criar scripts e conteúdos que convertem.",
-    placeholder: "Ex: Perdem muito tempo com processos manuais, não conseguem escalar vendas, gastam muito com equipe sem resultado...",
-  },
-  { id: "qtd_leads_mes", section: "Gestão de Leads", agentMessage: "Quantos leads recebe por mês?", inputType: "select", helpText: "Volume de leads determina a necessidade de automação.",
-    options: [
-      { value: "0-10", label: "0-10" }, { value: "11-30", label: "11-30" },
-      { value: "31-100", label: "31-100" }, { value: "100-500", label: "100-500" },
-      { value: "500+", label: "500+" },
-    ],
+    placeholder: "Ex: Perdem muito tempo com processos manuais, não conseguem escalar vendas...",
   },
 
-  // ── 5. Canais e Prospecção
+  // ── 5. Canais e Prospecção (2 perguntas — removido mede_roi)
   { id: "canais_aquisicao", section: "Canais e Prospecção", agentMessage: "Quais canais de aquisição você usa?", inputType: "multi-select", helpText: "Diversificar canais reduz o risco.",
     options: [
       { value: "google", label: "Google Ads" }, { value: "instagram", label: "Instagram" },
@@ -510,73 +492,27 @@ export const RAFAEL_STEPS: BriefingStep[] = [
       { value: "nao_sei", label: "Não sei" },
     ],
   },
-  { id: "mede_roi", section: "Canais e Prospecção", agentMessage: "Mede o ROI por canal?", inputType: "select", helpText: "Medir ROI evita desperdício em canais sem retorno.",
-    options: [
-      { value: "nao", label: "Não meço" }, { value: "parcial", label: "Parcialmente" },
-      { value: "sim", label: "Sim, de todos" },
-    ],
-  },
 
-  // ── 6. Processo de Vendas
-  { id: "usa_scripts", section: "Processo de Vendas", agentMessage: "Usa scripts ou roteiros padronizados?", inputType: "select", helpText: "Scripts garantem consistência e aceleram o ramp-up de novos vendedores.",
-    options: [
-      { value: "nao", label: "Não uso" }, { value: "tem_nao_segue", label: "Tenho mas não sigo" },
-      { value: "parcial", label: "Sim, parcialmente" }, { value: "sim", label: "Sim, toda equipe usa" },
-    ],
-  },
+  // ── 6. Processo de Vendas (1 pergunta — scripts e reunião são da plataforma)
   { id: "etapas_funil", section: "Processo de Vendas", agentMessage: "Descreva as etapas do seu processo de vendas, da prospecção ao fechamento. Pode ser como quiser! 🎯", inputType: "textarea", helpText: "Um funil bem definido permite identificar gargalos. Vamos criar seu funil automaticamente a partir dessas etapas!",
     placeholder: "Ex: Prospecção → Qualificação → Reunião → Proposta → Negociação → Fechamento",
   },
-  { id: "reuniao_recorrente", section: "Processo de Vendas", agentMessage: "Tem reunião comercial recorrente?", inputType: "select", helpText: "Reuniões de alinhamento garantem foco nas prioridades e metas.",
-    options: [
-      { value: "nao", label: "Não" }, { value: "mensal", label: "Mensal" },
-      { value: "semanal", label: "Semanal" }, { value: "diaria", label: "Diária" },
-    ],
-  },
 
-  // ── 7. Ferramentas e Automação
-  { id: "ferramentas_usadas", section: "Ferramentas e Automação", agentMessage: "Quais ferramentas utiliza no comercial?", inputType: "multi-select", helpText: "Mapear ferramentas atuais ajuda a identificar lacunas.",
-    options: [
-      { value: "crm", label: "CRM" }, { value: "whatsapp", label: "WhatsApp Business" },
-      { value: "email", label: "Email Marketing" }, { value: "telefone", label: "Telefone" },
-      { value: "automacao", label: "Automação (RD, HubSpot)" }, { value: "planilhas", label: "Planilhas" },
-      { value: "nenhuma", label: "Nenhuma" },
-    ],
-  },
-  { id: "tem_automacoes", section: "Ferramentas e Automação", agentMessage: "Tem automações ativas no processo comercial?", inputType: "select", helpText: "Automações liberam tempo para tarefas de maior valor.",
-    options: [
-      { value: "nao", label: "Nenhuma" }, { value: "poucas", label: "Poucas (email, lembretes)" },
-      { value: "sim", label: "Sim, várias integradas" },
-    ],
-  },
-  { id: "usa_agente_ia", section: "Ferramentas e Automação", agentMessage: "Usa agente de IA para atendimento?", inputType: "select", helpText: "IA responde leads 24h, reduz tempo de espera e qualifica automaticamente.",
-    options: [
-      { value: "nao", label: "Não" }, { value: "pensou", label: "Já pensei nisso" },
-      { value: "basico", label: "Sim, básico" }, { value: "integrado", label: "Sim, integrado ao CRM" },
-    ],
-  },
-
-  // ── 8. Metas e Performance
+  // ── 7. Metas e Performance (2 perguntas + 2 condicionais por segmento)
   { id: "metas_historicas", section: "Metas e Performance", agentMessage: "Suas metas são baseadas em dados históricos?", inputType: "select", helpText: "Metas baseadas em dados evitam frustração e permitem projeções realistas.",
     options: [
       { value: "nao", label: "Não tenho metas" }, { value: "achismo", label: "Metas por achismo" },
       { value: "historico", label: "Baseadas em histórico" }, { value: "projecoes", label: "Com projeções e cenários" },
     ],
   },
-  { id: "conversao_etapa", section: "Metas e Performance", agentMessage: "Acompanha taxa de conversão por etapa do funil?", inputType: "select", helpText: "Conversão por etapa revela onde os leads estão sendo perdidos.",
+  { id: "conversao_etapa", section: "Metas e Performance", agentMessage: "Pra finalizar: acompanha taxa de conversão por etapa do funil?", inputType: "select", helpText: "Conversão por etapa revela onde os leads estão sendo perdidos.",
     options: [
       { value: "nao", label: "Não acompanho" }, { value: "geral", label: "Apenas conversão geral" },
       { value: "por_etapa", label: "Sim, por etapa" },
     ],
   },
-  { id: "relatorios", section: "Metas e Performance", agentMessage: "Pra finalizar: gera relatórios comerciais periodicamente?", inputType: "select", helpText: "Relatórios frequentes permitem ajustar a estratégia rapidamente.",
-    options: [
-      { value: "nunca", label: "Nunca" }, { value: "mensal", label: "Mensal" },
-      { value: "semanal", label: "Semanal" }, { value: "diario", label: "Diário" },
-    ],
-  },
 
-  // Segment-specific conditional questions
+  // Condicionais por segmento
   { id: "saude_convenios", section: "Metas e Performance", agentMessage: "Trabalha com convênios ou planos de saúde?", inputType: "select", helpText: "Convênios impactam o ticket médio e o ciclo de pagamento.",
     options: [
       { value: "nao", label: "Não" }, { value: "alguns", label: "Alguns convênios" },
