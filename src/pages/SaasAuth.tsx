@@ -88,10 +88,21 @@ const SaasAuth = () => {
     navigate("/cliente/inicio");
   };
 
+  const passwordChecks = [
+    { label: "Mínimo 8 caracteres", ok: password.length >= 8 },
+    { label: "Letra maiúscula (A-Z)", ok: /[A-Z]/.test(password) },
+    { label: "Número (0-9)", ok: /[0-9]/.test(password) },
+    { label: "Caractere especial (!@#$...)", ok: /[^A-Za-z0-9]/.test(password) },
+  ];
+  const passedChecks = passwordChecks.filter(c => c.ok).length;
+  const passwordStrength = passedChecks <= 1 ? "fraca" : passedChecks <= 3 ? "média" : "forte";
+  const strengthColor = passwordStrength === "fraca" ? "hsl(0,72%,51%)" : passwordStrength === "média" ? "hsl(45,93%,52%)" : "hsl(142,71%,45%)";
+  const isPasswordValid = password.length >= 8;
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.");
+    if (!isPasswordValid) {
+      toast.error("A senha deve ter pelo menos 8 caracteres.");
       return;
     }
     if (!acceptedTerms) {
