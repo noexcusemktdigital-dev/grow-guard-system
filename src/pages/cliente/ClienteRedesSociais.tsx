@@ -577,9 +577,25 @@ export default function ClienteRedesSociais() {
               const renderPostCard = (p: PostItem) => (
                 <Card
                   key={p.id}
-                  className="overflow-hidden group hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => setGeneratedResult({ post: p, result_url: p.result_url, result_data: p.result_data })}
+                  className={`overflow-hidden group hover:shadow-md transition-shadow cursor-pointer relative ${selectionMode && selectedIds.has(p.id) ? "ring-2 ring-primary" : ""}`}
+                  onClick={() => {
+                    if (selectionMode) { toggleSelect(p.id); return; }
+                    setGeneratedResult({ post: p, result_url: p.result_url, result_data: p.result_data });
+                  }}
                 >
+                  {selectionMode && (
+                    <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
+                    </div>
+                  )}
+                  {!selectionMode && (
+                    <button
+                      className="absolute top-2 left-2 z-10 bg-destructive/90 text-destructive-foreground rounded-md p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTargetId(p.id); }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   {p.result_url ? (
                     <div className="aspect-square bg-muted relative overflow-hidden">
                       <img src={p.result_url} alt="" className="w-full h-full object-cover" />
