@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const CREDIT_COST_PER_CONTENT = 200;
+const CREDIT_COST_PER_CONTENT = 30;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
