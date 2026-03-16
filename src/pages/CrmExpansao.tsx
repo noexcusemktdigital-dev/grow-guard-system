@@ -298,7 +298,7 @@ export default function CrmExpansao() {
                 </div>
               </>
             )}
-            <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setFunnelManagerOpen(true)}><Settings2 className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>Gerenciar Funis</TooltipContent></Tooltip></TooltipProvider>
+            <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigate("/franqueadora/crm/config")}><Settings2 className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>Configurações do CRM</TooltipContent></Tooltip></TooltipProvider>
           </div>
         }
       />
