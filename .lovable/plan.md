@@ -1,64 +1,52 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: 3 Correções no Fluxo SaaS (Senha, Email, Tour)
 
-### Status: ✅ Implementado
+### 1. Indicador de força de senha no cadastro
 
-### Resumo
+**Arquivo:** `src/pages/SaasAuth.tsx`
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+Adicionar abaixo do campo de senha no formulário de signup:
+- Barra de força visual (fraca/média/forte) com cores vermelho/amarelo/verde
+- Lista de dicas visíveis enquanto digita:
+  - ✓/✗ Mínimo 8 caracteres
+  - ✓/✗ Letra maiúscula
+  - ✓/✗ Número
+  - ✓/✗ Caractere especial (!@#$...)
+- Bloquear submit se senha < 8 caracteres (atualmente aceita 6)
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+### 2. Aviso sobre lixo eletrônico na tela de verificação
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+**Arquivo:** `src/pages/SaasAuth.tsx` (seção `verify-email`)
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+Adicionar texto na tela de confirmação de email:
+> "Não encontrou? Verifique sua pasta de **Spam** ou **Lixo eletrônico**."
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### 3. Corrigir sobreposição Tour + TrialWelcomeModal + AnnouncementPopup
 
----
+**Problema:** No primeiro acesso SaaS, três elementos aparecem ao mesmo tempo com z-index conflitante: `TrialWelcomeModal`, `OnboardingTour` (z-[9999]) e `AnnouncementPopupDialog`. Resultado: tudo trava.
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+**Solução: sequenciar os 3 via eventos no `ClienteLayout`**
 
-### Status: ✅ Documentado
+| Ordem | Componente | Condição para abrir |
+|-------|-----------|-------------------|
+| 1º | `TrialWelcomeModal` | Abre normalmente (trial + não visto) |
+| 2º | `OnboardingTour` | Só abre DEPOIS que TrialWelcomeModal fechar |
+| 3º | `AnnouncementPopupDialog` | Só abre DEPOIS que OnboardingTour fechar (ou se não houve tour) |
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+**Implementação:**
+- `TrialWelcomeModal` e `OnboardingTour` recebem callbacks `onComplete`
+- `ClienteLayout.tsx` gerencia o estado de sequência: `welcomeDone → tourDone → announcements`
+- `AnnouncementPopupDialog` recebe prop `enabled` para atrasar abertura
+- O tour já marca `localStorage` para não repetir — manter esse comportamento
 
-### Margem por Plano
+### Arquivos impactados
 
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/SaasAuth.tsx` | Indicador de força de senha + aviso spam |
+| `src/components/cliente/TrialWelcomeModal.tsx` | Aceitar prop `onComplete` |
+| `src/components/cliente/OnboardingTour.tsx` | Aceitar prop `onComplete` + `enabled` |
+| `src/components/AnnouncementPopupDialog.tsx` | Aceitar prop `enabled` |
+| `src/components/ClienteLayout.tsx` | Orquestrar sequência dos 3 componentes |
 
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
