@@ -79,7 +79,7 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
   });
 
   it("shows error toast on login failure", async () => {
-    mockSignIn.mockResolvedValue({ error: { message: "Invalid" } });
+    mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Invalid" } });
     renderAuth();
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "bad@test.com" } });
