@@ -537,7 +537,6 @@ export default function CrmExpansao() {
 
       <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} />
       <CrmNewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} defaultStage={stages[0]?.key || "novo"} />
-      <CrmFunnelManager open={funnelManagerOpen} onOpenChange={setFunnelManagerOpen} />
       <CrmCsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
 
       <AlertDialog open={bulkDeleteLeadsOpen} onOpenChange={setBulkDeleteLeadsOpen}>
