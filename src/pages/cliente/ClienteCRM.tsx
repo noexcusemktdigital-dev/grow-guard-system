@@ -942,6 +942,8 @@ export default function ClienteCRM() {
               </CardContent>
             </Card>
           )}
+          </>
+          )}
         </>
       )}
 
