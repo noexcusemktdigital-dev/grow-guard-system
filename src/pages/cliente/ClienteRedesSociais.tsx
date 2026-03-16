@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { usePostHistory, useGeneratePost, useApprovePost, useGenerateBriefing, useGenerateVideoBriefing, PostItem } from "@/hooks/useClientePosts";
+import { usePostHistory, useGeneratePost, useApprovePost, useDeletePost, useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing, PostItem } from "@/hooks/useClientePosts";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -17,7 +17,7 @@ import {
   Share2, Plus, ArrowLeft, Image, Video, Check, RefreshCw, Download,
   Sparkles, Loader2, Upload, X, Clock, Eye, Type, Film, Smartphone,
   Monitor, LayoutGrid, Square, RectangleVertical, Palette, Box,
-  FileText, Wand2, AlertTriangle, FileDown
+  FileText, Wand2, AlertTriangle, FileDown, Trash2, CheckSquare
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,6 +25,8 @@ import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import { useContentHistory, ContentItem } from "@/hooks/useClienteContentV2";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type MainView = "history" | "wizard";
@@ -140,6 +142,9 @@ export default function ClienteRedesSociais() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [showContentPicker, setShowContentPicker] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const { data: orgId } = useUserOrgId();
   const { data: posts, isLoading: postsLoading } = usePostHistory();
@@ -149,6 +154,38 @@ export default function ClienteRedesSociais() {
   const approvePost = useApprovePost();
   const generateBriefing = useGenerateBriefing();
   const generateVideoBriefing = useGenerateVideoBriefing();
+  const deletePost = useDeletePost();
+  const bulkDelete = useBulkDeletePosts();
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteSingle = (id: string) => {
+    deletePost.mutate(id, {
+      onSuccess: () => {
+        setDeleteTargetId(null);
+        if (generatedResult?.post.id === id) {
+          setGeneratedResult(null);
+          setView("history");
+        }
+      },
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    bulkDelete.mutate(Array.from(selectedIds), {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+        setSelectionMode(false);
+      },
+    });
+  };
 
   const fillTextFromContent = (content: ContentItem) => {
     const res = content.result as any;
@@ -503,7 +540,21 @@ export default function ClienteRedesSociais() {
           title="Postagens"
           subtitle="Gere artes e vídeos para redes sociais"
           icon={<Share2 className="w-5 h-5 text-primary" />}
-          actions={<Button onClick={() => setView("wizard")}><Plus className="w-4 h-4 mr-1" /> Nova Postagem</Button>}
+          actions={
+            <div className="flex items-center gap-2">
+              {posts && posts.length > 0 && (
+                <Button
+                  variant={selectionMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => { setSelectionMode(!selectionMode); setSelectedIds(new Set()); }}
+                >
+                  <CheckSquare className="w-4 h-4 mr-1" />
+                  {selectionMode ? "Cancelar" : "Selecionar"}
+                </Button>
+              )}
+              <Button onClick={() => setView("wizard")}><Plus className="w-4 h-4 mr-1" /> Nova Postagem</Button>
+            </div>
+          }
         />
         <StrategyBanner toolName="suas postagens" dataUsed="Tom de voz, persona e estilo visual" />
         {postsLoading ? (
@@ -526,9 +577,25 @@ export default function ClienteRedesSociais() {
               const renderPostCard = (p: PostItem) => (
                 <Card
                   key={p.id}
-                  className="overflow-hidden group hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => setGeneratedResult({ post: p, result_url: p.result_url, result_data: p.result_data })}
+                  className={`overflow-hidden group hover:shadow-md transition-shadow cursor-pointer relative ${selectionMode && selectedIds.has(p.id) ? "ring-2 ring-primary" : ""}`}
+                  onClick={() => {
+                    if (selectionMode) { toggleSelect(p.id); return; }
+                    setGeneratedResult({ post: p, result_url: p.result_url, result_data: p.result_data });
+                  }}
                 >
+                  {selectionMode && (
+                    <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
+                    </div>
+                  )}
+                  {!selectionMode && (
+                    <button
+                      className="absolute top-2 left-2 z-10 bg-destructive/90 text-destructive-foreground rounded-md p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTargetId(p.id); }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   {p.result_url ? (
                     <div className="aspect-square bg-muted relative overflow-hidden">
                       <img src={p.result_url} alt="" className="w-full h-full object-cover" />
@@ -581,6 +648,45 @@ export default function ClienteRedesSociais() {
             })()}
           </>
         )}
+
+        {/* Bulk action bar */}
+        {selectionMode && selectedIds.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card border shadow-lg rounded-xl px-5 py-3 flex items-center gap-4">
+            <span className="text-sm font-medium">{selectedIds.size} selecionado(s)</span>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={bulkDelete.isPending}>
+                  {bulkDelete.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                  Apagar selecionados
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Apagar {selectedIds.size} postagem(ns)?</AlertDialogTitle>
+                  <AlertDialogDescription>Esta ação não pode ser desfeita. As postagens serão removidas permanentemente.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleBulkDelete}>Apagar</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
+
+        {/* Single delete confirmation */}
+        <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Apagar postagem?</AlertDialogTitle>
+              <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteTargetId && handleDeleteSingle(deleteTargetId)}>Apagar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
@@ -646,6 +752,23 @@ export default function ClienteRedesSociais() {
                   </a>
                 </Button>
               )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="lg" className="text-destructive hover:text-destructive">
+                    <Trash2 className="w-4 h-4 mr-2" /> Apagar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Apagar postagem?</AlertDialogTitle>
+                    <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDeleteSingle(generatedResult.post.id)}>Apagar</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         ) : null}

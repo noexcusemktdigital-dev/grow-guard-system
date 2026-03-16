@@ -1,44 +1,64 @@
 
 
-## Plano: Gerenciar e Apagar Artes no Redes Sociais
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
-A listagem de postagens (artes e vídeos) no SaaS não oferece opção de apagar ou gerenciar os itens. O usuário fica com postagens acumuladas sem poder removê-las.
+### Status: ✅ Implementado
 
-### Solução
+### Resumo
 
-**1. Hook de delete (`useClientePosts.ts`)**
-- Adicionar mutation `useDeletePost` que deleta o registro da tabela `client_posts` pelo ID
-- Invalidar query `client-posts` após sucesso
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**2. UI de gerenciamento (`ClienteRedesSociais.tsx`)**
-- Adicionar botão de **modo seleção** (checkbox) no header da listagem, ao lado de "Nova Postagem"
-- Em modo seleção: cada card ganha um checkbox; aparece barra de ações com "Apagar selecionados"
-- Fora do modo seleção: adicionar botão de lixeira no hover de cada card (canto superior esquerdo) com confirmação via AlertDialog
-- Na tela de resultado (ao clicar em um post existente): adicionar botão "Apagar" ao lado dos botões existentes (Aprovar, Download, etc.)
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-### Mudanças por arquivo
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/hooks/useClientePosts.ts` | Novo hook `useDeletePost` — delete da tabela `client_posts` + opcional delete do arquivo no storage |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Botão delete individual no hover do card + botão delete na tela de resultado + seleção em massa com barra de ações |
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-### Fluxo
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-```text
-Listagem de postagens:
-  - Hover no card → ícone de lixeira (canto)
-  - Clique → AlertDialog "Deseja apagar esta postagem?"
-  - Confirmar → deletePost.mutate(id) → remove do DB
+---
 
-  - Botão "Selecionar" no header → modo seleção
-  - Checkboxes nos cards → selecionar múltiplos
-  - Barra inferior: "X selecionados" + "Apagar selecionados"
-  - Confirmar → deleta todos em sequência
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-Tela de resultado (post existente):
-  - Botão "Apagar" com ícone Trash
-  - Confirmar → deleta + volta pra listagem
-```
+### Status: ✅ Documentado
 
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

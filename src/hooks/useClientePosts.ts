@@ -221,6 +221,42 @@ export function useGenerateVideoBriefing() {
   });
 }
 
+export function useDeletePost() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase
+        .from("client_posts" as any)
+        .delete()
+        .eq("id", postId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-posts"] });
+      toast({ title: "Postagem apagada com sucesso." });
+    },
+  });
+}
+
+export function useBulkDeletePosts() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (postIds: string[]) => {
+      const { error } = await supabase
+        .from("client_posts" as any)
+        .delete()
+        .in("id", postIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-posts"] });
+      toast({ title: "Postagens apagadas com sucesso." });
+    },
+  });
+}
+
 export function useApprovePost() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
