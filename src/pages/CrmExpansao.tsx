@@ -31,7 +31,6 @@ import { useToast } from "@/hooks/use-toast";
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
-import { CrmFunnelManager } from "@/components/crm/CrmFunnelManager";
 import { CrmContactsView } from "@/components/crm/CrmContactsView";
 import { CrmCsvImportDialog } from "@/components/crm/CrmCsvImportDialog";
 import { CrmTutorial } from "@/components/crm/CrmTutorial";
