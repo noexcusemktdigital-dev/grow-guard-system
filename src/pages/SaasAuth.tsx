@@ -337,8 +337,35 @@ const SaasAuth = () => {
                     <Label htmlFor="signup-password" className="text-white/70">Senha</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                      <Input id="signup-password" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
+                      <Input id="signup-password" type="password" placeholder="Mínimo 8 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
                     </div>
+                    {password.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{ width: `${(passedChecks / 4) * 100}%`, backgroundColor: strengthColor }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-medium" style={{ color: strengthColor }}>
+                            {passwordStrength === "fraca" ? "Fraca" : passwordStrength === "média" ? "Média" : "Forte"}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                          {passwordChecks.map((c) => (
+                            <div key={c.label} className="flex items-center gap-1.5">
+                              {c.ok ? (
+                                <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                              ) : (
+                                <X className="w-3 h-3 text-white/25 shrink-0" />
+                              )}
+                              <span className={`text-[10px] ${c.ok ? "text-emerald-400" : "text-white/35"}`}>{c.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-start space-x-2">
                     <Checkbox
