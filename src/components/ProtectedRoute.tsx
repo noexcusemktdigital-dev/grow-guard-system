@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 type AppRole = "super_admin" | "admin" | "franqueado" | "cliente_admin" | "cliente_user";
@@ -16,8 +16,14 @@ function getRoleRedirect(role: AppRole | null): string {
   return "/cliente/inicio";
 }
 
+function getLoginPath(pathname: string): string {
+  if (pathname.startsWith("/cliente")) return "/app";
+  return "/acessofranquia";
+}
+
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, role, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -28,10 +34,9 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (!user) {
-    return <Navigate to="/acessofranquia" replace />;
+    return <Navigate to={getLoginPath(location.pathname)} replace />;
   }
 
-  // If roles are specified, check access
   if (allowedRoles && allowedRoles.length > 0 && role) {
     if (!allowedRoles.includes(role)) {
       return <Navigate to={getRoleRedirect(role)} replace />;
