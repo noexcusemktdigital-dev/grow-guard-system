@@ -1,56 +1,64 @@
 
 
-## Playbooks & Scripts — Banco de Conhecimento da Matriz
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### O que será construído
+### Status: ✅ Implementado
 
-Uma nova página `/franqueadora/playbooks` acessível por todos os usuários da Matriz, funcionando como um banco de pesquisa completo com os playbooks operacionais e manuais de comunicação das funções **Performance** e **Criação**.
+### Resumo
 
-### Estrutura da página
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-```text
-┌─────────────────────────────────────────────┐
-│  Playbooks & Scripts                        │
-│  ┌──────────────────────────────────────┐   │
-│  │ 🔍 Pesquisar scripts, ações...       │   │
-│  └──────────────────────────────────────┘   │
-│  ┌────────────┬─────────────┐               │
-│  │ Performance│   Criação   │  ← tabs       │
-│  ├────────────┴─────────────┤               │
-│  │ ┌─ Playbook Operacional ─────────┐  │   │
-│  │ │ Accordion por seção            │  │   │
-│  │ │  > Objetivo da função          │  │   │
-│  │ │  > O que entrega               │  │   │
-│  │ │  > Ferramentas                 │  │   │
-│  │ │  > ...                         │  │   │
-│  │ └───────────────────────────────┘  │   │
-│  │ ┌─ Manual de Comunicação ────────┐  │   │
-│  │ │  > Bloco 1 — Início            │  │   │
-│  │ │    • Script 1 (expand)         │  │   │
-│  │ │    • Script 2 (expand)         │  │   │
-│  │ │  > Bloco 2 — Cobrança          │  │   │
-│  │ │    • Script 6                  │  │   │
-│  │ └───────────────────────────────┘  │   │
-│  └──────────────────────────────────────┘   │
-└─────────────────────────────────────────────┘
-```
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-### Dados
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-O conteúdo dos 4 PDFs será hardcoded em um arquivo de constantes (`src/constants/playbooks.ts`), estruturado como arrays de seções com título, subtítulo e cards de scripts. Cada script card contém: situação, objetivo, script curto, script completo, tom ideal, erro a evitar.
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-Não usaremos banco de dados — é conteúdo estático da operação.
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-### Pesquisa
+---
 
-Um campo de busca no topo filtra em tempo real todos os cards visíveis (título, situação, scripts) dentro da aba ativa. Resultado vazio mostra mensagem "Nenhum script encontrado".
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-### Mudanças
+### Status: ✅ Documentado
 
-| Arquivo | O que |
-|---------|-------|
-| `src/constants/playbooks.ts` | Dados estruturados dos 4 PDFs (Performance + Criação) |
-| `src/pages/franqueadora/Playbooks.tsx` | Página com tabs, pesquisa e accordions |
-| `src/components/FranqueadoraSidebar.tsx` | Novo item "Playbooks" na seção Marketing & Academy |
-| `src/App.tsx` | Nova rota `/franqueadora/playbooks` |
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual
