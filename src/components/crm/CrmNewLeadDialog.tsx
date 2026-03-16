@@ -77,6 +77,10 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, prefillCont
   };
 
   const handleCreate = () => {
+    if (!funnelsData || funnelsData.length === 0) {
+      toast({ title: "Nenhum funil configurado", description: "Crie pelo menos um funil nas configurações do CRM antes de adicionar leads.", variant: "destructive" });
+      return;
+    }
     if (atLimit) {
       toast({ title: "Limite de leads atingido", description: "Faça upgrade do plano para adicionar mais leads.", variant: "destructive" });
       return;
