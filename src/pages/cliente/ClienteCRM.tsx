@@ -815,7 +815,7 @@ export default function ClienteCRM() {
                   const stageLeads = leadsByStage[stage.key] || [];
                   const colorStyle = getColorStyle(stage.color);
                   return (
-                    <div key={stage.key} className="min-w-[260px] max-w-[280px] flex-shrink-0">
+                    <div key={stage.key} className="min-w-[260px] max-w-[280px] flex-shrink-0 flex flex-col">
                       <div className={`px-3 py-2 rounded-t-xl border-b-2 ${colorStyle.border} bg-gradient-to-r ${colorStyle.gradient}`}>
                         <div className="flex items-center gap-2">
                           <div className={`w-6 h-6 rounded-md ${colorStyle.light} flex items-center justify-center ${colorStyle.text}`}>
@@ -838,6 +838,7 @@ export default function ClienteCRM() {
                           </div>
                         )}
                       </div>
+                      <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
                       <DroppableColumn stageKey={stage.key}>
                         <KanbanColumnContent
                           stageLeads={stageLeads}
