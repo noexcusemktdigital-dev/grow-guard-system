@@ -18,7 +18,7 @@ export default function CrmConfigPage() {
   return (
     <div className="w-full space-y-5">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" className="gap-1" onClick={() => navigate("/cliente/crm")}>
+        <Button variant="ghost" size="sm" className="gap-1" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-4 h-4" /> Voltar
         </Button>
         <div>
