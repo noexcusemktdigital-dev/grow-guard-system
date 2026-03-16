@@ -50,6 +50,9 @@ function renderAuth() {
 describe("Auth (Franqueadora/Franqueado login)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: login succeeds and role is allowed (franqueado)
+    mockSignIn.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mockSelectRole.mockResolvedValue({ data: [{ role: "franqueado" }] });
   });
 
   it("renders email and password fields", () => {
