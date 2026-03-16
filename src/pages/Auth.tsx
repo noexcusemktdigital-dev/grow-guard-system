@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
+import { validatePortalAccess } from "@/lib/portalRoleGuard";
 
 const PHRASES = [
   "SEM DESCULPAS.\nSÓ RESULTADOS.",
