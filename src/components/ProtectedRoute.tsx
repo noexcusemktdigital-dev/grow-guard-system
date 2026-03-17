@@ -37,7 +37,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to={getLoginPath(location.pathname)} replace />;
   }
 
-  if (allowedRoles && allowedRoles.length > 0 && role) {
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!role) {
+      return <Navigate to={getLoginPath(location.pathname)} replace />;
+    }
+
     if (!allowedRoles.includes(role)) {
       return <Navigate to={getRoleRedirect(role)} replace />;
     }

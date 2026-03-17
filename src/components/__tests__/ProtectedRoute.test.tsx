@@ -33,8 +33,8 @@ function renderRoute(path: string, allowedRoles?: any[]) {
           }
         />
         <Route path="/acessofranquia" element={<div>Login Page</div>} />
-        <Route path="/franqueadora/dashboard" element={<div>Franqueadora Dashboard</div>} />
-        <Route path="/franqueado/dashboard" element={<div>Franqueado Dashboard</div>} />
+        <Route path="/franqueadora/inicio" element={<div>Franqueadora Dashboard</div>} />
+        <Route path="/franqueado/inicio" element={<div>Franqueado Dashboard</div>} />
         <Route path="/cliente/inicio" element={<div>Cliente Inicio</div>} />
       </Routes>
     </MemoryRouter>
