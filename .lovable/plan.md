@@ -1,64 +1,38 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Fix: Portal Guard Blocking Dual-Role Users
 
-### Status: ✅ Implementado
+### Problema
+Quando um usuário com dual-role (ex: `cliente_admin` + `franqueado`) tenta acessar o portal da franquia, o guard bloqueia e faz sign-out. O guard atual funciona corretamente para dual-role users, **mas o problema real é que o guard faz `signOut` antes de mostrar o erro** — isso destrói a sessão do outro portal também.
 
-### Resumo
+Além disso, para usuários que genuinamente só têm role SaaS, o guard não deveria fazer sign-out automático — deveria apenas mostrar a mensagem e redirecionar, preservando a sessão do portal correto.
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+### Solução
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+**Arquivo: `src/lib/portalRoleGuard.ts`**
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+1. **Remover o `signOut` automático** — não destruir a sessão quando o acesso é negado
+2. **Retornar `redirect` no resultado** para que o chamador redirecione ao portal correto sem perder a sessão
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+```ts
+if (!hasAllowedRole) {
+  // NÃO fazer signOut — preservar sessão do outro portal
+  const redirect = portal === "saas" ? "/acessofranquia" : "/app";
+  const message = portal === "saas"
+    ? "Esta conta pertence ao portal da franquia. Acesse /acessofranquia"
+    : "Esta conta pertence ao portal SaaS. Acesse /app";
+  return { allowed: false, message, redirect };
+}
+```
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+**Arquivo: `src/pages/Auth.tsx`** (franchise login)
+- Após `check.allowed === false`, fazer `signOut({ scope: 'local' })` apenas do cliente atual e mostrar toast com mensagem
 
----
+**Arquivo: `src/pages/SaasAuth.tsx`** (SaaS login)  
+- Mesmo ajuste: signOut local + toast
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+### Resultado
+- Dual-role users passam normalmente (já funciona se roles estão corretos)
+- Single-role users veem mensagem sem perder sessão do outro portal
+- Sign-out é controlado pelo chamador, não pelo guard
 
-### Status: ✅ Documentado
-
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
-
-### Margem por Plano
-
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
