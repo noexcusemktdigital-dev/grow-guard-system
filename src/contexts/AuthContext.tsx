@@ -110,6 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const initializedRef = useRef(false);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
@@ -122,7 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setRole(null);
         }
-        setLoading(false);
+        // Only set loading=false after initialization is complete
+        if (initializedRef.current) {
+          setLoading(false);
+        }
       }
     );
 
@@ -131,7 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(existingSession);
         setUser(existingSession.user);
         fetchProfileAndRole(existingSession.user);
-        setLoading(false);
       } else {
         // Check default client for OAuth redirect sessions (Google OAuth stores in default key)
         const { data: { session: defaultSession } } = await defaultClient.auth.getSession();
@@ -149,8 +153,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             fetchProfileAndRole(transferred.user);
           }
         }
-        setLoading(false);
       }
+      initializedRef.current = true;
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
