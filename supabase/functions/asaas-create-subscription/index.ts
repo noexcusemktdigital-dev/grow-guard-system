@@ -242,6 +242,39 @@ Deno.serve(async (req) => {
 
     // Credits will be added by asaas-webhook on PAYMENT_CONFIRMED
 
+    // Fetch first payment from the subscription to return payment details
+    let invoiceUrl: string | null = null;
+    let bankSlipUrl: string | null = null;
+    let pixQrCodeBase64: string | null = null;
+    let pixCopyPaste: string | null = null;
+    let firstPaymentId: string | null = null;
+
+    try {
+      const paymentsRes = await asaasFetch(`${ASAAS_BASE}/subscriptions/${subscriptionData.id}/payments`, {
+        method: "GET",
+        headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
+      });
+      if (paymentsRes.ok) {
+        const paymentsData = await paymentsRes.json();
+        const firstPayment = paymentsData.data?.[0];
+        if (firstPayment) {
+          firstPaymentId = firstPayment.id;
+          invoiceUrl = firstPayment.invoiceUrl || null;
+          bankSlipUrl = firstPayment.bankSlipUrl || null;
+          console.log(`First payment found: ${firstPayment.id}, status=${firstPayment.status}, invoiceUrl=${!!invoiceUrl}, bankSlipUrl=${!!bankSlipUrl}`);
+
+          // For PIX, fetch QR code
+          if (billing_type === "PIX" && firstPayment.id) {
+            const pix = await fetchPixQrCode(asaasApiKey, firstPayment.id);
+            pixQrCodeBase64 = pix.encodedImage;
+            pixCopyPaste = pix.payload;
+          }
+        }
+      }
+    } catch (payErr: any) {
+      console.warn("Failed to fetch first payment details:", payErr.message);
+    }
+
     console.log(`Subscription created for org ${org.id}: plan=${plan}, price=${finalPrice}, discount=${discountPercent}%, asaas_sub=${subscriptionData.id}`);
 
     return new Response(JSON.stringify({
@@ -251,6 +284,13 @@ Deno.serve(async (req) => {
       payment_link: subscriptionData.paymentLink || null,
       discount_applied: discountPercent,
       final_price: finalPrice,
+      invoice_url: invoiceUrl,
+      bank_slip_url: bankSlipUrl,
+      pix_qr_code_base64: pixQrCodeBase64,
+      pix_copy_paste: pixCopyPaste,
+      value: finalPrice,
+      billing_type,
+      payment_id: firstPaymentId,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
