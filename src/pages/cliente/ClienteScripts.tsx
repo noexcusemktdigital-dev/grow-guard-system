@@ -115,6 +115,7 @@ export default function ClienteScripts() {
             <Button size="sm" onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4 mr-1" /> Novo Script
             </Button>
+          </div>
         }
       />
 
