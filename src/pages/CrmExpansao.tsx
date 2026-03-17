@@ -477,6 +477,20 @@ export default function CrmExpansao() {
                             {STAGE_ICONS[stage.icon] || <CircleDot className="w-3.5 h-3.5" />}
                           </div>
                           <span className="text-xs font-semibold flex-1">{stage.label}</span>
+                          {selectionMode && stageLeads.length > 0 && (
+                            <Checkbox
+                              className="w-3.5 h-3.5"
+                              checked={stageLeads.every(l => selectedLeadIds.has(l.id))}
+                              onCheckedChange={() => {
+                                const ids = stageLeads.map(l => l.id);
+                                const allSelected = ids.every(id => selectedLeadIds.has(id));
+                                const next = new Set(selectedLeadIds);
+                                if (allSelected) ids.forEach(id => next.delete(id));
+                                else ids.forEach(id => next.add(id));
+                                setSelectedLeadIds(next);
+                              }}
+                            />
+                          )}
                           <Badge variant="outline" className="text-[9px] h-5">{stageLeads.length}</Badge>
                         </div>
                         {(stageValues[stage.key] > 0 || totalPipelineValue > 0) && (
