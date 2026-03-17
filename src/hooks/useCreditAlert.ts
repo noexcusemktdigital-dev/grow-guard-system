@@ -16,6 +16,10 @@ export function useCreditAlert(): CreditAlertData {
   const { data: wallet, isLoading: wl } = useClienteWallet();
   const { data: subscription, isLoading: sl } = useClienteSubscription();
 
+  if (wl || sl) {
+    return { level: "normal", percent: 100, balance: 0, total: 0, isLoading: true };
+  }
+
   const isTrial = subscription?.status === "trial";
 
   const planId = (subscription as any)?.plan as string | null;
