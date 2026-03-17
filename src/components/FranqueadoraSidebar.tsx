@@ -6,7 +6,7 @@ import {
   LayoutDashboard, DollarSign, FileText, Building2, TrendingUp,
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
   Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt, Sparkles, ClipboardCheck,
-  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, AlertTriangle, LogOut,
+  ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, AlertTriangle, LogOut, Users,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -36,6 +36,7 @@ const redeSection: SidebarItem[] = [
   { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
+  { label: "Candidatos", icon: Users, path: "/franqueadora/candidatos" },
 ];
 
 const comercialSection: SidebarItem[] = [

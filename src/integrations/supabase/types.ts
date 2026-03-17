@@ -3108,6 +3108,92 @@ export type Database = {
           },
         ]
       }
+      franchise_candidates: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          cep: string | null
+          city: string | null
+          cnpj: string | null
+          company_address: string | null
+          company_name: string | null
+          cpf: string | null
+          created_at: string | null
+          doc_url: string | null
+          email: string
+          id: string
+          lgpd_consent: boolean | null
+          lgpd_consent_date: string | null
+          marital_status: string | null
+          name: string
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          rg: string | null
+          source_lead_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          cep?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_address?: string | null
+          company_name?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          doc_url?: string | null
+          email: string
+          id?: string
+          lgpd_consent?: boolean | null
+          lgpd_consent_date?: string | null
+          marital_status?: string | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          rg?: string | null
+          source_lead_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          cep?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_address?: string | null
+          company_name?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          doc_url?: string | null
+          email?: string
+          id?: string
+          lgpd_consent?: boolean | null
+          lgpd_consent_date?: string | null
+          marital_status?: string | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          rg?: string | null
+          source_lead_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franchise_candidates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franchisee_charges: {
         Row: {
           asaas_payment_id: string | null

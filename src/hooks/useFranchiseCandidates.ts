@@ -1,0 +1,82 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserOrgId } from "./useUserOrgId";
+import { toast } from "sonner";
+
+export interface FranchiseCandidate {
+  id: string;
+  organization_id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  birth_date: string | null;
+  marital_status: string | null;
+  cep: string | null;
+  city: string | null;
+  address: string | null;
+  cpf: string | null;
+  rg: string | null;
+  company_name: string | null;
+  cnpj: string | null;
+  company_address: string | null;
+  doc_url: string | null;
+  lgpd_consent: boolean;
+  lgpd_consent_date: string | null;
+  status: string;
+  source_lead_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useFranchiseCandidates() {
+  const { data: orgId } = useUserOrgId();
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["franchise-candidates", orgId],
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("franchise_candidates")
+        .select("*")
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as FranchiseCandidate[];
+    },
+    enabled: !!orgId,
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from("franchise_candidates")
+        .update({ status })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["franchise-candidates"] });
+      toast.success("Status atualizado");
+    },
+    onError: () => toast.error("Erro ao atualizar status"),
+  });
+
+  const updateNotes = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const { error } = await supabase
+        .from("franchise_candidates")
+        .update({ notes })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["franchise-candidates"] });
+      toast.success("Observações salvas");
+    },
+    onError: () => toast.error("Erro ao salvar observações"),
+  });
+
+  return { ...query, updateStatus, updateNotes };
+}
