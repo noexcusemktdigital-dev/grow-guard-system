@@ -106,8 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
             if (verifyRole && verifyRole.length > 0) {
               const roles = verifyRole.map((r) => r.role as AppRole);
-              const priorityOrder: AppRole[] = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
-              const topRole = priorityOrder.find((p) => roles.includes(p)) || roles[0];
+              // SaaS provisioning always yields cliente_admin
+              const topRole = roles.find((r) => r === "cliente_admin") || roles[0];
               setRole(topRole);
               provisioned = true;
               console.log(`[Auth] Provisioning successful, role: ${topRole}`);
