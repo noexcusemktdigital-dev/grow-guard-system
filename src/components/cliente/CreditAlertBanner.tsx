@@ -14,8 +14,10 @@ function isDismissed(): boolean {
 }
 
 export function CreditAlertBanner() {
-  const { level, percent, balance } = useCreditAlert();
+  const { level, percent, balance, isLoading } = useCreditAlert();
   const [dismissed, setDismissed] = useState(isDismissed);
+
+  if (isLoading) return null;
   const navigate = useNavigate();
 
   if (level === "normal" || (dismissed && level !== "zero")) return null;
