@@ -1,64 +1,50 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Corrigir Google OAuth — Sessão não transferida a tempo
 
-### Status: ✅ Implementado
+### Causa raiz
 
-### Resumo
+O problema é uma **condição de corrida** (race condition) no `AuthContext.tsx`:
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+1. Usuário clica "Entrar com Google" → é redirecionado ao Google → volta para `/cliente/inicio`
+2. O `AuthProvider` monta e configura dois listeners em paralelo:
+   - `onAuthStateChange` no cliente portal (`noe-saas-auth`) — não encontra sessão, dispara com `null` e **define `loading=false` imediatamente**
+   - `getSession()` — verifica o cliente portal (nada), depois verifica o cliente default (onde o Lovable OAuth salvou a sessão), e só então faz a transferência
+3. O `ProtectedRoute` vê `loading=false` + `user=null` e **redireciona para `/app`** antes da transferência completar
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+Em resumo: o `onAuthStateChange` define `loading=false` antes do `getSession` ter chance de encontrar e transferir a sessão do Google OAuth.
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+### Solução
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+Adicionar um flag `initializing` no `AuthContext` para garantir que `loading` só se torne `false` **após** toda a lógica de inicialização (incluindo verificação do default client) completar. O `onAuthStateChange` não deve setar `loading=false` durante a fase inicial.
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### Mudança exata
 
----
+**Arquivo: `src/contexts/AuthContext.tsx`**
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+```typescript
+const [loading, setLoading] = useState(true);
+const [initialized, setInitialized] = useState(false); // ← NOVO
 
-### Status: ✅ Documentado
+// No onAuthStateChange:
+if (newSession?.user) {
+  setTimeout(() => fetchProfileAndRole(newSession.user), 0);
+}
+// Só define loading=false se já inicializou:
+if (initialized) {
+  setLoading(false);
+}
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+// No getSession (final da promise):
+setInitialized(true);
+setLoading(false);
+```
 
-### Margem por Plano
+Isso garante que durante o carregamento inicial, o `loading` permanece `true` até que `getSession` complete a verificação e a transferência da sessão OAuth. Depois de inicializado, os eventos subsequentes do `onAuthStateChange` (logout, refresh) continuam funcionando normalmente.
 
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+### Arquivo impactado
 
-### Custo por funcionalidade
+| Arquivo | Mudança |
+|---------|---------|
+| `src/contexts/AuthContext.tsx` | Adicionar flag `initialized` para evitar race condition |
 
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
