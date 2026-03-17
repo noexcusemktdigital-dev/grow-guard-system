@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export interface FranchiseCandidate {
@@ -30,9 +31,10 @@ export interface FranchiseCandidate {
 
 export function useFranchiseCandidates() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const query = useQuery({
-    queryKey: ["franchise-candidates"],
+    queryKey: ["franchise-candidates", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("franchise_candidates")
@@ -41,6 +43,7 @@ export function useFranchiseCandidates() {
       if (error) throw error;
       return data as FranchiseCandidate[];
     },
+    enabled: !!user,
   });
 
   const updateStatus = useMutation({
