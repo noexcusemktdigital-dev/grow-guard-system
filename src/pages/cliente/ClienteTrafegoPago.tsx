@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   DollarSign, Sparkles, Target, Users, Globe, BarChart3, Zap,
   Eye, MousePointer, TrendingUp, PlayCircle, ExternalLink,

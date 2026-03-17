@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 // ChatBriefing integration
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
 import { AGENTS, RAFAEL_STEPS } from "@/components/cliente/briefingAgents";

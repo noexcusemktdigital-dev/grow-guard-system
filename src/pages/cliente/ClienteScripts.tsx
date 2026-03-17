@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   BookOpen, Plus, Copy, Search, ChevronDown, ChevronUp, Sparkles,
   Pencil, Trash2, Crosshair, ShieldQuestion, Handshake, Target, Ban, Loader2

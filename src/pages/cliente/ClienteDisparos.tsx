@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   Send, Plus, Zap, Settings2, ChevronRight, ChevronLeft,
 } from "lucide-react";

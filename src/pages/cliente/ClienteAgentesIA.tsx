@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import { Bot, Plus, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";

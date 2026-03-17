@@ -1,4 +1,5 @@
 import { useMemo, useCallback } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   Trophy, Medal, Star, Target, Coins, Timer, BarChart3, Award,
   TrendingUp, Users, Crown, Lock, Gift, CheckCircle2, Flame,

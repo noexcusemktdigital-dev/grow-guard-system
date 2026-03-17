@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   FileText, Check, Sparkles, Copy, ArrowLeft, ArrowRight,
   Layers, Video, AlignLeft, Image, BookOpen, Clock,

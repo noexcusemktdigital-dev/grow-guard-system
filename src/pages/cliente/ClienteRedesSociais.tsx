@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   Globe, Sparkles, ArrowLeft, ArrowRight, Loader2,
   Briefcase, Target, Users, Package, Award,
