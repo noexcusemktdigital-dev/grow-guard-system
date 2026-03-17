@@ -24,10 +24,11 @@ export function useOrgProfile() {
 
   const update = useMutation({
     mutationFn: async (updates: Record<string, any>) => {
+      if (!orgId) throw new Error("Organização não encontrada. Tente novamente.");
       const { error } = await supabase
         .from("organizations")
         .update(updates)
-        .eq("id", orgId!);
+        .eq("id", orgId);
       if (error) throw error;
     },
     onSuccess: () => {
