@@ -553,7 +553,8 @@ function getLeadsProjection(pct: number) {
 
 function getRevenueProjection(answers: Answers, pct: number) {
   const ticketMap: Record<string, number> = {
-    "0-200": 150, "200-1k": 600, "1-5k": 3000, "5-15k": 10000, "15k+": 20000,
+    "0-200": 150, "200-1k": 600, "1-5k": 3000, "5-15k": 10000,
+    "15-50k": 30000, "50-150k": 90000, "150k+": 200000, "15k+": 20000,
   };
   const ticket = ticketMap[answers.ticket_medio as string] || 600;
   const conv = 0.1;
