@@ -209,9 +209,22 @@ Deno.serve(async (req) => {
       organization_id,
     }, { onConflict: "user_id,organization_id", ignoreDuplicates: true });
 
-    // Set role (upsert to handle existing users)
+    // Determine default role based on organization type
     const allowedRoles = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
-    const validRole = allowedRoles.includes(role) ? role : "cliente_user";
+    let validRole: string;
+    if (allowedRoles.includes(role)) {
+      validRole = role;
+    } else {
+      // Lookup org type to pick the correct default
+      const { data: orgData } = await adminClient
+        .from("organizations")
+        .select("type")
+        .eq("id", organization_id)
+        .single();
+      const orgType = orgData?.type;
+      validRole = (orgType === "franqueadora" || orgType === "franqueado") ? "franqueado" : "cliente_user";
+      console.log(`[invite-user] No explicit role, org type=${orgType}, defaulting to ${validRole}`);
+    }
     await adminClient.from("user_roles").upsert({
       user_id: userId,
       role: validRole,
