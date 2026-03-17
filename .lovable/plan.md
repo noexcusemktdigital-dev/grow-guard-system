@@ -1,64 +1,46 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Arrastar lead de qualquer lugar do card (não só pelo ícone)
 
-### Status: ✅ Implementado
+### Problema atual
 
-### Resumo
+Nos 3 CRMs (Cliente, Franqueado, Expansão) e no Kanban de Atendimento, o drag-and-drop só funciona clicando no pequeno ícone `GripVertical` (≈14px). Os `{...attributes} {...listeners}` do dnd-kit estão aplicados apenas nesse ícone, tornando difícil arrastar.
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+### Solução
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+Mover `{...attributes} {...listeners}` do ícone `GripVertical` para o `div` externo do card (o que já tem `ref={setNodeRef}`). Isso torna o card inteiro arrastável. O `onClick` do card continua funcionando normalmente porque o `PointerSensor` já tem `activationConstraint` que distingue clique de arrasto. O ícone GripVertical permanece como indicador visual.
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+### Mudanças
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/cliente/ClienteCRM.tsx` | Mover `attributes`/`listeners` para o div externo do card |
+| `src/pages/franqueado/FranqueadoCRM.tsx` | Idem |
+| `src/pages/CrmExpansao.tsx` | Idem |
+| `src/components/atendimento/AtendimentoKanban.tsx` | Idem (se aplicável) |
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### Código (padrão para todos os arquivos)
 
----
+**Antes:**
+```tsx
+<div ref={setNodeRef} style={style} className={`group ${isDragging ? "..." : ""}`}>
+  <Card onClick={() => { if (!isDragging) onClick(); }}>
+    <CardContent>
+      <div {...attributes} {...listeners} className="cursor-grab ...">
+        <GripVertical />
+      </div>
+```
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+**Depois:**
+```tsx
+<div ref={setNodeRef} style={style} {...attributes} {...listeners}
+     className={`group touch-none ${isDragging ? "..." : ""}`}>
+  <Card onClick={() => { if (!isDragging) onClick(); }}>
+    <CardContent>
+      <div className="cursor-grab ...">
+        <GripVertical />
+      </div>
+```
 
-### Status: ✅ Documentado
+O `touch-none` no div externo é necessário para que o drag funcione em dispositivos touch. Os botões de ação (menu, temperatura) já têm `e.stopPropagation()` que impede conflito com o drag.
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
-
-### Margem por Plano
-
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
