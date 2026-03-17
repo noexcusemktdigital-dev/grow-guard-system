@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
       .from("subscriptions")
       .update({
         plan,
-        status: "active",
+        status: "pending_payment",
         modules: null,
         sales_plan: null,
         marketing_plan: null,
@@ -245,26 +245,7 @@ Deno.serve(async (req) => {
       })
       .eq("organization_id", org.id);
 
-    // Add plan credits
-    const totalCredits = PLAN_CREDITS[plan] || 500;
-
-    const { data: wallet } = await adminClient
-      .from("credit_wallets")
-      .select("id, balance")
-      .eq("organization_id", org.id)
-      .maybeSingle();
-
-    if (wallet && totalCredits > 0) {
-      const newBalance = wallet.balance + totalCredits;
-      await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
-      await adminClient.from("credit_transactions").insert({
-        organization_id: org.id,
-        type: "purchase",
-        amount: totalCredits,
-        balance_after: newBalance,
-        description: `Ativação plano ${plan} — ${totalCredits} créditos`,
-      });
-    }
+    // Credits will be added by asaas-webhook on PAYMENT_CONFIRMED
 
     console.log(`Subscription created for org ${org.id}: plan=${plan}, price=${finalPrice}, discount=${discountPercent}%, asaas_sub=${subscriptionData.id}`);
 
