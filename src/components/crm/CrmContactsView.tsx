@@ -639,6 +639,11 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {funnels.length === 0 ? (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                Nenhum funil criado. Crie um funil nas configurações do CRM antes de converter contatos.
+              </div>
+            ) : (
             <div>
               <Label className="text-xs font-semibold">Funil</Label>
               <Select value={selectedFunnelId} onValueChange={v => { setSelectedFunnelId(v); setSelectedStage(""); }}>
@@ -650,6 +655,7 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
                 </SelectContent>
               </Select>
             </div>
+            )}
             {selectedFunnelStages.length > 0 && (
               <div>
                 <Label className="text-xs font-semibold">Etapa inicial</Label>
