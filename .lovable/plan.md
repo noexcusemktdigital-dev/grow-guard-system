@@ -1,31 +1,64 @@
 
 
-## Plano: Corrigir precisão do drag-and-drop nos Kanbans CRM
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
-O `DragOverlay` do `@dnd-kit/core` não segue o cursor com precisão. Isso acontece porque o overlay é renderizado sem `dropAnimation` configurada corretamente ou sem a propriedade `modifiers` para ancorar ao cursor.
+### Status: ✅ Implementado
 
-### Solução
-Adicionar o modifier `snapCenterToCursor` (do `@dnd-kit/modifiers`) ao `DragOverlay` em todos os 4 Kanbans. Isso faz o overlay seguir exatamente o centro do cursor durante o arraste.
+### Resumo
 
-### Arquivos a editar
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/franqueado/FranqueadoCRM.tsx` | Importar `snapCenterToCursor` de `@dnd-kit/modifiers` e adicionar `modifiers={[snapCenterToCursor]}` no `<DragOverlay>` |
-| `src/pages/cliente/ClienteCRM.tsx` | Mesmo ajuste |
-| `src/pages/CrmExpansao.tsx` | Mesmo ajuste |
-| `src/components/atendimento/AtendimentoKanban.tsx` | Mesmo ajuste |
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-### Exemplo da mudança
-```tsx
-import { snapCenterToCursor } from "@dnd-kit/modifiers";
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-// No DragOverlay:
-<DragOverlay dropAnimation={null} zIndex={100} modifiers={[snapCenterToCursor]}>
-  {/* overlay card */}
-</DragOverlay>
-```
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-Isso garante que o card arrastado segue o cursor em tempo real com precisão em todos os Kanbans do sistema.
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
+---
+
+## Análise: Custo Real Lovable vs Receita dos Planos
+
+### Status: ✅ Documentado
+
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

@@ -19,6 +19,7 @@ import {
 import { useDraggable } from "@dnd-kit/core";
 import { useState } from "react";
 import { CSS } from "@dnd-kit/utilities";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 
 interface Props {
   tickets: Ticket[];
@@ -174,7 +175,7 @@ export function AtendimentoKanban({ tickets, onSelectTicket, onMoveTicket }: Pro
           />
         ))}
       </div>
-      <DragOverlay>
+      <DragOverlay dropAnimation={null} zIndex={100} modifiers={[snapCenterToCursor]}>
         {activeTicket ? <OverlayCard ticket={activeTicket} /> : null}
       </DragOverlay>
     </DndContext>

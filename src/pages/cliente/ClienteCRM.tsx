@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLeadQuota } from "@/hooks/useLeadQuota";
 import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
 import { CrmFunnelManager } from "@/components/crm/CrmFunnelManager";
@@ -891,7 +892,7 @@ export default function ClienteCRM() {
                   );
                 })}
               </div>
-              <DragOverlay dropAnimation={null} zIndex={100}>
+              <DragOverlay dropAnimation={null} zIndex={100} modifiers={[snapCenterToCursor]}>
                 {draggingLead && (
                   <Card className="shadow-xl border-primary/30 w-[260px]">
                     <CardContent className="p-3">
