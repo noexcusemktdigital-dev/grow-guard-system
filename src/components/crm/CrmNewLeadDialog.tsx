@@ -17,6 +17,7 @@ interface CrmNewLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultStage: string;
+  funnelId?: string;
   prefillContact?: { id?: string; name: string; phone?: string; email?: string; company?: string } | null;
 }
 
