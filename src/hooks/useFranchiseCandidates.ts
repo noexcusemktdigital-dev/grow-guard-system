@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
 
 export interface FranchiseCandidate {
@@ -30,22 +29,18 @@ export interface FranchiseCandidate {
 }
 
 export function useFranchiseCandidates() {
-  const { data: orgId } = useUserOrgId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["franchise-candidates", orgId],
+    queryKey: ["franchise-candidates"],
     queryFn: async () => {
-      if (!orgId) return [];
       const { data, error } = await supabase
         .from("franchise_candidates")
         .select("*")
-        .eq("organization_id", orgId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as FranchiseCandidate[];
     },
-    enabled: !!orgId,
   });
 
   const updateStatus = useMutation({
