@@ -54,16 +54,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(profileData as Profile);
     }
 
-    // Fetch role (highest priority)
+    // Determine portal context from URL
+    const path = window.location.pathname;
+    const isSaasPortal = path.startsWith("/cliente") || path.startsWith("/app") || path === "/" || path.startsWith("/landing");
+
+    // Fetch role (portal-aware)
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", currentUser.id);
 
     if (roleData && roleData.length > 0) {
-      const priorityOrder: AppRole[] = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
       const roles = roleData.map((r) => r.role as AppRole);
-      const topRole = priorityOrder.find((p) => roles.includes(p)) || roles[0];
+      
+      // Filter roles by current portal context
+      const saasRoles: AppRole[] = ["cliente_admin", "cliente_user"];
+      const franchiseRoles: AppRole[] = ["super_admin", "admin", "franqueado"];
+      const portalRoles = isSaasPortal
+        ? roles.filter((r) => saasRoles.includes(r))
+        : roles.filter((r) => franchiseRoles.includes(r));
+
+      // Use portal-specific role if available, otherwise fallback to priority
+      const priorityOrder: AppRole[] = isSaasPortal
+        ? ["cliente_admin", "cliente_user", "super_admin", "admin", "franqueado"]
+        : ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
+      const topRole = (portalRoles.length > 0 ? portalRoles[0] : null)
+        || priorityOrder.find((p) => roles.includes(p))
+        || roles[0];
       setRole(topRole);
     } else {
       // New user from SaaS signup — check if they came from Google OAuth or SaaS signup
@@ -89,8 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
             if (verifyRole && verifyRole.length > 0) {
               const roles = verifyRole.map((r) => r.role as AppRole);
-              const priorityOrder: AppRole[] = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
-              const topRole = priorityOrder.find((p) => roles.includes(p)) || roles[0];
+              // SaaS provisioning always yields cliente_admin
+              const topRole = roles.find((r) => r === "cliente_admin") || roles[0];
               setRole(topRole);
               provisioned = true;
               console.log(`[Auth] Provisioning successful, role: ${topRole}`);
