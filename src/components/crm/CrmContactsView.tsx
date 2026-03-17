@@ -310,7 +310,19 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
       toast({ title: "Selecione funil e etapa", variant: "destructive" });
       return;
     }
+    let created = 0;
+    let skipped = 0;
+    const existingLeads = leads || [];
     convertContacts.forEach(c => {
+      // Check for duplicates by phone or email
+      const isDuplicate = existingLeads.some(l =>
+        (c.phone && l.phone && c.phone === l.phone) ||
+        (c.email && l.email && c.email === l.email)
+      );
+      if (isDuplicate) {
+        skipped++;
+        return;
+      }
       createLead.mutate({
         name: c.name,
         email: c.email || undefined,
@@ -320,8 +332,11 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
         funnel_id: selectedFunnelId,
         stage: selectedStage,
       });
+      created++;
     });
-    toast({ title: `${convertContacts.length} lead(s) criado(s) no funil selecionado` });
+    toast({
+      title: `${created} lead(s) criado(s)${skipped > 0 ? `, ${skipped} duplicado(s) ignorado(s)` : ""}`,
+    });
     setConvertDialogOpen(false);
     setConvertContacts([]);
     setSelectedIds(new Set());
