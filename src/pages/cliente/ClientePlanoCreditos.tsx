@@ -298,8 +298,20 @@ function SubscriptionDialog({
   const [couponDiscount, setCouponDiscount] = useState<number>(0);
   const [couponValid, setCouponValid] = useState<boolean | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<any>(null);
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
+
+  const handleClose = (o: boolean) => {
+    if (!o) {
+      setPaymentResult(null);
+      setBillingType("CREDIT_CARD");
+      setCouponCode("");
+      setCouponDiscount(0);
+      setCouponValid(null);
+    }
+    onOpenChange(o);
+  };
 
   const { data: orgData } = useQuery({
     queryKey: ["org-cnpj-check", orgId],
@@ -368,10 +380,9 @@ function SubscriptionDialog({
     },
     onSuccess: (data) => {
       toast.success("Cobrança gerada! Seus créditos serão liberados após a confirmação do pagamento.");
-      if (data?.payment_link) toast.info("Link de pagamento enviado.");
       qc.invalidateQueries({ queryKey: ["subscription"] });
       qc.invalidateQueries({ queryKey: ["credit-wallet"] });
-      onOpenChange(false);
+      setPaymentResult(data);
     },
     onError: (err: any) => {
       const msg = err?.message || "Erro desconhecido";
@@ -386,93 +397,102 @@ function SubscriptionDialog({
   if (!plan) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Assinar Plano {plan.name}</DialogTitle>
+          <DialogTitle>
+            {paymentResult ? "Pagamento — Plano " + plan.name : "Assinar Plano " + plan.name}
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div>
-            <div className="flex items-baseline gap-2">
-              {couponDiscount > 0 ? (
-                <>
-                  <span className="text-lg line-through text-muted-foreground">R$ {plan.price}</span>
-                  <span className="text-3xl font-bold text-foreground">R$ {finalPrice}</span>
-                </>
-              ) : (
-                <span className="text-3xl font-bold text-foreground">R$ {plan.price}</span>
-              )}
-              <span className="text-muted-foreground">/mês</span>
-            </div>
-            {couponDiscount > 0 && (
-              <Badge className="mt-1 text-xs" variant="secondary">
-                <Tag className="w-3 h-3 mr-1" /> {couponDiscount}% de desconto aplicado
-              </Badge>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">{plan.credits.toLocaleString("pt-BR")} créditos/mês</p>
-          </div>
 
-          {/* Coupon field */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Cupom de desconto</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Digite o código"
-                value={couponCode}
-                onChange={(e) => {
-                  setCouponCode(e.target.value.toUpperCase());
-                  if (couponValid !== null) {
-                    setCouponValid(null);
-                    setCouponDiscount(0);
-                  }
-                }}
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={applyCoupon}
-                disabled={couponLoading || !couponCode.trim()}
-                className="shrink-0"
-              >
-                {couponLoading ? "..." : "Aplicar"}
-              </Button>
-            </div>
-            {couponValid === false && (
-              <p className="text-xs text-destructive">Cupom inválido ou expirado</p>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Forma de pagamento</Label>
-            <RadioGroup value={billingType} onValueChange={setBillingType} className="space-y-2">
-              {[
-                { value: "CREDIT_CARD", label: "Cartão de Crédito", desc: "Cobrança automática mensal" },
-                { value: "BOLETO", label: "Boleto", desc: "Vencimento todo dia 10" },
-                { value: "PIX", label: "PIX", desc: "QR Code gerado automaticamente" },
-              ].map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50">
-                  <RadioGroupItem value={opt.value} id={opt.value} />
-                  <Label htmlFor={opt.value} className="cursor-pointer flex-1">
-                    <span className="font-medium">{opt.label}</span>
-                    <p className="text-xs text-muted-foreground">{opt.desc}</p>
-                  </Label>
+        {paymentResult ? (
+          <InlinePaymentView result={paymentResult} billingType={billingType} onClose={() => handleClose(false)} />
+        ) : (
+          <>
+            <div className="space-y-4 py-2">
+              <div>
+                <div className="flex items-baseline gap-2">
+                  {couponDiscount > 0 ? (
+                    <>
+                      <span className="text-lg line-through text-muted-foreground">R$ {plan.price}</span>
+                      <span className="text-3xl font-bold text-foreground">R$ {finalPrice}</span>
+                    </>
+                  ) : (
+                    <span className="text-3xl font-bold text-foreground">R$ {plan.price}</span>
+                  )}
+                  <span className="text-muted-foreground">/mês</span>
                 </div>
-              ))}
-            </RadioGroup>
-          </div>
-        {!hasCnpj && (
-          <p className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
-            ⚠️ Preencha o CNPJ/CPF da empresa em <strong>Configurações → Organização</strong> antes de assinar.
-          </p>
+                {couponDiscount > 0 && (
+                  <Badge className="mt-1 text-xs" variant="secondary">
+                    <Tag className="w-3 h-3 mr-1" /> {couponDiscount}% de desconto aplicado
+                  </Badge>
+                )}
+                <p className="text-sm text-muted-foreground mt-1">{plan.credits.toLocaleString("pt-BR")} créditos/mês</p>
+              </div>
+
+              {/* Coupon field */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Cupom de desconto</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Digite o código"
+                    value={couponCode}
+                    onChange={(e) => {
+                      setCouponCode(e.target.value.toUpperCase());
+                      if (couponValid !== null) {
+                        setCouponValid(null);
+                        setCouponDiscount(0);
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={applyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="shrink-0"
+                  >
+                    {couponLoading ? "..." : "Aplicar"}
+                  </Button>
+                </div>
+                {couponValid === false && (
+                  <p className="text-xs text-destructive">Cupom inválido ou expirado</p>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Forma de pagamento</Label>
+                <RadioGroup value={billingType} onValueChange={setBillingType} className="space-y-2">
+                  {[
+                    { value: "CREDIT_CARD", label: "Cartão de Crédito", desc: "Cobrança automática mensal" },
+                    { value: "BOLETO", label: "Boleto", desc: "Vencimento todo dia 10" },
+                    { value: "PIX", label: "PIX", desc: "QR Code gerado automaticamente" },
+                  ].map((opt) => (
+                    <div key={opt.value} className="flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50">
+                      <RadioGroupItem value={opt.value} id={`sub-${opt.value}`} />
+                      <Label htmlFor={`sub-${opt.value}`} className="cursor-pointer flex-1">
+                        <span className="font-medium">{opt.label}</span>
+                        <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              {!hasCnpj && (
+                <p className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
+                  ⚠️ Preencha o CNPJ/CPF da empresa em <strong>Configurações → Organização</strong> antes de assinar.
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => handleClose(false)} disabled={subscribe.isPending}>Cancelar</Button>
+              <Button onClick={() => subscribe.mutate()} disabled={subscribe.isPending || !hasCnpj}>
+                {subscribe.isPending ? "Processando..." : "Confirmar Assinatura"}
+              </Button>
+            </DialogFooter>
+          </>
         )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={subscribe.isPending}>Cancelar</Button>
-          <Button onClick={() => subscribe.mutate()} disabled={subscribe.isPending || !hasCnpj}>
-            {subscribe.isPending ? "Processando..." : "Confirmar Assinatura"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
