@@ -61,9 +61,10 @@ const emptyForm = { name: "", email: "", phone: "", company: "", position: "", n
 
 interface Props {
   onCreateLeadFromContact?: (contact: CrmContact) => void;
+  onBackToPipeline?: () => void;
 }
 
-export function CrmContactsView({ onCreateLeadFromContact }: Props) {
+export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: Props) {
   const { toast } = useToast();
   const { data: contacts, isLoading } = useCrmContacts();
   const { data: leads } = useCrmLeads();
