@@ -144,7 +144,8 @@ const salesSections: StrategySection[] = [
         options: [
           { label: "Até R$ 200", value: "0-200" }, { label: "R$ 200-1 mil", value: "200-1k" },
           { label: "R$ 1-5 mil", value: "1-5k" }, { label: "R$ 5-15 mil", value: "5-15k" },
-          { label: "R$ 15 mil+", value: "15k+" },
+          { label: "R$ 15-50 mil", value: "15-50k" }, { label: "R$ 50-150 mil", value: "50-150k" },
+          { label: "R$ 150 mil+", value: "150k+" },
         ],
       },
       {
@@ -552,7 +553,8 @@ function getLeadsProjection(pct: number) {
 
 function getRevenueProjection(answers: Answers, pct: number) {
   const ticketMap: Record<string, number> = {
-    "0-200": 150, "200-1k": 600, "1-5k": 3000, "5-15k": 10000, "15k+": 20000,
+    "0-200": 150, "200-1k": 600, "1-5k": 3000, "5-15k": 10000,
+    "15-50k": 30000, "50-150k": 90000, "150k+": 200000, "15k+": 20000,
   };
   const ticket = ticketMap[answers.ticket_medio as string] || 600;
   const conv = 0.1;
