@@ -678,6 +678,7 @@ export default function ClienteTrafegoPago() {
         title="Tráfego Pago"
         subtitle="Estratégia de campanhas gerada por IA com wizard guiado"
         icon={<DollarSign className="w-5 h-5 text-primary" />}
+        actions={<FeatureTutorialButton slug="trafego" />}
       />
 
       <StrategyBanner toolName="o tráfego pago" dataUsed="Canais prioritários, funil e público-alvo" />

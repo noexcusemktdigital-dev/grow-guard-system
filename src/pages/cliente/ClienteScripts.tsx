@@ -110,9 +110,11 @@ export default function ClienteScripts() {
         subtitle="Scripts de prospecção e negociação organizados por etapa do funil"
         icon={<BookOpen className="w-5 h-5 text-primary" />}
         actions={
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Novo Script
-          </Button>
+          <div className="flex items-center gap-2">
+            <FeatureTutorialButton slug="scripts" />
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Novo Script
+            </Button>
         }
       />
 

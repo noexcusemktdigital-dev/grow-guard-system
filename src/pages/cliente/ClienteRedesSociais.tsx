@@ -542,6 +542,7 @@ export default function ClienteRedesSociais() {
           icon={<Share2 className="w-5 h-5 text-primary" />}
           actions={
             <div className="flex items-center gap-2">
+              <FeatureTutorialButton slug="redes_sociais" />
               {posts && posts.length > 0 && (
                 <Button
                   variant={selectionMode ? "default" : "outline"}

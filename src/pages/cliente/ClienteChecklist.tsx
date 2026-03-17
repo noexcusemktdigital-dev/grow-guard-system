@@ -357,6 +357,7 @@ export default function ClienteChecklist() {
         title="Tarefas"
         subtitle="Gerencie suas tarefas diárias e atribuições"
         icon={<CheckSquare className="w-5 h-5 text-primary" />}
+        actions={<FeatureTutorialButton slug="checklist" />}
       />
 
       <Tabs defaultValue="hoje">

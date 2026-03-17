@@ -84,7 +84,12 @@ export default function ClienteAgentesIA() {
   return (
     <div className="w-full space-y-6">
       <PageHeader title="Agentes de IA" subtitle="Crie e gerencie seus agentes inteligentes" icon={<Bot className="w-5 h-5 text-primary" />}
-        actions={<Button onClick={handleNew} size="sm" className="gap-1.5"><Plus className="w-4 h-4" /> Novo Agente</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <FeatureTutorialButton slug="agentes_ia" />
+            <Button onClick={handleNew} size="sm" className="gap-1.5"><Plus className="w-4 h-4" /> Novo Agente</Button>
+          </div>
+        }
       />
 
       {isLoading ? (
