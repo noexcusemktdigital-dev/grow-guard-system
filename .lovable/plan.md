@@ -1,52 +1,64 @@
 
 
-## Plano: Corrigir 3 Bugs — Flickering de Tela, Erro de Script, e Débito de Créditos do Agente IA
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problemas identificados
+### Status: ✅ Implementado
 
-**1. Tela piscando / mudando de cor**
-O `ThemeToggle` não persiste a preferência no `localStorage`. A cada navegação de página, o estado `dark` reinicia para `false`, causando um flash visual quando o componente re-renderiza.
+### Resumo
 
-**2. Erro ao gerar script**
-A última geração de script (16/mar) ainda cobrou **150 créditos** (taxa antiga). A Edge Function `generate-script` não foi redeployada com o novo `CREDIT_COST = 20`. O usuário teste ficou com apenas **50 créditos**, insuficientes para gerar outro script (o edge function ainda pede 150).
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-Correção: forçar o redeploy da edge function (o código já está correto com `CREDIT_COST = 20`, mas precisa ser redeployado).
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**3. Bug grave: Agente IA debita tokens brutos ao invés de créditos fixos**
-A função `debitCredits` dentro de `ai-agent-reply/index.ts` debita o valor de `tokensUsed` (ex: 2008, 2349, 2871 tokens) diretamente do saldo de créditos, ao invés de um custo fixo de **2 créditos por mensagem** (conforme definido em `plans.ts`). Isso é o maior dreno de créditos da plataforma.
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-### Soluções
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/ThemeToggle.tsx` | Persistir tema no `localStorage`, ler na inicialização |
-| `supabase/functions/ai-agent-reply/index.ts` | Alterar `debitCredits` para debitar fixo **2 créditos** por mensagem (logando tokens no metadata para controle), usar `debit_credits` RPC |
-| `supabase/functions/generate-script/index.ts` | Adicionar um espaço/comentário trivial para forçar redeploy (código já correto) |
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-### Detalhe técnico
+---
 
-**ThemeToggle** — Ler `localStorage.getItem("theme")` no `useState` inicial, e salvar no `useEffect`.
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-**ai-agent-reply debitCredits** — Substituir a lógica que faz `balance - tokensUsed` por chamada ao RPC `debit_credits` com `_amount: 2`:
-```typescript
-async function debitCredits(adminClient, orgId, tokensUsed, agentName) {
-  try {
-    await adminClient.rpc("debit_credits", {
-      _org_id: orgId,
-      _amount: 2,
-      _description: `Mensagem IA — ${agentName}`,
-      _source: "ai-agent-reply",
-    });
-  } catch (e) {
-    console.error("Debit error:", e);
-  }
-}
-```
-Mantém o `tokensUsed` no log de `ai_conversation_logs` para rastreamento de custo real.
+### Status: ✅ Documentado
 
-**Recarregar créditos do teste** — SQL para restaurar o saldo do usuário teste para 500.
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
-### Resumo de impacto
-- 3 arquivos editados
-- 1 query SQL para restaurar créditos do teste
+### Margem por Plano
 
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

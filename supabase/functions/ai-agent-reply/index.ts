@@ -88,22 +88,17 @@ function hoursSince(dateStr: string): number {
 }
 
 async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string) {
-  const { data: wallet } = await adminClient
-    .from("credit_wallets")
-    .select("id, balance")
-    .eq("organization_id", orgId)
-    .maybeSingle();
-  if (!wallet) return;
-  const newBalance = Math.max(0, wallet.balance - tokensUsed);
-  await adminClient.from("credit_wallets").update({ balance: newBalance }).eq("id", wallet.id);
-  await adminClient.from("credit_transactions").insert({
-    organization_id: orgId,
-    type: "consumption",
-    amount: -tokensUsed,
-    balance_after: newBalance,
-    description: `Consumo IA — ${agentName}`,
-    metadata: { source: "ai-agent-reply" },
-  });
+  const FIXED_CREDIT_COST = 2;
+  try {
+    await adminClient.rpc("debit_credits", {
+      _org_id: orgId,
+      _amount: FIXED_CREDIT_COST,
+      _description: `Mensagem IA — ${agentName}`,
+      _source: "ai-agent-reply",
+    });
+  } catch (e) {
+    console.error("Debit credits error (non-blocking):", e);
+  }
 }
 
 async function executeHandoff(adminClient: any, orgId: string, contactId: string, agentName: string, reason: string) {

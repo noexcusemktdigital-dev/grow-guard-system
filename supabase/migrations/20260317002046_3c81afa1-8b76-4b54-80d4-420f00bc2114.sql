@@ -1,0 +1,2 @@
+UPDATE credit_wallets SET balance = 500, updated_at = now() WHERE organization_id = '6f409ecb-94a5-4a90-af33-23b1fd69cd62';
+INSERT INTO credit_transactions (organization_id, type, amount, balance_after, description, metadata) VALUES ('6f409ecb-94a5-4a90-af33-23b1fd69cd62', 'adjustment', 450, 500, 'Restauração de créditos (correção bug débito tokens)', '{"source": "admin_fix"}'::jsonb);
