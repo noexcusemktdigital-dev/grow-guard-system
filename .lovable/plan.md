@@ -1,58 +1,64 @@
 
 
-## Plano: Corrigir importação CSV — Suporte a delimitador ponto-e-vírgula
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Causa raiz
+### Status: ✅ Implementado
 
-O arquivo CSV usa **ponto-e-vírgula (`;`)** como separador de colunas (padrão brasileiro do Excel), mas o parser em `CrmCsvImportDialog.tsx` só reconhece **vírgula (`,`)**. Resultado: a linha inteira vira uma única coluna, o campo `name` fica vazio após o mapeamento, e o parser descarta todas as linhas → "Nenhum contato encontrado".
+### Resumo
 
-### Solução
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-Detectar automaticamente o delimitador na primeira linha (header). Se o header contiver mais `;` que `,`, usar `;` como separador. Isso resolve tanto CSVs brasileiros (`;`) quanto o formato internacional (`,`).
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-### Mudança
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/crm/CrmCsvImportDialog.tsx` | Detectar delimitador (`;` ou `,`) e usá-lo no parse de headers e linhas |
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-### Código
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-Na função `parseCsvText`, antes de fazer o split dos headers:
+---
 
-```typescript
-function parseCsvText(text: string): { headers: string[]; rows: ParsedRow[] } {
-  const lines = text.split("\n").filter(l => l.trim());
-  if (lines.length < 2) return { headers: [], rows: [] };
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-  // Auto-detect delimiter: semicolon (BR Excel) vs comma
-  const firstLine = lines[0];
-  const delimiter = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
+### Status: ✅ Documentado
 
-  const rawHeaders = firstLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
-  const mappedHeaders = rawHeaders.map(h => COLUMN_MAP[h] || h);
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
-  const rows: ParsedRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values: string[] = [];
-    let current = "";
-    let inQuotes = false;
-    for (const char of lines[i]) {
-      if (char === '"') { inQuotes = !inQuotes; continue; }
-      if (char === delimiter && !inQuotes) { values.push(current.trim()); current = ""; continue; }
-      current += char;
-    }
-    values.push(current.trim());
+### Margem por Plano
 
-    const row: any = { name: "", email: "", phone: "", company: "", position: "", source: "", tags: "", notes: "" };
-    mappedHeaders.forEach((h, idx) => {
-      if (row.hasOwnProperty(h)) row[h] = values[idx] || "";
-    });
-    if (row.name) rows.push(row);
-  }
-  return { headers: mappedHeaders, rows };
-}
-```
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
 
-Mudança cirúrgica: apenas detectar o delimitador e usá-lo nos dois splits (header + valores).
+### Custo por funcionalidade
 
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

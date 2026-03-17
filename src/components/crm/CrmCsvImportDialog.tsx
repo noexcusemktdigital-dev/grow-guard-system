@@ -47,18 +47,21 @@ function parseCsvText(text: string): { headers: string[]; rows: ParsedRow[] } {
   const lines = text.split("\n").filter(l => l.trim());
   if (lines.length < 2) return { headers: [], rows: [] };
 
-  const rawHeaders = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
+  // Auto-detect delimiter: semicolon (BR Excel) vs comma
+  const firstLine = lines[0];
+  const delimiter = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
+
+  const rawHeaders = firstLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
   const mappedHeaders = rawHeaders.map(h => COLUMN_MAP[h] || h);
 
   const rows: ParsedRow[] = [];
   for (let i = 1; i < lines.length; i++) {
-    // Simple CSV parse (handles quoted commas)
     const values: string[] = [];
     let current = "";
     let inQuotes = false;
     for (const char of lines[i]) {
       if (char === '"') { inQuotes = !inQuotes; continue; }
-      if (char === "," && !inQuotes) { values.push(current.trim()); current = ""; continue; }
+      if (char === delimiter && !inQuotes) { values.push(current.trim()); current = ""; continue; }
       current += char;
     }
     values.push(current.trim());
