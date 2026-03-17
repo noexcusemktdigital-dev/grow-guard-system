@@ -99,6 +99,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
       value: value ? parseFloat(value) : undefined,
       source: source || undefined,
       stage: defaultStage,
+      funnel_id: funnelId || undefined,
       tags: tags.length > 0 ? tags : undefined,
       _maxLeads: maxLeads,
     } as any);
