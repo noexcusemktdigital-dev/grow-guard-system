@@ -135,7 +135,7 @@ export default function FranqueadoraCandidatos() {
     <div className="space-y-6">
       <PageHeader
         title="Candidatos"
-        description="Candidatos a franqueados recebidos via formulário"
+        subtitle="Candidatos a franqueados recebidos via formulário"
         icon={<Users className="w-6 h-6 text-primary" />}
       />
 

@@ -36,6 +36,7 @@ const redeSection: SidebarItem[] = [
   { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
+  { label: "Candidatos", icon: Users, path: "/franqueadora/candidatos" },
 ];
 
 const comercialSection: SidebarItem[] = [
