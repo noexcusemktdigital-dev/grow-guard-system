@@ -278,7 +278,13 @@ function InlinePaymentView({ result, billingType, onClose }: { result: any; bill
     <div className="space-y-4 py-2">
       <p className="text-sm text-muted-foreground text-center">Complete o pagamento abaixo</p>
       {result.invoice_url ? (
-        <iframe src={result.invoice_url} className="w-full h-96 rounded-lg border" title="Pagamento" />
+        <div className="space-y-3 text-center">
+          <p className="text-sm text-muted-foreground">Clique abaixo para completar o pagamento com cartão</p>
+          <Button className="w-full gap-2" onClick={() => window.open(result.invoice_url, "_blank")}>
+            <CreditCard className="w-4 h-4" />
+            Abrir página de pagamento
+          </Button>
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground text-center">Link de pagamento não disponível</p>
       )}

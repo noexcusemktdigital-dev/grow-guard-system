@@ -205,13 +205,24 @@ export function SystemPaymentTab() {
                 </div>
               )}
 
-              {/* Boleto / Credit Card: iframe */}
-              {(selectedMethod === "BOLETO" || selectedMethod === "CREDIT_CARD") && paymentResult.invoice_url && (
+              {/* Boleto: iframe */}
+              {selectedMethod === "BOLETO" && paymentResult.invoice_url && (
                 <iframe
                   src={paymentResult.invoice_url}
                   className="w-full h-[400px] rounded-lg border"
                   title="Pagamento"
                 />
+              )}
+
+              {/* Credit Card: open in new tab (iframe blocked by Asaas CSP) */}
+              {selectedMethod === "CREDIT_CARD" && paymentResult.invoice_url && (
+                <div className="space-y-3 text-center">
+                  <p className="text-sm text-muted-foreground">Clique abaixo para completar o pagamento com cartão</p>
+                  <Button className="w-full gap-2" onClick={() => window.open(paymentResult.invoice_url, "_blank")}>
+                    <CreditCard className="w-4 h-4" />
+                    Abrir página de pagamento
+                  </Button>
+                </div>
               )}
 
               {/* Fallback if no invoice */}
