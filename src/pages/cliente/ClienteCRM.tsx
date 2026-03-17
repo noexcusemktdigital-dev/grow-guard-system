@@ -89,14 +89,14 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
   const colorStyle = getColorStyle(stageColor);
 
   return (
-    <div ref={setNodeRef} style={style} className={`group ${isDragging ? "pointer-events-none" : ""}`}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={`group touch-none ${isDragging ? "pointer-events-none" : ""}`}>
       <Card
         className={`cursor-pointer hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${colorStyle.border}`}
         onClick={() => { if (!isDragging) onClick(); }}
       >
         <CardContent className="p-3 space-y-2">
           <div className="flex items-start justify-between gap-2">
-            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing pt-0.5 -ml-1 px-1 touch-none">
+            <div className="cursor-grab active:cursor-grabbing pt-0.5 -ml-1 px-1">
               <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50" />
             </div>
             <div className="min-w-0 flex-1">

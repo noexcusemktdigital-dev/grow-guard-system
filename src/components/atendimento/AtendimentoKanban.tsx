@@ -62,45 +62,40 @@ function TicketCard({ ticket, onSelectTicket }: { ticket: Ticket; onSelectTicket
   };
 
   return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      className="p-3 cursor-pointer hover:shadow-md transition-shadow"
-      onClick={() => onSelectTicket(ticket.id)}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1">
-          <button
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground -ml-1 p-0.5"
-            onClick={e => e.stopPropagation()}
-          >
-            <GripVertical className="w-3.5 h-3.5" />
-          </button>
-          <span className="text-xs font-mono font-bold text-muted-foreground">{ticket.numero}</span>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none">
+      <Card
+        className="p-3 cursor-pointer hover:shadow-md transition-shadow"
+        onClick={() => onSelectTicket(ticket.id)}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1">
+            <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground -ml-1 p-0.5">
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-xs font-mono font-bold text-muted-foreground">{ticket.numero}</span>
+          </div>
+          <Badge className={`text-[10px] ${priorityColors[ticket.prioridade]}`}>{ticket.prioridade}</Badge>
         </div>
-        <Badge className={`text-[10px] ${priorityColors[ticket.prioridade]}`}>{ticket.prioridade}</Badge>
-      </div>
-      <p className="text-sm font-medium mb-1 line-clamp-1">{ticket.unidadeNome}</p>
-      <Badge variant="outline" className="text-[10px] mb-2">{ticket.categoria}</Badge>
-      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-        <User className="w-3 h-3" />
-        <span>{ticket.responsavelNome}</span>
-      </div>
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{formatDistanceToNow(new Date(ticket.atualizadoEm), { addSuffix: true, locale: ptBR })}</span>
-        {breached ? (
-          <span className="flex items-center gap-1 text-red-500 font-medium animate-pulse">
-            <AlertTriangle className="w-3 h-3" /> SLA Estourado
-          </span>
-        ) : sla !== "—" ? (
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" /> {sla}
-          </span>
-        ) : null}
-      </div>
-    </Card>
+        <p className="text-sm font-medium mb-1 line-clamp-1">{ticket.unidadeNome}</p>
+        <Badge variant="outline" className="text-[10px] mb-2">{ticket.categoria}</Badge>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+          <User className="w-3 h-3" />
+          <span>{ticket.responsavelNome}</span>
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{formatDistanceToNow(new Date(ticket.atualizadoEm), { addSuffix: true, locale: ptBR })}</span>
+          {breached ? (
+            <span className="flex items-center gap-1 text-red-500 font-medium animate-pulse">
+              <AlertTriangle className="w-3 h-3" /> SLA Estourado
+            </span>
+          ) : sla !== "—" ? (
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3" /> {sla}
+            </span>
+          ) : null}
+        </div>
+      </Card>
+    </div>
   );
 }
 
