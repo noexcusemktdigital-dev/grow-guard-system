@@ -588,7 +588,7 @@ export default function ClienteCRM() {
 
       {/* ===== CONTACTS TAB ===== */}
       {activeTab === "contatos" && (
-        <CrmContactsView onCreateLeadFromContact={handleCreateLeadFromContact} />
+        <CrmContactsView onCreateLeadFromContact={handleCreateLeadFromContact} onBackToPipeline={() => setActiveTab("pipeline")} />
       )}
 
       {/* ===== PIPELINE TAB ===== */}

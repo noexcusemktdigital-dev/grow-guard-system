@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Users, Plus, Search, Upload, UserPlus, Filter, X, MoreHorizontal, Copy, Trash2, Tag, Building2, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Plus, Search, Upload, UserPlus, Filter, X, MoreHorizontal, Copy, Trash2, Tag, Building2, MapPin, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,9 +61,10 @@ const emptyForm = { name: "", email: "", phone: "", company: "", position: "", n
 
 interface Props {
   onCreateLeadFromContact?: (contact: CrmContact) => void;
+  onBackToPipeline?: () => void;
 }
 
-export function CrmContactsView({ onCreateLeadFromContact }: Props) {
+export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: Props) {
   const { toast } = useToast();
   const { data: contacts, isLoading } = useCrmContacts();
   const { data: leads } = useCrmLeads();
@@ -309,7 +310,19 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
       toast({ title: "Selecione funil e etapa", variant: "destructive" });
       return;
     }
+    let created = 0;
+    let skipped = 0;
+    const existingLeads = leads || [];
     convertContacts.forEach(c => {
+      // Check for duplicates by phone or email
+      const isDuplicate = existingLeads.some(l =>
+        (c.phone && l.phone && c.phone === l.phone) ||
+        (c.email && l.email && c.email === l.email)
+      );
+      if (isDuplicate) {
+        skipped++;
+        return;
+      }
       createLead.mutate({
         name: c.name,
         email: c.email || undefined,
@@ -319,8 +332,11 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
         funnel_id: selectedFunnelId,
         stage: selectedStage,
       });
+      created++;
     });
-    toast({ title: `${convertContacts.length} lead(s) criado(s) no funil selecionado` });
+    toast({
+      title: `${created} lead(s) criado(s)${skipped > 0 ? `, ${skipped} duplicado(s) ignorado(s)` : ""}`,
+    });
     setConvertDialogOpen(false);
     setConvertContacts([]);
     setSelectedIds(new Set());
@@ -330,6 +346,12 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Back to Pipeline button */}
+      {onBackToPipeline && (
+        <Button variant="ghost" size="sm" className="gap-1.5 text-xs -mb-2" onClick={onBackToPipeline}>
+          <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao Pipeline
+        </Button>
+      )}
       {/* Bulk Actions Bar */}
       {someSelected && (
         <div className="sticky top-0 z-30 bg-primary text-primary-foreground rounded-lg px-4 py-2.5 flex flex-wrap items-center gap-2 shadow-lg animate-fade-in">
@@ -617,6 +639,11 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {funnels.length === 0 ? (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                Nenhum funil criado. Crie um funil nas configurações do CRM antes de converter contatos.
+              </div>
+            ) : (
             <div>
               <Label className="text-xs font-semibold">Funil</Label>
               <Select value={selectedFunnelId} onValueChange={v => { setSelectedFunnelId(v); setSelectedStage(""); }}>
@@ -628,6 +655,7 @@ export function CrmContactsView({ onCreateLeadFromContact }: Props) {
                 </SelectContent>
               </Select>
             </div>
+            )}
             {selectedFunnelStages.length > 0 && (
               <div>
                 <Label className="text-xs font-semibold">Etapa inicial</Label>

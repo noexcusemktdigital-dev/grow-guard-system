@@ -1,68 +1,64 @@
 
 
-## Plano: Corrigir duplicação de leads ao converter contatos + Navegação CRM
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problemas identificados
+### Status: ✅ Implementado
 
-**1. Duplicação de leads**: Em `handleConfirmConvertLeads` (CrmContactsView.tsx, linha 312), o `createLead.mutate()` é chamado em um `forEach` sem controle de duplicidade. Se o mesmo contato (mesmo phone/email) é convertido, cria leads duplicados. Além disso, não há verificação se já existe um lead com aquele phone/email no funil — resultado: o mesmo "Thiago" aparece em várias etapas.
+### Resumo
 
-**2. Sem funil padrão**: Se nenhum funil existe quando o usuário tenta converter, o dialog fica vazio e não funciona. Precisamos criar um funil padrão automaticamente ou bloquear com aviso claro.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-**3. Sem botão de voltar**: Quando o usuário está em Contatos, não tem atalho visível para voltar ao Pipeline (precisa clicar no botão "Contatos" de novo no header).
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-### Correções
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/crm/CrmContactsView.tsx` | 1. Deduplicar: antes de criar lead, verificar se já existe lead com mesmo phone/email no org. Pular duplicatas e avisar. 2. Se não houver funis, exibir aviso no dialog pedindo para criar um funil primeiro. |
-| `src/components/crm/CrmContactsView.tsx` | 3. Adicionar botão "← Voltar ao Pipeline" no topo da view de Contatos |
-| `src/pages/cliente/ClienteCRM.tsx` | Passar callback `onBackToPipeline` para o `CrmContactsView` |
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-### Detalhes técnicos
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-**Deduplicação (CrmContactsView.tsx)**:
-```typescript
-const handleConfirmConvertLeads = async () => {
-  if (!selectedFunnelId || !selectedStage) { ... }
-  
-  // Fetch existing leads to check duplicates
-  let created = 0, skipped = 0;
-  for (const c of convertContacts) {
-    // Check if lead with same phone or email already exists
-    const isDuplicate = (leads || []).some(l => 
-      (c.phone && l.phone === c.phone) || (c.email && l.email === c.email)
-    );
-    if (isDuplicate) { skipped++; continue; }
-    
-    createLead.mutate({ ...data, funnel_id: selectedFunnelId, stage: selectedStage });
-    created++;
-  }
-  toast({ title: `${created} lead(s) criado(s)${skipped ? `, ${skipped} duplicado(s) ignorado(s)` : ""}` });
-};
-```
+---
 
-**Sem funil — aviso no dialog**:
-```tsx
-{funnels.length === 0 && (
-  <div className="text-center py-4 text-sm text-muted-foreground">
-    Nenhum funil criado. Crie um funil nas configurações do CRM antes de converter contatos.
-  </div>
-)}
-```
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-**Botão voltar (CrmContactsView)**:
-```tsx
-// Aceitar prop onBackToPipeline
-<Button variant="ghost" size="sm" onClick={onBackToPipeline}>
-  <ArrowLeft className="w-4 h-4 mr-1" /> Voltar ao Pipeline
-</Button>
-```
+### Status: ✅ Documentado
 
-**ClienteCRM.tsx** — passar o callback:
-```tsx
-<CrmContactsView 
-  onCreateLeadFromContact={handleCreateLeadFromContact}
-  onBackToPipeline={() => setActiveTab("pipeline")}
-/>
-```
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual
