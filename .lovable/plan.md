@@ -1,88 +1,64 @@
 
 
-## Plano: Exibir dados de pagamento inline na assinatura de planos
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
-Existem **dois problemas principais**:
+### Status: ✅ Implementado
 
-1. **SubscriptionDialog fecha imediatamente** após criar a assinatura, sem mostrar o QR Code PIX, boleto ou link de pagamento por cartão. O usuário não tem como pagar diretamente na plataforma.
+### Resumo
 
-2. **Edge function `asaas-create-subscription`** não retorna os dados do primeiro pagamento gerado (invoice_url, PIX QR code, bank_slip_url). A API do Asaas, ao criar uma subscription, gera automaticamente o primeiro pagamento — mas a função não busca esses dados.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-O fluxo de **compra de créditos** (`CreditPackDialog` + `asaas-buy-credits`) já funciona corretamente, pois mostra o `InlinePaymentView` com PIX/boleto/cartão.
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-### Solução
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/asaas-create-subscription/index.ts` | Após criar a subscription, buscar o primeiro pagamento via `GET /subscriptions/{id}/payments` e retornar `invoice_url`, `bank_slip_url`, `pix_qr_code_base64`, `pix_copy_paste` e `value` na resposta |
-| `src/pages/cliente/ClientePlanoCreditos.tsx` | Converter `SubscriptionDialog` para funcionar como `CreditPackDialog`: ao invés de fechar o dialog no sucesso, exibir o `InlinePaymentView` com os dados de pagamento retornados |
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-### Detalhes técnicos
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-**`asaas-create-subscription/index.ts`** — após criar subscription, buscar primeiro pagamento:
-```typescript
-// Fetch first payment from the subscription
-let invoiceUrl = null;
-let bankSlipUrl = null;
-let pixQrCodeBase64 = null;
-let pixCopyPaste = null;
+---
 
-const paymentsRes = await asaasFetch(`${ASAAS_BASE}/subscriptions/${subscriptionData.id}/payments`, {
-  method: "GET",
-  headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
-});
-if (paymentsRes.ok) {
-  const paymentsData = await paymentsRes.json();
-  const firstPayment = paymentsData.data?.[0];
-  if (firstPayment) {
-    invoiceUrl = firstPayment.invoiceUrl;
-    bankSlipUrl = firstPayment.bankSlipUrl;
-    // For PIX, fetch QR code
-    if (billing_type === "PIX" && firstPayment.id) {
-      const pix = await fetchPixQrCode(asaasApiKey, firstPayment.id);
-      pixQrCodeBase64 = pix.encodedImage;
-      pixCopyPaste = pix.payload;
-    }
-  }
-}
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-// Return with payment data
-return { 
-  success: true,
-  invoice_url: invoiceUrl,
-  bank_slip_url: bankSlipUrl,
-  pix_qr_code_base64: pixQrCodeBase64,
-  pix_copy_paste: pixCopyPaste,
-  value: finalPrice,
-  billing_type,
-  ...
-};
-```
+### Status: ✅ Documentado
 
-**`ClientePlanoCreditos.tsx` — SubscriptionDialog** — adicionar estado `paymentResult` e mostrar `InlinePaymentView`:
-```tsx
-const [paymentResult, setPaymentResult] = useState<any>(null);
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
-// onSuccess: instead of closing, show payment view
-onSuccess: (data) => {
-  toast.success("Cobrança gerada! Créditos serão liberados após confirmação.");
-  setPaymentResult(data);
-  qc.invalidateQueries(...);
-  // Do NOT close dialog
-},
+### Margem por Plano
 
-// In render:
-{paymentResult ? (
-  <InlinePaymentView result={paymentResult} billingType={billingType} onClose={() => handleClose(false)} />
-) : (
-  // existing form
-)}
-```
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
 
-### Fluxo resultante
-1. Usuário escolhe plano → seleciona PIX/Boleto/Cartão → clica "Confirmar"
-2. Edge function cria subscription + busca primeiro pagamento
-3. Dialog exibe: QR Code PIX / iframe do boleto / iframe do cartão (invoice_url)
-4. Pagamento confirmado pelo Asaas via webhook → créditos liberados
+### Custo por funcionalidade
 
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual
