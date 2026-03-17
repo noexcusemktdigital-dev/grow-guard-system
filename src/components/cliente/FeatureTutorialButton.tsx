@@ -11,7 +11,11 @@ interface FeatureTutorialButtonProps {
 
 export function FeatureTutorialButton({ slug }: FeatureTutorialButtonProps) {
   const tutorial = FEATURE_TUTORIALS[slug];
-  const [open, setOpen] = useState(() => !localStorage.getItem(`feature_tutorial_${slug}_seen`));
+  const [open, setOpen] = useState(() => {
+    const tourDone = localStorage.getItem("onboarding_tour_done");
+    if (!tourDone) return false;
+    return !localStorage.getItem(`feature_tutorial_${slug}_seen`);
+  });
 
   if (!tutorial) return null;
 
