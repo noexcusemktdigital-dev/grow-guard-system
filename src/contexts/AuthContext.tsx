@@ -19,7 +19,7 @@ interface AuthContextType {
   profile: Profile | null;
   role: AppRole | null;
   loading: boolean;
-  signOut: () => Promise<void>;
+  signOut: (redirectTo?: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -161,12 +161,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => {
+  const signOut = async (redirectTo?: string) => {
+    const target = redirectTo || (
+      role === "cliente_admin" || role === "cliente_user" ? "/app" : "/acessofranquia"
+    );
     await supabase.auth.signOut({ scope: 'local' });
     setUser(null);
     setSession(null);
     setProfile(null);
     setRole(null);
+    window.location.href = target;
   };
 
   const refreshProfile = async () => {

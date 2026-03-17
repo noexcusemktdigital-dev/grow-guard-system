@@ -1,55 +1,64 @@
 
 
-## Plano: Corrigir redirecionamento de logout do SaaS
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Causa raiz
+### Status: ✅ Implementado
 
-Quando o usuário SaaS faz logout via `UserMenu`:
+### Resumo
 
-1. `handleLogout` chama `await signOut()` — que seta `user=null` imediatamente
-2. React re-renderiza, `ProtectedRoute` vê `user=null` e faz `<Navigate to={getLoginPath()}>` 
-3. O `navigate("/app")` do `handleLogout` não executa a tempo — o `ProtectedRoute` já ganhou a corrida
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-O problema é que `signOut()` limpa o estado do React antes do `navigate()` rodar, e o `ProtectedRoute` captura a mudança primeiro.
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-### Solução
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-Modificar `signOut` no `AuthContext` para aceitar um parâmetro `redirectTo`. Quando fornecido, navega usando `window.location.href` (que é síncrono e bypassa React Router) ANTES de limpar o estado. No `UserMenu.handleLogout`, passar o caminho correto.
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-### Mudanças
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/contexts/AuthContext.tsx` | `signOut` aceita `redirectTo?: string`, navega antes de limpar estado |
-| `src/components/UserMenu.tsx` | Passa o redirect path para `signOut()` |
-| `src/components/FranqueadoSidebar.tsx` | Passa `/acessofranquia` no `signOut()` |
-| `src/components/FranqueadoraSidebar.tsx` | Passa `/acessofranquia` no `signOut()` |
+---
 
-### Código
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-**AuthContext.tsx** — `signOut`:
-```typescript
-const signOut = async (redirectTo?: string) => {
-  const target = redirectTo || (
-    role === "cliente_admin" || role === "cliente_user" ? "/app" : "/acessofranquia"
-  );
-  await supabase.auth.signOut({ scope: 'local' });
-  setUser(null);
-  setSession(null);
-  setProfile(null);
-  setRole(null);
-  window.location.href = target;
-};
-```
+### Status: ✅ Documentado
 
-**UserMenu.tsx**:
-```typescript
-const handleLogout = async () => {
-  const target = isSaasUser ? "/app" : "/acessofranquia";
-  await signOut(target);
-  // Não precisa de navigate — signOut já redireciona
-};
-```
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
-Usar `window.location.href` garante que a navegação acontece de forma determinística, sem depender do ciclo de re-render do React.
+### Margem por Plano
 
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

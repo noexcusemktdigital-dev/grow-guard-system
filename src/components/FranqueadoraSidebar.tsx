@@ -285,7 +285,7 @@ function SidebarFooter() {
             <Settings className="w-4 h-4" /> Configurações
           </button>
           <button
-            onClick={() => signOut()}
+            onClick={() => signOut("/acessofranquia")}
             className="flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors"
           >
             <LogOut className="w-4 h-4" /> Sair
