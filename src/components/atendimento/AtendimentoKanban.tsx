@@ -175,7 +175,7 @@ export function AtendimentoKanban({ tickets, onSelectTicket, onMoveTicket }: Pro
           />
         ))}
       </div>
-      <DragOverlay>
+      <DragOverlay dropAnimation={null} zIndex={100} modifiers={[snapCenterToCursor]}>
         {activeTicket ? <OverlayCard ticket={activeTicket} /> : null}
       </DragOverlay>
     </DndContext>

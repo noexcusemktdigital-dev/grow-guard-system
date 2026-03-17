@@ -512,7 +512,7 @@ export default function FranqueadoCRM() {
                 </div>
                 <ScrollBar orientation="horizontal" />
               </ScrollArea>
-              <DragOverlay dropAnimation={null} zIndex={100}>
+              <DragOverlay dropAnimation={null} zIndex={100} modifiers={[snapCenterToCursor]}>
                 {draggingLead && (
                   <Card className="shadow-xl border-primary/30 w-[260px]">
                     <CardContent className="p-3"><p className="text-sm font-semibold">{draggingLead.name}</p><p className="text-xs text-muted-foreground">{draggingLead.phone}</p></CardContent>
