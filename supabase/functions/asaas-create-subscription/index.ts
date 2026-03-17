@@ -16,11 +16,6 @@ const PLAN_PRICES: Record<string, number> = {
   enterprise: 1497,
 };
 
-const PLAN_CREDITS: Record<string, number> = {
-  starter: 500,
-  pro: 1000,
-  enterprise: 1500,
-};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
