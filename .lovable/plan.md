@@ -1,64 +1,87 @@
 
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+## Plano: Ferramenta de Candidatos na Rede (Franqueadora)
 
-### Status: ✅ Implementado
+### Contexto
 
-### Resumo
+O projeto **Franquia NOE** (landing page) tem um formulário de candidatura (`/candidatura`) que salva leads na tabela `leads` com `funnel = 'candidatura'` e `application_data` (JSONB com dados pessoais, documentos, empresa, etc). Esses dados estão em **outro projeto Supabase**, então precisamos de um mecanismo para sincronizá-los.
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+### Arquitetura
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+1. Criar tabela `franchise_candidates` **neste projeto** para armazenar os candidatos
+2. Criar edge function `receive-candidate` (webhook público) que o outro projeto chama ao receber uma candidatura
+3. Criar página "Candidatos" na Franqueadora com listagem + download de ficha em PDF
+4. Adicionar no sidebar da Rede e nas rotas
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+### Mudanças
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+| Tipo | O quê |
+|------|-------|
+| **Migration** | Tabela `franchise_candidates` (name, email, phone, birth_date, marital_status, cep, city, address, cpf, rg, company_name, cnpj, company_address, doc_url, lgpd_consent, lgpd_consent_date, status, source_project_lead_id, organization_id, created_at) |
+| **Edge Function** | `receive-candidate/index.ts` — webhook POST que recebe dados do candidato e insere na tabela |
+| **Página** | `src/pages/franqueadora/FranqueadoraCandidatos.tsx` — tabela com candidatos, busca, filtros, botão "Baixar Ficha PDF" |
+| **Hook** | `src/hooks/useFranchiseCandidates.ts` — query dos candidatos |
+| **Sidebar** | `src/components/FranqueadoraSidebar.tsx` — adicionar "Candidatos" na seção Rede, abaixo de Onboarding |
+| **Router** | `src/App.tsx` — rota `/franqueadora/candidatos` |
+| **Outro projeto** | Após esta implementação, será necessário adicionar uma chamada ao webhook no formulário do Franquia NOE para enviar candidatos automaticamente |
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### Tabela `franchise_candidates`
 
----
+```sql
+CREATE TABLE public.franchise_candidates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id),
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  birth_date TEXT,
+  marital_status TEXT,
+  cep TEXT,
+  city TEXT,
+  address TEXT,
+  cpf TEXT,
+  rg TEXT,
+  company_name TEXT,
+  cnpj TEXT,
+  company_address TEXT,
+  doc_url TEXT,
+  lgpd_consent BOOLEAN DEFAULT false,
+  lgpd_consent_date TIMESTAMPTZ,
+  status TEXT DEFAULT 'novo',
+  source_lead_id TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+### Edge Function `receive-candidate`
 
-### Status: ✅ Documentado
+Webhook público (verify_jwt = false) que aceita POST com os dados do candidato. Valida campos obrigatórios (name, email) e insere na tabela. Protegido por um token simples no header para evitar spam.
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+### Página Candidatos
 
-### Margem por Plano
+- Tabela com colunas: Nome, Email, Telefone, Cidade, CPF, Status, Data
+- Busca por nome/email
+- Filtro por status (Novo, Em análise, Aprovado, Reprovado)
+- Botão "Baixar Ficha" que gera PDF com todos os dados do candidato usando html2pdf.js (mesmo padrão dos certificados e contratos)
+- Dialog de detalhe ao clicar no candidato
+- Possibilidade de alterar status
 
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+### PDF da Ficha
 
-### Custo por funcionalidade
+Template profissional com header NOEXCUSE (reusa `getLogoBase64` de `contractPdfTemplate.ts`), seções organizadas: Dados Pessoais, Endereço, Documentos, Dados da Empresa, e status LGPD.
 
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
+### Fluxo de integração com o outro projeto
 
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
+Após implementar tudo aqui, será necessário adicionar no projeto Franquia NOE (no `handleSubmit` do `ApplicationForm.tsx`) uma chamada fetch para o webhook:
+```typescript
+fetch("https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/receive-candidate", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "x-webhook-token": "TOKEN" },
+  body: JSON.stringify({ name, email, phone, ... })
+});
+```
+
+Isso será feito em um segundo momento, após a implementação principal.
+
