@@ -555,7 +555,7 @@ export default function FranqueadoCRM() {
       )}
 
       <CrmLeadDetailSheet lead={selectedLead} open={detailOpen} onOpenChange={setDetailOpen} />
-      <CrmNewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} defaultStage={stages[0]?.key || "novo"} />
+      <CrmNewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} defaultStage={stages[0]?.key || "novo"} funnelId={selectedFunnelId || undefined} />
       <CrmCsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
 
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>

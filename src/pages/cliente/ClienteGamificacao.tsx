@@ -1,4 +1,5 @@
 import { useMemo, useCallback } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   Trophy, Medal, Star, Target, Coins, Timer, BarChart3, Award,
   TrendingUp, Users, Crown, Lock, Gift, CheckCircle2, Flame,
@@ -282,7 +283,7 @@ export default function ClienteGamificacao() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Gamificação" subtitle={isAdmin ? "Visão geral da equipe e recompensas" : "Seus pontos, evolução e recompensas"} icon={<Trophy className="w-5 h-5 text-primary" />} />
+      <PageHeader title="Gamificação" subtitle={isAdmin ? "Visão geral da equipe e recompensas" : "Seus pontos, evolução e recompensas"} icon={<Trophy className="w-5 h-5 text-primary" />} actions={<FeatureTutorialButton slug="gamificacao" />} />
 
       {/* Evolution Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>

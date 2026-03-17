@@ -17,10 +17,11 @@ interface CrmNewLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultStage: string;
+  funnelId?: string;
   prefillContact?: { id?: string; name: string; phone?: string; email?: string; company?: string } | null;
 }
 
-export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, prefillContact }: CrmNewLeadDialogProps) {
+export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, prefillContact }: CrmNewLeadDialogProps) {
   const { toast } = useToast();
   const { createLead } = useCrmLeadMutations();
   const { data: contacts } = useCrmContacts();
@@ -98,6 +99,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, prefillCont
       value: value ? parseFloat(value) : undefined,
       source: source || undefined,
       stage: defaultStage,
+      funnel_id: funnelId || undefined,
       tags: tags.length > 0 ? tags : undefined,
       _maxLeads: maxLeads,
     } as any);

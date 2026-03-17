@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   FileText, Check, Sparkles, Copy, ArrowLeft, ArrowRight,
   Layers, Video, AlignLeft, Image, BookOpen, Clock,
@@ -345,7 +346,7 @@ export default function ClienteConteudos() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Geração de Conteúdo" subtitle="Gere lotes estratégicos de conteúdos alinhados com seu plano" />
+      <PageHeader title="Geração de Conteúdo" subtitle="Gere lotes estratégicos de conteúdos alinhados com seu plano" actions={<FeatureTutorialButton slug="conteudos" />} />
 
       <StrategyBanner toolName="a geração de conteúdo" dataUsed="Pilares, ICP e tom de voz" />
 

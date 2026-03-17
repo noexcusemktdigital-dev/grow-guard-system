@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 // ChatBriefing integration
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
 import { AGENTS, RAFAEL_STEPS } from "@/components/cliente/briefingAgents";
@@ -935,6 +936,7 @@ export default function ClientePlanoVendas() {
         title="Plano de Vendas"
         subtitle="Consultoria comercial interativa para diagnosticar e evoluir seu comercial"
         icon={<Target className="w-5 h-5 text-primary" />}
+        actions={<FeatureTutorialButton slug="plano_vendas" />}
       />
 
       <Tabs defaultValue="diagnostico" className="w-full">

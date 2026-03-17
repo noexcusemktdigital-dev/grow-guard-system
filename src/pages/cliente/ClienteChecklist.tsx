@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   CheckSquare, Plus, CheckCircle2, Flame, Settings2, Zap, Sparkles,
   Calendar, Users, Filter, Trash2, Clock, AlertTriangle, ChevronDown,
@@ -357,6 +358,7 @@ export default function ClienteChecklist() {
         title="Tarefas"
         subtitle="Gerencie suas tarefas diárias e atribuições"
         icon={<CheckSquare className="w-5 h-5 text-primary" />}
+        actions={<FeatureTutorialButton slug="checklist" />}
       />
 
       <Tabs defaultValue="hoje">
