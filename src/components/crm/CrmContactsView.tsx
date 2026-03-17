@@ -346,6 +346,12 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
 
   return (
     <div className="space-y-4">
+      {/* Back to Pipeline button */}
+      {onBackToPipeline && (
+        <Button variant="ghost" size="sm" className="gap-1.5 text-xs -mb-2" onClick={onBackToPipeline}>
+          <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao Pipeline
+        </Button>
+      )}
       {/* Bulk Actions Bar */}
       {someSelected && (
         <div className="sticky top-0 z-30 bg-primary text-primary-foreground rounded-lg px-4 py-2.5 flex flex-wrap items-center gap-2 shadow-lg animate-fade-in">
