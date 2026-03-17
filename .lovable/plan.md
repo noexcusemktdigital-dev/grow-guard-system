@@ -1,192 +1,68 @@
 
 
-## Checklist Completo de Testes — Portal SaaS (Cliente)
+## Plano: Suporte a Dual-Role (Mesmo email na Franquia e no SaaS)
 
-Este é um roteiro de testes manuais para percorrer toda a plataforma do cliente SaaS, identificando erros de usabilidade, bugs visuais e falhas funcionais.
+### Limitação técnica
+O sistema de autenticação usa **um único registro por email**. Não é possível ter dois usuários separados com o mesmo email. Porém, **o mesmo usuário pode ter múltiplos roles** (ex: `franqueado` + `cliente_admin`) e múltiplas associações a organizações diferentes.
 
----
+### Solução: Dual-Role com contexto de portal
 
-### 1. Autenticação & Onboarding
-- [ ] Cadastro com email + senha (validação de força da senha)
-- [ ] Verificação de email (tela de orientação sobre spam)
-- [ ] Login com credenciais corretas
-- [ ] Login com credenciais erradas (mensagem de erro clara?)
-- [ ] Reset de senha (fluxo completo)
-- [ ] Google OAuth (se habilitado)
-- [ ] Modal de boas-vindas (TrialWelcomeModal) aparece na primeira vez
-- [ ] Tour de onboarding roda após o modal
-- [ ] Popup de comunicados aparece após o tour
-- [ ] Onboarding de empresa (/cliente/onboarding) — todos os campos funcionam
+O mesmo `auth.user` terá:
+- Duas entradas em `user_roles` (ex: `franqueado` e `cliente_admin`)
+- Duas entradas em `organization_memberships` (uma para org franqueado, outra para org cliente)
+- O sistema escolhe o role e org corretos baseado no portal acessado
 
-### 2. Início (/cliente/inicio)
-- [ ] KPIs carregam corretamente
-- [ ] Checklist diário aparece
-- [ ] Atalhos rápidos funcionam e redirecionam
-- [ ] Mensagem do dia aparece (se configurada)
-- [ ] Banner de trial/créditos exibe quando aplicável
-- [ ] Comunicados da rede aparecem
+### Arquivos a editar
 
-### 3. Tarefas (/cliente/checklist)
-- [ ] Lista de tarefas carrega
-- [ ] Marcar/desmarcar tarefa como concluída
-- [ ] Filtros por tipo (Comercial, Marketing, Gestão)
-- [ ] Tarefas automáticas vs manuais
+| Arquivo | Mudança |
+|---------|---------|
+| **DB: `get_user_org_id`** | Receber parâmetro `_portal` (`saas`/`franchise`) e filtrar pela org do tipo correto |
+| **`src/hooks/useUserOrgId.ts`** | Passar contexto do portal ao chamar a RPC |
+| **`src/contexts/AuthContext.tsx`** | Escolher o role baseado no portal atual (não apenas prioridade global) |
+| **`src/lib/portalRoleGuard.ts`** | Permitir passagem quando o user tem role válido para aquele portal (já funciona) |
 
-### 4. Agenda (/cliente/agenda)
-- [ ] Calendário renderiza corretamente
-- [ ] Criar novo evento
-- [ ] Editar evento existente
-- [ ] Deletar evento
-- [ ] Visualização por dia/semana/mês
-- [ ] Eventos da rede aparecem (se aplicável)
+### Detalhes técnicos
 
-### 5. Gamificação (/cliente/gamificacao)
-- [ ] Pontuação e XP exibem corretamente
-- [ ] Ranking carrega
-- [ ] Medalhas mostram status (desbloqueada/bloqueada)
+**1. Nova RPC `get_user_org_id` (migration)**
+```sql
+CREATE OR REPLACE FUNCTION public.get_user_org_id(_user_id uuid, _portal text DEFAULT NULL)
+RETURNS uuid
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT om.organization_id 
+  FROM organization_memberships om
+  JOIN organizations o ON o.id = om.organization_id
+  WHERE om.user_id = _user_id
+    AND (
+      _portal IS NULL
+      OR (_portal = 'saas' AND o.type = 'cliente')
+      OR (_portal = 'franchise' AND o.type IN ('franqueadora', 'franqueado'))
+    )
+  LIMIT 1
+$$;
+```
 
-### 6. CRM (/cliente/crm)
-- [ ] **Pré-requisito**: Configurar pelo menos 1 funil em /cliente/crm/config
-- [ ] Kanban carrega com colunas do funil
-- [ ] Criar novo lead (dialog abre, campos validam)
-- [ ] Arrastar lead entre etapas (precisão do cursor — recém corrigido)
-- [ ] Abrir detalhe do lead (sheet lateral)
-- [ ] Editar campos do lead
-- [ ] Adicionar nota ao lead
-- [ ] Criar tarefa no lead
-- [ ] Timeline de atividades aparece
-- [ ] Filtros de temperatura (Quente/Morno/Frio)
-- [ ] Busca por nome/telefone
-- [ ] Visão de Contatos funciona
-- [ ] Importação CSV funciona
-- [ ] Trocar entre funis
-- [ ] Configurações do CRM (/cliente/crm/config) — funis, etapas, automações, equipes, produtos, parceiros
+**2. `useUserOrgId.ts`** — detectar portal pela URL e passar como parâmetro:
+```ts
+const portal = window.location.pathname.startsWith("/cliente") ? "saas" : "franchise";
+const { data } = await supabase.rpc("get_user_org_id", { _user_id: user.id, _portal: portal });
+```
 
-### 7. Conversas / Chat (/cliente/chat)
-- [ ] Lista de contatos carrega
-- [ ] Selecionar contato abre conversa
-- [ ] Enviar mensagem de texto
-- [ ] Receber mensagem (se WhatsApp conectado)
-- [ ] Layout responsivo (chat ocupa tela inteira sem scroll externo)
-- [ ] Painel de lead vinculado ao contato
+**3. `AuthContext.tsx`** — escolher role pelo portal atual:
+```ts
+const isSaas = window.location.pathname.startsWith("/cliente") || window.location.pathname.startsWith("/app");
+const portalRoles = isSaas 
+  ? roles.filter(r => ["cliente_admin", "cliente_user"].includes(r))
+  : roles.filter(r => ["super_admin", "admin", "franqueado"].includes(r));
+const topRole = portalRoles[0] || roles[0]; // fallback to any role
+```
 
-### 8. Agentes IA (/cliente/agentes-ia)
-- [ ] Lista de agentes carrega
-- [ ] Criar novo agente (formulário completo)
-- [ ] Editar agente existente
-- [ ] Configurar persona, base de conhecimento, prompt
-- [ ] Selecionar papel (SDR, Closer, Pós-venda, Suporte)
-- [ ] Simular agente funciona
+**4. `portalRoleGuard.ts`** — já funciona corretamente (verifica se user tem role permitido para o portal)
 
-### 9. Scripts (/cliente/scripts)
-- [ ] Lista de scripts carrega
-- [ ] Criar novo script
-- [ ] Editar script existente
-- [ ] Gerar script via IA (dialog funciona, créditos são debitados)
-- [ ] Categorias filtram corretamente
-
-### 10. Disparos (/cliente/disparos) — Admin only
-- [ ] Acesso bloqueado para cliente_user
-- [ ] Wizard de criação (3 etapas) funciona
-- [ ] Seleção de segmento e conta WhatsApp
-- [ ] Preview da mensagem
-- [ ] Envio / agendamento
-
-### 11. Relatórios / Dashboard (/cliente/dashboard) — Admin only
-- [ ] Acesso bloqueado para cliente_user
-- [ ] Gráficos e métricas carregam
-- [ ] Filtros de período funcionam
-
-### 12. Plano de Vendas (/cliente/plano-vendas)
-- [ ] Conteúdo carrega
-- [ ] cliente_user vê em modo somente leitura
-
-### 13. Marketing — Estratégia (/cliente/plano-marketing)
-- [ ] Plano de marketing carrega
-- [ ] cliente_user vê em modo somente leitura
-
-### 14. Conteúdos (/cliente/conteudos)
-- [ ] Lista de conteúdos carrega
-- [ ] Gerar conteúdo via IA (créditos debitados)
-- [ ] Aprovar/reprovar conteúdo
-
-### 15. Redes Sociais (/cliente/redes-sociais)
-- [ ] Mockup de Instagram carrega
-- [ ] Templates de arte disponíveis
-
-### 16. Sites (/cliente/sites)
-- [ ] Lista de sites carrega
-- [ ] Wizard de criação (3 etapas)
-- [ ] Preview do site
-- [ ] Deploy guide
-
-### 17. Tráfego Pago (/cliente/trafego-pago) — Admin only
-- [ ] Acesso bloqueado para cliente_user
-- [ ] Estratégia de tráfego carrega
-
-### 18. Integrações (/cliente/integracoes) — Admin only
-- [ ] Acesso bloqueado para cliente_user
-- [ ] WhatsApp setup wizard funciona
-- [ ] Google Calendar OAuth funciona
-- [ ] Website chat config funciona
-
-### 19. Plano & Créditos (/cliente/plano-creditos) — Admin only
-- [ ] Plano atual exibe corretamente
-- [ ] Saldo de créditos exibe
-- [ ] **Assinar/mudar plano**: dialog abre, escolha de PIX/Boleto/Cartão
-- [ ] **PIX**: QR Code exibe inline após confirmar
-- [ ] **Boleto**: Link do boleto exibe inline
-- [ ] **Cartão**: Invoice URL abre checkout
-- [ ] Créditos NÃO são liberados antes do pagamento (recém corrigido)
-- [ ] Comprar créditos extras (CreditPackDialog)
-- [ ] Histórico de transações carrega
-
-### 20. Configurações (/cliente/configuracoes)
-- [ ] Dados da organização carregam e são editáveis
-- [ ] Gerenciar membros da equipe
-- [ ] Convidar novo membro
-- [ ] Editar/remover membro
-- [ ] Identidade visual (cores, logo)
-
-### 21. Avaliações (/cliente/avaliacoes)
-- [ ] Lista de avaliações carrega
-- [ ] Criar nova avaliação (nota 1-5)
-- [ ] NPS (nota 1-10) funciona se habilitado
-
-### 22. Suporte (/cliente/suporte)
-- [ ] Lista de tickets carrega
-- [ ] Criar novo ticket
-- [ ] Adicionar mensagem a ticket existente
-- [ ] Upload de anexo funciona
-- [ ] Status do ticket atualiza
-
-### 23. Notificações (/cliente/notificacoes)
-- [ ] Lista de notificações carrega
-- [ ] Marcar como lida
-- [ ] Sino de notificação (NotificationBell) mostra contagem
-- [ ] Clicar na notificação redireciona
-
-### 24. Navegação & UX Global
-- [ ] Sidebar colapsa/expande corretamente
-- [ ] Mobile: menu hamburger abre sheet lateral
-- [ ] Mobile: links fecham o sheet ao clicar
-- [ ] Busca global (GlobalSearch) funciona
-- [ ] UserMenu (logout, perfil)
-- [ ] Dark mode toggle funciona
-- [ ] Todas as páginas admin-only mostram bloqueio para cliente_user
-- [ ] Feature gate overlay aparece para recursos do plano não contratado
-- [ ] Transições de página (animação page-enter)
-
-### 25. Responsividade
-- [ ] Testar em 1920px (desktop grande)
-- [ ] Testar em 1366px (laptop)
-- [ ] Testar em 768px (tablet)
-- [ ] Testar em 375px (mobile)
-
----
-
-### Como executar
-Acesse `/app` → faça login com o usuário teste → percorra cada item acima anotando: funciona / bug visual / erro funcional / travamento.
-
-Posso começar testando via browser automation se quiser, ou posso implementar correções conforme você for relatando os problemas encontrados.
+### Fluxo resultante
+1. Usuário franqueado acessa `/app` e faz cadastro SaaS → recebe role `cliente_admin` + org cliente
+2. Agora tem 2 roles: `franqueado` + `cliente_admin`
+3. Ao acessar `/acessofranquia` → sistema usa role `franqueado` e org da franquia
+4. Ao acessar `/app` → sistema usa role `cliente_admin` e org do cliente
+5. Sessões isoladas (storage keys separados) permitem login simultâneo nos dois portais
 
