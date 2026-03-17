@@ -19,6 +19,7 @@ import {
 import { useDraggable } from "@dnd-kit/core";
 import { useState } from "react";
 import { CSS } from "@dnd-kit/utilities";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 
 interface Props {
   tickets: Ticket[];
