@@ -26,12 +26,12 @@ export async function validatePortalAccess(
   const hasAllowedRole = roles.some((r) => allowedRoles.includes(r));
 
   if (!hasAllowedRole) {
-    await supabase.auth.signOut({ scope: 'local' });
+    const redirect = portal === "saas" ? "/acessofranquia" : "/app";
     const message =
       portal === "saas"
         ? "Esta conta pertence ao portal da franquia. Acesse /acessofranquia"
         : "Esta conta pertence ao portal SaaS. Acesse /app";
-    return { allowed: false, message };
+    return { allowed: false, message, redirect };
   }
 
   return { allowed: true };
