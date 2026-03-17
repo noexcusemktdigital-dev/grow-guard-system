@@ -1,57 +1,64 @@
 
 
-## Plano: Liberar créditos somente após confirmação de pagamento
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
+### Status: ✅ Implementado
 
-Duas Edge Functions adicionam créditos **imediatamente** ao criar a cobrança, antes do pagamento ser confirmado:
+### Resumo
 
-1. **`asaas-create-subscription`** (linhas 248-267): Ao criar a assinatura, já soma créditos do plano na wallet e marca status como "active". O webhook depois adiciona créditos **novamente** no PAYMENT_CONFIRMED → resultado: créditos duplicados.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-2. **`asaas-create-charge`** (não adiciona créditos — está correto).
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-3. **`asaas-buy-credits`** (não adiciona créditos — está correto). O webhook já trata a liberação de créditos corretamente para packs.
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-### Solução
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/asaas-create-subscription/index.ts` | Remover linhas 248-267 que adicionam créditos e marcam status "active". Marcar subscription como `pending_payment` em vez de `active`. Status e créditos serão liberados pelo webhook. |
-| `supabase/functions/asaas-webhook/index.ts` | No bloco `sub` do PAYMENT_CONFIRMED (linhas 220-313): já está correto — ativa subscription e libera créditos. Nenhuma mudança necessária. |
-| `src/pages/cliente/ClientePlanoCreditos.tsx` | Ajustar toast de sucesso para informar "Cobrança gerada! Créditos serão liberados após confirmação do pagamento." em vez de "Plano ativado!". |
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-### Detalhes técnicos
+---
 
-**`asaas-create-subscription/index.ts`** — remover bloco de créditos e mudar status:
-```typescript
-// ANTES: status "active" + créditos imediatos
-// DEPOIS: status "pending_payment", sem créditos
-await adminClient
-  .from("subscriptions")
-  .update({
-    plan,
-    status: "pending_payment",  // ← era "active"
-    modules: null,
-    sales_plan: null,
-    marketing_plan: null,
-    asaas_subscription_id: subscriptionData.id,
-    asaas_billing_type: billing_type,
-    expires_at: expiresAt.toISOString(),
-    discount_percent: discountPercent,
-    referral_org_id: referralOrgId,
-  })
-  .eq("organization_id", org.id);
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-// REMOVIDO: bloco que adicionava créditos (linhas 248-267)
-```
+### Status: ✅ Documentado
 
-**Frontend** — ajustar mensagem:
-```typescript
-onSuccess: (data) => {
-  toast.success("Cobrança gerada! Seus créditos serão liberados após a confirmação do pagamento.");
-  // ...
-}
-```
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
-Isso garante que para **todos os fluxos** (assinatura, recarga de créditos, cobranças avulsas), os créditos só são liberados quando o Asaas confirma o pagamento via webhook.
+### Margem por Plano
 
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

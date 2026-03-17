@@ -367,7 +367,7 @@ function SubscriptionDialog({
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`Plano ${plan!.name} ativado!`);
+      toast.success("Cobrança gerada! Seus créditos serão liberados após a confirmação do pagamento.");
       if (data?.payment_link) toast.info("Link de pagamento enviado.");
       qc.invalidateQueries({ queryKey: ["subscription"] });
       qc.invalidateQueries({ queryKey: ["credit-wallet"] });
