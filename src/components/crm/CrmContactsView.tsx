@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Users, Plus, Search, Upload, UserPlus, Filter, X, MoreHorizontal, Copy, Trash2, Tag, Building2, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Plus, Search, Upload, UserPlus, Filter, X, MoreHorizontal, Copy, Trash2, Tag, Building2, MapPin, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
