@@ -51,7 +51,9 @@ const Auth = () => {
     const check = await validatePortalAccess(data.user.id, "franchise");
     setLoading(false);
     if (!check.allowed) {
+      await supabase.auth.signOut({ scope: 'local' });
       toast.error(check.message);
+      if (check.redirect) navigate(check.redirect);
       return;
     }
     navigate("/");

@@ -82,7 +82,9 @@ const SaasAuth = () => {
     const check = await validatePortalAccess(data.user.id, "saas");
     setLoading(false);
     if (!check.allowed) {
+      await supabase.auth.signOut({ scope: 'local' });
       toast.error(check.message);
+      if (check.redirect) navigate(check.redirect);
       return;
     }
     navigate("/cliente/inicio");

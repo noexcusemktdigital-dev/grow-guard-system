@@ -12,7 +12,7 @@ const SAAS_ROLES: AppRole[] = ["cliente_admin", "cliente_user"];
 export async function validatePortalAccess(
   userId: string,
   portal: "saas" | "franchise"
-): Promise<{ allowed: boolean; message?: string }> {
+): Promise<{ allowed: boolean; message?: string; redirect?: string }> {
   const { data: roleData } = await supabase
     .from("user_roles")
     .select("role")
