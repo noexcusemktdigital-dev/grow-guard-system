@@ -28,7 +28,7 @@ import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useToast } from "@/hooks/use-toast";
-import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, pointerWithin, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
