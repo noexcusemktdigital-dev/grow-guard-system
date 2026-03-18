@@ -615,6 +615,8 @@ export default function ClientePlanoVendas() {
   // ── Sales Plan from DB ──
   const { data: salesPlanData, isLoading: spLoading } = useSalesPlan();
   const saveSalesPlan = useSaveSalesPlan();
+  const { data: planHistory, isLoading: historyLoading } = useSalesPlanHistory();
+  const archiveSalesPlan = useArchiveSalesPlan();
 
   const [answers, setAnswers] = useState<Answers>({});
   const [completed, setCompleted] = useState(false);
