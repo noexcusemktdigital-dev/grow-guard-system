@@ -108,8 +108,9 @@ function PageLoader() {
   );
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -218,7 +219,8 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+}
 
 export default App;
