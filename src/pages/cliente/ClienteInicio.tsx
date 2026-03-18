@@ -304,7 +304,7 @@ export default function ClienteInicio() {
               </motion.button>
             </div>
 
-            <div className="flex items-start gap-3 bg-background/40 rounded-xl p-3.5 backdrop-blur-sm">
+            <div className="flex items-start gap-3 bg-background/60 rounded-xl p-3.5">
               <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground/90 italic leading-relaxed">"{dailyPhrase}"</p>
