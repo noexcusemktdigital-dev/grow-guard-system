@@ -39,7 +39,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   if (allowedRoles && allowedRoles.length > 0) {
     if (!role) {
-      return <Navigate to={getLoginPath(location.pathname)} replace />;
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
     }
 
     if (!allowedRoles.includes(role)) {
