@@ -173,11 +173,11 @@ export default function ClienteScripts() {
               {filtered(stage.key).map(s => (
                 <Card
                   key={s.id}
-                  className={`overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer ${expandedId === s.id ? "ring-1 ring-primary/30 shadow-lg" : ""}`}
+                  className={`relative isolate overflow-hidden transition-shadow transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer ${expandedId === s.id ? "ring-1 ring-primary/30 shadow-lg" : ""}`}
                   onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
                 >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${stage.gradient} opacity-50`} />
-                  <CardContent className="relative py-4 space-y-2">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${stage.gradient} opacity-50 pointer-events-none`} />
+                  <CardContent className="relative z-10 py-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 flex-1 min-w-0">
                         <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${stage.accent} bg-background/50`}>
