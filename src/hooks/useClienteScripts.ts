@@ -7,6 +7,7 @@ export function useClienteScripts() {
 
   return useQuery({
     queryKey: ["client-scripts", orgId],
+    staleTime: 1000 * 60 * 2,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("client_scripts")

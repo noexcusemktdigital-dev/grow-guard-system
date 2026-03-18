@@ -99,7 +99,7 @@ export default function ClienteScripts() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !scripts) {
     return (
       <div className="w-full space-y-6">
         <PageHeader title="Scripts & Playbooks" subtitle="Scripts de prospecção e negociação" icon={<BookOpen className="w-5 h-5 text-primary" />} />
