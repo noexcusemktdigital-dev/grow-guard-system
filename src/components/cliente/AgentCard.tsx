@@ -1,4 +1,5 @@
-import { Bot, Copy, Edit, MoreVertical, Trash2, Smartphone, Play, Pause, MessageCircle, Users, RotateCcw } from "lucide-react";
+import { Bot, Copy, Edit, MoreVertical, Trash2, Smartphone, Play, Pause, MessageCircle, Users, RotateCcw, Power, PowerOff } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
