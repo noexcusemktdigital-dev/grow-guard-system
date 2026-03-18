@@ -123,6 +123,13 @@ export function AgentCard({ agent, onEdit, onDuplicate, onDelete, onToggleStatus
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(agent); }}>
                   <Edit className="w-4 h-4 mr-2" /> Editar
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStatus(agent); }}>
+                  {isActive ? (
+                    <><PowerOff className="w-4 h-4 mr-2" /> Pausar agente</>
+                  ) : (
+                    <><Power className="w-4 h-4 mr-2 text-green-600" /> Ativar agente</>
+                  )}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDuplicate(agent); }}>
                   <Copy className="w-4 h-4 mr-2" /> Duplicar
                 </DropdownMenuItem>
