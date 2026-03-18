@@ -362,6 +362,10 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
   const [manualTitle, setManualTitle] = useState("");
   const [manualContent, setManualContent] = useState("");
 
+  // Store last autoContext and orgId for regeneration
+  const [lastAutoContext, setLastAutoContext] = useState<any>(null);
+  const [lastOrgId, setLastOrgId] = useState<string | null>(null);
+
   // Reset state when dialog opens (always-mounted pattern)
   useEffect(() => {
     if (open) {
@@ -377,10 +381,15 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
       setAdditionalContext("");
       setManualTitle("");
       setManualContent("");
+      setLastAutoContext(null);
+      setLastOrgId(null);
     }
   }, [open, initialStage]);
 
   const handleGenerate = async (autoContext: any, orgId: string | null) => {
+    // Store context for regeneration
+    setLastAutoContext(autoContext);
+    setLastOrgId(orgId);
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-script", {
@@ -651,7 +660,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
               </Button>
               <div className="flex gap-2">
                 {mode === "ai" && (
-                  <Button variant="outline" onClick={() => handleGenerate({}, null)} disabled={isGenerating} className="gap-1">
+                  <Button variant="outline" onClick={() => handleGenerate(lastAutoContext || {}, lastOrgId)} disabled={isGenerating} className="gap-1">
                     <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? "animate-spin" : ""}`} />
                     Regenerar
                   </Button>
@@ -673,7 +682,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
       open={showCreditsDialog}
       onOpenChange={setShowCreditsDialog}
       actionLabel="gerar este script"
-      creditCost={150}
+      creditCost={20}
     />
     </>
   );

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   BookOpen, Plus, Copy, Search, ChevronDown, ChevronUp, Sparkles,
-  Pencil, Trash2, Crosshair, ShieldQuestion, Handshake, Target, Ban, Loader2
+  Pencil, Trash2, Crosshair, ShieldQuestion, Handshake, Target, Ban, Loader2, Check, X
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,9 @@ export default function ClienteScripts() {
   const [showCreate, setShowCreate] = useState(false);
   const [improvingId, setImprovingId] = useState<string | null>(null);
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
 
   const allScripts = scripts ?? [];
 
@@ -197,32 +201,88 @@ export default function ClienteScripts() {
 
                     {expandedId === s.id && (
                       <div className="animate-fade-in mt-3 space-y-3">
-                        <div className="p-4 bg-background/60 backdrop-blur-sm rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
-                          {s.content || "Sem conteúdo"}
-                        </div>
+                        {editingId === s.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={editTitle}
+                              onChange={e => setEditTitle(e.target.value)}
+                              className="text-sm font-semibold"
+                              placeholder="Título do script"
+                            />
+                            <Textarea
+                              value={editContent}
+                              onChange={e => setEditContent(e.target.value)}
+                              rows={12}
+                              className="font-mono text-xs leading-relaxed"
+                            />
+                          </div>
+                        ) : (
+                          <div className="p-4 bg-background/60 backdrop-blur-sm rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
+                            {s.content || "Sem conteúdo"}
+                          </div>
+                        )}
                         <div className="flex items-center justify-between">
                           <p className="text-[10px] text-muted-foreground">Atualizado em {new Date(s.updated_at).toLocaleDateString("pt-BR")}</p>
                           <div className="flex gap-1.5">
-                            <Button
-                              size="sm" variant="outline"
-                              className="text-[10px] h-6 px-2 gap-1"
-                              disabled={improvingId === s.id}
-                              onClick={(e) => { e.stopPropagation(); handleImproveWithAI(s.id, s.content || "", s.category || "prospeccao"); }}
-                            >
-                              {improvingId === s.id ? (
-                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                              ) : (
-                                <Sparkles className="w-2.5 h-2.5" />
-                              )}
-                              Melhorar com IA
-                            </Button>
-                            <Button
-                              size="sm" variant="outline"
-                              className="text-[10px] h-6 px-2 text-destructive hover:text-destructive"
-                              onClick={(e) => { e.stopPropagation(); deleteScriptMutation.mutate(s.id); toast({ title: "Script excluído!" }); }}
-                            >
-                              <Trash2 className="w-2.5 h-2.5 mr-1" /> Excluir
-                            </Button>
+                            {editingId === s.id ? (
+                              <>
+                                <Button
+                                  size="sm" variant="default"
+                                  className="text-[10px] h-6 px-2 gap-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateScript.mutate(
+                                      { id: s.id, title: editTitle, content: editContent },
+                                      { onSuccess: () => { toast({ title: "Script atualizado!" }); setEditingId(null); } }
+                                    );
+                                  }}
+                                >
+                                  <Check className="w-2.5 h-2.5" /> Salvar
+                                </Button>
+                                <Button
+                                  size="sm" variant="outline"
+                                  className="text-[10px] h-6 px-2 gap-1"
+                                  onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
+                                >
+                                  <X className="w-2.5 h-2.5" /> Cancelar
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm" variant="outline"
+                                  className="text-[10px] h-6 px-2 gap-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingId(s.id);
+                                    setEditTitle(s.title);
+                                    setEditContent(s.content || "");
+                                  }}
+                                >
+                                  <Pencil className="w-2.5 h-2.5" /> Editar
+                                </Button>
+                                <Button
+                                  size="sm" variant="outline"
+                                  className="text-[10px] h-6 px-2 gap-1"
+                                  disabled={improvingId === s.id}
+                                  onClick={(e) => { e.stopPropagation(); handleImproveWithAI(s.id, s.content || "", s.category || "prospeccao"); }}
+                                >
+                                  {improvingId === s.id ? (
+                                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                  ) : (
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                  )}
+                                  Melhorar com IA
+                                </Button>
+                                <Button
+                                  size="sm" variant="outline"
+                                  className="text-[10px] h-6 px-2 text-destructive hover:text-destructive"
+                                  onClick={(e) => { e.stopPropagation(); deleteScriptMutation.mutate(s.id); toast({ title: "Script excluído!" }); }}
+                                >
+                                  <Trash2 className="w-2.5 h-2.5 mr-1" /> Excluir
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -236,10 +296,15 @@ export default function ClienteScripts() {
               ))}
               {filtered(stage.key).length === 0 && (
                 <div className="text-center py-12">
-                  <Search className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    {search ? `Nenhum resultado para "${search}"` : "Nenhum script nesta etapa"}
+                  <stage.icon className={`w-8 h-8 mx-auto mb-3 opacity-30 ${stage.accent}`} />
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {search ? `Nenhum resultado para "${search}"` : `Nenhum script de ${stage.label}`}
                   </p>
+                  {!search && (
+                    <Button size="sm" variant="outline" onClick={() => setShowCreate(true)} className="gap-1">
+                      <Plus className="w-3.5 h-3.5" /> Criar Script de {stage.label}
+                    </Button>
+                  )}
                 </div>
               )}
             </TabsContent>
@@ -257,7 +322,7 @@ export default function ClienteScripts() {
         open={showCreditsDialog}
         onOpenChange={setShowCreditsDialog}
         actionLabel="melhorar este script"
-        creditCost={150}
+        creditCost={20}
       />
     </div>
   );
