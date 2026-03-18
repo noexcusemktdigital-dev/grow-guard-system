@@ -243,13 +243,14 @@ export default function ClienteInicio() {
     });
   }, [activeGoals, goalProgress]);
 
-  // Daily score combining checklist + goals + CRM activity
+  // Daily score combining checklist + goals + CRM activity (today)
+  const todayLeadsCount = useMemo(() => allLeads.filter(l => l.created_at.startsWith(today)).length, [allLeads, today]);
   const dailyScore = useMemo(() => {
     const checklistScore = taskProgress * 0.4; // 40% weight
     const goalScore = Math.min(goalPercent, 100) * 0.35; // 35% weight
-    const crmScore = Math.min(thisMonthLeads.length * 5, 100) * 0.25; // 25% weight
+    const crmScore = Math.min(todayLeadsCount * 20, 100) * 0.25; // 25% weight — 5 leads/day = 100%
     return Math.round(checklistScore + goalScore + crmScore);
-  }, [taskProgress, goalPercent, thisMonthLeads.length]);
+  }, [taskProgress, goalPercent, todayLeadsCount]);
 
   const handleToggleTask = useCallback((id: string, currentState: boolean) => {
     toggleChecklistItem.mutate(
