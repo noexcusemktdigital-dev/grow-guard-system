@@ -263,8 +263,8 @@ function CompletenessScore({ profile, org, waConnected }: { profile: any; org: a
 }
 
 /* ─── XP Actions Suggestions ─── */
-function XpSuggestions({ profile, org, waConnected, totalLeads, wonLeads, contentCount, siteCount, activeAgents }: {
-  profile: any; org: any; waConnected: boolean; totalLeads: number; wonLeads: number; contentCount: number; siteCount: number; activeAgents: number;
+function XpSuggestions({ profile, org, waConnected, totalLeads, wonLeads, contentCount, siteCount, activeAgents, hasStrategy }: {
+  profile: any; org: any; waConnected: boolean; totalLeads: number; wonLeads: number; contentCount: number; siteCount: number; activeAgents: number; hasStrategy: boolean;
 }) {
   const suggestions = useMemo(() => {
     const items: { text: string; xp: number; icon: React.ElementType; href: string }[] = [];
@@ -274,6 +274,8 @@ function XpSuggestions({ profile, org, waConnected, totalLeads, wonLeads, conten
       items.push({ text: "Preencha dados da empresa", xp: 25, icon: Building2, href: "/cliente/configuracoes" });
     if (!waConnected)
       items.push({ text: "Conecte o WhatsApp", xp: 50, icon: Wifi, href: "/cliente/integracoes" });
+    if (!hasStrategy)
+      items.push({ text: "Gere sua estratégia de marketing", xp: 30, icon: Clipboard, href: "/cliente/plano-marketing" });
     if (totalLeads < 1)
       items.push({ text: "Cadastre seu primeiro lead", xp: 10, icon: Target, href: "/cliente/crm" });
     if (wonLeads < 1 && totalLeads >= 1)
@@ -285,7 +287,7 @@ function XpSuggestions({ profile, org, waConnected, totalLeads, wonLeads, conten
     if (activeAgents < 1)
       items.push({ text: "Ative um agente IA", xp: 10, icon: Bot, href: "/cliente/agentes-ia" });
     return items.slice(0, 4);
-  }, [profile, org, waConnected, totalLeads, wonLeads, contentCount, siteCount, activeAgents]);
+  }, [profile, org, waConnected, totalLeads, wonLeads, contentCount, siteCount, activeAgents, hasStrategy]);
 
   if (suggestions.length === 0) return null;
 
