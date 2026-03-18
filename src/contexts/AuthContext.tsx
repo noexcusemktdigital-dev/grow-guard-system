@@ -59,12 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Fetch profile and roles in parallel with 5s timeout each
       const [profileResult, roleResult] = await Promise.allSettled([
         withTimeout(
-          supabase.from("profiles").select("*").eq("id", currentUser.id).single(),
+          supabase.from("profiles").select("*").eq("id", currentUser.id).single().then(r => r),
           5000,
           { data: null, error: { message: "timeout" } } as any
         ),
         withTimeout(
-          supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
+          supabase.from("user_roles").select("role").eq("user_id", currentUser.id).then(r => r),
           5000,
           { data: null, error: { message: "timeout" } } as any
         ),
