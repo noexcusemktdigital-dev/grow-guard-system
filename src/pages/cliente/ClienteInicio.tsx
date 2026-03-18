@@ -509,8 +509,8 @@ export default function ClienteInicio() {
             </Card>
           )}
 
-          {/* Next Steps — Admin only */}
-          {isAdmin && nextSteps.length > 0 && (
+          {/* Next Steps */}
+          {nextSteps.length > 0 && (
             <Card>
               <CardHeader className="pb-3 px-5 pt-5">
                 <div className="flex items-center gap-2">
