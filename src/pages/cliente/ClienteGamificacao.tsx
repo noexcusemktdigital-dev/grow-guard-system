@@ -35,6 +35,7 @@ import { useWhatsAppInstance } from "@/hooks/useWhatsApp";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useOrgTeams } from "@/hooks/useOrgTeams";
+import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 
 const LEVELS = [
   { name: "Novato", minXp: 0, maxXp: 499, icon: Shield, color: "text-muted-foreground" },
@@ -262,8 +263,8 @@ function CompletenessScore({ profile, org, waConnected }: { profile: any; org: a
 }
 
 /* ─── XP Actions Suggestions ─── */
-function XpSuggestions({ profile, org, waConnected, totalLeads, wonLeads, contentCount, siteCount, activeAgents }: {
-  profile: any; org: any; waConnected: boolean; totalLeads: number; wonLeads: number; contentCount: number; siteCount: number; activeAgents: number;
+function XpSuggestions({ profile, org, waConnected, totalLeads, wonLeads, contentCount, siteCount, activeAgents, hasStrategy }: {
+  profile: any; org: any; waConnected: boolean; totalLeads: number; wonLeads: number; contentCount: number; siteCount: number; activeAgents: number; hasStrategy: boolean;
 }) {
   const suggestions = useMemo(() => {
     const items: { text: string; xp: number; icon: React.ElementType; href: string }[] = [];
@@ -273,6 +274,8 @@ function XpSuggestions({ profile, org, waConnected, totalLeads, wonLeads, conten
       items.push({ text: "Preencha dados da empresa", xp: 25, icon: Building2, href: "/cliente/configuracoes" });
     if (!waConnected)
       items.push({ text: "Conecte o WhatsApp", xp: 50, icon: Wifi, href: "/cliente/integracoes" });
+    if (!hasStrategy)
+      items.push({ text: "Gere sua estratégia de marketing", xp: 30, icon: Clipboard, href: "/cliente/plano-marketing" });
     if (totalLeads < 1)
       items.push({ text: "Cadastre seu primeiro lead", xp: 10, icon: Target, href: "/cliente/crm" });
     if (wonLeads < 1 && totalLeads >= 1)
@@ -284,7 +287,7 @@ function XpSuggestions({ profile, org, waConnected, totalLeads, wonLeads, conten
     if (activeAgents < 1)
       items.push({ text: "Ative um agente IA", xp: 10, icon: Bot, href: "/cliente/agentes-ia" });
     return items.slice(0, 4);
-  }, [profile, org, waConnected, totalLeads, wonLeads, contentCount, siteCount, activeAgents]);
+  }, [profile, org, waConnected, totalLeads, wonLeads, contentCount, siteCount, activeAgents, hasStrategy]);
 
   if (suggestions.length === 0) return null;
 
@@ -337,6 +340,7 @@ export default function ClienteGamificacao() {
   const { data: waInstance } = useWhatsAppInstance();
   const { data: members } = useOrgMembers();
   const { data: teams } = useOrgTeams();
+  const { data: activeStrategy } = useActiveStrategy();
 
   // Extra data for new medals
   const { data: calendarEvents } = useQuery({
@@ -436,20 +440,22 @@ export default function ClienteGamificacao() {
     onError: () => toast.error("Erro ao resgatar recompensa"),
   });
 
-  const myLeads = leads?.filter(l => l.assigned_to === user?.id) ?? [];
-  const totalLeads = myLeads.length;
-  const wonLeads = myLeads.filter(l => !!l.won_at).length;
-  const pipelineValue = myLeads.filter(l => !l.won_at && !l.lost_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
-  const wonValue = myLeads.filter(l => !!l.won_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
+  // For cliente portal: use ALL org leads (most leads have assigned_to=null)
+  const orgLeads = leads ?? [];
+  const totalLeads = orgLeads.length;
+  const wonLeads = orgLeads.filter(l => !!l.won_at).length;
+  const pipelineValue = orgLeads.filter(l => !l.won_at && !l.lost_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
+  const wonValue = orgLeads.filter(l => !!l.won_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
 
   const contentCount = contents?.length ?? 0;
   const dispatchCount = dispatches?.length ?? 0;
   const siteCount = sites?.length ?? 0;
   const activeAgents = (agents || []).filter(a => a.status === "active").length;
   const waConnected = waInstance?.status === "connected";
+  const hasStrategy = !!activeStrategy;
 
   // Complete leads count (value + phone + email)
-  const completeLeads = myLeads.filter(l => l.value && Number(l.value) > 0 && l.phone && l.email).length;
+  const completeLeads = orgLeads.filter(l => l.value && Number(l.value) > 0 && l.phone && l.email).length;
 
   const xp = (gamification as any)?.xp ?? 0;
   const streakDays = gamification?.streak_days ?? 0;
@@ -479,7 +485,7 @@ export default function ClienteGamificacao() {
       if (m.emoji === "profile" && profile?.full_name && profile?.phone && profile?.job_title) unlocked = true;
       if (m.emoji === "company" && org?.cnpj && org?.address && org?.phone) unlocked = true;
       if (m.emoji === "integrator" && waConnected) unlocked = true;
-      if (m.emoji === "strategist" && contentCount >= 1) unlocked = true;
+      if (m.emoji === "strategist" && hasStrategy) unlocked = true;
       if (m.emoji === "communicator" && contentCount >= 10) unlocked = true;
       // New platform medals
       if (m.emoji === "organizer" && (calendarEvents ?? 0) >= 5) unlocked = true;
@@ -487,7 +493,7 @@ export default function ClienteGamificacao() {
       if (m.emoji === "funnel" && (customFunnels ?? 0) >= 1) unlocked = true;
       if (m.emoji === "checklist" && (checklistDoneCount ?? 0) >= 30) unlocked = true;
       if (m.emoji === "student" && (academyProgress ?? 0) >= 3) unlocked = true;
-      if (m.emoji === "strategy" && contentCount >= 3 && totalLeads >= 5) unlocked = true;
+      if (m.emoji === "strategy" && hasStrategy && totalLeads >= 5) unlocked = true;
       // CRM medals
       if (m.emoji === "lead" && totalLeads >= 1) unlocked = true;
       if (m.emoji === "sales" && wonLeads >= 10) unlocked = true;
@@ -500,7 +506,7 @@ export default function ClienteGamificacao() {
       if (m.emoji === "agent" && activeAgents >= 1) unlocked = true;
       return { ...m, unlocked };
     });
-  }, [totalLeads, wonLeads, streakDays, wonValue, contentCount, dispatchCount, siteCount, activeAgents, profile, org, waConnected, calendarEvents, completeLeads, customFunnels, checklistDoneCount, academyProgress]);
+  }, [totalLeads, wonLeads, streakDays, wonValue, contentCount, dispatchCount, siteCount, activeAgents, profile, org, waConnected, calendarEvents, completeLeads, customFunnels, checklistDoneCount, academyProgress, hasStrategy]);
 
   const unlockedCount = medals.filter(m => m.unlocked).length;
 
@@ -605,7 +611,7 @@ export default function ClienteGamificacao() {
       <XpSuggestions
         profile={profile} org={org} waConnected={waConnected}
         totalLeads={totalLeads} wonLeads={wonLeads} contentCount={contentCount}
-        siteCount={siteCount} activeAgents={activeAgents}
+        siteCount={siteCount} activeAgents={activeAgents} hasStrategy={hasStrategy}
       />
 
       {/* Profile Completeness Score */}
