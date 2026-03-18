@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   Phone, Mail, Building2, DollarSign, Tag, Clock, CheckCircle, XCircle,
   MessageCircle, ExternalLink, CircleDot, Plus, Trash2, CalendarDays,
