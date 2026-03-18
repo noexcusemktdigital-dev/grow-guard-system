@@ -828,7 +828,7 @@ export default function ClienteCRM() {
               </CardContent>
             </Card>
           ) : view === "kanban" ? (
-            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}> onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <div className="flex gap-3 overflow-x-auto pb-4">
                 {stages.map(stage => {
                   const stageLeads = leadsByStage[stage.key] || [];
