@@ -632,11 +632,15 @@ export default function ClientePlanoVendas() {
     }
   }, [salesPlanData, spLoading]);
 
-  // ── History state ──
-  const [history] = useState([
-    { date: "2026-01-15", score: 32, nivel: "Inicial" },
-    { date: "2026-02-10", score: 48, nivel: "Estruturando" },
-  ]);
+  // ── History state (derived from saved plan) ──
+  const history = useMemo(() => {
+    if (!salesPlanData || !completed) return [];
+    const sc = salesPlanData.score ?? 0;
+    const nv = getNivel(sc);
+    return [
+      { date: salesPlanData.updated_at || salesPlanData.created_at, score: sc, nivel: nv.label },
+    ];
+  }, [salesPlanData, completed]);
 
   // ── Metas state ──
   const [scopeFilter, setScopeFilter] = useState<string>("all");
