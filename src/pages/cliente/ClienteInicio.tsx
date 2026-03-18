@@ -123,7 +123,7 @@ export default function ClienteInicio() {
   const now = new Date();
   const monthStart = startOfMonth(now);
   const prevMonthStart = startOfMonth(subMonths(now, 1));
-  const prevMonthEnd = subMonths(monthStart, 0);
+  const prevMonthEnd = monthStart;
 
   const thisMonthLeads = useMemo(() => allLeads.filter(l => isAfter(new Date(l.created_at), monthStart)), [allLeads, monthStart]);
   const prevMonthLeads = useMemo(() => allLeads.filter(l => {
