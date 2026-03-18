@@ -112,23 +112,23 @@ const allMedals = [
 ];
 
 const rewardTiers = [
-  { level: 2, title: "+50 Créditos Bônus", description: "Nível Aprendiz", type: "bonus_credits", value: 50 },
-  { level: 3, title: "+200 Créditos Bônus", description: "Nível Profissional", type: "bonus_credits", value: 200 },
-  { level: 4, title: "5% Desconto no Plano", description: "Nível Especialista", type: "discount", value: 5 },
-  { level: 5, title: "+500 Créditos + Geração Extra", description: "Nível Mestre", type: "bonus_credits", value: 500 },
-  { level: 6, title: "10% Desconto + 1000 Créditos", description: "Nível Lenda", type: "bonus_credits", value: 1000 },
+  { level: 2, title: "+100 Créditos Bônus", description: "Nível Aprendiz", type: "bonus_credits", value: 100 },
+  { level: 3, title: "+300 Créditos Bônus", description: "Nível Profissional", type: "bonus_credits", value: 300 },
+  { level: 4, title: "+500 Créditos Bônus", description: "Nível Especialista", type: "bonus_credits", value: 500 },
+  { level: 5, title: "+800 Créditos Bônus", description: "Nível Mestre", type: "bonus_credits", value: 800 },
+  { level: 6, title: "+1.500 Créditos Bônus", description: "Nível Lenda", type: "bonus_credits", value: 1500 },
 ];
 
-function getLevelInfo(xp: number) {
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (xp >= LEVELS[i].minXp) {
-      const current = LEVELS[i];
-      const next = LEVELS[i + 1];
+function getLevelInfo(xp: number, levels = LEVELS) {
+  for (let i = levels.length - 1; i >= 0; i--) {
+    if (xp >= levels[i].minXp) {
+      const current = levels[i];
+      const next = levels[i + 1];
       const progressInLevel = next ? ((xp - current.minXp) / (next.minXp - current.minXp)) * 100 : 100;
       return { level: i + 1, title: current.name, nextTitle: next?.name, xpToNext: next ? next.minXp - xp : 0, progress: Math.min(progressInLevel, 100), icon: current.icon, color: current.color };
     }
   }
-  return { level: 1, title: "Novato", nextTitle: "Aprendiz", xpToNext: 500, progress: 0, icon: Shield, color: "text-muted-foreground" };
+  return { level: 1, title: "Novato", nextTitle: "Aprendiz", xpToNext: levels[1]?.minXp ?? 500, progress: 0, icon: Shield, color: "text-muted-foreground" };
 }
 
 /* ─── 3D Medal Component ─── */
