@@ -17,7 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
-import { useStrategyData } from "@/hooks/useStrategyData";
+
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 
