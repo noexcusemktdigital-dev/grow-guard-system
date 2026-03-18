@@ -673,7 +673,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
       open={showCreditsDialog}
       onOpenChange={setShowCreditsDialog}
       actionLabel="gerar este script"
-      creditCost={150}
+      creditCost={20}
     />
     </>
   );
