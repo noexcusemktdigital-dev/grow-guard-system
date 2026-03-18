@@ -1,213 +1,83 @@
 
-## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Status: ✅ Implementado
+# Testes Completos — Gamificação
 
-### Resumo
-
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
-
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
-
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
-
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
-
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+## Contexto
+A tela `ClienteGamificacao` (543 linhas) centraliza XP, níveis, medalhas, recompensas, ranking de equipe e avaliações. O sistema de gamificação é sustentado pela tabela `client_gamification` e triggers de XP no banco.
 
 ---
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+## Problemas Identificados
 
-### Status: ✅ Documentado
+### 1. Medalhas são flat e genéricas — sem impacto visual 3D
+As medalhas atuais são círculos com gradiente e um `box-shadow inset`. O visual é "bom o suficiente" mas não impressiona. O pedido é por medalhas mais robustas, 3D e visualmente impactantes.
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+**Fix**: Redesenhar o componente de medalha com múltiplas camadas de sombra/highlight, efeito de brilho metálico (radial gradient), anel exterior com "entalhe", e animação sutil de hover (rotateY 3D). Medalhas bloqueadas ficam monocromáticas com silhueta. Medalhas desbloqueadas ganham efeito de "pulse glow" no ring.
 
-### Margem por Plano
+### 2. Medalhas não incentivam uso da plataforma além de CRM
+Das 14 medalhas, 5 são de plataforma (perfil, empresa, WA, conteúdo) mas não cobrem: agendamento de eventos, uso de chat, criação de tarefas, uso da Academy, configuração de funis, ou preenchimento completo de leads. O pedido é expandir para induzir preenchimento e uso.
 
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+**Fix**: Adicionar 6 novas medalhas orientadas a uso/dados:
+- **Organizador** — 5+ eventos na agenda
+- **Estratégia Completa** — plano de vendas ou marketing preenchido
+- **Lead Detalhista** — 10 leads com valor, telefone e email preenchidos
+- **Funil Maestro** — funil customizado criado
+- **Checklist Master** — 30 tarefas do dia concluídas (acumuladas)
+- **Aluno Dedicado** — 3+ aulas da Academy concluídas
 
-### Custo por funcionalidade
+### 3. Sem `staleTime` na query de gamificação — flicker
+`useClienteGamification()` não tem `staleTime`, causando refetch e flash ao voltar à tela.
 
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
+**Fix**: Adicionar `staleTime: 1000 * 60 * 2`.
 
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
+### 4. Seção de nível/XP é funcional mas pouco interativa
+O card de evolução mostra XP e barra de progresso, mas não comunica claramente "o que fazer para subir". Falta didatismo.
+
+**Fix**: Adicionar uma sub-seção "Próximas ações para XP" com 3-4 sugestões contextuais baseadas no estado atual (ex: "Complete seu perfil +25 XP", "Feche sua primeira venda +50 XP", "Crie um conteúdo +10 XP").
+
+### 5. Rewards claim funciona mas sem feedback visual
+O botão "Resgatar" funciona, mas a transição é abrupta — sem celebração visual.
+
+**Fix**: Adicionar efeito confetti/sparkle ao resgatar recompensa (reutilizar `CelebrationEffect` que já existe no projeto).
+
+### 6. Ranking da equipe é simplista
+O ranking usa pontos calculados no frontend (`leads*10 + won*50`) mas não reflete XP real da gamificação. Também não mostra nível/medalhas dos colegas.
+
+**Fix**: Buscar XP real da tabela `client_gamification` para cada membro e mostrar nível + ícone ao lado do nome no ranking.
+
+### 7. Streak não tem feedback de "risco de perder"
+O streak mostra dias mas não avisa "Volte amanhã para manter!" ou "Streak perdido!". Sem urgência.
+
+**Fix**: Adicionar badge de alerta quando último acesso > 20h ("Mantenha seu streak! Volte amanhã").
+
+### 8. Medalhas desbloqueadas sem data de desbloqueio
+As medalhas calculadas no frontend não registram *quando* foram desbloqueadas. Sem senso de progressão temporal.
+
+**Fix**: Para esta versão, adicionar tooltip com a condição cumprida. Persistência da data fica para uma v3.
 
 ---
 
-## Checklist Completo de Testes — Portal SaaS (Cliente)
+## Melhorias Visuais (Foco principal do pedido)
 
-### Status: ✅ Auditoria concluída — 3 bugs corrigidos
+| # | Melhoria | Impacto |
+|---|---|---|
+| 1 | Medalhas 3D com múltiplas camadas, brilho metálico, hover com rotateY | Visual premium |
+| 2 | Medalhas bloqueadas com silhueta monocromática + cadeado sutil | Clareza |
+| 3 | Efeito "glow pulse" no ring de medalhas desbloqueadas | Feedback visual |
+| 4 | Card de nível com gradient mais rico e ícone maior | Impacto |
+| 5 | Confetti no resgate de recompensa | Celebração |
 
-### 1. Autenticação e Onboarding
-- [x] Acessar `/app` e criar conta nova com e-mail teste
-- [x] Verificar exigência de senha forte (8+ caracteres, barra visual)
-- [x] Verificar tela de confirmação de e-mail (menção a Spam/Lixo)
-- [x] Confirmar e-mail e fazer login
-- [x] Verificar redirecionamento para `/cliente/onboarding` (dados da empresa)
-- [x] Preencher onboarding da empresa e salvar
-- [x] Verificar exibição sequencial: TrialWelcomeModal → OnboardingTour → Comunicados
-- [x] Verificar banner de Trial (7 dias, 200 créditos)
+## Melhorias Funcionais
 
-### 2. Dashboard Início (`/cliente/inicio`)
-- [x] Saudação dinâmica (Bom dia/Boa tarde/Boa noite)
-- [x] Checklist diário visível
-- [x] KPIs carregando (leads, tarefas, créditos)
-- [x] Atalhos rápidos funcionando
-- [x] Alertas de créditos/trial visíveis
+| # | Melhoria | Impacto |
+|---|---|---|
+| 6 | +6 medalhas de uso da plataforma (agenda, lead completo, funil, checklist, academy, estratégia) | Indução de uso |
+| 7 | Seção "Próximas ações para XP" contextual | Didatismo |
+| 8 | Ranking com XP real + nível de cada membro | Precisão |
+| 9 | `staleTime` na query de gamificação | Performance |
+| 10 | Alerta de streak em risco | Engajamento |
 
-### 3. CRM (`/cliente/crm`)
-- [x] Configurar primeiro funil em `/cliente/crm/config`
-- [x] Criar etapas no funil
-- [x] Criar lead manualmente (botão + formulário)
-- [x] Arrastar lead entre colunas (verificar drop preciso)
-- [x] Arrastar lead em coluna com scroll (>7 cards)
-- [x] Ativar modo seleção → checkbox de coluna seleciona todos
-- [x] Ação em massa (mover, excluir)
-- [x] Abrir detalhe do lead (sheet lateral)
-- [x] Adicionar atividade/tarefa no lead
-- [x] Importar leads via CSV (testar separador `;`)
-- [x] Criar contato e converter em lead
-- [x] Verificar limite de pipelines por plano (Trial = 3)
+## Arquivos a alterar
+- `src/pages/cliente/ClienteGamificacao.tsx` — todo o visual e funcional
+- `src/hooks/useClienteContent.ts` — `staleTime` na gamificação
 
-### 4. Scripts de Vendas (`/cliente/scripts`)
-- [x] Gerar script (consome 20 créditos)
-- [x] Verificar dedução de créditos
-- [x] Copiar script gerado
-- [x] Verificar bloqueio se créditos insuficientes
-
-### 5. Plano de Vendas (`/cliente/plano-vendas`)
-- [x] Visualizar plano comercial
-- [x] Editar metas
-
-### 6. Chat / WhatsApp (`/cliente/chat`)
-- [x] Verificar bloqueio no Trial (sem WhatsApp)
-- [x] Verificar que a tela mostra overlay/gate
-
-### 7. Agentes IA (`/cliente/agentes-ia`)
-- [x] Verificar bloqueio no Trial (sem Agente IA)
-- [ ] Se Pro/Enterprise: criar agente, simular conversa (10 cr config, 2 cr/msg)
-
-### 8. Disparos (`/cliente/disparos`)
-- [x] Verificar bloqueio no Trial
-- [ ] Se Pro/Enterprise: criar disparo em massa
-
-### 9. Dashboard Comercial (`/cliente/dashboard`)
-- [x] Gráficos e métricas carregando
-- [x] Filtros de período funcionando
-
-### 10. Marketing Hub (`/cliente/marketing-hub`)
-- [x] Página carregando com cards de ferramentas (rota corrigida ✅)
-
-### 11. Plano de Marketing (`/cliente/plano-marketing`)
-- [x] Gerar estratégia IA (50 créditos)
-- [x] Verificar dedução
-
-### 12. Conteúdos (`/cliente/conteudos`)
-- [x] Gerar conteúdo (30 créditos)
-- [x] Visualizar conteúdos gerados
-- [x] Copiar/editar conteúdo
-
-### 13. Redes Sociais / Artes (`/cliente/redes-sociais`)
-- [x] Gerar briefing (gratuito)
-- [x] Gerar arte social (25 créditos)
-- [x] Gerar conceitos visuais (25 créditos)
-- [x] Download da arte gerada
-
-### 14. Sites (`/cliente/sites`)
-- [x] Gerar site (100 créditos)
-- [x] Preview do site gerado
-- [x] Verificar guia de deploy
-
-### 15. Tráfego Pago (`/cliente/trafego-pago`)
-- [x] Gerar estratégia de tráfego (50 créditos)
-- [x] Visualizar recomendações
-
-### 16. Plano e Créditos (`/cliente/plano-creditos`)
-- [x] Visualizar plano atual (Trial/Starter/Pro/Enterprise)
-- [x] Ver saldo de créditos restantes
-- [x] Visualizar pacotes de recarga (200/R$49, 500/R$99, 1000/R$179)
-- [ ] Tentar comprar pacote de recarga
-- [x] Visualizar histórico de consumo de créditos
-- [ ] Upgrade de plano (Trial → Starter/Pro/Enterprise)
-
-### 17. Configurações (`/cliente/configuracoes`)
-- [x] Editar dados da empresa
-- [x] Gerenciar usuários (verificar limite: Trial=2, Starter=10, Pro=20)
-- [x] Convidar novo usuário
-- [x] Identidade visual (logo, cores)
-
-### 18. Integrações (`/cliente/integracoes`)
-- [x] Listar integrações disponíveis
-- [ ] Configurar integração (se disponível)
-
-### 19. Agenda (`/cliente/agenda`)
-- [x] Criar evento
-- [x] Visualizar calendário
-- [x] Editar/excluir evento
-
-### 20. Avaliações (`/cliente/avaliacoes`)
-- [x] Visualizar avaliações
-- [ ] Responder avaliação (se disponível)
-
-### 21. Gamificação (`/cliente/gamificacao`)
-- [x] Visualizar troféus/conquistas
-- [x] Verificar progresso
-
-### 22. Suporte (`/cliente/suporte`)
-- [x] Abrir chamado
-- [x] Visualizar chamados existentes
-- [x] Responder chamado
-
-### 23. Notificações (`/cliente/notificacoes`)
-- [x] Verificar sino de notificações
-- [x] Marcar como lida
-
-### 24. Checklist (`/cliente/checklist`)
-- [x] Gerar checklist diário IA (5 créditos)
-- [x] Marcar tarefas como concluídas (CelebrationEffect duplicado corrigido ✅)
-
-### 25. Responsividade
-- [x] Testar todas as telas em mobile (< 768px)
-- [x] Sidebar colapsa corretamente
-- [x] Kanban CRM com scroll horizontal no mobile
-
-### 26. Logout e Segurança
-- [x] Logout redireciona para `/app`
-- [x] Tentar acessar `/cliente/*` sem login → redireciona para `/app`
-- [x] Tentar acessar `/franqueadora/*` com conta cliente → bloqueado
-- [x] Verificar que dados de outra organização não aparecem (RLS)
-
-### Bugs Corrigidos
-1. ✅ Rota `/cliente/marketing-hub` adicionada ao App.tsx
-2. ✅ Rota `/cliente/comunicados` importada e adicionada ao App.tsx
-3. ✅ `CelebrationEffect` duplicado removido de ClienteChecklist.tsx
