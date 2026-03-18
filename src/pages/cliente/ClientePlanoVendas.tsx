@@ -634,15 +634,24 @@ export default function ClientePlanoVendas() {
     }
   }, [salesPlanData, spLoading]);
 
-  // ── History state (derived from saved plan) ──
-  const history = useMemo(() => {
-    if (!salesPlanData || !completed) return [];
-    const sc = salesPlanData.score ?? 0;
-    const nv = getNivel(sc);
-    return [
-      { date: salesPlanData.updated_at || salesPlanData.created_at, score: sc, nivel: nv.label },
-    ];
-  }, [salesPlanData, completed]);
+  // ── History dialog state ──
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<any>(null);
+
+  const selectedHistoryScores = useMemo(() => {
+    if (!selectedHistoryItem) return null;
+    return computeScores(selectedHistoryItem.answers as Answers);
+  }, [selectedHistoryItem]);
+
+  const selectedHistoryInsights = useMemo(() => {
+    if (!selectedHistoryScores || !selectedHistoryItem) return [];
+    return generateInsights(selectedHistoryItem.answers as Answers, selectedHistoryScores.scoreMap, selectedHistoryScores.maxMap);
+  }, [selectedHistoryItem, selectedHistoryScores]);
+
+  const selectedHistoryActionPlan = useMemo(() => {
+    if (!selectedHistoryScores || !selectedHistoryItem) return [];
+    return generateActionPlan(selectedHistoryScores.scoreMap, selectedHistoryScores.maxMap, selectedHistoryItem.answers as Answers);
+  }, [selectedHistoryItem, selectedHistoryScores]);
 
   // ── Metas state ──
   const [scopeFilter, setScopeFilter] = useState<string>("all");
