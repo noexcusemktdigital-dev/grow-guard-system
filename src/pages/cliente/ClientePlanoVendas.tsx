@@ -1031,7 +1031,103 @@ export default function ClientePlanoVendas() {
                     </Card>
                   </div>
 
-                  {/* Insights */}
+                  {/* ═══ NEW: Bar Chart by Category + Gauge + Comparativo ═══ */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Bar chart horizontal por categoria */}
+                    <Card className="glass-card">
+                      <CardContent className="py-6">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">SCORE POR CATEGORIA</p>
+                        <div className="h-56">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={radarData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} unit="%" />
+                              <YAxis type="category" dataKey="category" tick={{ fontSize: 10 }} width={100} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} />
+                              <RechartsTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => [`${v}%`, "Score"]} />
+                              <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22} name="Score">
+                                {radarData.map((entry, i) => (
+                                  <Cell key={i} fill={entry.value >= 70 ? "hsl(var(--chart-3))" : entry.value >= 40 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Comparativo Ideal vs Real */}
+                    <Card className="glass-card">
+                      <CardContent className="py-6">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">ATUAL vs IDEAL (100%)</p>
+                        <div className="h-56">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={radarData.map(d => ({ ...d, ideal: 100 }))} margin={{ left: 10, right: 10 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="category" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} />
+                              <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} unit="%" />
+                              <RechartsTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                              <Bar dataKey="ideal" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} barSize={24} name="Ideal" />
+                              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={24} name="Atual" />
+                              <Legend wrapperStyle={{ fontSize: 11 }} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Gauge de Maturidade */}
+                  <Card className="glass-card">
+                    <CardContent className="py-6">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 text-center">INDICADOR DE MATURIDADE COMERCIAL</p>
+                      <div className="flex items-center justify-center">
+                        <div className="relative w-64 h-36">
+                          <svg viewBox="0 0 200 120" className="w-full h-full">
+                            {/* Background arc */}
+                            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="hsl(var(--muted))" strokeWidth="14" strokeLinecap="round" />
+                            {/* Colored arc based on percentage */}
+                            <path
+                              d="M 20 100 A 80 80 0 0 1 180 100"
+                              fill="none"
+                              stroke={nivel.cor}
+                              strokeWidth="14"
+                              strokeLinecap="round"
+                              strokeDasharray={`${(percentage / 100) * 251.3} 251.3`}
+                              className="transition-all duration-1000 ease-out"
+                            />
+                            {/* Needle */}
+                            {(() => {
+                              const angle = -180 + (percentage / 100) * 180;
+                              const rad = (angle * Math.PI) / 180;
+                              const cx = 100, cy = 100, len = 60;
+                              const x2 = cx + len * Math.cos(rad);
+                              const y2 = cy + len * Math.sin(rad);
+                              return <line x1={cx} y1={cy} x2={x2} y2={y2} stroke="hsl(var(--foreground))" strokeWidth="2.5" strokeLinecap="round" className="transition-all duration-1000 ease-out" />;
+                            })()}
+                            <circle cx="100" cy="100" r="5" fill="hsl(var(--foreground))" />
+                            {/* Labels */}
+                            <text x="20" y="115" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">0%</text>
+                            <text x="100" y="25" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">50%</text>
+                            <text x="180" y="115" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">100%</text>
+                          </svg>
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center">
+                            <p className="text-2xl font-bold" style={{ color: nivel.cor }}>{percentage}%</p>
+                            <p className="text-xs font-medium" style={{ color: nivel.cor }}>{nivel.label}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-3 mt-4">
+                        {niveis.map(n => (
+                          <div key={n.id} className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: n.cor }} />
+                            <span className="text-[10px] text-muted-foreground">{n.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">INSIGHTS E RECOMENDAÇÕES</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
