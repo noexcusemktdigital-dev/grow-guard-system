@@ -32,7 +32,7 @@ const funnelStages = [
 export default function ClienteScripts() {
   const { data: scripts, isLoading } = useClienteScripts();
   const { createScript, updateScript, deleteScript: deleteScriptMutation } = useClienteScriptMutations();
-  const { hasStrategy, dores, objecoes, gatilhosCompra, propostaValor } = useStrategyData();
+  const { hasStrategy } = useStrategyData();
   const { data: orgId } = useUserOrgId();
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -99,7 +99,7 @@ export default function ClienteScripts() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !scripts) {
     return (
       <div className="w-full space-y-6">
         <PageHeader title="Scripts & Playbooks" subtitle="Scripts de prospecção e negociação" icon={<BookOpen className="w-5 h-5 text-primary" />} />
