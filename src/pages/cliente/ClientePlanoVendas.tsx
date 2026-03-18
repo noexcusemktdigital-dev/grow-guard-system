@@ -861,8 +861,16 @@ export default function ClientePlanoVendas() {
       return;
     }
     const [y, m] = novaMeta.mesRef.split("-").map(Number);
+    const periodEnd = new Date(y, m, 0, 23, 59, 59);
+    const now = new Date();
+    if (periodEnd < now) {
+      const confirmed = window.confirm(
+        `O período selecionado (${MESES_COMPLETOS[m - 1]} ${y}) já passou. A meta será enviada diretamente para o histórico. Deseja continuar?`
+      );
+      if (!confirmed) return;
+    }
     const periodStart = new Date(y, m - 1, 1).toISOString();
-    const periodEnd = new Date(y, m, 0, 23, 59, 59).toISOString();
+    const periodEndISO = periodEnd.toISOString();
     createGoal.mutate({
       title: novaMeta.title,
       target_value: novaMeta.target_value,
