@@ -1794,9 +1794,11 @@ export default function ClientePlanoVendas() {
                 <Select value={novaMeta.mesRef} onValueChange={v => setNovaMeta(p => ({ ...p, mesRef: v }))}>
                   <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    {MESES_COMPLETOS.map((m, i) => (
-                      <SelectItem key={i} value={`${anoAtual}-${String(i + 1).padStart(2, "0")}`}>{m} {anoAtual}</SelectItem>
-                    ))}
+                    {[anoAtual, anoAtual + 1].flatMap(yr =>
+                      MESES_COMPLETOS.map((m, i) => (
+                        <SelectItem key={`${yr}-${i}`} value={`${yr}-${String(i + 1).padStart(2, "0")}`}>{m} {yr}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
