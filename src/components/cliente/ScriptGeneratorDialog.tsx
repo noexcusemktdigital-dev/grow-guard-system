@@ -387,6 +387,9 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
   }, [open, initialStage]);
 
   const handleGenerate = async (autoContext: any, orgId: string | null) => {
+    // Store context for regeneration
+    setLastAutoContext(autoContext);
+    setLastOrgId(orgId);
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-script", {
