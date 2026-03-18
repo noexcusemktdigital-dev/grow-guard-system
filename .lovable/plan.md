@@ -1,61 +1,64 @@
 
 
-# Auditoria Completa do Portal SaaS — Plano de Correções
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-## Problemas Encontrados
+### Status: ✅ Implementado
 
-### BUG 1: Rotas ausentes no App.tsx
-- **`/cliente/marketing-hub`**: `ClienteMarketingHub` esta importado (linha 91) mas **nao tem Route** definida. A pagina existe mas e inacessivel via navegacao.
-- **`/cliente/comunicados`**: `ClienteComunicados` existe como arquivo mas **nao e importado nem roteado** em `App.tsx`. Comunicados do cliente ficam inacessiveis.
+### Resumo
 
-**Correcao**: Adicionar ambas as rotas no bloco de rotas do cliente em `App.tsx`:
-- `<Route path="marketing-hub" element={<ClienteMarketingHub />} />`
-- Importar `ClienteComunicados` via lazy e adicionar `<Route path="comunicados" element={<ClienteComunicados />} />`
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-### BUG 2: CelebrationEffect duplicado em ClienteChecklist.tsx
-- `ClienteChecklist.tsx` (linha 356) renderiza `<CelebrationEffect />` localmente, mas `ClienteLayout.tsx` ja renderiza esse componente globalmente. Isso causa dupla montagem do listener de eventos e potenciais animacoes duplicadas.
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**Correcao**: Remover `<CelebrationEffect />` do JSX de `ClienteChecklist.tsx` e manter apenas o import de `triggerCelebration`.
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-### BUG 3: Import nao utilizado de ClienteMarketingHub
-- A variavel `ClienteMarketingHub` ja esta importada mas nao usada. Apos adicionar a rota, o import passa a ser valido.
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-## Checklist de Validacao por Area
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-| # | Area | Status | Observacao |
-|---|------|--------|------------|
-| 1 | Autenticacao/Onboarding | OK | SaasAuth com validacao 8+ chars, portal guard, sequencia modal ok |
-| 2 | Dashboard Inicio | OK | Saudacao dinamica, KPIs, checklist, atalhos funcionando |
-| 3 | CRM | OK | dnd-kit com pointerWithin, bulk select, CSV import, config page |
-| 4 | Scripts | OK | Gera via edge function, deduz creditos, dialog de creditos insuficientes |
-| 5 | Plano de Vendas | OK | Formulario completo, salva no DB |
-| 6 | Chat/WhatsApp | OK | FeatureGate bloqueia corretamente no Trial |
-| 7 | Agentes IA | OK | FeatureGate bloqueia, Pro+ desbloqueia |
-| 8 | Disparos | OK | FeatureGate bloqueia no Trial + plan_locked |
-| 9 | Dashboard Comercial | OK | Graficos Recharts, filtros, export CSV |
-| 10 | Marketing Hub | **BUG** | Rota ausente — pagina inacessivel |
-| 11 | Plano Marketing | OK | Estrategia IA com dedução |
-| 12 | Conteudos | OK | Gera conteudo, historico, copia |
-| 13 | Redes Sociais | OK | Briefing, arte, conceitos visuais |
-| 14 | Sites | OK | Wizard 10 etapas, preview, deploy guide |
-| 15 | Trafego Pago | OK | Estrategia de trafego |
-| 16 | Plano & Creditos | OK | Planos, recarga, historico, checkout Asaas |
-| 17 | Configuracoes | OK | Perfil, empresa, usuarios (limite por plano), visual identity |
-| 18 | Integracoes | OK | WhatsApp setup wizard |
-| 19 | Agenda | OK | Calendario mes/semana/dia, CRUD eventos |
-| 20 | Avaliacoes | OK | Lista e visualiza |
-| 21 | Gamificacao | OK | XP, niveis, trofeus, conquistas |
-| 22 | Suporte | OK | Criar/responder chamados |
-| 23 | Notificacoes | OK | Delegado para NotificacoesPage |
-| 24 | Checklist | **BUG** | CelebrationEffect duplicado |
-| 25 | Responsividade | OK | Sidebar mobile via Sheet, kanban scroll horizontal |
-| 26 | Logout/Seguranca | OK | ProtectedRoute com timeout, portal guard com signOut local |
-| — | Comunicados Cliente | **BUG** | Rota ausente — pagina existe mas nao roteada |
+---
 
-## Resumo de Alteracoes
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-1. **`src/App.tsx`** — Adicionar lazy import de `ClienteComunicados` e duas `<Route>` novas (`marketing-hub` e `comunicados`)
-2. **`src/pages/cliente/ClienteChecklist.tsx`** — Remover `<CelebrationEffect />` do JSX (manter apenas `triggerCelebration`)
+### Status: ✅ Documentado
 
-Total: 2 arquivos, 3 bugs corrigidos.
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

@@ -25,7 +25,7 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { format, isToday, isPast, isFuture, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
-import { CelebrationEffect, triggerCelebration } from "@/components/CelebrationEffect";
+import { triggerCelebration } from "@/components/CelebrationEffect";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
@@ -353,7 +353,6 @@ export default function ClienteChecklist() {
 
   return (
     <div className="w-full space-y-5">
-      <CelebrationEffect />
       <PageHeader
         title="Tarefas"
         subtitle="Gerencie suas tarefas diárias e atribuições"
