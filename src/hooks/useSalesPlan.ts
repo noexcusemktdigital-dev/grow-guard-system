@@ -13,6 +13,15 @@ export interface SalesPlan {
   updated_at: string;
 }
 
+export interface SalesPlanHistoryItem {
+  id: string;
+  organization_id: string;
+  answers: Record<string, any>;
+  score: number;
+  created_by: string | null;
+  created_at: string;
+}
+
 export function useSalesPlan() {
   const { data: orgId } = useUserOrgId();
 
@@ -36,6 +45,49 @@ export function useSalesPlanCompleted() {
   const { data: plan, isLoading } = useSalesPlan();
   const completed = !!plan && Object.keys(plan.answers || {}).length > 5;
   return { completed, isLoading };
+}
+
+export function useSalesPlanHistory() {
+  const { data: orgId } = useUserOrgId();
+
+  return useQuery({
+    queryKey: ["sales-plan-history", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sales_plan_history")
+        .select("*")
+        .eq("organization_id", orgId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as SalesPlanHistoryItem[];
+    },
+    enabled: !!orgId,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useArchiveSalesPlan() {
+  const { data: orgId } = useUserOrgId();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ answers, score }: { answers: Record<string, any>; score: number }) => {
+      if (!orgId) throw new Error("No org");
+      const { error } = await supabase
+        .from("sales_plan_history")
+        .insert({
+          organization_id: orgId,
+          answers,
+          score,
+          created_by: user?.id,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sales-plan-history"] });
+    },
+  });
 }
 
 export function useSaveSalesPlan() {
