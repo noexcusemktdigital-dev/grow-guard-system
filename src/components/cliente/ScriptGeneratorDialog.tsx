@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sparkles, Pencil, ArrowRight, ArrowLeft, Loader2, RefreshCw, Save,
   Crosshair, ShieldQuestion, Handshake, Target, Ban, Link, Plus, X,
