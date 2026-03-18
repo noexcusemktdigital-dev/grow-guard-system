@@ -458,6 +458,13 @@ export default function ClienteGamificacao() {
   const levelInfo = getLevelInfo(xp);
   const LevelIcon = levelInfo.icon;
 
+  // Organization-level: sum of all members' XP
+  const totalOrgXp = useMemo(() => {
+    return (teamGamification ?? []).reduce((sum, g) => sum + (g.xp ?? 0), 0);
+  }, [teamGamification]);
+  const orgLevelInfo = getLevelInfo(totalOrgXp, ORG_LEVELS);
+  const OrgLevelIcon = orgLevelInfo.icon;
+
   // Streak risk check
   const streakAtRisk = useMemo(() => {
     if (!lastActivity || streakDays === 0) return false;
