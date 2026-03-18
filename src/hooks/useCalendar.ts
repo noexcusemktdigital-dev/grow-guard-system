@@ -13,6 +13,7 @@ export function useCalendars() {
       return data;
     },
     enabled: !!orgId,
+    staleTime: 1000 * 60 * 2,
   });
 }
 
@@ -30,6 +31,7 @@ export function useCalendarEvents(startDate?: string, endDate?: string) {
       return data as any[];
     },
     enabled: !!orgId,
+    staleTime: 1000 * 60 * 2,
   });
 }
 
