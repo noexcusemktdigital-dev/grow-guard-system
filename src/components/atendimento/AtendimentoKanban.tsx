@@ -164,7 +164,7 @@ export function AtendimentoKanban({ tickets, onSelectTicket, onMoveTicket }: Pro
   };
 
   return (
-    <DndContext sensors={sensors} <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}> onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 overflow-x-auto pb-4">
         {TICKET_STATUSES.map(status => (
           <DroppableColumn
