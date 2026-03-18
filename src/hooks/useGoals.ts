@@ -16,6 +16,7 @@ export function useGoals(scope?: string, month?: string) {
       return results;
     },
     enabled: !!orgId,
+    staleTime: 1000 * 60 * 2,
   });
 }
 
@@ -40,6 +41,7 @@ export function useActiveGoals(scope?: string) {
       return results;
     },
     enabled: !!orgId,
+    staleTime: 1000 * 60 * 2,
   });
 }
 

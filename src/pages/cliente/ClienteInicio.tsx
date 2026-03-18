@@ -78,30 +78,6 @@ function getLevelInfo(xp: number) {
   return { level: 1, title: "Novato", nextTitle: "Aprendiz", xpToNext: 500, progress: 0 };
 }
 
-function AnimatedCounter({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    const duration = 800;
-    const steps = 30;
-    const increment = value / steps;
-    let current = 0;
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= value) {
-        setDisplay(value);
-        clearInterval(timer);
-      } else {
-        setDisplay(Math.round(current));
-      }
-    }, duration / steps);
-    return () => clearInterval(timer);
-  }, [value]);
-
-  if (prefix === "R$") {
-    return <>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(display)}</>;
-  }
-  return <>{prefix}{display.toLocaleString("pt-BR")}{suffix}</>;
-}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(value);
@@ -147,7 +123,7 @@ export default function ClienteInicio() {
   const now = new Date();
   const monthStart = startOfMonth(now);
   const prevMonthStart = startOfMonth(subMonths(now, 1));
-  const prevMonthEnd = subMonths(monthStart, 0);
+  const prevMonthEnd = monthStart;
 
   const thisMonthLeads = useMemo(() => allLeads.filter(l => isAfter(new Date(l.created_at), monthStart)), [allLeads, monthStart]);
   const prevMonthLeads = useMemo(() => allLeads.filter(l => {
@@ -267,13 +243,14 @@ export default function ClienteInicio() {
     });
   }, [activeGoals, goalProgress]);
 
-  // Daily score combining checklist + goals + CRM activity
+  // Daily score combining checklist + goals + CRM activity (today)
+  const todayLeadsCount = useMemo(() => allLeads.filter(l => l.created_at.startsWith(today)).length, [allLeads, today]);
   const dailyScore = useMemo(() => {
     const checklistScore = taskProgress * 0.4; // 40% weight
     const goalScore = Math.min(goalPercent, 100) * 0.35; // 35% weight
-    const crmScore = Math.min(thisMonthLeads.length * 5, 100) * 0.25; // 25% weight
+    const crmScore = Math.min(todayLeadsCount * 20, 100) * 0.25; // 25% weight — 5 leads/day = 100%
     return Math.round(checklistScore + goalScore + crmScore);
-  }, [taskProgress, goalPercent, thisMonthLeads.length]);
+  }, [taskProgress, goalPercent, todayLeadsCount]);
 
   const handleToggleTask = useCallback((id: string, currentState: boolean) => {
     toggleChecklistItem.mutate(
@@ -327,7 +304,7 @@ export default function ClienteInicio() {
               </motion.button>
             </div>
 
-            <div className="flex items-start gap-3 bg-background/40 rounded-xl p-3.5 backdrop-blur-sm">
+            <div className="flex items-start gap-3 bg-background/60 rounded-xl p-3.5">
               <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground/90 italic leading-relaxed">"{dailyPhrase}"</p>
@@ -473,7 +450,7 @@ export default function ClienteInicio() {
             <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
               <span>Checklist {Math.round(taskProgress)}%</span>
               <span>Metas {Math.min(goalPercent, 100).toFixed(0)}%</span>
-              <span>CRM {Math.min(thisMonthLeads.length * 5, 100)}%</span>
+              <span>CRM {Math.min(todayLeadsCount * 20, 100)}%</span>
             </div>
           </CardContent>
         </Card>
@@ -508,32 +485,42 @@ export default function ClienteInicio() {
                 </div>
               </CardHeader>
               <CardContent className="px-5 pb-5">
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={revenueData}>
-                      <defs>
-                        <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                      <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                      <Tooltip
-                        formatter={(v: number) => [formatCurrency(v), "Receita"]}
-                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
-                      />
-                      <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="url(#revenueGrad)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--card))" }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+                {revenueData.every(d => d.receita === 0) ? (
+                  <div className="flex flex-col items-center justify-center h-48 text-center">
+                    <BarChart3 className="w-8 h-8 text-muted-foreground/40 mb-2" />
+                    <p className="text-xs text-muted-foreground mb-3">Feche vendas no CRM para visualizar receita aqui</p>
+                    <Button variant="outline" size="sm" className="text-xs h-8 rounded-lg" onClick={() => navigate("/cliente/crm")}>
+                      Ir para CRM <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={revenueData}>
+                        <defs>
+                          <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                        <Tooltip
+                          formatter={(v: number) => [formatCurrency(v), "Receita"]}
+                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                        />
+                        <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="url(#revenueGrad)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--card))" }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
 
-          {/* Next Steps — Admin only */}
-          {isAdmin && nextSteps.length > 0 && (
+          {/* Next Steps */}
+          {nextSteps.length > 0 && (
             <Card>
               <CardHeader className="pb-3 px-5 pt-5">
                 <div className="flex items-center gap-2">
@@ -638,7 +625,13 @@ export default function ClienteInicio() {
                   </div>
                 )}
                 {pendingTasks.length === 0 && completedTasks.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4">Nenhuma tarefa pendente</p>
+                  <div className="flex flex-col items-center py-4">
+                    <CheckSquare className="w-6 h-6 text-muted-foreground/30 mb-1.5" />
+                    <p className="text-xs text-muted-foreground mb-2">Nenhuma tarefa para hoje</p>
+                    <Button variant="outline" size="sm" className="text-xs h-7 rounded-lg" onClick={() => navigate("/cliente/checklist")}>
+                      Gerar Checklist <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
                 )}
               </div>
               <Button variant="ghost" size="sm" className="w-full mt-3 text-xs h-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/cliente/checklist")}>
