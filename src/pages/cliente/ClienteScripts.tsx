@@ -38,6 +38,9 @@ export default function ClienteScripts() {
   const [showCreate, setShowCreate] = useState(false);
   const [improvingId, setImprovingId] = useState<string | null>(null);
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
 
   const allScripts = scripts ?? [];
 
