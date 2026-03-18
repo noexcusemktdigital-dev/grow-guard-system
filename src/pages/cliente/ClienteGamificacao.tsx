@@ -338,6 +338,7 @@ export default function ClienteGamificacao() {
   const { data: waInstance } = useWhatsAppInstance();
   const { data: members } = useOrgMembers();
   const { data: teams } = useOrgTeams();
+  const { data: activeStrategy } = useActiveStrategy();
 
   // Extra data for new medals
   const { data: calendarEvents } = useQuery({
