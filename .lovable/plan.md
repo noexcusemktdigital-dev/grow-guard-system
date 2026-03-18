@@ -1,44 +1,76 @@
 
 
-# Plano: Teste Automatizado Completo (26 itens)
+# Investigação: Bug do ScriptGeneratorDialog
 
-## Abordagem
+## Análise do Código
 
-Usar o browser automatizado para percorrer todos os 26 itens do checklist com as credenciais fornecidas:
-- **Email**: cliente.teste@noexcuse.com
-- **Senha**: 19961996
+Após investigar detalhadamente os arquivos envolvidos, o código está estruturalmente correto:
 
-## Sequência de Execução
+1. **`ClienteScripts.tsx` (linha 250-255)**: Usa o padrão `{showCreate && <ScriptGeneratorDialog open={showCreate} .../>}` — conditional mount + open prop.
+2. **`ScriptGeneratorDialog.tsx` (linha 423-425)**: Usa `<Dialog open={open} onOpenChange={onOpenChange}>` com portal — deveria renderizar sobre qualquer elemento.
+3. **`dialog.tsx`**: Usa Radix Portal padrão com z-50.
 
-### Bloco 1 — Login e Dashboard (itens 1-2)
-1. Navegar para `/app`, fazer login com as credenciais
-2. Verificar redirecionamento para `/cliente/inicio`
-3. Validar saudação dinâmica, KPIs, checklist, atalhos, alertas
+## Causa Raiz Identificada
 
-### Bloco 2 — CRM (item 3)
-4. Navegar para `/cliente/crm` e `/cliente/crm/config`
-5. Verificar funis, criação de lead, kanban, sheet de detalhe, CSV import
+O bug pode se manifestar em dois cenários:
 
-### Bloco 3 — Comercial (itens 4-9)
-6. Scripts (`/cliente/scripts`), Plano de Vendas (`/cliente/plano-vendas`)
-7. Chat (`/cliente/chat`), Agentes IA (`/cliente/agentes-ia`), Disparos (`/cliente/disparos`) — verificar feature gates
-8. Dashboard Comercial (`/cliente/dashboard`)
+1. **FeatureGateOverlay bloqueando**: A rota `/cliente/scripts` está em `SALES_PLAN_REQUIRED` (FeatureGateContext, linha 56). Se o Plano de Vendas não estiver completo, um overlay `absolute inset-0 z-50` cobre toda a página, impedindo o clique no botão. Neste caso não é bug do Dialog — é o gate funcionando.
 
-### Bloco 4 — Marketing (itens 10-15)
-9. Marketing Hub, Plano Marketing, Conteúdos, Redes Sociais, Sites, Tráfego Pago
+2. **Timing de mount/unmount**: O padrão `{showCreate && <Component/>}` causa unmount ao fechar. Em alguns cenários de race condition (click rápido, re-render do parent), o Dialog pode montar e desmontar antes de animar. A solução mais robusta é **sempre montar o Dialog** e controlar visibilidade apenas via prop `open`.
 
-### Bloco 5 — Sistema (itens 16-24)
-10. Plano e Créditos, Configurações, Integrações, Agenda, Avaliações, Gamificação, Suporte, Notificações, Checklist
+## Plano de Correção
 
-### Bloco 6 — Responsividade e Segurança (itens 25-26)
-11. Testar viewport mobile (375px) em 3 telas críticas (Dashboard, CRM, Configurações)
-12. Verificar logout e redirecionamento
+### Arquivo: `src/pages/cliente/ClienteScripts.tsx`
 
-## Entregável
+Alterar o padrão de renderização do dialog de conditional mount para always-mounted:
 
-Relatório com status de cada item (OK / BUG), screenshots dos problemas encontrados e correções propostas para cada bug.
+**Antes (linhas 250-256):**
+```tsx
+{showCreate && (
+  <ScriptGeneratorDialog
+    open={showCreate}
+    onOpenChange={setShowCreate}
+    onSave={handleSaveFromDialog}
+  />
+)}
+```
 
-## Observação Técnica
+**Depois:**
+```tsx
+<ScriptGeneratorDialog
+  open={showCreate}
+  onOpenChange={setShowCreate}
+  onSave={handleSaveFromDialog}
+/>
+```
 
-Cada tela será validada com `observe` + `screenshot`. Interações (cliques, formulários) serão feitas via `act`. O processo será dividido em mensagens sequenciais para respeitar os limites do browser.
+### Arquivo: `src/components/cliente/ScriptGeneratorDialog.tsx`
+
+Adicionar reset de estado quando o dialog abre (já que não terá mais unmount automático):
+
+No componente principal, adicionar um `useEffect` que reseta o step e campos quando `open` muda para `true`:
+
+```tsx
+import { useState, useEffect } from "react";
+
+// Dentro do componente, após as declarações de state:
+useEffect(() => {
+  if (open) {
+    setStep(1);
+    setMode("ai");
+    setStage(initialStage || "prospeccao");
+    setBriefing({});
+    setGeneratedContent("");
+    setGeneratedTitle("");
+    setGeneratedTags([]);
+    setShowTutorial(true);
+    setReferenceLinks([]);
+    setAdditionalContext("");
+    setManualTitle("");
+    setManualContent("");
+  }
+}, [open]);
+```
+
+Isso garante que o Dialog está sempre montado no DOM (sem race conditions de portal) e reseta o estado a cada abertura.
 
