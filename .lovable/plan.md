@@ -1,32 +1,64 @@
 
 
-## Corrigir drag-and-drop do Kanban em todos os CRMs
+## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Problema
+### Status: ✅ Implementado
 
-Dois bugs relacionados:
+### Resumo
 
-1. **Drop na coluna errada**: O algoritmo `closestCorners` calcula distância pelos 4 cantos do card arrastado, o que frequentemente seleciona a coluna adjacente em vez da que está sob o cursor.
-2. **Limite visual de ~7 cards**: As colunas têm `max-h-[calc(100vh-300px)] overflow-y-auto`, mas o droppable fica dentro do scroll container. Quando a área de drop é cortada pelo overflow, o algoritmo `closestCorners` não consegue detectar drops abaixo do fold.
+Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
 
-### Solução
+| | **Starter** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
+| Créditos/mês | 500 | 1.000 | 1.500 |
+| Usuários | até 10 | até 20 | ilimitado |
+| CRM Pipelines | 3 | 10 | ilimitado |
+| Agente IA | ❌ | ✅ | ✅ |
+| WhatsApp/Disparos | ❌ | ✅ | ✅ |
+| Marketing completo | ✅ | ✅ | ✅ |
 
-**Trocar `closestCorners` por `pointerWithin`** em todos os 4 Kanbans. O `pointerWithin` detecta qual droppable está exatamente sob o ponteiro do mouse, resolvendo ambos os problemas de uma vez.
+### Trial
+- 200 créditos, 7 dias, até 2 usuários
+- Sem Agente IA, WhatsApp e Disparos
 
-### Arquivos a modificar (4 arquivos)
+### Custos por ação (créditos)
+Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
 
-1. **`src/pages/franqueado/FranqueadoCRM.tsx`** (linha 30, 466)
-   - Trocar import de `closestCorners` para `pointerWithin`
-   - Trocar `collisionDetection={closestCorners}` para `collisionDetection={pointerWithin}`
+### Pacotes de Recarga
+- Básico: 200 cr / R$ 49
+- Popular: 500 cr / R$ 99
+- Premium: 1.000 cr / R$ 179
 
-2. **`src/pages/cliente/ClienteCRM.tsx`** (linha 33, 831)
-   - Mesma troca
+---
 
-3. **`src/pages/CrmExpansao.tsx`** (linha 31, 467)
-   - Mesma troca
+## Análise: Custo Real Lovable vs Receita dos Planos
 
-4. **`src/components/atendimento/AtendimentoKanban.tsx`** (linha 10, 167)
-   - Mesma troca
+### Status: ✅ Documentado
 
-Cada arquivo: apenas 2 linhas alteradas (import + uso). Zero risco de quebra, mesmo comportamento de handleDragEnd.
+### Custo Lovable AI (Gemini 3 Flash Preview)
+- Input: $0,50/1M tokens | Output: $3,00/1M tokens
+- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
 
+### Margem por Plano
+
+| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
+|---|---|---|---|
+| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
+| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+
+### Custo por funcionalidade
+
+| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
+|---|---|---|---|
+| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
+| Script | 20 | R$ 0,17 | R$ 16 |
+| Arte | 25 | R$ 0,50 | R$ 20 |
+| Conteúdo | 30 | R$ 0,17 | R$ 24 |
+| Estratégia | 50 | R$ 0,34 | R$ 40 |
+| Site | 100 | R$ 0,85 | R$ 80 |
+
+### Nota sobre Lovable Cloud
+- Renovação automática do saldo **não é possível via código**
+- Monitorar em Settings → Cloud & AI balance
+- Custo real é centavos/mês no volume atual

@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  pointerWithin,
   PointerSensor,
   useSensor,
   useSensors,
@@ -164,7 +164,7 @@ export function AtendimentoKanban({ tickets, onSelectTicket, onMoveTicket }: Pro
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 overflow-x-auto pb-4">
         {TICKET_STATUSES.map(status => (
           <DroppableColumn

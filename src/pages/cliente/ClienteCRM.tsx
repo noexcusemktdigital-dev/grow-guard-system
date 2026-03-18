@@ -30,7 +30,7 @@ import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useToast } from "@/hooks/use-toast";
 import { useLeadQuota } from "@/hooks/useLeadQuota";
 import { UsageQuotaBanner } from "@/components/quota/UsageQuotaBanner";
-import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, pointerWithin, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { CrmLeadDetailSheet } from "@/components/crm/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
@@ -828,7 +828,7 @@ export default function ClienteCRM() {
               </CardContent>
             </Card>
           ) : view === "kanban" ? (
-            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <div className="flex gap-3 overflow-x-auto pb-4">
                 {stages.map(stage => {
                   const stageLeads = leadsByStage[stage.key] || [];

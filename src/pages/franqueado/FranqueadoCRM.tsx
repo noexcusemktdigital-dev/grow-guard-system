@@ -27,7 +27,7 @@ import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { toast } from "sonner";
-import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, pointerWithin, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { CrmLeadDetailSheet } from "@/components/franqueado/CrmLeadDetailSheet";
 import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
@@ -463,7 +463,7 @@ export default function FranqueadoCRM() {
               </CardContent>
             </Card>
           ) : view === "kanban" ? (
-            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <ScrollArea className="w-full">
                 <div className="flex gap-3 pb-4 min-w-max">
                   {stages.map(stage => {
