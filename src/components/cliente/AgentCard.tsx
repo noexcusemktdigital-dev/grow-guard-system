@@ -1,4 +1,5 @@
-import { Bot, Copy, Edit, MoreVertical, Trash2, Smartphone, Play, Pause, MessageCircle, Users, RotateCcw } from "lucide-react";
+import { Bot, Copy, Edit, MoreVertical, Trash2, Smartphone, Play, Pause, MessageCircle, Users, RotateCcw, Power, PowerOff } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,14 @@ export function AgentCard({ agent, onEdit, onDuplicate, onDelete, onToggleStatus
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-sm truncate">{agent.name}</h3>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <h3 className="font-semibold text-sm truncate max-w-[180px]">{agent.name}</h3>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[300px]">
+                  <p className="text-xs">{agent.name}</p>
+                </TooltipContent>
+              </Tooltip>
               <Badge className={`text-[10px] px-1.5 py-0 shrink-0 ${roleInfo.color}`}>
                 {roleInfo.label}
               </Badge>
@@ -114,6 +122,13 @@ export function AgentCard({ agent, onEdit, onDuplicate, onDelete, onToggleStatus
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(agent); }}>
                   <Edit className="w-4 h-4 mr-2" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStatus(agent); }}>
+                  {isActive ? (
+                    <><PowerOff className="w-4 h-4 mr-2" /> Pausar agente</>
+                  ) : (
+                    <><Power className="w-4 h-4 mr-2 text-green-600" /> Ativar agente</>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDuplicate(agent); }}>
                   <Copy className="w-4 h-4 mr-2" /> Duplicar
