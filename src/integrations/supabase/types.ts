@@ -4658,6 +4658,41 @@ export type Database = {
           },
         ]
       }
+      sales_plan_history: {
+        Row: {
+          answers: Json | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          organization_id: string
+          score: number | null
+        }
+        Insert: {
+          answers?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          score?: number | null
+        }
+        Update: {
+          answers?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_plan_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_plans: {
         Row: {
           answers: Json

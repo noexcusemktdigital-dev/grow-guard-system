@@ -30,7 +30,7 @@ import { DiagnosticoTermometro } from "@/components/diagnostico/DiagnosticoTermo
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sounds";
-import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
+import { useSalesPlan, useSaveSalesPlan, useSalesPlanHistory, useArchiveSalesPlan } from "@/hooks/useSalesPlan";
 import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -615,6 +615,8 @@ export default function ClientePlanoVendas() {
   // ── Sales Plan from DB ──
   const { data: salesPlanData, isLoading: spLoading } = useSalesPlan();
   const saveSalesPlan = useSaveSalesPlan();
+  const { data: planHistory, isLoading: historyLoading } = useSalesPlanHistory();
+  const archiveSalesPlan = useArchiveSalesPlan();
 
   const [answers, setAnswers] = useState<Answers>({});
   const [completed, setCompleted] = useState(false);
@@ -632,15 +634,24 @@ export default function ClientePlanoVendas() {
     }
   }, [salesPlanData, spLoading]);
 
-  // ── History state (derived from saved plan) ──
-  const history = useMemo(() => {
-    if (!salesPlanData || !completed) return [];
-    const sc = salesPlanData.score ?? 0;
-    const nv = getNivel(sc);
-    return [
-      { date: salesPlanData.updated_at || salesPlanData.created_at, score: sc, nivel: nv.label },
-    ];
-  }, [salesPlanData, completed]);
+  // ── History dialog state ──
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<any>(null);
+
+  const selectedHistoryScores = useMemo(() => {
+    if (!selectedHistoryItem) return null;
+    return computeScores(selectedHistoryItem.answers as Answers);
+  }, [selectedHistoryItem]);
+
+  const selectedHistoryInsights = useMemo(() => {
+    if (!selectedHistoryScores || !selectedHistoryItem) return [];
+    return generateInsights(selectedHistoryItem.answers as Answers, selectedHistoryScores.scoreMap, selectedHistoryScores.maxMap);
+  }, [selectedHistoryItem, selectedHistoryScores]);
+
+  const selectedHistoryActionPlan = useMemo(() => {
+    if (!selectedHistoryScores || !selectedHistoryItem) return [];
+    return generateActionPlan(selectedHistoryScores.scoreMap, selectedHistoryScores.maxMap, selectedHistoryItem.answers as Answers);
+  }, [selectedHistoryItem, selectedHistoryScores]);
 
   // ── Metas state ──
   const [scopeFilter, setScopeFilter] = useState<string>("all");
@@ -817,7 +828,18 @@ export default function ClientePlanoVendas() {
     }
   };
 
-  const handleRestart = () => {
+  const handleRestart = async () => {
+    // Archive the current plan before resetting
+    if (salesPlanData && Object.keys(salesPlanData.answers || {}).length > 5) {
+      try {
+        await archiveSalesPlan.mutateAsync({
+          answers: salesPlanData.answers,
+          score: salesPlanData.score ?? 0,
+        });
+      } catch (e) {
+        console.error("Archive error:", e);
+      }
+    }
     setAnswers({}); setCompleted(false);
     saveSalesPlan.mutate({ answers: {}, score: 0 });
   };
@@ -1009,7 +1031,103 @@ export default function ClientePlanoVendas() {
                     </Card>
                   </div>
 
-                  {/* Insights */}
+                  {/* ═══ NEW: Bar Chart by Category + Gauge + Comparativo ═══ */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Bar chart horizontal por categoria */}
+                    <Card className="glass-card">
+                      <CardContent className="py-6">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">SCORE POR CATEGORIA</p>
+                        <div className="h-56">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={radarData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} unit="%" />
+                              <YAxis type="category" dataKey="category" tick={{ fontSize: 10 }} width={100} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} />
+                              <RechartsTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => [`${v}%`, "Score"]} />
+                              <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22} name="Score">
+                                {radarData.map((entry, i) => (
+                                  <Cell key={i} fill={entry.value >= 70 ? "hsl(var(--chart-3))" : entry.value >= 40 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Comparativo Ideal vs Real */}
+                    <Card className="glass-card">
+                      <CardContent className="py-6">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">ATUAL vs IDEAL (100%)</p>
+                        <div className="h-56">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={radarData.map(d => ({ ...d, ideal: 100 }))} margin={{ left: 10, right: 10 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="category" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} />
+                              <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} unit="%" />
+                              <RechartsTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                              <Bar dataKey="ideal" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} barSize={24} name="Ideal" />
+                              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={24} name="Atual" />
+                              <Legend wrapperStyle={{ fontSize: 11 }} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Gauge de Maturidade */}
+                  <Card className="glass-card">
+                    <CardContent className="py-6">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 text-center">INDICADOR DE MATURIDADE COMERCIAL</p>
+                      <div className="flex items-center justify-center">
+                        <div className="relative w-64 h-36">
+                          <svg viewBox="0 0 200 120" className="w-full h-full">
+                            {/* Background arc */}
+                            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="hsl(var(--muted))" strokeWidth="14" strokeLinecap="round" />
+                            {/* Colored arc based on percentage */}
+                            <path
+                              d="M 20 100 A 80 80 0 0 1 180 100"
+                              fill="none"
+                              stroke={nivel.cor}
+                              strokeWidth="14"
+                              strokeLinecap="round"
+                              strokeDasharray={`${(percentage / 100) * 251.3} 251.3`}
+                              className="transition-all duration-1000 ease-out"
+                            />
+                            {/* Needle */}
+                            {(() => {
+                              const angle = -180 + (percentage / 100) * 180;
+                              const rad = (angle * Math.PI) / 180;
+                              const cx = 100, cy = 100, len = 60;
+                              const x2 = cx + len * Math.cos(rad);
+                              const y2 = cy + len * Math.sin(rad);
+                              return <line x1={cx} y1={cy} x2={x2} y2={y2} stroke="hsl(var(--foreground))" strokeWidth="2.5" strokeLinecap="round" className="transition-all duration-1000 ease-out" />;
+                            })()}
+                            <circle cx="100" cy="100" r="5" fill="hsl(var(--foreground))" />
+                            {/* Labels */}
+                            <text x="20" y="115" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">0%</text>
+                            <text x="100" y="25" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">50%</text>
+                            <text x="180" y="115" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">100%</text>
+                          </svg>
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center">
+                            <p className="text-2xl font-bold" style={{ color: nivel.cor }}>{percentage}%</p>
+                            <p className="text-xs font-medium" style={{ color: nivel.cor }}>{nivel.label}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-3 mt-4">
+                        {niveis.map(n => (
+                          <div key={n.id} className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: n.cor }} />
+                            <span className="text-[10px] text-muted-foreground">{n.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">INSIGHTS E RECOMENDAÇÕES</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1189,35 +1307,73 @@ export default function ClientePlanoVendas() {
         <TabsContent value="historico" className="space-y-6 mt-4">
           <div>
             <p className="text-sm font-semibold">Histórico de Diagnósticos</p>
-            <p className="text-xs text-muted-foreground">Acompanhe a evolução do seu comercial ao longo do tempo</p>
+            <p className="text-xs text-muted-foreground">Cada vez que você refaz o diagnóstico, o anterior é salvo aqui. Clique para ver o diagnóstico completo.</p>
           </div>
-          {history.length === 0 ? (
+
+          {/* Evolution Chart */}
+          {planHistory && planHistory.length >= 2 && (
+            <Card className="glass-card">
+              <CardContent className="py-6">
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">EVOLUÇÃO DA MATURIDADE COMERCIAL</p>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={[...planHistory].reverse().map(h => ({
+                      data: new Date(h.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+                      score: h.score,
+                    }))} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="gradHistoryEvo" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis dataKey="data" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} unit="%" />
+                      <RechartsTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => [`${v}%`, "Score"]} />
+                      <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" fill="url(#gradHistoryEvo)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))" }} />
+                      <ReferenceLine y={75} stroke="hsl(var(--chart-3))" strokeDasharray="5 5" label={{ value: "Alta Perf.", position: "right", fontSize: 10, fill: "hsl(var(--chart-3))" }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {historyLoading ? (
+            <div className="space-y-3">
+              {[1, 2].map(i => <Card key={i}><CardContent className="h-16 animate-pulse bg-muted rounded" /></Card>)}
+            </div>
+          ) : !planHistory || planHistory.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Clock className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm font-medium">Nenhum diagnóstico realizado</p>
-                <p className="text-xs text-muted-foreground mt-1">Complete o diagnóstico para ver seu histórico aqui.</p>
+                <p className="text-sm font-medium">Nenhum diagnóstico salvo no histórico</p>
+                <p className="text-xs text-muted-foreground mt-1">Ao refazer o diagnóstico, o anterior será salvo automaticamente aqui.</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-3">
-              {history.map((h, i) => {
+              {planHistory.map((h) => {
                 const nv = getNivel(h.score);
                 return (
-                  <Card key={i} className="glass-card">
+                  <Card key={h.id} className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => { setSelectedHistoryItem(h); setHistoryDialogOpen(true); }}>
                     <CardContent className="py-3 px-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground" style={{ backgroundColor: nv.cor }}>
                           {h.score}%
                         </div>
                         <div>
-                          <p className="text-xs font-semibold">{h.nivel}</p>
-                          <p className="text-[10px] text-muted-foreground">{new Date(h.date).toLocaleDateString("pt-BR")}</p>
+                          <p className="text-xs font-semibold">{nv.label}</p>
+                          <p className="text-[10px] text-muted-foreground">{new Date(h.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-[9px]" style={{ borderColor: nv.cor, color: nv.cor }}>
-                        {h.nivel}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[9px]" style={{ borderColor: nv.cor, color: nv.cor }}>
+                          {nv.label}
+                        </Badge>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -1225,6 +1381,109 @@ export default function ClientePlanoVendas() {
             </div>
           )}
         </TabsContent>
+
+        {/* ═══ DIALOG: Histórico completo ═══ */}
+        <Dialog open={historyDialogOpen} onOpenChange={(o) => { setHistoryDialogOpen(o); if (!o) setSelectedHistoryItem(null); }}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-base flex items-center gap-2">
+                <Activity className="w-4 h-4 text-primary" />
+                Diagnóstico de {selectedHistoryItem && new Date(selectedHistoryItem.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedHistoryScores && selectedHistoryItem && (() => {
+              const hNivel = getNivel(selectedHistoryScores.percentage);
+              return (
+                <div className="space-y-6 mt-2">
+                  {/* Score + Level */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold text-primary-foreground" style={{ backgroundColor: hNivel.cor }}>
+                      {selectedHistoryScores.percentage}%
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold" style={{ color: hNivel.cor }}>{hNivel.label}</p>
+                      <p className="text-xs text-muted-foreground">{hNivel.desc}</p>
+                    </div>
+                  </div>
+
+                  {/* Radar */}
+                  <Card>
+                    <CardContent className="py-5">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">RADAR POR ÁREA</p>
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={selectedHistoryScores.radarData} outerRadius="65%">
+                            <PolarGrid stroke="hsl(var(--border))" />
+                            <PolarAngleAxis dataKey="category" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 8 }} />
+                            <Radar name="Score" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" strokeWidth={2} />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Bar chart by category */}
+                  <Card>
+                    <CardContent className="py-5">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">SCORE POR CATEGORIA</p>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={selectedHistoryScores.radarData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" unit="%" />
+                            <YAxis type="category" dataKey="category" tick={{ fontSize: 10 }} width={100} stroke="hsl(var(--muted-foreground))" />
+                            <RechartsTooltip formatter={(v: number) => [`${v}%`, "Score"]} />
+                            <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
+                              {selectedHistoryScores.radarData.map((entry, i) => (
+                                <Cell key={i} fill={entry.value >= 70 ? "hsl(var(--chart-3))" : entry.value >= 40 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Insights */}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">INSIGHTS</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {selectedHistoryInsights.map((ins, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm p-2 rounded-lg bg-muted/50">
+                          <ins.icon className={`w-4 h-4 mt-0.5 shrink-0 ${ins.type === "success" ? "text-emerald-500" : ins.type === "warning" ? "text-destructive" : "text-primary"}`} />
+                          <span>{ins.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action Plan */}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">PLANO DE AÇÃO</p>
+                    <div className="space-y-3">
+                      {selectedHistoryActionPlan.map(fase => (
+                        <div key={fase.fase} className="p-3 rounded-lg border" style={{ borderColor: fase.cor + "40" }}>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-bold">{fase.fase}</p>
+                            <Badge variant="outline" className="text-[9px]">{fase.periodo}</Badge>
+                          </div>
+                          <ul className="space-y-1">
+                            {fase.items.map((item, i) => (
+                              <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                                <ChevronRight className="w-3 h-3 mt-0.5 shrink-0 text-primary" /> {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
 
         {/* ═══════ TAB: METAS ═══════ */}
         <TabsContent value="metas" className="space-y-6 mt-4">
