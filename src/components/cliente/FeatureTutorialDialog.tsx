@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, ChevronLeft, ChevronRight, Lightbulb, Sparkles } from "lucide-react";
@@ -38,7 +38,7 @@ export function FeatureTutorialDialog({ tutorial, open, onOpenChange }: FeatureT
               </div>
               <div>
                 <DialogTitle className="text-lg">{tutorial.title}</DialogTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">{tutorial.subtitle}</p>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">{tutorial.subtitle}</DialogDescription>
               </div>
             </div>
           </DialogHeader>

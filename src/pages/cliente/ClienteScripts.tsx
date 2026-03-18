@@ -17,7 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
-import { useStrategyData } from "@/hooks/useStrategyData";
+
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 
@@ -32,7 +32,7 @@ const funnelStages = [
 export default function ClienteScripts() {
   const { data: scripts, isLoading } = useClienteScripts();
   const { createScript, updateScript, deleteScript: deleteScriptMutation } = useClienteScriptMutations();
-  const { hasStrategy } = useStrategyData();
+  
   const { data: orgId } = useUserOrgId();
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -173,11 +173,11 @@ export default function ClienteScripts() {
               {filtered(stage.key).map(s => (
                 <Card
                   key={s.id}
-                  className={`overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer ${expandedId === s.id ? "ring-1 ring-primary/30 shadow-lg" : ""}`}
+                  className={`relative isolate overflow-hidden transition-shadow transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer ${expandedId === s.id ? "ring-1 ring-primary/30 shadow-lg" : ""}`}
                   onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
                 >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${stage.gradient} opacity-50`} />
-                  <CardContent className="relative py-4 space-y-2">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${stage.gradient} opacity-50 pointer-events-none`} />
+                  <CardContent className="relative z-10 py-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 flex-1 min-w-0">
                         <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${stage.accent} bg-background/50`}>
@@ -217,7 +217,7 @@ export default function ClienteScripts() {
                             />
                           </div>
                         ) : (
-                          <div className="p-4 bg-background/60 backdrop-blur-sm rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
+                          <div className="p-4 bg-background/80 rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
                             {s.content || "Sem conteúdo"}
                           </div>
                         )}
