@@ -110,6 +110,7 @@ export function useClienteGamification() {
       return data;
     },
     enabled: !!user && !!orgId,
+    staleTime: 1000 * 60 * 2,
   });
 }
 
