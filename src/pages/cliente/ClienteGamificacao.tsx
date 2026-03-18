@@ -483,7 +483,7 @@ export default function ClienteGamificacao() {
       if (m.emoji === "profile" && profile?.full_name && profile?.phone && profile?.job_title) unlocked = true;
       if (m.emoji === "company" && org?.cnpj && org?.address && org?.phone) unlocked = true;
       if (m.emoji === "integrator" && waConnected) unlocked = true;
-      if (m.emoji === "strategist" && contentCount >= 1) unlocked = true;
+      if (m.emoji === "strategist" && hasStrategy) unlocked = true;
       if (m.emoji === "communicator" && contentCount >= 10) unlocked = true;
       // New platform medals
       if (m.emoji === "organizer" && (calendarEvents ?? 0) >= 5) unlocked = true;
@@ -491,7 +491,7 @@ export default function ClienteGamificacao() {
       if (m.emoji === "funnel" && (customFunnels ?? 0) >= 1) unlocked = true;
       if (m.emoji === "checklist" && (checklistDoneCount ?? 0) >= 30) unlocked = true;
       if (m.emoji === "student" && (academyProgress ?? 0) >= 3) unlocked = true;
-      if (m.emoji === "strategy" && contentCount >= 3 && totalLeads >= 5) unlocked = true;
+      if (m.emoji === "strategy" && hasStrategy && totalLeads >= 5) unlocked = true;
       // CRM medals
       if (m.emoji === "lead" && totalLeads >= 1) unlocked = true;
       if (m.emoji === "sales" && wonLeads >= 10) unlocked = true;
@@ -504,7 +504,7 @@ export default function ClienteGamificacao() {
       if (m.emoji === "agent" && activeAgents >= 1) unlocked = true;
       return { ...m, unlocked };
     });
-  }, [totalLeads, wonLeads, streakDays, wonValue, contentCount, dispatchCount, siteCount, activeAgents, profile, org, waConnected, calendarEvents, completeLeads, customFunnels, checklistDoneCount, academyProgress]);
+  }, [totalLeads, wonLeads, streakDays, wonValue, contentCount, dispatchCount, siteCount, activeAgents, profile, org, waConnected, calendarEvents, completeLeads, customFunnels, checklistDoneCount, academyProgress, hasStrategy]);
 
   const unlockedCount = medals.filter(m => m.unlocked).length;
 
