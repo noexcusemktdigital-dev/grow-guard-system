@@ -1,33 +1,27 @@
 
 
-# Correção do Bug do Funil + Testes Reais #14-18
+# Bloco 3: Testes Reais — Contatos do CRM
 
-## Contexto
-A senha correta é `19961996`. O plano já foi aprovado anteriormente.
+Com base no progresso:
+- **Bloco 1** ✅ Configurações CRM (funis, equipe, produtos, parceiros, SLA, integrações, automações)
+- **Bloco 2** ✅ Pipeline Kanban (criar lead, drag-drop, editar, marcar ganho/perdido)
+- **Bloco 3** → **Contatos** (próximo)
 
-## 1. Correção de código: `src/hooks/useCrmFunnels.ts`
-O `createFunnel` já foi corrigido na última iteração (adicionado reset de `is_default`). Nenhuma alteração de código adicional necessária.
+## Testes planejados
 
-## 2. Correção de dados no banco
-Executar SQL para garantir apenas 1 funil com `is_default = true` na org `adb09618`:
-- Setar `is_default = false` no funil "Funil Teste Editado" (`1f6539b4`)
-- Manter apenas "Funil Principal" (`d92b6d1d`) como padrão
+| # | Ação | Detalhe |
+|---|------|---------|
+| 1 | Criar contato | Preencher nome, email, telefone, empresa, tags |
+| 2 | Editar contato | Alterar campos e salvar |
+| 3 | Converter em lead | Usar ação de conversão contato → lead |
+| 4 | Deletar contato | Excluir e confirmar |
+| 5 | Busca | Pesquisar por nome/email |
+| 6 | Seleção em massa | Selecionar múltiplos e deletar em lote |
 
-## 3. Testes reais via browser
-Login com `cliente.teste@noexcuse.com` / `19961996` → CRM → Configurações:
+## Execução
+Login com `cliente.teste@noexcuse.com` / `19961996` → CRM → aba Contatos → executar cada ação com screenshots de evidência.
 
-| # | Teste | Ação real |
-|---|-------|-----------|
-| 5b | Deletar funil | Verificar que botão "Excluir" agora aparece no funil não-padrão, clicar e confirmar |
-| 14 | Integrações | Abrir aba, verificar Webhook URL e CSV import |
-| 15 | Criar automação | Preencher nome, trigger, ação, salvar |
-| 16 | Editar automação | Alterar campos, salvar |
-| 17 | Toggle status | Clicar switch ativo/inativo |
-| 18 | Deletar automação | Clicar excluir, confirmar |
-
-Screenshots de evidência após cada bloco.
-
-## Arquivos alterados
-- Nenhum arquivo de código (fix já aplicado)
-- Correção de dados via migration SQL
+## Arquivos relevantes (sem alteração)
+- `src/components/crm/CrmContactsView.tsx` — UI de contatos
+- `src/hooks/useCrmContacts.ts` — CRUD e bulk operations
 
