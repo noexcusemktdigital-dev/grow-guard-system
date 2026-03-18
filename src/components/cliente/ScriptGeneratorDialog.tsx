@@ -362,6 +362,10 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
   const [manualTitle, setManualTitle] = useState("");
   const [manualContent, setManualContent] = useState("");
 
+  // Store last autoContext and orgId for regeneration
+  const [lastAutoContext, setLastAutoContext] = useState<any>(null);
+  const [lastOrgId, setLastOrgId] = useState<string | null>(null);
+
   // Reset state when dialog opens (always-mounted pattern)
   useEffect(() => {
     if (open) {
@@ -377,6 +381,8 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
       setAdditionalContext("");
       setManualTitle("");
       setManualContent("");
+      setLastAutoContext(null);
+      setLastOrgId(null);
     }
   }, [open, initialStage]);
 
