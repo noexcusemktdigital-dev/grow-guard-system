@@ -380,16 +380,16 @@ export default function ClienteGamificacao() {
   });
 
   const { data: claims } = useQuery({
-    queryKey: ["gamification-claims", user?.id],
+    queryKey: ["gamification-claims", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("gamification_claims" as any)
         .select("*")
-        .eq("user_id", user!.id);
+        .eq("organization_id", orgId!);
       if (error) throw error;
       return data as any[];
     },
-    enabled: !!user,
+    enabled: !!orgId,
   });
 
   // Team gamification data for ranking
