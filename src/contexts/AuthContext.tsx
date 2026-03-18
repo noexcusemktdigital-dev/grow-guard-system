@@ -116,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               );
 
               const { data: verifyRole } = await withTimeout(
-                supabase.from("user_roles").select("role").eq("user_id", currentUser.id).then(r => r),
+                supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
                 5000,
                 { data: null } as any
               );
