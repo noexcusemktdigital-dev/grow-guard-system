@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  pointerWithin,
   PointerSensor,
   useSensor,
   useSensors,
