@@ -1091,8 +1091,8 @@ export default function ClientePlanoVendas() {
                     <CardContent className="py-6">
                       <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 text-center">INDICADOR DE MATURIDADE COMERCIAL</p>
                       <div className="flex items-center justify-center">
-                        <div className="relative w-64 h-36">
-                          <svg viewBox="0 0 200 120" className="w-full h-full">
+                        <div className="relative w-64 h-44">
+                          <svg viewBox="0 0 200 130" className="w-full h-full">
                             {/* Background arc */}
                             <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="hsl(var(--muted))" strokeWidth="14" strokeLinecap="round" />
                             {/* Colored arc based on percentage */}
@@ -1116,12 +1116,12 @@ export default function ClientePlanoVendas() {
                             })()}
                             <circle cx="100" cy="100" r="5" fill="hsl(var(--foreground))" />
                             {/* Labels */}
-                            <text x="20" y="115" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">0%</text>
-                            <text x="100" y="25" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">50%</text>
-                            <text x="180" y="115" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">100%</text>
+                            <text x="20" y="118" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">0%</text>
+                            <text x="100" y="18" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">50%</text>
+                            <text x="180" y="118" fontSize="9" fill="hsl(var(--muted-foreground))" textAnchor="middle">100%</text>
                           </svg>
-                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center">
-                            <p className="text-2xl font-bold" style={{ color: nivel.cor }}>{percentage}%</p>
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center whitespace-nowrap">
+                            <p className="text-2xl font-bold leading-tight" style={{ color: nivel.cor }}>{percentage}%</p>
                             <p className="text-xs font-medium" style={{ color: nivel.cor }}>{nivel.label}</p>
                           </div>
                         </div>
