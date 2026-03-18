@@ -291,8 +291,6 @@ export default function ClienteInicio() {
 
   return (
     <div className="w-full space-y-5">
-      <CelebrationEffect />
-      <TrialWelcomeModal />
 
       {/* Hero Section */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
