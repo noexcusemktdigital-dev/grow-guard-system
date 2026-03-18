@@ -38,7 +38,7 @@ export function FeatureTutorialDialog({ tutorial, open, onOpenChange }: FeatureT
               </div>
               <div>
                 <DialogTitle className="text-lg">{tutorial.title}</DialogTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">{tutorial.subtitle}</p>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">{tutorial.subtitle}</DialogDescription>
               </div>
             </div>
           </DialogHeader>

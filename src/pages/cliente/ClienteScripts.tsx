@@ -217,7 +217,7 @@ export default function ClienteScripts() {
                             />
                           </div>
                         ) : (
-                          <div className="p-4 bg-background/60 backdrop-blur-sm rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
+                          <div className="p-4 bg-background/80 rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
                             {s.content || "Sem conteúdo"}
                           </div>
                         )}
