@@ -9,8 +9,12 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, Trash2, Edit2,
-  RefreshCw, Unlink, CheckCircle2,
+  RefreshCw, Unlink, CheckCircle2, CalendarPlus,
 } from "lucide-react";
 import GoogleSetupWizard from "@/components/agenda/GoogleSetupWizard";
 import { useCalendarEvents, useCalendarEventMutations } from "@/hooks/useCalendar";
@@ -36,8 +40,8 @@ const HOURS = Array.from({ length: 16 }, (_, i) => i + 7);
 type ViewMode = "month" | "week" | "day";
 
 /* ───────── Week View ───────── */
-function WeekView({ currentDate, events, onEventClick, onNewEvent }: {
-  currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onNewEvent: (day: Date) => void;
+function WeekView({ currentDate, events, onEventClick, onDayClick }: {
+  currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onDayClick: (day: Date, hour: number) => void;
 }) {
   const weekStart = startOfWeek(currentDate, { locale: ptBR });
   const weekDays = eachDayOfInterval({ start: weekStart, end: endOfWeek(currentDate, { locale: ptBR }) });
@@ -70,16 +74,25 @@ function WeekView({ currentDate, events, onEventClick, onNewEvent }: {
               const key = format(day, "yyyy-MM-dd");
               const dayEvs = (eventsByDay[key] || []).filter(ev => getHours(parseISO(ev.start_at)) === hour);
               return (
-                <div key={`${key}-${hour}`} className="border-r border-b border-border/40 relative cursor-pointer hover:bg-muted/10" onClick={() => {
-                  const d = new Date(day); d.setHours(hour, 0, 0, 0); onNewEvent(d);
-                }}>
-                  {dayEvs.map(ev => (
-                    <div key={ev.id} className="absolute inset-x-0.5 rounded px-1 py-0.5 text-[10px] truncate cursor-pointer z-10"
-                      style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6", top: `${(getMinutes(parseISO(ev.start_at)) / 60) * 100}%` }}
-                      onClick={e => { e.stopPropagation(); onEventClick(ev); }}>
-                      {format(parseISO(ev.start_at), "HH:mm")} {ev.title}
-                    </div>
-                  ))}
+                <div key={`${key}-${hour}`} className="border-r border-b border-border/40 relative cursor-pointer hover:bg-muted/10" onClick={() => onDayClick(day, hour)}>
+                  {dayEvs.map(ev => {
+                    const start = parseISO(ev.start_at);
+                    const end = parseISO(ev.end_at);
+                    const durationMin = Math.max(differenceInMinutes(end, start), 30);
+                    const heightPx = Math.max((durationMin / 60) * 50, 20);
+                    return (
+                      <div key={ev.id} className="absolute inset-x-0.5 rounded px-1 py-0.5 text-[10px] truncate cursor-pointer z-10"
+                        style={{
+                          background: (ev.color || "#3b82f6") + "22",
+                          color: ev.color || "#3b82f6",
+                          top: `${(getMinutes(start) / 60) * 100}%`,
+                          height: `${heightPx}px`,
+                        }}
+                        onClick={e => { e.stopPropagation(); onEventClick(ev); }}>
+                        {format(start, "HH:mm")} {ev.title}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -200,6 +213,7 @@ export default function ClienteAgenda() {
   const [formOpen, setFormOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<any>(null);
   const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -229,16 +243,21 @@ export default function ClienteAgenda() {
     return map;
   }, [events]);
 
-  function openNewEvent(day?: Date) {
+  const eventCount = (events ?? []).length;
+
+  function resetForm() {
     setEditingEvent(null);
     setTitle(""); setDescription(""); setLocation(""); setAllDay(false); setColor(COLORS[4]);
+    const now = new Date();
+    setStartAt(format(now, "yyyy-MM-dd'T'HH:mm"));
+    setEndAt(format(new Date(now.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"));
+  }
+
+  function openNewEvent(day?: Date) {
+    resetForm();
     if (day) {
       setStartAt(format(day, "yyyy-MM-dd'T'HH:mm"));
       setEndAt(format(new Date(day.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"));
-    } else {
-      const now = new Date();
-      setStartAt(format(now, "yyyy-MM-dd'T'HH:mm"));
-      setEndAt(format(new Date(now.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"));
     }
     setFormOpen(true);
   }
@@ -256,6 +275,10 @@ export default function ClienteAgenda() {
   function handleSave() {
     if (!title.trim()) { toast.error("Informe o título"); return; }
     if (!startAt || !endAt) { toast.error("Informe data/hora"); return; }
+    if (new Date(endAt) <= new Date(startAt)) {
+      toast.error("A data/hora de fim deve ser posterior à de início");
+      return;
+    }
     const payload: any = {
       title, description: description || undefined,
       start_at: new Date(startAt).toISOString(), end_at: new Date(endAt).toISOString(),
@@ -272,10 +295,20 @@ export default function ClienteAgenda() {
     }
   }
 
-  function handleDelete(id: string) {
-    deleteEvent.mutate(id, {
-      onSuccess: () => { setDetailEvent(null); toast.success("Evento excluído!"); },
+  function confirmDelete(id: string) {
+    setDeleteConfirmId(id);
+  }
+
+  function executeDelete() {
+    if (!deleteConfirmId) return;
+    deleteEvent.mutate(deleteConfirmId, {
+      onSuccess: () => { setDetailEvent(null); setDeleteConfirmId(null); toast.success("Evento excluído!"); },
     });
+  }
+
+  function handleDayClick(day: Date) {
+    setCurrentDate(day);
+    setViewMode("day");
   }
 
   function navigatePrev() {
@@ -311,6 +344,9 @@ export default function ClienteAgenda() {
         <div className="flex items-center gap-3">
           <Calendar className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-bold">Agenda</h1>
+          {eventCount > 0 && (
+            <Badge variant="secondary" className="text-[10px]">{eventCount} evento{eventCount !== 1 ? "s" : ""}</Badge>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isGoogleConnected ? (
@@ -361,6 +397,20 @@ export default function ClienteAgenda() {
         </div>
       </div>
 
+      {/* Empty state */}
+      {eventCount === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+          <CalendarPlus className="w-10 h-10 text-muted-foreground/50" />
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Nenhum evento neste período</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Crie seu primeiro evento para começar a organizar sua agenda</p>
+          </div>
+          <Button size="sm" onClick={() => openNewEvent()}>
+            <Plus className="w-4 h-4 mr-1" /> Criar Evento
+          </Button>
+        </div>
+      )}
+
       {/* Month View */}
       {viewMode === "month" && (
         <div className="grid grid-cols-7 border border-border rounded-xl overflow-hidden">
@@ -375,7 +425,7 @@ export default function ClienteAgenda() {
               <div
                 key={key}
                 className={`min-h-[90px] border-b border-r border-border p-1 cursor-pointer transition-colors hover:bg-muted/20 ${!inMonth ? "bg-muted/10 opacity-40" : ""} ${isToday(day) ? "bg-primary/5" : ""}`}
-                onClick={() => openNewEvent(day)}
+                onClick={() => handleDayClick(day)}
               >
                 <span className={`text-[11px] font-medium block mb-0.5 ${isToday(day) ? "text-primary font-bold" : "text-foreground"}`}>
                   {format(day, "d")}
@@ -399,7 +449,15 @@ export default function ClienteAgenda() {
 
       {/* Week View */}
       {viewMode === "week" && (
-        <WeekView currentDate={currentDate} events={events ?? []} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
+        <WeekView
+          currentDate={currentDate}
+          events={events ?? []}
+          onEventClick={setDetailEvent}
+          onDayClick={(day, hour) => {
+            const d = new Date(day); d.setHours(hour, 0, 0, 0);
+            openNewEvent(d);
+          }}
+        />
       )}
 
       {/* Day View */}
@@ -411,21 +469,28 @@ export default function ClienteAgenda() {
       <GoogleSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} />
 
       {/* Event Form Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog open={formOpen} onOpenChange={(open) => { if (!open) resetForm(); setFormOpen(open); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingEvent ? "Editar Evento" : "Novo Evento"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div><Label>Título *</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Nome do evento" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Início</Label><Input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} /></div>
-              <div><Label>Fim</Label><Input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} /></div>
-            </div>
             <div className="flex items-center gap-2">
               <Switch checked={allDay} onCheckedChange={setAllDay} id="allday" />
               <Label htmlFor="allday">Dia todo</Label>
             </div>
+            {allDay ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Data início</Label><Input type="date" value={startAt.slice(0, 10)} onChange={e => { setStartAt(e.target.value + "T00:00"); setEndAt(e.target.value + "T23:59"); }} /></div>
+                <div><Label>Data fim</Label><Input type="date" value={endAt.slice(0, 10)} onChange={e => setEndAt(e.target.value + "T23:59")} /></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Início</Label><Input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} /></div>
+                <div><Label>Fim</Label><Input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} /></div>
+              </div>
+            )}
             <div><Label>Local</Label><Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Endereço ou link" /></div>
             <div><Label>Descrição</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} /></div>
             <div>
@@ -482,7 +547,7 @@ export default function ClienteAgenda() {
                 <Button size="sm" variant="outline" onClick={() => openEditEvent(detailEvent)}>
                   <Edit2 className="w-3.5 h-3.5 mr-1" /> Editar
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleDelete(detailEvent.id)}>
+                <Button size="sm" variant="destructive" onClick={() => confirmDelete(detailEvent.id)}>
                   <Trash2 className="w-3.5 h-3.5 mr-1" /> Excluir
                 </Button>
               </div>
@@ -490,6 +555,24 @@ export default function ClienteAgenda() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={open => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir evento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O evento será removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
