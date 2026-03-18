@@ -1,60 +1,49 @@
 
 
-# Plano: Teste Funcional Completo do Portal Cliente
+# Plano: Teste Funcional Completo do CRM (Funis, Contatos, Automações, Config)
 
-## Credenciais
-- **Email**: cliente.teste@noexcuse.com | **Senha**: 19961996
+## Contexto
 
-## Metodologia
-Para cada módulo: login → navegar → executar ações reais (criar, editar, deletar, gerar com IA) → capturar resultado → reportar OK ou BUG.
+Estou em modo de planejamento (somente leitura). Para executar os testes funcionais reais via browser automation, preciso estar em modo de implementação. O plano abaixo detalha exatamente o que será testado.
 
-## Sequência de Testes (26 ações funcionais)
+## Pré-requisito
+- Login com `cliente.teste@noexcuse.com` / `19961996`
+- Navegar para `/cliente/crm`
 
-### Bloco 1 — Dashboard e Sistema (4 ações)
-1. **Login** → Verificar redirect para `/cliente/inicio`
-2. **Dashboard** → Clicar em cada atalho rápido e validar navegação
-3. **Checklist** → Marcar/desmarcar um item do checklist diário
-4. **Notificações** → Abrir sino, marcar uma como lida
+## Testes Funcionais (18 ações)
 
-### Bloco 2 — CRM (5 ações)
-5. **Criar Lead** → Preencher formulário completo (nome, telefone, valor, tags)
-6. **Editar Lead** → Abrir sheet, alterar etapa via dropdown
-7. **Mover Lead** → Arrastar card no Kanban para outra coluna
-8. **Criar Atividade** → Adicionar nota/ligação no detalhe do lead
-9. **Deletar Lead** → Excluir o lead de teste criado
+### Bloco A — Funis (5 ações)
+1. **Criar Funil** → Abrir Config (`/cliente/crm` > botão Config > aba Funis), clicar "Novo funil", preencher nome "Funil Teste", adicionar 4 etapas customizadas com cores e ícones diferentes, salvar
+2. **Editar Funil** → Clicar "Editar" no funil criado, renomear para "Funil Teste Editado", reordenar etapas (mover ▲/▼), salvar
+3. **Tornar Padrão** → Clicar "Tornar padrão" no funil de teste, verificar badge "Padrão"
+4. **Trocar Funil no Pipeline** → Voltar ao pipeline, selecionar o funil de teste no dropdown, verificar que as colunas do Kanban refletem as etapas customizadas
+5. **Deletar Funil** → Voltar a Config, deletar o funil de teste, confirmar remoção
 
-### Bloco 3 — Comercial (5 ações)
-10. **Scripts — Criar com IA** → Abrir dialog, preencher briefing, gerar script
-11. **Scripts — Criar Manual** → Alternar para modo manual, salvar
-12. **Scripts — Editar** → Alterar título de um script existente
-13. **Scripts — Deletar** → Excluir script de teste
-14. **Plano de Vendas** → Verificar wizard/briefing do Agente Rafael
+### Bloco B — Contatos (4 ações)
+6. **Criar Contato** → No CRM, aba "Contatos", clicar "+ Contato", preencher nome, email, telefone, empresa, tags, salvar
+7. **Editar Contato** → Clicar no contato criado, alterar empresa e adicionar tag, salvar
+8. **Converter Contato em Lead** → Usar ação de conversão (se disponível no UI)
+9. **Deletar Contato** → Excluir contato de teste
 
-### Bloco 4 — Marketing (6 ações)
-15. **Estratégia** → Iniciar briefing ou verificar score existente
-16. **Conteúdos — Gerar** → Executar wizard de geração com IA (1 conteúdo)
-17. **Conteúdos — Deletar** → Excluir conteúdo gerado
-18. **Redes Sociais** → Verificar histórico, tentar gerar postagem
-19. **Sites** → Abrir wizard, verificar se chega até step 3
-20. **Tráfego Pago** → Verificar recomendações geradas
+### Bloco C — Configurações CRM (5 ações)
+10. **Equipe** → Aba "Equipe", verificar listagem de membros
+11. **Produtos** → Aba "Produtos", criar produto "Produto Teste" com valor R$ 500, verificar listagem, deletar
+12. **Parceiros** → Aba "Parceiros", criar parceiro "Parceiro Teste", verificar, deletar
+13. **SLA** → Aba "SLA", verificar/alterar configuração de alertas
+14. **Integrações** → Aba "Integ.", verificar API key e webhook URL exibidos
 
-### Bloco 5 — Sistema e Config (4 ações)
-21. **Configurações** → Editar nome da empresa, salvar, verificar persistência
-22. **Plano e Créditos** → Verificar saldo, histórico de transações
-23. **Suporte** → Criar ticket de teste, verificar listagem
-24. **Gamificação** → Verificar XP, nível e troféus
-
-### Bloco 6 — Responsividade e Segurança (2 ações)
-25. **Mobile 375px** → Testar Dashboard, CRM e Config em viewport mobile
-26. **Logout** → Executar logout e verificar redirect para `/app`
+### Bloco D — Automações (4 ações)
+15. **Criar Automação** → Aba "Autom.", clicar "Nova automação", configurar trigger "lead_created" + action "send_notification", salvar
+16. **Editar Automação** → Alterar trigger ou ação, salvar
+17. **Ativar/Desativar** → Toggle de is_active na automação
+18. **Deletar Automação** → Excluir automação de teste
 
 ## Entregável
+Tabela consolidada:
+| # | Módulo | Ação | Status (OK/BUG) | Detalhe |
 
-Tabela consolidada com:
-| # | Módulo | Ação | Status | Detalhe |
 Para cada BUG: screenshot + descrição técnica + correção proposta.
 
 ## Execução
-
-O teste será realizado via browser automatizado em blocos sequenciais. Cada ação será executada com `act` (não apenas `observe`), validando o resultado real da operação.
+Cada ação será executada com `act` (interação real), não apenas `observe`. Após aprovação, iniciarei o browser, farei login e executarei sequencialmente.
 
