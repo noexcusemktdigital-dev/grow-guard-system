@@ -438,20 +438,22 @@ export default function ClienteGamificacao() {
     onError: () => toast.error("Erro ao resgatar recompensa"),
   });
 
-  const myLeads = leads?.filter(l => l.assigned_to === user?.id) ?? [];
-  const totalLeads = myLeads.length;
-  const wonLeads = myLeads.filter(l => !!l.won_at).length;
-  const pipelineValue = myLeads.filter(l => !l.won_at && !l.lost_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
-  const wonValue = myLeads.filter(l => !!l.won_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
+  // For cliente portal: use ALL org leads (most leads have assigned_to=null)
+  const orgLeads = leads ?? [];
+  const totalLeads = orgLeads.length;
+  const wonLeads = orgLeads.filter(l => !!l.won_at).length;
+  const pipelineValue = orgLeads.filter(l => !l.won_at && !l.lost_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
+  const wonValue = orgLeads.filter(l => !!l.won_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
 
   const contentCount = contents?.length ?? 0;
   const dispatchCount = dispatches?.length ?? 0;
   const siteCount = sites?.length ?? 0;
   const activeAgents = (agents || []).filter(a => a.status === "active").length;
   const waConnected = waInstance?.status === "connected";
+  const hasStrategy = !!activeStrategy;
 
   // Complete leads count (value + phone + email)
-  const completeLeads = myLeads.filter(l => l.value && Number(l.value) > 0 && l.phone && l.email).length;
+  const completeLeads = orgLeads.filter(l => l.value && Number(l.value) > 0 && l.phone && l.email).length;
 
   const xp = (gamification as any)?.xp ?? 0;
   const streakDays = gamification?.streak_days ?? 0;
