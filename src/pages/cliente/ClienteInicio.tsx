@@ -450,7 +450,7 @@ export default function ClienteInicio() {
             <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
               <span>Checklist {Math.round(taskProgress)}%</span>
               <span>Metas {Math.min(goalPercent, 100).toFixed(0)}%</span>
-              <span>CRM {Math.min(thisMonthLeads.length * 5, 100)}%</span>
+              <span>CRM {Math.min(todayLeadsCount * 20, 100)}%</span>
             </div>
           </CardContent>
         </Card>
