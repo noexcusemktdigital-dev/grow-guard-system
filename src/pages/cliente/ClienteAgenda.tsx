@@ -56,6 +56,20 @@ function WeekView({ currentDate, events, onEventClick, onDayClick }: {
     return map;
   }, [events]);
 
+  // All-day events
+  const allDayByDay = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (events ?? []).forEach(ev => {
+      if (!ev.all_day) return;
+      const key = format(parseISO(ev.start_at), "yyyy-MM-dd");
+      if (!map[key]) map[key] = [];
+      map[key].push(ev);
+    });
+    return map;
+  }, [events]);
+
+  const hasAllDay = Object.values(allDayByDay).some(arr => arr.length > 0);
+
   return (
     <div className="border border-border rounded-xl overflow-hidden">
       <div className="grid grid-cols-[60px_repeat(7,1fr)]">
@@ -66,13 +80,34 @@ function WeekView({ currentDate, events, onEventClick, onDayClick }: {
           </div>
         ))}
       </div>
+      {/* All-day row */}
+      {hasAllDay && (
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border">
+          <div className="text-[10px] text-muted-foreground text-right pr-2 pt-1 border-r border-border">Dia todo</div>
+          {weekDays.map(day => {
+            const key = format(day, "yyyy-MM-dd");
+            const dayAllDay = allDayByDay[key] || [];
+            return (
+              <div key={key} className="border-r border-border/40 p-0.5 min-h-[28px]">
+                {dayAllDay.map(ev => (
+                  <div key={ev.id} className="rounded px-1 py-0.5 text-[10px] truncate cursor-pointer mb-0.5"
+                    style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6" }}
+                    onClick={() => onEventClick(ev)}>
+                    {ev.title}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
       <div className="max-h-[600px] overflow-y-auto">
         {HOURS.map(hour => (
           <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] min-h-[50px]">
             <div className="text-[10px] text-muted-foreground text-right pr-2 pt-1 border-r border-border">{`${hour}:00`}</div>
             {weekDays.map(day => {
               const key = format(day, "yyyy-MM-dd");
-              const dayEvs = (eventsByDay[key] || []).filter(ev => getHours(parseISO(ev.start_at)) === hour);
+              const dayEvs = (eventsByDay[key] || []).filter(ev => !ev.all_day && getHours(parseISO(ev.start_at)) === hour);
               return (
                 <div key={`${key}-${hour}`} className="border-r border-b border-border/40 relative cursor-pointer hover:bg-muted/10" onClick={() => onDayClick(day, hour)}>
                   {dayEvs.map(ev => {
