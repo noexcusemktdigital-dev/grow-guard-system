@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
         // Credit wallet
         await supabaseAdmin
           .from("credit_wallets")
-          .insert({ organization_id: clienteOrg.id, balance: 100 });
+          .insert({ organization_id: clienteOrg.id, balance: 200 });
       }
 
       await supabaseAdmin
