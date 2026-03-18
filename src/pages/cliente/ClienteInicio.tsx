@@ -624,7 +624,13 @@ export default function ClienteInicio() {
                   </div>
                 )}
                 {pendingTasks.length === 0 && completedTasks.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4">Nenhuma tarefa pendente</p>
+                  <div className="flex flex-col items-center py-4">
+                    <CheckSquare className="w-6 h-6 text-muted-foreground/30 mb-1.5" />
+                    <p className="text-xs text-muted-foreground mb-2">Nenhuma tarefa para hoje</p>
+                    <Button variant="outline" size="sm" className="text-xs h-7 rounded-lg" onClick={() => navigate("/cliente/checklist")}>
+                      Gerar Checklist <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
                 )}
               </div>
               <Button variant="ghost" size="sm" className="w-full mt-3 text-xs h-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/cliente/checklist")}>

@@ -26,6 +26,7 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
       return { data: data ?? [], count: count ?? 0, page, pageSize: PAGE_SIZE };
     },
     enabled: !!orgId,
+    staleTime: 1000 * 60 * 2,
     placeholderData: keepPreviousData,
   });
 
