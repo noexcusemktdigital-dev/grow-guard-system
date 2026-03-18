@@ -660,7 +660,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
               </Button>
               <div className="flex gap-2">
                 {mode === "ai" && (
-                  <Button variant="outline" onClick={() => handleGenerate({}, null)} disabled={isGenerating} className="gap-1">
+                  <Button variant="outline" onClick={() => handleGenerate(lastAutoContext || {}, lastOrgId)} disabled={isGenerating} className="gap-1">
                     <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? "animate-spin" : ""}`} />
                     Regenerar
                   </Button>

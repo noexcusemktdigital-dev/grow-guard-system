@@ -257,7 +257,7 @@ export default function ClienteScripts() {
         open={showCreditsDialog}
         onOpenChange={setShowCreditsDialog}
         actionLabel="melhorar este script"
-        creditCost={150}
+        creditCost={20}
       />
     </div>
   );
