@@ -78,30 +78,6 @@ function getLevelInfo(xp: number) {
   return { level: 1, title: "Novato", nextTitle: "Aprendiz", xpToNext: 500, progress: 0 };
 }
 
-function AnimatedCounter({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    const duration = 800;
-    const steps = 30;
-    const increment = value / steps;
-    let current = 0;
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= value) {
-        setDisplay(value);
-        clearInterval(timer);
-      } else {
-        setDisplay(Math.round(current));
-      }
-    }, duration / steps);
-    return () => clearInterval(timer);
-  }, [value]);
-
-  if (prefix === "R$") {
-    return <>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(display)}</>;
-  }
-  return <>{prefix}{display.toLocaleString("pt-BR")}{suffix}</>;
-}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(value);
