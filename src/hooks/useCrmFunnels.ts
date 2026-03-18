@@ -26,6 +26,12 @@ export function useCrmFunnelMutations() {
 
   const createFunnel = useMutation({
     mutationFn: async (funnel: { name: string; description?: string; stages?: any[]; is_default?: boolean }) => {
+      if (funnel.is_default && orgId) {
+        await supabase
+          .from("crm_funnels")
+          .update({ is_default: false })
+          .eq("organization_id", orgId);
+      }
       const { data, error } = await supabase
         .from("crm_funnels")
         .insert({ ...funnel, organization_id: orgId!, stages: funnel.stages || [] })
