@@ -362,6 +362,24 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
   const [manualTitle, setManualTitle] = useState("");
   const [manualContent, setManualContent] = useState("");
 
+  // Reset state when dialog opens (always-mounted pattern)
+  useEffect(() => {
+    if (open) {
+      setStep(1);
+      setMode("ai");
+      setStage(initialStage || "prospeccao");
+      setBriefing({});
+      setGeneratedContent("");
+      setGeneratedTitle("");
+      setGeneratedTags([]);
+      setShowTutorial(true);
+      setReferenceLinks([]);
+      setAdditionalContext("");
+      setManualTitle("");
+      setManualContent("");
+    }
+  }, [open, initialStage]);
+
   const handleGenerate = async (autoContext: any, orgId: string | null) => {
     setIsGenerating(true);
     try {
