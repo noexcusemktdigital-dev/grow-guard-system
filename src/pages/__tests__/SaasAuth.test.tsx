@@ -6,18 +6,25 @@ import { BrowserRouter } from "react-router-dom";
 const mockSignIn = vi.fn();
 const mockSignUp = vi.fn();
 const mockInvoke = vi.fn();
+const mockRpc = vi.fn().mockResolvedValue({ data: [] });
 
-vi.mock("@/integrations/supabase/client", () => ({
+vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
       signInWithPassword: (...args: any[]) => mockSignIn(...args),
       signUp: (...args: any[]) => mockSignUp(...args),
       resend: vi.fn().mockResolvedValue({ error: null }),
       resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
+      signOut: vi.fn().mockResolvedValue({}),
     },
     from: () => ({ update: () => ({ eq: vi.fn().mockResolvedValue({}) }) }),
     functions: { invoke: (...args: any[]) => mockInvoke(...args) },
+    rpc: (...args: any[]) => mockRpc(...args),
   },
+}));
+
+vi.mock("@/lib/portalRoleGuard", () => ({
+  validatePortalAccess: vi.fn().mockResolvedValue({ allowed: true }),
 }));
 
 vi.mock("@/integrations/lovable/index", () => ({
@@ -67,7 +74,7 @@ describe("SaasAuth (Cliente SaaS)", () => {
   });
 
   it("login calls signInWithPassword", async () => {
-    mockSignIn.mockResolvedValue({ error: null });
+    mockSignIn.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
     renderSaas();
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "user@test.com" } });
@@ -80,7 +87,7 @@ describe("SaasAuth (Cliente SaaS)", () => {
   });
 
   it("shows error toast on login failure", async () => {
-    mockSignIn.mockResolvedValue({ error: { message: "Invalid" } });
+    mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Invalid" } });
     renderSaas();
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "bad@test.com" } });
@@ -93,7 +100,7 @@ describe("SaasAuth (Cliente SaaS)", () => {
   });
 
   it("shows email not confirmed error", async () => {
-    mockSignIn.mockResolvedValue({ error: { message: "Email not confirmed" } });
+    mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Email not confirmed" } });
     renderSaas();
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "unverified@test.com" } });

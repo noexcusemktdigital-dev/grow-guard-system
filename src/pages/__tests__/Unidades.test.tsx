@@ -15,6 +15,7 @@ vi.mock("@/hooks/useUnits", () => ({
   useUnitMutations: () => ({
     createUnit: { mutateAsync: vi.fn() },
     updateUnit: { mutateAsync: vi.fn() },
+    deleteUnit: { mutateAsync: vi.fn() },
   }),
 }));
 
@@ -23,7 +24,7 @@ vi.mock("@/hooks/useUserOrgId", () => ({
 }));
 
 const mockInvoke = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({
+vi.mock("@/lib/supabase", () => ({
   supabase: {
     functions: { invoke: (...args: any[]) => mockInvoke(...args) },
   },
@@ -45,10 +46,10 @@ describe("Unidades — Wizard de Provisionamento", () => {
 
   it("abre wizard no passo 1 ao clicar Nova Unidade", async () => {
     renderWithProviders(<Unidades />);
-    // Click the button inside the empty state
     const buttons = screen.getAllByText(/Nova Unidade/i);
     await user.click(buttons[0]);
-    expect(screen.getByText(/Passo 1 de 3/)).toBeInTheDocument();
+    // Wizard now has 2 steps, title shows "Passo 1 de 2"
+    expect(screen.getByText(/Passo 1 de 2/)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Unidade Centro/i)).toBeInTheDocument();
   });
 
@@ -66,73 +67,39 @@ describe("Unidades — Wizard de Provisionamento", () => {
     await user.click(screen.getAllByText(/Nova Unidade/i)[0]);
     await user.type(screen.getByPlaceholderText(/Unidade Centro/i), "Unidade Teste");
     await user.click(screen.getByText("Próximo"));
-    expect(screen.getByText(/Passo 2 de 3/)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Nome completo")).toBeInTheDocument();
-  });
-
-  it("valida nome e email obrigatórios no passo 2", async () => {
-    renderWithProviders(<Unidades />);
-    await user.click(screen.getAllByText(/Nova Unidade/i)[0]);
-    await user.type(screen.getByPlaceholderText(/Unidade Centro/i), "Unidade Teste");
-    await user.click(screen.getByText("Próximo"));
-    // Now on step 2, click next without filling
-    await user.click(screen.getByText("Próximo"));
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Informe nome e email do responsável", variant: "destructive" })
-    );
-  });
-
-  it("avança para passo 3 com dados do responsável preenchidos", async () => {
-    renderWithProviders(<Unidades />);
-    await user.click(screen.getAllByText(/Nova Unidade/i)[0]);
-    await user.type(screen.getByPlaceholderText(/Unidade Centro/i), "Unidade Teste");
-    await user.click(screen.getByText("Próximo"));
-    await user.type(screen.getByPlaceholderText("Nome completo"), "João Silva");
-    await user.type(screen.getByPlaceholderText("email@exemplo.com"), "joao@teste.com");
-    await user.click(screen.getByText("Próximo"));
-    expect(screen.getByText(/Passo 3 de 3/)).toBeInTheDocument();
+    // Step 2 is now financial config
+    expect(screen.getByText(/Passo 2 de 2/)).toBeInTheDocument();
     expect(screen.getByText(/Royalties/i)).toBeInTheDocument();
   });
 
   it("chama provision-unit ao finalizar", async () => {
     renderWithProviders(<Unidades />);
     await user.click(screen.getAllByText(/Nova Unidade/i)[0]);
-    // Step 1
+    // Step 1 — fill unit name and optional manager info
     await user.type(screen.getByPlaceholderText(/Unidade Centro/i), "Unidade Teste");
     await user.click(screen.getByText("Próximo"));
-    // Step 2
-    await user.type(screen.getByPlaceholderText("Nome completo"), "João Silva");
-    await user.type(screen.getByPlaceholderText("email@exemplo.com"), "joao@teste.com");
-    await user.click(screen.getByText("Próximo"));
-    // Step 3 — click create
+    // Step 2 — click create
     await user.click(screen.getByText("Criar Unidade"));
 
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("provision-unit", {
         body: expect.objectContaining({
           unit_name: "Unidade Teste",
-          manager_name: "João Silva",
-          manager_email: "joao@teste.com",
           parent_org_id: "org-test-123",
         }),
       });
     });
   });
 
-  it("mostra tela de sucesso com credenciais temporárias", async () => {
+  it("mostra tela de sucesso após provisionar", async () => {
     renderWithProviders(<Unidades />);
     await user.click(screen.getAllByText(/Nova Unidade/i)[0]);
     await user.type(screen.getByPlaceholderText(/Unidade Centro/i), "Unidade X");
-    await user.click(screen.getByText("Próximo"));
-    await user.type(screen.getByPlaceholderText("Nome completo"), "Maria");
-    await user.type(screen.getByPlaceholderText("email@exemplo.com"), "maria@x.com");
     await user.click(screen.getByText("Próximo"));
     await user.click(screen.getByText("Criar Unidade"));
 
     await waitFor(() => {
       expect(screen.getByText("Unidade Criada!")).toBeInTheDocument();
     });
-    expect(screen.getByText("Temp@123")).toBeInTheDocument();
-    expect(screen.getByText("maria@x.com")).toBeInTheDocument();
   });
 });

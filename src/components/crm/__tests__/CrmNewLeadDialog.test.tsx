@@ -16,6 +16,15 @@ vi.mock("@/hooks/useCrmContacts", () => ({
   useCrmContacts: () => ({ data: [] }),
 }));
 
+// Mock funnels — return at least one funnel so validation passes
+vi.mock("@/hooks/useCrmFunnels", () => ({
+  useCrmFunnels: () => ({ data: [{ id: "f1", name: "Default", is_default: true, stages: [] }] }),
+}));
+
+vi.mock("@/hooks/useLeadQuota", () => ({
+  useLeadQuota: () => ({ maxLeads: 100, atLimit: false, activeLeadCount: 0, planName: "starter" }),
+}));
+
 const mockToast = vi.fn();
 vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: mockToast }),
