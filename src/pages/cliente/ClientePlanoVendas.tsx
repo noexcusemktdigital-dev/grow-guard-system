@@ -828,7 +828,18 @@ export default function ClientePlanoVendas() {
     }
   };
 
-  const handleRestart = () => {
+  const handleRestart = async () => {
+    // Archive the current plan before resetting
+    if (salesPlanData && Object.keys(salesPlanData.answers || {}).length > 5) {
+      try {
+        await archiveSalesPlan.mutateAsync({
+          answers: salesPlanData.answers,
+          score: salesPlanData.score ?? 0,
+        });
+      } catch (e) {
+        console.error("Archive error:", e);
+      }
+    }
     setAnswers({}); setCompleted(false);
     saveSalesPlan.mutate({ answers: {}, score: 0 });
   };
