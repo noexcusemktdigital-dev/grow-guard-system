@@ -611,7 +611,7 @@ export default function ClienteGamificacao() {
       <XpSuggestions
         profile={profile} org={org} waConnected={waConnected}
         totalLeads={totalLeads} wonLeads={wonLeads} contentCount={contentCount}
-        siteCount={siteCount} activeAgents={activeAgents}
+        siteCount={siteCount} activeAgents={activeAgents} hasStrategy={hasStrategy}
       />
 
       {/* Profile Completeness Score */}
