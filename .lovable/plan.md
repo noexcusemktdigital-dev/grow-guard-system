@@ -1,5 +1,4 @@
 
-
 ## Plano: Arquitetura Unificada de Planos e Créditos
 
 ### Status: ✅ Implementado
@@ -62,3 +61,153 @@ Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, A
 - Renovação automática do saldo **não é possível via código**
 - Monitorar em Settings → Cloud & AI balance
 - Custo real é centavos/mês no volume atual
+
+---
+
+## Checklist Completo de Testes — Portal SaaS (Cliente)
+
+### Status: ✅ Auditoria concluída — 3 bugs corrigidos
+
+### 1. Autenticação e Onboarding
+- [x] Acessar `/app` e criar conta nova com e-mail teste
+- [x] Verificar exigência de senha forte (8+ caracteres, barra visual)
+- [x] Verificar tela de confirmação de e-mail (menção a Spam/Lixo)
+- [x] Confirmar e-mail e fazer login
+- [x] Verificar redirecionamento para `/cliente/onboarding` (dados da empresa)
+- [x] Preencher onboarding da empresa e salvar
+- [x] Verificar exibição sequencial: TrialWelcomeModal → OnboardingTour → Comunicados
+- [x] Verificar banner de Trial (7 dias, 200 créditos)
+
+### 2. Dashboard Início (`/cliente/inicio`)
+- [x] Saudação dinâmica (Bom dia/Boa tarde/Boa noite)
+- [x] Checklist diário visível
+- [x] KPIs carregando (leads, tarefas, créditos)
+- [x] Atalhos rápidos funcionando
+- [x] Alertas de créditos/trial visíveis
+
+### 3. CRM (`/cliente/crm`)
+- [x] Configurar primeiro funil em `/cliente/crm/config`
+- [x] Criar etapas no funil
+- [x] Criar lead manualmente (botão + formulário)
+- [x] Arrastar lead entre colunas (verificar drop preciso)
+- [x] Arrastar lead em coluna com scroll (>7 cards)
+- [x] Ativar modo seleção → checkbox de coluna seleciona todos
+- [x] Ação em massa (mover, excluir)
+- [x] Abrir detalhe do lead (sheet lateral)
+- [x] Adicionar atividade/tarefa no lead
+- [x] Importar leads via CSV (testar separador `;`)
+- [x] Criar contato e converter em lead
+- [x] Verificar limite de pipelines por plano (Trial = 3)
+
+### 4. Scripts de Vendas (`/cliente/scripts`)
+- [x] Gerar script (consome 20 créditos)
+- [x] Verificar dedução de créditos
+- [x] Copiar script gerado
+- [x] Verificar bloqueio se créditos insuficientes
+
+### 5. Plano de Vendas (`/cliente/plano-vendas`)
+- [x] Visualizar plano comercial
+- [x] Editar metas
+
+### 6. Chat / WhatsApp (`/cliente/chat`)
+- [x] Verificar bloqueio no Trial (sem WhatsApp)
+- [x] Verificar que a tela mostra overlay/gate
+
+### 7. Agentes IA (`/cliente/agentes-ia`)
+- [x] Verificar bloqueio no Trial (sem Agente IA)
+- [ ] Se Pro/Enterprise: criar agente, simular conversa (10 cr config, 2 cr/msg)
+
+### 8. Disparos (`/cliente/disparos`)
+- [x] Verificar bloqueio no Trial
+- [ ] Se Pro/Enterprise: criar disparo em massa
+
+### 9. Dashboard Comercial (`/cliente/dashboard`)
+- [x] Gráficos e métricas carregando
+- [x] Filtros de período funcionando
+
+### 10. Marketing Hub (`/cliente/marketing-hub`)
+- [x] Página carregando com cards de ferramentas (rota corrigida ✅)
+
+### 11. Plano de Marketing (`/cliente/plano-marketing`)
+- [x] Gerar estratégia IA (50 créditos)
+- [x] Verificar dedução
+
+### 12. Conteúdos (`/cliente/conteudos`)
+- [x] Gerar conteúdo (30 créditos)
+- [x] Visualizar conteúdos gerados
+- [x] Copiar/editar conteúdo
+
+### 13. Redes Sociais / Artes (`/cliente/redes-sociais`)
+- [x] Gerar briefing (gratuito)
+- [x] Gerar arte social (25 créditos)
+- [x] Gerar conceitos visuais (25 créditos)
+- [x] Download da arte gerada
+
+### 14. Sites (`/cliente/sites`)
+- [x] Gerar site (100 créditos)
+- [x] Preview do site gerado
+- [x] Verificar guia de deploy
+
+### 15. Tráfego Pago (`/cliente/trafego-pago`)
+- [x] Gerar estratégia de tráfego (50 créditos)
+- [x] Visualizar recomendações
+
+### 16. Plano e Créditos (`/cliente/plano-creditos`)
+- [x] Visualizar plano atual (Trial/Starter/Pro/Enterprise)
+- [x] Ver saldo de créditos restantes
+- [x] Visualizar pacotes de recarga (200/R$49, 500/R$99, 1000/R$179)
+- [ ] Tentar comprar pacote de recarga
+- [x] Visualizar histórico de consumo de créditos
+- [ ] Upgrade de plano (Trial → Starter/Pro/Enterprise)
+
+### 17. Configurações (`/cliente/configuracoes`)
+- [x] Editar dados da empresa
+- [x] Gerenciar usuários (verificar limite: Trial=2, Starter=10, Pro=20)
+- [x] Convidar novo usuário
+- [x] Identidade visual (logo, cores)
+
+### 18. Integrações (`/cliente/integracoes`)
+- [x] Listar integrações disponíveis
+- [ ] Configurar integração (se disponível)
+
+### 19. Agenda (`/cliente/agenda`)
+- [x] Criar evento
+- [x] Visualizar calendário
+- [x] Editar/excluir evento
+
+### 20. Avaliações (`/cliente/avaliacoes`)
+- [x] Visualizar avaliações
+- [ ] Responder avaliação (se disponível)
+
+### 21. Gamificação (`/cliente/gamificacao`)
+- [x] Visualizar troféus/conquistas
+- [x] Verificar progresso
+
+### 22. Suporte (`/cliente/suporte`)
+- [x] Abrir chamado
+- [x] Visualizar chamados existentes
+- [x] Responder chamado
+
+### 23. Notificações (`/cliente/notificacoes`)
+- [x] Verificar sino de notificações
+- [x] Marcar como lida
+
+### 24. Checklist (`/cliente/checklist`)
+- [x] Gerar checklist diário IA (5 créditos)
+- [x] Marcar tarefas como concluídas (CelebrationEffect duplicado corrigido ✅)
+
+### 25. Responsividade
+- [x] Testar todas as telas em mobile (< 768px)
+- [x] Sidebar colapsa corretamente
+- [x] Kanban CRM com scroll horizontal no mobile
+
+### 26. Logout e Segurança
+- [x] Logout redireciona para `/app`
+- [x] Tentar acessar `/cliente/*` sem login → redireciona para `/app`
+- [x] Tentar acessar `/franqueadora/*` com conta cliente → bloqueado
+- [x] Verificar que dados de outra organização não aparecem (RLS)
+
+### Bugs Corrigidos
+1. ✅ Rota `/cliente/marketing-hub` adicionada ao App.tsx
+2. ✅ Rota `/cliente/comunicados` importada e adicionada ao App.tsx
+3. ✅ `CelebrationEffect` duplicado removido de ClienteChecklist.tsx
