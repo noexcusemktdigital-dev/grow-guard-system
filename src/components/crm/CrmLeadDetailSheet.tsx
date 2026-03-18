@@ -401,9 +401,9 @@ function ProposalsTab({ leadId }: { leadId: string }) {
       if (file) {
         const ext = file.name.split(".").pop() || "pdf";
         const path = `proposals/${leadId}/${Date.now()}.${ext}`;
-        const { error: uploadError } = await (await import("@/integrations/supabase/client")).supabase.storage.from("crm-files").upload(path, file);
+        const { error: uploadError } = await supabase.storage.from("crm-files").upload(path, file);
         if (uploadError) throw uploadError;
-        const { data: urlData } = (await import("@/integrations/supabase/client")).supabase.storage.from("crm-files").getPublicUrl(path);
+        const { data: urlData } = supabase.storage.from("crm-files").getPublicUrl(path);
         fileUrl = urlData.publicUrl;
       }
       createProposal.mutate({
