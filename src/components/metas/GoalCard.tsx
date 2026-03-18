@@ -126,11 +126,19 @@ export function GoalCard({ goal, progress, onEdit, onArchive }: GoalCardProps) {
                     : "bg-destructive/10 text-destructive"
               }`}>
                 {(() => {
-                  const projectedPercent = Math.round(progress.pacePerDay * (progress.daysLeft + (progress.currentValue / progress.pacePerDay)) / (goal.target_value || 1) * 100);
+                  const totalDays = progress.pacePerDay > 0
+                    ? progress.daysLeft + (progress.currentValue / progress.pacePerDay)
+                    : progress.daysLeft;
+                  const projectedPercent = progress.pacePerDay > 0
+                    ? Math.round(progress.pacePerDay * totalDays / (goal.target_value || 1) * 100)
+                    : 0;
+                  const increaseNeeded = progress.pacePerDay > 0
+                    ? Math.round(((progress.requiredPacePerDay / progress.pacePerDay) - 1) * 100)
+                    : 100;
                   if (progress.pacePerDay >= progress.requiredPacePerDay * 0.9) {
                     return `✅ No ritmo atual, você atingirá ~${Math.min(projectedPercent, 150)}% da meta até o final do período.`;
                   } else if (progress.pacePerDay >= progress.requiredPacePerDay * 0.7) {
-                    return `⚠️ Projeção: ~${Math.min(projectedPercent, 150)}% da meta. Aumente o ritmo em ${Math.round(((progress.requiredPacePerDay / progress.pacePerDay) - 1) * 100)}% para bater.`;
+                    return `⚠️ Projeção: ~${Math.min(projectedPercent, 150)}% da meta. Aumente o ritmo em ${increaseNeeded}% para bater.`;
                   } else {
                     return `🚨 Ritmo crítico! Projeção: ~${Math.min(projectedPercent, 150)}% da meta. Necessário ${metric.format(Math.round(progress.requiredPacePerDay))}/dia.`;
                   }
