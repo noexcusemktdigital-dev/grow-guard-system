@@ -56,6 +56,20 @@ function WeekView({ currentDate, events, onEventClick, onDayClick }: {
     return map;
   }, [events]);
 
+  // All-day events
+  const allDayByDay = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (events ?? []).forEach(ev => {
+      if (!ev.all_day) return;
+      const key = format(parseISO(ev.start_at), "yyyy-MM-dd");
+      if (!map[key]) map[key] = [];
+      map[key].push(ev);
+    });
+    return map;
+  }, [events]);
+
+  const hasAllDay = Object.values(allDayByDay).some(arr => arr.length > 0);
+
   return (
     <div className="border border-border rounded-xl overflow-hidden">
       <div className="grid grid-cols-[60px_repeat(7,1fr)]">
@@ -66,13 +80,34 @@ function WeekView({ currentDate, events, onEventClick, onDayClick }: {
           </div>
         ))}
       </div>
+      {/* All-day row */}
+      {hasAllDay && (
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border">
+          <div className="text-[10px] text-muted-foreground text-right pr-2 pt-1 border-r border-border">Dia todo</div>
+          {weekDays.map(day => {
+            const key = format(day, "yyyy-MM-dd");
+            const dayAllDay = allDayByDay[key] || [];
+            return (
+              <div key={key} className="border-r border-border/40 p-0.5 min-h-[28px]">
+                {dayAllDay.map(ev => (
+                  <div key={ev.id} className="rounded px-1 py-0.5 text-[10px] truncate cursor-pointer mb-0.5"
+                    style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6" }}
+                    onClick={() => onEventClick(ev)}>
+                    {ev.title}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
       <div className="max-h-[600px] overflow-y-auto">
         {HOURS.map(hour => (
           <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] min-h-[50px]">
             <div className="text-[10px] text-muted-foreground text-right pr-2 pt-1 border-r border-border">{`${hour}:00`}</div>
             {weekDays.map(day => {
               const key = format(day, "yyyy-MM-dd");
-              const dayEvs = (eventsByDay[key] || []).filter(ev => getHours(parseISO(ev.start_at)) === hour);
+              const dayEvs = (eventsByDay[key] || []).filter(ev => !ev.all_day && getHours(parseISO(ev.start_at)) === hour);
               return (
                 <div key={`${key}-${hour}`} className="border-r border-b border-border/40 relative cursor-pointer hover:bg-muted/10" onClick={() => onDayClick(day, hour)}>
                   {dayEvs.map(ev => {
@@ -107,19 +142,35 @@ function WeekView({ currentDate, events, onEventClick, onDayClick }: {
 function DayView({ currentDate, events, onEventClick, onNewEvent }: {
   currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onNewEvent: (day: Date) => void;
 }) {
+  const dayKey = format(currentDate, "yyyy-MM-dd");
   const dayEvents = useMemo(() => {
-    const key = format(currentDate, "yyyy-MM-dd");
-    return (events ?? []).filter(ev => format(parseISO(ev.start_at), "yyyy-MM-dd") === key);
-  }, [events, currentDate]);
+    return (events ?? []).filter(ev => format(parseISO(ev.start_at), "yyyy-MM-dd") === dayKey);
+  }, [events, dayKey]);
+
+  const allDayEvents = dayEvents.filter(ev => ev.all_day);
+  const timedEvents = dayEvents.filter(ev => !ev.all_day);
 
   return (
     <div className="border border-border rounded-xl overflow-hidden">
-      <div className="bg-muted/30 border-b border-border py-2 px-4 text-sm font-semibold capitalize">
-        {format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+      <div className="bg-muted/30 border-b border-border py-2 px-4 text-sm font-semibold capitalize flex items-center justify-between">
+        <span>{format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}</span>
+        <Badge variant="secondary" className="text-[10px]">{dayEvents.length} evento{dayEvents.length !== 1 ? "s" : ""}</Badge>
       </div>
+      {allDayEvents.length > 0 && (
+        <div className="border-b border-border p-2 space-y-1 bg-muted/10">
+          <span className="text-[10px] text-muted-foreground font-medium">Dia todo</span>
+          {allDayEvents.map(ev => (
+            <div key={ev.id} className="rounded px-2 py-1 text-xs cursor-pointer"
+              style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6" }}
+              onClick={() => onEventClick(ev)}>
+              <span className="font-medium">{ev.title}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="max-h-[600px] overflow-y-auto">
         {HOURS.map(hour => {
-          const hourEvs = dayEvents.filter(ev => getHours(parseISO(ev.start_at)) === hour);
+          const hourEvs = timedEvents.filter(ev => getHours(parseISO(ev.start_at)) === hour);
           return (
             <div key={hour} className="grid grid-cols-[60px_1fr] min-h-[60px]">
               <div className="text-[11px] text-muted-foreground text-right pr-3 pt-1 border-r border-border">{`${hour}:00`}</div>
@@ -307,8 +358,17 @@ export default function ClienteAgenda() {
   }
 
   function handleDayClick(day: Date) {
-    setCurrentDate(day);
-    setViewMode("day");
+    const key = format(day, "yyyy-MM-dd");
+    const dayEvs = eventsByDay[key] || [];
+    if (dayEvs.length > 0) {
+      // If there are events, show the first one's detail
+      setDetailEvent(dayEvs[0]);
+    } else {
+      // If no events, open creation form for that day
+      const d = new Date(day);
+      d.setHours(9, 0, 0, 0);
+      openNewEvent(d);
+    }
   }
 
   function navigatePrev() {
@@ -345,7 +405,9 @@ export default function ClienteAgenda() {
           <Calendar className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-bold">Agenda</h1>
           {eventCount > 0 && (
-            <Badge variant="secondary" className="text-[10px]">{eventCount} evento{eventCount !== 1 ? "s" : ""}</Badge>
+            <Badge variant="secondary" className="text-[10px]">
+              {eventCount} evento{eventCount !== 1 ? "s" : ""} {viewMode === "month" ? "no mês" : viewMode === "week" ? "na semana" : "no dia"}
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
