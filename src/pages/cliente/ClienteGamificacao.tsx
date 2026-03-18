@@ -35,6 +35,7 @@ import { useWhatsAppInstance } from "@/hooks/useWhatsApp";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useOrgTeams } from "@/hooks/useOrgTeams";
+import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 
 const LEVELS = [
   { name: "Novato", minXp: 0, maxXp: 499, icon: Shield, color: "text-muted-foreground" },
