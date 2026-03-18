@@ -108,6 +108,7 @@ export function useGoalMutations() {
       qc.invalidateQueries({ queryKey: ["goals"] });
       qc.invalidateQueries({ queryKey: ["goals-active"] });
       qc.invalidateQueries({ queryKey: ["goals-historic"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
@@ -121,6 +122,7 @@ export function useGoalMutations() {
       qc.invalidateQueries({ queryKey: ["goals"] });
       qc.invalidateQueries({ queryKey: ["goals-active"] });
       qc.invalidateQueries({ queryKey: ["goals-historic"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
@@ -134,6 +136,7 @@ export function useGoalMutations() {
       qc.invalidateQueries({ queryKey: ["goals"] });
       qc.invalidateQueries({ queryKey: ["goals-active"] });
       qc.invalidateQueries({ queryKey: ["goals-historic"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 

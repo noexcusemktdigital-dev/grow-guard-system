@@ -680,15 +680,17 @@ export default function ClientePlanoVendas() {
   // ── Metas charts data ──
   const progressChartData = useMemo(() => {
     if (!activeGoals?.length || !goalProgress) return [];
-    return activeGoals.map(g => {
-      const p = goalProgress[g.id];
-      return {
-        name: g.title?.length > 25 ? g.title.slice(0, 22) + "..." : g.title,
-        atual: p?.currentValue ?? 0,
-        alvo: g.target_value ?? 0,
-        percent: p?.percent ?? 0,
-      };
-    });
+    return [...activeGoals]
+      .sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+      .map(g => {
+        const p = goalProgress[g.id];
+        return {
+          name: g.title?.length > 25 ? g.title.slice(0, 22) + "..." : g.title,
+          atual: p?.currentValue ?? 0,
+          alvo: g.target_value ?? 0,
+          percent: p?.percent ?? 0,
+        };
+      });
   }, [activeGoals, goalProgress]);
 
   const evolutionChartData = useMemo(() => {
@@ -859,8 +861,16 @@ export default function ClientePlanoVendas() {
       return;
     }
     const [y, m] = novaMeta.mesRef.split("-").map(Number);
+    const periodEnd = new Date(y, m, 0, 23, 59, 59);
+    const now = new Date();
+    if (periodEnd < now) {
+      const confirmed = window.confirm(
+        `O período selecionado (${MESES_COMPLETOS[m - 1]} ${y}) já passou. A meta será enviada diretamente para o histórico. Deseja continuar?`
+      );
+      if (!confirmed) return;
+    }
     const periodStart = new Date(y, m - 1, 1).toISOString();
-    const periodEnd = new Date(y, m, 0, 23, 59, 59).toISOString();
+    const periodEndISO = periodEnd.toISOString();
     createGoal.mutate({
       title: novaMeta.title,
       target_value: novaMeta.target_value,
@@ -870,7 +880,7 @@ export default function ClientePlanoVendas() {
       team_id: novaMeta.scope === "team" && novaMeta.team_id ? novaMeta.team_id : undefined,
       assigned_to: novaMeta.scope === "individual" && novaMeta.assigned_to ? novaMeta.assigned_to : undefined,
       period_start: periodStart,
-      period_end: periodEnd,
+      period_end: periodEndISO,
       status: "active",
     }, {
       onSuccess: () => {
@@ -1784,9 +1794,11 @@ export default function ClientePlanoVendas() {
                 <Select value={novaMeta.mesRef} onValueChange={v => setNovaMeta(p => ({ ...p, mesRef: v }))}>
                   <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    {MESES_COMPLETOS.map((m, i) => (
-                      <SelectItem key={i} value={`${anoAtual}-${String(i + 1).padStart(2, "0")}`}>{m} {anoAtual}</SelectItem>
-                    ))}
+                    {[anoAtual, anoAtual + 1].flatMap(yr =>
+                      MESES_COMPLETOS.map((m, i) => (
+                        <SelectItem key={`${yr}-${i}`} value={`${yr}-${String(i + 1).padStart(2, "0")}`}>{m} {yr}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
