@@ -2,8 +2,9 @@ import { useState } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   BookOpen, Plus, Copy, Search, ChevronDown, ChevronUp, Sparkles,
-  Pencil, Trash2, Crosshair, ShieldQuestion, Handshake, Target, Ban, Loader2
+  Pencil, Trash2, Crosshair, ShieldQuestion, Handshake, Target, Ban, Loader2, Check, X
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
