@@ -358,8 +358,17 @@ export default function ClienteAgenda() {
   }
 
   function handleDayClick(day: Date) {
-    setCurrentDate(day);
-    setViewMode("day");
+    const key = format(day, "yyyy-MM-dd");
+    const dayEvs = eventsByDay[key] || [];
+    if (dayEvs.length > 0) {
+      // If there are events, show the first one's detail
+      setDetailEvent(dayEvs[0]);
+    } else {
+      // If no events, open creation form for that day
+      const d = new Date(day);
+      d.setHours(9, 0, 0, 0);
+      openNewEvent(d);
+    }
   }
 
   function navigatePrev() {
