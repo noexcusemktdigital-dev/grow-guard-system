@@ -142,19 +142,35 @@ function WeekView({ currentDate, events, onEventClick, onDayClick }: {
 function DayView({ currentDate, events, onEventClick, onNewEvent }: {
   currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onNewEvent: (day: Date) => void;
 }) {
+  const dayKey = format(currentDate, "yyyy-MM-dd");
   const dayEvents = useMemo(() => {
-    const key = format(currentDate, "yyyy-MM-dd");
-    return (events ?? []).filter(ev => format(parseISO(ev.start_at), "yyyy-MM-dd") === key);
-  }, [events, currentDate]);
+    return (events ?? []).filter(ev => format(parseISO(ev.start_at), "yyyy-MM-dd") === dayKey);
+  }, [events, dayKey]);
+
+  const allDayEvents = dayEvents.filter(ev => ev.all_day);
+  const timedEvents = dayEvents.filter(ev => !ev.all_day);
 
   return (
     <div className="border border-border rounded-xl overflow-hidden">
-      <div className="bg-muted/30 border-b border-border py-2 px-4 text-sm font-semibold capitalize">
-        {format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+      <div className="bg-muted/30 border-b border-border py-2 px-4 text-sm font-semibold capitalize flex items-center justify-between">
+        <span>{format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}</span>
+        <Badge variant="secondary" className="text-[10px]">{dayEvents.length} evento{dayEvents.length !== 1 ? "s" : ""}</Badge>
       </div>
+      {allDayEvents.length > 0 && (
+        <div className="border-b border-border p-2 space-y-1 bg-muted/10">
+          <span className="text-[10px] text-muted-foreground font-medium">Dia todo</span>
+          {allDayEvents.map(ev => (
+            <div key={ev.id} className="rounded px-2 py-1 text-xs cursor-pointer"
+              style={{ background: (ev.color || "#3b82f6") + "22", color: ev.color || "#3b82f6" }}
+              onClick={() => onEventClick(ev)}>
+              <span className="font-medium">{ev.title}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="max-h-[600px] overflow-y-auto">
         {HOURS.map(hour => {
-          const hourEvs = dayEvents.filter(ev => getHours(parseISO(ev.start_at)) === hour);
+          const hourEvs = timedEvents.filter(ev => getHours(parseISO(ev.start_at)) === hour);
           return (
             <div key={hour} className="grid grid-cols-[60px_1fr] min-h-[60px]">
               <div className="text-[11px] text-muted-foreground text-right pr-3 pt-1 border-r border-border">{`${hour}:00`}</div>
