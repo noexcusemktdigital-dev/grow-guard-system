@@ -1,213 +1,87 @@
 
-## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Status: ✅ Implementado
+# Histórico de Diagnósticos + Gráficos Aprimorados
 
-### Resumo
+## Problema atual
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+1. **Sem histórico real**: A tabela `sales_plans` tem constraint `isOneToOne` no `organization_id`. Cada novo diagnóstico sobrescreve o anterior. O "histórico" mostra apenas 1 entrada (o plano atual). Não há como fazer diagnósticos periódicos.
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+2. **Itens do histórico não são clicáveis**: Mesmo a entrada existente não abre nenhum detalhe ao clicar.
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
-
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
-
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+3. **Gráficos do diagnóstico são básicos**: Apenas um RadarChart e um termômetro. Faltam gráficos interativos, comparativos e tipos variados.
 
 ---
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+## Solução
 
-### Status: ✅ Documentado
+### 1. Nova tabela `sales_plan_history`
+Criar uma tabela para armazenar snapshots de cada diagnóstico:
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+```sql
+CREATE TABLE sales_plan_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
+  answers JSONB DEFAULT '{}',
+  score INT DEFAULT 0,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE sales_plan_history ENABLE ROW LEVEL SECURITY;
+-- RLS: membros da org podem ver
+CREATE POLICY "Members can view own org history"
+  ON sales_plan_history FOR SELECT TO authenticated
+  USING (organization_id IN (
+    SELECT organization_id FROM organization_memberships WHERE user_id = auth.uid()
+  ));
+CREATE POLICY "Members can insert own org history"
+  ON sales_plan_history FOR INSERT TO authenticated
+  WITH CHECK (organization_id IN (
+    SELECT organization_id FROM organization_memberships WHERE user_id = auth.uid()
+  ));
+```
 
-### Margem por Plano
+### 2. Fluxo de "Refazer diagnóstico"
+Quando o usuário clica "Refazer":
+- **Antes de limpar**: Salva o diagnóstico atual (answers + score + data) como snapshot na `sales_plan_history`
+- **Depois**: Limpa `sales_plans` como já faz hoje
+- Isso garante que cada diagnóstico fica permanentemente salvo no histórico
 
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+### 3. Histórico clicável com visualização completa
+- Buscar todos os registros de `sales_plan_history` para a org, ordenados por `created_at DESC`
+- Cada card do histórico ganha botão "Ver diagnóstico"
+- Ao clicar, abre um `Dialog` fullscreen com:
+  - Termômetro com a pontuação daquele diagnóstico
+  - Radar por área (recalculado das answers salvas)
+  - Insights e plano de ação (recalculados)
+  - Data de realização
 
-### Custo por funcionalidade
+### 4. Gráficos do diagnóstico aprimorados
+Adicionar ao resultado do diagnóstico (além do Radar e Termômetro existentes):
 
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
+| Gráfico | Tipo | Descrição |
+|---|---|---|
+| Barras por Categoria | BarChart horizontal | Score de cada área (Negócio, Financeiro, Equipe, etc) com cores por faixa |
+| Evolução Histórica | AreaChart | Score geral ao longo do tempo (conecta com histórico) |
+| Gauge de Maturidade | Componente custom | Indicador visual tipo velocímetro com animação |
+| Comparativo Ideal vs Real | BarChart agrupado | Cada área mostra score atual vs benchmark ideal (100%) |
 
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
+Os gráficos existentes (Radar, Termômetro) permanecem. Os novos são adicionados abaixo.
+
+### 5. Metas — análise de completude
+A aba de Metas está funcional com:
+- Criação/edição/arquivamento
+- Progresso real via CRM (useGoalProgress calcula revenue, leads, contracts, meetings, avg_ticket, conversions)
+- Filtros por escopo (empresa/equipe/individual)
+- Gráficos de progresso, comparativo por escopo, evolução diária
+- Export CSV e PDF
+- GoalCard com projeção inteligente (ritmo, dias restantes)
+
+Nenhum bug crítico identificado na lógica de metas. O sistema está completo.
 
 ---
 
-## Checklist Completo de Testes — Portal SaaS (Cliente)
+## Arquivos a alterar
+- **Migration SQL** — criar tabela `sales_plan_history` com RLS
+- **`src/hooks/useSalesPlan.ts`** — adicionar `useSalesPlanHistory()` query e `useArchiveSalesPlan()` mutation
+- **`src/pages/cliente/ClientePlanoVendas.tsx`** — refazer tab Histórico (lista de `sales_plan_history`), dialog de visualização completa, novos gráficos no diagnóstico, lógica de archive antes de refazer
 
-### Status: ✅ Auditoria concluída — 3 bugs corrigidos
-
-### 1. Autenticação e Onboarding
-- [x] Acessar `/app` e criar conta nova com e-mail teste
-- [x] Verificar exigência de senha forte (8+ caracteres, barra visual)
-- [x] Verificar tela de confirmação de e-mail (menção a Spam/Lixo)
-- [x] Confirmar e-mail e fazer login
-- [x] Verificar redirecionamento para `/cliente/onboarding` (dados da empresa)
-- [x] Preencher onboarding da empresa e salvar
-- [x] Verificar exibição sequencial: TrialWelcomeModal → OnboardingTour → Comunicados
-- [x] Verificar banner de Trial (7 dias, 200 créditos)
-
-### 2. Dashboard Início (`/cliente/inicio`)
-- [x] Saudação dinâmica (Bom dia/Boa tarde/Boa noite)
-- [x] Checklist diário visível
-- [x] KPIs carregando (leads, tarefas, créditos)
-- [x] Atalhos rápidos funcionando
-- [x] Alertas de créditos/trial visíveis
-
-### 3. CRM (`/cliente/crm`)
-- [x] Configurar primeiro funil em `/cliente/crm/config`
-- [x] Criar etapas no funil
-- [x] Criar lead manualmente (botão + formulário)
-- [x] Arrastar lead entre colunas (verificar drop preciso)
-- [x] Arrastar lead em coluna com scroll (>7 cards)
-- [x] Ativar modo seleção → checkbox de coluna seleciona todos
-- [x] Ação em massa (mover, excluir)
-- [x] Abrir detalhe do lead (sheet lateral)
-- [x] Adicionar atividade/tarefa no lead
-- [x] Importar leads via CSV (testar separador `;`)
-- [x] Criar contato e converter em lead
-- [x] Verificar limite de pipelines por plano (Trial = 3)
-
-### 4. Scripts de Vendas (`/cliente/scripts`)
-- [x] Gerar script (consome 20 créditos)
-- [x] Verificar dedução de créditos
-- [x] Copiar script gerado
-- [x] Verificar bloqueio se créditos insuficientes
-
-### 5. Plano de Vendas (`/cliente/plano-vendas`)
-- [x] Visualizar plano comercial
-- [x] Editar metas
-
-### 6. Chat / WhatsApp (`/cliente/chat`)
-- [x] Verificar bloqueio no Trial (sem WhatsApp)
-- [x] Verificar que a tela mostra overlay/gate
-
-### 7. Agentes IA (`/cliente/agentes-ia`)
-- [x] Verificar bloqueio no Trial (sem Agente IA)
-- [ ] Se Pro/Enterprise: criar agente, simular conversa (10 cr config, 2 cr/msg)
-
-### 8. Disparos (`/cliente/disparos`)
-- [x] Verificar bloqueio no Trial
-- [ ] Se Pro/Enterprise: criar disparo em massa
-
-### 9. Dashboard Comercial (`/cliente/dashboard`)
-- [x] Gráficos e métricas carregando
-- [x] Filtros de período funcionando
-
-### 10. Marketing Hub (`/cliente/marketing-hub`)
-- [x] Página carregando com cards de ferramentas (rota corrigida ✅)
-
-### 11. Plano de Marketing (`/cliente/plano-marketing`)
-- [x] Gerar estratégia IA (50 créditos)
-- [x] Verificar dedução
-
-### 12. Conteúdos (`/cliente/conteudos`)
-- [x] Gerar conteúdo (30 créditos)
-- [x] Visualizar conteúdos gerados
-- [x] Copiar/editar conteúdo
-
-### 13. Redes Sociais / Artes (`/cliente/redes-sociais`)
-- [x] Gerar briefing (gratuito)
-- [x] Gerar arte social (25 créditos)
-- [x] Gerar conceitos visuais (25 créditos)
-- [x] Download da arte gerada
-
-### 14. Sites (`/cliente/sites`)
-- [x] Gerar site (100 créditos)
-- [x] Preview do site gerado
-- [x] Verificar guia de deploy
-
-### 15. Tráfego Pago (`/cliente/trafego-pago`)
-- [x] Gerar estratégia de tráfego (50 créditos)
-- [x] Visualizar recomendações
-
-### 16. Plano e Créditos (`/cliente/plano-creditos`)
-- [x] Visualizar plano atual (Trial/Starter/Pro/Enterprise)
-- [x] Ver saldo de créditos restantes
-- [x] Visualizar pacotes de recarga (200/R$49, 500/R$99, 1000/R$179)
-- [ ] Tentar comprar pacote de recarga
-- [x] Visualizar histórico de consumo de créditos
-- [ ] Upgrade de plano (Trial → Starter/Pro/Enterprise)
-
-### 17. Configurações (`/cliente/configuracoes`)
-- [x] Editar dados da empresa
-- [x] Gerenciar usuários (verificar limite: Trial=2, Starter=10, Pro=20)
-- [x] Convidar novo usuário
-- [x] Identidade visual (logo, cores)
-
-### 18. Integrações (`/cliente/integracoes`)
-- [x] Listar integrações disponíveis
-- [ ] Configurar integração (se disponível)
-
-### 19. Agenda (`/cliente/agenda`)
-- [x] Criar evento
-- [x] Visualizar calendário
-- [x] Editar/excluir evento
-
-### 20. Avaliações (`/cliente/avaliacoes`)
-- [x] Visualizar avaliações
-- [ ] Responder avaliação (se disponível)
-
-### 21. Gamificação (`/cliente/gamificacao`)
-- [x] Visualizar troféus/conquistas
-- [x] Verificar progresso
-
-### 22. Suporte (`/cliente/suporte`)
-- [x] Abrir chamado
-- [x] Visualizar chamados existentes
-- [x] Responder chamado
-
-### 23. Notificações (`/cliente/notificacoes`)
-- [x] Verificar sino de notificações
-- [x] Marcar como lida
-
-### 24. Checklist (`/cliente/checklist`)
-- [x] Gerar checklist diário IA (5 créditos)
-- [x] Marcar tarefas como concluídas (CelebrationEffect duplicado corrigido ✅)
-
-### 25. Responsividade
-- [x] Testar todas as telas em mobile (< 768px)
-- [x] Sidebar colapsa corretamente
-- [x] Kanban CRM com scroll horizontal no mobile
-
-### 26. Logout e Segurança
-- [x] Logout redireciona para `/app`
-- [x] Tentar acessar `/cliente/*` sem login → redireciona para `/app`
-- [x] Tentar acessar `/franqueadora/*` com conta cliente → bloqueado
-- [x] Verificar que dados de outra organização não aparecem (RLS)
-
-### Bugs Corrigidos
-1. ✅ Rota `/cliente/marketing-hub` adicionada ao App.tsx
-2. ✅ Rota `/cliente/comunicados` importada e adicionada ao App.tsx
-3. ✅ `CelebrationEffect` duplicado removido de ClienteChecklist.tsx
