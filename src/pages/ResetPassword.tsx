@@ -46,7 +46,7 @@ const ResetPassword = () => {
     } else {
       setSuccess(true);
       toast.success("Senha redefinida com sucesso!");
-      setTimeout(() => navigate("/"), 2000);
+      setTimeout(() => navigate("/app"), 2000);
     }
   };
 
