@@ -719,20 +719,60 @@ export default function ClienteGamificacao() {
         </CardContent>
       </Card>
 
-      {/* Rewards */}
+      {/* Nível da Conta (Org) */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-primary/[0.02]">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-primary" />
+              <CardTitle className="text-sm font-semibold">Nível da Conta</CardTitle>
+              <Badge variant="outline" className="text-[10px] ml-auto">Recompensas da empresa</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-5">
+              <div className="text-center shrink-0">
+                <div
+                  className="w-16 h-16 rounded-xl flex items-center justify-center mb-1.5 mx-auto border-2 border-primary/20"
+                  style={{
+                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))`,
+                    boxShadow: `0 6px 24px hsl(var(--primary) / 0.1)`,
+                  }}
+                >
+                  <OrgLevelIcon className={`w-8 h-8 ${orgLevelInfo.color} drop-shadow`} />
+                </div>
+                <p className={`text-sm font-black ${orgLevelInfo.color}`}>{orgLevelInfo.title}</p>
+                <p className="text-[9px] text-muted-foreground">Nível {orgLevelInfo.level}</p>
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold">{totalOrgXp.toLocaleString()} XP total</span>
+                  {orgLevelInfo.nextTitle && <span className="text-muted-foreground">{orgLevelInfo.xpToNext.toLocaleString()} XP para {orgLevelInfo.nextTitle}</span>}
+                </div>
+                <Progress value={orgLevelInfo.progress} className="h-2.5" />
+                <p className="text-[10px] text-muted-foreground">
+                  Soma do XP de {(teamGamification ?? []).length} membro{(teamGamification ?? []).length !== 1 ? "s" : ""} da equipe
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Rewards — based on org level */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Gift className="w-4 h-4 text-primary" />
-            <CardTitle className="text-sm font-semibold">Recompensas</CardTitle>
+            <CardTitle className="text-sm font-semibold">Recompensas da Conta</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {rewardTiers.map((reward) => {
-              const isUnlocked = levelInfo.level >= reward.level;
+              const isUnlocked = orgLevelInfo.level >= reward.level;
               const isClaimed = claimedLevels.has(`level-${reward.level}`);
-              const tierLevel = LEVELS[reward.level - 1];
+              const tierLevel = ORG_LEVELS[reward.level - 1];
               const TierIcon = tierLevel.icon;
               return (
                 <div key={reward.level} className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
@@ -743,14 +783,16 @@ export default function ClienteGamificacao() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold">{reward.title}</p>
-                    <p className="text-[10px] text-muted-foreground">Nível {reward.level} — {tierLevel.name}</p>
+                    <p className="text-[10px] text-muted-foreground">Nível {reward.level} da conta — {tierLevel.name}</p>
                   </div>
                   {isClaimed ? (
                     <Badge variant="secondary" className="text-[10px] shrink-0"><CheckCircle2 className="w-3 h-3 mr-1" /> Resgatado</Badge>
-                  ) : isUnlocked ? (
+                  ) : isUnlocked && isAdmin ? (
                     <Button size="sm" className="text-xs h-8 shrink-0" onClick={() => claimReward.mutate({ level: reward.level, value: reward.value })} disabled={claimReward.isPending}>
                       <Gift className="w-3 h-3 mr-1" /> Resgatar
                     </Button>
+                  ) : isUnlocked && !isAdmin ? (
+                    <Badge variant="secondary" className="text-[10px] shrink-0">Peça ao admin</Badge>
                   ) : (
                     <Badge variant="outline" className="text-[10px] shrink-0"><Lock className="w-3 h-3 mr-1" /> Bloqueado</Badge>
                   )}
