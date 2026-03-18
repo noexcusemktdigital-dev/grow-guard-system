@@ -47,16 +47,42 @@ const Auth = () => {
       toast.error("Credenciais inválidas. Verifique seu email e senha.");
       return;
     }
-    // Block SaaS users from franchise portal
-    const check = await validatePortalAccess(data.user.id, "franchise");
-    setLoading(false);
-    if (!check.allowed) {
-      await supabase.auth.signOut({ scope: 'local' });
-      toast.error(check.message);
-      if (check.redirect) navigate(check.redirect);
-      return;
+    // Block SaaS users from franchise portal (with timeout fallback)
+    try {
+      const check = await Promise.race([
+        validatePortalAccess(data.user.id, "franchise"),
+        new Promise<{ allowed: boolean }>((resolve) =>
+          setTimeout(() => resolve({ allowed: true }), 3000)
+        ),
+      ]);
+      if (!check.allowed) {
+        setLoading(false);
+        await supabase.auth.signOut({ scope: 'local' });
+        toast.error((check as any).message || "Acesso negado.");
+        if ((check as any).redirect) navigate((check as any).redirect);
+        return;
+      }
+    } catch (err) {
+      console.warn("[Login] Portal validation failed, proceeding:", err);
     }
-    navigate("/");
+    // Determine redirect based on user role
+    let destination = "/franqueado/inicio";
+    try {
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id);
+      if (roleData && roleData.length > 0) {
+        const roles = roleData.map((r) => r.role as string);
+        if (roles.includes("super_admin") || roles.includes("admin")) {
+          destination = "/franqueadora/inicio";
+        }
+      }
+    } catch (err) {
+      console.warn("[Login] Role fetch failed, using default redirect:", err);
+    }
+    setLoading(false);
+    navigate(destination);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
