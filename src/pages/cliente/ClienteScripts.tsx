@@ -247,13 +247,11 @@ export default function ClienteScripts() {
         </Tabs>
       )}
 
-      {showCreate && (
-        <ScriptGeneratorDialog
-          open={showCreate}
-          onOpenChange={setShowCreate}
-          onSave={handleSaveFromDialog}
-        />
-      )}
+      <ScriptGeneratorDialog
+        open={showCreate}
+        onOpenChange={setShowCreate}
+        onSave={handleSaveFromDialog}
+      />
 
       <InsufficientCreditsDialog
         open={showCreditsDialog}
