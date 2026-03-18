@@ -405,7 +405,9 @@ export default function ClienteAgenda() {
           <Calendar className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-bold">Agenda</h1>
           {eventCount > 0 && (
-            <Badge variant="secondary" className="text-[10px]">{eventCount} evento{eventCount !== 1 ? "s" : ""}</Badge>
+            <Badge variant="secondary" className="text-[10px]">
+              {eventCount} evento{eventCount !== 1 ? "s" : ""} {viewMode === "month" ? "no mês" : viewMode === "week" ? "na semana" : "no dia"}
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
