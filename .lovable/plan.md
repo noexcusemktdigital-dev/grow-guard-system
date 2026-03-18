@@ -1,27 +1,32 @@
 
 
-# Bloco 3: Testes Reais — Contatos do CRM
+# Bloco: Testes Reais — Agentes de IA (Ações Reais via Browser)
 
-Com base no progresso:
-- **Bloco 1** ✅ Configurações CRM (funis, equipe, produtos, parceiros, SLA, integrações, automações)
-- **Bloco 2** ✅ Pipeline Kanban (criar lead, drag-drop, editar, marcar ganho/perdido)
-- **Bloco 3** → **Contatos** (próximo)
+Sim, vou executar **todas as ações reais** via browser, como um usuário real faria — clicando, preenchendo, salvando, simulando conversas, etc.
 
-## Testes planejados
+## Execução Sequencial com Browser
 
-| # | Ação | Detalhe |
-|---|------|---------|
-| 1 | Criar contato | Preencher nome, email, telefone, empresa, tags |
-| 2 | Editar contato | Alterar campos e salvar |
-| 3 | Converter em lead | Usar ação de conversão contato → lead |
-| 4 | Deletar contato | Excluir e confirmar |
-| 5 | Busca | Pesquisar por nome/email |
-| 6 | Seleção em massa | Selecionar múltiplos e deletar em lote |
+Login: `cliente.teste@noexcuse.com` / `19961996` → Menu lateral → **Agentes de IA**
 
-## Execução
-Login com `cliente.teste@noexcuse.com` / `19961996` → CRM → aba Contatos → executar cada ação com screenshots de evidência.
+| # | Ação Real | O que vou fazer no browser |
+|---|-----------|---------------------------|
+| 1 | **Criar agente completo** | Clicar "Novo Agente" → preencher wizard completo (nome, função SDR, sexo, persona, saudação, base de conhecimento com texto, objetivos, regras) → Salvar |
+| 2 | **Testar simulador** | Abrir agente criado → aba Simulador → enviar mensagens reais e verificar respostas da IA |
+| 3 | **Gerar com IA** | Clicar nos botões "Gerar persona com IA", "Gerar saudação", "Gerar prompt" → verificar resultados |
+| 4 | **Editar agente** | Reabrir agente → alterar nome e campos → Salvar → verificar persistência |
+| 5 | **Toggle status** | Clicar Pausar/Ativar no card → verificar badge e toast |
+| 6 | **Duplicar agente** | Clicar duplicar → verificar cópia na lista |
+| 7 | **Excluir agentes** | Excluir cópia e original → confirmar empty state |
+| 8 | **Validações** | Tentar avançar wizard sem campos obrigatórios → verificar bloqueio |
+| 9 | **Upload avatar** | Fazer upload de imagem no campo de avatar |
+| 10 | **Bugs e melhorias** | Documentar qualquer erro ou UX gap encontrado durante os testes |
 
-## Arquivos relevantes (sem alteração)
-- `src/components/crm/CrmContactsView.tsx` — UI de contatos
-- `src/hooks/useCrmContacts.ts` — CRUD e bulk operations
+Cada ação terá screenshot de evidência. Vou reportar bugs encontrados e sugerir melhorias concretas ao final.
+
+## Arquivos relevantes (sem alteração nesta fase)
+- `src/pages/cliente/ClienteAgentesIA.tsx`
+- `src/components/cliente/AgentFormSheet.tsx`
+- `src/components/cliente/AgentCard.tsx`
+- `src/hooks/useClienteAgents.ts`
+- `supabase/functions/ai-agent-simulate/index.ts`
 
