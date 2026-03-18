@@ -42,6 +42,7 @@ export function useClienteTasks(filters?: { status?: string; assigned_to?: strin
       return (data ?? []) as ClientTask[];
     },
     enabled: !!orgId,
+    staleTime: 1000 * 60 * 2,
   });
 }
 
