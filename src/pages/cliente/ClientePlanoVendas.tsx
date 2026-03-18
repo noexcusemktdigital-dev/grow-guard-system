@@ -30,7 +30,7 @@ import { DiagnosticoTermometro } from "@/components/diagnostico/DiagnosticoTermo
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sounds";
-import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
+import { useSalesPlan, useSaveSalesPlan, useSalesPlanHistory, useArchiveSalesPlan } from "@/hooks/useSalesPlan";
 import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
