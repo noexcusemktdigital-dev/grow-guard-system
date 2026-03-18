@@ -1,43 +1,31 @@
 
 
-# Plano: Testes Funcionais Completos do CRM via Browser
+# Plano: Testes Funcionais CRM via Browser com Login
 
 ## Abordagem
-Executar os 14 testes restantes do CRM usando browser automation (`act`, `observe`, `screenshot`). Interações reais no preview — clicar, preencher formulários, verificar resultados visuais.
+1. Navegar ao sandbox preview
+2. Fazer login com as credenciais fornecidas (cliente.teste@noexcuse.com / 19961996)
+3. Navegar ao CRM
+4. Executar os 14 testes restantes sequencialmente com interações reais
 
-## Pré-requisito
-O usuário confirmou que já fez login no preview. Vou navegar diretamente para `/cliente/crm` e executar sequencialmente.
-
-## Sequência de Execução
-
-### Bloco 1 — Funis (#5)
-- Navegar para Config > Funis
-- Deletar funil não-padrão
-- Screenshot de confirmação
-
-### Bloco 2 — Contatos (#6-9)
-- Navegar para aba Contatos
-- Criar contato (nome, email, telefone, empresa, tags)
-- Editar contato (alterar empresa, adicionar tag)
-- Converter contato em lead
-- Deletar contato
-- Screenshot após cada ação
-
-### Bloco 3 — Config (#10-14)
-- Verificar aba Equipe
-- Criar/deletar Produto
-- Criar/deletar Parceiro
-- Verificar SLA
-- Verificar Integrações
-- Screenshot de cada aba
-
-### Bloco 4 — Automações (#15-18)
-- Criar automação
-- Editar automação
-- Toggle ativo/inativo
-- Deletar automação
-- Screenshot de cada ação
+## Sequência
+| # | Ação |
+|---|------|
+| 5 | Deletar funil não-padrão |
+| 6 | Criar contato (nome, email, telefone, empresa, tags) |
+| 7 | Editar contato |
+| 8 | Converter contato em lead |
+| 9 | Deletar contato |
+| 10 | Verificar aba Equipe |
+| 11 | Criar/deletar Produto |
+| 12 | Criar/deletar Parceiro |
+| 13 | Verificar SLA |
+| 14 | Verificar Integrações |
+| 15 | Criar automação |
+| 16 | Editar automação |
+| 17 | Toggle ativo/inativo |
+| 18 | Deletar automação |
 
 ## Entregável
-Tabela consolidada dos 18 testes com status OK/BUG, screenshots das evidências, e correções inline para bugs encontrados.
+Tabela consolidada com status OK/BUG + screenshots de evidência para cada bloco.
 
