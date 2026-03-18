@@ -78,15 +78,25 @@ const SaasAuth = () => {
       }
       return;
     }
-    // Block franchise users from SaaS portal
-    const check = await validatePortalAccess(data.user.id, "saas");
-    setLoading(false);
-    if (!check.allowed) {
-      await supabase.auth.signOut({ scope: 'local' });
-      toast.error(check.message);
-      if (check.redirect) navigate(check.redirect);
-      return;
+    // Block franchise users from SaaS portal (with timeout fallback)
+    try {
+      const check = await Promise.race([
+        validatePortalAccess(data.user.id, "saas"),
+        new Promise<{ allowed: boolean }>((resolve) =>
+          setTimeout(() => resolve({ allowed: true }), 3000)
+        ),
+      ]);
+      if (!check.allowed) {
+        setLoading(false);
+        await supabase.auth.signOut({ scope: 'local' });
+        toast.error((check as any).message || "Acesso negado.");
+        if ((check as any).redirect) navigate((check as any).redirect);
+        return;
+      }
+    } catch (err) {
+      console.warn("[Login] Portal validation failed, proceeding:", err);
     }
+    setLoading(false);
     window.location.href = "/cliente/inicio";
   };
 
