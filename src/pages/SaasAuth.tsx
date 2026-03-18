@@ -97,7 +97,7 @@ const SaasAuth = () => {
       console.warn("[Login] Portal validation failed, proceeding:", err);
     }
     setLoading(false);
-    window.location.href = "/cliente/inicio";
+    navigate("/cliente/inicio");
   };
 
   const passwordChecks = [
