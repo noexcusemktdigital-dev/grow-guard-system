@@ -1,64 +1,52 @@
 
+Diagnóstico que eu fecharia agora:
 
-## Plano: Arquitetura Unificada de Planos e Créditos
+- O login em si está funcionando no backend. Há `POST /auth/v1/token` com status `200` para `cliente.teste@noexcuse.com`.
+- O usuário existe, tem `role = cliente_admin` e tem membership em uma organização `cliente`.
+- As políticas de acesso permitem ler `profiles`, `user_roles`, `organization_memberships` e `organizations` para esse usuário.
+- Então o problema mais provável não é credencial nem permissão de login: ele está no bootstrap pós-login do frontend.
 
-### Status: ✅ Implementado
+Erro mais provável:
+- `AuthContext` faz o app esperar a resolução de perfil/papel logo após o login.
+- Esse fluxo hoje não tem proteção contra erro/timeout em `fetchProfileAndRole`.
+- Se qualquer consulta falhar ou ficar pendurada, o `role` permanece `null` e o `ProtectedRoute` fica mostrando spinner indefinidamente.
+- Isso explica exatamente o sintoma: autentica, “fica carregando”, mas nunca entra.
 
-### Resumo
+Sinais que reforçam isso:
+- `SaasAuth` chama `signInWithPassword` com sucesso e depois tenta redirecionar.
+- O gargalo real vem depois, quando o contexto tenta resolver sessão/perfil/role.
+- O warning do `GoogleButton` com `ref` é ruído visual, mas não explica o travamento.
+- Existe ainda um risco secundário no projeto: há duas versões da função `get_user_org_id`, o que pode causar comportamento inconsistente depois que o usuário entra, mas isso parece ser problema secundário, não o bloqueio principal do login.
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+Plano de correção:
+1. Fortalecer `src/contexts/AuthContext.tsx`
+   - Envolver `fetchProfileAndRole` em `try/catch/finally`.
+   - Buscar `profile` e `user_roles` em paralelo com tolerância a falha.
+   - Garantir que `loading` sempre seja desligado, mesmo se alguma query falhar.
+   - Se falhar a leitura do perfil, não bloquear login.
+   - Se falhar a leitura do papel, registrar erro claro e aplicar fallback controlado em vez de deixar `role = null` para sempre.
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+2. Remover a dependência de corrida entre login e redirect
+   - Em `src/pages/SaasAuth.tsx` e `src/pages/Auth.tsx`, parar de depender do redirecionamento imediato logo após `signInWithPassword`.
+   - Deixar o redirecionamento acontecer quando `AuthContext` confirmar `user + role` prontos.
+   - Isso elimina a disputa entre “login handler”, `onAuthStateChange` e `ProtectedRoute`.
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+3. Melhorar recuperação no `ProtectedRoute`
+   - Manter loader enquanto o contexto resolve.
+   - Mas impedir spinner infinito: se houver sessão autenticada sem `role` por tempo demais, mostrar erro de sessão e rota de recuperação em vez de travar para sempre.
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+4. Corrigir a causa secundária de inconsistência
+   - Consolidar o uso de `get_user_org_id` para uma única assinatura portal-aware.
+   - Isso reduz risco de hooks internos carregarem errado após o login.
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+Arquivos que eu alteraria:
+- `src/contexts/AuthContext.tsx`
+- `src/pages/SaasAuth.tsx`
+- `src/pages/Auth.tsx`
+- `src/components/ProtectedRoute.tsx`
+- possivelmente um ajuste de backend/migração para unificar `get_user_org_id`
 
----
-
-## Análise: Custo Real Lovable vs Receita dos Planos
-
-### Status: ✅ Documentado
-
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
-
-### Margem por Plano
-
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
-
-### Custo por funcionalidade
-
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
-
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
+Resumo objetivo:
+- O erro não está no login do usuário teste.
+- O erro está no fluxo de inicialização da sessão no frontend, que não trata falha/timeout e deixa o app preso esperando `role`.
+- Eu corrigiria primeiro o `AuthContext`, depois alinharia o redirecionamento ao estado real da sessão, e por fim limparia a RPC duplicada para evitar novos travamentos depois da entrada.
