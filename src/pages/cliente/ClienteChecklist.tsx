@@ -353,7 +353,6 @@ export default function ClienteChecklist() {
 
   return (
     <div className="w-full space-y-5">
-      <CelebrationEffect />
       <PageHeader
         title="Tarefas"
         subtitle="Gerencie suas tarefas diárias e atribuições"

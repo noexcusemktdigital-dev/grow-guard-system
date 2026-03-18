@@ -212,6 +212,8 @@ function App() {
                   <Route path="configuracoes" element={<ClienteConfiguracoes />} />
                   <Route path="avaliacoes" element={<ClienteAvaliacoes />} />
                   <Route path="suporte" element={<ClienteSuporte />} />
+                  <Route path="marketing-hub" element={<ClienteMarketingHub />} />
+                  <Route path="comunicados" element={<ClienteComunicados />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
