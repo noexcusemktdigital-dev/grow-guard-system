@@ -32,7 +32,7 @@ const funnelStages = [
 export default function ClienteScripts() {
   const { data: scripts, isLoading } = useClienteScripts();
   const { createScript, updateScript, deleteScript: deleteScriptMutation } = useClienteScriptMutations();
-  const { hasStrategy, dores, objecoes, gatilhosCompra, propostaValor } = useStrategyData();
+  const { hasStrategy } = useStrategyData();
   const { data: orgId } = useUserOrgId();
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
