@@ -201,32 +201,88 @@ export default function ClienteScripts() {
 
                     {expandedId === s.id && (
                       <div className="animate-fade-in mt-3 space-y-3">
-                        <div className="p-4 bg-background/60 backdrop-blur-sm rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
-                          {s.content || "Sem conteúdo"}
-                        </div>
+                        {editingId === s.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={editTitle}
+                              onChange={e => setEditTitle(e.target.value)}
+                              className="text-sm font-semibold"
+                              placeholder="Título do script"
+                            />
+                            <Textarea
+                              value={editContent}
+                              onChange={e => setEditContent(e.target.value)}
+                              rows={12}
+                              className="font-mono text-xs leading-relaxed"
+                            />
+                          </div>
+                        ) : (
+                          <div className="p-4 bg-background/60 backdrop-blur-sm rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
+                            {s.content || "Sem conteúdo"}
+                          </div>
+                        )}
                         <div className="flex items-center justify-between">
                           <p className="text-[10px] text-muted-foreground">Atualizado em {new Date(s.updated_at).toLocaleDateString("pt-BR")}</p>
                           <div className="flex gap-1.5">
-                            <Button
-                              size="sm" variant="outline"
-                              className="text-[10px] h-6 px-2 gap-1"
-                              disabled={improvingId === s.id}
-                              onClick={(e) => { e.stopPropagation(); handleImproveWithAI(s.id, s.content || "", s.category || "prospeccao"); }}
-                            >
-                              {improvingId === s.id ? (
-                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                              ) : (
-                                <Sparkles className="w-2.5 h-2.5" />
-                              )}
-                              Melhorar com IA
-                            </Button>
-                            <Button
-                              size="sm" variant="outline"
-                              className="text-[10px] h-6 px-2 text-destructive hover:text-destructive"
-                              onClick={(e) => { e.stopPropagation(); deleteScriptMutation.mutate(s.id); toast({ title: "Script excluído!" }); }}
-                            >
-                              <Trash2 className="w-2.5 h-2.5 mr-1" /> Excluir
-                            </Button>
+                            {editingId === s.id ? (
+                              <>
+                                <Button
+                                  size="sm" variant="default"
+                                  className="text-[10px] h-6 px-2 gap-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateScript.mutate(
+                                      { id: s.id, title: editTitle, content: editContent },
+                                      { onSuccess: () => { toast({ title: "Script atualizado!" }); setEditingId(null); } }
+                                    );
+                                  }}
+                                >
+                                  <Check className="w-2.5 h-2.5" /> Salvar
+                                </Button>
+                                <Button
+                                  size="sm" variant="outline"
+                                  className="text-[10px] h-6 px-2 gap-1"
+                                  onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
+                                >
+                                  <X className="w-2.5 h-2.5" /> Cancelar
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm" variant="outline"
+                                  className="text-[10px] h-6 px-2 gap-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingId(s.id);
+                                    setEditTitle(s.title);
+                                    setEditContent(s.content || "");
+                                  }}
+                                >
+                                  <Pencil className="w-2.5 h-2.5" /> Editar
+                                </Button>
+                                <Button
+                                  size="sm" variant="outline"
+                                  className="text-[10px] h-6 px-2 gap-1"
+                                  disabled={improvingId === s.id}
+                                  onClick={(e) => { e.stopPropagation(); handleImproveWithAI(s.id, s.content || "", s.category || "prospeccao"); }}
+                                >
+                                  {improvingId === s.id ? (
+                                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                  ) : (
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                  )}
+                                  Melhorar com IA
+                                </Button>
+                                <Button
+                                  size="sm" variant="outline"
+                                  className="text-[10px] h-6 px-2 text-destructive hover:text-destructive"
+                                  onClick={(e) => { e.stopPropagation(); deleteScriptMutation.mutate(s.id); toast({ title: "Script excluído!" }); }}
+                                >
+                                  <Trash2 className="w-2.5 h-2.5 mr-1" /> Excluir
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
