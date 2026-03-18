@@ -36,7 +36,7 @@ function SetPasswordSection() {
   if (!isGoogleUser) return null;
 
   const handleSetPassword = async () => {
-    if (password.length < 6) return toast.error("A senha deve ter pelo menos 6 caracteres");
+    if (password.length < 8) return toast.error("A senha deve ter pelo menos 8 caracteres");
     if (password !== confirm) return toast.error("As senhas não coincidem");
     setSaving(true);
     try {
