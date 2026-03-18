@@ -485,6 +485,15 @@ export default function ClienteInicio() {
                 </div>
               </CardHeader>
               <CardContent className="px-5 pb-5">
+                {revenueData.every(d => d.receita === 0) ? (
+                  <div className="flex flex-col items-center justify-center h-48 text-center">
+                    <BarChart3 className="w-8 h-8 text-muted-foreground/40 mb-2" />
+                    <p className="text-xs text-muted-foreground mb-3">Feche vendas no CRM para visualizar receita aqui</p>
+                    <Button variant="outline" size="sm" className="text-xs h-8 rounded-lg" onClick={() => navigate("/cliente/crm")}>
+                      Ir para CRM <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
+                ) : (
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={revenueData}>
