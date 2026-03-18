@@ -1,35 +1,34 @@
 
 
-# Plano: Finalizar Testes CRM + Continuar Blocos Restantes
+# Plano: Finalizar Testes Funcionais do CRM (14 ações restantes)
 
-## Status Atual
+## Ações Pendentes
 
-| # | Ação | Status |
-|---|------|--------|
-| 1-4 | Funis (criar, editar, padrão, trocar) | ✅ OK (bug padrão corrigido) |
-| 5-18 | Deletar funil, Contatos, Config, Automações | ⏳ Pendente |
-| 19-39 | Comercial, Marketing, Sistema, Mobile | ⏳ Pendente |
-
-## Proposta: Execução Sequencial Completa
-
-### Fase 1 — Finalizar CRM (14 ações restantes)
-5. Deletar funil de teste
-6-9. Contatos: criar, editar, converter em lead, deletar
-10-14. Config: equipe, produtos CRUD, parceiros CRUD, SLA, integrações (webhook URL)
-15-18. Automações: criar, editar, toggle ativo/inativo, deletar
-
-### Fase 2 — Comercial (5 ações)
-Scripts IA, Scripts manual, editar, deletar, Plano de Vendas
-
-### Fase 3 — Marketing (6 ações)
-Estratégia, Conteúdos (gerar + deletar), Redes Sociais, Sites wizard, Tráfego Pago
-
-### Fase 4 — Sistema e Mobile (6 ações)
-Configurações, Plano/Créditos, Suporte, Gamificação, Mobile 375px, Logout
-
-## Entregável
-Tabela consolidada com todos os 39 testes, status OK/BUG, e correções propostas para cada bug encontrado.
+| # | Módulo | Ação |
+|---|--------|------|
+| 5 | Funis | Deletar "Funil Teste Editado" |
+| 6 | Contatos | Criar contato com nome, email, telefone, empresa, tags |
+| 7 | Contatos | Editar contato (alterar empresa, adicionar tag) |
+| 8 | Contatos | Converter contato em lead |
+| 9 | Contatos | Deletar contato |
+| 10 | Config | Verificar aba Equipe |
+| 11 | Config | Criar produto "Produto Teste" R$500, verificar, deletar |
+| 12 | Config | Criar parceiro "Parceiro Teste", verificar, deletar |
+| 13 | Config | Verificar/alterar SLA |
+| 14 | Config | Verificar Integrações (API key, webhook) |
+| 15 | Automações | Criar automação (trigger lead_created + action send_notification) |
+| 16 | Automações | Editar automação |
+| 17 | Automações | Toggle ativo/inativo |
+| 18 | Automações | Deletar automação |
 
 ## Execução
-Tudo via browser automation com `act` (interações reais). Cada bug encontrado será reportado com screenshot e fix proposto. Posso corrigir bugs inline ou acumular todos ao final.
+
+1. Login no preview, navegar ao CRM via sidebar
+2. Executar as 14 ações sequencialmente com `act` (interações reais)
+3. Screenshot após cada bloco para evidência
+4. Bugs encontrados: reportados com screenshot + fix proposto
+
+## Entregável
+
+Tabela consolidada com todos os 18 testes (incluindo os 4 já feitos), status OK/BUG e detalhes. Nenhum avanço para blocos seguintes até aprovação.
 
