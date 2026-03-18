@@ -50,7 +50,14 @@ export function AgentCard({ agent, onEdit, onDuplicate, onDelete, onToggleStatus
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-sm truncate">{agent.name}</h3>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <h3 className="font-semibold text-sm truncate max-w-[180px]">{agent.name}</h3>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[300px]">
+                  <p className="text-xs">{agent.name}</p>
+                </TooltipContent>
+              </Tooltip>
               <Badge className={`text-[10px] px-1.5 py-0 shrink-0 ${roleInfo.color}`}>
                 {roleInfo.label}
               </Badge>
