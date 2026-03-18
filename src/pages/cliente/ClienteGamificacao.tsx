@@ -45,6 +45,16 @@ const LEVELS = [
   { name: "Lenda", minXp: 12000, maxXp: Infinity, icon: Trophy, color: "text-primary" },
 ];
 
+// Organization-level thresholds (sum of all members' XP)
+const ORG_LEVELS = [
+  { name: "Novato", minXp: 0, maxXp: 999, icon: Shield, color: "text-muted-foreground" },
+  { name: "Aprendiz", minXp: 1000, maxXp: 2999, icon: Sword, color: "text-blue-500" },
+  { name: "Profissional", minXp: 3000, maxXp: 6999, icon: Star, color: "text-purple-500" },
+  { name: "Especialista", minXp: 7000, maxXp: 13999, icon: Gem, color: "text-amber-500" },
+  { name: "Mestre", minXp: 14000, maxXp: 23999, icon: Crown, color: "text-orange-500" },
+  { name: "Lenda", minXp: 24000, maxXp: Infinity, icon: Trophy, color: "text-primary" },
+];
+
 const medalIcons: Record<string, React.ElementType> = {
   lead: Target, sales: Coins, streak: Timer, crm: BarChart3, closer: Trophy,
   content: FileText, dispatch: Send, site: Globe, agent: Bot,
