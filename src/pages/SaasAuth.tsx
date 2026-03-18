@@ -87,7 +87,7 @@ const SaasAuth = () => {
       if (check.redirect) navigate(check.redirect);
       return;
     }
-    navigate("/cliente/inicio");
+    window.location.href = "/cliente/inicio";
   };
 
   const passwordChecks = [
