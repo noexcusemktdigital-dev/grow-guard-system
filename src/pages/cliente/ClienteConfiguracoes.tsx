@@ -36,7 +36,7 @@ function SetPasswordSection() {
   if (!isGoogleUser) return null;
 
   const handleSetPassword = async () => {
-    if (password.length < 6) return toast.error("A senha deve ter pelo menos 6 caracteres");
+    if (password.length < 8) return toast.error("A senha deve ter pelo menos 8 caracteres");
     if (password !== confirm) return toast.error("As senhas não coincidem");
     setSaving(true);
     try {
@@ -57,7 +57,7 @@ function SetPasswordSection() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2"><Label>Nova Senha</Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" /></div>
+          <div className="space-y-2"><Label>Nova Senha</Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" /></div>
           <div className="space-y-2"><Label>Confirmar Senha</Label><Input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha" /></div>
         </div>
         <Button onClick={handleSetPassword} disabled={saving || !password}>{saving ? "Salvando..." : "Definir Senha"}</Button>

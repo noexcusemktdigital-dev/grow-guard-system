@@ -34,8 +34,8 @@ const ResetPassword = () => {
       toast.error("As senhas não coincidem");
       return;
     }
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres");
+    if (password.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres");
       return;
     }
     setLoading(true);
@@ -46,7 +46,7 @@ const ResetPassword = () => {
     } else {
       setSuccess(true);
       toast.success("Senha redefinida com sucesso!");
-      setTimeout(() => navigate("/"), 2000);
+      setTimeout(() => navigate("/app"), 2000);
     }
   };
 
@@ -85,7 +85,7 @@ const ResetPassword = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
               </div>
@@ -102,7 +102,7 @@ const ResetPassword = () => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pl-10"
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
               </div>

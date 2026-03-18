@@ -18,8 +18,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProgressCtaCard } from "@/components/premium/ProgressCtaCard";
-import { TrialWelcomeModal } from "@/components/cliente/TrialWelcomeModal";
-import { CelebrationEffect, triggerCelebration } from "@/components/CelebrationEffect";
+import { triggerCelebration } from "@/components/CelebrationEffect";
 import { useClienteChecklist, useClienteGamification, useClienteContentMutations } from "@/hooks/useClienteContent";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { useActiveGoals } from "@/hooks/useGoals";
@@ -291,8 +290,6 @@ export default function ClienteInicio() {
 
   return (
     <div className="w-full space-y-5">
-      <CelebrationEffect />
-      <TrialWelcomeModal />
 
       {/* Hero Section */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
