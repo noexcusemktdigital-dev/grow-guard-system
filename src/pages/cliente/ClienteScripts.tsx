@@ -296,10 +296,15 @@ export default function ClienteScripts() {
               ))}
               {filtered(stage.key).length === 0 && (
                 <div className="text-center py-12">
-                  <Search className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    {search ? `Nenhum resultado para "${search}"` : "Nenhum script nesta etapa"}
+                  <stage.icon className={`w-8 h-8 mx-auto mb-3 opacity-30 ${stage.accent}`} />
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {search ? `Nenhum resultado para "${search}"` : `Nenhum script de ${stage.label}`}
                   </p>
+                  {!search && (
+                    <Button size="sm" variant="outline" onClick={() => setShowCreate(true)} className="gap-1">
+                      <Plus className="w-3.5 h-3.5" /> Criar Script de {stage.label}
+                    </Button>
+                  )}
                 </div>
               )}
             </TabsContent>
