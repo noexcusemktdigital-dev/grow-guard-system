@@ -680,15 +680,17 @@ export default function ClientePlanoVendas() {
   // ── Metas charts data ──
   const progressChartData = useMemo(() => {
     if (!activeGoals?.length || !goalProgress) return [];
-    return activeGoals.map(g => {
-      const p = goalProgress[g.id];
-      return {
-        name: g.title?.length > 25 ? g.title.slice(0, 22) + "..." : g.title,
-        atual: p?.currentValue ?? 0,
-        alvo: g.target_value ?? 0,
-        percent: p?.percent ?? 0,
-      };
-    });
+    return [...activeGoals]
+      .sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+      .map(g => {
+        const p = goalProgress[g.id];
+        return {
+          name: g.title?.length > 25 ? g.title.slice(0, 22) + "..." : g.title,
+          atual: p?.currentValue ?? 0,
+          alvo: g.target_value ?? 0,
+          percent: p?.percent ?? 0,
+        };
+      });
   }, [activeGoals, goalProgress]);
 
   const evolutionChartData = useMemo(() => {
