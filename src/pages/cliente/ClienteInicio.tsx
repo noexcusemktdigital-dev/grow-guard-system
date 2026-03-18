@@ -18,8 +18,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProgressCtaCard } from "@/components/premium/ProgressCtaCard";
-import { TrialWelcomeModal } from "@/components/cliente/TrialWelcomeModal";
-import { CelebrationEffect, triggerCelebration } from "@/components/CelebrationEffect";
+import { triggerCelebration } from "@/components/CelebrationEffect";
 import { useClienteChecklist, useClienteGamification, useClienteContentMutations } from "@/hooks/useClienteContent";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { useActiveGoals } from "@/hooks/useGoals";
