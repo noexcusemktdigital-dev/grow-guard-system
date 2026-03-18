@@ -3,13 +3,12 @@ import { render } from "@testing-library/react";
 import { screen, fireEvent, waitFor } from "@testing-library/dom";
 import { BrowserRouter } from "react-router-dom";
 
-// Mock supabase
+// Mock supabase (Auth imports from @/lib/supabase)
 const mockSignIn = vi.fn();
 const mockResetPassword = vi.fn();
 const mockSignOut = vi.fn();
-const mockSelectRole = vi.fn();
 
-vi.mock("@/integrations/supabase/client", () => ({
+vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
       signInWithPassword: (...args: any[]) => mockSignIn(...args),
@@ -18,10 +17,15 @@ vi.mock("@/integrations/supabase/client", () => ({
     },
     from: () => ({
       select: () => ({
-        eq: () => mockSelectRole(),
+        eq: () => ({ data: [{ role: "franqueado" }] }),
       }),
     }),
   },
+}));
+
+// Mock portalRoleGuard
+vi.mock("@/lib/portalRoleGuard", () => ({
+  validatePortalAccess: vi.fn().mockResolvedValue({ allowed: true }),
 }));
 
 // Mock sonner
@@ -50,9 +54,7 @@ function renderAuth() {
 describe("Auth (Franqueadora/Franqueado login)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: login succeeds and role is allowed (franqueado)
     mockSignIn.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
-    mockSelectRole.mockResolvedValue({ data: [{ role: "franqueado" }] });
   });
 
   it("renders email and password fields", () => {
