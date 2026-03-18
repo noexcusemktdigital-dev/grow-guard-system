@@ -42,6 +42,7 @@ export function useClienteTasks(filters?: { status?: string; assigned_to?: strin
       return (data ?? []) as ClientTask[];
     },
     enabled: !!orgId,
+    staleTime: 1000 * 60 * 2,
   });
 }
 
@@ -96,8 +97,42 @@ export function useClienteTaskMutations() {
         : { status: "pending", completed_at: null, completed_by: null };
       const { error } = await supabase.from("client_tasks").update(updates).eq("id", id);
       if (error) throw error;
+
+      // Award +10 XP when completing a task
+      if (done && user && orgId) {
+        const { data: gamData } = await supabase
+          .from("client_gamification")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("organization_id", orgId)
+          .maybeSingle();
+
+        if (gamData) {
+          const currentXp = (gamData.xp as number) || 0;
+          const newXp = currentXp + 10;
+          let title = "Novato";
+          if (newXp >= 12000) title = "Lenda";
+          else if (newXp >= 7000) title = "Mestre";
+          else if (newXp >= 3500) title = "Especialista";
+          else if (newXp >= 1500) title = "Profissional";
+          else if (newXp >= 500) title = "Aprendiz";
+
+          await supabase
+            .from("client_gamification")
+            .update({ xp: newXp, title, points: (gamData.points || 0) + 10, last_activity_at: new Date().toISOString() })
+            .eq("id", gamData.id);
+
+          return { xpAwarded: true };
+        }
+      }
+      return { xpAwarded: false };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["client-tasks"] }),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["client-tasks"] });
+      if (result?.xpAwarded) {
+        qc.invalidateQueries({ queryKey: ["client-gamification"] });
+      }
+    },
   });
 
   const deleteTask = useMutation({

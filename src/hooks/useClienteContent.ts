@@ -95,6 +95,7 @@ export function useClienteChecklist(date?: string) {
       return data;
     },
     enabled: !!user,
+    staleTime: 1000 * 60 * 2,
   });
 }
 

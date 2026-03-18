@@ -3,6 +3,7 @@ import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButto
 import {
   CheckSquare, Plus, CheckCircle2, Flame, Settings2, Zap, Sparkles,
   Calendar, Users, Filter, Trash2, Clock, AlertTriangle, ChevronDown,
+  Wand2, Edit2,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,26 +15,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import {
   useClienteChecklist, useClienteGamification, useClienteContentMutations,
 } from "@/hooks/useClienteContent";
-import { useClienteTasks, useClienteTaskMutations } from "@/hooks/useClienteTasks";
+import { useClienteTasks, useClienteTaskMutations, ClientTask } from "@/hooks/useClienteTasks";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { format, isToday, isPast, isFuture, parseISO } from "date-fns";
+import { format, isToday, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { triggerCelebration } from "@/components/CelebrationEffect";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-
-const categoryConfig: Record<string, { color: string; icon: string }> = {
-  comercial: { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: "💼" },
-  marketing: { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", icon: "📣" },
-  operacional: { color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", icon: "⚙️" },
-};
+import { useQueryClient } from "@tanstack/react-query";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { playSound } from "@/lib/sounds";
 
 const priorityConfig: Record<string, { label: string; color: string }> = {
   high: { label: "Alta", color: "bg-destructive/10 text-destructive border-destructive/20" },
@@ -47,8 +46,11 @@ const sourceConfig: Record<string, { label: string; color: string }> = {
   system: { label: "Sistema", color: "text-amber-500" },
 };
 
+/* ─── DAILY CHECKLIST TAB ─── */
 function DailyChecklistTab() {
   const { user } = useAuth();
+  const { data: orgId } = useUserOrgId();
+  const qc = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
   const { data: items, isLoading } = useClienteChecklist(today);
   const { data: gamification } = useClienteGamification();
@@ -58,7 +60,6 @@ function DailyChecklistTab() {
   const [generating, setGenerating] = useState(false);
 
   const streakDays = gamification?.streak_days ?? 0;
-
   const allItems = items ?? [];
   const completed = allItems.filter((i: any) => i.is_completed).length;
   const total = allItems.length || 1;
@@ -78,6 +79,23 @@ function DailyChecklistTab() {
       { onSuccess: (result) => { if (result?.allDone) triggerCelebration(); } }
     );
   }, [toggleChecklistItem]);
+
+  const handleGenerateChecklist = async () => {
+    if (!orgId) return;
+    setGenerating(true);
+    try {
+      const { error } = await supabase.functions.invoke("generate-daily-checklist", {
+        body: { organization_id: orgId },
+      });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["client-checklist"] });
+      toast.success("Checklist gerado com sucesso!");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar checklist");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const pendingItems = allItems.filter((i: any) => !i.is_completed);
   const doneItems = allItems.filter((i: any) => i.is_completed);
@@ -130,9 +148,12 @@ function DailyChecklistTab() {
       )}
 
       {pendingItems.length === 0 && doneItems.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-12 space-y-3">
           <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
           <p className="text-sm text-muted-foreground">Nenhuma tarefa hoje</p>
+          <Button variant="outline" size="sm" onClick={handleGenerateChecklist} disabled={generating}>
+            <Wand2 className="w-4 h-4 mr-1" /> Gerar Checklist com IA (5 créditos)
+          </Button>
         </div>
       ) : (
         <>
@@ -171,15 +192,117 @@ function DailyChecklistTab() {
   );
 }
 
+/* ─── TASK FORM DIALOG ─── */
+interface TaskFormProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  task?: ClientTask | null;
+  members?: any[];
+  isAdmin: boolean;
+  onSubmit: (data: any) => void;
+  isPending: boolean;
+}
+
+function TaskFormDialog({ open, onOpenChange, task, members, isAdmin, onSubmit, isPending }: TaskFormProps) {
+  const isEdit = !!task;
+  const [form, setForm] = useState({
+    title: task?.title ?? "",
+    description: task?.description ?? "",
+    due_date: task?.due_date ?? "",
+    priority: task?.priority ?? "medium",
+    assigned_to: task?.assigned_to ?? "__none__",
+    assigned_team: task?.assigned_team ?? "",
+  });
+
+  // Reset form when task changes
+  const key = task?.id ?? "new";
+  useState(() => {
+    setForm({
+      title: task?.title ?? "",
+      description: task?.description ?? "",
+      due_date: task?.due_date ?? "",
+      priority: task?.priority ?? "medium",
+      assigned_to: task?.assigned_to ?? "__none__",
+      assigned_team: task?.assigned_team ?? "",
+    });
+  });
+
+  const handleSubmit = () => {
+    if (!form.title.trim()) return;
+    onSubmit({
+      ...form,
+      assigned_to: form.assigned_to === "__none__" ? undefined : form.assigned_to,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} key={key}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>{isEdit ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle></DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Título *</Label>
+            <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="O que precisa ser feito?" />
+          </div>
+          <div className="space-y-2">
+            <Label>Descrição</Label>
+            <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detalhes opcionais..." rows={2} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Prazo</Label>
+              <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Prioridade</Label>
+              <Select value={form.priority} onValueChange={v => setForm({ ...form, priority: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="low">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {isAdmin && members && members.length > 1 && (
+            <div className="space-y-2">
+              <Label>Atribuir a</Label>
+              <Select value={form.assigned_to} onValueChange={v => setForm({ ...form, assigned_to: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecionar membro" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Ninguém (eu)</SelectItem>
+                  {members.map(m => (
+                    <SelectItem key={m.user_id} value={m.user_id}>{m.full_name || "Sem nome"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleSubmit} disabled={isPending || !form.title.trim()}>
+            {isPending ? (isEdit ? "Salvando..." : "Criando...") : (isEdit ? "Salvar" : "Criar Tarefa")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── TASKS TAB ─── */
 function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
   const { user } = useAuth();
   const { isAdmin } = useRoleAccess();
   const { data: allTasks, isLoading } = useClienteTasks();
   const { data: members } = useOrgMembers();
-  const { createTask, toggleTask, deleteTask } = useClienteTaskMutations();
+  const { createTask, updateTask, toggleTask, deleteTask } = useClienteTaskMutations();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<ClientTask | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [form, setForm] = useState({ title: "", description: "", due_date: "", priority: "medium", assigned_to: "", assigned_team: "" });
+  const [showAllDone, setShowAllDone] = useState(false);
 
   const tasks = useMemo(() => {
     let list = allTasks ?? [];
@@ -190,22 +313,61 @@ function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
 
   const pending = tasks.filter(t => t.status === "pending");
   const done = tasks.filter(t => t.status === "done");
+  const overdue = pending.filter(t => t.due_date && isPast(parseISO(t.due_date)) && !isToday(parseISO(t.due_date)));
+  const completedToday = done.filter(t => t.completed_at && isToday(parseISO(t.completed_at)));
 
-  const handleCreate = () => {
-    if (!form.title.trim()) return;
+  const handleCreate = (data: any) => {
     createTask.mutate({
-      title: form.title,
-      description: form.description || undefined,
-      due_date: form.due_date || undefined,
-      priority: form.priority,
+      title: data.title,
+      description: data.description || undefined,
+      due_date: data.due_date || undefined,
+      priority: data.priority,
       source: isAdmin ? "admin" : "manual",
-      assigned_to: form.assigned_to || undefined,
-      assigned_team: form.assigned_team || undefined,
+      assigned_to: data.assigned_to,
+      assigned_team: data.assigned_team || undefined,
     }, {
       onSuccess: () => {
         setCreateOpen(false);
-        setForm({ title: "", description: "", due_date: "", priority: "medium", assigned_to: "", assigned_team: "" });
         toast.success("Tarefa criada!");
+      },
+    });
+  };
+
+  const handleEdit = (data: any) => {
+    if (!editingTask) return;
+    updateTask.mutate({
+      id: editingTask.id,
+      title: data.title,
+      description: data.description || null,
+      due_date: data.due_date || null,
+      priority: data.priority,
+      assigned_to: data.assigned_to || null,
+      assigned_team: data.assigned_team || null,
+    }, {
+      onSuccess: () => {
+        setEditingTask(null);
+        toast.success("Tarefa atualizada!");
+      },
+    });
+  };
+
+  const handleToggle = (id: string, done: boolean) => {
+    toggleTask.mutate({ id, done }, {
+      onSuccess: (result) => {
+        if (done && result?.xpAwarded) {
+          playSound("success");
+          toast.success("+10 XP ⚡", { duration: 2000 });
+        }
+      },
+    });
+  };
+
+  const confirmDelete = () => {
+    if (!deletingId) return;
+    deleteTask.mutate(deletingId, {
+      onSuccess: () => {
+        setDeletingId(null);
+        toast.success("Tarefa excluída");
       },
     });
   };
@@ -213,9 +375,41 @@ function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
   if (isLoading) return <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>;
 
   const getMemberName = (id: string | null) => members?.find(m => m.user_id === id)?.full_name || "";
+  const visibleDone = showAllDone ? done : done.slice(0, 5);
 
   return (
     <div className="space-y-4">
+      {/* Mini-KPIs */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="border">
+          <CardContent className="py-3 px-4 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-500" />
+            <div>
+              <p className="text-lg font-bold">{pending.length}</p>
+              <p className="text-[10px] text-muted-foreground">Pendentes</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={`border ${overdue.length > 0 ? "border-destructive/30" : ""}`}>
+          <CardContent className="py-3 px-4 flex items-center gap-2">
+            <AlertTriangle className={`w-4 h-4 ${overdue.length > 0 ? "text-destructive" : "text-muted-foreground"}`} />
+            <div>
+              <p className="text-lg font-bold">{overdue.length}</p>
+              <p className="text-[10px] text-muted-foreground">Atrasadas</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border">
+          <CardContent className="py-3 px-4 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <div>
+              <p className="text-lg font-bold">{completedToday.length}</p>
+              <p className="text-[10px] text-muted-foreground">Hoje</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="flex items-center justify-between gap-2">
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
           <SelectTrigger className="w-36 h-8 text-xs"><Filter className="w-3 h-3 mr-1" /><SelectValue /></SelectTrigger>
@@ -245,9 +439,9 @@ function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
                 <CardContent className="py-3 px-4">
                   <div className="flex items-start gap-3">
                     <motion.div whileHover={{ scale: 1.3 }} whileTap={{ scale: 0.7 }}
-                      onClick={() => toggleTask.mutate({ id: task.id, done: true })}
+                      onClick={() => handleToggle(task.id, true)}
                       className="w-5 h-5 mt-0.5 rounded-full border-2 border-muted-foreground/30 hover:border-primary hover:bg-primary/10 cursor-pointer flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setEditingTask(task)}>
                       <p className="text-sm font-medium">{task.title}</p>
                       {task.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{task.description}</p>}
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
@@ -267,9 +461,14 @@ function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
                         )}
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => deleteTask.mutate(task.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setEditingTask(task)}>
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeletingId(task.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -278,8 +477,8 @@ function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
           {done.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Concluídas ({done.length})</p>
-              {done.slice(0, 5).map((task) => (
-                <Card key={task.id} className="opacity-50 cursor-pointer hover:opacity-70" onClick={() => toggleTask.mutate({ id: task.id, done: false })}>
+              {visibleDone.map((task) => (
+                <Card key={task.id} className="opacity-50 cursor-pointer hover:opacity-70" onClick={() => handleToggle(task.id, false)}>
                   <CardContent className="py-2 px-3 flex items-center gap-3">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span className="text-[13px] flex-1 line-through text-muted-foreground">{task.title}</span>
@@ -287,67 +486,57 @@ function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
                   </CardContent>
                 </Card>
               ))}
+              {done.length > 5 && !showAllDone && (
+                <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setShowAllDone(true)}>
+                  <ChevronDown className="w-3 h-3 mr-1" /> Ver todas ({done.length})
+                </Button>
+              )}
             </div>
           )}
         </>
       )}
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Nova Tarefa</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Título *</Label>
-              <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="O que precisa ser feito?" />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detalhes opcionais..." rows={2} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Prazo</Label>
-                <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Prioridade</Label>
-                <Select value={form.priority} onValueChange={v => setForm({ ...form, priority: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high">Alta</SelectItem>
-                    <SelectItem value="medium">Média</SelectItem>
-                    <SelectItem value="low">Baixa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {isAdmin && members && members.length > 1 && (
-              <div className="space-y-2">
-                <Label>Atribuir a</Label>
-                <Select value={form.assigned_to} onValueChange={v => setForm({ ...form, assigned_to: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar membro" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Ninguém (eu)</SelectItem>
-                    {members.map(m => (
-                      <SelectItem key={m.user_id} value={m.user_id}>{m.full_name || "Sem nome"}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={createTask.isPending || !form.title.trim()}>
-              {createTask.isPending ? "Criando..." : "Criar Tarefa"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create Dialog */}
+      <TaskFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        members={members}
+        isAdmin={isAdmin}
+        onSubmit={handleCreate}
+        isPending={createTask.isPending}
+      />
+
+      {/* Edit Dialog */}
+      {editingTask && (
+        <TaskFormDialog
+          open={!!editingTask}
+          onOpenChange={(v) => !v && setEditingTask(null)}
+          task={editingTask}
+          members={members}
+          isAdmin={isAdmin}
+          onSubmit={handleEdit}
+          isPending={updateTask.isPending}
+        />
+      )}
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingId} onOpenChange={(v) => !v && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
+/* ─── MAIN PAGE ─── */
 export default function ClienteChecklist() {
   const { isAdmin } = useRoleAccess();
 
