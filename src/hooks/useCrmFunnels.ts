@@ -39,6 +39,13 @@ export function useCrmFunnelMutations() {
 
   const updateFunnel = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      if (updates.is_default === true && orgId) {
+        await supabase
+          .from("crm_funnels")
+          .update({ is_default: false })
+          .eq("organization_id", orgId)
+          .neq("id", id);
+      }
       const { data, error } = await supabase.from("crm_funnels").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
