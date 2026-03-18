@@ -880,7 +880,7 @@ export default function ClientePlanoVendas() {
       team_id: novaMeta.scope === "team" && novaMeta.team_id ? novaMeta.team_id : undefined,
       assigned_to: novaMeta.scope === "individual" && novaMeta.assigned_to ? novaMeta.assigned_to : undefined,
       period_start: periodStart,
-      period_end: periodEnd,
+      period_end: periodEndISO,
       status: "active",
     }, {
       onSuccess: () => {
