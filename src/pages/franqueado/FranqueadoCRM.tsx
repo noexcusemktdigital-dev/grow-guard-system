@@ -463,7 +463,7 @@ export default function FranqueadoCRM() {
               </CardContent>
             </Card>
           ) : view === "kanban" ? (
-            <DndContext sensors={sensors} <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}> onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}> collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}> onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <ScrollArea className="w-full">
                 <div className="flex gap-3 pb-4 min-w-max">
                   {stages.map(stage => {
