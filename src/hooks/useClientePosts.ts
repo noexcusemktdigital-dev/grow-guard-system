@@ -3,8 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { useClienteSubscription } from "./useClienteSubscription";
-import { getEffectiveLimits } from "@/constants/plans";
+import { useClienteWallet } from "./useClienteWallet";
 
 export interface PostItem {
   id: string;
