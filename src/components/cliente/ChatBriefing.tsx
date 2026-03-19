@@ -360,9 +360,10 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
                     ? "bg-muted text-foreground rounded-tl-md"
                     : "bg-primary/10 text-foreground rounded-tr-md"
                 )}
-              >
-                {msg.text}
-              </div>
+                dangerouslySetInnerHTML={{
+                  __html: msg.text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                }}
+              />
             </motion.div>
           ))}
         </AnimatePresence>
