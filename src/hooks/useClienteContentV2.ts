@@ -216,3 +216,21 @@ export function useApproveBatch() {
     },
   });
 }
+
+export function useDeleteContent() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (contentId: string) => {
+      const { error } = await supabase
+        .from("client_content")
+        .delete()
+        .eq("id", contentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-content-v2"] });
+      qc.invalidateQueries({ queryKey: ["content-quota"] });
+    },
+  });
+}
