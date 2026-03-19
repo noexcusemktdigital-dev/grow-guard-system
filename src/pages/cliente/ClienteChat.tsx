@@ -175,10 +175,7 @@ export default function ClienteChat() {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         }
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-        // Play notification sound for new inbound messages
-        if (payload.eventType === "INSERT" && payload.new?.direction === "inbound") {
-          try { playSound("notification"); } catch {}
-        }
+        // Sound is played by ChatConversation — no duplicate here
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
