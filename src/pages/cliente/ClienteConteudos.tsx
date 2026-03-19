@@ -518,13 +518,13 @@ function ContentVisualCard({ content: c, index, onCopy, onPdf, onPost, onApprove
         <h3 className="text-lg font-bold leading-tight">{c.titulo}</h3>
 
         {/* Content body — format-specific visual */}
-        {formato.includes("carrossel") && <CarrosselVisual content={c.conteudo_principal} />}
-        {formato.includes("post") && <PostVisual content={c.conteudo_principal} />}
-        {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && <VideoVisual content={c.conteudo_principal} />}
-        {formato.includes("story") && <StoryVisual content={c.conteudo_principal} />}
-        {formato.includes("artigo") && <ArtigoVisual content={c.conteudo_principal} />}
+        {formato.includes("carrossel") && <CarrosselVisual content={parsedContent} />}
+        {formato.includes("post") && <PostVisual content={parsedContent} />}
+        {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && <VideoVisual content={parsedContent} />}
+        {formato.includes("story") && <StoryVisual content={parsedContent} />}
+        {formato.includes("artigo") && <ArtigoVisual content={parsedContent} />}
         {!formato.includes("carrossel") && !formato.includes("post") && !formato.includes("video") && !formato.includes("vídeo") && !formato.includes("roteiro") && !formato.includes("story") && !formato.includes("artigo") && (
-          <GenericVisual content={c.conteudo_principal} />
+          <GenericVisual content={parsedContent} />
         )}
 
         {/* Caption */}
