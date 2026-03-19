@@ -85,6 +85,7 @@ const TOOL_SCHEMA = {
                 type: "object",
                 properties: {
                   nome: { type: "string" },
+                  url: { type: "string", description: "URL do site ou rede social do concorrente (se fornecido pelo usuário)" },
                   pontos_fortes: { type: "string" },
                   pontos_fracos: { type: "string" },
                   oportunidade_diferenciacao: { type: "string" },
