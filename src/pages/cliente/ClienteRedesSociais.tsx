@@ -469,8 +469,9 @@ export default function ClienteRedesSociais() {
 
   const handleApprove = async () => {
     if (!generatedResult) return;
+    const numFrames = videoDuration === "8s" ? 5 : 3;
     try {
-      await approvePost.mutateAsync({ postId: generatedResult.post.id, type: postType });
+      await approvePost.mutateAsync({ postId: generatedResult.post.id, type: postType, numFrames });
       resetWizard();
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) {
