@@ -104,8 +104,8 @@ export function ContentWizard({
     return (
       <Card className="border-destructive">
         <CardContent className="py-6 text-center space-y-2">
-          <p className="font-semibold text-destructive">Limite de conteúdos atingido este mês</p>
-          <p className="text-sm text-muted-foreground">Seu plano permite {quotaMax} conteúdos/mês. Faça upgrade para gerar mais.</p>
+          <p className="font-semibold text-destructive">Créditos insuficientes</p>
+          <p className="text-sm text-muted-foreground">Você tem {creditBalance} créditos. Cada conteúdo custa {costPerContent} créditos. Recarregue para continuar gerando.</p>
         </CardContent>
       </Card>
     );
