@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { usePostHistory, useGeneratePost, useApprovePost, useDeletePost, useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing, usePostQuota, CREDIT_COST_ART, CREDIT_COST_VIDEO, PostItem } from "@/hooks/useClientePosts";
+import { usePostHistory, useGeneratePost, useApprovePost, useDeletePost, useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing, usePostQuota, CREDIT_COST_ART, CREDIT_COST_VIDEO, getVideoCost, PostItem } from "@/hooks/useClientePosts";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
