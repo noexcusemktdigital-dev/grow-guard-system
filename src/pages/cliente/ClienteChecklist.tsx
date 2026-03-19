@@ -51,7 +51,7 @@ function DailyChecklistTab() {
   const { user } = useAuth();
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = new Date().toISOString().split("T")[0]; // UTC date to match edge function
   const { data: items, isLoading } = useClienteChecklist(today);
   const { data: gamification } = useClienteGamification();
   const { createChecklistItem, toggleChecklistItem } = useClienteContentMutations();
