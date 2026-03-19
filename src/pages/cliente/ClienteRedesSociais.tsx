@@ -757,14 +757,21 @@ export default function ClienteRedesSociais() {
               {generatedResult.post.status !== "approved" ? (
                 <Button onClick={handleApprove} disabled={approvePost.isPending} className="flex-1" size="lg">
                   {approvePost.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                  Aprovar ({postType === "video" ? "200" : "100"} créditos)
+                  Aprovar ({postType === "video" ? getVideoCost(videoDuration) : CREDIT_COST_ART} créditos)
                 </Button>
               ) : (
                 <Button disabled className="flex-1" size="lg" variant="secondary">
                   <Check className="w-4 h-4 mr-2" /> Aprovado
                 </Button>
               )}
-              <Button variant="outline" onClick={() => { setGeneratedResult(null); handleGenerate(); }} className="flex-1" size="lg">
+              <Button variant="outline" onClick={async () => {
+                // Delete ghost record before regenerating
+                if (generatedResult?.post?.id && generatedResult.post.status !== "approved") {
+                  try { await deletePost.mutateAsync(generatedResult.post.id); } catch {}
+                }
+                setGeneratedResult(null);
+                handleGenerate();
+              }} className="flex-1" size="lg">
                 <RefreshCw className="w-4 h-4 mr-2" /> Regenerar
               </Button>
               {generatedResult.result_url && (
