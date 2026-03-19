@@ -98,7 +98,9 @@ export default function ClienteChat() {
 
 
   // Fetch real message previews from the database
-  const contactIds = useMemo(() => contacts.map((c) => c.id), [contacts]);
+  // Stringify IDs to stabilize the query key and prevent infinite re-fetches
+  const contactIdsStr = useMemo(() => contacts.map((c) => c.id).sort().join(","), [contacts]);
+  const contactIds = useMemo(() => contactIdsStr ? contactIdsStr.split(",") : [], [contactIdsStr]);
   const { data: realPreviews } = useContactPreviews(contactIds);
   const lastMessages = realPreviews ?? new Map<string, string>();
 

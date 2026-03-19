@@ -24,7 +24,9 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
   const crmLeadId = contactAny?.crm_lead_id || null;
   const { data: leadData } = useFindLeadByPhone(contact?.phone ?? null);
   const lead = leadData as any;
-  const { data: activities } = useCrmActivities(crmLeadId);
+  // Use lead id from either linked contact or phone-matched lead
+  const effectiveLeadId = crmLeadId || lead?.id || null;
+  const { data: activities } = useCrmActivities(effectiveLeadId);
 
   if (!contact) return null;
 
