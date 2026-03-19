@@ -68,19 +68,21 @@ function ScoreRing({ score, label, size = 120 }: { score: number; label: string;
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
-        <motion.circle
-          cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth="8"
-          strokeLinecap="round" strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-        />
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
-        <span className="text-2xl font-bold">{score}</span>
-        <span className="text-[10px] text-muted-foreground">/100</span>
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+          <motion.circle
+            cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth="8"
+            strokeLinecap="round" strokeDasharray={circumference}
+            initial={{ strokeDashoffset: circumference }}
+            animate={{ strokeDashoffset }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-bold">{score}</span>
+          <span className="text-[10px] text-muted-foreground">/100</span>
+        </div>
       </div>
       <p className="text-xs font-medium text-muted-foreground mt-1">{label}</p>
     </div>
