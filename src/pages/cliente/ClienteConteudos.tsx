@@ -227,13 +227,23 @@ export default function ClienteConteudos() {
         </p>
       </div>
       <div className="space-y-3">
-        <Slider value={[quantidade]} onValueChange={([v]) => { setQuantidade(v); setFormatDist({}); }} min={1} max={quota.remaining} step={1} />
+        <Slider value={[quantidade]} onValueChange={([v]) => { setQuantidade(v); setFormatDist({}); }} min={1} max={Math.min(quota.remaining, 30)} step={1} />
         <div className="text-center text-4xl font-bold text-primary">{quantidade}</div>
       </div>
       <div>
-        <p className="text-sm font-medium mb-3">
+        <p className="text-sm font-medium mb-1">
           Distribuição de formatos: <strong className={formatTotal === quantidade ? "text-primary" : "text-destructive"}>{formatTotal}/{quantidade}</strong>
         </p>
+        {formatTotal !== quantidade && formatTotal > 0 && (
+          <p className="text-xs text-destructive mb-3">
+            {formatTotal < quantidade
+              ? `Distribua mais ${quantidade - formatTotal} conteúdo${quantidade - formatTotal > 1 ? "s" : ""} nos formatos abaixo.`
+              : `Remova ${formatTotal - quantidade} conteúdo${formatTotal - quantidade > 1 ? "s" : ""} dos formatos.`}
+          </p>
+        )}
+        {formatTotal === 0 && (
+          <p className="text-xs text-muted-foreground mb-3">Escolha como distribuir seus {quantidade} conteúdos entre os formatos abaixo.</p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FORMATOS.map(f => {
             const Icon = f.icon;
@@ -471,6 +481,19 @@ export default function ClienteConteudos() {
   );
 }
 
+/* ── Helper: safely parse conteudo_principal (AI may return string) ── */
+function parseConteudoPrincipal(raw: any): any {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw); } catch { /* ignore */ }
+    try {
+      const fixed = raw.replace(/'/g, '"').replace(/None/g, "null").replace(/True/g, "true").replace(/False/g, "false");
+      return JSON.parse(fixed);
+    } catch { return raw; }
+  }
+  return raw;
+}
+
 /* ══════════════════════════════════════════════════════════════
    VISUAL CONTENT CARD — renders content in social-media style
    ══════════════════════════════════════════════════════════════ */
@@ -480,6 +503,7 @@ function ContentVisualCard({ content: c, index, onCopy, onPdf, onPost, onApprove
   onCopy: () => void; onPdf: () => void; onPost: () => void; onApprove: () => void; approving: boolean;
 }) {
   const formato = (c.formato || "").toLowerCase();
+  const parsedContent = parseConteudoPrincipal(c.conteudo_principal);
 
   return (
     <Card id={`content-card-${index}`} className="overflow-hidden group hover:shadow-lg transition-shadow">
@@ -494,13 +518,13 @@ function ContentVisualCard({ content: c, index, onCopy, onPdf, onPost, onApprove
         <h3 className="text-lg font-bold leading-tight">{c.titulo}</h3>
 
         {/* Content body — format-specific visual */}
-        {formato.includes("carrossel") && <CarrosselVisual content={c.conteudo_principal} />}
-        {formato.includes("post") && <PostVisual content={c.conteudo_principal} />}
-        {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && <VideoVisual content={c.conteudo_principal} />}
-        {formato.includes("story") && <StoryVisual content={c.conteudo_principal} />}
-        {formato.includes("artigo") && <ArtigoVisual content={c.conteudo_principal} />}
+        {formato.includes("carrossel") && <CarrosselVisual content={parsedContent} />}
+        {formato.includes("post") && <PostVisual content={parsedContent} />}
+        {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && <VideoVisual content={parsedContent} />}
+        {formato.includes("story") && <StoryVisual content={parsedContent} />}
+        {formato.includes("artigo") && <ArtigoVisual content={parsedContent} />}
         {!formato.includes("carrossel") && !formato.includes("post") && !formato.includes("video") && !formato.includes("vídeo") && !formato.includes("roteiro") && !formato.includes("story") && !formato.includes("artigo") && (
-          <GenericVisual content={c.conteudo_principal} />
+          <GenericVisual content={parsedContent} />
         )}
 
         {/* Caption */}
@@ -751,6 +775,7 @@ function BatchFolder({ batch, navigate }: { batch: { date: string; items: Conten
             const r = item.result as any;
             if (!r) return null;
             const formato = (item.format || r.formato || "").toLowerCase();
+            const parsedContent = parseConteudoPrincipal(r.conteudo_principal);
 
             return (
               <Card key={item.id} className="overflow-hidden">
@@ -764,30 +789,29 @@ function BatchFolder({ batch, navigate }: { batch: { date: string; items: Conten
                 <CardContent className="space-y-2 pt-1">
                   <h4 className="font-bold text-sm">{item.title}</h4>
 
-                  {/* Compact visual */}
-                  {formato.includes("carrossel") && Array.isArray(r.conteudo_principal) && (
+                  {formato.includes("carrossel") && Array.isArray(parsedContent) && (
                     <div className="flex gap-1.5 overflow-x-auto pb-1">
-                      {(r.conteudo_principal as any[]).slice(0, 4).map((s: any, si: number) => (
+                      {(parsedContent as any[]).slice(0, 4).map((s: any, si: number) => (
                         <div key={si} className="flex-none w-28 rounded-lg bg-primary/5 border p-2">
                           <span className="text-[10px] font-bold text-primary/50">{si + 1}</span>
                           {s.titulo && <p className="text-[11px] font-bold leading-tight">{s.titulo}</p>}
                         </div>
                       ))}
-                      {(r.conteudo_principal as any[]).length > 4 && (
+                      {(parsedContent as any[]).length > 4 && (
                         <div className="flex-none w-28 rounded-lg bg-muted/50 border p-2 flex items-center justify-center text-xs text-muted-foreground">
-                          +{(r.conteudo_principal as any[]).length - 4}
+                          +{(parsedContent as any[]).length - 4}
                         </div>
                       )}
                     </div>
                   )}
 
-                  {(formato.includes("post") || formato.includes("educativo") || formato.includes("autoridade")) && r.conteudo_principal?.headline && (
-                    <p className="text-sm font-extrabold">{r.conteudo_principal.headline}</p>
+                  {(formato.includes("post") || formato.includes("educativo") || formato.includes("autoridade")) && parsedContent?.headline && (
+                    <p className="text-sm font-extrabold">{parsedContent.headline}</p>
                   )}
 
-                  {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && r.conteudo_principal?.hook && (
+                  {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && parsedContent?.hook && (
                     <div className="rounded-lg bg-primary/10 p-2 text-center">
-                      <p className="text-xs font-bold">🎬 "{r.conteudo_principal.hook}"</p>
+                      <p className="text-xs font-bold">🎬 "{parsedContent.hook}"</p>
                     </div>
                   )}
 
