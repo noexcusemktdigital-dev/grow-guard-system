@@ -1022,7 +1022,7 @@ export default function ClientePlanoMarketing() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Estratégia de Marketing" subtitle="Carregando..." icon={<Megaphone className="w-5 h-5 text-primary" />} />
+        <PageHeader title="Plano de Marketing" subtitle="Carregando..." icon={<Megaphone className="w-5 h-5 text-primary" />} />
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map(i => <div key={i} className="h-32 rounded-xl bg-muted/50" />)}
         </div>
