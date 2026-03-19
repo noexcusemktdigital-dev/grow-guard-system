@@ -157,6 +157,7 @@ export default function ClienteRedesSociais() {
   const generateVideoBriefing = useGenerateVideoBriefing();
   const deletePost = useDeletePost();
   const bulkDelete = useBulkDeletePosts();
+  const quota = usePostQuota();
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
