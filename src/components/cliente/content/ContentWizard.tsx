@@ -57,7 +57,7 @@ interface ContentWizardProps {
 }
 
 export function ContentWizard({
-  quotaRemaining, quotaMax, hasStrategy, strategy,
+  quotaRemaining, quotaMax, creditBalance, costPerContent, hasStrategy, strategy,
   isGenerating, loadingIdx, quantidade,
   onGenerate, onQuantidadeChange,
   formatDist, onFormatDistChange,
