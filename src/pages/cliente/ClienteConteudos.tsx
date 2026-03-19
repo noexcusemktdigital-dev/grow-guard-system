@@ -481,6 +481,19 @@ export default function ClienteConteudos() {
   );
 }
 
+/* ── Helper: safely parse conteudo_principal (AI may return string) ── */
+function parseConteudoPrincipal(raw: any): any {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw); } catch { /* ignore */ }
+    try {
+      const fixed = raw.replace(/'/g, '"').replace(/None/g, "null").replace(/True/g, "true").replace(/False/g, "false");
+      return JSON.parse(fixed);
+    } catch { return raw; }
+  }
+  return raw;
+}
+
 /* ══════════════════════════════════════════════════════════════
    VISUAL CONTENT CARD — renders content in social-media style
    ══════════════════════════════════════════════════════════════ */
@@ -490,6 +503,7 @@ function ContentVisualCard({ content: c, index, onCopy, onPdf, onPost, onApprove
   onCopy: () => void; onPdf: () => void; onPost: () => void; onApprove: () => void; approving: boolean;
 }) {
   const formato = (c.formato || "").toLowerCase();
+  const parsedContent = parseConteudoPrincipal(c.conteudo_principal);
 
   return (
     <Card id={`content-card-${index}`} className="overflow-hidden group hover:shadow-lg transition-shadow">
