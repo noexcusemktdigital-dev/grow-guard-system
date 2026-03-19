@@ -261,10 +261,12 @@ export function useApprovePost() {
   const { data: orgId } = useUserOrgId();
 
   return useMutation({
-    mutationFn: async ({ postId, type }: { postId: string; type: "art" | "video" }) => {
+    mutationFn: async ({ postId, type, numFrames }: { postId: string; type: "art" | "video"; numFrames?: number }) => {
       if (!orgId) throw new Error("Org not found");
 
-      const creditCost = type === "video" ? 200 : 100;
+      const creditCost = type === "video"
+        ? CREDIT_COST_VIDEO_PER_FRAME * (numFrames || 3)
+        : CREDIT_COST_ART;
 
       const { error: debitError } = await supabase.rpc("debit_credits" as any, {
         _org_id: orgId,
