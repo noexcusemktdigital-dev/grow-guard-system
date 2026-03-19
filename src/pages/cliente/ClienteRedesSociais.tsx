@@ -399,13 +399,7 @@ export default function ClienteRedesSociais() {
       }
     };
 
-    // Auto-load refs
-    useEffect(() => {
-      if (referenceUrls.length === 0 && visualIdentity) {
-        if (visualIdentity.image_bank_urls?.length) setReferenceUrls(visualIdentity.image_bank_urls.slice(0, 5));
-        else if (visualIdentity.logo_url) setReferenceUrls([visualIdentity.logo_url]);
-      }
-    }, [visualIdentity]);
+    // Auto-load refs handled by top-level effect
 
     const goVideoBack = () => {
       if (videoStep > 1) setVideoStep(videoStep - 1);
