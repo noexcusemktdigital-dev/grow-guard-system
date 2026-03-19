@@ -1639,12 +1639,12 @@ export default function ClienteRedesSociais() {
         {isLastStep ? (
           <Button
             onClick={handleGenerate}
-            disabled={!canProceed() || generatePost.isPending}
+            disabled={!canProceed() || generatePost.isPending || (postType === "art" ? !quota.canAffordArt : !quota.canAffordVideo)}
             className="flex-1"
             size="lg"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            Gerar {postType === "art" ? "Arte" : "Vídeo"}
+            Gerar {postType === "art" ? `Arte (${CREDIT_COST_ART} créditos)` : `Vídeo (${CREDIT_COST_VIDEO} créditos)`}
           </Button>
         ) : (
           <Button
