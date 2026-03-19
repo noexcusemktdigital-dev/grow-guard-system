@@ -320,7 +320,14 @@ function TabConcorrencia({ result }: { result: any }) {
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{i + 1}</div>
-                    <h4 className="font-semibold text-sm">{c.nome}</h4>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm">{c.nome}</h4>
+                      {c.url && (
+                        <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5 truncate">
+                          <ExternalLink className="w-2.5 h-2.5 shrink-0" /> {c.url}
+                        </a>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-start gap-2"><ThumbsUp className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /><p className="text-xs">{c.pontos_fortes}</p></div>
