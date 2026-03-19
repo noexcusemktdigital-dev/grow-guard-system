@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { supabase as defaultClient } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -50,22 +50,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfileAndRole = async (currentUser: User) => {
+  // Guard against concurrent fetchProfileAndRole calls
+  const fetchingRef = useRef(false);
+  const lastFetchedUserRef = useRef<string | null>(null);
+
+  const fetchProfileAndRole = useCallback(async (currentUser: User, force = false) => {
+    // Skip if already fetching or if we already fetched for this user (unless forced)
+    if (fetchingRef.current) return;
+    if (!force && lastFetchedUserRef.current === currentUser.id && role !== null) return;
+
+    fetchingRef.current = true;
+
     try {
-      // Determine portal context from URL
       const path = window.location.pathname;
       const isSaasPortal = path.startsWith("/cliente") || path.startsWith("/app") || path === "/" || path.startsWith("/landing");
 
-      // Fetch profile and roles in parallel with 5s timeout each
+      // Use longer timeouts (10s) to avoid false negatives
       const [profileResult, roleResult] = await Promise.allSettled([
         withTimeout(
           supabase.from("profiles").select("*").eq("id", currentUser.id).single(),
-          5000,
+          10000,
           { data: null, error: { message: "timeout" } } as any
         ),
         withTimeout(
           supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
-          5000,
+          10000,
           { data: null, error: { message: "timeout" } } as any
         ),
       ]);
@@ -96,8 +105,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           || priorityOrder.find((p) => roles.includes(p))
           || roles[0];
         setRole(topRole);
+        lastFetchedUserRef.current = currentUser.id;
       } else {
-        // New user from SaaS signup — provision
+        // Check if this was a timeout vs genuine "no roles"
+        const wasTimeout = roleResult.status === "fulfilled" &&
+          roleResult.value?.error?.message === "timeout";
+
+        if (wasTimeout) {
+          // On timeout, use fallback based on URL context — don't provision
+          console.warn("[Auth] Role fetch timed out, using fallback role");
+          const fallback: AppRole = isSaasPortal ? "cliente_admin" : "franqueado";
+          setRole(fallback);
+          lastFetchedUserRef.current = currentUser.id;
+          return;
+        }
+
+        // Genuine "no roles" — only provision for SaaS signups
         const signupSource = currentUser.user_metadata?.signup_source;
         if (signupSource === "saas" || currentUser.app_metadata?.provider === "google") {
           const companyName = currentUser.user_metadata?.company_name ||
@@ -107,17 +130,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           for (let attempt = 0; attempt < 2 && !provisioned; attempt++) {
             try {
               console.log(`[Auth] Provisioning attempt ${attempt + 1} for user ${currentUser.id}`);
-              await withTimeout(
+              const provResult = await withTimeout(
                 supabase.functions.invoke("signup-saas", {
                   body: { user_id: currentUser.id, company_name: companyName },
                 }),
-                8000,
+                12000,
                 { error: { message: "timeout" } } as any
               );
 
+              if (provResult?.error) {
+                console.warn("[Auth] Provisioning error:", provResult.error);
+                continue;
+              }
+
               const { data: verifyRole } = await withTimeout(
                 supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
-                5000,
+                8000,
                 { data: null } as any
               );
 
@@ -126,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const topRole = roles.find((r: AppRole) => r === "cliente_admin") || roles[0];
                 setRole(topRole);
                 provisioned = true;
+                lastFetchedUserRef.current = currentUser.id;
                 console.log(`[Auth] Provisioning successful, role: ${topRole}`);
               }
             } catch (err) {
@@ -136,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!provisioned) {
             console.error("[Auth] All provisioning attempts failed, using fallback role");
             setRole("cliente_admin");
+            lastFetchedUserRef.current = currentUser.id;
           }
         } else {
           console.warn("[Auth] No roles found and not a SaaS signup, role remains null");
@@ -143,39 +173,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error("[Auth] fetchProfileAndRole failed:", err);
-      // Don't leave role as null for SaaS users — check URL context for fallback
       const path = window.location.pathname;
       if (path.startsWith("/cliente") || path.startsWith("/app")) {
         setRole("cliente_admin");
       }
+    } finally {
+      fetchingRef.current = false;
     }
-  };
-
-  const initializedRef = useRef(false);
+  }, [role]);
 
   useEffect(() => {
+    let mounted = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
+        if (!mounted) return;
+
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
+          // For TOKEN_REFRESHED events, skip re-fetching if already have data
+          if (_event === "TOKEN_REFRESHED" && role !== null) {
+            setLoading(false);
+            return;
+          }
           await fetchProfileAndRole(newSession.user);
         } else {
           setProfile(null);
           setRole(null);
         }
 
-        // Always set loading to false after processing
         setLoading(false);
       }
     );
 
     supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+      if (!mounted) return;
+
       if (existingSession) {
         setSession(existingSession);
         setUser(existingSession.user);
-        await fetchProfileAndRole(existingSession.user);
+        await fetchProfileAndRole(existingSession.user, true);
       } else {
         // Check default client for OAuth redirect sessions
         try {
@@ -190,18 +229,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (transferred) {
               setSession(transferred);
               setUser(transferred.user);
-              await fetchProfileAndRole(transferred.user);
+              await fetchProfileAndRole(transferred.user, true);
             }
           }
         } catch (err) {
           console.error("[Auth] OAuth session transfer failed:", err);
         }
       }
-      initializedRef.current = true;
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async (redirectTo?: string) => {
@@ -213,6 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setRole(null);
+    lastFetchedUserRef.current = null;
     window.location.href = target;
   };
 
