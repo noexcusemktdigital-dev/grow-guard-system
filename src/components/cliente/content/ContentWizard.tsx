@@ -128,7 +128,7 @@ export function ContentWizard({
       <div>
         <h3 className="text-xl font-semibold mb-1">Quantos conteúdos e em quais formatos?</h3>
         <p className="text-sm text-muted-foreground">
-          Seu plano permite <strong>{quotaMax}</strong> conteúdos/mês · Restam <strong className="text-primary">{quotaRemaining}</strong>
+          Você tem <strong className="text-primary">{creditBalance}</strong> créditos · Cada conteúdo custa <strong>{costPerContent}</strong> créditos · Máximo neste lote: <strong className="text-primary">{quotaRemaining}</strong>
         </p>
       </div>
       <div className="space-y-3">
