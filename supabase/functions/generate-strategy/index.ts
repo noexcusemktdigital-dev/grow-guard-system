@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CREDIT_COST = 50;
@@ -13,174 +12,365 @@ const TOOL_SCHEMA = {
   type: "function",
   function: {
     name: "generate_strategy",
-    description:
-      "Gera um diagnóstico estratégico completo baseado na metodologia SPIN Selling + Termômetro NOEXCUSE, com 7 seções: diagnóstico do negócio, problemas, gargalos, projeção de crescimento, estratégia recomendada, serviços indicados e roadmap de execução.",
+    description: "Gera uma estratégia de marketing completa e personalizada com 12 seções.",
     parameters: {
       type: "object",
       properties: {
-        diagnostico_negocio: {
+        diagnostico: {
           type: "object",
           properties: {
-            modelo: { type: "string", description: "Descrição do modelo de negócio atual (1-2 parágrafos)" },
-            momento: { type: "string", description: "Análise do momento atual do negócio (1-2 parágrafos)" },
-            maturidade: {
+            score_geral: { type: "number", description: "Score geral de maturidade de marketing 0-100" },
+            analise: { type: "string", description: "Análise geral da situação de marketing do negócio (2-3 parágrafos)" },
+            radar: {
               type: "object",
               properties: {
-                score: { type: "number", description: "Score geral de maturidade de 0-100" },
-                nivel: { type: "string", description: "Nível: Inicial, Em Desenvolvimento, Estruturado, Avançado ou Excelência" },
-                descricao: { type: "string", description: "Descrição detalhada da maturidade do negócio" },
+                autoridade: { type: "number", description: "Score 0-10 de autoridade de marca" },
+                aquisicao: { type: "number", description: "Score 0-10 de capacidade de aquisição" },
+                conversao: { type: "number", description: "Score 0-10 de taxa de conversão" },
+                retencao: { type: "number", description: "Score 0-10 de retenção de clientes" },
+                conteudo: { type: "number", description: "Score 0-10 de qualidade de conteúdo" },
+                branding: { type: "number", description: "Score 0-10 de branding e identidade" },
               },
-              required: ["score", "nivel", "descricao"],
+              required: ["autoridade", "aquisicao", "conversao", "retencao", "conteudo", "branding"],
               additionalProperties: false,
             },
-            radar_data: {
+            pontos_fortes: { type: "array", items: { type: "string" }, description: "3-5 pontos fortes identificados" },
+            oportunidades: { type: "array", items: { type: "string" }, description: "3-5 oportunidades de crescimento" },
+            riscos: { type: "array", items: { type: "string" }, description: "2-4 riscos identificados" },
+          },
+          required: ["score_geral", "analise", "radar", "pontos_fortes", "oportunidades", "riscos"],
+          additionalProperties: false,
+        },
+        objetivo_principal: { type: "string", description: "Objetivo principal recomendado (ex: Gerar 50 leads/mês)" },
+        canal_prioritario: { type: "string", description: "Canal prioritário recomendado (ex: Instagram + Tráfego Pago)" },
+        investimento_recomendado: { type: "string", description: "Investimento mensal recomendado em marketing (ex: R$ 3.000 a R$ 5.000/mês)" },
+        potencial_crescimento: { type: "string", description: "Potencial de crescimento estimado (ex: 3x em 12 meses)" },
+        resumo_executivo: { type: "string", description: "Resumo executivo de 2-3 parágrafos da estratégia completa" },
+        icp: {
+          type: "object",
+          properties: {
+            nome_persona: { type: "string", description: "Nome da persona (ex: João Empreendedor)" },
+            avatar_emoji: { type: "string", description: "Emoji que representa a persona (ex: 👨‍💼)" },
+            demografia: { type: "string", description: "Dados demográficos (ex: Homem, 35-45 anos, classe A/B)" },
+            perfil_profissional: { type: "string", description: "Perfil profissional (ex: Dono de empresa com 10-50 funcionários)" },
+            descricao: { type: "string", description: "Descrição detalhada da persona (1-2 parágrafos)" },
+            comportamento_digital: { type: "string", description: "Como a persona se comporta no digital" },
+            dores: { type: "array", items: { type: "string" }, description: "4-6 dores da persona" },
+            desejos: { type: "array", items: { type: "string" }, description: "4-6 desejos da persona" },
+            objecoes: { type: "array", items: { type: "string" }, description: "3-5 objeções comuns" },
+            gatilhos_compra: { type: "array", items: { type: "string" }, description: "3-5 gatilhos de compra" },
+          },
+          required: ["nome_persona", "avatar_emoji", "demografia", "perfil_profissional", "descricao", "comportamento_digital", "dores", "desejos", "objecoes", "gatilhos_compra"],
+          additionalProperties: false,
+        },
+        proposta_valor: {
+          type: "object",
+          properties: {
+            headline: { type: "string", description: "Headline da proposta de valor (1 frase impactante)" },
+            problema: { type: "string", description: "O problema que o negócio resolve" },
+            metodo: { type: "string", description: "O método/abordagem único" },
+            resultado: { type: "string", description: "O resultado que o cliente alcança" },
+            prova: { type: "string", description: "Prova social ou evidência" },
+          },
+          required: ["headline", "problema", "metodo", "resultado", "prova"],
+          additionalProperties: false,
+        },
+        analise_concorrencia: {
+          type: "object",
+          properties: {
+            visao_geral: { type: "string", description: "Visão geral do cenário competitivo (1-2 parágrafos)" },
+            concorrentes: {
               type: "array",
               items: {
                 type: "object",
                 properties: {
-                  eixo: { type: "string", description: "Nome do eixo avaliado" },
-                  score: { type: "number", description: "Score de 0 a 5" },
-                  max: { type: "number", description: "Valor máximo (sempre 5)" },
+                  nome: { type: "string" },
+                  pontos_fortes: { type: "string" },
+                  pontos_fracos: { type: "string" },
+                  oportunidade_diferenciacao: { type: "string" },
                 },
-                required: ["eixo", "score", "max"],
+                required: ["nome", "pontos_fortes", "pontos_fracos", "oportunidade_diferenciacao"],
                 additionalProperties: false,
               },
-              description: "6 eixos do radar: Estrutura de Marketing, Estrutura Comercial, Organização de Leads, Previsibilidade de Vendas, Posicionamento de Marca, Escala de Aquisição",
+              description: "2-4 concorrentes analisados",
+            },
+            posicionamento_recomendado: { type: "string", description: "Posicionamento de mercado recomendado" },
+          },
+          required: ["visao_geral", "concorrentes", "posicionamento_recomendado"],
+          additionalProperties: false,
+        },
+        tom_comunicacao: {
+          type: "object",
+          properties: {
+            tom_principal: { type: "string", description: "Tom principal de comunicação (ex: Educativo e Acessível)" },
+            personalidade_marca: { type: "array", items: { type: "string" }, description: "3-5 adjetivos que definem a personalidade" },
+            voz_exemplo: { type: "string", description: "Exemplo de como a marca falaria em um post" },
+            palavras_usar: { type: "array", items: { type: "string" }, description: "8-12 palavras/expressões para usar" },
+            palavras_evitar: { type: "array", items: { type: "string" }, description: "5-8 palavras/expressões para evitar" },
+            exemplos_posts: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  tipo: { type: "string", description: "Tipo do post (carrossel, reels, stories, etc)" },
+                  exemplo: { type: "string", description: "Exemplo de texto do post" },
+                },
+                required: ["tipo", "exemplo"],
+                additionalProperties: false,
+              },
+              description: "3-5 exemplos de posts com o tom definido",
             },
           },
-          required: ["modelo", "momento", "maturidade", "radar_data"],
+          required: ["tom_principal", "personalidade_marca", "voz_exemplo", "palavras_usar", "palavras_evitar", "exemplos_posts"],
           additionalProperties: false,
         },
-        problemas_identificados: {
-          type: "array",
-          items: { type: "string" },
-          description: "5-8 problemas reais identificados a partir das respostas SPIN (Problema + Implicação)",
-        },
-        gargalos: {
+        estrategia_aquisicao: {
           type: "object",
           properties: {
-            aquisicao: { type: "string", description: "Gargalo na aquisição de clientes (1-2 parágrafos)" },
-            conversao: { type: "string", description: "Gargalo na conversão de leads em clientes (1-2 parágrafos)" },
-            estrutura: { type: "string", description: "Gargalo na estrutura comercial e operacional (1-2 parágrafos)" },
-            posicionamento: { type: "string", description: "Gargalo no posicionamento de marca e mercado (1-2 parágrafos)" },
+            canais_prioritarios: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  canal: { type: "string", description: "Nome do canal (ex: Instagram)" },
+                  tipo: { type: "string", enum: ["organico", "pago", "parceria"], description: "Tipo do canal" },
+                  percentual: { type: "number", description: "Percentual do investimento/esforço (0-100)" },
+                  acao_principal: { type: "string", description: "Ação principal neste canal" },
+                },
+                required: ["canal", "tipo", "percentual", "acao_principal"],
+                additionalProperties: false,
+              },
+            },
+            funil: {
+              type: "object",
+              properties: {
+                topo: {
+                  type: "object",
+                  properties: {
+                    estimativa_visitantes: { type: "number" },
+                    objetivo: { type: "string" },
+                  },
+                  required: ["estimativa_visitantes", "objetivo"],
+                  additionalProperties: false,
+                },
+                meio: {
+                  type: "object",
+                  properties: {
+                    estimativa_leads: { type: "number" },
+                    objetivo: { type: "string" },
+                  },
+                  required: ["estimativa_leads", "objetivo"],
+                  additionalProperties: false,
+                },
+                fundo: {
+                  type: "object",
+                  properties: {
+                    estimativa_clientes: { type: "number" },
+                    objetivo: { type: "string" },
+                  },
+                  required: ["estimativa_clientes", "objetivo"],
+                  additionalProperties: false,
+                },
+              },
+              required: ["topo", "meio", "fundo"],
+              additionalProperties: false,
+            },
           },
-          required: ["aquisicao", "conversao", "estrutura", "posicionamento"],
+          required: ["canais_prioritarios", "funil"],
           additionalProperties: false,
         },
-        projecao_crescimento: {
+        estrategia_conteudo: {
           type: "object",
           properties: {
-            meta_faturamento: { type: "string", description: "Meta de faturamento mensal informada (R$)" },
-            ticket_medio: { type: "string", description: "Ticket médio atual ou desejado (R$)" },
-            vendas_necessarias: { type: "number", description: "Número de vendas necessárias por mês (meta ÷ ticket)" },
-            leads_necessarios: { type: "number", description: "Leads necessários por mês (vendas ÷ taxa conversão)" },
-            taxa_conversao: { type: "number", description: "Taxa de conversão estimada (%)" },
-            descricao: { type: "string", description: "Descrição narrativa da projeção de crescimento com cálculos detalhados (2-3 parágrafos)" },
+            pilares: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  nome: { type: "string" },
+                  tipo: { type: "string", enum: ["educacao", "autoridade", "prova_social", "oferta"] },
+                  percentual: { type: "number", description: "Percentual do calendário (0-100)" },
+                  descricao: { type: "string" },
+                  exemplos: { type: "array", items: { type: "string" }, description: "3-5 ideias de conteúdo para este pilar" },
+                },
+                required: ["nome", "tipo", "percentual", "descricao", "exemplos"],
+                additionalProperties: false,
+              },
+              description: "3-4 pilares de conteúdo",
+            },
+            calendario_semanal: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  dia: { type: "string", description: "Dia da semana (Seg, Ter, Qua, etc)" },
+                  formato: { type: "string", description: "Formato (Carrossel, Reels, Stories, Post, etc)" },
+                  sugestao: { type: "string", description: "Sugestão de tema/conteúdo" },
+                },
+                required: ["dia", "formato", "sugestao"],
+                additionalProperties: false,
+              },
+              description: "5-7 dias com sugestão de conteúdo",
+            },
+            ideias_conteudo: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  formato: { type: "string" },
+                  titulo: { type: "string" },
+                  etapa_funil: { type: "string", enum: ["topo", "meio", "fundo"] },
+                },
+                required: ["formato", "titulo", "etapa_funil"],
+                additionalProperties: false,
+              },
+              description: "8-12 ideias de conteúdo para o próximo mês",
+            },
           },
-          required: ["meta_faturamento", "ticket_medio", "vendas_necessarias", "leads_necessarios", "taxa_conversao", "descricao"],
+          required: ["pilares", "calendario_semanal", "ideias_conteudo"],
           additionalProperties: false,
         },
-        estrategia_recomendada: {
+        plano_crescimento: {
           type: "object",
           properties: {
-            estrutura: { type: "array", items: { type: "string" }, description: "3-5 ações para estruturar o negócio" },
-            aquisicao: { type: "array", items: { type: "string" }, description: "3-5 ações para gerar demanda" },
-            conversao: { type: "array", items: { type: "string" }, description: "3-5 ações para otimizar conversão" },
-            escala: { type: "array", items: { type: "string" }, description: "3-5 ações para escalar o negócio" },
+            projecoes_mensais: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  mes: { type: "number" },
+                  leads: { type: "number" },
+                  clientes: { type: "number" },
+                  receita: { type: "number" },
+                  investimento: { type: "number" },
+                },
+                required: ["mes", "leads", "clientes", "receita", "investimento"],
+                additionalProperties: false,
+              },
+              description: "Projeção de 6 meses",
+            },
+            indicadores: {
+              type: "object",
+              properties: {
+                cpc_medio: { type: "string" },
+                cpl_estimado: { type: "string" },
+                cac_estimado: { type: "string" },
+                roi_esperado: { type: "string" },
+                ltv_estimado: { type: "string" },
+              },
+              required: ["cpc_medio", "cpl_estimado", "cac_estimado", "roi_esperado", "ltv_estimado"],
+              additionalProperties: false,
+            },
           },
-          required: ["estrutura", "aquisicao", "conversao", "escala"],
+          required: ["projecoes_mensais", "indicadores"],
           additionalProperties: false,
         },
-        servicos_indicados: {
+        benchmarks_setor: {
+          type: "object",
+          properties: {
+            setor: { type: "string" },
+            taxa_conversao_media: { type: "string" },
+            cpl_medio_setor: { type: "string" },
+            ticket_medio_setor: { type: "string" },
+            tendencias: { type: "array", items: { type: "string" }, description: "3-5 tendências do setor" },
+            insight_competitivo: { type: "string" },
+          },
+          required: ["setor", "taxa_conversao_media", "cpl_medio_setor", "ticket_medio_setor", "tendencias", "insight_competitivo"],
+          additionalProperties: false,
+        },
+        plano_execucao: {
           type: "array",
           items: {
             type: "object",
             properties: {
-              servico: { type: "string", description: "Nome do serviço NOEXCUSE indicado" },
-              justificativa: { type: "string", description: "Por que esse serviço é necessário" },
-              prioridade: { type: "string", enum: ["essencial", "recomendado", "opcional"], description: "Nível de prioridade" },
+              mes: { type: "number" },
+              titulo: { type: "string" },
+              passos: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    acao: { type: "string" },
+                    ferramenta: { type: "string", enum: ["conteudos", "postagens", "sites", "trafego", "crm", "scripts", "manual"] },
+                  },
+                  required: ["acao", "ferramenta"],
+                  additionalProperties: false,
+                },
+              },
             },
-            required: ["servico", "justificativa", "prioridade"],
+            required: ["mes", "titulo", "passos"],
             additionalProperties: false,
           },
-          description: "5-8 serviços indicados: Estruturação RevOps, CRM, Tráfego Pago, Estratégia de Conteúdo, Automação de Vendas, Dashboards, etc.",
+          description: "Roadmap de 3 meses com ações e ferramentas da plataforma",
         },
-        roadmap: {
+        estrutura_recomendada: {
           type: "array",
           items: {
             type: "object",
             properties: {
-              fase: { type: "number", description: "Número da fase (1-4)" },
-              titulo: { type: "string", description: "Título da fase" },
-              periodo: { type: "string", description: "Período estimado (ex: Semanas 1-4)" },
-              acoes: { type: "array", items: { type: "string" }, description: "3-5 ações da fase" },
+              item: { type: "string", description: "Item de estrutura (ex: Site profissional, CRM configurado)" },
+              status: { type: "string", enum: ["tem", "nao_tem"], description: "Se o negócio já possui ou não" },
+              prioridade: { type: "string", enum: ["alta", "media", "baixa"] },
+              recomendacao: { type: "string" },
             },
-            required: ["fase", "titulo", "periodo", "acoes"],
+            required: ["item", "status", "prioridade", "recomendacao"],
             additionalProperties: false,
           },
-          description: "4 fases: 1-Estrutura, 2-Geração de Demanda, 3-Otimização de Conversão, 4-Escala",
+          description: "6-10 itens de checklist de estrutura",
         },
-        resumo_executivo: { type: "string", description: "Resumo executivo de 2-3 parágrafos da estratégia completa, incluindo diagnóstico, principais problemas, projeção e recomendações" },
       },
       required: [
-        "diagnostico_negocio", "problemas_identificados", "gargalos",
-        "projecao_crescimento", "estrategia_recomendada", "servicos_indicados",
-        "roadmap", "resumo_executivo",
+        "diagnostico", "objetivo_principal", "canal_prioritario",
+        "investimento_recomendado", "potencial_crescimento", "resumo_executivo",
+        "icp", "proposta_valor", "analise_concorrencia", "tom_comunicacao",
+        "estrategia_aquisicao", "estrategia_conteudo", "plano_crescimento",
+        "benchmarks_setor", "plano_execucao", "estrutura_recomendada",
       ],
       additionalProperties: false,
     },
   },
 };
 
-const SYSTEM_PROMPT = `Você é um consultor estratégico sênior da NOEXCUSE, especialista em diagnóstico empresarial usando a metodologia SPIN Selling combinada com o Termômetro de Maturidade NOEXCUSE (Estrutura → Dados → Escala).
+const SYSTEM_PROMPT = `Você é uma estrategista de marketing sênior. Sua função é receber as respostas de um briefing de marketing e gerar uma ESTRATÉGIA COMPLETA E PERSONALIZADA.
 
-Sua função é receber as respostas de um diagnóstico estratégico de 8 blocos e gerar um documento completo com 7 seções.
+SEÇÕES A GERAR:
 
-METODOLOGIA:
-- SPIN Selling: as respostas dos blocos de Situação, Problemas, Impacto e Resultado Esperado revelam as dores reais e o cenário futuro desejado.
-- Termômetro NOEXCUSE: as autoavaliações (1-5) em 6 eixos (Marketing, Comercial, Leads, Previsibilidade, Marca, Escala) definem o nível de maturidade.
-- Os dados financeiros (margem, custo máx/cliente, LTV) permitem projeções precisas.
+1. DIAGNÓSTICO: Score geral (0-100), radar de 6 dimensões (0-10 cada: autoridade, aquisição, conversão, retenção, conteúdo, branding), análise textual, pontos fortes, oportunidades e riscos.
 
-ESTRUTURA DO DIAGNÓSTICO (8 blocos de entrada):
-1. Situação (Contexto do Negócio) — produto, ticket, faturamento, meta, canais, investimento marketing
-2. Estrutura Comercial — processo, atendimento leads, time, script, funil, CRM, conversão
-3. Geração de Demanda — leads/mês, CPL, canal principal, tráfego pago, conteúdo, posicionamento
-4. Problemas (SPIN) — dores de geração, vendas, oportunidades perdidas, qualificação, previsibilidade
-5. Impacto (SPIN) — consequências, impacto faturamento, vendas perdidas, capacidade de escala
-6. Resultado Esperado (Need Payoff) — clientes desejados, faturamento ideal, ticket futuro, cenário ideal
-7. Termômetro Maturidade — autoavaliação 1-5 em 6 eixos
-8. Financeiro Estratégico — margem, custo máx/cliente, LTV
+2. OBJETIVO & CANAL: Objetivo principal recomendado, canal prioritário, investimento recomendado, potencial de crescimento.
 
-DOCUMENTO A GERAR (7 seções):
+3. ICP (CLIENTE IDEAL): Persona detalhada com nome, emoji avatar, demografia, perfil profissional, descrição, comportamento digital, dores (4-6), desejos (4-6), objeções (3-5), gatilhos de compra (3-5).
 
-1. DIAGNÓSTICO DO NEGÓCIO: modelo de negócio, momento atual, maturidade (score 0-100, nível, radar com 6 eixos usando as notas do termômetro).
+4. PROPOSTA DE VALOR: Headline impactante, framework Problema → Método → Resultado, prova social.
 
-2. PROBLEMAS IDENTIFICADOS: 5-8 problemas REAIS extraídos das respostas SPIN (não genéricos).
+5. ANÁLISE DE CONCORRÊNCIA: Visão geral, análise de 2-4 concorrentes (inferidos do segmento ou dos URLs fornecidos), posicionamento recomendado.
 
-3. GARGALOS ESTRATÉGICOS: análise detalhada em 4 dimensões — aquisição, conversão, estrutura, posicionamento.
+6. TOM DE COMUNICAÇÃO: Tom principal, personalidade da marca (adjetivos), exemplo de voz, palavras para usar (8-12), palavras para evitar (5-8), exemplos de posts (3-5).
 
-4. PROJEÇÃO DE CRESCIMENTO: cálculos matemáticos baseados nos dados fornecidos:
-   - Meta ÷ Ticket = Vendas necessárias
-   - Vendas ÷ Taxa conversão = Leads necessários
-   - Use os dados reais informados (faturamento, ticket, taxa conversão).
+7. ESTRATÉGIA DE AQUISIÇÃO: Canais prioritários com percentuais, funil detalhado (topo/meio/fundo com estimativas).
 
-5. ESTRATÉGIA RECOMENDADA: 4 pilares (Estrutura, Aquisição, Conversão, Escala) com 3-5 ações cada.
+8. ESTRATÉGIA DE CONTEÚDO: Pilares (3-4 com percentuais), calendário semanal (5-7 dias), ideias de conteúdo (8-12).
 
-6. SERVIÇOS INDICADOS NOEXCUSE: 5-8 serviços da suite NOEXCUSE (RevOps, CRM, Tráfego Pago, Conteúdo, Automação, Dashboards, Branding, etc.) com justificativa e prioridade.
+9. PROJEÇÃO DE CRESCIMENTO: Projeções de 6 meses (leads, clientes, receita, investimento), indicadores (CPC, CPL, CAC, ROI, LTV).
 
-7. ROADMAP DE EXECUÇÃO: 4 fases — Estrutura → Demanda → Conversão → Escala, com 3-5 ações cada e período estimado.
+10. BENCHMARKS DO SETOR: Métricas médias do setor, tendências, insight competitivo.
+
+11. PLANO DE EXECUÇÃO: Roadmap de 3 meses com ações vinculadas às ferramentas da plataforma (conteudos, postagens, sites, trafego, crm, scripts, manual).
+
+12. CHECKLIST DE ESTRUTURA: 6-10 itens com status (tem/nao_tem), prioridade e recomendação.
 
 REGRAS:
-- Seja ESPECÍFICO com base nos dados fornecidos — nada genérico
-- Use CÁLCULOS REAIS para projeções
-- Os scores do radar devem refletir as autoavaliações do termômetro
-- O score geral de maturidade (0-100) deve ser calculado como a média dos 6 eixos × 20
+- Seja ESPECÍFICO com base nas respostas — nada genérico
+- Use CÁLCULOS REAIS para projeções financeiras
+- Todas as dores, objeções e gatilhos devem refletir o segmento real
+- Tom de comunicação deve respeitar as preferências informadas
 - Sempre em português brasileiro
-- Prioridades dos serviços: essencial (necessário imediatamente), recomendado (importante), opcional (bom ter)
+- Valores monetários em R$
+- Os exemplos de posts devem usar o tom definido
 
 Use a ferramenta generate_strategy para retornar.`;
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
 
@@ -211,7 +401,7 @@ serve(async (req) => {
     const { answers, organization_id } = await req.json();
     if (!answers) {
       return new Response(
-        JSON.stringify({ error: "Respostas do diagnóstico são obrigatórias" }),
+        JSON.stringify({ error: "Respostas do briefing são obrigatórias" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -225,26 +415,26 @@ serve(async (req) => {
     }
 
     // Pre-check credits
+    const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    
     if (organization_id) {
-      const adminCheck = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const { data: wallet } = await adminCheck
+      const { data: wallet } = await serviceClient
         .from("credit_wallets")
         .select("balance")
         .eq("organization_id", organization_id)
         .maybeSingle();
       if (!wallet || wallet.balance < CREDIT_COST) {
         return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }),
+          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos para gerar a estratégia." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
     // Fetch sales plan for unified context
-    const serviceClient2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     let salesPlanContext = "";
     if (organization_id) {
-      const { data: salesPlan } = await serviceClient2
+      const { data: salesPlan } = await serviceClient
         .from("sales_plans")
         .select("answers")
         .eq("organization_id", organization_id)
@@ -253,7 +443,7 @@ serve(async (req) => {
         const spText = Object.entries(salesPlan.answers as Record<string, any>)
           .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
           .join("\n");
-        salesPlanContext = `\n\nCONTEXTO DO PLANO DE VENDAS (já preenchido pelo usuário):\n${spText}\n\nUse esses dados para enriquecer o diagnóstico e as recomendações.`;
+        salesPlanContext = `\n\nCONTEXTO DO PLANO DE VENDAS (já preenchido):\n${spText}\n\nUse esses dados para enriquecer ICP, proposta de valor e projeções.`;
       }
     }
 
@@ -261,19 +451,20 @@ serve(async (req) => {
       .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
       .join("\n");
 
-    const userPrompt = `Com base nas respostas do diagnóstico estratégico abaixo (8 blocos: Situação, Estrutura Comercial, Geração de Demanda, Problemas SPIN, Impacto SPIN, Resultado Esperado, Termômetro de Maturidade, Financeiro), gere o documento estratégico COMPLETO com as 7 seções.
+    const userPrompt = `Com base nas respostas do briefing de marketing abaixo, gere a ESTRATÉGIA COMPLETA com todas as 12 seções.
 
-RESPOSTAS DO DIAGNÓSTICO:
+RESPOSTAS DO BRIEFING:
 ${answersText}
 ${salesPlanContext}
 
-INSTRUÇÕES:
-1. Use as autoavaliações do termômetro (1-5) como base para os scores do radar
-2. Calcule o score de maturidade como média dos 6 eixos × 20
-3. Extraia problemas REAIS das respostas SPIN (não invente)
-4. Faça a projeção de crescimento com cálculos matemáticos reais (meta ÷ ticket = vendas, vendas ÷ conversão = leads)
-5. Indique serviços NOEXCUSE relevantes com justificativa baseada nos problemas identificados
-6. Monte roadmap em 4 fases progressivas
+INSTRUÇÕES IMPORTANTES:
+1. O ICP deve refletir exatamente o público descrito nas respostas
+2. O tom de comunicação deve respeitar as preferências informadas (incluindo o que NÃO quer)
+3. Faça projeções financeiras realistas baseadas no ticket médio e orçamento informados
+4. Os concorrentes devem ser inferidos do segmento (ou usar URLs se fornecidos)
+5. O calendário semanal deve ser prático e executável
+6. O plano de execução deve referenciar ferramentas reais da plataforma (conteudos, postagens, sites, trafego, crm, scripts)
+7. A estrutura recomendada deve avaliar o que o negócio já tem vs o que precisa
 
 Use a ferramenta generate_strategy para retornar.`;
 
@@ -284,7 +475,7 @@ Use a ferramenta generate_strategy para retornar.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
@@ -331,7 +522,7 @@ Use a ferramenta generate_strategy para retornar.`;
       }
     }
 
-    // Fallback: if tool_calls is empty, try parsing message.content as JSON
+    // Fallback: try parsing message.content as JSON
     if (!result) {
       const messageContent = aiData.choices?.[0]?.message?.content;
       if (messageContent) {
@@ -354,11 +545,6 @@ Use a ferramenta generate_strategy para retornar.`;
     }
 
     // Log usage
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
     const { data: orgData } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
 
     if (orgData) {
@@ -366,10 +552,10 @@ Use a ferramenta generate_strategy para retornar.`;
         organization_id: orgData,
         agent_id: "00000000-0000-0000-0000-000000000000",
         contact_id: "00000000-0000-0000-0000-000000000000",
-        input_message: `[Estratégia SPIN+NOEXCUSE] Diagnóstico com ${Object.keys(answers).length} respostas`,
+        input_message: `[Estratégia Marketing] Briefing com ${Object.keys(answers).length} respostas`,
         output_message: JSON.stringify(result).substring(0, 500),
         tokens_used: tokensUsed,
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
       });
     }
 
@@ -377,10 +563,10 @@ Use a ferramenta generate_strategy para retornar.`;
       JSON.stringify({ result, tokens_used: tokensUsed }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (e) {
-    console.error("generate-strategy error:", e);
+  } catch (err: any) {
+    console.error("Strategy generation error:", err);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
+      JSON.stringify({ error: err.message || "Erro interno" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
