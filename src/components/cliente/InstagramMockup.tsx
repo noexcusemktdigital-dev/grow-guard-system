@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Heart, MessageCircle, Send, Bookmark, MoreHorizontal,
   Download, Copy, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ExternalLink,
