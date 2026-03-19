@@ -37,6 +37,8 @@ function savePrefs(prefs: WizardPrefs) {
 interface ContentWizardProps {
   quotaRemaining: number;
   quotaMax: number;
+  creditBalance: number;
+  costPerContent: number;
   hasStrategy: boolean;
   strategy: any;
   isGenerating: boolean;
