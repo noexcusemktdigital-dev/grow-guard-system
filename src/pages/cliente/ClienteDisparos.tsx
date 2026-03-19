@@ -12,6 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useClienteDispatches, useClienteDispatchMutations } from "@/hooks/useClienteDispatches";
 import { useWhatsAppInstance } from "@/hooks/useWhatsApp";
 import { toast } from "@/hooks/use-toast";
@@ -21,19 +26,26 @@ import { DisparoWizardStep1 } from "@/components/disparos/DisparoWizardStep1";
 import { DisparoWizardStep2 } from "@/components/disparos/DisparoWizardStep2";
 import { DisparoWizardStep3 } from "@/components/disparos/DisparoWizardStep3";
 import { DisparoDispatchCard } from "@/components/disparos/DisparoDispatchCard";
+import { DisparoDetailSheet } from "@/components/disparos/DisparoDetailSheet";
 
 const STEP_TITLES = ["Mensagem", "Destinatários", "Confirmar"];
 
 export default function ClienteDisparos() {
   const navigate = useNavigate();
   const { data: dispatches, isLoading } = useClienteDispatches();
-  const { createDispatch, triggerBulkSend } = useClienteDispatchMutations();
+  const { createDispatch, deleteDispatch, triggerBulkSend } = useClienteDispatchMutations();
   const { data: instance } = useWhatsAppInstance();
 
   const isConnected = instance?.status === "connected";
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [step, setStep] = useState(0);
+
+  // Detail sheet
+  const [detailDispatch, setDetailDispatch] = useState<any>(null);
+
+  // Delete confirm
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Wizard state
   const [step1, setStep1] = useState({ name: "", message: "", imageUrl: "" });
@@ -98,6 +110,38 @@ export default function ClienteDisparos() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await deleteDispatch.mutateAsync(deleteId);
+      toast({ title: "Disparo excluído" });
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+    }
+    setDeleteId(null);
+  };
+
+  const handleResend = (id: string) => {
+    if (!isConnected) {
+      toast({ title: "WhatsApp não conectado", description: "Conecte o WhatsApp para enviar.", variant: "destructive" });
+      return;
+    }
+    triggerBulkSend.mutate(id, {
+      onSuccess: (data: any) => {
+        toast({ title: "Disparo enviado!", description: `${data?.stats?.sent || 0} mensagens enviadas.` });
+      },
+      onError: (err: any) => {
+        toast({ title: "Erro no envio", description: err.message, variant: "destructive" });
+      },
+    });
+    toast({ title: "Enviando...", description: "Disparo em andamento." });
+  };
+
+  // KPI calculations
+  const totalSent = allDispatches
+    .filter((d) => d.stats)
+    .reduce((acc, d) => acc + ((d.stats as any)?.sent || 0), 0);
+
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -128,7 +172,6 @@ export default function ClienteDisparos() {
         }
       />
 
-      {/* Warning banner */}
       <DisparoWarningBanner />
 
       {!isConnected && (
@@ -146,7 +189,7 @@ export default function ClienteDisparos() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{allDispatches.length}</p><p className="text-[10px] text-muted-foreground uppercase">Total</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{allDispatches.filter((d) => d.status === "sent").length}</p><p className="text-[10px] text-muted-foreground uppercase">Enviados</p></CardContent></Card>
-        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{allDispatches.filter((d) => d.status === "sending").length}</p><p className="text-[10px] text-muted-foreground uppercase">Enviando</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-primary">{totalSent}</p><p className="text-[10px] text-muted-foreground uppercase">Mensagens</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{allDispatches.filter((d) => d.status === "draft").length}</p><p className="text-[10px] text-muted-foreground uppercase">Rascunhos</p></CardContent></Card>
       </div>
 
@@ -164,20 +207,51 @@ export default function ClienteDisparos() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {allDispatches.map((d, i) => (
-            <DisparoDispatchCard key={d.id} dispatch={d} index={i} />
+            <DisparoDispatchCard
+              key={d.id}
+              dispatch={d}
+              index={i}
+              onView={(dispatch) => setDetailDispatch(dispatch)}
+              onDelete={(id) => setDeleteId(id)}
+              onResend={handleResend}
+            />
           ))}
         </div>
       )}
 
+      {/* Detail sheet */}
+      <DisparoDetailSheet
+        dispatch={detailDispatch}
+        open={!!detailDispatch}
+        onOpenChange={(open) => { if (!open) setDetailDispatch(null); }}
+      />
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir disparo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O disparo será removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Wizard Sheet */}
-      <Sheet open={wizardOpen} onOpenChange={setWizardOpen}>
+      <Sheet open={wizardOpen} onOpenChange={(open) => { setWizardOpen(open); if (!open) resetWizard(); }}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Novo Disparo — {STEP_TITLES[step]}</SheetTitle>
             <SheetDescription>Etapa {step + 1} de 3</SheetDescription>
           </SheetHeader>
 
-          {/* Step indicators */}
           <div className="flex items-center gap-2 mt-4 mb-6">
             {STEP_TITLES.map((t, i) => (
               <div
@@ -187,7 +261,6 @@ export default function ClienteDisparos() {
             ))}
           </div>
 
-          {/* Steps */}
           {step === 0 && <DisparoWizardStep1 data={step1} onChange={setStep1} />}
           {step === 1 && (
             <DisparoWizardStep2
@@ -208,7 +281,6 @@ export default function ClienteDisparos() {
             />
           )}
 
-          {/* Navigation */}
           <div className="flex gap-2 mt-8">
             {step > 0 ? (
               <Button variant="outline" className="flex-1" onClick={() => setStep(step - 1)}>
