@@ -227,13 +227,23 @@ export default function ClienteConteudos() {
         </p>
       </div>
       <div className="space-y-3">
-        <Slider value={[quantidade]} onValueChange={([v]) => { setQuantidade(v); setFormatDist({}); }} min={1} max={quota.remaining} step={1} />
+        <Slider value={[quantidade]} onValueChange={([v]) => { setQuantidade(v); setFormatDist({}); }} min={1} max={Math.min(quota.remaining, 30)} step={1} />
         <div className="text-center text-4xl font-bold text-primary">{quantidade}</div>
       </div>
       <div>
-        <p className="text-sm font-medium mb-3">
+        <p className="text-sm font-medium mb-1">
           Distribuição de formatos: <strong className={formatTotal === quantidade ? "text-primary" : "text-destructive"}>{formatTotal}/{quantidade}</strong>
         </p>
+        {formatTotal !== quantidade && formatTotal > 0 && (
+          <p className="text-xs text-destructive mb-3">
+            {formatTotal < quantidade
+              ? `Distribua mais ${quantidade - formatTotal} conteúdo${quantidade - formatTotal > 1 ? "s" : ""} nos formatos abaixo.`
+              : `Remova ${formatTotal - quantidade} conteúdo${formatTotal - quantidade > 1 ? "s" : ""} dos formatos.`}
+          </p>
+        )}
+        {formatTotal === 0 && (
+          <p className="text-xs text-muted-foreground mb-3">Escolha como distribuir seus {quantidade} conteúdos entre os formatos abaixo.</p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FORMATOS.map(f => {
             const Icon = f.icon;
