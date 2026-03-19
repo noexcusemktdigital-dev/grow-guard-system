@@ -1057,7 +1057,7 @@ export default function ClientePlanoMarketing() {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <PageHeader title="Estratégia de Marketing" subtitle="Dashboard estratégico personalizado" icon={<Megaphone className="w-5 h-5 text-primary" />} />
+          <PageHeader title="Plano de Marketing" subtitle="Dashboard estratégico personalizado" icon={<Megaphone className="w-5 h-5 text-primary" />} />
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">{generationCount} geração(ões)</Badge>
             {(history?.length ?? 0) > 0 && (
