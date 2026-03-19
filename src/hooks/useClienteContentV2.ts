@@ -3,7 +3,10 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClienteSubscription } from "./useClienteSubscription";
+import { useClienteWallet } from "./useClienteWallet";
 import { getEffectiveLimits } from "@/constants/plans";
+
+const CREDIT_COST_PER_CONTENT = 30;
 
 export interface ContentItem {
   id: string;
