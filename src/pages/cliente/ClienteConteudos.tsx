@@ -213,6 +213,8 @@ export default function ClienteConteudos() {
             <ContentWizard
               quotaRemaining={quota.remaining}
               quotaMax={quota.max}
+              creditBalance={quota.creditBalance}
+              costPerContent={quota.costPerContent}
               hasStrategy={hasStrategy}
               strategy={strategy}
               isGenerating={isGenerating}
