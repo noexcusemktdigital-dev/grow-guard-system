@@ -20,7 +20,7 @@ import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import {
   RadialBarChart, RadialBar, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  LineChart, Line, ResponsiveContainer, PieChart, Pie, Cell,
+  LineChart, Line, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,8 +33,51 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
+/* ========== DATE FILTER HELPER ========== */
+function getDateRange(period: string, customFrom: string, customTo: string): { from: Date | null; to: Date } {
+  const now = new Date();
+  const to = new Date(now);
+  to.setHours(23, 59, 59, 999);
+
+  switch (period) {
+    case "7d": {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 7);
+      from.setHours(0, 0, 0, 0);
+      return { from, to };
+    }
+    case "30d": {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 30);
+      from.setHours(0, 0, 0, 0);
+      return { from, to };
+    }
+    case "90d": {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 90);
+      from.setHours(0, 0, 0, 0);
+      return { from, to };
+    }
+    case "custom": {
+      const from = customFrom ? new Date(customFrom + "T00:00:00") : null;
+      const customEnd = customTo ? new Date(customTo + "T23:59:59") : to;
+      return { from, to: customEnd };
+    }
+    default: // "all"
+      return { from: null, to };
+  }
+}
+
+function filterByDate<T extends { created_at: string }>(items: T[], from: Date | null, to: Date): T[] {
+  if (!from) return items;
+  return items.filter(item => {
+    const d = new Date(item.created_at);
+    return d >= from && d <= to;
+  });
+}
+
 /* ========== KPI CARD ========== */
-function KpiCard({ label, value, icon: Icon, gradient }: { label: string; value: string; icon: React.ElementType; gradient: string }) {
+function KpiCard({ label, value, icon: Icon, gradient, trend }: { label: string; value: string; icon: React.ElementType; gradient: string; trend?: { value: string; positive: boolean } }) {
   return (
     <Card className="relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-60`} />
@@ -44,7 +87,15 @@ function KpiCard({ label, value, icon: Icon, gradient }: { label: string; value:
         </div>
         <div className="mt-3">
           <p className="text-2xl font-bold tracking-tight">{value}</p>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{label}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+            {trend && (
+              <span className={`text-[10px] font-medium flex items-center gap-0.5 ${trend.positive ? "text-emerald-600" : "text-red-500"}`}>
+                {trend.positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                {trend.value}
+              </span>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -103,8 +154,23 @@ export default function ClienteDashboard() {
     enabled: !!orgId,
   });
 
+  // ===== DATE RANGE =====
+  const { from: dateFrom, to: dateTo } = useMemo(() => getDateRange(period, customFrom, customTo), [period, customFrom, customTo]);
+
+  // ===== FILTERED DATA =====
+  const allLeadsRaw = leads ?? [];
+  const allLeads = useMemo(() => filterByDate(allLeadsRaw, dateFrom, dateTo), [allLeadsRaw, dateFrom, dateTo]);
+
+  // Previous period for comparison
+  const prevLeads = useMemo(() => {
+    if (!dateFrom) return [];
+    const periodMs = dateTo.getTime() - dateFrom.getTime();
+    const prevFrom = new Date(dateFrom.getTime() - periodMs);
+    const prevTo = new Date(dateFrom.getTime() - 1);
+    return filterByDate(allLeadsRaw, prevFrom, prevTo);
+  }, [allLeadsRaw, dateFrom, dateTo]);
+
   // CRM computed values
-  const allLeads = leads ?? [];
   const wonLeads = allLeads.filter(l => l.won_at);
   const lostLeads = allLeads.filter(l => l.lost_at);
   const activeLeads = allLeads.filter(l => !l.won_at && !l.lost_at);
@@ -113,6 +179,18 @@ export default function ClienteDashboard() {
   const conversionRate = allLeads.length > 0 ? ((wonLeads.length / allLeads.length) * 100).toFixed(1) : "0";
   const lossRate = allLeads.length > 0 ? ((lostLeads.length / allLeads.length) * 100).toFixed(1) : "0";
   const ticketMedio = wonLeads.length > 0 ? totalValue / wonLeads.length : 0;
+
+  // Previous period comparison
+  const prevWonLeads = prevLeads.filter(l => l.won_at);
+  const prevTotalValue = prevWonLeads.reduce((sum, l) => sum + Number(l.value || 0), 0);
+  const prevConversionRate = prevLeads.length > 0 ? ((prevWonLeads.length / prevLeads.length) * 100) : 0;
+
+  function calcTrend(current: number, previous: number): { value: string; positive: boolean } | undefined {
+    if (previous === 0 && current === 0) return undefined;
+    if (previous === 0) return { value: "+100%", positive: true };
+    const pct = ((current - previous) / previous * 100).toFixed(0);
+    return { value: `${Number(pct) >= 0 ? "+" : ""}${pct}%`, positive: Number(pct) >= 0 };
+  }
 
   // Average closing time (days between created_at and won_at)
   const avgClosingDays = useMemo(() => {
@@ -177,11 +255,19 @@ export default function ClienteDashboard() {
   const openProposals = (proposals ?? []).filter(p => p.status === "draft" || p.status === "sent");
   const openProposalsValue = openProposals.reduce((s, p) => s + (p.value || 0), 0);
 
-  // Chat computed
+  // Chat computed - also filtered by date
   const allContacts = chatContacts ?? [];
-  const allMessages = chatMessages ?? [];
+  const allMessagesRaw = chatMessages ?? [];
+  const allMessages = useMemo(() => {
+    if (!dateFrom) return allMessagesRaw;
+    return allMessagesRaw.filter((m: any) => {
+      const d = new Date(m.created_at);
+      return d >= dateFrom && d <= dateTo;
+    });
+  }, [allMessagesRaw, dateFrom, dateTo]);
+
   const todayStr = new Date().toISOString().slice(0, 10);
-  const messagesToday = allMessages.filter((m: any) => m.created_at?.startsWith(todayStr));
+  const messagesToday = allMessagesRaw.filter((m: any) => m.created_at?.startsWith(todayStr));
 
   // Messages per day (last 7 days)
   const messagesPerDay = useMemo(() => {
@@ -191,7 +277,7 @@ export default function ClienteDashboard() {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const dayStr = d.toISOString().slice(0, 10);
-      const dayMsgs = allMessages.filter((m: any) => m.created_at?.startsWith(dayStr));
+      const dayMsgs = allMessagesRaw.filter((m: any) => m.created_at?.startsWith(dayStr));
       days.push({
         name: d.toLocaleDateString("pt-BR", { weekday: "short" }),
         inbound: dayMsgs.filter((m: any) => m.direction === "inbound").length,
@@ -199,7 +285,7 @@ export default function ClienteDashboard() {
       });
     }
     return days;
-  }, [allMessages]);
+  }, [allMessagesRaw]);
 
   // AI vs Human distribution
   const aiVsHuman = useMemo(() => {
@@ -214,12 +300,12 @@ export default function ClienteDashboard() {
   // Contacts without response
   const noResponseCount = useMemo(() => {
     return allContacts.filter((c: any) => {
-      const contactMsgs = allMessages.filter((m: any) => m.contact_id === c.id);
+      const contactMsgs = allMessagesRaw.filter((m: any) => m.contact_id === c.id);
       if (contactMsgs.length === 0) return false;
-      const lastMsg = contactMsgs[0]; // already ordered desc
+      const lastMsg = contactMsgs[0];
       return lastMsg.direction === "inbound";
     }).length;
-  }, [allContacts, allMessages]);
+  }, [allContacts, allMessagesRaw]);
 
   // Average response time (minutes)
   const avgResponseTime = useMemo(() => {
@@ -232,7 +318,7 @@ export default function ClienteDashboard() {
         const next = sorted.slice(i + 1).find((n: any) => n.direction === "outbound" && n.contact_id === m.contact_id);
         if (next) {
           const diff = (new Date((next as any).created_at).getTime() - new Date(m.created_at).getTime()) / (1000 * 60);
-          if (diff < 1440) { // ignore gaps > 24h
+          if (diff < 1440) {
             totalTime += diff;
             count++;
           }
@@ -242,23 +328,32 @@ export default function ClienteDashboard() {
     return count > 0 ? Math.round(totalTime / count) : 0;
   }, [allMessages]);
 
-  // AI computed
+  // AI computed - also filtered
   const allAgents = agents ?? [];
   const activeAgents = allAgents.filter((a: any) => a.status === "active");
-  const totalTokens = (aiLogs ?? []).reduce((s: number, l: any) => s + (l.tokens_used || 0), 0);
-  const avgTokensPerConvo = (aiLogs ?? []).length > 0 ? Math.round(totalTokens / (aiLogs ?? []).length) : 0;
+  const filteredAiLogs = useMemo(() => {
+    const logs = aiLogs ?? [];
+    if (!dateFrom) return logs;
+    return logs.filter((l: any) => {
+      const d = new Date(l.created_at);
+      return d >= dateFrom && d <= dateTo;
+    });
+  }, [aiLogs, dateFrom, dateTo]);
+  
+  const totalTokens = filteredAiLogs.reduce((s: number, l: any) => s + (l.tokens_used || 0), 0);
+  const avgTokensPerConvo = filteredAiLogs.length > 0 ? Math.round(totalTokens / filteredAiLogs.length) : 0;
 
   // Conversations per agent
   const conversationsPerAgent = useMemo(() => {
     const map: Record<string, { name: string; count: number }> = {};
-    (aiLogs ?? []).forEach((log: any) => {
+    filteredAiLogs.forEach((log: any) => {
       const agent = allAgents.find((a: any) => a.id === log.agent_id);
       const name = agent?.name || "Desconhecido";
       if (!map[log.agent_id]) map[log.agent_id] = { name, count: 0 };
       map[log.agent_id].count++;
     });
     return Object.values(map).sort((a, b) => b.count - a.count);
-  }, [aiLogs, allAgents]);
+  }, [filteredAiLogs, allAgents]);
 
   // Handoff rate
   const handoffRate = useMemo(() => {
@@ -270,10 +365,13 @@ export default function ClienteDashboard() {
 
   const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--muted-foreground))"];
 
+  // Period label for display
+  const periodLabel = period === "7d" ? "7 dias" : period === "30d" ? "30 dias" : period === "90d" ? "90 dias" : period === "custom" ? "Personalizado" : "Todo período";
+
   if (leadsLoading) {
     return (
       <div className="w-full space-y-6">
-        <PageHeader title="Dashboard" subtitle="Análises e métricas" icon={<BarChart3 className="w-5 h-5 text-primary" />} />
+        <PageHeader title="Relatórios" subtitle="Análises e métricas" icon={<BarChart3 className="w-5 h-5 text-primary" />} />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
       </div>
     );
@@ -316,6 +414,16 @@ export default function ClienteDashboard() {
         }
       />
 
+      {/* Period info badge */}
+      {dateFrom && (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-[10px]">
+            {dateFrom.toLocaleDateString("pt-BR")} — {dateTo.toLocaleDateString("pt-BR")}
+          </Badge>
+          <span className="text-[10px] text-muted-foreground">{allLeads.length} de {allLeadsRaw.length} leads no período</span>
+        </div>
+      )}
+
       <Tabs defaultValue="crm" className="w-full">
         <TabsList className="grid grid-cols-3 w-full max-w-md">
           <TabsTrigger value="crm" className="text-xs gap-1"><Users className="w-3 h-3" /> CRM</TabsTrigger>
@@ -330,16 +438,16 @@ export default function ClienteDashboard() {
               downloadCsv("crm-leads.csv", ["Nome", "Empresa", "Valor", "Etapa", "Origem", "Criado em"],
                 allLeads.map(l => [l.name, l.company || "", String(l.value || 0), l.stage, l.source || "", l.created_at])
               );
-              toast({ title: "CSV exportado" });
+              toast({ title: "CSV exportado", description: `${allLeads.length} leads exportados (${periodLabel})` });
             }}>
               <Download className="w-3 h-3" /> Exportar
             </Button>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Receita Total" value={`R$ ${totalValue.toLocaleString("pt-BR")}`} icon={DollarSign} gradient="from-emerald-500/15 to-emerald-600/5" />
-            <KpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" />
-            <KpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" />
+            <KpiCard label="Receita Total" value={`R$ ${totalValue.toLocaleString("pt-BR")}`} icon={DollarSign} gradient="from-emerald-500/15 to-emerald-600/5" trend={calcTrend(totalValue, prevTotalValue)} />
+            <KpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" trend={calcTrend(allLeads.length, prevLeads.length)} />
+            <KpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" trend={calcTrend(Number(conversionRate), prevConversionRate)} />
             <KpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={Eye} gradient="from-amber-500/15 to-amber-600/5" />
           </div>
 
@@ -385,7 +493,7 @@ export default function ClienteDashboard() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados</p>}
+                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}
               </CardContent>
             </Card>
           </div>
@@ -403,11 +511,13 @@ export default function ClienteDashboard() {
                         <XAxis type="number" tick={{ fontSize: 10 }} />
                         <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} />
                         <ReTooltip />
-                        <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                          {leadsBySource.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados</p>}
+                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}
               </CardContent>
             </Card>
 
@@ -439,7 +549,7 @@ export default function ClienteDashboard() {
                         ))}
                       </TableBody>
                     </Table>
-                  ) : <p className="text-xs text-muted-foreground text-center py-4">Sem dados</p>}
+                  ) : <p className="text-xs text-muted-foreground text-center py-4">Sem dados no período</p>}
                 </CardContent>
               </Card>
             </div>
@@ -462,7 +572,7 @@ export default function ClienteDashboard() {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados</p>}
+                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}
               </CardContent>
             </Card>
 
@@ -471,14 +581,17 @@ export default function ClienteDashboard() {
               <CardContent>
                 {lostReasons.length > 0 ? (
                   <div className="space-y-2">
-                    {lostReasons.map(r => (
+                    {lostReasons.map((r, i) => (
                       <div key={r.name} className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground truncate flex-1">{r.name}</span>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                          <span className="text-xs text-muted-foreground truncate">{r.name}</span>
+                        </div>
                         <Badge variant="secondary" className="text-[10px]">{r.value}</Badge>
                       </div>
                     ))}
                   </div>
-                ) : <p className="text-xs text-muted-foreground text-center py-8">Nenhum lead perdido</p>}
+                ) : <p className="text-xs text-muted-foreground text-center py-8">Nenhum lead perdido no período</p>}
               </CardContent>
             </Card>
           </div>
@@ -491,7 +604,7 @@ export default function ClienteDashboard() {
               downloadCsv("chat-contacts.csv", ["Nome", "Telefone", "Última mensagem"],
                 allContacts.map((c: any) => [c.name || "", c.phone || "", c.last_message_at || ""])
               );
-              toast({ title: "CSV exportado" });
+              toast({ title: "CSV exportado", description: `${allContacts.length} contatos exportados` });
             }}>
               <Download className="w-3 h-3" /> Exportar
             </Button>
@@ -505,7 +618,7 @@ export default function ClienteDashboard() {
           </div>
 
           {/* Messages per day + AI vs Human */}
-          {allMessages.length > 0 && (
+          {allMessagesRaw.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-sm">Mensagens por Dia (7 dias)</CardTitle></CardHeader>
@@ -517,6 +630,7 @@ export default function ClienteDashboard() {
                         <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} />
                         <ReTooltip />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
                         <Bar dataKey="inbound" name="Recebidas" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="outbound" name="Enviadas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
@@ -559,9 +673,9 @@ export default function ClienteDashboard() {
           <div className="flex justify-end">
             <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => {
               downloadCsv("ai-logs.csv", ["Agente ID", "Tokens", "Modelo", "Data"],
-                (aiLogs ?? []).map((l: any) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])
+                filteredAiLogs.map((l: any) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])
               );
-              toast({ title: "CSV exportado" });
+              toast({ title: "CSV exportado", description: `${filteredAiLogs.length} logs exportados (${periodLabel})` });
             }}>
               <Download className="w-3 h-3" /> Exportar
             </Button>
@@ -586,7 +700,9 @@ export default function ClienteDashboard() {
                       <XAxis type="number" tick={{ fontSize: 10 }} />
                       <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} />
                       <ReTooltip />
-                      <Bar dataKey="count" name="Conversas" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="count" name="Conversas" radius={[0, 4, 4, 0]}>
+                        {conversationsPerAgent.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
