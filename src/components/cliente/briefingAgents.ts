@@ -54,7 +54,7 @@ export const SOFIA_STEPS: BriefingStep[] = [
   // ── Intro
   {
     id: "_intro_sofia",
-    agentMessage: "Oi! 👋 Sou a Sofia, sua consultora de marketing. Vou te fazer algumas perguntas estratégicas para criar um plano completo e personalizado para o seu negócio. Tudo que você responder aqui vai alimentar TODAS as ferramentas da plataforma — conteúdos, artes, scripts, tráfego pago e mais. Vamos lá?",
+    agentMessage: "Oi! 👋 Sou a **Sofia**, sua consultora de marketing.\n\n🎯 **O que é o Plano de Marketing?**\nÉ o documento estratégico mais importante do seu negócio digital. Ele define quem é seu cliente ideal (ICP), como você se comunica, quais canais priorizar, que tipo de conteúdo criar e como investir para crescer.\n\n🔗 **Para que serve?**\nTudo que você responder aqui vai alimentar TODAS as ferramentas da plataforma — conteúdos, artes, scripts, sites, tráfego pago e muito mais. É a base de inteligência que conecta tudo.\n\n⏱️ Leva cerca de 7 minutos. Vamos lá?",
     inputType: "info",
   },
 
