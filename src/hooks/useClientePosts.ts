@@ -261,10 +261,12 @@ export function useApprovePost() {
   const { data: orgId } = useUserOrgId();
 
   return useMutation({
-    mutationFn: async ({ postId, type }: { postId: string; type: "art" | "video" }) => {
+    mutationFn: async ({ postId, type, numFrames }: { postId: string; type: "art" | "video"; numFrames?: number }) => {
       if (!orgId) throw new Error("Org not found");
 
-      const creditCost = type === "video" ? 200 : 100;
+      const creditCost = type === "video"
+        ? CREDIT_COST_VIDEO_PER_FRAME * (numFrames || 3)
+        : CREDIT_COST_ART;
 
       const { error: debitError } = await supabase.rpc("debit_credits" as any, {
         _org_id: orgId,
@@ -288,9 +290,16 @@ export function useApprovePost() {
   });
 }
 
-/** Credit-based quota for posts */
-export const CREDIT_COST_ART = 100;
-export const CREDIT_COST_VIDEO = 200;
+/** Credit-based quota for posts — aligned with edge function costs */
+export const CREDIT_COST_ART = 25;
+export const CREDIT_COST_VIDEO_PER_FRAME = 25;
+/** Legacy alias kept for simpler checks (3-frame minimum) */
+export const CREDIT_COST_VIDEO = CREDIT_COST_VIDEO_PER_FRAME * 3;
+
+export function getVideoCost(duration: string): number {
+  const frames = duration === "8s" ? 5 : 3;
+  return CREDIT_COST_VIDEO_PER_FRAME * frames;
+}
 
 export function usePostQuota() {
   const { data: wallet } = useClienteWallet();

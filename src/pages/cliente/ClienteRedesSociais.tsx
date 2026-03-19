@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { usePostHistory, useGeneratePost, useApprovePost, useDeletePost, useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing, usePostQuota, CREDIT_COST_ART, CREDIT_COST_VIDEO, PostItem } from "@/hooks/useClientePosts";
+import { usePostHistory, useGeneratePost, useApprovePost, useDeletePost, useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing, usePostQuota, CREDIT_COST_ART, CREDIT_COST_VIDEO, getVideoCost, PostItem } from "@/hooks/useClientePosts";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -469,8 +469,9 @@ export default function ClienteRedesSociais() {
 
   const handleApprove = async () => {
     if (!generatedResult) return;
+    const numFrames = videoDuration === "8s" ? 5 : 3;
     try {
-      await approvePost.mutateAsync({ postId: generatedResult.post.id, type: postType });
+      await approvePost.mutateAsync({ postId: generatedResult.post.id, type: postType, numFrames });
       resetWizard();
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) {
@@ -756,14 +757,21 @@ export default function ClienteRedesSociais() {
               {generatedResult.post.status !== "approved" ? (
                 <Button onClick={handleApprove} disabled={approvePost.isPending} className="flex-1" size="lg">
                   {approvePost.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                  Aprovar ({postType === "video" ? "200" : "100"} créditos)
+                  Aprovar ({postType === "video" ? getVideoCost(videoDuration) : CREDIT_COST_ART} créditos)
                 </Button>
               ) : (
                 <Button disabled className="flex-1" size="lg" variant="secondary">
                   <Check className="w-4 h-4 mr-2" /> Aprovado
                 </Button>
               )}
-              <Button variant="outline" onClick={() => { setGeneratedResult(null); handleGenerate(); }} className="flex-1" size="lg">
+              <Button variant="outline" onClick={async () => {
+                // Delete ghost record before regenerating
+                if (generatedResult?.post?.id && generatedResult.post.status !== "approved") {
+                  try { await deletePost.mutateAsync(generatedResult.post.id); } catch {}
+                }
+                setGeneratedResult(null);
+                handleGenerate();
+              }} className="flex-1" size="lg">
                 <RefreshCw className="w-4 h-4 mr-2" /> Regenerar
               </Button>
               {generatedResult.result_url && (
