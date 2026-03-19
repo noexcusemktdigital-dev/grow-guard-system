@@ -783,8 +783,14 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                   </div>
                 );
               })}
-              {/* AI typing indicator */}
-              {attendingMode === "ai" && messages.length > 0 && messages[messages.length - 1]?.direction === "inbound" && (
+              {/* AI typing indicator — only show briefly after inbound message, hide once AI responds */}
+              {attendingMode === "ai" && messages.length > 0 && (() => {
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg.direction !== "inbound") return false;
+                // Only show if message arrived in the last 30 seconds (AI is likely processing)
+                const elapsed = Date.now() - new Date(lastMsg.created_at).getTime();
+                return elapsed < 30000;
+              })() && (
                 <div className="flex justify-start mb-2">
                   <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
                     <div className="flex items-center gap-1.5">
@@ -855,7 +861,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,video/*,application/pdf"
+          accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/zip,application/x-rar-compressed"
           className="hidden"
           onChange={handleFileUpload}
         />

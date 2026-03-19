@@ -24,7 +24,7 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { playSound } from "@/lib/sounds";
+
 
 export default function ClienteChat() {
   const navigate = useNavigate();
@@ -98,7 +98,9 @@ export default function ClienteChat() {
 
 
   // Fetch real message previews from the database
-  const contactIds = useMemo(() => contacts.map((c) => c.id), [contacts]);
+  // Stringify IDs to stabilize the query key and prevent infinite re-fetches
+  const contactIdsStr = useMemo(() => contacts.map((c) => c.id).sort().join(","), [contacts]);
+  const contactIds = useMemo(() => contactIdsStr ? contactIdsStr.split(",") : [], [contactIdsStr]);
   const { data: realPreviews } = useContactPreviews(contactIds);
   const lastMessages = realPreviews ?? new Map<string, string>();
 
@@ -175,10 +177,7 @@ export default function ClienteChat() {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         }
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-        // Play notification sound for new inbound messages
-        if (payload.eventType === "INSERT" && payload.new?.direction === "inbound") {
-          try { playSound("notification"); } catch {}
-        }
+        // Sound is played by ChatConversation — no duplicate here
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
