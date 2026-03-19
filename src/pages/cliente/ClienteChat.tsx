@@ -24,7 +24,7 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { playSound } from "@/lib/sounds";
+
 
 export default function ClienteChat() {
   const navigate = useNavigate();
