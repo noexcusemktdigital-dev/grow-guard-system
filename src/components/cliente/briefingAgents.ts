@@ -475,6 +475,16 @@ export const RAFAEL_STEPS: BriefingStep[] = [
     placeholder: "Ex: Perdem muito tempo com processos manuais, não conseguem escalar vendas...",
   },
 
+  // ── 4b. Concorrência (para análise real)
+  { id: "concorrentes_vendas_urls", section: "Concorrência Comercial", agentMessage: "Conhece seus principais concorrentes? Cole os links (site ou redes sociais) de 2-3 concorrentes para eu analisar o posicionamento deles! 🔍", inputType: "textarea", helpText: "Com URLs reais, consigo inferir o posicionamento comercial, preços e diferenciais dos concorrentes.",
+    placeholder: "Ex:\nhttps://www.concorrente1.com.br\nhttps://instagram.com/concorrente2\nhttps://www.concorrente3.com.br",
+    optional: true,
+  },
+  { id: "concorrente_vantagem", section: "Concorrência Comercial", agentMessage: "O que seus concorrentes fazem melhor que você na parte comercial?", inputType: "textarea", helpText: "Identificar pontos fortes dos concorrentes ajuda a definir estratégias de diferenciação.",
+    placeholder: "Ex: Respondem leads mais rápido, têm equipe maior, investem mais em tráfego...",
+    optional: true,
+  },
+
   // ── 5. Canais e Prospecção (2 perguntas — removido mede_roi)
   { id: "canais_aquisicao", section: "Canais e Prospecção", agentMessage: "Quais canais de aquisição você usa?", inputType: "multi-select", helpText: "Diversificar canais reduz o risco.",
     options: [
