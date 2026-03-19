@@ -282,7 +282,7 @@ export function ContentWizard({
             </Button>
           ) : (
             <Button onClick={handleGenerate} disabled={!canAdvance()}>
-              <Sparkles className="w-4 h-4 mr-1" /> Gerar {quantidade} Conteúdos
+              <Sparkles className="w-4 h-4 mr-1" /> Gerar {quantidade} Conteúdos ({quantidade * costPerContent} créditos)
             </Button>
           )}
         </div>
