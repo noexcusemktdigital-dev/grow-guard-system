@@ -753,10 +753,16 @@ export default function ClienteRedesSociais() {
               </div>
             )}
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={handleApprove} disabled={approvePost.isPending} className="flex-1" size="lg">
-                {approvePost.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                Aprovar ({postType === "video" ? "200" : "100"} créditos)
-              </Button>
+              {generatedResult.post.status !== "approved" ? (
+                <Button onClick={handleApprove} disabled={approvePost.isPending} className="flex-1" size="lg">
+                  {approvePost.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                  Aprovar ({postType === "video" ? "200" : "100"} créditos)
+                </Button>
+              ) : (
+                <Button disabled className="flex-1" size="lg" variant="secondary">
+                  <Check className="w-4 h-4 mr-2" /> Aprovado
+                </Button>
+              )}
               <Button variant="outline" onClick={() => { setGeneratedResult(null); handleGenerate(); }} className="flex-1" size="lg">
                 <RefreshCw className="w-4 h-4 mr-2" /> Regenerar
               </Button>
