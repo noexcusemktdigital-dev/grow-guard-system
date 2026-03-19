@@ -401,9 +401,17 @@ export default function ClienteRedesSociais() {
         toast({ title: "Envie pelo menos 3 imagens de referência", variant: "destructive" });
         return;
       }
+      if (!quota.canAffordArt) {
+        setShowCreditsDialog(true);
+        return;
+      }
     } else {
       if (!videoCena.trim()) {
         toast({ title: "Descreva a cena do vídeo", variant: "destructive" });
+        return;
+      }
+      if (!quota.canAffordVideo) {
+        setShowCreditsDialog(true);
         return;
       }
     }
@@ -447,7 +455,11 @@ export default function ClienteRedesSociais() {
       });
       setGeneratedResult(result);
     } catch (err: any) {
-      toast({ title: "Erro na geração", description: err.message, variant: "destructive" });
+      if (isInsufficientCreditsError(err)) {
+        setShowCreditsDialog(true);
+      } else {
+        toast({ title: "Erro na geração", description: err.message, variant: "destructive" });
+      }
     } finally {
       clearInterval(interval);
       setIsGenerating(false);
