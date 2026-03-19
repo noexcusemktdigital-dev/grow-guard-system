@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
-import { Users, FileText, Keyboard, Search, AlertCircle } from "lucide-react";
+import { Users, FileText, Keyboard, Search, AlertCircle, CheckSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useCrmContacts } from "@/hooks/useCrmContacts";
 
@@ -69,6 +70,31 @@ export function DisparoWizardStep2({ recipients, sourceType, onChange }: Props) 
     onChange(phones, "crm_contacts");
   };
 
+  const handleSelectAll = () => {
+    const visible = contactsWithPhone.slice(0, 100); // respect 100 limit
+    const allSelected = visible.every((c) => selectedContactIds.has(c.id));
+
+    if (allSelected) {
+      // Deselect all visible
+      const next = new Set(selectedContactIds);
+      visible.forEach((c) => next.delete(c.id));
+      setSelectedContactIds(next);
+      const phones = contactsWithPhone
+        .filter((c) => next.has(c.id))
+        .map((c) => c.phone!.trim());
+      onChange(phones, "crm_contacts");
+    } else {
+      // Select all visible (up to 100)
+      const next = new Set(selectedContactIds);
+      visible.forEach((c) => next.add(c.id));
+      setSelectedContactIds(next);
+      const phones = contactsWithPhone
+        .filter((c) => next.has(c.id))
+        .map((c) => c.phone!.trim());
+      onChange(phones, "crm_contacts");
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -86,6 +112,7 @@ export function DisparoWizardStep2({ recipients, sourceType, onChange }: Props) 
   };
 
   const isOverLimit = recipients.length > 100;
+  const allVisibleSelected = contactsWithPhone.length > 0 && contactsWithPhone.slice(0, 100).every((c) => selectedContactIds.has(c.id));
 
   return (
     <div className="space-y-4">
@@ -150,6 +177,19 @@ export function DisparoWizardStep2({ recipients, sourceType, onChange }: Props) 
               />
             )}
           </div>
+
+          {/* Select all */}
+          {contactsWithPhone.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={handleSelectAll}
+            >
+              <CheckSquare className="w-3 h-3" />
+              {allVisibleSelected ? "Desmarcar todos" : `Selecionar todos (${Math.min(contactsWithPhone.length, 100)})`}
+            </Button>
+          )}
 
           <div className="max-h-[200px] overflow-y-auto border rounded-lg divide-y">
             {contactsWithPhone.length === 0 ? (
