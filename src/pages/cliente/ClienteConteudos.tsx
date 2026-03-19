@@ -197,7 +197,7 @@ export default function ClienteConteudos() {
           </Badge>
         )}
         <Badge variant="outline" className="gap-1.5">
-          <FileText className="w-3.5 h-3.5" /> {quota.used}/{quota.max} conteúdos este mês
+          <FileText className="w-3.5 h-3.5" /> {quota.creditBalance} créditos · até {quota.remaining} conteúdos ({quota.costPerContent} créditos cada)
         </Badge>
       </div>
 
