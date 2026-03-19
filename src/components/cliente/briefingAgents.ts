@@ -382,8 +382,8 @@ export const SOFIA_STEPS: BriefingStep[] = [
    ══════════════════════════════════════════════ */
 
 export const RAFAEL_STEPS: BriefingStep[] = [
-  // ── Intro (condensada em 1 só)
-  { id: "_intro_rafael", agentMessage: "Oi! 👋 Eu sou o Rafael, seu consultor comercial. Em poucos minutos vou entender sua operação de vendas e criar um plano 100% personalizado que vai alimentar seu CRM, scripts e marketing. Bora lá? 😎🚀", inputType: "info" },
+  // ── Intro
+  { id: "_intro_rafael", agentMessage: "Oi! 👋 Eu sou o **Rafael**, seu consultor comercial.\n\n🎯 **O que é o Plano de Vendas?**\nÉ um diagnóstico completo da maturidade do seu comercial — analisa processos, equipe, ferramentas, canais e performance.\n\n🔗 **Para que serve?**\nCom base nas suas respostas, vou gerar um diagnóstico com score, insights personalizados, plano de ação em 3 fases e projeções de crescimento. Além disso, vou criar automaticamente seu funil de CRM e scripts de vendas.\n\n📊 Seu plano fica salvo no histórico e você pode refazer quantas vezes quiser para acompanhar sua evolução.\n\n⏱️ Leva cerca de 5 minutos. Bora lá? 😎🚀", inputType: "info" },
 
   // ── 1. Sobre o Negócio (4 perguntas)
   { id: "segmento", section: "Sobre o Negócio", agentMessage: "Qual é o segmento da sua empresa?", inputType: "select", helpText: "Identifique o setor principal de atuação para personalizar as recomendações.",
