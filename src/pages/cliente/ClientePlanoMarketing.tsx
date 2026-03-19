@@ -320,7 +320,14 @@ function TabConcorrencia({ result }: { result: any }) {
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{i + 1}</div>
-                    <h4 className="font-semibold text-sm">{c.nome}</h4>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm">{c.nome}</h4>
+                      {c.url && (
+                        <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5 truncate">
+                          <ExternalLink className="w-2.5 h-2.5 shrink-0" /> {c.url}
+                        </a>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-start gap-2"><ThumbsUp className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /><p className="text-xs">{c.pontos_fortes}</p></div>
@@ -1022,7 +1029,7 @@ export default function ClientePlanoMarketing() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Estratégia de Marketing" subtitle="Carregando..." icon={<Megaphone className="w-5 h-5 text-primary" />} />
+        <PageHeader title="Plano de Marketing" subtitle="Carregando..." icon={<Megaphone className="w-5 h-5 text-primary" />} />
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map(i => <div key={i} className="h-32 rounded-xl bg-muted/50" />)}
         </div>
@@ -1033,7 +1040,7 @@ export default function ClientePlanoMarketing() {
   if (showChat || isGenerating) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Estratégia de Marketing" subtitle="Responda as perguntas para gerar sua estratégia" icon={<Megaphone className="w-5 h-5 text-primary" />} />
+        <PageHeader title="Plano de Marketing" subtitle="Responda as perguntas para gerar seu plano" icon={<Megaphone className="w-5 h-5 text-primary" />} />
         {isGenerating ? (
           <Card>
             <CardContent className="p-12 flex flex-col items-center gap-4">
@@ -1057,7 +1064,7 @@ export default function ClientePlanoMarketing() {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <PageHeader title="Estratégia de Marketing" subtitle="Dashboard estratégico personalizado" icon={<Megaphone className="w-5 h-5 text-primary" />} />
+          <PageHeader title="Plano de Marketing" subtitle="Dashboard estratégico personalizado" icon={<Megaphone className="w-5 h-5 text-primary" />} />
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">{generationCount} geração(ões)</Badge>
             {(history?.length ?? 0) > 0 && (
@@ -1089,7 +1096,7 @@ export default function ClientePlanoMarketing() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Estratégia de Marketing" subtitle="Crie sua estratégia personalizada com IA" icon={<Megaphone className="w-5 h-5 text-primary" />} />
+      <PageHeader title="Plano de Marketing" subtitle="Crie seu plano de marketing personalizado com IA" icon={<Megaphone className="w-5 h-5 text-primary" />} />
 
       <Card className="border-dashed">
         <CardContent className="p-12 flex flex-col items-center gap-4 text-center">
@@ -1097,7 +1104,7 @@ export default function ClientePlanoMarketing() {
             <Sparkles className="w-8 h-8 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-lg">Crie sua Estratégia de Marketing</h3>
+            <h3 className="font-semibold text-lg">Crie seu Plano de Marketing</h3>
             <p className="text-sm text-muted-foreground max-w-lg mt-1">
               Responda perguntas estratégicas e a IA vai gerar um plano completo com diagnóstico, radar 6D,
               análise de concorrência, tom de voz, calendário editorial, projeções de crescimento, benchmarks do setor e roadmap de execução.

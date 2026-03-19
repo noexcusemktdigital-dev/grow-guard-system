@@ -54,7 +54,7 @@ export const SOFIA_STEPS: BriefingStep[] = [
   // ── Intro
   {
     id: "_intro_sofia",
-    agentMessage: "Oi! 👋 Sou a Sofia, sua consultora de marketing. Vou te fazer algumas perguntas estratégicas para criar um plano completo e personalizado para o seu negócio. Tudo que você responder aqui vai alimentar TODAS as ferramentas da plataforma — conteúdos, artes, scripts, tráfego pago e mais. Vamos lá?",
+    agentMessage: "Oi! 👋 Sou a **Sofia**, sua consultora de marketing.\n\n🎯 **O que é o Plano de Marketing?**\nÉ o documento estratégico mais importante do seu negócio digital. Ele define quem é seu cliente ideal (ICP), como você se comunica, quais canais priorizar, que tipo de conteúdo criar e como investir para crescer.\n\n🔗 **Para que serve?**\nTudo que você responder aqui vai alimentar TODAS as ferramentas da plataforma — conteúdos, artes, scripts, sites, tráfego pago e muito mais. É a base de inteligência que conecta tudo.\n\n⏱️ Leva cerca de 7 minutos. Vamos lá?",
     inputType: "info",
   },
 
@@ -382,8 +382,8 @@ export const SOFIA_STEPS: BriefingStep[] = [
    ══════════════════════════════════════════════ */
 
 export const RAFAEL_STEPS: BriefingStep[] = [
-  // ── Intro (condensada em 1 só)
-  { id: "_intro_rafael", agentMessage: "Oi! 👋 Eu sou o Rafael, seu consultor comercial. Em poucos minutos vou entender sua operação de vendas e criar um plano 100% personalizado que vai alimentar seu CRM, scripts e marketing. Bora lá? 😎🚀", inputType: "info" },
+  // ── Intro
+  { id: "_intro_rafael", agentMessage: "Oi! 👋 Eu sou o **Rafael**, seu consultor comercial.\n\n🎯 **O que é o Plano de Vendas?**\nÉ um diagnóstico completo da maturidade do seu comercial — analisa processos, equipe, ferramentas, canais e performance.\n\n🔗 **Para que serve?**\nCom base nas suas respostas, vou gerar um diagnóstico com score, insights personalizados, plano de ação em 3 fases e projeções de crescimento. Além disso, vou criar automaticamente seu funil de CRM e scripts de vendas.\n\n📊 Seu plano fica salvo no histórico e você pode refazer quantas vezes quiser para acompanhar sua evolução.\n\n⏱️ Leva cerca de 5 minutos. Bora lá? 😎🚀", inputType: "info" },
 
   // ── 1. Sobre o Negócio (4 perguntas)
   { id: "segmento", section: "Sobre o Negócio", agentMessage: "Qual é o segmento da sua empresa?", inputType: "select", helpText: "Identifique o setor principal de atuação para personalizar as recomendações.",
@@ -473,6 +473,16 @@ export const RAFAEL_STEPS: BriefingStep[] = [
   },
   { id: "dor_principal", section: "Gestão de Leads", agentMessage: "Qual a maior dor ou necessidade do seu cliente ideal? O que faz ele procurar uma solução como a sua? 🎯", inputType: "textarea", helpText: "Entender a dor do cliente é essencial para criar scripts e conteúdos que convertem.",
     placeholder: "Ex: Perdem muito tempo com processos manuais, não conseguem escalar vendas...",
+  },
+
+  // ── 4b. Concorrência (para análise real)
+  { id: "concorrentes_vendas_urls", section: "Concorrência Comercial", agentMessage: "Conhece seus principais concorrentes? Cole os links (site ou redes sociais) de 2-3 concorrentes para eu analisar o posicionamento deles! 🔍", inputType: "textarea", helpText: "Com URLs reais, consigo inferir o posicionamento comercial, preços e diferenciais dos concorrentes.",
+    placeholder: "Ex:\nhttps://www.concorrente1.com.br\nhttps://instagram.com/concorrente2\nhttps://www.concorrente3.com.br",
+    optional: true,
+  },
+  { id: "concorrente_vantagem", section: "Concorrência Comercial", agentMessage: "O que seus concorrentes fazem melhor que você na parte comercial?", inputType: "textarea", helpText: "Identificar pontos fortes dos concorrentes ajuda a definir estratégias de diferenciação.",
+    placeholder: "Ex: Respondem leads mais rápido, têm equipe maior, investem mais em tráfego...",
+    optional: true,
   },
 
   // ── 5. Canais e Prospecção (2 perguntas — removido mede_roi)
