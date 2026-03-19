@@ -761,6 +761,7 @@ function BatchFolder({ batch, navigate }: { batch: { date: string; items: Conten
             const r = item.result as any;
             if (!r) return null;
             const formato = (item.format || r.formato || "").toLowerCase();
+            const parsedContent = parseConteudoPrincipal(r.conteudo_principal);
 
             return (
               <Card key={item.id} className="overflow-hidden">
@@ -774,30 +775,29 @@ function BatchFolder({ batch, navigate }: { batch: { date: string; items: Conten
                 <CardContent className="space-y-2 pt-1">
                   <h4 className="font-bold text-sm">{item.title}</h4>
 
-                  {/* Compact visual */}
-                  {formato.includes("carrossel") && Array.isArray(r.conteudo_principal) && (
+                  {formato.includes("carrossel") && Array.isArray(parsedContent) && (
                     <div className="flex gap-1.5 overflow-x-auto pb-1">
-                      {(r.conteudo_principal as any[]).slice(0, 4).map((s: any, si: number) => (
+                      {(parsedContent as any[]).slice(0, 4).map((s: any, si: number) => (
                         <div key={si} className="flex-none w-28 rounded-lg bg-primary/5 border p-2">
                           <span className="text-[10px] font-bold text-primary/50">{si + 1}</span>
                           {s.titulo && <p className="text-[11px] font-bold leading-tight">{s.titulo}</p>}
                         </div>
                       ))}
-                      {(r.conteudo_principal as any[]).length > 4 && (
+                      {(parsedContent as any[]).length > 4 && (
                         <div className="flex-none w-28 rounded-lg bg-muted/50 border p-2 flex items-center justify-center text-xs text-muted-foreground">
-                          +{(r.conteudo_principal as any[]).length - 4}
+                          +{(parsedContent as any[]).length - 4}
                         </div>
                       )}
                     </div>
                   )}
 
-                  {(formato.includes("post") || formato.includes("educativo") || formato.includes("autoridade")) && r.conteudo_principal?.headline && (
-                    <p className="text-sm font-extrabold">{r.conteudo_principal.headline}</p>
+                  {(formato.includes("post") || formato.includes("educativo") || formato.includes("autoridade")) && parsedContent?.headline && (
+                    <p className="text-sm font-extrabold">{parsedContent.headline}</p>
                   )}
 
-                  {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && r.conteudo_principal?.hook && (
+                  {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && parsedContent?.hook && (
                     <div className="rounded-lg bg-primary/10 p-2 text-center">
-                      <p className="text-xs font-bold">🎬 "{r.conteudo_principal.hook}"</p>
+                      <p className="text-xs font-bold">🎬 "{parsedContent.hook}"</p>
                     </div>
                   )}
 
