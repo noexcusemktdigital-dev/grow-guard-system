@@ -1097,7 +1097,7 @@ export default function ClientePlanoMarketing() {
             <Sparkles className="w-8 h-8 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-lg">Crie sua Estratégia de Marketing</h3>
+            <h3 className="font-semibold text-lg">Crie seu Plano de Marketing</h3>
             <p className="text-sm text-muted-foreground max-w-lg mt-1">
               Responda perguntas estratégicas e a IA vai gerar um plano completo com diagnóstico, radar 6D,
               análise de concorrência, tom de voz, calendário editorial, projeções de crescimento, benchmarks do setor e roadmap de execução.
