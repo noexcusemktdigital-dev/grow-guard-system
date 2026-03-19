@@ -39,10 +39,10 @@ export default function ClienteConteudos() {
   const deleteMutation = useDeleteContent();
 
   const hasStrategy = strategy.hasStrategy;
-  const maxContents = quota.max;
+  const maxPerBatch = Math.min(quota.remaining, 30);
 
   // Wizard state
-  const [quantidade, setQuantidade] = useState(Math.min(maxContents, 8));
+  const [quantidade, setQuantidade] = useState(Math.min(maxPerBatch, 8));
   const [formatDist, setFormatDist] = useState<Record<string, number>>({});
   const [objetivos, setObjetivos] = useState<string[]>([]);
   const [tema, setTema] = useState("");
