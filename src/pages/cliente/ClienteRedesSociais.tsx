@@ -90,6 +90,14 @@ export default function ClienteRedesSociais() {
     }
   }, [searchParams]);
 
+  // Auto-load references from visual identity for video wizard
+  useEffect(() => {
+    if (view === "video-wizard" && referenceUrls.length === 0 && visualIdentity) {
+      if (visualIdentity.image_bank_urls?.length) setReferenceUrls(visualIdentity.image_bank_urls.slice(0, 5));
+      else if (visualIdentity.logo_url) setReferenceUrls([visualIdentity.logo_url]);
+    }
+  }, [visualIdentity, view]);
+
   const loadContentData = async (id: string) => {
     try {
       const { data, error } = await supabase
