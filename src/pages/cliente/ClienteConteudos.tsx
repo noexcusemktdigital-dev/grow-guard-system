@@ -146,7 +146,7 @@ export default function ClienteConteudos() {
 
   const resetWizard = () => {
     setIsResultScreen(false);
-    setQuantidade(Math.min(maxContents, 8));
+    setQuantidade(Math.min(Math.min(quota.remaining, 30), 8));
     setFormatDist({});
     setObjetivos([]);
     setTema("");
