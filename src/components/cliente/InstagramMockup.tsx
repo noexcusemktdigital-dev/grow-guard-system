@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Heart, MessageCircle, Send, Bookmark, MoreHorizontal,
   Download, Copy, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ExternalLink,
@@ -44,7 +44,7 @@ export function InstagramMockup({
 
   const images = carouselImages?.length ? carouselImages : [imageUrl];
   const isCarousel = images.length > 1;
-  const likeCount = Math.floor(Math.random() * 200) + 50;
+  const likeCount = useMemo(() => Math.floor(Math.random() * 200) + 50, []);
   const fullCaption = `${caption}${hashtags.length ? "\n\n" + hashtags.map(h => `#${h}`).join(" ") : ""}`;
   const charCount = fullCaption.length;
 

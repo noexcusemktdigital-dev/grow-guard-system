@@ -3,8 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { useClienteSubscription } from "./useClienteSubscription";
-import { getEffectiveLimits } from "@/constants/plans";
+import { useClienteWallet } from "./useClienteWallet";
 
 export interface PostItem {
   id: string;
@@ -289,35 +288,24 @@ export function useApprovePost() {
   });
 }
 
-/** Quota: how many posts generated this month vs plan limit */
+/** Credit-based quota for posts */
+export const CREDIT_COST_ART = 100;
+export const CREDIT_COST_VIDEO = 200;
+
 export function usePostQuota() {
-  const { data: orgId } = useUserOrgId();
-  const { data: subscription } = useClienteSubscription();
+  const { data: wallet } = useClienteWallet();
 
-  const isTrial = subscription?.status === "trial";
-  const limits = getEffectiveLimits(subscription?.plan, isTrial);
-  const maxPosts = limits.maxSocialArts || 9999;
-
-  const query = useQuery({
-    queryKey: ["post-quota", orgId],
-    queryFn: async () => {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const { count, error } = await supabase
-        .from("client_posts")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", orgId!)
-        .gte("created_at", monthStart);
-      if (error) throw error;
-      return count ?? 0;
-    },
-    enabled: !!orgId,
-  });
+  const creditBalance = wallet?.balance ?? 0;
+  const maxArts = Math.floor(creditBalance / CREDIT_COST_ART);
+  const maxVideos = Math.floor(creditBalance / CREDIT_COST_VIDEO);
 
   return {
-    ...query,
-    used: query.data ?? 0,
-    max: maxPosts,
-    remaining: Math.max(0, maxPosts - (query.data ?? 0)),
+    creditBalance,
+    maxArts,
+    maxVideos,
+    costArt: CREDIT_COST_ART,
+    costVideo: CREDIT_COST_VIDEO,
+    canAffordArt: creditBalance >= CREDIT_COST_ART,
+    canAffordVideo: creditBalance >= CREDIT_COST_VIDEO,
   };
 }

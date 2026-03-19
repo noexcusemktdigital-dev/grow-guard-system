@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { usePostHistory, useGeneratePost, useApprovePost, useDeletePost, useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing, PostItem } from "@/hooks/useClientePosts";
+import { usePostHistory, useGeneratePost, useApprovePost, useDeletePost, useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing, usePostQuota, CREDIT_COST_ART, CREDIT_COST_VIDEO, PostItem } from "@/hooks/useClientePosts";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -157,6 +157,7 @@ export default function ClienteRedesSociais() {
   const generateVideoBriefing = useGenerateVideoBriefing();
   const deletePost = useDeletePost();
   const bulkDelete = useBulkDeletePosts();
+  const quota = usePostQuota();
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -401,9 +402,17 @@ export default function ClienteRedesSociais() {
         toast({ title: "Envie pelo menos 3 imagens de referência", variant: "destructive" });
         return;
       }
+      if (!quota.canAffordArt) {
+        setShowCreditsDialog(true);
+        return;
+      }
     } else {
       if (!videoCena.trim()) {
         toast({ title: "Descreva a cena do vídeo", variant: "destructive" });
+        return;
+      }
+      if (!quota.canAffordVideo) {
+        setShowCreditsDialog(true);
         return;
       }
     }
@@ -447,7 +456,11 @@ export default function ClienteRedesSociais() {
       });
       setGeneratedResult(result);
     } catch (err: any) {
-      toast({ title: "Erro na geração", description: err.message, variant: "destructive" });
+      if (isInsufficientCreditsError(err)) {
+        setShowCreditsDialog(true);
+      } else {
+        toast({ title: "Erro na geração", description: err.message, variant: "destructive" });
+      }
     } finally {
       clearInterval(interval);
       setIsGenerating(false);
@@ -701,7 +714,7 @@ export default function ClienteRedesSociais() {
           title="Resultado"
           subtitle={generatedResult ? "Revise e aprove seu criativo" : "Gerando…"}
           icon={<Sparkles className="w-5 h-5 text-primary" />}
-          backButton={!isGenerating ? <Button variant="ghost" size="icon" onClick={() => { setGeneratedResult(null); }}><ArrowLeft className="w-4 h-4" /></Button> : undefined}
+          backButton={!isGenerating ? <Button variant="ghost" size="icon" onClick={() => { setGeneratedResult(null); setView("history"); }}><ArrowLeft className="w-4 h-4" /></Button> : undefined}
         />
         {isGenerating ? (
           <Card>
@@ -1626,12 +1639,12 @@ export default function ClienteRedesSociais() {
         {isLastStep ? (
           <Button
             onClick={handleGenerate}
-            disabled={!canProceed() || generatePost.isPending}
+            disabled={!canProceed() || generatePost.isPending || (postType === "art" ? !quota.canAffordArt : !quota.canAffordVideo)}
             className="flex-1"
             size="lg"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            Gerar {postType === "art" ? "Arte" : "Vídeo"}
+            Gerar {postType === "art" ? `Arte (${CREDIT_COST_ART} créditos)` : `Vídeo (${CREDIT_COST_VIDEO} créditos)`}
           </Button>
         ) : (
           <Button
