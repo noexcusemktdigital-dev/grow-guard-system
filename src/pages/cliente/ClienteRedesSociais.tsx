@@ -605,7 +605,7 @@ export default function ClienteRedesSociais() {
                   )}
                   {!selectionMode && (
                     <button
-                      className="absolute top-2 left-2 z-10 bg-destructive/90 text-destructive-foreground rounded-md p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 left-2 z-10 bg-destructive/90 text-destructive-foreground rounded-md p-1.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity"
                       onClick={(e) => { e.stopPropagation(); setDeleteTargetId(p.id); }}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
