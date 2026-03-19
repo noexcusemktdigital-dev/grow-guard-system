@@ -1033,7 +1033,7 @@ export default function ClientePlanoMarketing() {
   if (showChat || isGenerating) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Estratégia de Marketing" subtitle="Responda as perguntas para gerar sua estratégia" icon={<Megaphone className="w-5 h-5 text-primary" />} />
+        <PageHeader title="Plano de Marketing" subtitle="Responda as perguntas para gerar seu plano" icon={<Megaphone className="w-5 h-5 text-primary" />} />
         {isGenerating ? (
           <Card>
             <CardContent className="p-12 flex flex-col items-center gap-4">
