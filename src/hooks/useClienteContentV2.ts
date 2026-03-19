@@ -3,7 +3,10 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClienteSubscription } from "./useClienteSubscription";
+import { useClienteWallet } from "./useClienteWallet";
 import { getEffectiveLimits } from "@/constants/plans";
+
+const CREDIT_COST_PER_CONTENT = 30;
 
 export interface ContentItem {
   id: string;
@@ -38,14 +41,13 @@ export function useContentHistory() {
   });
 }
 
-/** Quota: how many contents generated this month vs plan limit */
+/** Quota: based on credit balance. Each content costs 30 credits. */
 export function useContentQuota() {
   const { data: orgId } = useUserOrgId();
-  const { data: subscription } = useClienteSubscription();
+  const { data: wallet, isLoading: walletLoading } = useClienteWallet();
 
-  const isTrial = subscription?.status === "trial";
-  const limits = getEffectiveLimits(subscription?.plan, isTrial);
-  const maxContents = limits.maxContents || 9999;
+  const creditBalance = wallet?.balance ?? 0;
+  const maxByCredits = Math.floor(creditBalance / CREDIT_COST_PER_CONTENT);
 
   const query = useQuery({
     queryKey: ["content-quota", orgId],
@@ -66,8 +68,11 @@ export function useContentQuota() {
   return {
     ...query,
     used: query.data ?? 0,
-    max: maxContents,
-    remaining: Math.max(0, maxContents - (query.data ?? 0)),
+    max: maxByCredits,
+    remaining: maxByCredits,
+    creditBalance,
+    costPerContent: CREDIT_COST_PER_CONTENT,
+    isWalletLoading: walletLoading,
   };
 }
 

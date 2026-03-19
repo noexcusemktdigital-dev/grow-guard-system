@@ -37,6 +37,8 @@ function savePrefs(prefs: WizardPrefs) {
 interface ContentWizardProps {
   quotaRemaining: number;
   quotaMax: number;
+  creditBalance: number;
+  costPerContent: number;
   hasStrategy: boolean;
   strategy: any;
   isGenerating: boolean;
@@ -55,7 +57,7 @@ interface ContentWizardProps {
 }
 
 export function ContentWizard({
-  quotaRemaining, quotaMax, hasStrategy, strategy,
+  quotaRemaining, quotaMax, creditBalance, costPerContent, hasStrategy, strategy,
   isGenerating, loadingIdx, quantidade,
   onGenerate, onQuantidadeChange,
   formatDist, onFormatDistChange,
@@ -102,8 +104,8 @@ export function ContentWizard({
     return (
       <Card className="border-destructive">
         <CardContent className="py-6 text-center space-y-2">
-          <p className="font-semibold text-destructive">Limite de conteúdos atingido este mês</p>
-          <p className="text-sm text-muted-foreground">Seu plano permite {quotaMax} conteúdos/mês. Faça upgrade para gerar mais.</p>
+          <p className="font-semibold text-destructive">Créditos insuficientes</p>
+          <p className="text-sm text-muted-foreground">Você tem {creditBalance} créditos. Cada conteúdo custa {costPerContent} créditos. Recarregue para continuar gerando.</p>
         </CardContent>
       </Card>
     );
@@ -126,7 +128,7 @@ export function ContentWizard({
       <div>
         <h3 className="text-xl font-semibold mb-1">Quantos conteúdos e em quais formatos?</h3>
         <p className="text-sm text-muted-foreground">
-          Seu plano permite <strong>{quotaMax}</strong> conteúdos/mês · Restam <strong className="text-primary">{quotaRemaining}</strong>
+          Você tem <strong className="text-primary">{creditBalance}</strong> créditos · Cada conteúdo custa <strong>{costPerContent}</strong> créditos · Máximo neste lote: <strong className="text-primary">{quotaRemaining}</strong>
         </p>
       </div>
       <div className="space-y-3">
@@ -280,7 +282,7 @@ export function ContentWizard({
             </Button>
           ) : (
             <Button onClick={handleGenerate} disabled={!canAdvance()}>
-              <Sparkles className="w-4 h-4 mr-1" /> Gerar {quantidade} Conteúdos
+              <Sparkles className="w-4 h-4 mr-1" /> Gerar {quantidade} Conteúdos ({quantidade * costPerContent} créditos)
             </Button>
           )}
         </div>

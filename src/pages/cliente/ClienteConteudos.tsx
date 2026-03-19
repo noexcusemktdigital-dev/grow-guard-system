@@ -39,10 +39,10 @@ export default function ClienteConteudos() {
   const deleteMutation = useDeleteContent();
 
   const hasStrategy = strategy.hasStrategy;
-  const maxContents = quota.max;
+  const maxPerBatch = Math.min(quota.remaining, 30);
 
   // Wizard state
-  const [quantidade, setQuantidade] = useState(Math.min(maxContents, 8));
+  const [quantidade, setQuantidade] = useState(Math.min(maxPerBatch, 8));
   const [formatDist, setFormatDist] = useState<Record<string, number>>({});
   const [objetivos, setObjetivos] = useState<string[]>([]);
   const [tema, setTema] = useState("");
@@ -146,7 +146,7 @@ export default function ClienteConteudos() {
 
   const resetWizard = () => {
     setIsResultScreen(false);
-    setQuantidade(Math.min(maxContents, 8));
+    setQuantidade(Math.min(Math.min(quota.remaining, 30), 8));
     setFormatDist({});
     setObjetivos([]);
     setTema("");
@@ -197,7 +197,7 @@ export default function ClienteConteudos() {
           </Badge>
         )}
         <Badge variant="outline" className="gap-1.5">
-          <FileText className="w-3.5 h-3.5" /> {quota.used}/{quota.max} conteúdos este mês
+          <FileText className="w-3.5 h-3.5" /> {quota.creditBalance} créditos · até {quota.remaining} conteúdos ({quota.costPerContent} créditos cada)
         </Badge>
       </div>
 
@@ -213,6 +213,8 @@ export default function ClienteConteudos() {
             <ContentWizard
               quotaRemaining={quota.remaining}
               quotaMax={quota.max}
+              creditBalance={quota.creditBalance}
+              costPerContent={quota.costPerContent}
               hasStrategy={hasStrategy}
               strategy={strategy}
               isGenerating={isGenerating}
