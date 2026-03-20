@@ -30,6 +30,33 @@ export function RefUploader({
 }: RefUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [extractingLogo, setExtractingLogo] = useState(false);
+
+  const handleExtractLogo = async () => {
+    if (!orgId || referenceUrls.length === 0 || !setLogoUrl) return;
+    setExtractingLogo(true);
+    try {
+      const resp = await supabase.functions.invoke("generate-social-image", {
+        body: {
+          extract_logo: true,
+          reference_images: referenceUrls.slice(0, 3),
+          organization_id: orgId,
+        },
+      });
+      if (resp.error) throw new Error(resp.error.message);
+      if (resp.data?.error) throw new Error(resp.data.error);
+      if (resp.data?.logo_url) {
+        setLogoUrl(resp.data.logo_url);
+        toast({ title: "Logo extraída com sucesso!", description: "A logo foi detectada nas referências." });
+      } else {
+        toast({ title: "Não foi possível extrair a logo", description: "Tente enviar a logo manualmente.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao extrair logo", description: err.message, variant: "destructive" });
+    } finally {
+      setExtractingLogo(false);
+    }
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
