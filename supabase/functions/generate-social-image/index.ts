@@ -77,6 +77,10 @@ async function analyzeAndOptimizePrompt(
     brand_name?: string;
     supporting_text?: string;
     bullet_points?: string;
+    layout_type?: string;
+    logo_url?: string;
+    primary_ref_index?: number;
+    objective?: string;
   },
   referenceBase64s?: { type: string; image_url: { url: string } }[],
 ): Promise<StructuredPromptResult | null> {
