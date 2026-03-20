@@ -319,6 +319,13 @@ export default function ClienteSites() {
       toast({ title: "Nome da empresa é obrigatório", variant: "destructive" });
       return;
     }
+
+    // Pre-check credits
+    if (wallet && wallet.balance < SITE_CREDIT_COST) {
+      setShowCreditsDialog(true);
+      return;
+    }
+
     setGenerating(true);
     setGenProgress(10);
 
@@ -376,7 +383,12 @@ export default function ClienteSites() {
       clearInterval(interval);
 
       if (error || data?.error) {
-        toast({ title: "Erro ao gerar site", description: data?.error || "Tente novamente.", variant: "destructive" });
+        const isCredits = data?.code === "INSUFFICIENT_CREDITS" || data?.error?.includes("Créditos insuficientes");
+        if (isCredits) {
+          setShowCreditsDialog(true);
+        } else {
+          toast({ title: "Erro ao gerar site", description: data?.error || "Tente novamente.", variant: "destructive" });
+        }
         setGenerating(false);
         setGenProgress(0);
         return;
@@ -385,15 +397,20 @@ export default function ClienteSites() {
       setGenProgress(100);
       setGeneratedHtml(data.html);
       setShowPreview(true);
+      setCurrentSiteStatus("Rascunho");
 
       createSiteMutation.mutate({
         name: `${form.nome_empresa} — ${form.objetivo || "Site"} — ${new Date().toLocaleDateString("pt-BR")}`,
         type: (form.paginas as string[]).length <= 1 ? "lp" : "site",
         html: data.html,
         strategy_id: activeStrategy?.id,
+      }, {
+        onSuccess: (created: any) => {
+          if (created?.id) setCurrentSiteId(created.id);
+        },
       });
 
-      toast({ title: "Site gerado com sucesso!" });
+      toast({ title: "Site gerado com sucesso!", description: `${SITE_CREDIT_COST} créditos foram utilizados.` });
     } catch (err) {
       console.error(err);
       clearInterval(interval);
