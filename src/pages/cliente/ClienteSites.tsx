@@ -426,6 +426,8 @@ export default function ClienteSites() {
     setGeneratedHtml("");
     setCreating(false);
     setStepIdx(0);
+    setCurrentSiteId(null);
+    setCurrentSiteStatus("Rascunho");
     autoFilled[1](false);
     setForm({
       nome_empresa: "", slogan: "", descricao_negocio: "", segmento: "",
