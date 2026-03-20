@@ -98,12 +98,41 @@ Deno.serve(async (req) => {
     if (event === "CONNECTION_UPDATE") {
       const state = body.data?.state || body.state || "";
       const connected = state === "open";
+      const updatePayload: Record<string, any> = {
+        status: connected ? "connected" : "disconnected",
+      };
+
+      // Capture phone number when connected
+      if (connected && !instance.phone_number) {
+        try {
+          const cleanBase = (instance.base_url || "").replace(/\/+$/, "");
+          if (cleanBase) {
+            const fetchRes = await fetch(`${cleanBase}/instance/fetchInstances?instanceName=${instance.instance_id}`, {
+              headers: { apikey: instance.client_token || "" },
+              signal: AbortSignal.timeout(10000),
+            });
+            if (fetchRes.ok) {
+              const fetchData = await fetchRes.json();
+              const instData = Array.isArray(fetchData) ? fetchData[0] : fetchData;
+              const ownerJid = instData?.instance?.owner || instData?.owner || instData?.ownerJid || "";
+              const phone = ownerJid.replace(/@.*$/, "");
+              if (phone && /^\d{8,}$/.test(phone)) {
+                updatePayload.phone_number = phone;
+                console.log("[evolution-webhook] Phone detected on connect:", phone);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("[evolution-webhook] Phone fetch error (non-fatal):", err);
+        }
+      }
+
       await adminClient
         .from("whatsapp_instances")
-        .update({ status: connected ? "connected" : "disconnected" })
+        .update(updatePayload)
         .eq("id", instance.id);
 
-      return new Response(JSON.stringify({ ok: true, connection: state }), {
+      return new Response(JSON.stringify({ ok: true, connection: state, phone: updatePayload.phone_number || null }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

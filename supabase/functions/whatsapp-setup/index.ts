@@ -128,6 +128,28 @@ Deno.serve(async (req) => {
               }
             }
 
+            // Fetch phone number if connected and not already known
+            if (connected && !phoneNumber) {
+              try {
+                const phoneRes = await fetch(`${inst.base_url}/instance/fetchInstances?instanceName=${inst.instance_id}`, {
+                  headers: { apikey: inst.client_token },
+                  signal: AbortSignal.timeout(10000),
+                });
+                if (phoneRes.ok) {
+                  const phoneData = await phoneRes.json();
+                  const instData = Array.isArray(phoneData) ? phoneData[0] : phoneData;
+                  const ownerJid = instData?.instance?.owner || instData?.owner || instData?.ownerJid || "";
+                  const phone = ownerJid.replace(/@.*$/, "");
+                  if (phone && /^\d{8,}$/.test(phone)) {
+                    phoneNumber = phone;
+                    console.log("[check-status] Evolution phone detected:", phoneNumber);
+                  }
+                }
+              } catch (err) {
+                console.error("[check-status] Evolution phone fetch error:", err);
+              }
+            }
+
             // Read-only webhook check (no self-heal — instance may belong to another project)
             if (connected) {
               const expectedWebhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
@@ -546,6 +568,29 @@ Deno.serve(async (req) => {
         console.error("[connect] Evolution webhook reconfig error (non-fatal):", err);
       }
 
+      // Fetch phone number from Evolution API if connected
+      let phoneNumber: string | null = null;
+      if (connStatus === "connected") {
+        try {
+          const listRes = await fetch(`${cleanBaseUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
+            headers: { apikey: effectiveApiKey },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            const instData = Array.isArray(listData) ? listData[0] : listData;
+            const ownerJid = instData?.instance?.owner || instData?.owner || instData?.ownerJid || "";
+            const phone = ownerJid.replace(/@.*$/, "");
+            if (phone && /^\d{8,}$/.test(phone)) {
+              phoneNumber = phone;
+              console.log("[connect] Evolution phone detected:", phoneNumber);
+            }
+          }
+        } catch (err) {
+          console.error("[connect] Evolution phone fetch error (non-fatal):", err);
+        }
+      }
+
       // Upsert instance
       const { data: existing } = await adminClient
         .from("whatsapp_instances")
@@ -559,7 +604,7 @@ Deno.serve(async (req) => {
         token: effectiveApiKey,
         client_token: effectiveApiKey,
         status: connStatus,
-        phone_number: null,
+        phone_number: phoneNumber,
         webhook_url: webhookUrl,
         label: label || instanceName,
         provider: "evolution",
@@ -577,7 +622,7 @@ Deno.serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ success: true, status: connStatus, phone: null, webhookUrl }),
+        JSON.stringify({ success: true, status: connStatus, phone: phoneNumber, webhookUrl }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
