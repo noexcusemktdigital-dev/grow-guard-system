@@ -8,7 +8,7 @@ export interface SavedSite {
   id: string;
   name: string;
   type: string;
-  status: "Rascunho" | "Publicado";
+  status: "Rascunho" | "Aprovado" | "Publicado";
   createdAt: string;
   url?: string;
   html?: string;
