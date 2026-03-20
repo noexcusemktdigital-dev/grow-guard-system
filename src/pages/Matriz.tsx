@@ -203,7 +203,7 @@ export default function Matriz() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {members!.map((m) => {
+              {members?.map((m) => {
                 const userTeams = getUserTeams(m.user_id);
                 return (
                   <Card key={m.user_id} className="p-4">

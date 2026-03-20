@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { formatBRL } from "@/lib/formatting";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +28,6 @@ import { ProposalSummary } from "@/components/calculator/ProposalSummary";
 import { ProposalGenerator } from "@/components/calculator/ProposalGenerator";
 import { SummaryDrawer } from "@/components/calculator/SummaryDrawer";
 
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 // ── Proposal Viewer Sheet ───────────────────────────────────────
 function ProposalViewerSheet({ proposal, open, onClose }: { proposal: any; open: boolean; onClose: () => void }) {
@@ -150,7 +150,7 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: any; open:
                 </thead>
                 <tbody>
                   {items.map((item: any, i: number) => (
-                    <tr key={i} className="border-b border-gray-100">
+                    <tr key={item.id ?? `${item.name}-${i}`} className="border-b border-gray-100">
                       <td className="py-2 text-gray-800">{item.name}</td>
                       <td className="py-2 text-center text-gray-600">{item.quantity || 1}</td>
                       <td className="py-2 text-right text-gray-600">{formatBRL(Number(item.unit_price || 0))}</td>

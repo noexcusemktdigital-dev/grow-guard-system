@@ -140,7 +140,7 @@ export default function ContratosTemplates() {
         </div>
       ) : (
         <div className="space-y-3">
-          {templates!.map(t => (
+          {templates?.map(t => (
             <Card key={t.id} className="p-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-1 flex-1">

@@ -11,8 +11,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
-
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+import { formatBRL } from "@/lib/formatting";
 
 const statusConfig: Record<string, { label: string; icon: React.ReactNode; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Pendente", icon: <Clock className="w-3 h-3" />, variant: "outline" },
@@ -237,7 +236,7 @@ export default function FinanceiroRepasse() {
                   <Button
                     variant="outline"
                     className="w-full gap-2"
-                    onClick={() => handleCopy(fetchPix.data!.copy_paste!)}
+                    onClick={() => handleCopy(fetchPix.data?.copy_paste ?? "")}
                   >
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     {copied ? "Copiado!" : "Copiar código PIX"}

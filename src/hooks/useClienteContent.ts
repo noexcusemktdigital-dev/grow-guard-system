@@ -166,7 +166,8 @@ export function useClienteContentMutations() {
 
   const createChecklistItem = useMutation({
     mutationFn: async (item: { title: string; date?: string; source?: string; category?: string }) => {
-      const { data, error } = await supabase.from("client_checklist_items").insert({ ...item, organization_id: orgId!, user_id: user!.id }).select().single();
+      if (!orgId || !user) throw new Error("Usuário não autenticado");
+      const { data, error } = await supabase.from("client_checklist_items").insert({ ...item, organization_id: orgId, user_id: user.id }).select().single();
       if (error) throw error;
       return data;
     },
@@ -179,12 +180,12 @@ export function useClienteContentMutations() {
       if (error) throw error;
 
       // If completing, add XP (+10 per task, +50 bonus if all done)
-      if (is_completed) {
+      if (is_completed && user && orgId) {
         const { data: gamData } = await supabase
           .from("client_gamification")
           .select("*")
-          .eq("user_id", user!.id)
-          .eq("organization_id", orgId!)
+          .eq("user_id", user.id)
+          .eq("organization_id", orgId)
           .maybeSingle();
 
         if (gamData) {
@@ -196,7 +197,7 @@ export function useClienteContentMutations() {
           const { data: todayItems } = await supabase
             .from("client_checklist_items")
             .select("id, is_completed")
-            .eq("user_id", user!.id)
+            .eq("user_id", user.id)
             .eq("date", today);
 
           const allDone = todayItems && todayItems.every((i: any) => i.is_completed || i.id === id);
@@ -252,7 +253,7 @@ export function useClienteContentMutations() {
       const { error } = await supabase
         .from("client_notifications")
         .update({ is_read: true })
-        .eq("user_id", user!.id)
+        .eq("user_id", user?.id ?? "")
         .eq("is_read", false);
       if (error) throw error;
     },

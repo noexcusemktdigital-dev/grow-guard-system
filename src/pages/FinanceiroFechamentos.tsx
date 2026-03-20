@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef } from "react";
+import { formatBRL } from "@/lib/formatting";
 import { Inbox, FileDown, Building2, Plus, Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +19,6 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 export default function FinanceiroFechamentos() {
@@ -179,8 +179,8 @@ export default function FinanceiroFechamentos() {
               </tr>
             </thead>
             <tbody>
-              {consolidation.map((c, i) => (
-                <tr key={i} className="border-b hover:bg-muted/30">
+              {consolidation.map((c) => (
+                <tr key={c.orgName} className="border-b hover:bg-muted/30">
                   <td className="py-3 px-4 font-medium flex items-center gap-2"><Building2 className="w-4 h-4 text-muted-foreground" />{c.orgName}</td>
                   <td className="py-3 px-4 text-center">{c.contracts}</td>
                   <td className="py-3 px-4 text-right">{formatBRL(c.mrr)}</td>
@@ -205,7 +205,7 @@ export default function FinanceiroFechamentos() {
       {(closings ?? []).length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">Arquivos de Fechamento</h3>
-          {closings!.map((cl: any) => (
+          {closings?.map((cl: any) => (
             <Card key={cl.id} className="glass-card">
               <CardContent className="flex items-center justify-between py-4">
                 <div className="flex items-center gap-4">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatBRL } from "@/lib/formatting";
 import { Trophy, BarChart3, Target, Plus, TrendingUp, Medal, Users, CalendarDays, Inbox, MoreVertical, Pencil, Archive, Star, Flame, Zap, Lock, Crown, Award } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +19,6 @@ import { useNetworkTrophies } from "@/hooks/useNetworkTrophies";
 import type { TrophyId } from "@/hooks/useTrophyProgress";
 import { toast } from "sonner";
 
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const MONETARY_TYPES = ["faturamento", "avg_ticket", "revenue"];
 const isMonetaryType = (type: string) => MONETARY_TYPES.includes(type);
 const formatMetricValue = (v: number, type: string) => isMonetaryType(type) ? formatBRL(v) : v.toLocaleString("pt-BR");

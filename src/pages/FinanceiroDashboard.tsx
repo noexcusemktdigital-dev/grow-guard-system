@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { formatBRL, MONTH_NAMES } from "@/lib/formatting";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Inbox, ArrowRight, Plus, Pencil, Trash2, Search, CreditCard, Copy, ExternalLink, Loader2, RefreshCw, Send, QrCode, Check, FileDown, Building2, Upload, Save, Clock, CheckCircle, AlertTriangle, TrendingUp, DollarSign, AlertCircle, Users, PieChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer, CartesianGrid, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
 
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const expCategories = ["Pessoas", "Plataformas", "Estrutura", "Empréstimos", "Investimentos", "Eventos", "Treinamentos", "Impostos"];
 const ASAAS_PAID_STATUSES = ["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"];
 const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--muted-foreground))"];
@@ -867,7 +866,7 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
               <>
                 <img src={`data:image/png;base64,${fetchPix.data.encoded_image}`} alt="QR Code PIX" className="w-56 h-56 rounded-lg border" />
                 {fetchPix.data.copy_paste && (
-                  <Button variant="outline" className="w-full gap-2" onClick={() => handleCopy(fetchPix.data!.copy_paste!)}>
+                  <Button variant="outline" className="w-full gap-2" onClick={() => handleCopy(fetchPix.data?.copy_paste ?? "")}>
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     {copied ? "Copiado!" : "Copiar código PIX"}
                   </Button>

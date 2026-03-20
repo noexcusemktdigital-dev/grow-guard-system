@@ -183,7 +183,7 @@ export default function Unidades() {
           </div>
         ) : viewMode === "card" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {units!.map(u => (
+            {units?.map(u => (
               <Card key={u.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedId(u.id)}>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold">{u.name}</h3>
@@ -206,7 +206,7 @@ export default function Unidades() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {units!.map(u => (
+                {units?.map(u => (
                   <TableRow key={u.id} className="cursor-pointer hover:bg-muted/30" onClick={() => setSelectedId(u.id)}>
                     <TableCell className="font-medium">{u.name}</TableCell>
                     <TableCell>{u.city}{u.state ? `, ${u.state}` : ""}</TableCell>

@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { formatBRL } from "@/lib/formatting";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -121,7 +123,6 @@ function ServiceContractForm({ onSuccess, initialProposalId }: { onSuccess: () =
 
   const set = (key: string, val: string) => setForm(prev => ({ ...prev, [key]: val }));
   const previewContent = useMemo(() => buildContent(form, "assessoria"), [form]);
-  const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const handleSave = (status: string) => {
     if (!selectedProposalId) return toast.error("Selecione uma proposta para gerar o contrato de prestação de serviço");
@@ -260,7 +261,7 @@ function ServiceContractForm({ onSuccess, initialProposalId }: { onSuccess: () =
       {showPreview && (
         <Card className="glass-card overflow-hidden">
           <CardContent className="p-0">
-            <div className="bg-white" dangerouslySetInnerHTML={{ __html: getPreviewHtml(previewContent, "assessoria") }} />
+            <div className="bg-white" dangerouslySetInnerHTML={{ __html: sanitizeHtml(getPreviewHtml(previewContent, "assessoria")) }} />
           </CardContent>
         </Card>
       )}
@@ -413,7 +414,7 @@ function FranchiseContractForm({ onSuccess }: { onSuccess: () => void }) {
       {showPreview && (
         <Card className="glass-card overflow-hidden">
           <CardContent className="p-0">
-            <div className="bg-white" dangerouslySetInnerHTML={{ __html: getPreviewHtml(previewContent, "franquia") }} />
+            <div className="bg-white" dangerouslySetInnerHTML={{ __html: sanitizeHtml(getPreviewHtml(previewContent, "franquia")) }} />
           </CardContent>
         </Card>
       )}
@@ -475,7 +476,6 @@ export default function ContratosGerador() {
   const totalContracts = filtered.length;
   const activeCount = filtered.filter((c: any) => c.status === "active" || c.status === "signed").length;
   const expiringCount = filtered.filter((c: any) => { const d = daysUntilExpiry(c.end_date); return d !== null && d > 0 && d <= 30; }).length;
-  const formatBRLFn = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const openEdit = (c: any) => {
     setEditingContract(c);
@@ -508,9 +508,9 @@ export default function ContratosGerador() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard label="Total" value={String(totalContracts)} icon={FileSignature} delay={0} />
         <KpiCard label="Ativos" value={String(activeCount)} icon={FileSignature} delay={1} variant="accent" />
-        <KpiCard label="MRR Rede" value={formatBRLFn(totalMRR)} icon={DollarSign} delay={2} />
+        <KpiCard label="MRR Rede" value={formatBRL(totalMRR)} icon={DollarSign} delay={2} />
         <KpiCard label="A Vencer (30d)" value={String(expiringCount)} icon={AlertTriangle} delay={3} />
-        <KpiCard label="Valor Total" value={formatBRLFn(filtered.reduce((s: number, c: any) => s + Number(c.total_value || 0), 0))} icon={DollarSign} delay={4} />
+        <KpiCard label="Valor Total" value={formatBRL(filtered.reduce((s: number, c: any) => s + Number(c.total_value || 0), 0))} icon={DollarSign} delay={4} />
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
@@ -599,7 +599,7 @@ export default function ContratosGerador() {
                         <td className="py-3 px-4 text-center">
                           <Badge variant="outline" className="text-[10px] capitalize">{typeLabels[c.contract_type] || c.contract_type || "—"}</Badge>
                         </td>
-                        <td className="py-3 px-4 text-right">{c.monthly_value ? formatBRLFn(Number(c.monthly_value)) : "—"}</td>
+                        <td className="py-3 px-4 text-right">{c.monthly_value ? formatBRL(Number(c.monthly_value)) : "—"}</td>
                         <td className="py-3 px-4 text-center">
                           <span className={`text-xs px-2 py-0.5 rounded ${gestaoStatusColors[c.status] || "bg-muted"}`}>{gestaoStatusLabels[c.status] || c.status}</span>
                         </td>
@@ -645,8 +645,8 @@ export default function ContratosGerador() {
                 ["Tipo", typeLabels[detailContract.contract_type] || detailContract.contract_type],
                 ["Dono", ownerLabels[detailContract.owner_type] || detailContract.owner_type],
                 ["Status", gestaoStatusLabels[detailContract.status] || detailContract.status],
-                ["Valor Mensal", detailContract.monthly_value ? formatBRLFn(Number(detailContract.monthly_value)) : "—"],
-                ["Valor Total", detailContract.total_value ? formatBRLFn(Number(detailContract.total_value)) : "—"],
+                ["Valor Mensal", detailContract.monthly_value ? formatBRL(Number(detailContract.monthly_value)) : "—"],
+                ["Valor Total", detailContract.total_value ? formatBRL(Number(detailContract.total_value)) : "—"],
                 ["Duração", detailContract.duration_months ? `${detailContract.duration_months} meses` : "—"],
                 ["Início", detailContract.start_date ? new Date(detailContract.start_date).toLocaleDateString("pt-BR") : "—"],
                 ["Vencimento", detailContract.end_date ? new Date(detailContract.end_date).toLocaleDateString("pt-BR") : "—"],

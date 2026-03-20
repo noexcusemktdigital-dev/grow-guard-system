@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -203,7 +204,7 @@ function ContractForm({ onSuccess }: { onSuccess: () => void }) {
       {showPreview && (
         <Card className="glass-card overflow-hidden">
           <CardContent className="p-0">
-            <div className="bg-white" dangerouslySetInnerHTML={{ __html: getPreviewHtml(previewContent, "assessoria") }} />
+            <div className="bg-white" dangerouslySetInnerHTML={{ __html: sanitizeHtml(getPreviewHtml(previewContent, "assessoria")) }} />
           </CardContent>
         </Card>
       )}

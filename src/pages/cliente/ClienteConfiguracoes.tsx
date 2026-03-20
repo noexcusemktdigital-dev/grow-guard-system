@@ -402,7 +402,7 @@ function NotificationsTab() {
     const updated = { ...notifications, [key]: value };
     setNotifications(updated);
     try {
-      const { error } = await supabase.from("profiles").update({ notification_preferences: updated } as any).eq("id", user!.id);
+      const { error } = await supabase.from("profiles").update({ notification_preferences: updated } as any).eq("id", user?.id ?? "");
       if (error) throw error;
       toast.success(`${value ? "Ativado" : "Desativado"}`);
     } catch { toast.error("Erro ao salvar preferência"); }

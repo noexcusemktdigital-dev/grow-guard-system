@@ -12,8 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useNetworkContracts, useContractMutations } from "@/hooks/useContracts";
 import { KpiCard } from "@/components/KpiCard";
 import { useToast } from "@/hooks/use-toast";
-
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+import { formatBRL } from "@/lib/formatting";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",

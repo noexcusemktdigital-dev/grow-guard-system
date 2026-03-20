@@ -16,8 +16,7 @@ import { useNetworkContracts } from "@/hooks/useContracts";
 import { useChargeClient, useAsaasNetworkPayments, type AsaasPayment } from "@/hooks/useClientPayments";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
-
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+import { formatBRL } from "@/lib/formatting";
 const revCategories = ["Assessoria", "SaaS", "Franquia", "Outros"];
 const expCategories = ["Pessoas", "Plataformas", "Estrutura", "Empréstimos", "Investimentos", "Eventos", "Treinamentos", "Impostos"];
 

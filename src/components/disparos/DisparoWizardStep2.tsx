@@ -66,7 +66,7 @@ export function DisparoWizardStep2({ recipients, sourceType, onChange }: Props) 
 
     const phones = contactsWithPhone
       .filter((c) => next.has(c.id))
-      .map((c) => c.phone!.trim());
+      .filter((c) => c.phone).map((c) => c.phone!.trim());
     onChange(phones, "crm_contacts");
   };
 
@@ -81,7 +81,7 @@ export function DisparoWizardStep2({ recipients, sourceType, onChange }: Props) 
       setSelectedContactIds(next);
       const phones = contactsWithPhone
         .filter((c) => next.has(c.id))
-        .map((c) => c.phone!.trim());
+        .filter((c) => c.phone).map((c) => c.phone!.trim());
       onChange(phones, "crm_contacts");
     } else {
       // Select all visible (up to 100)
@@ -90,7 +90,7 @@ export function DisparoWizardStep2({ recipients, sourceType, onChange }: Props) 
       setSelectedContactIds(next);
       const phones = contactsWithPhone
         .filter((c) => next.has(c.id))
-        .map((c) => c.phone!.trim());
+        .filter((c) => c.phone).map((c) => c.phone!.trim());
       onChange(phones, "crm_contacts");
     }
   };

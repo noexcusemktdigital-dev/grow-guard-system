@@ -15,7 +15,7 @@ export function useAcademyModules() {
   return useQuery({
     queryKey: ["academy-modules", sourceOrgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("academy_modules").select("*").eq("organization_id", sourceOrgId!).order("sort_order");
+      const { data, error } = await supabase.from("academy_modules").select("*").eq("organization_id", sourceOrgId).order("sort_order");
       if (error) throw error;
       return data;
     },
@@ -28,7 +28,7 @@ export function useAcademyLessons(moduleId?: string) {
   return useQuery({
     queryKey: ["academy-lessons", sourceOrgId, moduleId],
     queryFn: async () => {
-      let q = supabase.from("academy_lessons").select("*").eq("organization_id", sourceOrgId!).order("sort_order");
+      let q = supabase.from("academy_lessons").select("*").eq("organization_id", sourceOrgId).order("sort_order");
       if (moduleId) q = q.eq("module_id", moduleId);
       const { data, error } = await q;
       if (error) throw error;
@@ -43,7 +43,7 @@ export function useAcademyProgress() {
   return useQuery({
     queryKey: ["academy-progress", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("academy_progress").select("*").eq("user_id", user!.id);
+      const { data, error } = await supabase.from("academy_progress").select("*").eq("user_id", user.id);
       if (error) throw error;
       return data;
     },
@@ -56,7 +56,7 @@ export function useAcademyCertificates() {
   return useQuery({
     queryKey: ["academy-certificates", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("academy_certificates").select("*").eq("user_id", user!.id);
+      const { data, error } = await supabase.from("academy_certificates").select("*").eq("user_id", user.id);
       if (error) throw error;
       return data;
     },
@@ -69,7 +69,7 @@ export function useAcademyQuizzes(moduleId?: string) {
   return useQuery({
     queryKey: ["academy-quizzes", sourceOrgId, moduleId],
     queryFn: async () => {
-      let q = supabase.from("academy_quizzes").select("*").eq("organization_id", sourceOrgId!);
+      let q = supabase.from("academy_quizzes").select("*").eq("organization_id", sourceOrgId);
       if (moduleId) q = q.eq("module_id", moduleId);
       const { data, error } = await q;
       if (error) throw error;
@@ -96,7 +96,7 @@ export function useAcademyQuizAttempts(quizId?: string) {
   return useQuery({
     queryKey: ["academy-quiz-attempts", user?.id, quizId],
     queryFn: async () => {
-      let q = supabase.from("academy_quiz_attempts").select("*").eq("user_id", user!.id);
+      let q = supabase.from("academy_quiz_attempts").select("*").eq("user_id", user.id);
       if (quizId) q = q.eq("quiz_id", quizId);
       const { data, error } = await q.order("created_at");
       if (error) throw error;
@@ -143,7 +143,7 @@ export function useAcademyMutations() {
       const { data: existing } = await supabase
         .from("academy_progress")
         .select("id")
-        .eq("user_id", user!.id)
+        .eq("user_id", user.id)
         .eq("lesson_id", lessonId)
         .maybeSingle();
 
@@ -159,7 +159,7 @@ export function useAcademyMutations() {
       } else {
         const { data, error } = await supabase
           .from("academy_progress")
-          .insert({ user_id: user!.id, lesson_id: lessonId, completed_at: new Date().toISOString(), progress_percent: 100 })
+          .insert({ user_id: user.id, lesson_id: lessonId, completed_at: new Date().toISOString(), progress_percent: 100 })
           .select()
           .single();
         if (error) throw error;
@@ -172,7 +172,7 @@ export function useAcademyMutations() {
   const submitQuizAttempt = useMutation({
     mutationFn: async ({ quizId, score, passed, answers }: { quizId: string; score: number; passed: boolean; answers?: Json }) => {
       const { data, error } = await supabase.from("academy_quiz_attempts").insert({
-        user_id: user!.id,
+        user_id: user.id,
         quiz_id: quizId,
         score,
         passed,
@@ -187,7 +187,7 @@ export function useAcademyMutations() {
   const insertCertificate = useMutation({
     mutationFn: async (moduleId: string) => {
       const { data, error } = await supabase.from("academy_certificates").insert({
-        user_id: user!.id,
+        user_id: user.id,
         module_id: moduleId,
       }).select().single();
       if (error) throw error;

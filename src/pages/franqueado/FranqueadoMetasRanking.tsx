@@ -1,3 +1,4 @@
+import { formatBRL } from "@/lib/formatting";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +35,6 @@ const trophyDefs: TrophyItem[] = [
   { id: "ten_clients", title: "10 Clientes Ativos", description: "Alcance 10 clientes ativos na carteira", icon: Users },
 ];
 
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatMetricValue = (v: number, type: string) => ["revenue", "faturamento", "avg_ticket"].includes(type) ? formatBRL(v) : v.toLocaleString("pt-BR");
 
 export default function FranqueadoMetasRanking() {

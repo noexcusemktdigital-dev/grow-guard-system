@@ -1,4 +1,5 @@
 import { Bot, User, Users, Globe } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { WhatsAppContact } from "@/hooks/useWhatsApp";
@@ -89,9 +90,9 @@ export function ChatContactItem({ contact, isSelected, onSelect, stageLabel, pre
               <span
                 className="text-muted-foreground/80"
                 dangerouslySetInnerHTML={{
-                  __html: preview
+                  __html: sanitizeHtml(preview
                     .replace(/^(✓✓?)\s*Você:/g, '<span class="text-emerald-500">$1</span> <span class="font-semibold text-foreground/70">Você:</span>')
-                    .replace(/^(🎤|📷|📹|📄)/g, '<span class="text-primary/80">$1</span>')
+                    .replace(/^(🎤|📷|📹|📄)/g, '<span class="text-primary/80">$1</span>'))
                 }}
               />
             ) : (

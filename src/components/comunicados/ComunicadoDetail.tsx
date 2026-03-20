@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -105,7 +106,7 @@ export default function ComunicadoDetail({ comunicado, onEdit, onDuplicate, onAr
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: comunicado.conteudo }} />
+          <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(comunicado.conteudo) }} />
 
           {(comunicado as any).attachmentUrl && (
             <a

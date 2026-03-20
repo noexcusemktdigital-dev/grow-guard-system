@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { ArrowLeft, ArrowRight, Send, CheckCircle2, HelpCircle, Undo2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -361,7 +362,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
                     : "bg-primary/10 text-foreground rounded-tr-md"
                 )}
                 dangerouslySetInnerHTML={{
-                  __html: msg.text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                  __html: sanitizeHtml(msg.text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'))
                 }}
               />
             </motion.div>
@@ -446,7 +447,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
           {/* Select with categories */}
           {currentStep.inputType === "select" && hasCategories && (
             <div className="space-y-3 max-h-64 overflow-y-auto">
-              {currentStep.categories!.map(cat => (
+              {currentStep.categories?.map(cat => (
                 <div key={cat.title}>
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span className="text-sm">{cat.icon}</span>

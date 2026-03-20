@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatBRL } from "@/lib/formatting";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Inbox, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useFinanceExpenses, useFinanceMutations } from "@/hooks/useFinance";
 import { useToast } from "@/hooks/use-toast";
 
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const allCategorias = ["Pessoas", "Plataformas", "Estrutura", "Empréstimos", "Investimentos", "Eventos", "Treinamentos", "Impostos"];
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -73,7 +73,7 @@ export default function FinanceiroDespesas() {
               </tr>
             </thead>
             <tbody>
-              {expenses!.map(e => (
+              {expenses?.map(e => (
                 <tr key={e.id} className="border-b border-border/50 hover:bg-secondary/30">
                   <td className="py-3 px-4 font-medium">{e.description}</td>
                   <td className="py-3 px-4"><span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground">{e.category || "—"}</span></td>

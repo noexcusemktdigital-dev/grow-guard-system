@@ -1083,12 +1083,12 @@ export default function ClientePlanoMarketing() {
         )}
 
         <StrategyDashboard
-          result={activeStrategy!.strategy_result}
+          result={activeStrategy?.strategy_result}
           onApprove={handleApprove}
           onRegenerate={() => setShowChat(true)}
           isApproving={approveStrategy.isPending}
           status={status}
-          createdAt={activeStrategy!.created_at}
+          createdAt={activeStrategy?.created_at ?? ""}
         />
       </div>
     );

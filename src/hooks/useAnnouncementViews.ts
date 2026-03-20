@@ -24,9 +24,10 @@ export function useAnnouncementViewMutations() {
 
   const markViewed = useMutation({
     mutationFn: async (announcementId: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { error } = await supabase
         .from("announcement_views")
-        .upsert({ announcement_id: announcementId, user_id: user!.id, viewed_at: new Date().toISOString() }, { onConflict: "announcement_id,user_id" });
+        .upsert({ announcement_id: announcementId, user_id: user.id, viewed_at: new Date().toISOString() }, { onConflict: "announcement_id,user_id" });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["announcement-views"] }),
@@ -34,16 +35,17 @@ export function useAnnouncementViewMutations() {
 
   const confirmRead = useMutation({
     mutationFn: async (announcementId: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
       // First ensure viewed
       await supabase
         .from("announcement_views")
-        .upsert({ announcement_id: announcementId, user_id: user!.id, viewed_at: new Date().toISOString() }, { onConflict: "announcement_id,user_id" });
+        .upsert({ announcement_id: announcementId, user_id: user.id, viewed_at: new Date().toISOString() }, { onConflict: "announcement_id,user_id" });
       // Then confirm
       const { error } = await supabase
         .from("announcement_views")
         .update({ confirmed_at: new Date().toISOString() })
         .eq("announcement_id", announcementId)
-        .eq("user_id", user!.id);
+        .eq("user_id", user.id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["announcement-views"] }),

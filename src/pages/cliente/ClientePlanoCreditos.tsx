@@ -375,7 +375,7 @@ function SubscriptionDialog({
       const { data, error } = await supabase.functions.invoke("asaas-create-subscription", {
         body: {
           organization_id: orgId,
-          plan: plan!.id,
+          plan: plan?.id,
           billing_type: billingType,
           coupon_code: couponValid ? couponCode.trim().toUpperCase() : undefined,
         },
@@ -521,7 +521,7 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { data, error } = await supabase.functions.invoke("asaas-buy-credits", {
-        body: { organization_id: orgId, pack_id: pack!.id, billing_type: billingType },
+        body: { organization_id: orgId, pack_id: pack?.id, billing_type: billingType },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

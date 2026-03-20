@@ -295,7 +295,7 @@ function DiagnosticForm({
               <Select value={answers[field.key] || ""} onValueChange={(v) => setAnswers((p) => ({ ...p, [field.key]: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {field.options!.map((o) => (
+                  {field.options?.map((o) => (
                     <SelectItem key={o} value={o}>{o}</SelectItem>
                   ))}
                 </SelectContent>
@@ -321,7 +321,7 @@ function DiagnosticForm({
 
             {field.type === "checkbox-group" && (
               <div className="grid grid-cols-2 gap-2 mt-1">
-                {field.options!.map((option) => {
+                {field.options?.map((option) => {
                   const checked = Array.isArray(answers[field.key]) && answers[field.key].includes(option);
                   return (
                     <label key={option} className="flex items-center gap-2 text-sm cursor-pointer">

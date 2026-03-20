@@ -150,7 +150,7 @@ export default function Onboarding() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {units!.map(u => {
+            {units?.map(u => {
               const progress = getProgress(u.id);
               const st = STATUS_MAP[u.status] || STATUS_MAP.pending;
               return (
@@ -241,7 +241,7 @@ export default function Onboarding() {
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhuma etapa configurada.</p>
               ) : (
                 <div className="space-y-2">
-                  {checklist!.map(c => (
+                  {checklist?.map(c => (
                     <div key={c.id} className={`flex items-center gap-3 p-3 rounded-lg border ${c.is_completed ? "bg-muted/30" : ""}`}>
                       <Checkbox checked={c.is_completed} onCheckedChange={(v) => toggleChecklistItem.mutate({ id: c.id, is_completed: !!v })} />
                       <span className={`text-sm flex-1 ${c.is_completed ? "line-through text-muted-foreground" : ""}`}>{c.title}</span>
@@ -260,7 +260,7 @@ export default function Onboarding() {
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhuma reunião agendada.</p>
               ) : (
                 <div className="space-y-2">
-                  {meetings!.map(m => (
+                  {meetings?.map(m => (
                     <Card key={m.id} className="p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm">{m.title}</h4>
@@ -288,7 +288,7 @@ export default function Onboarding() {
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhum indicador configurado.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
-                  {indicators!.map(ind => (
+                  {indicators?.map(ind => (
                     <Card key={ind.id} className="p-4">
                       <p className="text-sm font-medium">{ind.name}</p>
                       <p className="text-2xl font-bold">{ind.current_value}{ind.unit}</p>
@@ -307,7 +307,7 @@ export default function Onboarding() {
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhuma tarefa no plano de ação.</p>
               ) : (
                 <div className="space-y-2">
-                  {tasks!.map(t => (
+                  {tasks?.map(t => (
                     <div key={t.id} className={`flex items-center gap-3 p-3 rounded-lg border ${t.is_completed ? "bg-muted/30" : ""}`}>
                       <Checkbox checked={t.is_completed} onCheckedChange={(v) => toggleTask.mutate({ id: t.id, is_completed: !!v })} />
                       <span className={`text-sm flex-1 ${t.is_completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</span>

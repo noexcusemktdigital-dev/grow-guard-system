@@ -61,12 +61,13 @@ export function useClienteTaskMutations() {
       assigned_to?: string;
       assigned_team?: string;
     }) => {
+      if (!orgId || !user) throw new Error("Missing orgId or user");
       const { data, error } = await supabase
         .from("client_tasks")
         .insert({
           ...task,
-          organization_id: orgId!,
-          created_by: user!.id,
+          organization_id: orgId,
+          created_by: user.id,
         })
         .select()
         .single();
@@ -92,8 +93,9 @@ export function useClienteTaskMutations() {
 
   const toggleTask = useMutation({
     mutationFn: async ({ id, done }: { id: string; done: boolean }) => {
+      if (!user) throw new Error("Missing user");
       const updates = done
-        ? { status: "done", completed_at: new Date().toISOString(), completed_by: user!.id }
+        ? { status: "done", completed_at: new Date().toISOString(), completed_by: user.id }
         : { status: "pending", completed_at: null, completed_by: null };
       const { error } = await supabase.from("client_tasks").update(updates).eq("id", id);
       if (error) throw error;

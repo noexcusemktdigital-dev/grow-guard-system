@@ -65,12 +65,13 @@ export function useEvaluationMutations() {
       categories: Record<string, number>;
       comment?: string;
     }) => {
+      if (!orgId || !user) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from("user_evaluations")
         .insert({
           ...input,
-          organization_id: orgId!,
-          evaluator_id: user!.id,
+          organization_id: orgId,
+          evaluator_id: user.id,
         })
         .select()
         .single();
@@ -89,7 +90,7 @@ export function useEvaluationMutations() {
         .from("user_evaluations")
         .delete()
         .eq("id", id)
-        .eq("evaluator_id", user!.id);
+        .eq("evaluator_id", user?.id ?? "");
       if (error) throw error;
     },
     onSuccess: () => {

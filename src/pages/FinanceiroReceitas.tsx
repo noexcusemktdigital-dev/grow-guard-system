@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatBRL } from "@/lib/formatting";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Inbox, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useFinanceRevenues, useFinanceMutations } from "@/hooks/useFinance";
 import { useToast } from "@/hooks/use-toast";
 
-const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const today = () => new Date().toISOString().split("T")[0];
 
 export default function FinanceiroReceitas() {
@@ -107,7 +107,7 @@ export default function FinanceiroReceitas() {
               </tr>
             </thead>
             <tbody>
-              {revenues!.map(r => (
+              {revenues?.map(r => (
                 <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30">
                   <td className="py-3 px-4 font-medium">{r.description}</td>
                   <td className="py-3 px-4 text-muted-foreground">{r.category || "—"}</td>

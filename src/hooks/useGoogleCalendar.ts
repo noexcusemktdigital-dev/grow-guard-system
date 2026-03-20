@@ -12,7 +12,7 @@ export function useGoogleCalendarConnection() {
       const { data, error } = await supabase
         .from("google_calendar_tokens")
         .select("id, google_calendar_id, expires_at, updated_at, client_id, access_token")
-        .eq("user_id", user!.id)
+        .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw error;
       // Consider "connected" only if we have an access_token (OAuth completed)
