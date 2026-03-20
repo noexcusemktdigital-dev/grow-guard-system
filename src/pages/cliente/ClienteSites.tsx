@@ -20,11 +20,13 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getEffectiveLimits } from "@/constants/plans";
 import { SitePreview } from "@/components/sites/SitePreview";
 import { SiteHistory, type SavedSite } from "@/components/sites/SiteHistory";
-import { useClienteSitesDB, useCreateClientSite } from "@/hooks/useClienteSitesDB";
+import { useClienteSitesDB, useCreateClientSite, useApproveSite } from "@/hooks/useClienteSitesDB";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 import { useContentHistory } from "@/hooks/useClienteContentV2";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useClienteWallet } from "@/hooks/useClienteWallet";
+import { InsufficientCreditsDialog } from "@/components/cliente/InsufficientCreditsDialog";
 
 /* ═══ WIZARD CONFIG ═══ */
 
