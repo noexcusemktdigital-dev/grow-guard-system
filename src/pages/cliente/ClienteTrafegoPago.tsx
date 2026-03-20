@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
+import { AdConnectionCards } from "@/components/trafego/AdConnectionCards";
+import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
+import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
 import {
   DollarSign, Sparkles, Target, Users, Globe, BarChart3, Zap,
   Eye, MousePointer, TrendingUp, PlayCircle, ExternalLink,
