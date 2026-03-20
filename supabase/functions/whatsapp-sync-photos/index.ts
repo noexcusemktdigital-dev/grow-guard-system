@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: orgId } = await adminClient.rpc("get_user_org_id", { _user_id: userId });
+    const { data: orgId } = await adminClient.rpc("get_user_org_id", { _user_id: userId, _portal: "saas" });
     if (!orgId) {
       return new Response(JSON.stringify({ error: "No org" }), {
         status: 400,
