@@ -146,7 +146,7 @@ export function ArtWizard({
     switch (step) {
       case 1: return !!(briefingText.trim() || contentData);
       case 2: return true;
-      case 3: return true;
+      case 3: return layoutTypes.length >= 1;
       case 4: return referenceUrls.length >= 3 && !!logoUrl;
       case 5: return true;
       case 6: return !!headline.trim();
