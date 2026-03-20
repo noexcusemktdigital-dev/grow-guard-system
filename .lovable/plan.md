@@ -1,213 +1,107 @@
 
-## Plano: Arquitetura Unificada de Planos e Créditos
 
-### Status: ✅ Implementado
+# Reestruturação do Motor de Redes Sociais — Diagramação + Logo + Direção Criativa
 
-### Resumo
+## Problema identificado
 
-Substituímos a arquitetura modular (Vendas + Marketing + Combo) por **3 planos unificados** baseados em créditos:
+1. **Logo não aparece**: A IA tenta extrair logo das referências mas falha. Precisa de upload separado e envio explícito ao pipeline.
+2. **Step 3 (Estilo) é abstrato demais**: Mostra "Minimalista", "Bold", "Editorial" — conceitos de design, não de diagramação. O usuário leigo precisa ver **layouts concretos** (mockups visuais).
+3. **Texto manual desnecessário**: O wizard pede headline, subheadline, CTA manualmente. A IA deveria gerar tudo a partir do briefing + objetivo.
 
-| | **Starter** | **Pro** | **Enterprise** |
-|---|---|---|---|
-| Preço | R$ 397/mês | R$ 797/mês | R$ 1.497/mês |
-| Créditos/mês | 500 | 1.000 | 1.500 |
-| Usuários | até 10 | até 20 | ilimitado |
-| CRM Pipelines | 3 | 10 | ilimitado |
-| Agente IA | ❌ | ✅ | ✅ |
-| WhatsApp/Disparos | ❌ | ✅ | ✅ |
-| Marketing completo | ✅ | ✅ | ✅ |
+## Arquitetura proposta — 3 camadas
 
-### Trial
-- 200 créditos, 7 dias, até 2 usuários
-- Sem Agente IA, WhatsApp e Disparos
+```text
+┌─────────────────────────────────────┐
+│  CAMADA 1: Escolha de Diagramação   │ ← 9 layouts com thumbnail/mockup
+│  (substitui Step 3 "Estilo")        │
+├─────────────────────────────────────┤
+│  CAMADA 2: Referências + Logo       │ ← Logo separado + refs obrigatórias
+│  (com peso de preferência)          │   + "qual ref mais gostou?"
+├─────────────────────────────────────┤
+│  CAMADA 3: Geração de Copy          │ ← IA gera headline/sub/CTA
+│  (usuário só descreve objetivo)     │   do briefing automaticamente
+└─────────────────────────────────────┘
+         ↓
+   Prompt técnico em inglês → Nano Banana
+```
 
-### Custos por ação (créditos)
-Site=100, Arte=25, Conteúdo=30, Script=20, Estratégia=50, Automação CRM=5, Agente IA msg=2
+## Mudanças detalhadas
 
-### Pacotes de Recarga
-- Básico: 200 cr / R$ 49
-- Popular: 500 cr / R$ 99
-- Premium: 1.000 cr / R$ 179
+### 1. Novo Step 3 — Diagramação (9 layouts com mockup)
 
----
+Substituir `ART_STYLES` por `LAYOUT_TYPES` em `constants.ts`. Cada layout terá:
+- `value`: identificador (ex: `hero_central`, `split_texto_imagem`, `card_moldura`, `imagem_overlay`, `grid_carrossel`, `minimalista_clean`, `anuncio_agressivo`, `premium_luxo`, `texto_dominante`)
+- `label`, `desc`: nome e descrição curta
+- `mockupSvg` ou `mockupClass`: representação visual inline (SVG simplificado ou CSS art) que mostra a composição — **não emoji, não gradiente**
 
-## Análise: Custo Real Lovable vs Receita dos Planos
+Cada layout gera regras de composição específicas que vão direto no prompt:
+```text
+hero_central → Headline grande centralizada, sub abaixo, fundo texturizado
+split_texto_imagem → Texto à esquerda, imagem à direita, CTA visível
+card_moldura → Card com bordas arredondadas sobre fundo, texto dentro
+imagem_overlay → Foto full-bleed com overlay escuro + texto sobreposto
+grid_carrossel → Grid organizado estilo resumo/carrossel
+minimalista_clean → 60%+ espaço vazio, poucos elementos
+anuncio_agressivo → Alto contraste, texto enorme, cores vibrantes
+premium_luxo → Tipografia serifada, fundos escuros, detalhes dourados
+texto_dominante → Texto como elemento principal, imagem mínima
+```
 
-### Status: ✅ Documentado
+### 2. Logo separado no Step 4 (Referências)
 
-### Custo Lovable AI (Gemini 3 Flash Preview)
-- Input: $0,50/1M tokens | Output: $3,00/1M tokens
-- Média por mensagem agente: ~2.700 tokens → **R$ 0,034/msg**
+Adicionar ao `RefUploader` (ou criar sub-componente):
+- Campo dedicado "Logo da marca" com upload separado
+- Auto-preenche do `visualIdentity.logo_url` se existir
+- Logo é enviado como campo `logo_url` separado no payload (não misturado com referências)
 
-### Margem por Plano
+No prompt final, instrução explícita: "Place the brand logo [position] in the composition. Use the attached logo image exactly as provided."
 
-| | Starter R$ 397 | Pro R$ 797 | Enterprise R$ 1.497 |
-|---|---|---|---|
-| Custo total estimado | ~R$ 20 | ~R$ 91 | ~R$ 120 |
-| **Margem bruta** | **R$ 377 (95%)** | **R$ 706 (89%)** | **R$ 1.377 (92%)** |
+### 3. Peso das referências
 
-### Custo por funcionalidade
+Após upload das 3+ refs, mostrar as thumbnails com opção "⭐ Principal" — a referência marcada ganha peso 0.6, as demais dividem 0.4.
 
-| Ação | Créditos | Custo real | Receita (R$ 0,80/cr) |
-|---|---|---|---|
-| Agente IA (msg) | 2 | R$ 0,034 | R$ 1,60 |
-| Script | 20 | R$ 0,17 | R$ 16 |
-| Arte | 25 | R$ 0,50 | R$ 20 |
-| Conteúdo | 30 | R$ 0,17 | R$ 24 |
-| Estratégia | 50 | R$ 0,34 | R$ 40 |
-| Site | 100 | R$ 0,85 | R$ 80 |
+No CoT (Stage 1), incluir: "Reference 1 is the PRIMARY reference (weight 60%). Match its design language most closely."
 
-### Nota sobre Lovable Cloud
-- Renovação automática do saldo **não é possível via código**
-- Monitorar em Settings → Cloud & AI balance
-- Custo real é centavos/mês no volume atual
+### 4. Simplificar Steps de texto (Steps 6-7 atuais)
 
----
+- **Remover** campos manuais de headline, subheadline, CTA, cena, elementos visuais
+- **Substituir** por 2-3 perguntas simples:
+  - "Sobre o que é a arte?" (campo existente do briefing)
+  - "Qual resultado quer gerar?" (dropdown: vender, educar, engajar, informar, lançamento)
+  - "Tem alguma frase obrigatória?" (opcional)
+- A IA (generate-social-briefing) gera todos os textos automaticamente
+- Mostrar preview dos textos gerados com opção de editar antes de gerar
 
-## Checklist Completo de Testes — Portal SaaS (Cliente)
+### 5. Atualizar Edge Functions
 
-### Status: ✅ Auditoria concluída — 3 bugs corrigidos
+**`generate-social-briefing`**: Receber `layout_type` e incluí-lo no prompt de extração.
 
-### 1. Autenticação e Onboarding
-- [x] Acessar `/app` e criar conta nova com e-mail teste
-- [x] Verificar exigência de senha forte (8+ caracteres, barra visual)
-- [x] Verificar tela de confirmação de e-mail (menção a Spam/Lixo)
-- [x] Confirmar e-mail e fazer login
-- [x] Verificar redirecionamento para `/cliente/onboarding` (dados da empresa)
-- [x] Preencher onboarding da empresa e salvar
-- [x] Verificar exibição sequencial: TrialWelcomeModal → OnboardingTour → Comunicados
-- [x] Verificar banner de Trial (7 dias, 200 créditos)
+**`generate-social-image`**:
+- Receber `layout_type` e `logo_url` como novos campos
+- Adicionar instruções de layout específicas ao prompt baseado no `layout_type` escolhido
+- Enviar logo como imagem separada na chamada de geração (Stage 2) com instrução explícita de posicionamento
+- Incluir peso de referência no CoT (Stage 1)
 
-### 2. Dashboard Início (`/cliente/inicio`)
-- [x] Saudação dinâmica (Bom dia/Boa tarde/Boa noite)
-- [x] Checklist diário visível
-- [x] KPIs carregando (leads, tarefas, créditos)
-- [x] Atalhos rápidos funcionando
-- [x] Alertas de créditos/trial visíveis
+### 6. Novo fluxo do wizard (6 steps em vez de 8)
 
-### 3. CRM (`/cliente/crm`)
-- [x] Configurar primeiro funil em `/cliente/crm/config`
-- [x] Criar etapas no funil
-- [x] Criar lead manualmente (botão + formulário)
-- [x] Arrastar lead entre colunas (verificar drop preciso)
-- [x] Arrastar lead em coluna com scroll (>7 cards)
-- [x] Ativar modo seleção → checkbox de coluna seleciona todos
-- [x] Ação em massa (mover, excluir)
-- [x] Abrir detalhe do lead (sheet lateral)
-- [x] Adicionar atividade/tarefa no lead
-- [x] Importar leads via CSV (testar separador `;`)
-- [x] Criar contato e converter em lead
-- [x] Verificar limite de pipelines por plano (Trial = 3)
+| Step | Conteúdo |
+|------|----------|
+| 1 | Briefing (o que comunicar + objetivo) — mantém |
+| 2 | Tipo de postagem + quantidade — mantém |
+| 3 | **Diagramação** — 9 layouts com mockup visual |
+| 4 | **Referências + Logo** — refs obrigatórias + logo separado + peso |
+| 5 | Formato (1:1, 4:5, 9:16) — mantém |
+| 6 | **Review** — textos gerados pela IA + preview + edição opcional |
 
-### 4. Scripts de Vendas (`/cliente/scripts`)
-- [x] Gerar script (consome 20 créditos)
-- [x] Verificar dedução de créditos
-- [x] Copiar script gerado
-- [x] Verificar bloqueio se créditos insuficientes
+## Arquivos modificados
 
-### 5. Plano de Vendas (`/cliente/plano-vendas`)
-- [x] Visualizar plano comercial
-- [x] Editar metas
+- `src/components/cliente/social/constants.ts` — substituir `ART_STYLES` por `LAYOUT_TYPES` com mockups SVG
+- `src/components/cliente/social/ArtWizard.tsx` — reestruturar steps, adicionar logo, peso de refs, remover campos manuais
+- `src/components/cliente/social/RefUploader.tsx` — adicionar upload de logo separado + seleção de ref principal
+- `supabase/functions/generate-social-image/index.ts` — receber `layout_type` + `logo_url`, ajustar prompts
+- `supabase/functions/generate-social-briefing/index.ts` — receber `layout_type`, gerar textos com base no layout
 
-### 6. Chat / WhatsApp (`/cliente/chat`)
-- [x] Verificar bloqueio no Trial (sem WhatsApp)
-- [x] Verificar que a tela mostra overlay/gate
+## Resultado esperado
 
-### 7. Agentes IA (`/cliente/agentes-ia`)
-- [x] Verificar bloqueio no Trial (sem Agente IA)
-- [ ] Se Pro/Enterprise: criar agente, simular conversa (10 cr config, 2 cr/msg)
+O usuário leigo: escolhe um layout visual → envia logo + refs → descreve objetivo → IA gera tudo → arte profissional com logo correta e diagramação fiel.
 
-### 8. Disparos (`/cliente/disparos`)
-- [x] Verificar bloqueio no Trial
-- [ ] Se Pro/Enterprise: criar disparo em massa
-
-### 9. Dashboard Comercial (`/cliente/dashboard`)
-- [x] Gráficos e métricas carregando
-- [x] Filtros de período funcionando
-
-### 10. Marketing Hub (`/cliente/marketing-hub`)
-- [x] Página carregando com cards de ferramentas (rota corrigida ✅)
-
-### 11. Plano de Marketing (`/cliente/plano-marketing`)
-- [x] Gerar estratégia IA (50 créditos)
-- [x] Verificar dedução
-
-### 12. Conteúdos (`/cliente/conteudos`)
-- [x] Gerar conteúdo (30 créditos)
-- [x] Visualizar conteúdos gerados
-- [x] Copiar/editar conteúdo
-
-### 13. Redes Sociais / Artes (`/cliente/redes-sociais`)
-- [x] Gerar briefing (gratuito)
-- [x] Gerar arte social (25 créditos)
-- [x] Gerar conceitos visuais (25 créditos)
-- [x] Download da arte gerada
-
-### 14. Sites (`/cliente/sites`)
-- [x] Gerar site (100 créditos)
-- [x] Preview do site gerado
-- [x] Verificar guia de deploy
-
-### 15. Tráfego Pago (`/cliente/trafego-pago`)
-- [x] Gerar estratégia de tráfego (50 créditos)
-- [x] Visualizar recomendações
-
-### 16. Plano e Créditos (`/cliente/plano-creditos`)
-- [x] Visualizar plano atual (Trial/Starter/Pro/Enterprise)
-- [x] Ver saldo de créditos restantes
-- [x] Visualizar pacotes de recarga (200/R$49, 500/R$99, 1000/R$179)
-- [ ] Tentar comprar pacote de recarga
-- [x] Visualizar histórico de consumo de créditos
-- [ ] Upgrade de plano (Trial → Starter/Pro/Enterprise)
-
-### 17. Configurações (`/cliente/configuracoes`)
-- [x] Editar dados da empresa
-- [x] Gerenciar usuários (verificar limite: Trial=2, Starter=10, Pro=20)
-- [x] Convidar novo usuário
-- [x] Identidade visual (logo, cores)
-
-### 18. Integrações (`/cliente/integracoes`)
-- [x] Listar integrações disponíveis
-- [ ] Configurar integração (se disponível)
-
-### 19. Agenda (`/cliente/agenda`)
-- [x] Criar evento
-- [x] Visualizar calendário
-- [x] Editar/excluir evento
-
-### 20. Avaliações (`/cliente/avaliacoes`)
-- [x] Visualizar avaliações
-- [ ] Responder avaliação (se disponível)
-
-### 21. Gamificação (`/cliente/gamificacao`)
-- [x] Visualizar troféus/conquistas
-- [x] Verificar progresso
-
-### 22. Suporte (`/cliente/suporte`)
-- [x] Abrir chamado
-- [x] Visualizar chamados existentes
-- [x] Responder chamado
-
-### 23. Notificações (`/cliente/notificacoes`)
-- [x] Verificar sino de notificações
-- [x] Marcar como lida
-
-### 24. Checklist (`/cliente/checklist`)
-- [x] Gerar checklist diário IA (5 créditos)
-- [x] Marcar tarefas como concluídas (CelebrationEffect duplicado corrigido ✅)
-
-### 25. Responsividade
-- [x] Testar todas as telas em mobile (< 768px)
-- [x] Sidebar colapsa corretamente
-- [x] Kanban CRM com scroll horizontal no mobile
-
-### 26. Logout e Segurança
-- [x] Logout redireciona para `/app`
-- [x] Tentar acessar `/cliente/*` sem login → redireciona para `/app`
-- [x] Tentar acessar `/franqueadora/*` com conta cliente → bloqueado
-- [x] Verificar que dados de outra organização não aparecem (RLS)
-
-### Bugs Corrigidos
-1. ✅ Rota `/cliente/marketing-hub` adicionada ao App.tsx
-2. ✅ Rota `/cliente/comunicados` importada e adicionada ao App.tsx
-3. ✅ `CelebrationEffect` duplicado removido de ClienteChecklist.tsx
