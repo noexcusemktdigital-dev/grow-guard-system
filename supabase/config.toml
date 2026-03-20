@@ -93,3 +93,11 @@ project_id = "gxrhdpbbxfipeopdyygn"
     verify_jwt = false
   [functions.whatsapp-webhook]
     verify_jwt = false
+  [functions.ads-oauth-callback]
+    verify_jwt = false
+  [functions.ads-sync-metrics]
+    verify_jwt = false
+  [functions.ads-disconnect]
+    verify_jwt = false
+  [functions.ads-analyze]
+    verify_jwt = false
