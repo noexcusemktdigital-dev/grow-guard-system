@@ -171,6 +171,10 @@ export default function ClienteRedesSociais() {
           brand_name: payload.brandName || undefined,
           supporting_text: payload.supportingText || undefined,
           bullet_points: payload.bulletPoints || undefined,
+          layout_type: payload.layoutType || undefined,
+          logo_url: payload.logoUrl || undefined,
+          primary_ref_index: payload.primaryRefIndex,
+          objective: payload.objective || undefined,
         });
 
         results.push(result);
