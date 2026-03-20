@@ -154,7 +154,6 @@ export interface EffectiveLimits {
   maxContents: number;
   /** @deprecated */
   maxSocialArts: number;
-  /** @deprecated */
   maxSites: number;
   /** @deprecated */
   maxLeads: number;
