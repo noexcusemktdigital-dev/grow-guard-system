@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link2, Wifi, WifiOff, Settings2, RefreshCw, Unplug, AlertTriangle, Headset, Copy, Key, Webhook, MessageSquare, Code2, Zap, TestTube2, Trash2, Plus, Plug, Server, Pencil, Stethoscope, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Link2, Wifi, WifiOff, Settings2, RefreshCw, Unplug, AlertTriangle, Headset, Copy, Key, Webhook, MessageSquare, Code2, Zap, TestTube2, Trash2, Plus, Plug, Server, Pencil, Stethoscope, CheckCircle2, XCircle, Loader2, QrCode, Smartphone } from "lucide-react";
 import { WebsiteChatConfig } from "@/components/cliente/WebsiteChatConfig";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -242,7 +242,59 @@ function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation, refet
   );
 }
 
-/* ── Instance Card ── */
+/* ── QR Code Dialog ── */
+function QrCodeDialog({ open, onOpenChange, qrCode, pairingCode, instanceName, onConnected }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  qrCode: string | null;
+  pairingCode: string | null;
+  instanceName: string;
+  onConnected: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-base flex items-center gap-2">
+            <Smartphone className="w-4 h-4" /> Escanear QR Code
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 flex flex-col items-center">
+          <p className="text-xs text-muted-foreground text-center">
+            Abra o <strong>WhatsApp</strong> no celular → Configurações → Aparelhos conectados → Conectar → Escaneie o código abaixo.
+          </p>
+
+          {qrCode ? (
+            <div className="p-3 bg-white rounded-xl shadow-md">
+              <img
+                src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+                alt="QR Code WhatsApp"
+                className="w-56 h-56 object-contain"
+              />
+            </div>
+          ) : (
+            <div className="w-56 h-56 flex items-center justify-center bg-muted rounded-xl">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {pairingCode && (
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground">Código de pareamento:</p>
+              <p className="font-mono text-lg font-bold tracking-widest">{pairingCode}</p>
+            </div>
+          )}
+
+          <p className="text-[10px] text-muted-foreground text-center">
+            Instância: <span className="font-mono">{instanceName}</span>
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconnect, onReconfigureWebhook, isPending }: {
   instance: WhatsAppInstance;
   onCheckStatus: () => void;
@@ -336,6 +388,11 @@ export default function ClienteIntegracoes() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editInstance, setEditInstance] = useState<WhatsAppInstance | null>(null);
   const [diagOpen, setDiagOpen] = useState(false);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [qrInstanceName, setQrInstanceName] = useState("");
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { data: org } = useOrgProfile();
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
@@ -413,20 +470,85 @@ export default function ClienteIntegracoes() {
     }
   };
 
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
+
+  const startQrPolling = useCallback((inst: WhatsAppInstance) => {
+    stopPolling();
+    let attempts = 0;
+    pollingRef.current = setInterval(async () => {
+      attempts++;
+      if (attempts > 24) { // ~2 min
+        stopPolling();
+        return;
+      }
+      try {
+        const res = await setupMutation.mutateAsync({
+          action: "get-qr",
+          provider: "evolution",
+          instanceName: inst.instance_id,
+          baseUrl: inst.base_url || undefined,
+          apiKey: inst.client_token || undefined,
+        });
+        if (res?.status === "connected") {
+          stopPolling();
+          setQrDialogOpen(false);
+          refetch();
+          toast.success("WhatsApp conectado com sucesso!");
+        } else if (res?.qr_code) {
+          setQrCode(res.qr_code);
+          if (res.pairing_code) setPairingCode(res.pairing_code);
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 5000);
+  }, [stopPolling, setupMutation, refetch]);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => stopPolling(), [stopPolling]);
+
   const handleReconnect = async (inst: WhatsAppInstance) => {
     try {
-      let res: any;
       if (inst.provider === "evolution") {
-        res = await setupMutation.mutateAsync({
-          action: "connect",
+        // First try get-qr to show QR code
+        setQrInstanceName(inst.label || inst.instance_id);
+        setQrCode(null);
+        setPairingCode(null);
+        setQrDialogOpen(true);
+
+        const res = await setupMutation.mutateAsync({
+          action: "get-qr",
           provider: "evolution",
-          baseUrl: inst.base_url,
-          apiKey: inst.client_token,
           instanceName: inst.instance_id,
-          label: inst.label,
+          baseUrl: inst.base_url || undefined,
+          apiKey: inst.client_token || undefined,
         });
+
+        if (res?.status === "connected") {
+          setQrDialogOpen(false);
+          refetch();
+          toast.success("WhatsApp já está conectado!");
+          return;
+        }
+
+        if (res?.qr_code) {
+          setQrCode(res.qr_code);
+          if (res.pairing_code) setPairingCode(res.pairing_code);
+          // Start polling for connection status
+          startQrPolling(inst);
+        } else {
+          setQrDialogOpen(false);
+          toast.warning("Não foi possível obter o QR code", {
+            description: "Verifique se a instância existe no servidor Evolution.",
+          });
+        }
       } else {
-        res = await setupMutation.mutateAsync({
+        const res = await setupMutation.mutateAsync({
           action: "connect",
           provider: "zapi",
           instanceId: inst.instance_id,
@@ -434,16 +556,15 @@ export default function ClienteIntegracoes() {
           clientToken: inst.client_token,
           label: inst.label,
         });
-      }
-      refetch();
-      if (res?.status === "connected") {
-        toast.success("Reconexão realizada — conectado!");
-      } else {
-        toast.warning("Reconexão executada, mas status: " + (res?.status || "desconectado"), {
-          description: "A instância pode não existir no servidor ou o nome está diferente. Use o Diagnóstico para verificar.",
-        });
+        refetch();
+        if (res?.status === "connected") {
+          toast.success("Reconexão realizada — conectado!");
+        } else {
+          toast.warning("Reconexão executada, mas status: " + (res?.status || "desconectado"));
+        }
       }
     } catch (err: any) {
+      setQrDialogOpen(false);
       toast.error("Erro na reconexão: " + err.message);
     }
   };
@@ -690,6 +811,14 @@ export default function ClienteIntegracoes() {
       <WhatsAppSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} />
       <EditInstanceDialog instance={editInstance} open={!!editInstance} onOpenChange={v => { if (!v) setEditInstance(null); }} onSave={handleEditSave} isPending={setupMutation.isPending} />
       <DiagnosticsDialog open={diagOpen} onOpenChange={setDiagOpen} instances={instances || []} setupMutation={setupMutation} refetch={refetch} />
+      <QrCodeDialog
+        open={qrDialogOpen}
+        onOpenChange={(v) => { if (!v) { stopPolling(); setQrDialogOpen(false); } }}
+        qrCode={qrCode}
+        pairingCode={pairingCode}
+        instanceName={qrInstanceName}
+        onConnected={() => { stopPolling(); setQrDialogOpen(false); refetch(); }}
+      />
     </div>
   );
 }
