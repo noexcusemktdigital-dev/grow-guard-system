@@ -572,6 +572,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const body = await req.json();
     const {
       prompt, format, file_path, nivel, persona, identidade_visual,
       organization_id, reference_images, art_style,
@@ -579,7 +580,8 @@ serve(async (req) => {
       manual_colors, manual_style, brand_name,
       supporting_text, bullet_points,
       layout_type, logo_url, primary_ref_index, objective,
-    } = await req.json();
+      extract_logo,
+    } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -587,6 +589,78 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // ─── Extract logo mode ───
+    if (extract_logo && reference_images?.length > 0) {
+      console.log("🔍 Extract logo mode: analyzing references...");
+      const refB64s: { type: string; image_url: { url: string } }[] = [];
+      for (const refUrl of reference_images.slice(0, 3)) {
+        const b64 = await urlToBase64(refUrl);
+        if (b64) refB64s.push({ type: "image_url", image_url: { url: b64 } });
+      }
+      if (refB64s.length === 0) {
+        return new Response(JSON.stringify({ error: "Could not load reference images" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3.1-flash-image-preview",
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Look at these reference images carefully. Find the brand logo/logotype that appears in them.
+Extract ONLY the logo — remove all other elements.
+Place the extracted logo on a clean solid white background.
+Maintain the original colors, proportions, and text of the logo exactly.
+If there are multiple logos, extract the most prominent one.
+Output ONLY the extracted logo image.`,
+              },
+              ...refB64s,
+            ],
+          }],
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (!extractResponse.ok) {
+        console.error("Logo extraction failed:", extractResponse.status);
+        return new Response(JSON.stringify({ error: "Logo extraction failed" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const extractData = await extractResponse.json();
+      const extractedImage = extractData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (!extractedImage) {
+        return new Response(JSON.stringify({ error: "No logo found in references" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Upload extracted logo
+      const logoPath = `logos/${organization_id}/${Date.now()}_extracted.png`;
+      const logoBase64 = extractedImage.replace(/^data:image\/\w+;base64,/, "");
+      const logoBinary = Uint8Array.from(atob(logoBase64), (c) => c.charCodeAt(0));
+      const { error: uploadErr } = await supabase.storage
+        .from("social-arts")
+        .upload(logoPath, logoBinary, { contentType: "image/png", upsert: true });
+      if (uploadErr) throw new Error(`Logo upload failed: ${uploadErr.message}`);
+      const { data: logoUrlData } = supabase.storage.from("social-arts").getPublicUrl(logoPath);
+
+      console.log("✅ Logo extracted and uploaded:", logoUrlData.publicUrl);
+      return new Response(JSON.stringify({ logo_url: logoUrlData.publicUrl }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Pre-check credits (skip for test orgs)
     const isTestOrg = typeof organization_id === "string" && organization_id.startsWith("test-");
