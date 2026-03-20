@@ -20,11 +20,13 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getEffectiveLimits } from "@/constants/plans";
 import { SitePreview } from "@/components/sites/SitePreview";
 import { SiteHistory, type SavedSite } from "@/components/sites/SiteHistory";
-import { useClienteSitesDB, useCreateClientSite } from "@/hooks/useClienteSitesDB";
+import { useClienteSitesDB, useCreateClientSite, useApproveSite } from "@/hooks/useClienteSitesDB";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 import { useContentHistory } from "@/hooks/useClienteContentV2";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useClienteWallet } from "@/hooks/useClienteWallet";
+import { InsufficientCreditsDialog } from "@/components/cliente/InsufficientCreditsDialog";
 
 /* ═══ WIZARD CONFIG ═══ */
 
@@ -183,15 +185,20 @@ export default function ClienteSites() {
 
   const { data: dbSites } = useClienteSitesDB();
   const createSiteMutation = useCreateClientSite();
+  const approveSiteMutation = useApproveSite();
   const { data: activeStrategy } = useActiveStrategy();
   const { data: contents } = useContentHistory();
   const { data: visualIdentity } = useVisualIdentity();
+  const { data: wallet } = useClienteWallet();
+
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+  const SITE_CREDIT_COST = 100;
 
   const sites: SavedSite[] = (dbSites || []).map(s => ({
     id: s.id,
     name: s.name,
     type: s.type || "lp",
-    status: (s.status === "Publicado" ? "Publicado" : "Rascunho") as "Publicado" | "Rascunho",
+    status: s.status as "Rascunho" | "Aprovado" | "Publicado",
     createdAt: s.created_at.split("T")[0],
     html: (s.content as any)?.html || "",
   }));
@@ -203,6 +210,8 @@ export default function ClienteSites() {
   const [generatedHtml, setGeneratedHtml] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [genProgress, setGenProgress] = useState(0);
+  const [currentSiteId, setCurrentSiteId] = useState<string | null>(null);
+  const [currentSiteStatus, setCurrentSiteStatus] = useState<string>("Rascunho");
 
   // Form data
   const [form, setForm] = useState<Record<string, any>>({
@@ -310,6 +319,13 @@ export default function ClienteSites() {
       toast({ title: "Nome da empresa é obrigatório", variant: "destructive" });
       return;
     }
+
+    // Pre-check credits
+    if (wallet && wallet.balance < SITE_CREDIT_COST) {
+      setShowCreditsDialog(true);
+      return;
+    }
+
     setGenerating(true);
     setGenProgress(10);
 
@@ -367,7 +383,12 @@ export default function ClienteSites() {
       clearInterval(interval);
 
       if (error || data?.error) {
-        toast({ title: "Erro ao gerar site", description: data?.error || "Tente novamente.", variant: "destructive" });
+        const isCredits = data?.code === "INSUFFICIENT_CREDITS" || data?.error?.includes("Créditos insuficientes");
+        if (isCredits) {
+          setShowCreditsDialog(true);
+        } else {
+          toast({ title: "Erro ao gerar site", description: data?.error || "Tente novamente.", variant: "destructive" });
+        }
         setGenerating(false);
         setGenProgress(0);
         return;
@@ -376,15 +397,20 @@ export default function ClienteSites() {
       setGenProgress(100);
       setGeneratedHtml(data.html);
       setShowPreview(true);
+      setCurrentSiteStatus("Rascunho");
 
       createSiteMutation.mutate({
         name: `${form.nome_empresa} — ${form.objetivo || "Site"} — ${new Date().toLocaleDateString("pt-BR")}`,
         type: (form.paginas as string[]).length <= 1 ? "lp" : "site",
         html: data.html,
         strategy_id: activeStrategy?.id,
+      }, {
+        onSuccess: (created: any) => {
+          if (created?.id) setCurrentSiteId(created.id);
+        },
       });
 
-      toast({ title: "Site gerado com sucesso!" });
+      toast({ title: "Site gerado com sucesso!", description: `${SITE_CREDIT_COST} créditos foram utilizados.` });
     } catch (err) {
       console.error(err);
       clearInterval(interval);
@@ -393,13 +419,15 @@ export default function ClienteSites() {
       setGenerating(false);
       setGenProgress(0);
     }
-  }, [form, orgId, strategyAnswers, viPalette, viFonts, viStyle, visualIdentity, whatsappLink, createSiteMutation, activeStrategy]);
+  }, [form, orgId, strategyAnswers, viPalette, viFonts, viStyle, visualIdentity, whatsappLink, createSiteMutation, activeStrategy, wallet]);
 
   const resetWizard = () => {
     setShowPreview(false);
     setGeneratedHtml("");
     setCreating(false);
     setStepIdx(0);
+    setCurrentSiteId(null);
+    setCurrentSiteStatus("Rascunho");
     autoFilled[1](false);
     setForm({
       nome_empresa: "", slogan: "", descricao_negocio: "", segmento: "",
@@ -421,13 +449,27 @@ export default function ClienteSites() {
         <PageHeader title="Preview do Site" subtitle="Revise, aprove e baixe o código" icon={<Globe className="w-5 h-5 text-primary" />} />
         <SitePreview
           html={generatedHtml}
+          siteId={currentSiteId || undefined}
+          siteStatus={currentSiteStatus}
           onRegenerate={handleGenerate}
           onEditBriefing={() => { setShowPreview(false); }}
+          onApprove={() => {
+            if (currentSiteId) {
+              approveSiteMutation.mutate(currentSiteId);
+              setCurrentSiteStatus("Aprovado");
+            }
+          }}
           generating={generating}
         />
         <Button variant="ghost" className="text-xs" onClick={resetWizard}>
           <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Voltar ao início
         </Button>
+        <InsufficientCreditsDialog
+          open={showCreditsDialog}
+          onOpenChange={setShowCreditsDialog}
+          actionLabel="gerar este site"
+          creditCost={SITE_CREDIT_COST}
+        />
       </div>
     );
   }
@@ -736,7 +778,7 @@ export default function ClienteSites() {
             </Button>
             {isLast ? (
               <Button onClick={handleGenerate} className="flex-1 gap-1" disabled={!form.nome_empresa}>
-                <Sparkles className="w-4 h-4" /> Gerar Site
+                <Sparkles className="w-4 h-4" /> Gerar Site ({SITE_CREDIT_COST} créditos)
               </Button>
             ) : (
               <Button onClick={() => setStepIdx(s => s + 1)} className="flex-1 gap-1">
@@ -745,6 +787,12 @@ export default function ClienteSites() {
             )}
           </div>
         )}
+        <InsufficientCreditsDialog
+          open={showCreditsDialog}
+          onOpenChange={setShowCreditsDialog}
+          actionLabel="gerar este site"
+          creditCost={SITE_CREDIT_COST}
+        />
       </div>
     );
   }
@@ -760,7 +808,13 @@ export default function ClienteSites() {
       <div>
         <p className="section-label mb-3">HISTÓRICO DE SITES</p>
         <SiteHistory sites={sites} onPreview={(site) => {
-          if (site.html) { setGeneratedHtml(site.html); setShowPreview(true); setCreating(true); }
+          if (site.html) {
+            setGeneratedHtml(site.html);
+            setCurrentSiteId(site.id);
+            setCurrentSiteStatus(site.status);
+            setShowPreview(true);
+            setCreating(true);
+          }
         }} />
       </div>
     </div>

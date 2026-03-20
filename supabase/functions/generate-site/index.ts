@@ -29,18 +29,26 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Pre-check credits
     const organization_id = body.organization_id;
+    const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Debit credits BEFORE generation
     if (organization_id) {
-      const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const { data: wallet } = await adminClient
-        .from("credit_wallets")
-        .select("balance")
-        .eq("organization_id", organization_id)
-        .maybeSingle();
-      if (!wallet || wallet.balance < CREDIT_COST) {
+      const { error: debitError } = await adminClient.rpc("debit_credits", {
+        _org_id: organization_id,
+        _amount: CREDIT_COST,
+        _description: "Geração de site com IA",
+        _source: "generate-site",
+      });
+      if (debitError) {
+        const isInsufficient = debitError.message?.includes("INSUFFICIENT_CREDITS") || debitError.message?.includes("WALLET_NOT_FOUND");
         return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos.", code: "INSUFFICIENT_CREDITS" }),
+          JSON.stringify({
+            error: isInsufficient
+              ? `Créditos insuficientes. Você precisa de ${CREDIT_COST} créditos.`
+              : "Erro ao debitar créditos.",
+            code: isInsufficient ? "INSUFFICIENT_CREDITS" : "DEBIT_ERROR",
+          }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -153,6 +161,39 @@ Gere o HTML COMPLETO agora.`;
     });
 
     if (!response.ok) {
+      // Refund credits on AI failure
+      if (organization_id) {
+        try {
+          await adminClient
+            .from("credit_wallets")
+            .update({ balance: adminClient.rpc ? undefined : undefined })
+          // Simple refund via direct balance increment
+          const { data: wallet } = await adminClient
+            .from("credit_wallets")
+            .select("balance")
+            .eq("organization_id", organization_id)
+            .maybeSingle();
+          if (wallet) {
+            await adminClient
+              .from("credit_wallets")
+              .update({ balance: wallet.balance + CREDIT_COST, updated_at: new Date().toISOString() })
+              .eq("organization_id", organization_id);
+            await adminClient
+              .from("credit_transactions")
+              .insert({
+                organization_id,
+                type: "refund",
+                amount: CREDIT_COST,
+                balance_after: wallet.balance + CREDIT_COST,
+                description: "Reembolso - falha na geração de site",
+                metadata: { source: "generate-site-refund" },
+              });
+          }
+        } catch (refundErr) {
+          console.error("Refund failed:", refundErr);
+        }
+      }
+
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -165,7 +206,7 @@ Gere o HTML COMPLETO agora.`;
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "Erro ao gerar site. Tente novamente." }), {
+      return new Response(JSON.stringify({ error: "Erro ao gerar site. Tente novamente. (Créditos foram reembolsados)" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
