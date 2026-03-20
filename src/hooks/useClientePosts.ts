@@ -109,6 +109,11 @@ export function useGeneratePost() {
             brand_name: payload.brand_name,
             supporting_text: payload.supporting_text,
             bullet_points: payload.bullet_points,
+            // Layout + Logo
+            layout_type: payload.layout_type,
+            logo_url: payload.logo_url,
+            primary_ref_index: payload.primary_ref_index,
+            objective: payload.objective,
           },
         });
         if (resp.error) throw new Error(resp.error.message || "Erro ao gerar arte");
