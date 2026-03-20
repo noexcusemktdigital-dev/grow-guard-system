@@ -1,19 +1,28 @@
 import { useState } from "react";
 import {
   Monitor, Tablet, Smartphone, Maximize2, Minimize2,
-  Download, RotateCcw, Edit3,
+  Download, RotateCcw, Edit3, Coins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { ApprovalPanel, type ApprovalStatus } from "@/components/approval/ApprovalPanel";
 import { SiteDeployGuide } from "@/components/sites/SiteDeployGuide";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+const CREDIT_COST = 100;
 
 interface Props {
   html: string;
+  siteId?: string;
+  siteStatus?: string;
   onRegenerate: () => void;
   onEditBriefing: () => void;
+  onApprove?: () => void;
   generating: boolean;
 }
 
@@ -25,11 +34,11 @@ const viewportWidths: Record<Viewport, string> = {
   mobile: "375px",
 };
 
-export function SitePreview({ html, onRegenerate, onEditBriefing, generating }: Props) {
+export function SitePreview({ html, siteId, siteStatus, onRegenerate, onEditBriefing, onApprove, generating }: Props) {
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [fullscreen, setFullscreen] = useState(false);
-  const [siteStatus, setSiteStatus] = useState<ApprovalStatus>("pending");
-  const [changeNote, setChangeNote] = useState<string | undefined>();
+
+  const isApproved = siteStatus === "Aprovado" || siteStatus === "Publicado";
 
   const handleDownload = () => {
     const blob = new Blob([html], { type: "text/html" });
@@ -44,26 +53,30 @@ export function SitePreview({ html, onRegenerate, onEditBriefing, generating }: 
     toast({ title: "Site baixado!", description: "Arquivo HTML pronto para hospedar." });
   };
 
+  const ViewportButtons = () => (
+    <div className="flex items-center gap-1">
+      {(["desktop", "tablet", "mobile"] as Viewport[]).map((vp) => {
+        const Icon = vp === "desktop" ? Monitor : vp === "tablet" ? Tablet : Smartphone;
+        return (
+          <Button
+            key={vp}
+            variant={viewport === vp ? "default" : "ghost"}
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => setViewport(vp)}
+          >
+            <Icon className="w-4 h-4" />
+          </Button>
+        );
+      })}
+    </div>
+  );
+
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-50 bg-background flex flex-col">
         <div className="flex items-center justify-between p-3 border-b bg-card">
-          <div className="flex items-center gap-2">
-            {(["desktop", "tablet", "mobile"] as Viewport[]).map((vp) => {
-              const Icon = vp === "desktop" ? Monitor : vp === "tablet" ? Tablet : Smartphone;
-              return (
-                <Button
-                  key={vp}
-                  variant={viewport === vp ? "default" : "ghost"}
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setViewport(vp)}
-                >
-                  <Icon className="w-4 h-4" />
-                </Button>
-              );
-            })}
-          </div>
+          <ViewportButtons />
           <Button variant="ghost" size="sm" onClick={() => setFullscreen(false)}>
             <Minimize2 className="w-4 h-4" />
           </Button>
@@ -87,22 +100,7 @@ export function SitePreview({ html, onRegenerate, onEditBriefing, generating }: 
       <Card>
         <CardContent className="py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              {(["desktop", "tablet", "mobile"] as Viewport[]).map((vp) => {
-                const Icon = vp === "desktop" ? Monitor : vp === "tablet" ? Tablet : Smartphone;
-                return (
-                  <Button
-                    key={vp}
-                    variant={viewport === vp ? "default" : "ghost"}
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => setViewport(vp)}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                  </Button>
-                );
-              })}
-            </div>
+            <ViewportButtons />
             <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setFullscreen(true)}>
               <Maximize2 className="w-3.5 h-3.5" /> Tela cheia
             </Button>
@@ -126,45 +124,69 @@ export function SitePreview({ html, onRegenerate, onEditBriefing, generating }: 
         </div>
       </div>
 
-      {/* Approval Panel */}
-      <ApprovalPanel
-        status={siteStatus}
-        changeNote={changeNote}
-        onApprove={() => {
-          setSiteStatus("approved");
-          toast({ title: "Site aprovado!", description: "Agora você pode baixar o código." });
-        }}
-        onRequestChanges={(note) => {
-          setSiteStatus("changes_requested");
-          setChangeNote(note);
-          onEditBriefing();
-          toast({ title: "Ajustes solicitados", description: "Edite o briefing e regenere o site." });
-        }}
-        onReject={() => {
-          setSiteStatus("rejected");
-          toast({ title: "Site rejeitado." });
-        }}
-        showReject={false}
-        helpText="Ao aprovar, o site está pronto para download e publicação no seu domínio."
-      />
+      {/* Approval Panel — only if not yet approved */}
+      {!isApproved && (
+        <ApprovalPanel
+          status="pending"
+          onApprove={() => {
+            onApprove?.();
+            toast({ title: "Site aprovado!", description: "Agora você pode baixar o código." });
+          }}
+          onRequestChanges={(note) => {
+            onEditBriefing();
+            toast({ title: "Ajustes solicitados", description: "Edite o briefing e regenere o site." });
+          }}
+          onReject={() => {}}
+          showReject={false}
+          helpText="Ao aprovar, o site fica marcado como pronto para download e publicação."
+        />
+      )}
+
+      {isApproved && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-center">
+          <p className="text-sm font-medium text-green-700 dark:text-green-400">✅ Site aprovado — pronto para download e publicação</p>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="grid grid-cols-2 gap-3">
         <Button
           className="w-full gap-2"
           onClick={handleDownload}
-          disabled={siteStatus !== "approved"}
+          disabled={!isApproved}
         >
           <Download className="w-4 h-4" />
-          {siteStatus === "approved" ? "Baixar Código" : "Aprove para Baixar"}
+          {isApproved ? "Baixar Código" : "Aprove para Baixar"}
         </Button>
-        <Button variant="outline" className="w-full gap-2" onClick={onRegenerate} disabled={generating}>
-          <RotateCcw className="w-4 h-4" /> Regenerar
-        </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" className="w-full gap-2" disabled={generating}>
+              <RotateCcw className="w-4 h-4" /> Regenerar
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Coins className="w-5 h-5 text-amber-500" />
+                Regenerar site
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Regenerar o site consumirá <strong>{CREDIT_COST} créditos</strong>. Deseja continuar?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={onRegenerate}>
+                Regenerar ({CREDIT_COST} créditos)
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {/* Deploy Guide - shown after approval */}
-      {siteStatus === "approved" && <SiteDeployGuide />}
+      {isApproved && <SiteDeployGuide />}
     </div>
   );
 }
