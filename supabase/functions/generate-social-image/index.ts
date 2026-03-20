@@ -612,6 +612,9 @@ serve(async (req) => {
     if (cta) enrichedPrompt += `\nCTA: ${cta}`;
     if (tipo_postagem) enrichedPrompt += `\nPost type: ${tipo_postagem}`;
     if (brand_name) enrichedPrompt += `\nBrand: ${brand_name}`;
+    if (layout_type) enrichedPrompt += `\nLayout type: ${layout_type}`;
+    if (objective) enrichedPrompt += `\nObjective: ${objective}`;
+    if (logo_url) enrichedPrompt += `\nBrand logo: provided as separate image`;
     if (feedbackContext) enrichedPrompt += feedbackContext;
 
     // Convert reference images to base64 EARLY so CoT can use them too
