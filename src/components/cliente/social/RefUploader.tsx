@@ -138,6 +138,18 @@ export function RefUploader({
           </div>
           <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
           <p className="text-[10px] text-muted-foreground">A logo será inserida na arte exatamente como enviada.</p>
+          {!logoUrl && referenceUrls.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={handleExtractLogo}
+              disabled={extractingLogo}
+            >
+              {extractingLogo ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+              Extrair logo das referências
+            </Button>
+          )}
         </div>
       )}
 
