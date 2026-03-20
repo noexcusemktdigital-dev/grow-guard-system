@@ -91,7 +91,7 @@ export function ArtWizard({
   const [carouselSlides, setCarouselSlides] = useState(5);
 
   // Step 3: Layout (replaces old Style)
-  const [layoutType, setLayoutType] = useState("hero_central");
+  const [layoutTypes, setLayoutTypes] = useState<string[]>(["hero_central"]);
 
   // Step 4: References + Logo
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
