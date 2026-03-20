@@ -14,8 +14,9 @@ import {
   ArrowRight, ArrowLeft, KeyRound, Plug, ShieldCheck,
   AlertTriangle, Monitor, QrCode, Copy, Headset,
   MessageSquare, UserPlus, Settings, Eye, EyeOff,
-  Server,
+  Server, HelpCircle,
 } from "lucide-react";
+import { WhatsAppHowItWorks } from "./WhatsAppHowItWorks";
 
 type Provider = "zapi" | "evolution";
 
@@ -26,7 +27,7 @@ interface Props {
 
 const SUPPORT_LINK = "https://wa.me/5500000000000?text=Olá! Preciso de ajuda para configurar a integração WhatsApp.";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 3;
 
 export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const { refetch } = useWhatsAppInstances();
@@ -39,6 +40,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const [showToken, setShowToken] = useState(false);
   const [showClientToken, setShowClientToken] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
   const reset = () => {
     setStep(1);
@@ -52,14 +54,14 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   };
 
   const handleConnect = async () => {
-    setStep(5);
+    setStep(3);
     try {
       let res: any;
       if (provider === "evolution") {
         res = await setupMutation.mutateAsync({
           provider: "evolution",
-          baseUrl: evoCreds.baseUrl.trim(),
-          apiKey: evoCreds.apiKey.trim(),
+          baseUrl: evoCreds.baseUrl.trim() || undefined,
+          apiKey: evoCreds.apiKey.trim() || undefined,
           instanceName: evoCreds.instanceName.trim(),
           action: "connect",
         });
@@ -77,12 +79,12 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
       toast({ title: "WhatsApp conectado!", description: "Webhooks configurados com sucesso." });
     } catch (err: any) {
       toast({ title: "Erro ao conectar", description: err.message, variant: "destructive" });
-      setStep(4);
+      setStep(2);
     }
   };
 
   const canConnect = provider === "evolution"
-    ? evoCreds.baseUrl.trim() && evoCreds.apiKey.trim() && evoCreds.instanceName.trim()
+    ? evoCreds.instanceName.trim()
     : creds.instanceId.trim() && creds.instanceToken.trim() && creds.clientToken.trim();
 
   const openSupport = () => window.open(SUPPORT_LINK, "_blank");
@@ -236,176 +238,15 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
             </div>
           )}
 
-          {/* ─── STEP 2: Create Account / Setup ─── */}
+          {/* ─── STEP 2: Enter Credentials ─── */}
           {step === 2 && (
             <div className="space-y-5">
-              {provider === "zapi" ? (
-                <>
-                  <StepHeader number={1} title="Crie sua conta na Z-API" description="Se você já tem uma conta, pule para o próximo passo." />
-                  <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5">
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                        <Monitor className="w-8 h-8 text-emerald-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Acesse o site da Z-API</p>
-                        <p className="text-xs text-muted-foreground mt-1">Clique no botão abaixo para abrir o painel</p>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => window.open("https://app.z-api.io", "_blank")}>
-                        <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Z-API
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
-                    <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">Passo a passo</h4>
-                    <ol className="space-y-3">
-                      {['Acesse app.z-api.io e clique em "Criar conta"', "Preencha seu e-mail e crie uma senha", "Confirme seu e-mail clicando no link de verificação", "Faça login no painel da Z-API"].map((text, i) => (
-                        <li key={i} className="flex items-start gap-3 text-xs text-foreground">
-                          <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
-                          <span className="mt-0.5 leading-relaxed">{text}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <StepHeader number={1} title="Configure sua Evolution API" description="Certifique-se de que sua instância está rodando e acessível." />
-                  <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5">
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                        <Server className="w-8 h-8 text-blue-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Evolution API</p>
-                        <p className="text-xs text-muted-foreground mt-1">Sua instância deve estar rodando e acessível via HTTP</p>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => window.open("https://doc.evolution-api.com", "_blank")}>
-                        <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Documentação
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
-                    <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">Passo a passo</h4>
-                    <ol className="space-y-3">
-                      {["Instale a Evolution API no seu servidor (Docker recomendado)", "Configure a API Key global no arquivo .env", "Crie uma instância via painel ou API", "Conecte o WhatsApp escaneando o QR Code no painel"].map((text, i) => (
-                        <li key={i} className="flex items-start gap-3 text-xs text-foreground">
-                          <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
-                          <span className="mt-0.5 leading-relaxed">{text}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                </>
-              )}
-
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
-                  <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
-                </Button>
-                <Button className="flex-1" onClick={() => setStep(3)}>
-                  {provider === "zapi" ? "Já tenho conta" : "API configurada"} <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ─── STEP 3: Create & Connect Instance ─── */}
-          {step === 3 && (
-            <div className="space-y-5">
-              {provider === "zapi" ? (
-                <>
-                  <StepHeader number={2} title="Crie e conecte sua instância" description="Crie uma instância no painel e conecte escaneando o QR Code." />
-                  <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5">
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                        <Settings className="w-8 h-8 text-blue-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Criar nova instância</p>
-                        <p className="text-xs text-muted-foreground mt-1">No painel Z-API, clique em <strong>"Nova Instância"</strong></p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
-                    <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">Passo a passo</h4>
-                    <ol className="space-y-3">
-                      {['No painel Z-API, clique em "Nova Instância"', 'Dê um nome para sua instância (ex: "Minha Empresa")', 'Após criar, clique em "Conectar" para gerar o QR Code', "Abra o WhatsApp no celular → Configurações → Aparelhos conectados → Conectar aparelho", "Escaneie o QR Code exibido na tela com seu celular", 'Aguarde a confirmação de conexão (status: "Connected")'].map((text, i) => (
-                        <li key={i} className="flex items-start gap-3 text-xs text-foreground">
-                          <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
-                          <span className="mt-0.5 leading-relaxed">{text}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <StepHeader number={2} title="Conecte o WhatsApp na instância" description="Escaneie o QR Code no painel da Evolution API." />
-                  <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="w-20 h-20 rounded-xl border-2 border-border bg-background flex items-center justify-center shrink-0">
-                        <QrCode className="w-10 h-10 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Escaneie o QR Code</p>
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                          No painel da Evolution API, acesse sua instância e escaneie o QR Code com o WhatsApp.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
-                    <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">Passo a passo</h4>
-                    <ol className="space-y-3">
-                      {["Acesse o painel da Evolution API", "Selecione a instância que deseja conectar", 'Clique em "Conectar" para gerar o QR Code', "Abra o WhatsApp → Aparelhos conectados → Conectar", "Escaneie o QR Code e aguarde a conexão"].map((text, i) => (
-                        <li key={i} className="flex items-start gap-3 text-xs text-foreground">
-                          <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
-                          <span className="mt-0.5 leading-relaxed">{text}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                </>
-              )}
-
-              {/* QR Code visual hint (Z-API only) */}
-              {provider === "zapi" && (
-                <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-xl border-2 border-border bg-background flex items-center justify-center shrink-0">
-                      <QrCode className="w-10 h-10 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">Escaneie o QR Code</p>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        O QR Code será exibido no painel da Z-API. Use a câmera do WhatsApp para conectar.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
-                  <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
-                </Button>
-                <Button className="flex-1" onClick={() => setStep(4)}>
-                  {provider === "zapi" ? "Instância conectada" : "WhatsApp conectado"} <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ─── STEP 4: Enter Credentials ─── */}
-          {step === 4 && (
-            <div className="space-y-5">
               <StepHeader
-                number={3}
+                number={2}
                 title="Insira suas credenciais"
                 description={provider === "zapi"
                   ? "Copie as informações do painel Z-API e cole nos campos abaixo."
-                  : "Informe a URL, API Key e o nome da instância da Evolution API."
+                  : "Informe o nome da instância. URL e API Key são opcionais se usar o servidor padrão."
                 }
               />
 
@@ -463,32 +304,26 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                 </>
               ) : (
                 <>
-                  <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5">
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                        <Server className="w-8 h-8 text-blue-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Credenciais da Evolution API</p>
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                          Informe a URL base do seu servidor, a API Key global e o nome da instância criada.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
-                        <Server className="w-3 h-3 text-muted-foreground" /> URL da API
+                        <Copy className="w-3 h-3 text-muted-foreground" /> Nome da Instância <span className="text-destructive">*</span>
                       </Label>
-                      <Input placeholder="Ex: http://129.121.44.154:8080" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
-                      <p className="text-[10px] text-muted-foreground">URL base do seu servidor Evolution API</p>
+                      <Input placeholder="Ex: minha-empresa" value={evoCreds.instanceName} onChange={(e) => setEvoCreds((p) => ({ ...p, instanceName: e.target.value }))} />
+                      <p className="text-[10px] text-muted-foreground">Nome exato da instância criada na Evolution API</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
-                        <KeyRound className="w-3 h-3 text-muted-foreground" /> API Key Global
+                        <Server className="w-3 h-3 text-muted-foreground" /> URL da API <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
+                      </Label>
+                      <Input placeholder="https://evo.grupolamadre.com.br" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
+                      <p className="text-[10px] text-muted-foreground">Deixe em branco para usar o servidor padrão</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        <KeyRound className="w-3 h-3 text-muted-foreground" /> API Key Global <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
                       </Label>
                       <div className="relative">
                         <Input placeholder="Sua API Key global" type={showApiKey ? "text" : "password"} value={evoCreds.apiKey} onChange={(e) => setEvoCreds((p) => ({ ...p, apiKey: e.target.value }))} />
@@ -496,22 +331,20 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                           {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
-                      <p className="text-[10px] text-muted-foreground">Chave de autenticação global da Evolution API</p>
+                      <p className="text-[10px] text-muted-foreground">Deixe em branco para usar a chave padrão</p>
                     </div>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold flex items-center gap-1.5">
-                        <Copy className="w-3 h-3 text-muted-foreground" /> Nome da Instância
-                      </Label>
-                      <Input placeholder="Ex: minha-empresa" value={evoCreds.instanceName} onChange={(e) => setEvoCreds((p) => ({ ...p, instanceName: e.target.value }))} />
-                      <p className="text-[10px] text-muted-foreground">Nome exato da instância criada na Evolution API</p>
-                    </div>
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                    <p className="text-xs text-muted-foreground">
+                      <strong className="text-amber-600 dark:text-amber-400">Dica:</strong> Se você não tem essas informações, entre em contato com o suporte.
+                    </p>
                   </div>
                 </>
               )}
 
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(3)}>
+                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
                   <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
                 </Button>
                 <Button className="flex-1" disabled={!canConnect || setupMutation.isPending} onClick={handleConnect}>
@@ -521,8 +354,8 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
             </div>
           )}
 
-          {/* ─── STEP 5: Result ─── */}
-          {step === 5 && (
+          {/* ─── STEP 3: Result ─── */}
+          {step === 3 && (
             <div className="space-y-5">
               {setupMutation.isPending ? (
                 <div className="flex flex-col items-center py-16 text-center">
@@ -569,15 +402,22 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
           )}
         </div>
 
-        {/* Footer with support */}
-        {step < 5 && (
-          <div className="px-6 py-3 border-t border-border flex items-center justify-center">
+        {/* Footer with how-it-works + support */}
+        {step < 3 && (
+          <div className="px-6 py-3 border-t border-border flex items-center justify-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => setHowItWorksOpen(true)} className="text-xs text-muted-foreground gap-1.5 hover:text-primary">
+              <HelpCircle className="w-3.5 h-3.5" />
+              Como funciona?
+            </Button>
+            <span className="text-border">|</span>
             <Button variant="ghost" size="sm" onClick={openSupport} className="text-xs text-muted-foreground gap-1.5 hover:text-primary">
               <Headset className="w-3.5 h-3.5" />
               Precisa de ajuda? Fale com o suporte
             </Button>
           </div>
         )}
+
+        <WhatsAppHowItWorks open={howItWorksOpen} onOpenChange={setHowItWorksOpen} />
       </DialogContent>
     </Dialog>
   );

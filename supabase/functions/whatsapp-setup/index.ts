@@ -381,14 +381,15 @@ Deno.serve(async (req) => {
     // ─── Action: connect (default) ───
     if (isEvolution) {
       // Evolution API connect
-      if (!baseUrl || !apiKey || !instanceName) {
-        return new Response(JSON.stringify({ error: "baseUrl, apiKey, and instanceName are required for Evolution" }), {
+      if (!instanceName) {
+        return new Response(JSON.stringify({ error: "instanceName is required for Evolution" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
+      const cleanBaseUrl = (baseUrl || Deno.env.get("EVOLUTION_API_URL") || "https://evo.grupolamadre.com.br").replace(/\/+$/, "");
+      const effectiveApiKey = apiKey || Deno.env.get("EVOLUTION_API_KEY") || "izitech_evo_key_2026";
       const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
 
       // Step 1: Create instance on Evolution API (ignore if already exists)
@@ -397,7 +398,7 @@ Deno.serve(async (req) => {
         const webhookUrlEv = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
         const createRes = await fetch(`${cleanBaseUrl}/instance/create`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", apikey: apiKey },
+          headers: { "Content-Type": "application/json", apikey: effectiveApiKey },
           body: JSON.stringify({
             instanceName,
             integration: "WHATSAPP-BAILEYS",
@@ -431,7 +432,7 @@ Deno.serve(async (req) => {
               byEvents: true,
               base64: true,
               events,
-              headers: { "x-evolution-secret": apiKey },
+              headers: { "x-evolution-secret": effectiveApiKey },
             },
           },
           {
@@ -445,7 +446,7 @@ Deno.serve(async (req) => {
         for (const payload of payloadAttempts) {
           const setRes = await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", apikey: apiKey },
+            headers: { "Content-Type": "application/json", apikey: effectiveApiKey },
             body: JSON.stringify(payload),
           });
 
@@ -467,7 +468,7 @@ Deno.serve(async (req) => {
       try {
         console.log("[connect] Evolution checking state at", `${cleanBaseUrl}/instance/connectionState/${instanceName}`);
         const stateRes = await fetch(`${cleanBaseUrl}/instance/connectionState/${instanceName}`, {
-          headers: { apikey: apiKey },
+          headers: { apikey: effectiveApiKey },
         });
         const stateData = await stateRes.json();
         console.log("[connect] Evolution connectionState:", JSON.stringify(stateData));
@@ -480,7 +481,7 @@ Deno.serve(async (req) => {
           console.log("[connect] Evolution instance not found, trying fetchInstances fallback");
           try {
             const listRes = await fetch(`${cleanBaseUrl}/instance/fetchInstances`, {
-              headers: { apikey: apiKey },
+              headers: { apikey: effectiveApiKey },
             });
             if (listRes.ok) {
               const allInstances = await listRes.json();
@@ -509,6 +510,42 @@ Deno.serve(async (req) => {
         console.error("[connect] Evolution connectionState error:", err);
       }
 
+      // Step 3: Always (re)configure webhook to ensure it points to this Supabase project
+      try {
+        console.log("[connect] Evolution auto-reconfiguring webhook to", webhookUrl);
+        const reconfigEvents = ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"];
+        const reconfigPayloads = [
+          {
+            webhook: {
+              enabled: true,
+              url: webhookUrl,
+              byEvents: true,
+              base64: true,
+              events: reconfigEvents,
+              headers: { "x-evolution-secret": effectiveApiKey },
+            },
+          },
+          {
+            url: webhookUrl,
+            webhook_by_events: true,
+            webhook_base64: true,
+            events: reconfigEvents,
+          },
+        ];
+
+        for (const payload of reconfigPayloads) {
+          const reconfigRes = await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", apikey: effectiveApiKey },
+            body: JSON.stringify(payload),
+          });
+          console.log("[connect] Evolution webhook reconfig response:", reconfigRes.status);
+          if (reconfigRes.ok) break;
+        }
+      } catch (err) {
+        console.error("[connect] Evolution webhook reconfig error (non-fatal):", err);
+      }
+
       // Upsert instance
       const { data: existing } = await adminClient
         .from("whatsapp_instances")
@@ -519,8 +556,8 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       const instanceData = {
-        token: apiKey,
-        client_token: apiKey,
+        token: effectiveApiKey,
+        client_token: effectiveApiKey,
         status: connStatus,
         phone_number: null,
         webhook_url: webhookUrl,
