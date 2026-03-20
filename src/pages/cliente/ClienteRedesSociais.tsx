@@ -181,7 +181,6 @@ export default function ClienteRedesSociais() {
           results.push(result);
         }
       }
-      }
 
       setBatchResults(results);
       setGeneratedResult(results[0]);
