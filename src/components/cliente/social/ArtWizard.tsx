@@ -7,14 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { RefUploader } from "./RefUploader";
+import { LayoutPicker } from "./LayoutPicker";
 import { ContentPickerDialog } from "./ContentPickerDialog";
 import {
-  ART_FORMATS, ART_STYLES, POST_TYPES, ELEMENT_SUGGESTIONS, SCENE_SUGGESTIONS,
+  ART_FORMATS, LAYOUT_TYPES, POST_TYPES, ART_OBJECTIVES,
 } from "./constants";
 import { ContentItem } from "@/hooks/useClienteContentV2";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import {
-  Check, FileText, X, Wand2, Loader2, Plus, AlertTriangle, FileDown, Sparkles, ArrowLeft,
+  Check, FileText, X, Wand2, Loader2, AlertTriangle, Sparkles, ArrowLeft, Pencil,
 } from "lucide-react";
 
 interface ArtWizardProps {
@@ -53,6 +54,10 @@ export interface ArtGeneratePayload {
   contentId: string | null;
   quantity: number;
   carouselSlides: number;
+  layoutType?: string;
+  logoUrl?: string;
+  primaryRefIndex?: number;
+  objective?: string;
 }
 
 export interface ArtBriefingResult {
@@ -67,7 +72,7 @@ export interface ArtBriefingResult {
   suggested_tipo: string;
 }
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 6;
 
 export function ArtWizard({
   orgId, visualIdentity, contentHistory, contentData, setContentData,
@@ -77,91 +82,84 @@ export function ArtWizard({
   const [step, setStep] = useState(1);
   const [briefingText, setBriefingText] = useState("");
   const [showContentPicker, setShowContentPicker] = useState(false);
+  const [objective, setObjective] = useState("vender");
+  const [mandatoryPhrase, setMandatoryPhrase] = useState("");
 
   // Step 2: Type + quantity
   const [tipoPostagem, setTipoPostagem] = useState("post_unico");
   const [quantity, setQuantity] = useState(1);
   const [carouselSlides, setCarouselSlides] = useState(5);
 
-  // Step 3: Style
-  const [artStyle, setArtStyle] = useState("minimalista");
+  // Step 3: Layout (replaces old Style)
+  const [layoutType, setLayoutType] = useState("hero_central");
 
-  // Step 4: References
+  // Step 4: References + Logo
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [primaryRefIndex, setPrimaryRefIndex] = useState(0);
 
   // Step 5: Format
   const [artFormat, setArtFormat] = useState("portrait");
 
-  // Step 6: Text fields
+  // Step 6: AI-generated text (review)
   const [headline, setHeadline] = useState("");
   const [subheadline, setSubheadline] = useState("");
   const [cta, setCta] = useState("");
   const [supportingText, setSupportingText] = useState("");
   const [bulletPoints, setBulletPoints] = useState("");
   const [brandName, setBrandName] = useState("");
-
-  // Step 7: Scene
   const [cena, setCena] = useState("");
   const [elementosVisuais, setElementosVisuais] = useState("");
-  const [manualColors, setManualColors] = useState("");
-  const [manualStyle, setManualStyle] = useState("");
+  const [editingTexts, setEditingTexts] = useState(false);
 
-  // Auto-load references from visual identity
+  // Auto-load from visual identity
   useEffect(() => {
     if (referenceUrls.length === 0 && visualIdentity) {
       if (visualIdentity.image_bank_urls?.length) {
         setReferenceUrls(visualIdentity.image_bank_urls.slice(0, 5));
-      } else if (visualIdentity.logo_url) {
-        setReferenceUrls([visualIdentity.logo_url]);
       }
+    }
+    if (!logoUrl && visualIdentity?.logo_url) {
+      setLogoUrl(visualIdentity.logo_url);
     }
   }, [visualIdentity]);
 
-  const fillTextFromContent = (content: ContentItem) => {
-    const res = content.result as any;
-    if (!res) return;
-    const principal = res.conteudo_principal || res;
-    setHeadline(principal.headline || principal.titulo || content.title || "");
-    setSubheadline(principal.subtitulo || principal.subheadline || "");
-    setSupportingText(res.legenda ? String(res.legenda).slice(0, 300) : principal.texto_apoio || "");
-    setBulletPoints(
-      Array.isArray(principal.bullet_points)
-        ? principal.bullet_points.join(", ")
-        : principal.bullet_points || ""
-    );
-    setCta(principal.cta || res.cta || content.cta || "");
-    toast({ title: "Texto importado!", description: "Revise e ajuste os campos." });
-  };
-
-  const handleFillAI = async () => {
-    const result = await onFillWithAI(briefingText, contentData);
+  // Auto-fill texts when entering step 6
+  const handleAutoFillTexts = async () => {
+    if (briefingFilled && headline) return; // already filled
+    const enrichedBriefing = `${briefingText}\nObjetivo: ${objective}${mandatoryPhrase ? `\nFrase obrigatória: ${mandatoryPhrase}` : ""}`;
+    const result = await onFillWithAI(enrichedBriefing, contentData);
     if (result) {
-      setHeadline(result.headline || "");
+      setHeadline(mandatoryPhrase || result.headline || "");
       setSubheadline(result.subheadline || "");
       setCta(result.cta || "");
       setCena(result.cena || "");
       setElementosVisuais(result.elementos_visuais || "");
       setSupportingText(result.supporting_text || "");
       setBulletPoints(result.bullet_points || "");
-      if (result.suggested_format) setArtFormat(result.suggested_format);
-      if (result.suggested_tipo) setTipoPostagem(result.suggested_tipo);
       setBriefingFilled(true);
     }
   };
 
   const canProceed = () => {
     switch (step) {
-      case 1: return true;
+      case 1: return !!(briefingText.trim() || contentData);
       case 2: return true;
       case 3: return true;
-      case 4: return referenceUrls.length >= 3;
+      case 4: return referenceUrls.length >= 3 && !!logoUrl;
       case 5: return true;
       case 6: return !!headline.trim();
-      case 7: return true;
-      case 8: return true;
       default: return true;
     }
+  };
+
+  const handleStepChange = (nextStep: number) => {
+    // Auto-trigger AI text generation when entering review step
+    if (nextStep === 6 && !briefingFilled) {
+      handleAutoFillTexts();
+    }
+    setStep(nextStep);
   };
 
   const handleGenerate = () => {
@@ -175,12 +173,17 @@ export function ArtWizard({
     }
     onGenerate({
       format: artFormat,
-      style: artStyle,
+      style: layoutType,
       tipoPostagem,
       headline, subheadline, cta, cena, elementosVisuais,
-      manualColors, manualStyle, brandName, supportingText, bulletPoints,
+      manualColors: "", manualStyle: "",
+      brandName, supportingText, bulletPoints,
       referenceUrls, contentId, quantity,
       carouselSlides: tipoPostagem === "carrossel" ? carouselSlides : 0,
+      layoutType,
+      logoUrl,
+      primaryRefIndex,
+      objective,
     });
   };
 
@@ -211,15 +214,14 @@ export function ArtWizard({
 
   const renderStep = () => {
     switch (step) {
-      // ─── Step 1: Briefing ───
+      // ─── Step 1: Briefing + Objective ───
       case 1:
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-semibold mb-1">💡 O que você quer comunicar?</h3>
               <p className="text-sm text-muted-foreground">
-                Descreva livremente. A IA vai estruturar tudo para você.
-                Ou vincule um conteúdo já gerado na plataforma.
+                Descreva livremente. A IA vai gerar todos os textos, cena e composição para você.
               </p>
             </div>
 
@@ -246,29 +248,34 @@ export function ArtWizard({
               className="resize-none"
             />
 
-            <div className="flex gap-2">
-              <Button
-                onClick={handleFillAI}
-                disabled={isFillingAI || (!briefingText.trim() && !contentData)}
-                className="flex-1"
-                variant="secondary"
-              >
-                {isFillingAI ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
-                {isFillingAI ? "Preenchendo…" : "Preencher com IA"}
-              </Button>
-              <Button variant="outline" onClick={() => setShowContentPicker(true)}>
-                <FileText className="w-4 h-4 mr-1" /> Vincular conteúdo
-              </Button>
+            <div>
+              <Label className="text-xs font-semibold">Qual resultado quer gerar?</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                {ART_OBJECTIVES.map((obj) => (
+                  <SelectCard key={obj.value} selected={objective === obj.value} onClick={() => setObjective(obj.value)}>
+                    <CardContent className="p-2.5 text-center">
+                      <p className="font-semibold text-xs">{obj.label}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{obj.desc}</p>
+                    </CardContent>
+                  </SelectCard>
+                ))}
+              </div>
             </div>
 
-            {briefingFilled && (
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="p-3 flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary shrink-0" />
-                  <p className="text-xs text-primary">Campos preenchidos! Avance para continuar.</p>
-                </CardContent>
-              </Card>
-            )}
+            <div>
+              <Label className="text-xs">Frase obrigatória (opcional)</Label>
+              <Input
+                placeholder="Ex: Investir não é sorte"
+                value={mandatoryPhrase}
+                onChange={(e) => setMandatoryPhrase(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-[10px] text-muted-foreground mt-0.5">Se preenchido, será usada como headline principal.</p>
+            </div>
+
+            <Button variant="outline" size="sm" onClick={() => setShowContentPicker(true)}>
+              <FileText className="w-4 h-4 mr-1" /> Vincular conteúdo existente
+            </Button>
 
             <ContentPickerDialog
               open={showContentPicker}
@@ -277,7 +284,7 @@ export function ArtWizard({
               onSelect={(c) => {
                 setContentId(c.id);
                 setContentData(c);
-                fillTextFromContent(c);
+                setBriefingText(c.title || briefingText);
               }}
             />
           </div>
@@ -309,18 +316,13 @@ export function ArtWizard({
                 <Label className="text-xs">Quantos slides no carrossel?</Label>
                 <div className="flex gap-2 mt-2">
                   {[3, 5, 7, 10].map(n => (
-                    <Button
-                      key={n}
-                      variant={carouselSlides === n ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCarouselSlides(n)}
-                    >
+                    <Button key={n} variant={carouselSlides === n ? "default" : "outline"} size="sm" onClick={() => setCarouselSlides(n)}>
                       {n} slides
                     </Button>
                   ))}
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  Cada slide será gerado individualmente com a mesma identidade visual ({creditCost} créditos/slide)
+                  Cada slide será gerado individualmente ({creditCost} créditos/slide)
                 </p>
               </div>
             )}
@@ -330,70 +332,50 @@ export function ArtWizard({
                 <Label className="text-xs">Quantas peças gerar de uma vez?</Label>
                 <div className="flex gap-2 mt-2">
                   {[1, 2, 3, 4, 5].map(n => (
-                    <Button
-                      key={n}
-                      variant={quantity === n ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setQuantity(n)}
-                    >
+                    <Button key={n} variant={quantity === n ? "default" : "outline"} size="sm" onClick={() => setQuantity(n)}>
                       {n}
                     </Button>
                   ))}
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  Custo total: {(tipoPostagem !== "carrossel" ? quantity : carouselSlides) * creditCost} créditos
+                  Custo total: {quantity * creditCost} créditos
                 </p>
               </div>
             )}
           </div>
         );
 
-      // ─── Step 3: Style ───
+      // ─── Step 3: Layout (Diagramação) ───
       case 3:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">🎨 Estilo de diagramação</h3>
+              <h3 className="text-base font-semibold mb-1">📐 Diagramação</h3>
               <p className="text-sm text-muted-foreground">
-                Escolha o estilo visual. A IA vai combinar com suas referências para manter a identidade.
+                Escolha como a arte será organizada. A IA vai seguir essa composição fielmente.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {ART_STYLES.map((s) => (
-                <SelectCard key={s.value} selected={artStyle === s.value} onClick={() => setArtStyle(s.value)}>
-                  <CardContent className="p-0 overflow-hidden">
-                    <div className={`h-20 ${s.colors} flex items-center justify-center`}>
-                      <span className="text-3xl">{s.emoji}</span>
-                    </div>
-                    <div className="p-3">
-                      <p className="font-semibold text-sm">{s.label}</p>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{s.desc}</p>
-                    </div>
-                  </CardContent>
-                </SelectCard>
-              ))}
-            </div>
+            <LayoutPicker selected={layoutType} onSelect={setLayoutType} />
           </div>
         );
 
-      // ─── Step 4: References ───
+      // ─── Step 4: References + Logo ───
       case 4:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">📸 Referências visuais</h3>
+              <h3 className="text-base font-semibold mb-1">📸 Referências + Logo</h3>
               <p className="text-sm text-muted-foreground">
-                A IA extrai <strong>cores, fontes e logo</strong> das suas referências.
-                Envie pelo menos 3 imagens de qualidade.
+                A IA extrai <strong>cores, fontes e estilo</strong> das referências.
+                Envie a logo separadamente para garantir que apareça na arte.
               </p>
             </div>
             <Card className="bg-accent/30 border-accent">
               <CardContent className="p-3 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div className="text-xs text-muted-foreground">
-                  <strong>Dica:</strong> Envie artes anteriores da marca, posts que você gostou, 
-                  screenshots de referência ou materiais institucionais. 
-                  Quanto mais referências, mais fiel ao seu estilo.
+                  <strong>Dica:</strong> Envie artes anteriores, posts que você gostou ou materiais da marca.
+                  Marque com ⭐ a referência que mais representa o estilo desejado.
                 </div>
               </CardContent>
             </Card>
@@ -406,6 +388,10 @@ export function ArtWizard({
               required
               min={3}
               visualIdentity={visualIdentity}
+              logoUrl={logoUrl}
+              setLogoUrl={setLogoUrl}
+              primaryRefIndex={primaryRefIndex}
+              setPrimaryRefIndex={setPrimaryRefIndex}
             />
           </div>
         );
@@ -433,165 +419,11 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 6: Text ───
-      case 6:
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold mb-1">✏️ Textos da arte</h3>
-              <p className="text-sm text-muted-foreground">
-                {briefingFilled
-                  ? "Campos pré-preenchidos pela IA. Revise e ajuste."
-                  : "Preencha os textos que aparecerão na arte. Ou importe de um conteúdo."}
-              </p>
-            </div>
-
-            {contentData && (
-              <Card className="bg-accent/50 border-accent">
-                <CardContent className="p-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="w-4 h-4 text-primary shrink-0" />
-                    <span className="text-xs font-medium truncate">Conteúdo: {contentData.title}</span>
-                  </div>
-                  <Button size="sm" variant="secondary" className="shrink-0 text-xs" onClick={() => fillTextFromContent(contentData)}>
-                    <FileDown className="w-3 h-3 mr-1" /> Usar texto
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {!contentData && (
-              <Button variant="outline" size="sm" className="w-full" onClick={() => setShowContentPicker(true)}>
-                <FileText className="w-4 h-4 mr-2" /> Importar de um conteúdo
-              </Button>
-            )}
-
-            <div className="space-y-3">
-              <div>
-                <Label className="text-xs">Headline principal <span className="text-destructive">*</span></Label>
-                <Input placeholder="Ex: Escalar não é sorte" value={headline} onChange={(e) => setHeadline(e.target.value)} className="mt-1" />
-                <p className="text-[10px] text-muted-foreground mt-0.5">Texto principal da arte (máx. 6 palavras para melhor impacto)</p>
-              </div>
-              <div>
-                <Label className="text-xs">Subheadline</Label>
-                <Input placeholder="Ex: É processo" value={subheadline} onChange={(e) => setSubheadline(e.target.value)} className="mt-1" />
-                <p className="text-[10px] text-muted-foreground mt-0.5">Complemento da headline (2-4 palavras)</p>
-              </div>
-              <div>
-                <Label className="text-xs">Texto de apoio</Label>
-                <Textarea placeholder="Ex: Com a estratégia certa, seus resultados mudam." value={supportingText} onChange={(e) => setSupportingText(e.target.value)} rows={2} className="mt-1 resize-none" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Bullet points</Label>
-                  <Input placeholder="Ex: Tempo, Renda, Objetivo" value={bulletPoints} onChange={(e) => setBulletPoints(e.target.value)} className="mt-1" />
-                </div>
-                <div>
-                  <Label className="text-xs">Call to Action</Label>
-                  <Input placeholder="Ex: Conheça o método" value={cta} onChange={(e) => setCta(e.target.value)} className="mt-1" />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs">Nome da marca</Label>
-                <Input placeholder="Ex: Klir, NoExcuse" value={brandName} onChange={(e) => setBrandName(e.target.value)} className="mt-1" />
-              </div>
-            </div>
-
-            <ContentPickerDialog
-              open={showContentPicker}
-              onOpenChange={setShowContentPicker}
-              contentHistory={contentHistory}
-              onSelect={(c) => {
-                setContentId(c.id);
-                setContentData(c);
-                fillTextFromContent(c);
-              }}
-            />
-          </div>
-        );
-
-      // ─── Step 7: Scene ───
-      case 7:
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold mb-1">🎬 Cena e elementos (opcional)</h3>
-              <p className="text-sm text-muted-foreground">
-                Descreva o cenário e objetos que devem aparecer. Se não preencher, a IA decide com base no estilo e referências.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <Label className="text-xs">Descrição da cena</Label>
-                <Textarea
-                  placeholder="Ex: Empresário analisando dashboard no notebook em escritório moderno com luz natural"
-                  value={cena}
-                  onChange={(e) => setCena(e.target.value)}
-                  rows={3}
-                  className="mt-1 resize-none"
-                />
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {SCENE_SUGGESTIONS.map((s) => (
-                    <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => setCena(s)}>
-                      {s}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs">Elementos visuais</Label>
-                <Input
-                  placeholder="Ex: Notebook, smartphone, gráfico subindo"
-                  value={elementosVisuais}
-                  onChange={(e) => setElementosVisuais(e.target.value)}
-                  className="mt-1"
-                />
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {ELEMENT_SUGGESTIONS.map((s) => (
-                    <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs" onClick={() => setElementosVisuais((prev) => prev ? `${prev}, ${s}` : s)}>
-                      <Plus className="w-3 h-3 mr-1" /> {s}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {visualIdentity ? (
-                <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="p-3 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Check className="w-3 h-3 text-primary" />
-                      <p className="text-xs font-semibold text-primary">Identidade visual aplicada automaticamente</p>
-                    </div>
-                    {visualIdentity.palette && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {(Array.isArray(visualIdentity.palette) ? visualIdentity.palette : []).map((c: any, i: number) => (
-                          <div key={i} className="w-5 h-5 rounded-full border" style={{ backgroundColor: c.hex || c }} title={c.label || c.hex || c} />
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-xs">Cores da marca (sem identidade cadastrada)</Label>
-                    <Input placeholder="Ex: Azul profundo e branco" value={manualColors} onChange={(e) => setManualColors(e.target.value)} className="mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Estilo visual</Label>
-                    <Input placeholder="Ex: Corporativo premium, minimalista" value={manualStyle} onChange={(e) => setManualStyle(e.target.value)} className="mt-1" />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-
-      // ─── Step 8: Review ───
-      case 8: {
+      // ─── Step 6: Review (AI-generated texts) ───
+      case 6: {
         const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
         const totalCost = totalPieces * creditCost;
-        const selectedStyle = ART_STYLES.find(s => s.value === artStyle);
+        const selectedLayout = LAYOUT_TYPES.find(l => l.value === layoutType);
         const selectedFormat = ART_FORMATS.find(f => f.value === artFormat);
         const selectedType = POST_TYPES.find(t => t.value === tipoPostagem);
 
@@ -599,77 +431,135 @@ export function ArtWizard({
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-semibold mb-1">✅ Revisão final</h3>
-              <p className="text-sm text-muted-foreground">Confira tudo antes de gerar</p>
+              <p className="text-sm text-muted-foreground">
+                {isFillingAI ? "A IA está gerando os textos..." : "Textos gerados pela IA. Edite se necessário."}
+              </p>
             </div>
 
-            {referenceUrls.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Referências ({referenceUrls.length})</p>
-                <div className="flex flex-wrap gap-2">
-                  {referenceUrls.map((url, i) => (
-                    <div key={i} className="w-14 h-14 rounded-lg overflow-hidden border">
-                      <img src={url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {isFillingAI && (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <p className="text-sm text-primary">Gerando textos com IA...</p>
+                </CardContent>
+              </Card>
             )}
 
-            <Card className="bg-muted/30">
-              <CardContent className="p-4 space-y-2">
-                <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
-                  <span className="text-muted-foreground font-medium">Tipo:</span>
-                  <span>{selectedType?.icon} {selectedType?.label}</span>
+            {!isFillingAI && briefingFilled && (
+              <>
+                {/* AI-generated texts with edit toggle */}
+                <Card>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-muted-foreground">Textos gerados pela IA</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs gap-1"
+                        onClick={() => setEditingTexts(!editingTexts)}
+                      >
+                        <Pencil className="w-3 h-3" />
+                        {editingTexts ? "Fechar" : "Editar"}
+                      </Button>
+                    </div>
 
-                  <span className="text-muted-foreground font-medium">Quantidade:</span>
-                  <span>{totalPieces} {tipoPostagem === "carrossel" ? "slides" : "peça(s)"}</span>
+                    {editingTexts ? (
+                      <div className="space-y-2">
+                        <div>
+                          <Label className="text-[10px]">Headline <span className="text-destructive">*</span></Label>
+                          <Input value={headline} onChange={(e) => setHeadline(e.target.value)} className="mt-0.5 h-8 text-xs" />
+                        </div>
+                        <div>
+                          <Label className="text-[10px]">Subheadline</Label>
+                          <Input value={subheadline} onChange={(e) => setSubheadline(e.target.value)} className="mt-0.5 h-8 text-xs" />
+                        </div>
+                        <div>
+                          <Label className="text-[10px]">Texto de apoio</Label>
+                          <Textarea value={supportingText} onChange={(e) => setSupportingText(e.target.value)} rows={2} className="mt-0.5 resize-none text-xs" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-[10px]">CTA</Label>
+                            <Input value={cta} onChange={(e) => setCta(e.target.value)} className="mt-0.5 h-8 text-xs" />
+                          </div>
+                          <div>
+                            <Label className="text-[10px]">Nome da marca</Label>
+                            <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} className="mt-0.5 h-8 text-xs" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 text-xs">
+                        <div><span className="text-muted-foreground">Headline:</span> <span className="font-semibold">{headline || "—"}</span></div>
+                        {subheadline && <div><span className="text-muted-foreground">Sub:</span> {subheadline}</div>}
+                        {supportingText && <div><span className="text-muted-foreground">Apoio:</span> <span className="line-clamp-2">{supportingText}</span></div>}
+                        {cta && <div><span className="text-muted-foreground">CTA:</span> {cta}</div>}
+                        {brandName && <div><span className="text-muted-foreground">Marca:</span> {brandName}</div>}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                  <span className="text-muted-foreground font-medium">Estilo:</span>
-                  <span>{selectedStyle?.emoji} {selectedStyle?.label}</span>
+                {/* Summary */}
+                <Card className="bg-muted/30">
+                  <CardContent className="p-4 space-y-2">
+                    {referenceUrls.length > 0 && (
+                      <div className="mb-2">
+                        <p className="text-[10px] font-medium text-muted-foreground mb-1">Referências ({referenceUrls.length}){logoUrl ? " + Logo" : ""}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {logoUrl && (
+                            <div className="w-10 h-10 rounded-md overflow-hidden border-2 border-primary">
+                              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain bg-white p-0.5" />
+                            </div>
+                          )}
+                          {referenceUrls.map((url, i) => (
+                            <div key={i} className={`w-10 h-10 rounded-md overflow-hidden border ${primaryRefIndex === i ? "border-primary border-2" : "border-border"}`}>
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                  <span className="text-muted-foreground font-medium">Formato:</span>
-                  <span>{selectedFormat?.label} ({selectedFormat?.ratio})</span>
+                    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+                      <span className="text-muted-foreground">Tipo:</span>
+                      <span>{selectedType?.icon} {selectedType?.label}</span>
 
-                  <span className="text-muted-foreground font-medium">Headline:</span>
-                  <span className="font-semibold">{headline || "—"}</span>
+                      <span className="text-muted-foreground">Quantidade:</span>
+                      <span>{totalPieces} {tipoPostagem === "carrossel" ? "slides" : "peça(s)"}</span>
 
-                  {subheadline && <>
-                    <span className="text-muted-foreground font-medium">Sub:</span>
-                    <span>{subheadline}</span>
-                  </>}
+                      <span className="text-muted-foreground">Diagramação:</span>
+                      <span>{selectedLayout?.label}</span>
 
-                  {cta && <>
-                    <span className="text-muted-foreground font-medium">CTA:</span>
-                    <span>{cta}</span>
-                  </>}
+                      <span className="text-muted-foreground">Formato:</span>
+                      <span>{selectedFormat?.label} ({selectedFormat?.ratio})</span>
 
-                  {brandName && <>
-                    <span className="text-muted-foreground font-medium">Marca:</span>
-                    <span>{brandName}</span>
-                  </>}
+                      {visualIdentity && <>
+                        <span className="text-muted-foreground">Identidade:</span>
+                        <span className="text-primary">✓ Aplicada</span>
+                      </>}
+                    </div>
 
-                  {cena && <>
-                    <span className="text-muted-foreground font-medium">Cena:</span>
-                    <span className="line-clamp-2">{cena}</span>
-                  </>}
+                    <div className="pt-2 border-t mt-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold">Custo total</span>
+                        <Badge variant="secondary" className="text-xs">{totalCost} créditos</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  <span className="text-muted-foreground font-medium">Refs:</span>
-                  <span>{referenceUrls.length} imagens</span>
-
-                  {visualIdentity && <>
-                    <span className="text-muted-foreground font-medium">Identidade:</span>
-                    <span className="text-primary">✓ Aplicada automaticamente</span>
-                  </>}
-                </div>
-
-                <div className="pt-2 border-t mt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold">Custo total</span>
-                    <Badge variant="secondary" className="text-xs">{totalCost} créditos</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAutoFillTexts}
+                  disabled={isFillingAI}
+                  className="w-full"
+                >
+                  <Wand2 className="w-3 h-3 mr-1" /> Regenerar textos com IA
+                </Button>
+              </>
+            )}
           </div>
         );
       }
@@ -708,7 +598,7 @@ export function ArtWizard({
         {isLastStep ? (
           <Button
             onClick={handleGenerate}
-            disabled={!canProceed() || !canAfford}
+            disabled={!canProceed() || !canAfford || isFillingAI}
             className="flex-1"
             size="lg"
           >
@@ -716,7 +606,7 @@ export function ArtWizard({
             Gerar {totalPieces > 1 ? `${totalPieces} peças` : "Arte"} ({totalCost} créditos)
           </Button>
         ) : (
-          <Button onClick={() => setStep(step + 1)} disabled={!canProceed()} className="flex-1" size="lg">
+          <Button onClick={() => handleStepChange(step + 1)} disabled={!canProceed()} className="flex-1" size="lg">
             Continuar
           </Button>
         )}

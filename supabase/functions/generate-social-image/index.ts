@@ -57,6 +57,82 @@ interface StructuredPromptResult {
   text_hierarchy: TextHierarchy;
 }
 
+// --- Layout composition rules ---
+
+function getLayoutRulesForPrompt(layoutType: string): string {
+  const rules: Record<string, string> = {
+    hero_central: `LAYOUT RULES (Hero Central):
+- Large centered headline dominating the upper 60% of the canvas
+- Subheadline directly below in smaller weight
+- Background uses a textured gradient or subtle photographic image with dark overlay for contrast
+- CTA button centered at bottom
+- Brand logo small in top-left or top-right corner
+- Strong vertical symmetry`,
+    split_texto_imagem: `LAYOUT RULES (Split Text + Image):
+- Composition split vertically: left 45% is a solid or gradient color block with headline, supporting text and CTA stacked vertically
+- Right 55% is a high-quality photograph or illustration filling edge to edge
+- Brand logo in the text side, top corner
+- Clear dividing line or overlap between zones
+- Text is left-aligned within the text zone`,
+    card_moldura: `LAYOUT RULES (Card with Frame):
+- Background is a solid bold color or subtle gradient
+- Centered rounded card (border-radius 24px+) in white or contrasting color containing all text
+- Card contains: headline, subheadline, bullet points, CTA
+- Card has subtle shadow for depth
+- Brand logo outside the card in a corner
+- Clean generous padding inside card`,
+    imagem_overlay: `LAYOUT RULES (Image + Overlay):
+- Full-bleed high-quality photograph covering entire canvas
+- Dark gradient overlay (40-60% opacity) concentrated on the area where text appears (typically bottom half)
+- White or light-colored headline text with strong contrast
+- Supporting text and CTA in lighter weight below
+- Brand logo in corner with subtle backdrop blur`,
+    grid_carrossel: `LAYOUT RULES (Organized Grid):
+- Organized grid layout with 2-3 columns or rows
+- Each cell contains an icon/number + short text
+- Header zone at top with headline spanning full width
+- Footer zone with CTA
+- Clean dividers between sections
+- Consistent spacing and alignment
+- Brand logo in header
+- Professional infographic aesthetic`,
+    minimalista_clean: `LAYOUT RULES (Minimalist Clean):
+- 60% or more negative space (white or very light background)
+- Single focal element: one phrase, one object, or one graphic
+- Ultra-refined typography
+- Maximum 2 colors plus white/black
+- No clutter, no busy backgrounds
+- Brand logo subtle and small
+- Breathing room around every element`,
+    anuncio_agressivo: `LAYOUT RULES (Impact Advertisement):
+- MAXIMUM IMPACT layout
+- Headline text is ENORMOUS — fills 40%+ of the canvas
+- Ultra-bold weight, possibly tilted 2-5 degrees for energy
+- Vibrant saturated background color (red, yellow, electric blue)
+- High contrast between text and background
+- CTA in contrasting accent color, prominent
+- Brand logo prominent
+- Zero subtlety — everything screams attention`,
+    premium_luxo: `LAYOUT RULES (Premium / Luxury):
+- Dark background (#0a0a0a to #1a1a2e)
+- Elegant serif typography for headline
+- Gold, champagne, or rose-gold accent color for highlights and decorative elements
+- Thin ornamental lines or borders framing content
+- Generous letter-spacing on headline
+- Brand logo in metallic finish
+- Overall mood: exclusive, refined, aspirational`,
+    texto_dominante: `LAYOUT RULES (Text Dominant):
+- Typography IS the design — text as the main visual element
+- Headline uses creative typographic treatment: mixed weights, sizes, or colors within the text
+- Minimal or no imagery — background is solid or very subtle texture
+- Text occupies 70%+ of canvas
+- Supporting text in much smaller size below
+- Brand logo integrated into the typographic composition
+- Think poster design / editorial typography`,
+  };
+  return rules[layoutType] || "";
+}
+
 async function analyzeAndOptimizePrompt(
   apiKey: string,
   context: {
@@ -77,6 +153,10 @@ async function analyzeAndOptimizePrompt(
     brand_name?: string;
     supporting_text?: string;
     bullet_points?: string;
+    layout_type?: string;
+    logo_url?: string;
+    primary_ref_index?: number;
+    objective?: string;
   },
   referenceBase64s?: { type: string; image_url: { url: string } }[],
 ): Promise<StructuredPromptResult | null> {
@@ -92,13 +172,19 @@ CRITICAL RULES:
 3. Be hyper-specific about composition, colors, lighting, and spatial layout.
 4. Never use vague descriptions like "professional look" or "modern design". Be CONCRETE.
 ${hasRefs ? `5. You have been given BRAND REFERENCE IMAGES. Analyze them carefully and extract the exact visual design system: color usage patterns, layout structures, card shapes, icon styles, typography approach, photographic vs graphic style. Your output must faithfully replicate this design language in a NEW scene.
-6. IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references. Create a NEW scene that follows the same brand design language.` : ""}
+6. IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references. Create a NEW scene that follows the same brand design language.
+7. ${context.primary_ref_index !== undefined ? `Reference image #${(context.primary_ref_index || 0) + 1} is the PRIMARY reference (weight 60%). Match its design language MOST closely. The remaining references share the other 40% of influence.` : "All reference images have equal weight."}` : ""}
+${context.logo_url ? `8. A BRAND LOGO image has been provided separately. You MUST include the logo in the composition. Place it naturally (typically top-left or top-right corner) without distortion. Use the exact logo as provided.` : ""}
+${context.layout_type ? `9. LAYOUT TYPE SELECTED: "${context.layout_type}". You MUST follow the specific layout composition rules for this type. The layout determines WHERE elements go — follow it precisely.` : ""}
+
+${context.layout_type ? getLayoutRulesForPrompt(context.layout_type) : ""}
 
 The art_style determines the visual approach:
 - Styles starting with "grafica_" → FLAT GRAPHIC DESIGN (vector shapes, color blocks, geometric patterns, NO photographs)
 - Styles starting with "foto_" → PHOTOGRAPHIC (cinematic, editorial, real people/objects)
 - "ilustracao" → DIGITAL ILLUSTRATION (vector-like, friendly, stylized)
 - "collage" → MIXED-MEDIA COLLAGE (layered photos + graphic elements)
+- Layout types (hero_central, split_texto_imagem, etc.) → Follow the specific layout composition rules above
 
 OUTPUT SECTIONS (all in English):
 
@@ -480,6 +566,7 @@ serve(async (req) => {
       tipo_postagem, headline, subheadline, cta, cena, elementos_visuais,
       manual_colors, manual_style, brand_name,
       supporting_text, bullet_points,
+      layout_type, logo_url, primary_ref_index, objective,
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -525,6 +612,9 @@ serve(async (req) => {
     if (cta) enrichedPrompt += `\nCTA: ${cta}`;
     if (tipo_postagem) enrichedPrompt += `\nPost type: ${tipo_postagem}`;
     if (brand_name) enrichedPrompt += `\nBrand: ${brand_name}`;
+    if (layout_type) enrichedPrompt += `\nLayout type: ${layout_type}`;
+    if (objective) enrichedPrompt += `\nObjective: ${objective}`;
+    if (logo_url) enrichedPrompt += `\nBrand logo: provided as separate image`;
     if (feedbackContext) enrichedPrompt += feedbackContext;
 
     // Convert reference images to base64 EARLY so CoT can use them too
@@ -563,11 +653,16 @@ serve(async (req) => {
       brand_name,
       supporting_text,
       bullet_points,
+      layout_type,
+      logo_url,
+      primary_ref_index,
+      objective,
     }, base64Refs.length > 0 ? base64Refs : undefined);
 
-    // Quality and style instructions
+    // Quality, style and layout instructions
     const qualityInstructions = getQualityInstructions(nivel || "simples");
     const artStyleInstructions = art_style ? getArtStyleInstructions(art_style) : "";
+    const layoutInstructions = layout_type ? getLayoutRulesForPrompt(layout_type) : "";
 
     const formatDescMap: Record<string, string> = {
       feed: "square 1:1 (1080×1080px) social media post for Instagram feed",
@@ -590,12 +685,34 @@ serve(async (req) => {
       );
     }
 
-    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
+    // Append layout instructions to prompt if not already in CoT
+    if (layoutInstructions && !optimized) {
+      fullPrompt += `\n\n${layoutInstructions}`;
+    }
+
+    // Append logo instruction
+    if (logo_url) {
+      fullPrompt += `\n\nBRAND LOGO: A brand logo image is attached. Place it naturally in the composition (typically top-left or top-right corner). Use the exact logo as provided — do NOT recreate, redraw, or stylize it. The logo must appear clearly and legibly.`;
+    }
+
+    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
-    // Build message content — reference images are already analyzed by CoT (Stage 1)
-    // Do NOT attach them to Stage 2 (image generation) to avoid exceeding token limits
-    const messageContent: any = fullPrompt;
+    // Build message content — include logo as image in Stage 2 for accurate reproduction
+    let messageContent: any;
+    if (logo_url) {
+      const logoB64 = await urlToBase64(logo_url);
+      if (logoB64) {
+        messageContent = [
+          { type: "text", text: fullPrompt },
+          { type: "image_url", image_url: { url: logoB64 } },
+        ];
+      } else {
+        messageContent = fullPrompt;
+      }
+    } else {
+      messageContent = fullPrompt;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
