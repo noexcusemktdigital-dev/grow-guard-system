@@ -40,7 +40,7 @@ export function AdConnectionCards() {
   };
 
   // Handle OAuth callback
-  useState(() => {
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const isCallback = params.get("oauth_callback");
     const code = params.get("code");
@@ -52,13 +52,12 @@ export function AdConnectionCards() {
 
       supabase.functions.invoke("ads-oauth-callback", {
         body: { platform, code, redirect_uri: redirectUri, organization_id: orgId },
-      }).then(({ error }) => {
+      }).then(() => {
         setConnectingPlatform(null);
-        // Clean URL
         window.history.replaceState({}, "", window.location.pathname);
       });
     }
-  });
+  }, [orgId]);
 
   const getConnection = (platform: string): AdConnection | undefined =>
     connections?.find((c) => c.platform === platform && c.status === "active");
