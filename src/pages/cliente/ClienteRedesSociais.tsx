@@ -143,41 +143,44 @@ export default function ClienteRedesSociais() {
         ? { palette: visualIdentity.palette, fonts: visualIdentity.fonts, style: visualIdentity.style, tone: visualIdentity.tone, logo_url: visualIdentity.logo_url }
         : undefined;
 
-      const totalPieces = payload.tipoPostagem === "carrossel" ? payload.carouselSlides : payload.quantity;
+      const layoutVariations = payload.layoutTypes.length > 0 ? payload.layoutTypes : ["hero_central"];
+      const basePieces = payload.tipoPostagem === "carrossel" ? payload.carouselSlides : payload.quantity;
       const results: { post: PostItem; result_url: string | null; result_data: any }[] = [];
 
-      for (let i = 0; i < totalPieces; i++) {
-        const isCarousel = payload.tipoPostagem === "carrossel";
-        const slideLabel = isCarousel ? (i === 0 ? "capa" : i === totalPieces - 1 ? "cta_final" : `slide_${i}`) : undefined;
+      for (const currentLayout of layoutVariations) {
+        for (let i = 0; i < basePieces; i++) {
+          const isCarousel = payload.tipoPostagem === "carrossel";
 
-        const result = await generatePost.mutateAsync({
-          type: "art",
-          format: payload.format,
-          style: payload.style,
-          input_text: payload.headline,
-          reference_image_urls: payload.referenceUrls,
-          identidade_visual: iv,
-          content_id: payload.contentId || undefined,
-          tipo_postagem: isCarousel ? (i === 0 ? "capa_carrossel" : "slide_carrossel") : payload.tipoPostagem,
-          headline: isCarousel && i > 0 && i < totalPieces - 1
-            ? `${payload.headline} — Slide ${i + 1}`
-            : payload.headline,
-          subheadline: payload.subheadline || undefined,
-          cta: isCarousel && i === totalPieces - 1 ? (payload.cta || "Saiba mais") : (payload.cta || undefined),
-          cena: payload.cena || undefined,
-          elementos_visuais: payload.elementosVisuais || undefined,
-          manual_colors: !visualIdentity && payload.manualColors ? payload.manualColors : undefined,
-          manual_style: !visualIdentity && payload.manualStyle ? payload.manualStyle : undefined,
-          brand_name: payload.brandName || undefined,
-          supporting_text: payload.supportingText || undefined,
-          bullet_points: payload.bulletPoints || undefined,
-          layout_type: payload.layoutType || undefined,
-          logo_url: payload.logoUrl || undefined,
-          primary_ref_index: payload.primaryRefIndex,
-          objective: payload.objective || undefined,
-        });
+          const result = await generatePost.mutateAsync({
+            type: "art",
+            format: payload.format,
+            style: currentLayout,
+            input_text: payload.headline,
+            reference_image_urls: payload.referenceUrls,
+            identidade_visual: iv,
+            content_id: payload.contentId || undefined,
+            tipo_postagem: isCarousel ? (i === 0 ? "capa_carrossel" : "slide_carrossel") : payload.tipoPostagem,
+            headline: isCarousel && i > 0 && i < basePieces - 1
+              ? `${payload.headline} — Slide ${i + 1}`
+              : payload.headline,
+            subheadline: payload.subheadline || undefined,
+            cta: isCarousel && i === basePieces - 1 ? (payload.cta || "Saiba mais") : (payload.cta || undefined),
+            cena: payload.cena || undefined,
+            elementos_visuais: payload.elementosVisuais || undefined,
+            manual_colors: !visualIdentity && payload.manualColors ? payload.manualColors : undefined,
+            manual_style: !visualIdentity && payload.manualStyle ? payload.manualStyle : undefined,
+            brand_name: payload.brandName || undefined,
+            supporting_text: payload.supportingText || undefined,
+            bullet_points: payload.bulletPoints || undefined,
+            layout_type: currentLayout,
+            logo_url: payload.logoUrl || undefined,
+            primary_ref_index: payload.primaryRefIndex,
+            objective: payload.objective || undefined,
+          });
 
-        results.push(result);
+          results.push(result);
+        }
+      }
       }
 
       setBatchResults(results);
