@@ -173,14 +173,14 @@ export function ArtWizard({
     }
     onGenerate({
       format: artFormat,
-      style: layoutType,
+      style: layoutTypes[0],
       tipoPostagem,
       headline, subheadline, cta, cena, elementosVisuais,
       manualColors: "", manualStyle: "",
       brandName, supportingText, bulletPoints,
       referenceUrls, contentId, quantity,
       carouselSlides: tipoPostagem === "carrossel" ? carouselSlides : 0,
-      layoutType,
+      layoutTypes,
       logoUrl,
       primaryRefIndex,
       objective,
