@@ -185,15 +185,20 @@ export default function ClienteSites() {
 
   const { data: dbSites } = useClienteSitesDB();
   const createSiteMutation = useCreateClientSite();
+  const approveSiteMutation = useApproveSite();
   const { data: activeStrategy } = useActiveStrategy();
   const { data: contents } = useContentHistory();
   const { data: visualIdentity } = useVisualIdentity();
+  const { data: wallet } = useClienteWallet();
+
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+  const SITE_CREDIT_COST = 100;
 
   const sites: SavedSite[] = (dbSites || []).map(s => ({
     id: s.id,
     name: s.name,
     type: s.type || "lp",
-    status: (s.status === "Publicado" ? "Publicado" : "Rascunho") as "Publicado" | "Rascunho",
+    status: s.status as "Rascunho" | "Aprovado" | "Publicado",
     createdAt: s.created_at.split("T")[0],
     html: (s.content as any)?.html || "",
   }));
@@ -205,6 +210,8 @@ export default function ClienteSites() {
   const [generatedHtml, setGeneratedHtml] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [genProgress, setGenProgress] = useState(0);
+  const [currentSiteId, setCurrentSiteId] = useState<string | null>(null);
+  const [currentSiteStatus, setCurrentSiteStatus] = useState<string>("Rascunho");
 
   // Form data
   const [form, setForm] = useState<Record<string, any>>({
