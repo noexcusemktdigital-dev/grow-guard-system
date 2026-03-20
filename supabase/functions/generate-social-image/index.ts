@@ -659,9 +659,10 @@ serve(async (req) => {
       objective,
     }, base64Refs.length > 0 ? base64Refs : undefined);
 
-    // Quality and style instructions
+    // Quality, style and layout instructions
     const qualityInstructions = getQualityInstructions(nivel || "simples");
     const artStyleInstructions = art_style ? getArtStyleInstructions(art_style) : "";
+    const layoutInstructions = layout_type ? getLayoutRulesForPrompt(layout_type) : "";
 
     const formatDescMap: Record<string, string> = {
       feed: "square 1:1 (1080×1080px) social media post for Instagram feed",
@@ -684,12 +685,34 @@ serve(async (req) => {
       );
     }
 
-    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
+    // Append layout instructions to prompt if not already in CoT
+    if (layoutInstructions && !optimized) {
+      fullPrompt += `\n\n${layoutInstructions}`;
+    }
+
+    // Append logo instruction
+    if (logo_url) {
+      fullPrompt += `\n\nBRAND LOGO: A brand logo image is attached. Place it naturally in the composition (typically top-left or top-right corner). Use the exact logo as provided — do NOT recreate, redraw, or stylize it. The logo must appear clearly and legibly.`;
+    }
+
+    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
-    // Build message content — reference images are already analyzed by CoT (Stage 1)
-    // Do NOT attach them to Stage 2 (image generation) to avoid exceeding token limits
-    const messageContent: any = fullPrompt;
+    // Build message content — include logo as image in Stage 2 for accurate reproduction
+    let messageContent: any;
+    if (logo_url) {
+      const logoB64 = await urlToBase64(logo_url);
+      if (logoB64) {
+        messageContent = [
+          { type: "text", text: fullPrompt },
+          { type: "image_url", image_url: { url: logoB64 } },
+        ];
+      } else {
+        messageContent = fullPrompt;
+      }
+    } else {
+      messageContent = fullPrompt;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
