@@ -74,21 +74,65 @@ Deno.serve(async (req) => {
       const encodedName = encodeURIComponent(inst.instance_id);
 
       // First check if already connected
+      let instanceExists = true;
       try {
         const stateRes = await fetch(`${cleanBase}/instance/connectionState/${encodedName}`, {
           headers: { apikey: key },
         });
         const stateData = await stateRes.json();
         console.log("[get-qr] connectionState:", JSON.stringify(stateData));
-        const isOpen = stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED";
-        if (isOpen) {
-          await adminClient.from("whatsapp_instances").update({ status: "connected" }).eq("id", inst.id);
-          return new Response(JSON.stringify({ status: "connected", message: "Instance is already connected" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+
+        // Check if instance doesn't exist on server
+        if (stateRes.status === 404 || stateData?.response?.message?.[0]?.includes("does not exist")) {
+          instanceExists = false;
+          console.log("[get-qr] Instance does not exist on server, will recreate");
+        } else {
+          const isOpen = stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED";
+          if (isOpen) {
+            await adminClient.from("whatsapp_instances").update({ status: "connected" }).eq("id", inst.id);
+            return new Response(JSON.stringify({ status: "connected", message: "Instance is already connected" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         }
       } catch (err) {
         console.error("[get-qr] connectionState check error:", err);
+      }
+
+      // If instance doesn't exist, recreate it
+      if (!instanceExists) {
+        try {
+          const webhookUrlEv = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
+          console.log("[get-qr] Recreating instance:", inst.instance_id);
+          const createRes = await fetch(`${cleanBase}/instance/create`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", apikey: key },
+            body: JSON.stringify({
+              instanceName: inst.instance_id,
+              integration: "WHATSAPP-BAILEYS",
+              qrcode: true,
+              webhook: {
+                url: webhookUrlEv,
+                byEvents: true,
+                base64: true,
+                events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"],
+              },
+            }),
+          });
+          const createData = await createRes.json();
+          console.log("[get-qr] Recreate response:", createRes.status, JSON.stringify(createData));
+
+          // The create response often includes the QR code directly
+          const qrFromCreate = createData?.qrcode?.base64 || createData?.base64 || null;
+          const pairingFromCreate = createData?.qrcode?.pairingCode || createData?.pairingCode || null;
+          if (qrFromCreate) {
+            return new Response(JSON.stringify({ status: "qr_ready", qr_code: qrFromCreate, pairing_code: pairingFromCreate }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } catch (err) {
+          console.error("[get-qr] Recreate error:", err);
+        }
       }
 
       // Call instance/connect to get QR code
