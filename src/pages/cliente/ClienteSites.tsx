@@ -449,13 +449,27 @@ export default function ClienteSites() {
         <PageHeader title="Preview do Site" subtitle="Revise, aprove e baixe o código" icon={<Globe className="w-5 h-5 text-primary" />} />
         <SitePreview
           html={generatedHtml}
+          siteId={currentSiteId || undefined}
+          siteStatus={currentSiteStatus}
           onRegenerate={handleGenerate}
           onEditBriefing={() => { setShowPreview(false); }}
+          onApprove={() => {
+            if (currentSiteId) {
+              approveSiteMutation.mutate(currentSiteId);
+              setCurrentSiteStatus("Aprovado");
+            }
+          }}
           generating={generating}
         />
         <Button variant="ghost" className="text-xs" onClick={resetWizard}>
           <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Voltar ao início
         </Button>
+        <InsufficientCreditsDialog
+          open={showCreditsDialog}
+          onOpenChange={setShowCreditsDialog}
+          actionLabel="gerar este site"
+          creditCost={SITE_CREDIT_COST}
+        />
       </div>
     );
   }
