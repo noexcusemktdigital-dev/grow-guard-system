@@ -1,0 +1,230 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+async function refreshGoogleToken(refreshToken: string): Promise<{ access_token: string; expires_in: number } | null> {
+  const clientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID")!;
+  const clientSecret = Deno.env.get("GOOGLE_ADS_CLIENT_SECRET")!;
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+async function syncGoogleAds(connection: any, supabase: any) {
+  let accessToken = connection.access_token;
+  const devToken = Deno.env.get("GOOGLE_ADS_DEVELOPER_TOKEN");
+  if (!devToken) throw new Error("GOOGLE_ADS_DEVELOPER_TOKEN not configured");
+
+  // Refresh token if expired
+  if (connection.refresh_token && connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
+    const refreshed = await refreshGoogleToken(connection.refresh_token);
+    if (refreshed) {
+      accessToken = refreshed.access_token;
+      await supabase.from("ad_platform_connections").update({
+        access_token: accessToken,
+        token_expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
+        status: "active",
+      }).eq("id", connection.id);
+    } else {
+      await supabase.from("ad_platform_connections").update({ status: "expired" }).eq("id", connection.id);
+      throw new Error("Token expired and refresh failed");
+    }
+  }
+
+  const customerId = connection.account_id;
+  if (!customerId) throw new Error("No Google Ads customer ID");
+
+  // Query last 30 days of campaign metrics
+  const query = `
+    SELECT campaign.id, campaign.name, campaign.status,
+           segments.date,
+           metrics.impressions, metrics.clicks, metrics.cost_micros,
+           metrics.conversions, metrics.ctr, metrics.average_cpc
+    FROM campaign
+    WHERE segments.date DURING LAST_30_DAYS
+    ORDER BY segments.date DESC
+  `;
+
+  const res = await fetch(
+    `https://googleads.googleapis.com/v16/customers/${customerId}/googleAds:searchStream`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "developer-token": devToken,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query }),
+    }
+  );
+
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Google Ads API error:", errText);
+    throw new Error(`Google Ads API error: ${res.status}`);
+  }
+
+  const results = await res.json();
+  const metrics: any[] = [];
+
+  for (const batch of results) {
+    for (const row of batch.results || []) {
+      const spendBrl = (row.metrics?.cost_micros || 0) / 1_000_000;
+      const conversions = Math.round(row.metrics?.conversions || 0);
+      metrics.push({
+        organization_id: connection.organization_id,
+        connection_id: connection.id,
+        platform: "google_ads",
+        campaign_id: row.campaign?.id?.toString() || "unknown",
+        campaign_name: row.campaign?.name || "Unknown",
+        campaign_status: row.campaign?.status || "UNKNOWN",
+        date: row.segments?.date,
+        impressions: row.metrics?.impressions || 0,
+        clicks: row.metrics?.clicks || 0,
+        spend: spendBrl,
+        conversions,
+        ctr: row.metrics?.ctr || 0,
+        cpc: (row.metrics?.average_cpc || 0) / 1_000_000,
+        cpl: conversions > 0 ? spendBrl / conversions : 0,
+        raw_data: row,
+      });
+    }
+  }
+
+  return metrics;
+}
+
+async function syncMetaAds(connection: any, supabase: any) {
+  const accessToken = connection.access_token;
+  const accountId = connection.account_id;
+  if (!accountId) throw new Error("No Meta ad account ID");
+
+  // Get campaigns with insights for last 30 days
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000);
+  const since = thirtyDaysAgo.toISOString().split("T")[0];
+  const until = today.toISOString().split("T")[0];
+
+  const insightsUrl = `https://graph.facebook.com/v19.0/act_${accountId}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,actions,ctr,cpc&time_range={"since":"${since}","until":"${until}"}&time_increment=1&level=campaign&limit=500&access_token=${accessToken}`;
+
+  const res = await fetch(insightsUrl);
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Meta Ads API error:", errText);
+
+    if (res.status === 190 || res.status === 401) {
+      await supabase.from("ad_platform_connections").update({ status: "expired" }).eq("id", connection.id);
+    }
+    throw new Error(`Meta Ads API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  const metrics: any[] = [];
+
+  for (const row of data.data || []) {
+    const spend = parseFloat(row.spend || "0");
+    const conversions = (row.actions || [])
+      .filter((a: any) => ["lead", "offsite_conversion.fb_pixel_lead", "purchase", "complete_registration"].includes(a.action_type))
+      .reduce((sum: number, a: any) => sum + parseInt(a.value || "0"), 0);
+
+    metrics.push({
+      organization_id: connection.organization_id,
+      connection_id: connection.id,
+      platform: "meta_ads",
+      campaign_id: row.campaign_id,
+      campaign_name: row.campaign_name || "Unknown",
+      campaign_status: "ACTIVE",
+      date: row.date_start,
+      impressions: parseInt(row.impressions || "0"),
+      clicks: parseInt(row.clicks || "0"),
+      spend,
+      conversions,
+      ctr: parseFloat(row.ctr || "0"),
+      cpc: parseFloat(row.cpc || "0"),
+      cpl: conversions > 0 ? spend / conversions : 0,
+      raw_data: row,
+    });
+  }
+
+  return metrics;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const { connection_id } = await req.json();
+    if (!connection_id) {
+      return new Response(JSON.stringify({ error: "Missing connection_id" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: connection, error: connError } = await supabase
+      .from("ad_platform_connections")
+      .select("*")
+      .eq("id", connection_id)
+      .single();
+
+    if (connError || !connection) {
+      return new Response(JSON.stringify({ error: "Connection not found" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let metrics: any[];
+    if (connection.platform === "google_ads") {
+      metrics = await syncGoogleAds(connection, supabase);
+    } else if (connection.platform === "meta_ads") {
+      metrics = await syncMetaAds(connection, supabase);
+    } else {
+      return new Response(JSON.stringify({ error: "Unknown platform" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Upsert metrics
+    if (metrics.length > 0) {
+      const { error: upsertError } = await supabase
+        .from("ad_campaign_metrics")
+        .upsert(metrics, { onConflict: "connection_id,campaign_id,date" });
+
+      if (upsertError) {
+        console.error("Metrics upsert error:", upsertError);
+      }
+    }
+
+    // Update last_synced_at
+    await supabase.from("ad_platform_connections")
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq("id", connection_id);
+
+    return new Response(JSON.stringify({ success: true, synced: metrics.length }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("ads-sync-metrics error:", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
+import { AdConnectionCards } from "@/components/trafego/AdConnectionCards";
+import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
+import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
 import {
   DollarSign, Sparkles, Target, Users, Globe, BarChart3, Zap,
   Eye, MousePointer, TrendingUp, PlayCircle, ExternalLink,
@@ -109,6 +112,7 @@ export default function ClienteTrafegoPago() {
   const approveMutation = useApproveTrafficStrategy();
 
   const [activeTab, setActiveTab] = useState("estrategia");
+  const [metricsPeriod, setMetricsPeriod] = useState(30);
   const [step, setStep] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
   const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
@@ -687,6 +691,7 @@ export default function ClienteTrafegoPago() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="estrategia" className="text-xs gap-1.5"><Target className="w-3.5 h-3.5" /> Estratégia</TabsTrigger>
+          <TabsTrigger value="metricas" className="text-xs gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> Métricas</TabsTrigger>
           <TabsTrigger value="historico" className="text-xs gap-1.5"><History className="w-3.5 h-3.5" /> Histórico</TabsTrigger>
         </TabsList>
 
@@ -781,6 +786,36 @@ export default function ClienteTrafegoPago() {
               {renderResult()}
             </>
           )}
+        </TabsContent>
+
+        {/* ═══ MÉTRICAS ═══ */}
+        <TabsContent value="metricas" className="space-y-6 mt-4">
+          {/* Connection Cards */}
+          <div>
+            <p className="text-sm font-semibold mb-3">Contas de Anúncio</p>
+            <AdConnectionCards />
+          </div>
+
+          {/* Period selector */}
+          <div className="flex gap-2">
+            {[7, 30, 90].map((d) => (
+              <Button
+                key={d}
+                variant={metricsPeriod === d ? "default" : "outline"}
+                size="sm"
+                className="text-xs"
+                onClick={() => setMetricsPeriod(d)}
+              >
+                {d}d
+              </Button>
+            ))}
+          </div>
+
+          {/* Metrics Dashboard */}
+          <AdMetricsDashboard period={metricsPeriod} />
+
+          {/* AI Analysis */}
+          <AdAIAnalysis />
         </TabsContent>
 
         {/* ═══ HISTÓRICO ═══ */}

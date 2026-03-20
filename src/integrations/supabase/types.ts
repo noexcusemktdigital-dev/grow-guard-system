@@ -300,6 +300,134 @@ export type Database = {
           },
         ]
       }
+      ad_campaign_metrics: {
+        Row: {
+          campaign_id: string
+          campaign_name: string | null
+          campaign_status: string | null
+          clicks: number | null
+          connection_id: string
+          conversions: number | null
+          cpc: number | null
+          cpl: number | null
+          created_at: string
+          ctr: number | null
+          date: string
+          id: string
+          impressions: number | null
+          organization_id: string
+          platform: string
+          raw_data: Json | null
+          spend: number | null
+        }
+        Insert: {
+          campaign_id: string
+          campaign_name?: string | null
+          campaign_status?: string | null
+          clicks?: number | null
+          connection_id: string
+          conversions?: number | null
+          cpc?: number | null
+          cpl?: number | null
+          created_at?: string
+          ctr?: number | null
+          date: string
+          id?: string
+          impressions?: number | null
+          organization_id: string
+          platform: string
+          raw_data?: Json | null
+          spend?: number | null
+        }
+        Update: {
+          campaign_id?: string
+          campaign_name?: string | null
+          campaign_status?: string | null
+          clicks?: number | null
+          connection_id?: string
+          conversions?: number | null
+          cpc?: number | null
+          cpl?: number | null
+          created_at?: string
+          ctr?: number | null
+          date?: string
+          id?: string
+          impressions?: number | null
+          organization_id?: string
+          platform?: string
+          raw_data?: Json | null
+          spend?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_campaign_metrics_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "ad_platform_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaign_metrics_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_platform_connections: {
+        Row: {
+          access_token: string
+          account_id: string | null
+          account_name: string | null
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          organization_id: string
+          platform: string
+          refresh_token: string | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          organization_id: string
+          platform: string
+          refresh_token?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          organization_id?: string
+          platform?: string
+          refresh_token?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_platform_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_conversation_logs: {
         Row: {
           agent_id: string
