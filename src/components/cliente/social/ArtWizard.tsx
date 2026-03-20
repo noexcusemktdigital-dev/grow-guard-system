@@ -531,7 +531,7 @@ export function ArtWizard({
                       <span>{totalPieces} {tipoPostagem === "carrossel" ? "slides" : "peça(s)"}</span>
 
                       <span className="text-muted-foreground">Diagramação:</span>
-                      <span>{selectedLayout?.label}</span>
+                      <span>{selectedLayouts.map(l => l?.label).join(" + ")}</span>
 
                       <span className="text-muted-foreground">Formato:</span>
                       <span>{selectedFormat?.label} ({selectedFormat?.ratio})</span>
