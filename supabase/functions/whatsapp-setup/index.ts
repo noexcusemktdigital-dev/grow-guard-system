@@ -52,6 +52,76 @@ Deno.serve(async (req) => {
 
     const isEvolution = provider === "evolution";
 
+    // ─── Action: get-qr (Evolution only) ───
+    if (action === "get-qr") {
+      const { data: inst } = await adminClient
+        .from("whatsapp_instances")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("instance_id", instanceName || instanceId)
+        .eq("provider", "evolution")
+        .maybeSingle();
+
+      if (!inst) {
+        return new Response(JSON.stringify({ error: "Evolution instance not found in database" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const cleanBase = (inst.base_url || baseUrl || "").replace(/\/+$/, "");
+      const key = apiKey || inst.client_token;
+      const encodedName = encodeURIComponent(inst.instance_id);
+
+      // First check if already connected
+      try {
+        const stateRes = await fetch(`${cleanBase}/instance/connectionState/${encodedName}`, {
+          headers: { apikey: key },
+        });
+        const stateData = await stateRes.json();
+        console.log("[get-qr] connectionState:", JSON.stringify(stateData));
+        const isOpen = stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED";
+        if (isOpen) {
+          await adminClient.from("whatsapp_instances").update({ status: "connected" }).eq("id", inst.id);
+          return new Response(JSON.stringify({ status: "connected", message: "Instance is already connected" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (err) {
+        console.error("[get-qr] connectionState check error:", err);
+      }
+
+      // Call instance/connect to get QR code
+      try {
+        console.log("[get-qr] Fetching QR from", `${cleanBase}/instance/connect/${encodedName}`);
+        const qrRes = await fetch(`${cleanBase}/instance/connect/${encodedName}`, {
+          headers: { apikey: key },
+        });
+        const qrData = await qrRes.json();
+        console.log("[get-qr] QR response status:", qrRes.status, "keys:", Object.keys(qrData || {}));
+
+        // Evolution API returns: { base64: "data:image/png;base64,..." } or { qrcode: { base64: "..." } }
+        const qrBase64 = qrData?.base64 || qrData?.qrcode?.base64 || qrData?.code || null;
+        const pairingCode = qrData?.pairingCode || null;
+
+        if (qrBase64) {
+          return new Response(JSON.stringify({ status: "qr_ready", qr_code: qrBase64, pairing_code: pairingCode }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } else {
+          return new Response(JSON.stringify({ status: "no_qr", detail: qrData }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (err) {
+        console.error("[get-qr] Error fetching QR:", err);
+        return new Response(JSON.stringify({ error: "Failed to fetch QR code", detail: String(err) }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // ─── Action: disconnect ───
     if (action === "disconnect") {
       if (instanceId) {
