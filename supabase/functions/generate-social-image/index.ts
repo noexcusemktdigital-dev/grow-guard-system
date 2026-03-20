@@ -566,6 +566,7 @@ serve(async (req) => {
       tipo_postagem, headline, subheadline, cta, cena, elementos_visuais,
       manual_colors, manual_style, brand_name,
       supporting_text, bullet_points,
+      layout_type, logo_url, primary_ref_index, objective,
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
