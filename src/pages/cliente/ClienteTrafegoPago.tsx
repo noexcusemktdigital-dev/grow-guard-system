@@ -691,6 +691,7 @@ export default function ClienteTrafegoPago() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="estrategia" className="text-xs gap-1.5"><Target className="w-3.5 h-3.5" /> Estratégia</TabsTrigger>
+          <TabsTrigger value="metricas" className="text-xs gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> Métricas</TabsTrigger>
           <TabsTrigger value="historico" className="text-xs gap-1.5"><History className="w-3.5 h-3.5" /> Histórico</TabsTrigger>
         </TabsList>
 
