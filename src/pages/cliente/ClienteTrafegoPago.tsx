@@ -788,6 +788,36 @@ export default function ClienteTrafegoPago() {
           )}
         </TabsContent>
 
+        {/* ═══ MÉTRICAS ═══ */}
+        <TabsContent value="metricas" className="space-y-6 mt-4">
+          {/* Connection Cards */}
+          <div>
+            <p className="text-sm font-semibold mb-3">Contas de Anúncio</p>
+            <AdConnectionCards />
+          </div>
+
+          {/* Period selector */}
+          <div className="flex gap-2">
+            {[7, 30, 90].map((d) => (
+              <Button
+                key={d}
+                variant={metricsPeriod === d ? "default" : "outline"}
+                size="sm"
+                className="text-xs"
+                onClick={() => setMetricsPeriod(d)}
+              >
+                {d}d
+              </Button>
+            ))}
+          </div>
+
+          {/* Metrics Dashboard */}
+          <AdMetricsDashboard period={metricsPeriod} />
+
+          {/* AI Analysis */}
+          <AdAIAnalysis />
+        </TabsContent>
+
         {/* ═══ HISTÓRICO ═══ */}
         <TabsContent value="historico" className="space-y-4 mt-4">
           {loadingHistory ? (
