@@ -421,9 +421,11 @@ export function ArtWizard({
 
       // ─── Step 6: Review (AI-generated texts) ───
       case 6: {
-        const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+        const basePieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+        const layoutMultiplier = layoutTypes.length;
+        const totalPieces = basePieces * layoutMultiplier;
         const totalCost = totalPieces * creditCost;
-        const selectedLayout = LAYOUT_TYPES.find(l => l.value === layoutType);
+        const selectedLayouts = layoutTypes.map(lt => LAYOUT_TYPES.find(l => l.value === lt)).filter(Boolean);
         const selectedFormat = ART_FORMATS.find(f => f.value === artFormat);
         const selectedType = POST_TYPES.find(t => t.value === tipoPostagem);
 
