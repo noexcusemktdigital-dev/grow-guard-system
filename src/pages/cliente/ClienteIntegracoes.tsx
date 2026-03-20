@@ -242,7 +242,59 @@ function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation, refet
   );
 }
 
-/* ── Instance Card ── */
+/* ── QR Code Dialog ── */
+function QrCodeDialog({ open, onOpenChange, qrCode, pairingCode, instanceName, onConnected }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  qrCode: string | null;
+  pairingCode: string | null;
+  instanceName: string;
+  onConnected: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-base flex items-center gap-2">
+            <Smartphone className="w-4 h-4" /> Escanear QR Code
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 flex flex-col items-center">
+          <p className="text-xs text-muted-foreground text-center">
+            Abra o <strong>WhatsApp</strong> no celular → Configurações → Aparelhos conectados → Conectar → Escaneie o código abaixo.
+          </p>
+
+          {qrCode ? (
+            <div className="p-3 bg-white rounded-xl shadow-md">
+              <img
+                src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+                alt="QR Code WhatsApp"
+                className="w-56 h-56 object-contain"
+              />
+            </div>
+          ) : (
+            <div className="w-56 h-56 flex items-center justify-center bg-muted rounded-xl">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {pairingCode && (
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground">Código de pareamento:</p>
+              <p className="font-mono text-lg font-bold tracking-widest">{pairingCode}</p>
+            </div>
+          )}
+
+          <p className="text-[10px] text-muted-foreground text-center">
+            Instância: <span className="font-mono">{instanceName}</span>
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconnect, onReconfigureWebhook, isPending }: {
   instance: WhatsAppInstance;
   onCheckStatus: () => void;
