@@ -572,7 +572,8 @@ export function ArtWizard({
   };
 
   const isLastStep = step === TOTAL_STEPS;
-  const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+  const basePieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+  const totalPieces = basePieces * layoutTypes.length;
   const totalCost = totalPieces * creditCost;
 
   return (
