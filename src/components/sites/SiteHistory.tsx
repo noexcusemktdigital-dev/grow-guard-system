@@ -59,7 +59,7 @@ export function SiteHistory({ sites, onPreview }: Props) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold">{s.name}</p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant={s.status === "Publicado" ? "default" : "outline"} className="text-[9px]">{s.status}</Badge>
+                <Badge variant={s.status === "Publicado" ? "default" : s.status === "Aprovado" ? "secondary" : "outline"} className="text-[9px]">{s.status}</Badge>
                 <Badge variant="outline" className="text-[8px]">{typeLabels[s.type] || s.type}</Badge>
                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" /> {s.createdAt}
