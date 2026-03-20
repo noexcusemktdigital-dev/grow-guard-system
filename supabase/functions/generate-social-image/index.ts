@@ -96,13 +96,19 @@ CRITICAL RULES:
 3. Be hyper-specific about composition, colors, lighting, and spatial layout.
 4. Never use vague descriptions like "professional look" or "modern design". Be CONCRETE.
 ${hasRefs ? `5. You have been given BRAND REFERENCE IMAGES. Analyze them carefully and extract the exact visual design system: color usage patterns, layout structures, card shapes, icon styles, typography approach, photographic vs graphic style. Your output must faithfully replicate this design language in a NEW scene.
-6. IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references. Create a NEW scene that follows the same brand design language.` : ""}
+6. IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references. Create a NEW scene that follows the same brand design language.
+7. ${context.primary_ref_index !== undefined ? `Reference image #${(context.primary_ref_index || 0) + 1} is the PRIMARY reference (weight 60%). Match its design language MOST closely. The remaining references share the other 40% of influence.` : "All reference images have equal weight."}` : ""}
+${context.logo_url ? `8. A BRAND LOGO image has been provided separately. You MUST include the logo in the composition. Place it naturally (typically top-left or top-right corner) without distortion. Use the exact logo as provided.` : ""}
+${context.layout_type ? `9. LAYOUT TYPE SELECTED: "${context.layout_type}". You MUST follow the specific layout composition rules for this type. The layout determines WHERE elements go — follow it precisely.` : ""}
+
+${context.layout_type ? getLayoutRulesForPrompt(context.layout_type) : ""}
 
 The art_style determines the visual approach:
 - Styles starting with "grafica_" → FLAT GRAPHIC DESIGN (vector shapes, color blocks, geometric patterns, NO photographs)
 - Styles starting with "foto_" → PHOTOGRAPHIC (cinematic, editorial, real people/objects)
 - "ilustracao" → DIGITAL ILLUSTRATION (vector-like, friendly, stylized)
 - "collage" → MIXED-MEDIA COLLAGE (layered photos + graphic elements)
+- Layout types (hero_central, split_texto_imagem, etc.) → Follow the specific layout composition rules above
 
 OUTPUT SECTIONS (all in English):
 
