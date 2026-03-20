@@ -811,6 +811,14 @@ export default function ClienteIntegracoes() {
       <WhatsAppSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} />
       <EditInstanceDialog instance={editInstance} open={!!editInstance} onOpenChange={v => { if (!v) setEditInstance(null); }} onSave={handleEditSave} isPending={setupMutation.isPending} />
       <DiagnosticsDialog open={diagOpen} onOpenChange={setDiagOpen} instances={instances || []} setupMutation={setupMutation} refetch={refetch} />
+      <QrCodeDialog
+        open={qrDialogOpen}
+        onOpenChange={(v) => { if (!v) { stopPolling(); setQrDialogOpen(false); } }}
+        qrCode={qrCode}
+        pairingCode={pairingCode}
+        instanceName={qrInstanceName}
+        onConnected={() => { stopPolling(); setQrDialogOpen(false); refetch(); }}
+      />
     </div>
   );
 }
