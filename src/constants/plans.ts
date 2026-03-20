@@ -154,7 +154,6 @@ export interface EffectiveLimits {
   maxContents: number;
   /** @deprecated */
   maxSocialArts: number;
-  /** @deprecated */
   maxSites: number;
   /** @deprecated */
   maxLeads: number;
@@ -174,12 +173,18 @@ export function getEffectiveLimits(
       hasDispatches: TRIAL_PLAN.hasDispatches,
       maxContents: 9999,
       maxSocialArts: 9999,
-      maxSites: 9999,
+      maxSites: 1,
       maxLeads: 9999,
     };
   }
 
   const plan = UNIFIED_PLANS.find((p) => p.id === planId);
+
+  const siteLimits: Record<string, number> = {
+    starter: 1,
+    pro: 3,
+    enterprise: 9999,
+  };
 
   return {
     totalCredits: plan?.credits ?? 500,
@@ -190,7 +195,7 @@ export function getEffectiveLimits(
     hasDispatches: plan?.hasDispatches ?? false,
     maxContents: 9999,
     maxSocialArts: 9999,
-    maxSites: 9999,
+    maxSites: siteLimits[planId ?? "starter"] ?? 1,
     maxLeads: 9999,
   };
 }
