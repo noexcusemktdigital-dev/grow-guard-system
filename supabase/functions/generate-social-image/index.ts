@@ -57,6 +57,82 @@ interface StructuredPromptResult {
   text_hierarchy: TextHierarchy;
 }
 
+// --- Layout composition rules ---
+
+function getLayoutRulesForPrompt(layoutType: string): string {
+  const rules: Record<string, string> = {
+    hero_central: `LAYOUT RULES (Hero Central):
+- Large centered headline dominating the upper 60% of the canvas
+- Subheadline directly below in smaller weight
+- Background uses a textured gradient or subtle photographic image with dark overlay for contrast
+- CTA button centered at bottom
+- Brand logo small in top-left or top-right corner
+- Strong vertical symmetry`,
+    split_texto_imagem: `LAYOUT RULES (Split Text + Image):
+- Composition split vertically: left 45% is a solid or gradient color block with headline, supporting text and CTA stacked vertically
+- Right 55% is a high-quality photograph or illustration filling edge to edge
+- Brand logo in the text side, top corner
+- Clear dividing line or overlap between zones
+- Text is left-aligned within the text zone`,
+    card_moldura: `LAYOUT RULES (Card with Frame):
+- Background is a solid bold color or subtle gradient
+- Centered rounded card (border-radius 24px+) in white or contrasting color containing all text
+- Card contains: headline, subheadline, bullet points, CTA
+- Card has subtle shadow for depth
+- Brand logo outside the card in a corner
+- Clean generous padding inside card`,
+    imagem_overlay: `LAYOUT RULES (Image + Overlay):
+- Full-bleed high-quality photograph covering entire canvas
+- Dark gradient overlay (40-60% opacity) concentrated on the area where text appears (typically bottom half)
+- White or light-colored headline text with strong contrast
+- Supporting text and CTA in lighter weight below
+- Brand logo in corner with subtle backdrop blur`,
+    grid_carrossel: `LAYOUT RULES (Organized Grid):
+- Organized grid layout with 2-3 columns or rows
+- Each cell contains an icon/number + short text
+- Header zone at top with headline spanning full width
+- Footer zone with CTA
+- Clean dividers between sections
+- Consistent spacing and alignment
+- Brand logo in header
+- Professional infographic aesthetic`,
+    minimalista_clean: `LAYOUT RULES (Minimalist Clean):
+- 60% or more negative space (white or very light background)
+- Single focal element: one phrase, one object, or one graphic
+- Ultra-refined typography
+- Maximum 2 colors plus white/black
+- No clutter, no busy backgrounds
+- Brand logo subtle and small
+- Breathing room around every element`,
+    anuncio_agressivo: `LAYOUT RULES (Impact Advertisement):
+- MAXIMUM IMPACT layout
+- Headline text is ENORMOUS — fills 40%+ of the canvas
+- Ultra-bold weight, possibly tilted 2-5 degrees for energy
+- Vibrant saturated background color (red, yellow, electric blue)
+- High contrast between text and background
+- CTA in contrasting accent color, prominent
+- Brand logo prominent
+- Zero subtlety — everything screams attention`,
+    premium_luxo: `LAYOUT RULES (Premium / Luxury):
+- Dark background (#0a0a0a to #1a1a2e)
+- Elegant serif typography for headline
+- Gold, champagne, or rose-gold accent color for highlights and decorative elements
+- Thin ornamental lines or borders framing content
+- Generous letter-spacing on headline
+- Brand logo in metallic finish
+- Overall mood: exclusive, refined, aspirational`,
+    texto_dominante: `LAYOUT RULES (Text Dominant):
+- Typography IS the design — text as the main visual element
+- Headline uses creative typographic treatment: mixed weights, sizes, or colors within the text
+- Minimal or no imagery — background is solid or very subtle texture
+- Text occupies 70%+ of canvas
+- Supporting text in much smaller size below
+- Brand logo integrated into the typographic composition
+- Think poster design / editorial typography`,
+  };
+  return rules[layoutType] || "";
+}
+
 async function analyzeAndOptimizePrompt(
   apiKey: string,
   context: {
