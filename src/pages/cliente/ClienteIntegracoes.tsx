@@ -388,6 +388,11 @@ export default function ClienteIntegracoes() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editInstance, setEditInstance] = useState<WhatsAppInstance | null>(null);
   const [diagOpen, setDiagOpen] = useState(false);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [qrInstanceName, setQrInstanceName] = useState("");
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { data: org } = useOrgProfile();
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
