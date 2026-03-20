@@ -352,10 +352,10 @@ export function ArtWizard({
             <div>
               <h3 className="text-base font-semibold mb-1">📐 Diagramação</h3>
               <p className="text-sm text-muted-foreground">
-                Escolha como a arte será organizada. A IA vai seguir essa composição fielmente.
+                Escolha 1 ou 2 layouts. Com 2 layouts, a IA gera variações separadas para cada composição.
               </p>
             </div>
-            <LayoutPicker selected={layoutType} onSelect={setLayoutType} />
+            <LayoutPicker selected={layoutTypes} onSelect={setLayoutTypes} />
           </div>
         );
 
