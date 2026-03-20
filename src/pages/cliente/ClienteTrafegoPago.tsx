@@ -112,6 +112,7 @@ export default function ClienteTrafegoPago() {
   const approveMutation = useApproveTrafficStrategy();
 
   const [activeTab, setActiveTab] = useState("estrategia");
+  const [metricsPeriod, setMetricsPeriod] = useState(30);
   const [step, setStep] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
   const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
