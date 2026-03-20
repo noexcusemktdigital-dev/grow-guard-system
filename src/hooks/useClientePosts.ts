@@ -171,6 +171,7 @@ export function useGeneratePost() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-posts"] });
+      qc.invalidateQueries({ queryKey: ["credit-wallet"] });
     },
   });
 }
@@ -268,24 +269,9 @@ export function useBulkDeletePosts() {
 
 export function useApprovePost() {
   const qc = useQueryClient();
-  const { data: orgId } = useUserOrgId();
 
   return useMutation({
-    mutationFn: async ({ postId, type, numFrames }: { postId: string; type: "art" | "video"; numFrames?: number }) => {
-      if (!orgId) throw new Error("Org not found");
-
-      const creditCost = type === "video"
-        ? CREDIT_COST_VIDEO_PER_FRAME * (numFrames || 3)
-        : CREDIT_COST_ART;
-
-      const { error: debitError } = await supabase.rpc("debit_credits" as any, {
-        _org_id: orgId,
-        _amount: creditCost,
-        _description: type === "video" ? "Vídeo aprovado" : "Arte aprovada",
-        _source: "client-posts",
-      });
-      if (debitError) throw debitError;
-
+    mutationFn: async ({ postId }: { postId: string; type?: "art" | "video"; numFrames?: number }) => {
       const { error } = await supabase
         .from("client_posts" as any)
         .update({ status: "approved" } as any)
@@ -294,8 +280,7 @@ export function useApprovePost() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-posts"] });
-      qc.invalidateQueries({ queryKey: ["credit-wallet"] });
-      toast({ title: "Postagem aprovada!", description: "Créditos debitados com sucesso." });
+      toast({ title: "Postagem aprovada!" });
     },
   });
 }
