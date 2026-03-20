@@ -778,7 +778,7 @@ export default function ClienteSites() {
             </Button>
             {isLast ? (
               <Button onClick={handleGenerate} className="flex-1 gap-1" disabled={!form.nome_empresa}>
-                <Sparkles className="w-4 h-4" /> Gerar Site
+                <Sparkles className="w-4 h-4" /> Gerar Site ({SITE_CREDIT_COST} créditos)
               </Button>
             ) : (
               <Button onClick={() => setStepIdx(s => s + 1)} className="flex-1 gap-1">
@@ -787,6 +787,12 @@ export default function ClienteSites() {
             )}
           </div>
         )}
+        <InsufficientCreditsDialog
+          open={showCreditsDialog}
+          onOpenChange={setShowCreditsDialog}
+          actionLabel="gerar este site"
+          creditCost={SITE_CREDIT_COST}
+        />
       </div>
     );
   }
@@ -802,7 +808,13 @@ export default function ClienteSites() {
       <div>
         <p className="section-label mb-3">HISTÓRICO DE SITES</p>
         <SiteHistory sites={sites} onPreview={(site) => {
-          if (site.html) { setGeneratedHtml(site.html); setShowPreview(true); setCreating(true); }
+          if (site.html) {
+            setGeneratedHtml(site.html);
+            setCurrentSiteId(site.id);
+            setCurrentSiteStatus(site.status);
+            setShowPreview(true);
+            setCreating(true);
+          }
         }} />
       </div>
     </div>
