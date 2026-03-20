@@ -470,20 +470,85 @@ export default function ClienteIntegracoes() {
     }
   };
 
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
+
+  const startQrPolling = useCallback((inst: WhatsAppInstance) => {
+    stopPolling();
+    let attempts = 0;
+    pollingRef.current = setInterval(async () => {
+      attempts++;
+      if (attempts > 24) { // ~2 min
+        stopPolling();
+        return;
+      }
+      try {
+        const res = await setupMutation.mutateAsync({
+          action: "get-qr",
+          provider: "evolution",
+          instanceName: inst.instance_id,
+          baseUrl: inst.base_url || undefined,
+          apiKey: inst.client_token || undefined,
+        });
+        if (res?.status === "connected") {
+          stopPolling();
+          setQrDialogOpen(false);
+          refetch();
+          toast.success("WhatsApp conectado com sucesso!");
+        } else if (res?.qr_code) {
+          setQrCode(res.qr_code);
+          if (res.pairing_code) setPairingCode(res.pairing_code);
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 5000);
+  }, [stopPolling, setupMutation, refetch]);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => stopPolling(), [stopPolling]);
+
   const handleReconnect = async (inst: WhatsAppInstance) => {
     try {
-      let res: any;
       if (inst.provider === "evolution") {
-        res = await setupMutation.mutateAsync({
-          action: "connect",
+        // First try get-qr to show QR code
+        setQrInstanceName(inst.label || inst.instance_id);
+        setQrCode(null);
+        setPairingCode(null);
+        setQrDialogOpen(true);
+
+        const res = await setupMutation.mutateAsync({
+          action: "get-qr",
           provider: "evolution",
-          baseUrl: inst.base_url,
-          apiKey: inst.client_token,
           instanceName: inst.instance_id,
-          label: inst.label,
+          baseUrl: inst.base_url || undefined,
+          apiKey: inst.client_token || undefined,
         });
+
+        if (res?.status === "connected") {
+          setQrDialogOpen(false);
+          refetch();
+          toast.success("WhatsApp já está conectado!");
+          return;
+        }
+
+        if (res?.qr_code) {
+          setQrCode(res.qr_code);
+          if (res.pairing_code) setPairingCode(res.pairing_code);
+          // Start polling for connection status
+          startQrPolling(inst);
+        } else {
+          setQrDialogOpen(false);
+          toast.warning("Não foi possível obter o QR code", {
+            description: "Verifique se a instância existe no servidor Evolution.",
+          });
+        }
       } else {
-        res = await setupMutation.mutateAsync({
+        const res = await setupMutation.mutateAsync({
           action: "connect",
           provider: "zapi",
           instanceId: inst.instance_id,
@@ -491,16 +556,15 @@ export default function ClienteIntegracoes() {
           clientToken: inst.client_token,
           label: inst.label,
         });
-      }
-      refetch();
-      if (res?.status === "connected") {
-        toast.success("Reconexão realizada — conectado!");
-      } else {
-        toast.warning("Reconexão executada, mas status: " + (res?.status || "desconectado"), {
-          description: "A instância pode não existir no servidor ou o nome está diferente. Use o Diagnóstico para verificar.",
-        });
+        refetch();
+        if (res?.status === "connected") {
+          toast.success("Reconexão realizada — conectado!");
+        } else {
+          toast.warning("Reconexão executada, mas status: " + (res?.status || "desconectado"));
+        }
       }
     } catch (err: any) {
+      setQrDialogOpen(false);
       toast.error("Erro na reconexão: " + err.message);
     }
   };
