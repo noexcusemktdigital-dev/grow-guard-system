@@ -252,52 +252,81 @@ function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconne
   onReconfigureWebhook?: () => void;
   isPending: boolean;
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const isConn = instance.status === "connected";
   const isEvo = instance.provider === "evolution";
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isConn ? "bg-emerald-500/10" : "bg-muted"}`}>
-              {isEvo ? <Server className={`w-5 h-5 ${isConn ? "text-blue-500" : "text-muted-foreground"}`} /> : <MessageSquare className={`w-5 h-5 ${isConn ? "text-emerald-500" : "text-muted-foreground"}`} />}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold">{instance.label || instance.phone_number || instance.instance_id}</h4>
-                <Badge variant="outline" className={`text-[10px] gap-1 ${isConn ? "text-primary border-primary/30" : "text-muted-foreground border-border"}`}>
-                  {isConn ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                  {isConn ? "Conectado" : "Desconectado"}
-                </Badge>
+    <>
+      <Card className="overflow-hidden">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isConn ? "bg-emerald-500/10" : "bg-muted"}`}>
+                {isEvo ? <Server className={`w-5 h-5 ${isConn ? "text-blue-500" : "text-muted-foreground"}`} /> : <MessageSquare className={`w-5 h-5 ${isConn ? "text-emerald-500" : "text-muted-foreground"}`} />}
               </div>
-              {instance.phone_number && <p className="text-xs text-muted-foreground">Número: {instance.phone_number}</p>}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold">{instance.label || instance.phone_number || instance.instance_id}</h4>
+                  <Badge variant="outline" className={`text-[10px] gap-1 ${isConn ? "text-primary border-primary/30" : "text-muted-foreground border-border"}`}>
+                    {isConn ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                    {isConn ? "Conectado" : "Desconectado"}
+                  </Badge>
+                  <Badge variant="outline" className="text-[9px]">{isEvo ? "Evolution" : "Z-API"}</Badge>
+                </div>
+                {instance.phone_number && <p className="text-xs text-muted-foreground">Número: {instance.phone_number}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {!isConn && onReconnect && (
+                <Button variant="default" size="sm" onClick={onReconnect} disabled={isPending} title="Reconectar" className="gap-1">
+                  <Zap className="w-3.5 h-3.5" /> Reconectar
+                </Button>
+              )}
+              {isEvo && onReconfigureWebhook && (
+                <Button variant="outline" size="sm" onClick={onReconfigureWebhook} disabled={isPending} title="Reconfigurar Webhook" className="gap-1">
+                  <Webhook className="w-3.5 h-3.5" /> Webhook
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={onEdit} disabled={isPending} title="Editar">
+                <Pencil className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={onCheckStatus} disabled={isPending} title="Verificar status">
+                <RefreshCw className={`w-3.5 h-3.5 ${isPending ? "animate-spin" : ""}`} />
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)} disabled={isPending} title="Desconectar e remover" className="gap-1">
+                <Unplug className="w-3.5 h-3.5" /> Desconectar
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {!isConn && onReconnect && (
-              <Button variant="default" size="sm" onClick={onReconnect} disabled={isPending} title="Reconectar" className="gap-1">
-                <Zap className="w-3.5 h-3.5" /> Reconectar
+        </CardContent>
+      </Card>
+
+      {/* Disconnect confirmation dialog */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-4 h-4" /> Desconectar Instância
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja desconectar <strong>{instance.label || instance.phone_number || instance.instance_id}</strong>?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              A instância será removida e você poderá conectar uma nova em seguida.
+            </p>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+              <Button variant="destructive" size="sm" onClick={() => { setConfirmOpen(false); onDisconnect(); }} disabled={isPending} className="gap-1">
+                <Unplug className="w-3.5 h-3.5" /> Confirmar Desconexão
               </Button>
-            )}
-            {isEvo && onReconfigureWebhook && (
-              <Button variant="outline" size="sm" onClick={onReconfigureWebhook} disabled={isPending} title="Reconfigurar Webhook" className="gap-1">
-                <Webhook className="w-3.5 h-3.5" /> Webhook
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={onEdit} disabled={isPending} title="Editar">
-              <Pencil className="w-3.5 h-3.5" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={onCheckStatus} disabled={isPending} title="Verificar status">
-              <RefreshCw className={`w-3.5 h-3.5 ${isPending ? "animate-spin" : ""}`} />
-            </Button>
-            <Button variant="outline" size="sm" onClick={onDisconnect} disabled={isPending} className="text-destructive hover:text-destructive" title={isConn ? "Desconectar" : "Remover"}>
-              <Unplug className="w-3.5 h-3.5" />
-            </Button>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
