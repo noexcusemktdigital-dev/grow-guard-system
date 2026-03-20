@@ -54,7 +54,7 @@ export interface ArtGeneratePayload {
   contentId: string | null;
   quantity: number;
   carouselSlides: number;
-  layoutType?: string;
+  layoutTypes: string[];
   logoUrl?: string;
   primaryRefIndex?: number;
   objective?: string;
