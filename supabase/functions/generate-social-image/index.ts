@@ -572,6 +572,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const body = await req.json();
     const {
       prompt, format, file_path, nivel, persona, identidade_visual,
       organization_id, reference_images, art_style,
@@ -579,7 +580,8 @@ serve(async (req) => {
       manual_colors, manual_style, brand_name,
       supporting_text, bullet_points,
       layout_type, logo_url, primary_ref_index, objective,
-    } = await req.json();
+      extract_logo,
+    } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -587,6 +589,78 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // ─── Extract logo mode ───
+    if (extract_logo && reference_images?.length > 0) {
+      console.log("🔍 Extract logo mode: analyzing references...");
+      const refB64s: { type: string; image_url: { url: string } }[] = [];
+      for (const refUrl of reference_images.slice(0, 3)) {
+        const b64 = await urlToBase64(refUrl);
+        if (b64) refB64s.push({ type: "image_url", image_url: { url: b64 } });
+      }
+      if (refB64s.length === 0) {
+        return new Response(JSON.stringify({ error: "Could not load reference images" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3.1-flash-image-preview",
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Look at these reference images carefully. Find the brand logo/logotype that appears in them.
+Extract ONLY the logo — remove all other elements.
+Place the extracted logo on a clean solid white background.
+Maintain the original colors, proportions, and text of the logo exactly.
+If there are multiple logos, extract the most prominent one.
+Output ONLY the extracted logo image.`,
+              },
+              ...refB64s,
+            ],
+          }],
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (!extractResponse.ok) {
+        console.error("Logo extraction failed:", extractResponse.status);
+        return new Response(JSON.stringify({ error: "Logo extraction failed" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const extractData = await extractResponse.json();
+      const extractedImage = extractData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (!extractedImage) {
+        return new Response(JSON.stringify({ error: "No logo found in references" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Upload extracted logo
+      const logoPath = `logos/${organization_id}/${Date.now()}_extracted.png`;
+      const logoBase64 = extractedImage.replace(/^data:image\/\w+;base64,/, "");
+      const logoBinary = Uint8Array.from(atob(logoBase64), (c) => c.charCodeAt(0));
+      const { error: uploadErr } = await supabase.storage
+        .from("social-arts")
+        .upload(logoPath, logoBinary, { contentType: "image/png", upsert: true });
+      if (uploadErr) throw new Error(`Logo upload failed: ${uploadErr.message}`);
+      const { data: logoUrlData } = supabase.storage.from("social-arts").getPublicUrl(logoPath);
+
+      console.log("✅ Logo extracted and uploaded:", logoUrlData.publicUrl);
+      return new Response(JSON.stringify({ logo_url: logoUrlData.publicUrl }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Pre-check credits (skip for test orgs)
     const isTestOrg = typeof organization_id === "string" && organization_id.startsWith("test-");
@@ -702,29 +776,16 @@ serve(async (req) => {
       fullPrompt += `\n\n${layoutInstructions}`;
     }
 
-    // Append logo instruction
+    // Instruct the model to RESERVE SPACE for the logo instead of rendering it
     if (logo_url) {
-      fullPrompt += `\n\nBRAND LOGO: A brand logo image is attached. Place it naturally in the composition (typically top-left or top-right corner). Use the exact logo as provided — do NOT recreate, redraw, or stylize it. The logo must appear clearly and legibly.`;
+      fullPrompt += `\n\nBRAND LOGO PLACEMENT: Leave a CLEAN, EMPTY rectangular space (approximately 10-15% of image width) in the top-left corner of the design for the brand logo. This space must have a solid, uniform background matching the surrounding design — do NOT place any text, graphics, or busy patterns there. The logo will be composited in post-production.`;
     }
 
     console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
-    // Build message content — include logo as image in Stage 2 for accurate reproduction
-    let messageContent: any;
-    if (logo_url) {
-      const logoB64 = await urlToBase64(logo_url);
-      if (logoB64) {
-        messageContent = [
-          { type: "text", text: fullPrompt },
-          { type: "image_url", image_url: { url: logoB64 } },
-        ];
-      } else {
-        messageContent = fullPrompt;
-      }
-    } else {
-      messageContent = fullPrompt;
-    }
+    // Stage 2: Generate image (NO logo image sent — just text prompt + refs)
+    const messageContent: any = fullPrompt;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -756,11 +817,73 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    let imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageData) {
       console.error("No image in response:", JSON.stringify(data).slice(0, 500));
       throw new Error("No image generated");
+    }
+
+    // ─── Stage 3: Logo Composition (overlay real logo) ───
+    if (logo_url) {
+      console.log("🖼️ Stage 3: Compositing brand logo onto generated art...");
+      const logoB64 = await urlToBase64(logo_url);
+      if (logoB64) {
+        try {
+          const compositeResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-3.1-flash-image-preview",
+              messages: [{
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: `You are a professional graphic designer doing final production. 
+
+TASK: Place the brand logo (second image) onto the design artwork (first image).
+
+RULES:
+- Place the logo in the top-left corner area of the design
+- Scale the logo to approximately 8-12% of the image width
+- The logo must appear EXACTLY as provided — same colors, same shape, same proportions, same text
+- Do NOT redraw, stylize, modify, reinterpret, or simplify the logo in ANY way
+- Do NOT change any other part of the design — keep everything else pixel-perfect
+- If the corner area has a busy background, add a very subtle semi-transparent backing behind the logo for legibility
+- Maintain the overall design composition and quality
+
+OUTPUT: The same design with the real brand logo composited in.`,
+                  },
+                  { type: "image_url", image_url: { url: imageData } },
+                  { type: "image_url", image_url: { url: logoB64 } },
+                ],
+              }],
+              modalities: ["image", "text"],
+            }),
+          });
+
+          if (compositeResponse.ok) {
+            const compositeData = await compositeResponse.json();
+            const compositedImage = compositeData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+            if (compositedImage) {
+              console.log("✅ Logo composited successfully");
+              imageData = compositedImage;
+            } else {
+              console.warn("⚠️ Stage 3 returned no image, using Stage 2 result");
+            }
+          } else {
+            console.warn("⚠️ Stage 3 failed (HTTP " + compositeResponse.status + "), using Stage 2 result");
+          }
+        } catch (compErr) {
+          console.warn("⚠️ Stage 3 error (non-blocking):", compErr);
+        }
+      } else {
+        console.warn("⚠️ Could not convert logo to base64, skipping Stage 3");
+      }
     }
 
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");

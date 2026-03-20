@@ -1,9 +1,10 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Upload, X, Plus, Loader2, Star, ImageIcon } from "lucide-react";
+import { Upload, X, Plus, Loader2, Star, ImageIcon, Wand2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
+import { Button } from "@/components/ui/button";
 
 interface RefUploaderProps {
   referenceUrls: string[];
@@ -29,6 +30,33 @@ export function RefUploader({
 }: RefUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [extractingLogo, setExtractingLogo] = useState(false);
+
+  const handleExtractLogo = async () => {
+    if (!orgId || referenceUrls.length === 0 || !setLogoUrl) return;
+    setExtractingLogo(true);
+    try {
+      const resp = await supabase.functions.invoke("generate-social-image", {
+        body: {
+          extract_logo: true,
+          reference_images: referenceUrls.slice(0, 3),
+          organization_id: orgId,
+        },
+      });
+      if (resp.error) throw new Error(resp.error.message);
+      if (resp.data?.error) throw new Error(resp.data.error);
+      if (resp.data?.logo_url) {
+        setLogoUrl(resp.data.logo_url);
+        toast({ title: "Logo extraída com sucesso!", description: "A logo foi detectada nas referências." });
+      } else {
+        toast({ title: "Não foi possível extrair a logo", description: "Tente enviar a logo manualmente.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao extrair logo", description: err.message, variant: "destructive" });
+    } finally {
+      setExtractingLogo(false);
+    }
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -110,6 +138,18 @@ export function RefUploader({
           </div>
           <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
           <p className="text-[10px] text-muted-foreground">A logo será inserida na arte exatamente como enviada.</p>
+          {!logoUrl && referenceUrls.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={handleExtractLogo}
+              disabled={extractingLogo}
+            >
+              {extractingLogo ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+              Extrair logo das referências
+            </Button>
+          )}
         </div>
       )}
 

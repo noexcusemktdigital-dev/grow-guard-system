@@ -54,7 +54,7 @@ export interface ArtGeneratePayload {
   contentId: string | null;
   quantity: number;
   carouselSlides: number;
-  layoutType?: string;
+  layoutTypes: string[];
   logoUrl?: string;
   primaryRefIndex?: number;
   objective?: string;
@@ -91,7 +91,7 @@ export function ArtWizard({
   const [carouselSlides, setCarouselSlides] = useState(5);
 
   // Step 3: Layout (replaces old Style)
-  const [layoutType, setLayoutType] = useState("hero_central");
+  const [layoutTypes, setLayoutTypes] = useState<string[]>(["hero_central"]);
 
   // Step 4: References + Logo
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
@@ -146,7 +146,7 @@ export function ArtWizard({
     switch (step) {
       case 1: return !!(briefingText.trim() || contentData);
       case 2: return true;
-      case 3: return true;
+      case 3: return layoutTypes.length >= 1;
       case 4: return referenceUrls.length >= 3 && !!logoUrl;
       case 5: return true;
       case 6: return !!headline.trim();
@@ -173,14 +173,14 @@ export function ArtWizard({
     }
     onGenerate({
       format: artFormat,
-      style: layoutType,
+      style: layoutTypes[0],
       tipoPostagem,
       headline, subheadline, cta, cena, elementosVisuais,
       manualColors: "", manualStyle: "",
       brandName, supportingText, bulletPoints,
       referenceUrls, contentId, quantity,
       carouselSlides: tipoPostagem === "carrossel" ? carouselSlides : 0,
-      layoutType,
+      layoutTypes,
       logoUrl,
       primaryRefIndex,
       objective,
@@ -352,10 +352,10 @@ export function ArtWizard({
             <div>
               <h3 className="text-base font-semibold mb-1">📐 Diagramação</h3>
               <p className="text-sm text-muted-foreground">
-                Escolha como a arte será organizada. A IA vai seguir essa composição fielmente.
+                Escolha 1 ou 2 layouts. Com 2 layouts, a IA gera variações separadas para cada composição.
               </p>
             </div>
-            <LayoutPicker selected={layoutType} onSelect={setLayoutType} />
+            <LayoutPicker selected={layoutTypes} onSelect={setLayoutTypes} />
           </div>
         );
 
@@ -421,9 +421,11 @@ export function ArtWizard({
 
       // ─── Step 6: Review (AI-generated texts) ───
       case 6: {
-        const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+        const basePieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+        const layoutMultiplier = layoutTypes.length;
+        const totalPieces = basePieces * layoutMultiplier;
         const totalCost = totalPieces * creditCost;
-        const selectedLayout = LAYOUT_TYPES.find(l => l.value === layoutType);
+        const selectedLayouts = layoutTypes.map(lt => LAYOUT_TYPES.find(l => l.value === lt)).filter(Boolean);
         const selectedFormat = ART_FORMATS.find(f => f.value === artFormat);
         const selectedType = POST_TYPES.find(t => t.value === tipoPostagem);
 
@@ -529,7 +531,7 @@ export function ArtWizard({
                       <span>{totalPieces} {tipoPostagem === "carrossel" ? "slides" : "peça(s)"}</span>
 
                       <span className="text-muted-foreground">Diagramação:</span>
-                      <span>{selectedLayout?.label}</span>
+                      <span>{selectedLayouts.map(l => l?.label).join(" + ")}</span>
 
                       <span className="text-muted-foreground">Formato:</span>
                       <span>{selectedFormat?.label} ({selectedFormat?.ratio})</span>
@@ -570,7 +572,8 @@ export function ArtWizard({
   };
 
   const isLastStep = step === TOTAL_STEPS;
-  const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+  const basePieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+  const totalPieces = basePieces * layoutTypes.length;
   const totalCost = totalPieces * creditCost;
 
   return (
