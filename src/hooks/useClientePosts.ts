@@ -171,6 +171,7 @@ export function useGeneratePost() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-posts"] });
+      qc.invalidateQueries({ queryKey: ["credit-wallet"] });
     },
   });
 }

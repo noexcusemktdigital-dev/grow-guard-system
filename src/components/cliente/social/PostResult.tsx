@@ -106,16 +106,32 @@ export function PostResult({
             {!allApproved ? (
               <Button onClick={onApprove} disabled={isApproving} className="flex-1" size="lg">
                 {isApproving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                Aprovar ({totalCost} créditos)
+                Aprovar
               </Button>
             ) : (
               <Button disabled className="flex-1" size="lg" variant="secondary">
                 <Check className="w-4 h-4 mr-2" /> Aprovado
               </Button>
             )}
-            <Button variant="outline" onClick={onRegenerate} className="flex-1" size="lg">
-              <RefreshCw className="w-4 h-4 mr-2" /> Regenerar
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="flex-1" size="lg">
+                  <RefreshCw className="w-4 h-4 mr-2" /> Regenerar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Regenerar {allResults.length > 1 ? "artes" : "arte"}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cada regeneração consome {creditCost} créditos por peça ({totalCost} créditos no total). Deseja continuar?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={onRegenerate}>Regenerar</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             {allResults.length === 1 && allResults[0].result_url && (
               <Button variant="secondary" asChild size="lg">
                 <a href={allResults[0].result_url} download target="_blank" rel="noopener noreferrer">
