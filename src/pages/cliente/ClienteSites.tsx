@@ -419,7 +419,7 @@ export default function ClienteSites() {
       setGenerating(false);
       setGenProgress(0);
     }
-  }, [form, orgId, strategyAnswers, viPalette, viFonts, viStyle, visualIdentity, whatsappLink, createSiteMutation, activeStrategy]);
+  }, [form, orgId, strategyAnswers, viPalette, viFonts, viStyle, visualIdentity, whatsappLink, createSiteMutation, activeStrategy, wallet]);
 
   const resetWizard = () => {
     setShowPreview(false);
