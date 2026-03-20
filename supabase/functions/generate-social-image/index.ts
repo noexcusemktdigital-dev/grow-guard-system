@@ -17,7 +17,19 @@ async function urlToBase64(url: string): Promise<string | null> {
       console.warn(`Failed to fetch reference image (${res.status}): ${url}`);
       return null;
     }
-    const contentType = res.headers.get("content-type") || "image/png";
+    let contentType = res.headers.get("content-type") || "image/png";
+
+    // The AI model does not support SVG — skip unsupported MIME types
+    if (contentType.includes("svg")) {
+      console.warn(`Skipping unsupported MIME type (${contentType}): ${url}`);
+      return null;
+    }
+
+    // Normalize content-type to a supported raster format
+    if (!contentType.startsWith("image/")) {
+      contentType = "image/png";
+    }
+
     const buffer = new Uint8Array(await res.arrayBuffer());
     // Chunked base64 encoding to avoid stack overflow on large images
     let binary = "";
