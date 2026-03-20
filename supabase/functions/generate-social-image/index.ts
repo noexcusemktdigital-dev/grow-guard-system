@@ -653,6 +653,10 @@ serve(async (req) => {
       brand_name,
       supporting_text,
       bullet_points,
+      layout_type,
+      logo_url,
+      primary_ref_index,
+      objective,
     }, base64Refs.length > 0 ? base64Refs : undefined);
 
     // Quality and style instructions
