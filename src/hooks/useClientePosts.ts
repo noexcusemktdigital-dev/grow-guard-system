@@ -70,6 +70,11 @@ export function useGeneratePost() {
       brand_name?: string;
       supporting_text?: string;
       bullet_points?: string;
+      // Layout + Logo fields
+      layout_type?: string;
+      logo_url?: string;
+      primary_ref_index?: number;
+      objective?: string;
       // Video-specific structured fields
       plataforma?: string;
       estilo_visual?: string;
