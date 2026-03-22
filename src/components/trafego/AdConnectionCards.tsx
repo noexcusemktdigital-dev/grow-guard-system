@@ -81,6 +81,7 @@ export function AdConnectionCards() {
         save_failed: "Erro ao salvar a conexão. Tente novamente.",
         invalid_platform: "Plataforma inválida.",
         access_denied: "Acesso negado. Você precisa autorizar o acesso.",
+        no_ad_account: "Não foi possível acessar contas do Google Ads. Verifique se o Developer Token possui nível 'Basic Access' no Google Ads MCC (Ferramentas → Centro de API).",
       };
       toast({
         title: "Erro na conexão",

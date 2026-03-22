@@ -89,14 +89,29 @@ serve(async (req) => {
               "https://googleads.googleapis.com/v16/customers:listAccessibleCustomers",
               { headers: { Authorization: `Bearer ${accessToken}`, "developer-token": devToken } }
             );
-            const customersData = await customersRes.json();
-            if (customersData.resourceNames?.length > 0) {
-              accountId = customersData.resourceNames[0].replace("customers/", "");
-              accountName = `Google Ads ${accountId}`;
+            const contentType = customersRes.headers.get("content-type") || "";
+            const bodyText = await customersRes.text();
+            console.log("Google Ads listAccessibleCustomers status:", customersRes.status, "content-type:", contentType);
+
+            if (!customersRes.ok || !contentType.includes("application/json")) {
+              console.error("Google Ads listAccessibleCustomers failed. Status:", customersRes.status, "Body:", bodyText.substring(0, 500));
+            } else {
+              const customersData = JSON.parse(bodyText);
+              if (customersData.resourceNames?.length > 0) {
+                accountId = customersData.resourceNames[0].replace("customers/", "");
+                accountName = `Google Ads ${accountId}`;
+              }
             }
           } catch (e) {
             console.warn("Could not fetch Google Ads customers:", e);
           }
+        }
+
+        // Block connection if no account_id was found
+        if (!accountId) {
+          console.error("No Google Ads account_id found — blocking connection save");
+          const errUrl = `${appRedirectBase}/cliente/trafego-pago?ads_error=no_ad_account`;
+          return new Response(null, { status: 302, headers: { Location: errUrl } });
         }
       } else if (platform === "meta_ads") {
         const appId = Deno.env.get("META_APP_ID");
