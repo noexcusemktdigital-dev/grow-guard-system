@@ -248,14 +248,28 @@ serve(async (req) => {
             "https://googleads.googleapis.com/v16/customers:listAccessibleCustomers",
             { headers: { Authorization: `Bearer ${accessToken}`, "developer-token": devToken } }
           );
-          const customersData = await customersRes.json();
-          if (customersData.resourceNames?.length > 0) {
-            accountId = customersData.resourceNames[0].replace("customers/", "");
-            accountName = `Google Ads ${accountId}`;
+          const contentType = customersRes.headers.get("content-type") || "";
+          const bodyText = await customersRes.text();
+          console.log("POST: Google Ads listAccessibleCustomers status:", customersRes.status, "content-type:", contentType);
+
+          if (!customersRes.ok || !contentType.includes("application/json")) {
+            console.error("POST: Google Ads listAccessibleCustomers failed. Status:", customersRes.status, "Body:", bodyText.substring(0, 500));
+          } else {
+            const customersData = JSON.parse(bodyText);
+            if (customersData.resourceNames?.length > 0) {
+              accountId = customersData.resourceNames[0].replace("customers/", "");
+              accountName = `Google Ads ${accountId}`;
+            }
           }
         } catch (e) {
           console.warn("Could not fetch Google Ads customers:", e);
         }
+      }
+
+      if (!accountId) {
+        return new Response(JSON.stringify({ error: "No Google Ads account found. Verify Developer Token has Basic Access level." }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     } else if (platform === "meta_ads") {
       const appId = Deno.env.get("META_APP_ID");
