@@ -1,30 +1,51 @@
 
 
-# Corrigir client_id vazio no OAuth do Google Ads
+# Corrigir sincronização Google Ads — account_id nulo
 
-## Problema
+## Diagnóstico confirmado (logs do backend)
 
-A variável `VITE_GOOGLE_ADS_CLIENT_ID` foi adicionada como secret do backend (Edge Functions), mas variáveis `VITE_*` precisam estar no `.env` do frontend para serem acessíveis via `import.meta.env`. Como o `.env` é auto-gerenciado pelo Lovable Cloud, o valor nunca chega ao frontend -- resultando em `client_id=` vazio na URL do Google.
+A cadeia de erro é:
 
-## Solução
+```text
+OAuth callback → listAccessibleCustomers retorna HTML (não JSON)
+→ accountId fica null → conexão salva sem account_id
+→ ads-sync-metrics → "No Google Ads customer ID" → erro
+```
 
-Criar uma Edge Function leve (`ads-get-config`) que retorna o `GOOGLE_ADS_CLIENT_ID` para o frontend. Assim o Client ID (que é um valor público) fica disponível sem precisar alterar o `.env`.
+O `listAccessibleCustomers` retornou HTML em vez de JSON. Isso acontece quando:
+- O Developer Token tem nível "Test Account" (só funciona com contas de teste)
+- Ou o Developer Token não foi aprovado para "Basic Access"
 
-### 1. Nova Edge Function: `ads-get-config`
-- Lê o secret `GOOGLE_ADS_CLIENT_ID` do ambiente
-- Retorna `{ client_id: "..." }` como JSON
-- CORS habilitado, sem autenticação obrigatória (Client ID é público)
+## Plano de correção (2 partes)
 
-### 2. Atualizar `getOAuthUrl` em `useAdPlatforms.ts`
-- Transformar `getOAuthUrl` em função assíncrona
-- Antes de montar a URL, chamar `ads-get-config` para obter o `client_id`
-- Cachear o valor para não chamar a cada clique
+### Parte 1: Verificação do Developer Token (ação manual)
+No Google Ads MCC → Tools → API Center, verificar o nível de acesso do Developer Token:
+- **Test Account**: só funciona com contas de teste do Google Ads, não com contas reais
+- **Basic Access**: funciona com contas reais (é o que você precisa)
 
-### 3. Atualizar `AdConnectionCards.tsx`
-- Ajustar `handleConnect` para usar `await getOAuthUrl(...)` (agora assíncrono)
+Se estiver em "Test Account", é preciso solicitar "Basic Access" ao Google.
 
-## Arquivos envolvidos
-- `supabase/functions/ads-get-config/index.ts` (novo)
-- `src/hooks/useAdPlatforms.ts` (alterar `getOAuthUrl`)
-- `src/components/trafego/AdConnectionCards.tsx` (ajustar chamada async)
+### Parte 2: Melhorias no código (3 correções)
+
+#### 1. `ads-oauth-callback` — não salvar conexão sem account_id
+Atualmente o callback salva a conexão mesmo quando não consegue obter o customer ID. Vou:
+- Adicionar log detalhado do erro (status HTTP + corpo da resposta)
+- Se `accountId` for null após a tentativa, redirecionar com erro específico (`no_ad_account`)
+- Não salvar conexão sem account_id
+
+#### 2. `ads-oauth-callback` — tratar resposta não-JSON do Google
+O código atual faz `.json()` direto sem verificar o content-type. Vou:
+- Verificar se a resposta é JSON antes de parsear
+- Logar o corpo da resposta em caso de erro para debug
+
+#### 3. `AdConnectionCards.tsx` — mensagem de erro mais clara
+Adicionar tratamento para o novo código de erro `no_ad_account` na tela, explicando que o Developer Token pode não ter permissão.
+
+## Arquivos modificados
+- `supabase/functions/ads-oauth-callback/index.ts`
+- `src/components/trafego/AdConnectionCards.tsx`
+
+## Resultado esperado
+- Se o Developer Token não tiver acesso, o usuário verá um erro claro em vez de uma conexão "fantasma" sem métricas
+- Se o token tiver acesso correto, a conexão será salva com o customer ID e a sincronização funcionará
 
