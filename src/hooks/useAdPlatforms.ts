@@ -158,12 +158,17 @@ export function useAnalyzeAds() {
   });
 }
 
-export function getOAuthUrl(platform: "google_ads" | "meta_ads", redirectUri: string): string {
+const SUPABASE_FUNCTIONS_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
+
+export function getOAuthUrl(platform: "google_ads" | "meta_ads", organizationId: string): string {
+  const redirectUri = `${SUPABASE_FUNCTIONS_URL}/ads-oauth-callback`;
+  const state = btoa(JSON.stringify({ platform, organization_id: organizationId, origin: window.location.origin }));
+
   if (platform === "google_ads") {
     const clientId = import.meta.env.VITE_GOOGLE_ADS_CLIENT_ID || "";
-    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent("https://www.googleapis.com/auth/adwords.readonly")}&access_type=offline&prompt=consent`;
+    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent("https://www.googleapis.com/auth/adwords")}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
   } else {
     const appId = import.meta.env.VITE_META_APP_ID || "";
-    return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=ads_read&response_type=code`;
+    return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=ads_read&response_type=code&state=${encodeURIComponent(state)}`;
   }
 }

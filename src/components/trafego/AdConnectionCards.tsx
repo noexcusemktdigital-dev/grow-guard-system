@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { Globe, Users, RefreshCw, Unplug, Loader2, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Globe, Users, RefreshCw, Unplug, Loader2, ExternalLink, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAdConnections, useSyncMetrics, useDisconnectAd, getOAuthUrl, AdConnection } from "@/hooks/useAdPlatforms";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { toast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 const platformConfig = {
   google_ads: {
@@ -31,33 +32,62 @@ export function AdConnectionCards() {
   const { data: orgId } = useUserOrgId();
   const syncMutation = useSyncMetrics();
   const disconnectMutation = useDisconnectAd();
+  const queryClient = useQueryClient();
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
 
-  const handleConnect = async (platform: "google_ads" | "meta_ads") => {
-    const redirectUri = `${window.location.origin}/cliente/trafego-pago?oauth_callback=true&platform=${platform}`;
-    const url = getOAuthUrl(platform, redirectUri);
-    window.open(url, "_blank", "width=600,height=700");
+  const handleConnect = (platform: "google_ads" | "meta_ads") => {
+    if (!orgId) {
+      toast({ title: "Erro", description: "Organização não encontrada.", variant: "destructive" });
+      return;
+    }
+
+    const url = getOAuthUrl(platform, orgId);
+    setConnectingPlatform(platform);
+
+    // Open in a new top-level window to avoid iframe blocking
+    const w = window.open(url, "_blank", "noopener,noreferrer");
+    if (!w) {
+      // Popup blocked — try navigating directly
+      window.open(url, "_blank");
+    }
+
+    toast({
+      title: "Autorização iniciada",
+      description: "Complete a autorização na nova aba. Ao finalizar, você será redirecionado de volta.",
+    });
   };
 
-  // Handle OAuth callback
+  // Handle return from OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const isCallback = params.get("oauth_callback");
-    const code = params.get("code");
-    const platform = params.get("platform");
+    const adsConnected = params.get("ads_connected");
+    const adsError = params.get("ads_error");
 
-    if (isCallback && code && platform && orgId) {
-      setConnectingPlatform(platform);
-      const redirectUri = `${window.location.origin}/cliente/trafego-pago?oauth_callback=true&platform=${platform}`;
-
-      supabase.functions.invoke("ads-oauth-callback", {
-        body: { platform, code, redirect_uri: redirectUri, organization_id: orgId },
-      }).then(() => {
-        setConnectingPlatform(null);
-        window.history.replaceState({}, "", window.location.pathname);
-      });
+    if (adsConnected) {
+      const label = adsConnected === "google_ads" ? "Google Ads" : "Meta Ads";
+      toast({ title: `${label} conectado com sucesso!`, description: "Agora você pode sincronizar suas métricas." });
+      queryClient.invalidateQueries({ queryKey: ["ad-connections"] });
+      window.history.replaceState({}, "", window.location.pathname);
+      setConnectingPlatform(null);
     }
-  }, [orgId]);
+
+    if (adsError) {
+      const errorMessages: Record<string, string> = {
+        credentials_not_configured: "Credenciais da plataforma não configuradas no backend.",
+        token_exchange_failed: "Falha ao trocar o código de autorização. Tente novamente.",
+        save_failed: "Erro ao salvar a conexão. Tente novamente.",
+        invalid_platform: "Plataforma inválida.",
+        access_denied: "Acesso negado. Você precisa autorizar o acesso.",
+      };
+      toast({
+        title: "Erro na conexão",
+        description: errorMessages[adsError] || `Erro: ${adsError}`,
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+      setConnectingPlatform(null);
+    }
+  }, []);
 
   const getConnection = (platform: string): AdConnection | undefined =>
     connections?.find((c) => c.platform === platform && c.status === "active");
@@ -137,7 +167,7 @@ export function AdConnectionCards() {
                   ) : (
                     <ExternalLink className="w-3.5 h-3.5" />
                   )}
-                  Conectar {config.label}
+                  {isConnecting ? "Aguardando autorização..." : `Conectar ${config.label}`}
                 </Button>
               )}
             </CardContent>
