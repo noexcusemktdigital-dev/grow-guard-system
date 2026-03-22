@@ -35,26 +35,29 @@ export function AdConnectionCards() {
   const queryClient = useQueryClient();
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
 
-  const handleConnect = (platform: "google_ads" | "meta_ads") => {
+  const handleConnect = async (platform: "google_ads" | "meta_ads") => {
     if (!orgId) {
       toast({ title: "Erro", description: "Organização não encontrada.", variant: "destructive" });
       return;
     }
 
-    const url = getOAuthUrl(platform, orgId);
     setConnectingPlatform(platform);
+    try {
+      const url = await getOAuthUrl(platform, orgId);
 
-    // Open in a new top-level window to avoid iframe blocking
-    const w = window.open(url, "_blank", "noopener,noreferrer");
-    if (!w) {
-      // Popup blocked — try navigating directly
-      window.open(url, "_blank");
+      const w = window.open(url, "_blank", "noopener,noreferrer");
+      if (!w) {
+        window.open(url, "_blank");
+      }
+
+      toast({
+        title: "Autorização iniciada",
+        description: "Complete a autorização na nova aba. Ao finalizar, você será redirecionado de volta.",
+      });
+    } catch (err: any) {
+      toast({ title: "Erro ao iniciar conexão", description: err.message, variant: "destructive" });
+      setConnectingPlatform(null);
     }
-
-    toast({
-      title: "Autorização iniciada",
-      description: "Complete a autorização na nova aba. Ao finalizar, você será redirecionado de volta.",
-    });
   };
 
   // Handle return from OAuth callback
