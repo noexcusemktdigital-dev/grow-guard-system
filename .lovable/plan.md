@@ -1,83 +1,78 @@
 
 ## Diagnóstico
 
-O erro não está na conta Google em si. O problema principal é o fluxo atual de OAuth abrindo a autorização do Google a partir do preview embutido da plataforma. O `accounts.google.com` não aceita esse tipo de carregamento e o navegador bloqueia com `ERR_BLOCKED_BY_RESPONSE`.
+O erro atual não é mais o bloqueio do iframe. Agora o problema é outro e está bem claro:
 
-Também encontrei 2 problemas no fluxo atual:
-1. O OAuth nem chega no backend hoje (não há logs da função `ads-oauth-callback`).
-2. A scope do Google Ads está incorreta no frontend: o código usa `adwords.readonly`, mas a scope oficial é `https://www.googleapis.com/auth/adwords`.
-3. O redirect URI informado antes está desalinhado com o código atual. Hoje o frontend usa `/cliente/trafego-pago?...`, mas a orientação passada foi cadastrar a URL da função backend.
-
-## Plano de correção
-
-### 1. Tirar o OAuth de dentro do preview embutido
-Vou ajustar o botão “Conectar Google Ads” para:
-- detectar quando o app está rodando embutido
-- abrir uma aba/página standalone antes de iniciar o OAuth
-- iniciar o Google OAuth apenas nessa janela top-level
-
-Isso evita o bloqueio do `accounts.google.com`.
-
-### 2. Padronizar o callback no backend
-Vou mudar o fluxo para o Google redirecionar para uma URL estável do backend, e não mais para a página `/cliente/trafego-pago`.
-
-Novo fluxo:
 ```text
-Cliente clica em Conectar
-→ abre aba standalone
-→ vai para Google OAuth
-→ Google redireciona para ads-oauth-callback
-→ backend troca code por token
-→ backend salva conexão
-→ backend redireciona de volta para /cliente/trafego-pago com status=success
+redirect_uri_mismatch
+redirect_uri = https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/ads-oauth-callback
 ```
 
-Assim:
-- fica mais confiável
-- precisa cadastrar só uma redirect URI estável no Google
-- evita depender de URL dinâmica de preview
+Isso significa que o Google está recebendo essa URL no login, mas essa URL ainda não foi cadastrada exatamente nas credenciais OAuth do Google Cloud.
 
-### 3. Corrigir a URL OAuth do Google
-Vou ajustar o `getOAuthUrl()` para:
-- usar a scope oficial `https://www.googleapis.com/auth/adwords`
-- enviar `state` com dados mínimos para retorno seguro
-- usar a redirect URI do backend
+Como o erro acontece antes do retorno, a função `ads-oauth-callback` nem é chamada mesmo — por isso não há logs.
 
-### 4. Atualizar a função `ads-oauth-callback`
-A função passará a suportar o callback real do Google via `GET`, além de:
-- validar `platform` e `state`
-- trocar `code` por token
-- buscar a conta acessível
-- salvar em `ad_platform_connections`
-- redirecionar o usuário de volta para a tela de Tráfego Pago com sucesso ou erro amigável
+## O que precisa ser corrigido
 
-### 5. Melhorar feedback na interface
-Na tela de Tráfego Pago, vou adicionar tratamento visual para:
-- “Conexão iniciada em nova aba”
-- “Conta conectada com sucesso”
-- “Falha na autenticação”
-- aviso contextual quando o usuário estiver no preview embutido
+### 1. Cadastrar a redirect URI exata no Google Cloud
+No Google Cloud Console, nas credenciais do OAuth Client usado por esse app, adicionar em **Authorized redirect URIs** exatamente:
 
-## Arquivos envolvidos
-
-- `src/components/trafego/AdConnectionCards.tsx`
-- `src/hooks/useAdPlatforms.ts`
-- `supabase/functions/ads-oauth-callback/index.ts`
-
-## Detalhes técnicos
-
-- Motivo do erro atual: OAuth do Google sendo disparado a partir de contexto embutido/iframe.
-- Scope correta do Google Ads: `https://www.googleapis.com/auth/adwords`
-- Redirect URI a cadastrar no Google após a correção:
 ```text
 https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/ads-oauth-callback
 ```
-- O backend continuará salvando tokens em `ad_platform_connections`, que já está com RLS habilitado.
+
+Tem que ser idêntica:
+- com `https`
+- sem barra extra no final
+- mesmo domínio
+- mesmo caminho `/functions/v1/ads-oauth-callback`
+
+### 2. Conferir se o Client ID é o mesmo do projeto
+O `client_id` exibido no erro precisa ser o mesmo Client ID configurado no frontend/backend. Vou validar no código e manter o fluxo apontando sempre para essa mesma credencial, para evitar divergência entre ambientes.
+
+### 3. Validar se o app OAuth está no projeto Google correto
+Se existir mais de um projeto/credencial no Google Cloud, o erro pode acontecer porque a URI foi cadastrada em um Client ID diferente do que a aplicação está usando. O ajuste é garantir que:
+- o Client ID da plataforma
+- e a credencial editada no Google Cloud
+
+sejam exatamente a mesma credencial.
+
+## Passo a passo para corrigir no Google Cloud
+
+1. Abrir **Google Cloud Console**
+2. Ir em **APIs e Serviços → Credentials**
+3. Abrir o **OAuth 2.0 Client ID** usado na integração
+4. Em **Authorized redirect URIs**, adicionar:
+
+```text
+https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/ads-oauth-callback
+```
+
+5. Salvar
+6. Esperar 1 a 5 minutos
+7. Testar novamente o botão **Conectar Google Ads**
+
+## O que vou considerar na próxima implementação, se ainda falhar
+
+Se depois disso ainda der erro, o próximo plano será:
+1. conferir qual `client_id` o frontend está usando em runtime
+2. validar se há conflito entre preview/publicado
+3. revisar retorno amigável para exibir o erro dentro da tela de Tráfego Pago
+4. testar o fluxo completo até a gravação da conexão
 
 ## Resultado esperado
 
-Depois da implementação:
-- clicar em “Conectar Google Ads” não vai mais abrir a tela bloqueada
-- o usuário será levado ao consentimento do Google em contexto permitido
-- a conta será salva corretamente após o retorno
-- a base ficará pronta para sincronizar métricas e alimentar o dashboard
+Depois desse ajuste no Google Cloud:
+- a tela de login do Google deve abrir normalmente
+- o consentimento deve concluir
+- o Google deve redirecionar para `ads-oauth-callback`
+- a conexão deve ser salva
+- o usuário deve voltar para `/cliente/trafego-pago` com sucesso
+
+## Resumo prático
+
+O código já está apontando para uma callback estável. O que falta agora é cadastrar essa callback exata no Google Cloud:
+
+```text
+https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/ads-oauth-callback
+```
