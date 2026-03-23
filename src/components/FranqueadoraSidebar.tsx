@@ -28,6 +28,7 @@ interface SidebarItem {
 
 const principalSection: SidebarItem[] = [
   { label: "Início", icon: LayoutDashboard, path: "/franqueadora/inicio" },
+  { label: "Chat da Equipe", icon: MessageSquare, path: "/franqueadora/chat" },
   { label: "Agenda", icon: Calendar, path: "/franqueadora/agenda" },
   { label: "Comunicados", icon: Megaphone, path: "/franqueadora/comunicados" },
 ];

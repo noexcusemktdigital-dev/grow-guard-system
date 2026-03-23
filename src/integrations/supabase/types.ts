@@ -5096,6 +5096,99 @@ export type Database = {
         }
         Relationships: []
       }
+      team_chat_channels: {
+        Row: {
+          created_at: string
+          id: string
+          name: string | null
+          organization_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          organization_id: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          organization_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_chat_channels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_chat_members: {
+        Row: {
+          channel_id: string
+          id: string
+          last_read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          id?: string
+          last_read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          id?: string
+          last_read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_chat_members_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "team_chat_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_chat_messages: {
+        Row: {
+          channel_id: string
+          content: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          channel_id: string
+          content: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          channel_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_chat_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "team_chat_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       traffic_strategies: {
         Row: {
           created_at: string
@@ -6045,6 +6138,10 @@ export type Database = {
       }
       is_member_or_parent_of_org: {
         Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_chat_member: {
+        Args: { _channel_id: string; _user_id: string }
         Returns: boolean
       }
       move_to_dlq: {
