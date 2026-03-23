@@ -10,7 +10,7 @@ export interface AdConnection {
   platform: "google_ads" | "meta_ads";
   account_id: string | null;
   account_name: string | null;
-  status: "active" | "expired" | "disconnected";
+  status: "active" | "expired" | "disconnected" | "pending";
   last_synced_at: string | null;
   created_at: string;
 }
@@ -49,7 +49,7 @@ export function useAdConnections() {
         .from("ad_platform_connections")
         .select("id, organization_id, platform, account_id, account_name, status, last_synced_at, created_at")
         .eq("organization_id", orgId!)
-        .neq("status", "disconnected");
+        .not("status", "eq", "disconnected");
       if (error) throw error;
       return (data || []) as AdConnection[];
     },
@@ -106,10 +106,15 @@ export function useSyncMetrics() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["ad-metrics"] });
       qc.invalidateQueries({ queryKey: ["ad-connections"] });
-      toast({ title: "Métricas sincronizadas!" });
+      const synced = data?.synced ?? 0;
+      if (synced === 0) {
+        toast({ title: "Sincronização concluída", description: "Nenhuma métrica encontrada no período. Verifique se há campanhas ativas na conta." });
+      } else {
+        toast({ title: "Métricas sincronizadas!", description: `${synced} registros importados.` });
+      }
     },
     onError: (err: any) => {
       toast({ title: "Erro ao sincronizar", description: err.message, variant: "destructive" });
@@ -130,6 +135,26 @@ export function useDisconnectAd() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ad-connections"] });
       toast({ title: "Conta desconectada" });
+    },
+  });
+}
+
+export function useSelectAdAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { connection_id: string; account_id: string; account_name: string }) => {
+      const { data, error } = await supabase.functions.invoke("ads-select-account", {
+        body: params,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ad-connections"] });
+      toast({ title: "Conta selecionada com sucesso!" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro ao selecionar conta", description: err.message, variant: "destructive" });
     },
   });
 }
