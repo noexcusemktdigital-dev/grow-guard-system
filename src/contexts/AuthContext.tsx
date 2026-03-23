@@ -65,29 +65,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const path = window.location.pathname;
       const isSaasPortal = path.startsWith("/cliente") || path.startsWith("/app") || path === "/" || path.startsWith("/landing");
 
-      // Use longer timeouts (10s) to avoid false negatives
-      const [profileResult, roleResult] = await Promise.allSettled([
-        withTimeout(
-          supabase.from("profiles").select("*").eq("id", currentUser.id).single(),
-          10000,
-          { data: null, error: { message: "timeout" } } as any
+      // Use longer timeouts (15s) and retry once on failure
+      const fetchWithRetry = async <T,>(fn: () => PromiseLike<T>, label: string): Promise<T | null> => {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const result = await withTimeout(fn(), 15000, null as any);
+            if (result !== null) return result;
+          } catch {
+            // retry
+          }
+          if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+        }
+        console.warn(`[Auth] ${label} failed after retries`);
+        return null;
+      };
+
+      const [profileResult, roleResult] = await Promise.all([
+        fetchWithRetry(
+          () => supabase.from("profiles").select("*").eq("id", currentUser.id).single(),
+          "Profile fetch"
         ),
-        withTimeout(
-          supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
-          10000,
-          { data: null, error: { message: "timeout" } } as any
+        fetchWithRetry(
+          () => supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
+          "Role fetch"
         ),
       ]);
 
       // Handle profile
-      if (profileResult.status === "fulfilled" && profileResult.value?.data) {
-        setProfile(profileResult.value.data as Profile);
-      } else {
-        console.warn("[Auth] Profile fetch failed or timed out");
+      if (profileResult?.data) {
+        setProfile(profileResult.data as Profile);
       }
 
       // Handle roles
-      const roleData = roleResult.status === "fulfilled" ? roleResult.value?.data : null;
+      const roleData = (roleResult as any)?.data;
 
       if (roleData && roleData.length > 0) {
         const roles = roleData.map((r: any) => r.role as AppRole);
