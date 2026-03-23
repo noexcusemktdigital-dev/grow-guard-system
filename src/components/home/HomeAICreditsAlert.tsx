@@ -86,13 +86,12 @@ export function HomeAICreditsAlert({ data }: Props) {
         </div>
       </div>
 
-      {/* Lovable platform reminder */}
+      {/* Platform reminder */}
       <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
         <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
         <div>
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            <strong>Lembrete:</strong> O saldo da plataforma Lovable (Cloud & AI balance) deve ser monitorado em{" "}
-            <span className="font-medium text-foreground">Settings → Cloud & AI balance</span>. Se o saldo zerar, todas as funções de IA da rede serão pausadas automaticamente.
+            <strong>Lembrete:</strong> O saldo de créditos de IA da rede deve ser monitorado regularmente. Se o saldo zerar, todas as funções de IA da rede serão pausadas automaticamente. Entre em contato com o suporte para recargas.
           </p>
         </div>
       </div>
