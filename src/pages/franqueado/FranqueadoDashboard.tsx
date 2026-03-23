@@ -292,9 +292,11 @@ export default function FranqueadoDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📅 Próximos Compromissos</h3>
               </div>
-              {(events ?? []).length > 0 ? (
+              {(() => {
+                const futureEvents = (events ?? []).filter(e => new Date(e.start_at) >= new Date());
+                return futureEvents.length > 0 ? (
                 <div className="space-y-2">
-                  {(events ?? []).slice(0, 4).map(e => (
+                  {futureEvents.slice(0, 4).map(e => (
                     <div key={e.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => navigate("/franqueado/agenda")}>
                       <div className="w-9 h-9 rounded-lg bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
                         <span className="text-[10px] text-primary font-bold">{format(new Date(e.start_at), "dd")}</span>
