@@ -156,6 +156,7 @@ function App() {
                   <Route path="perfil" element={<FranqueadoraPerfil />} />
                   <Route path="playbooks" element={<Playbooks />} />
                   <Route path="candidatos" element={<FranqueadoraCandidatos />} />
+                  <Route path="chat" element={<FranqueadoraChat />} />
                   <Route path="notificacoes" element={<NotificacoesPage />} />
                 </Route>
               </Route>
