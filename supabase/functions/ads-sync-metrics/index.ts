@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 async function refreshGoogleToken(refreshToken: string): Promise<{ access_token: string; expires_in: number } | null> {
@@ -19,7 +19,11 @@ async function refreshGoogleToken(refreshToken: string): Promise<{ access_token:
       grant_type: "refresh_token",
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Google token refresh failed:", res.status, errText);
+    return null;
+  }
   return await res.json();
 }
 
@@ -28,7 +32,6 @@ async function syncGoogleAds(connection: any, supabase: any) {
   const devToken = Deno.env.get("GOOGLE_ADS_DEVELOPER_TOKEN");
   if (!devToken) throw new Error("GOOGLE_ADS_DEVELOPER_TOKEN not configured");
 
-  // Refresh token if expired
   if (connection.refresh_token && connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
     const refreshed = await refreshGoogleToken(connection.refresh_token);
     if (refreshed) {
@@ -47,7 +50,6 @@ async function syncGoogleAds(connection: any, supabase: any) {
   const customerId = connection.account_id;
   if (!customerId) throw new Error("No Google Ads customer ID");
 
-  // Query last 30 days of campaign metrics
   const query = `
     SELECT campaign.id, campaign.name, campaign.status,
            segments.date,
@@ -57,6 +59,8 @@ async function syncGoogleAds(connection: any, supabase: any) {
     WHERE segments.date DURING LAST_30_DAYS
     ORDER BY segments.date DESC
   `;
+
+  console.log(`[Google] Syncing customer ${customerId}...`);
 
   const res = await fetch(
     `https://googleads.googleapis.com/v16/customers/${customerId}/googleAds:searchStream`,
@@ -71,13 +75,15 @@ async function syncGoogleAds(connection: any, supabase: any) {
     }
   );
 
+  const bodyText = await res.text();
+  console.log(`[Google] API response status: ${res.status}, body length: ${bodyText.length}`);
+
   if (!res.ok) {
-    const errText = await res.text();
-    console.error("Google Ads API error:", errText);
+    console.error("[Google] API error body:", bodyText.substring(0, 1000));
     throw new Error(`Google Ads API error: ${res.status}`);
   }
 
-  const results = await res.json();
+  const results = JSON.parse(bodyText);
   const metrics: any[] = [];
 
   for (const batch of results) {
@@ -104,15 +110,18 @@ async function syncGoogleAds(connection: any, supabase: any) {
     }
   }
 
+  console.log(`[Google] Parsed ${metrics.length} metric rows`);
   return metrics;
 }
 
 async function syncMetaAds(connection: any, supabase: any) {
   const accessToken = connection.access_token;
-  const accountId = connection.account_id;
+  let accountId = connection.account_id;
   if (!accountId) throw new Error("No Meta ad account ID");
 
-  // Get campaigns with insights for last 30 days
+  // Ensure account_id does NOT already have act_ prefix — the API call adds it
+  accountId = accountId.replace(/^act_/, "");
+
   const today = new Date();
   const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000);
   const since = thirtyDaysAgo.toISOString().split("T")[0];
@@ -120,18 +129,20 @@ async function syncMetaAds(connection: any, supabase: any) {
 
   const insightsUrl = `https://graph.facebook.com/v19.0/act_${accountId}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,actions,ctr,cpc&time_range={"since":"${since}","until":"${until}"}&time_increment=1&level=campaign&limit=500&access_token=${accessToken}`;
 
-  const res = await fetch(insightsUrl);
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error("Meta Ads API error:", errText);
+  console.log(`[Meta] Syncing account act_${accountId}, period ${since} to ${until}`);
 
+  const res = await fetch(insightsUrl);
+  const bodyText = await res.text();
+  console.log(`[Meta] API response status: ${res.status}, body length: ${bodyText.length}, preview: ${bodyText.substring(0, 500)}`);
+
+  if (!res.ok) {
     if (res.status === 190 || res.status === 401) {
       await supabase.from("ad_platform_connections").update({ status: "expired" }).eq("id", connection.id);
     }
-    throw new Error(`Meta Ads API error: ${res.status}`);
+    throw new Error(`Meta Ads API error: ${res.status} — ${bodyText.substring(0, 300)}`);
   }
 
-  const data = await res.json();
+  const data = JSON.parse(bodyText);
   const metrics: any[] = [];
 
   for (const row of data.data || []) {
@@ -157,6 +168,41 @@ async function syncMetaAds(connection: any, supabase: any) {
       cpl: conversions > 0 ? spend / conversions : 0,
       raw_data: row,
     });
+  }
+
+  console.log(`[Meta] Parsed ${metrics.length} metric rows`);
+
+  // Handle pagination
+  let nextUrl = data.paging?.next;
+  while (nextUrl) {
+    console.log(`[Meta] Fetching next page...`);
+    const nextRes = await fetch(nextUrl);
+    if (!nextRes.ok) break;
+    const nextData = await nextRes.json();
+    for (const row of nextData.data || []) {
+      const spend = parseFloat(row.spend || "0");
+      const conversions = (row.actions || [])
+        .filter((a: any) => ["lead", "offsite_conversion.fb_pixel_lead", "purchase", "complete_registration"].includes(a.action_type))
+        .reduce((sum: number, a: any) => sum + parseInt(a.value || "0"), 0);
+      metrics.push({
+        organization_id: connection.organization_id,
+        connection_id: connection.id,
+        platform: "meta_ads",
+        campaign_id: row.campaign_id,
+        campaign_name: row.campaign_name || "Unknown",
+        campaign_status: "ACTIVE",
+        date: row.date_start,
+        impressions: parseInt(row.impressions || "0"),
+        clicks: parseInt(row.clicks || "0"),
+        spend,
+        conversions,
+        ctr: parseFloat(row.ctr || "0"),
+        cpc: parseFloat(row.cpc || "0"),
+        cpl: conversions > 0 ? spend / conversions : 0,
+        raw_data: row,
+      });
+    }
+    nextUrl = nextData.paging?.next;
   }
 
   return metrics;
@@ -191,6 +237,12 @@ serve(async (req) => {
       });
     }
 
+    if (connection.status !== "active") {
+      return new Response(JSON.stringify({ error: "Connection is not active", status: connection.status }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let metrics: any[];
     if (connection.platform === "google_ads") {
       metrics = await syncGoogleAds(connection, supabase);
@@ -202,7 +254,6 @@ serve(async (req) => {
       });
     }
 
-    // Upsert metrics
     if (metrics.length > 0) {
       const { error: upsertError } = await supabase
         .from("ad_campaign_metrics")
@@ -213,7 +264,6 @@ serve(async (req) => {
       }
     }
 
-    // Update last_synced_at
     await supabase.from("ad_platform_connections")
       .update({ last_synced_at: new Date().toISOString() })
       .eq("id", connection_id);
