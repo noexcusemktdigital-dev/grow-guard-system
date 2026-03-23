@@ -172,7 +172,7 @@ export default function FranqueadoDashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard label="Leads Ativos" value={String(leadsAtivos)} sublabel={`${(leads ?? []).length} total`} icon={Users} delay={0} />
             <KpiCard label="Contratos Ativos" value={String(contratosAtivos)} sublabel={`${(contracts ?? []).length} total`} icon={FileSignature} delay={1} />
-            <KpiCard label="Próximos Eventos" value={String((events ?? []).slice(0, 5).length)} sublabel="Na agenda" icon={Calendar} delay={2} />
+            <KpiCard label="Próximos Eventos" value={String((events ?? []).filter(e => new Date(e.start_at) >= new Date()).slice(0, 5).length)} sublabel="Na agenda" icon={Calendar} delay={2} />
             <KpiCard label="Comunicados" value={String(unreadAnnouncements.length)} sublabel={unreadAnnouncements.length > 0 ? "não lidos" : "tudo lido"} icon={Megaphone} delay={3} />
           </div>
 
