@@ -165,24 +165,62 @@ serve(async (req) => {
           expiresAt = new Date(Date.now() + longData.expires_in * 1000).toISOString();
         }
 
-        // Fetch all ad accounts
+        // Fetch all ad accounts (personal + Business Manager)
         let adAccounts: { account_id: string; name: string }[] = [];
+        const seenIds = new Set<string>();
+
+        // 1) Personal ad accounts via /me/adaccounts
         try {
           const meRes = await fetch(
             `https://graph.facebook.com/v19.0/me/adaccounts?fields=name,account_id,account_status&access_token=${accessToken}&limit=100`
           );
           const meData = await meRes.json();
-          console.log("Meta ad accounts response:", JSON.stringify(meData).substring(0, 1000));
-          
+          console.log("Meta personal ad accounts:", JSON.stringify(meData).substring(0, 500));
           if (meData.data?.length > 0) {
-            adAccounts = meData.data.map((acc: any) => ({
-              account_id: acc.account_id,
-              name: acc.name || `Meta Ads ${acc.account_id}`,
-            }));
+            for (const acc of meData.data) {
+              if (!seenIds.has(acc.account_id)) {
+                seenIds.add(acc.account_id);
+                adAccounts.push({ account_id: acc.account_id, name: acc.name || `Meta Ads ${acc.account_id}` });
+              }
+            }
           }
         } catch (e) {
-          console.warn("Could not fetch Meta ad accounts:", e);
+          console.warn("Could not fetch personal ad accounts:", e);
         }
+
+        // 2) Business Manager ad accounts via /me/businesses -> /BM_ID/owned_ad_accounts
+        try {
+          const bizRes = await fetch(
+            `https://graph.facebook.com/v19.0/me/businesses?fields=id,name&access_token=${accessToken}&limit=50`
+          );
+          const bizData = await bizRes.json();
+          console.log("Meta businesses:", JSON.stringify(bizData).substring(0, 500));
+          if (bizData.data?.length > 0) {
+            for (const biz of bizData.data) {
+              try {
+                const bmAccRes = await fetch(
+                  `https://graph.facebook.com/v19.0/${biz.id}/owned_ad_accounts?fields=name,account_id,account_status&access_token=${accessToken}&limit=100`
+                );
+                const bmAccData = await bmAccRes.json();
+                console.log(`BM ${biz.name} (${biz.id}) ad accounts:`, JSON.stringify(bmAccData).substring(0, 500));
+                if (bmAccData.data?.length > 0) {
+                  for (const acc of bmAccData.data) {
+                    if (!seenIds.has(acc.account_id)) {
+                      seenIds.add(acc.account_id);
+                      adAccounts.push({ account_id: acc.account_id, name: `${acc.name || acc.account_id} (${biz.name})` });
+                    }
+                  }
+                }
+              } catch (bmErr) {
+                console.warn(`Could not fetch BM ${biz.id} accounts:`, bmErr);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Could not fetch businesses:", e);
+        }
+
+        console.log(`Total ad accounts found: ${adAccounts.length}`, adAccounts.map(a => a.name));
 
         if (adAccounts.length === 0) {
           const errUrl = `${appRedirectBase}/cliente/trafego-pago?ads_error=no_ad_account`;
