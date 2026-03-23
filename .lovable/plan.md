@@ -1,51 +1,91 @@
 
 
-# Corrigir sincronização Google Ads — account_id nulo
+# Chat Interno da Matriz
 
-## Diagnóstico confirmado (logs do backend)
+## Resumo
 
-A cadeia de erro é:
+Criar um sistema de chat em tempo real exclusivo para membros da organização Matriz (super_admin e admin). Permitira conversas diretas 1-a-1 e um canal geral da equipe.
+
+## Estrutura
 
 ```text
-OAuth callback → listAccessibleCustomers retorna HTML (não JSON)
-→ accountId fica null → conexão salva sem account_id
-→ ads-sync-metrics → "No Google Ads customer ID" → erro
+┌──────────────────────────────────────────────────┐
+│  Chat da Equipe                                  │
+├─────────────┬────────────────────────────────────┤
+│ Lista       │  Conversa                          │
+│             │                                    │
+│ #geral      │  [Mensagens em tempo real]         │
+│ ──────────  │                                    │
+│ DMs:        │                                    │
+│  João       │                                    │
+│  Maria      │  ┌─────────────────────────┐       │
+│             │  │ Digite sua mensagem...  │       │
+│             │  └─────────────────────────┘       │
+└─────────────┴────────────────────────────────────┘
 ```
 
-O `listAccessibleCustomers` retornou HTML em vez de JSON. Isso acontece quando:
-- O Developer Token tem nível "Test Account" (só funciona com contas de teste)
-- Ou o Developer Token não foi aprovado para "Basic Access"
+## Banco de Dados (2 tabelas novas)
 
-## Plano de correção (2 partes)
+### `team_chat_channels`
+Canais de conversa (canal geral + DMs).
 
-### Parte 1: Verificação do Developer Token (ação manual)
-No Google Ads MCC → Tools → API Center, verificar o nível de acesso do Developer Token:
-- **Test Account**: só funciona com contas de teste do Google Ads, não com contas reais
-- **Basic Access**: funciona com contas reais (é o que você precisa)
+| Coluna | Tipo | Notas |
+|--------|------|-------|
+| id | uuid PK | |
+| organization_id | uuid FK organizations | |
+| type | text | 'group' ou 'direct' |
+| name | text nullable | nome do canal (ex: "Geral") |
+| created_at | timestamptz | |
 
-Se estiver em "Test Account", é preciso solicitar "Basic Access" ao Google.
+### `team_chat_messages`
+Mensagens enviadas nos canais.
 
-### Parte 2: Melhorias no código (3 correções)
+| Coluna | Tipo | Notas |
+|--------|------|-------|
+| id | uuid PK | |
+| channel_id | uuid FK team_chat_channels | |
+| sender_id | uuid FK auth.users(id) | |
+| content | text | |
+| created_at | timestamptz | |
 
-#### 1. `ads-oauth-callback` — não salvar conexão sem account_id
-Atualmente o callback salva a conexão mesmo quando não consegue obter o customer ID. Vou:
-- Adicionar log detalhado do erro (status HTTP + corpo da resposta)
-- Se `accountId` for null após a tentativa, redirecionar com erro específico (`no_ad_account`)
-- Não salvar conexão sem account_id
+### `team_chat_members`
+Membros de cada canal (para DMs e controle de acesso).
 
-#### 2. `ads-oauth-callback` — tratar resposta não-JSON do Google
-O código atual faz `.json()` direto sem verificar o content-type. Vou:
-- Verificar se a resposta é JSON antes de parsear
-- Logar o corpo da resposta em caso de erro para debug
+| Coluna | Tipo | Notas |
+|--------|------|-------|
+| id | uuid PK | |
+| channel_id | uuid FK team_chat_channels | |
+| user_id | uuid FK auth.users(id) | |
+| last_read_at | timestamptz | para badge de nao-lidas |
 
-#### 3. `AdConnectionCards.tsx` — mensagem de erro mais clara
-Adicionar tratamento para o novo código de erro `no_ad_account` na tela, explicando que o Developer Token pode não ter permissão.
+### Realtime
+Habilitar realtime em `team_chat_messages` para atualizacao instantanea.
 
-## Arquivos modificados
-- `supabase/functions/ads-oauth-callback/index.ts`
-- `src/components/trafego/AdConnectionCards.tsx`
+### RLS
+- SELECT/INSERT em `team_chat_messages`: usuario autenticado que seja membro do canal (via `team_chat_members`)
+- SELECT/INSERT em `team_chat_channels`: membro da organizacao com role super_admin ou admin
+- Funcao `is_team_chat_member` (security definer) para evitar recursao
 
-## Resultado esperado
-- Se o Developer Token não tiver acesso, o usuário verá um erro claro em vez de uma conexão "fantasma" sem métricas
-- Se o token tiver acesso correto, a conexão será salva com o customer ID e a sincronização funcionará
+## Frontend (3 arquivos novos + 2 alteracoes)
+
+### Novos
+1. **`src/pages/franqueadora/FranqueadoraChat.tsx`** - Pagina principal com layout split (lista de canais + conversa)
+2. **`src/hooks/useTeamChat.ts`** - Hook com queries/mutations para canais, mensagens e realtime subscription
+3. **`src/components/teamchat/TeamChatConversation.tsx`** - Componente de conversa com input, bolhas de mensagem e scroll automatico
+
+### Alteracoes
+4. **`src/App.tsx`** - Adicionar rota `/franqueadora/chat`
+5. **`src/components/FranqueadoraSidebar.tsx`** - Adicionar item "Chat da Equipe" na secao Principal
+
+## Fluxo
+1. Ao acessar a pagina, busca canais da org (cria canal "Geral" automaticamente se nao existir)
+2. Lista membros da Matriz para iniciar DMs
+3. Mensagens carregadas por canal com paginacao
+4. Realtime: novas mensagens aparecem instantaneamente
+5. Badge de nao-lidas na sidebar baseado em `last_read_at`
+
+## Seguranca
+- Rota protegida por `allowedRoles={["super_admin", "admin"]}` (ja existe no layout)
+- RLS garante que apenas membros da mesma org acessam os canais
+- Apenas roles da Matriz (super_admin/admin) podem acessar
 
