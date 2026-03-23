@@ -91,6 +91,34 @@ project_id = "gxrhdpbbxfipeopdyygn"
     verify_jwt = false
   [functions.whatsapp-typing]
     verify_jwt = false
+  [functions.delete-unit]
+    verify_jwt = false
+  [functions.evolution-webhook]
+    verify_jwt = false
+  [functions.generate-daily-checklist]
+    verify_jwt = false
+  [functions.google-calendar-oauth]
+    verify_jwt = false
+  [functions.google-calendar-sync]
+    verify_jwt = false
+  [functions.receive-candidate]
+    verify_jwt = false
+  [functions.seed-demo-data]
+    verify_jwt = false
+  [functions.send-transactional-email]
+    verify_jwt = false
+  [functions.validate-coupon]
+    verify_jwt = false
+  [functions.website-chat]
+    verify_jwt = false
+  [functions.website-chat-widget]
+    verify_jwt = false
+  [functions.whatsapp-load-history]
+    verify_jwt = false
+  [functions.whatsapp-sync-chats]
+    verify_jwt = false
+  [functions.whatsapp-sync-photos]
+    verify_jwt = false
   [functions.whatsapp-webhook]
     verify_jwt = false
   [functions.ads-oauth-callback]
