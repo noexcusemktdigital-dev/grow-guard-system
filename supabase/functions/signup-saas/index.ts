@@ -26,6 +26,28 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Wait for auth.users row to be fully committed (race condition with signUp)
+    let userExists = false;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("id", user_id)
+        .maybeSingle();
+      if (profile) {
+        userExists = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    if (!userExists) {
+      console.error(`User ${user_id} not found in profiles after 5s`);
+      return new Response(JSON.stringify({ error: "User not ready yet. Please try again." }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Check if user already has a role (avoid duplicate provisioning)
     const { data: existingRole } = await supabaseAdmin
       .from("user_roles")
