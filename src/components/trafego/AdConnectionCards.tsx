@@ -186,6 +186,19 @@ export function AdConnectionCards() {
                         Sincronizar
                       </Button>
                       <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5"
+                        onClick={async () => {
+                          await disconnectMutation.mutateAsync(conn.id);
+                          handleConnect(platform);
+                        }}
+                        disabled={disconnectMutation.isPending}
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Trocar
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="sm"
                         className="text-xs gap-1.5 text-destructive"
