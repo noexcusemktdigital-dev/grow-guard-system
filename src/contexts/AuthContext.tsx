@@ -117,11 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRole(topRole);
         lastFetchedUserRef.current = currentUser.id;
       } else {
-        // Check if this was a timeout vs genuine "no roles"
-        const wasTimeout = roleResult.status === "fulfilled" &&
-          roleResult.value?.error?.message === "timeout";
-
-        if (wasTimeout) {
+        // Check if this was a timeout (null result) vs genuine "no roles"
+        if (roleResult === null) {
           // On timeout, use fallback based on URL context — don't provision
           console.warn("[Auth] Role fetch timed out, using fallback role");
           const fallback: AppRole = isSaasPortal ? "cliente_admin" : "franqueado";
