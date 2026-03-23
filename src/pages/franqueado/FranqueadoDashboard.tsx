@@ -295,23 +295,24 @@ export default function FranqueadoDashboard() {
               {(() => {
                 const futureEvents = (events ?? []).filter(e => new Date(e.start_at) >= new Date());
                 return futureEvents.length > 0 ? (
-                <div className="space-y-2">
-                  {futureEvents.slice(0, 4).map(e => (
-                    <div key={e.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => navigate("/franqueado/agenda")}>
-                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
-                        <span className="text-[10px] text-primary font-bold">{format(new Date(e.start_at), "dd")}</span>
-                        <span className="text-[8px] text-muted-foreground uppercase">{format(new Date(e.start_at), "MMM", { locale: ptBR })}</span>
+                  <div className="space-y-2">
+                    {futureEvents.slice(0, 4).map(e => (
+                      <div key={e.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => navigate("/franqueado/agenda")}>
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] text-primary font-bold">{format(new Date(e.start_at), "dd")}</span>
+                          <span className="text-[8px] text-muted-foreground uppercase">{format(new Date(e.start_at), "MMM", { locale: ptBR })}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{e.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{format(new Date(e.start_at), "HH:mm")}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{e.title}</p>
-                        <p className="text-[10px] text-muted-foreground">{format(new Date(e.start_at), "HH:mm")}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Agenda vazia. <button onClick={() => navigate("/franqueado/agenda")} className="text-primary hover:underline">Criar evento.</button></p>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Agenda vazia. <button onClick={() => navigate("/franqueado/agenda")} className="text-primary hover:underline">Criar evento.</button></p>
+                );
+              })()}
               <Button variant="ghost" size="sm" className="mt-3 text-xs w-full" onClick={() => navigate("/franqueado/agenda")}>
                 Ver agenda →
               </Button>
