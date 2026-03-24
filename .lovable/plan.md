@@ -1,38 +1,56 @@
 
 
-# Corrigir navegação "Configurações" no portal do Cliente
+# CRM — Exclusão de Funil, Kanban Imediato e Transferência de Leads entre Funis
 
-## Problema
+## Problemas
 
-No `UserMenu`, tanto "Meu Perfil" quanto "Configurações" redirecionam para `/cliente/configuracoes`, que abre sempre na aba "Perfil". O usuário espera que "Configurações" abra na aba de organização/sistema.
+1. **Não é possível excluir um funil** — O `CrmFunnelManager` tem o botão de delete, mas ele só aparece para funis que NÃO são padrão, e a lógica de `deleteFunnel` existe no hook. Preciso verificar se o botão está realmente renderizando e se há confirmação antes de excluir.
 
-## Causa raiz
+2. **Funil recém-criado não exibe colunas vazias** — Quando o Kanban não tem leads, mostra "Nenhum lead cadastrado" ao invés das colunas vazias do funil. O Kanban precisa sempre mostrar as etapas, mesmo sem leads.
 
-- `UserMenu.tsx` linha 65: "Meu Perfil" → `/cliente/configuracoes` (correto, abre no perfil)
-- `UserMenu.tsx` linha 73: "Configurações" → `/cliente/configuracoes` (deveria abrir em outra aba)
-- `ClienteSidebar.tsx`: item "Configurações" → `/cliente/configuracoes` (mesmo problema)
-- `ClienteConfiguracoes.tsx` linha 444: `defaultValue="perfil"` — sempre abre na aba perfil
+3. **Não há opção de transferir leads entre funis** — Nem no detalhe do lead, nem na seleção em massa, existe a opção de mover leads para outro funil (alterar `funnel_id`).
 
-## Correção
+---
 
-### 1. `ClienteConfiguracoes.tsx` — Ler tab da URL
+## Correções
 
-Usar `useSearchParams` para ler um parâmetro `?tab=` e definir a aba ativa. Se `?tab=organizacao`, abrir na aba de organização. Caso contrário, manter "perfil" como padrão.
+### 1. Garantir exclusão de funil com confirmação
+**Arquivo**: `src/components/crm/CrmFunnelManager.tsx`
 
-### 2. `UserMenu.tsx` — Diferenciar as rotas
+- Adicionar `AlertDialog` de confirmação antes de excluir um funil
+- Informar quantos leads estão vinculados ao funil (se possível)
+- O botão de delete já existe para funis não-padrão — garantir que está visível e funcional
 
-- "Meu Perfil" → `/cliente/configuracoes?tab=perfil`
-- "Configurações" → `/cliente/configuracoes?tab=organizacao`
+### 2. Kanban mostra colunas vazias mesmo sem leads
+**Arquivo**: `src/pages/cliente/ClienteCRM.tsx`
 
-### 3. `ClienteSidebar.tsx` — Atualizar path
+- Na linha ~819, o estado vazio `allLeads.length === 0` mostra um card genérico. Alterar para que, quando há um funil selecionado com etapas definidas, o Kanban renderize as colunas vazias normalmente (com header de cada etapa), e apenas mostre a mensagem "Adicione seu primeiro lead" dentro de cada coluna ou como um banner acima
+- Mover a verificação de empty state para dentro do Kanban, mostrando colunas vazias com um botão "Novo Lead" na primeira coluna
 
-Alterar o item "Configurações" de `/cliente/configuracoes` para `/cliente/configuracoes?tab=organizacao`.
+### 3. Transferir leads entre funis — Individual e em massa
+**Arquivos**: `src/pages/cliente/ClienteCRM.tsx`, `src/components/crm/CrmLeadDetailSheet.tsx`
 
-## Arquivos afetados
+**Bulk Actions (ClienteCRM.tsx)**:
+- Adicionar um `Select` na barra de ações em massa para "Transferir para funil"
+- Listar todos os funis disponíveis (exceto o atual)
+- Ao selecionar, chamar `bulkUpdateLeads` com `{ funnel_id: novoFunnelId, stage: primeiraEtapaDoNovoFunil }`
+- Os leads transferidos são movidos para a primeira etapa do funil destino
+
+**Lead Detail (CrmLeadDetailSheet.tsx)**:
+- Adicionar um campo "Funil" no detalhe do lead com um Select dos funis disponíveis
+- Ao trocar o funil, atualizar `funnel_id` e resetar o `stage` para a primeira etapa do funil destino
+- Necessário passar `funnels` como prop (lista de funis acessíveis)
+
+**Hook (useCrmLeads.ts)**:
+- O `updateLead` já aceita qualquer campo, incluindo `funnel_id` — não precisa de alteração no hook
+
+---
+
+## Arquivos Afetados
 
 | Arquivo | Ação |
 |---|---|
-| `src/pages/cliente/ClienteConfiguracoes.tsx` | Ler `?tab=` da URL para definir aba ativa |
-| `src/components/UserMenu.tsx` | Diferenciar navegação Perfil vs Configurações |
-| `src/components/ClienteSidebar.tsx` | Atualizar path do item Configurações |
+| `src/components/crm/CrmFunnelManager.tsx` | Adicionar confirmação de exclusão com AlertDialog |
+| `src/pages/cliente/ClienteCRM.tsx` | Kanban com colunas vazias + ação bulk "Transferir funil" |
+| `src/components/crm/CrmLeadDetailSheet.tsx` | Adicionar seletor de funil no detalhe do lead |
 
