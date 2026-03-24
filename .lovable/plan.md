@@ -1,74 +1,51 @@
 
 
-# Arquitetura de Aprovação Unificada — Conteúdos, Redes Sociais e Sites
+# Correção do Fluxo de Convite de Usuários — Franqueadora, Franquia e Cliente
 
-## Diagnóstico Atual
+## Problemas Identificados
 
-Hoje cada ferramenta trata aprovações de forma isolada e inconsistente:
+1. **Erro "Informe o e-mail" falso**: Em `Matriz.tsx` (linha 71), a validação `if (!inviteEmail.trim() || !orgId)` mostra "Informe o e-mail" mesmo quando o problema real é `orgId` undefined. Mensagem de erro enganosa.
 
-| Ferramenta | Status possíveis | Onde vê pendentes? | Aprovação em lote? | Filtro por status? |
-|---|---|---|---|---|
-| **Conteúdos** | `pending` / `approved` | Aba "Meus Conteúdos" (sem destaque) | Sim (com custo de créditos) | Sim (filtro simples) |
-| **Redes Sociais** | `pending` / `approved` | Galeria com filtro | Não | Sim |
-| **Sites** | `Rascunho` / `Aprovado` / `Publicado` | Lista simples | Não | Não |
+2. **Seletor de Times ausente**: Apenas `Matriz.tsx` tem `TeamSelector`. Os diálogos de convite em `FranqueadoConfiguracoes.tsx` e `ClienteConfiguracoes.tsx` não permitem selecionar times/funções, apesar de o hook `useOrgTeams` estar disponível.
 
-**Problemas identificados:**
-- Não existe visão consolidada de "o que preciso aprovar"
-- Status inconsistentes entre ferramentas (`pending` vs `Rascunho`)
-- Não há painel de progresso cross-tool
-- Falta feedback visual claro de itens pendentes vs aprovados
-- Sites não usa o `ApprovalPanel` de forma integrada na listagem
+3. **`team_ids` não enviado em vários portais**: Franqueado e Cliente não enviam `team_ids` no body da Edge Function `invite-user`, mesmo que a função suporte.
+
+4. **URL de redirecionamento desatualizada**: A Edge Function `invite-user` usa `SITE_URL` com fallback para `grow-guard-system.lovable.app` — deveria ser o domínio correto.
+
+5. **`UnidadeUsuariosReal.tsx` sem seletor de times**: O convite de membros de unidades também não tem seletor de times.
 
 ---
 
-## Proposta: Central de Aprovações + Melhorias por Ferramenta
+## Plano de Correção
 
-### 1. Dashboard de Aprovação (novo componente)
+### 1. Criar componente reutilizável `TeamSelector`
 
-Um card/seção na Home ou como header compartilhado nas ferramentas de marketing, mostrando:
+Extrair o `TeamSelector` de `Matriz.tsx` para `src/components/TeamSelector.tsx` — recebe `selectedIds`, `onToggle`, e busca teams via `useOrgTeams`. Reutilizável em todos os portais.
 
-```text
-┌─────────────────────────────────────────────────┐
-│  📋 Central de Aprovações                       │
-│                                                 │
-│  Conteúdos    ██████░░░░  6 pendentes / 2 ok    │
-│  Artes        ████░░░░░░  4 pendentes / 9 ok    │
-│  Sites        █░░░░░░░░░  1 pendente  / 0 ok    │
-│                                                 │
-│  [Aprovar Pendentes]    Total: 11 pendentes     │
-└─────────────────────────────────────────────────┘
-```
+### 2. Corrigir validação em `Matriz.tsx`
 
-- Componente `ApprovalDashboard.tsx` reutilizável
-- Puxa dados de `client_content`, `client_posts` e `client_sites` com contadores
-- Links diretos para cada ferramenta filtrada por "pendentes"
+Separar as validações:
+- Se `!inviteEmail.trim()` → "Informe o e-mail"
+- Se `!orgId` → "Erro: organização não encontrada. Recarregue a página."
 
-### 2. Melhorias em Conteúdos
+### 3. Adicionar TeamSelector ao Franqueado (`FranqueadoConfiguracoes.tsx`)
 
-- Adicionar contadores visuais no header da aba "Meus Conteúdos" (`3 pendentes · 5 aprovados`)
-- Badge de status colorido em cada card do `BatchFolderView` (verde=aprovado, amarelo=pendente)
-- Botão "Aprovar" inline em cada card pendente na listagem (hoje só aparece na tela de resultado)
-- Filtro padrão abrir em "pendentes primeiro"
+- Importar `TeamSelector` e `useOrgTeams`
+- Adicionar estado `inviteTeamIds`
+- Incluir `TeamSelector` no diálogo de convite
+- Enviar `team_ids` no body da chamada `invite-user`
 
-### 3. Melhorias em Redes Sociais
+### 4. Adicionar TeamSelector ao Cliente (`ClienteConfiguracoes.tsx`)
 
-- Adicionar contadores no header da `PostGallery` (`4 pendentes · 9 aprovados`)
-- Aprovação em lote: checkbox de seleção + botão "Aprovar Selecionados"
-- Badge de status mais proeminente no `PostCard` (hoje é discreto)
-- Ordenação padrão: pendentes primeiro
+- Mesmo padrão: importar, adicionar estado, incluir no diálogo, enviar `team_ids`
 
-### 4. Melhorias em Sites
+### 5. Adicionar TeamSelector à Unidades (`UnidadeUsuariosReal.tsx`)
 
-- Normalizar status para lowercase (`pending` / `approved` / `published`)
-- Adicionar `ApprovalPanel` integrado na listagem do `SiteHistory`
-- Badge visual de status com cores consistentes
-- Filtro por status na lista de sites
+- Mesmo padrão para convites de membros de unidades
 
-### 5. Padronização Visual
+### 6. Atualizar URL de redirecionamento na Edge Function
 
-- Status badges unificados usando `ApprovalStatusBadge` (já existe) em todas as ferramentas
-- Cores consistentes: verde=aprovado, amarelo=pendente, azul=publicado
-- Componente `ApprovalCountBar` compartilhado (barra de progresso mini)
+- Alterar fallback `SITE_URL` de `grow-guard-system.lovable.app` para `sistema.noexcusedigital.com.br`
 
 ---
 
@@ -76,22 +53,10 @@ Um card/seção na Home ou como header compartilhado nas ferramentas de marketin
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/cliente/ApprovalDashboard.tsx` | **Novo** — Painel consolidado |
-| `src/components/cliente/ApprovalCountBar.tsx` | **Novo** — Barra de contagem reutilizável |
-| `src/components/cliente/content/BatchFolderView.tsx` | Editar — Adicionar aprovação inline + badges |
-| `src/components/cliente/social/PostGallery.tsx` | Editar — Aprovação em lote + contadores |
-| `src/components/sites/SiteHistory.tsx` | Editar — Status badges + filtro |
-| `src/pages/cliente/ClienteConteudos.tsx` | Editar — Integrar ApprovalDashboard |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Editar — Integrar ApprovalDashboard |
-| `src/pages/cliente/ClienteSites.tsx` | Editar — Normalizar status + integrar painel |
-| `src/hooks/useApprovalStats.ts` | **Novo** — Hook que agrega contadores das 3 tabelas |
-
----
-
-## Detalhes Técnicos
-
-- O hook `useApprovalStats` faz 3 queries paralelas com `select("id, status", { count: "exact", head: true })` para performance
-- Nenhuma mudança de schema necessária — os campos `status` já existem
-- A normalização de status em Sites será feita no frontend (mapear "Rascunho" para "pending", "Aprovado" para "approved")
-- Aprovação em lote de posts reutiliza o padrão já implementado em conteúdos
+| `src/components/TeamSelector.tsx` | **Novo** — Componente reutilizável |
+| `src/pages/Matriz.tsx` | Editar — Usar componente extraído + corrigir validação |
+| `src/pages/franqueado/FranqueadoConfiguracoes.tsx` | Editar — Adicionar TeamSelector + team_ids |
+| `src/pages/cliente/ClienteConfiguracoes.tsx` | Editar — Adicionar TeamSelector + team_ids |
+| `src/components/unidades/UnidadeUsuariosReal.tsx` | Editar — Adicionar TeamSelector + team_ids |
+| `supabase/functions/invite-user/index.ts` | Editar — Atualizar SITE_URL fallback |
 
