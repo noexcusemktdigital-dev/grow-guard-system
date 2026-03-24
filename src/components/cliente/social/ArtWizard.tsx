@@ -733,7 +733,7 @@ export function ArtWizard({
                       <span>{selectedLayouts.map(l => l?.label).join(" + ")}</span>
 
                       <span className="text-muted-foreground">Formato:</span>
-                      <span>{selectedFormat?.label} ({selectedFormat?.ratio})</span>
+                      <span>{selectedFormat?.label} ({(selectedFormat as any)?.ratio || (selectedFormat as any)?.cm})</span>
 
                       {visualIdentity && <>
                         <span className="text-muted-foreground">Identidade:</span>
