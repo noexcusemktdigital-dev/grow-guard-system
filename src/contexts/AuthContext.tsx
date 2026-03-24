@@ -53,11 +53,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Guard against concurrent fetchProfileAndRole calls
   const fetchingRef = useRef(false);
   const lastFetchedUserRef = useRef<string | null>(null);
+  const roleRef = useRef<AppRole | null>(null);
+
+  // Keep roleRef in sync
+  useEffect(() => { roleRef.current = role; }, [role]);
 
   const fetchProfileAndRole = useCallback(async (currentUser: User, force = false) => {
     // Skip if already fetching or if we already fetched for this user (unless forced)
     if (fetchingRef.current) return;
-    if (!force && lastFetchedUserRef.current === currentUser.id && role !== null) return;
+    if (!force && lastFetchedUserRef.current === currentUser.id && roleRef.current !== null) return;
 
     fetchingRef.current = true;
 
@@ -187,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       fetchingRef.current = false;
     }
-  }, [role]);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -201,11 +205,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (newSession?.user) {
           // For TOKEN_REFRESHED events, skip re-fetching if already have data
-          if (_event === "TOKEN_REFRESHED" && role !== null) {
+          if (_event === "TOKEN_REFRESHED" && roleRef.current !== null && lastFetchedUserRef.current === newSession.user.id) {
             setLoading(false);
             return;
           }
-          await fetchProfileAndRole(newSession.user);
+          await fetchProfileAndRole(newSession.user, _event === "SIGNED_IN");
         } else {
           setProfile(null);
           setRole(null);
