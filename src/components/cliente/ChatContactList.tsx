@@ -47,8 +47,6 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
 
     const sortedContacts = useMemo(() => {
       return [...filtered].sort((a, b) => {
-        if (a.unread_count > 0 && b.unread_count === 0) return -1;
-        if (a.unread_count === 0 && b.unread_count > 0) return 1;
         const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
         const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return db - da;
