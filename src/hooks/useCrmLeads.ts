@@ -234,7 +234,10 @@ export function useCrmLeadMutations() {
       const { error } = await supabase.from("crm_leads").delete().in("id", ids);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+    },
   });
 
   const bulkAddTag = useMutation({
