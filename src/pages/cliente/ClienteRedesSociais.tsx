@@ -319,6 +319,7 @@ export default function ClienteRedesSociais() {
   if (view === "gallery") {
     return (
       <>
+        <ApprovalDashboard />
         <PostGallery
           posts={posts}
           isLoading={postsLoading}
