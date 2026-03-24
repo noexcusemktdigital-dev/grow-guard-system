@@ -62,7 +62,7 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => {
           if (role === "franqueado") navigate("/franqueado/perfil");
-          else if (role === "cliente_admin" || role === "cliente_user") navigate("/cliente/configuracoes");
+          else if (role === "cliente_admin" || role === "cliente_user") navigate("/cliente/configuracoes?tab=perfil");
           else navigate("/franqueadora/perfil");
         }}>
           <User className="mr-2 h-4 w-4" />
@@ -70,7 +70,7 @@ export function UserMenu() {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => {
           if (role === "franqueado") navigate("/franqueado/configuracoes");
-          else if (role === "cliente_admin" || role === "cliente_user") navigate("/cliente/configuracoes");
+          else if (role === "cliente_admin" || role === "cliente_user") navigate("/cliente/configuracoes?tab=organizacao");
           else navigate("/franqueadora/perfil");
         }}>
           <Settings className="mr-2 h-4 w-4" />
