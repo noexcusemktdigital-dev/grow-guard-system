@@ -149,6 +149,24 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
         </div>
       )}
 
+      {/* Delete Funnel Confirmation */}
+      <AlertDialog open={!!deletingFunnel} onOpenChange={(o) => !o && setDeletingFunnel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir funil "{deletingFunnel?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Os leads vinculados a este funil ficarão sem funil associado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { deleteFunnel.mutate(deletingFunnel.id); setDeletingFunnel(null); toast({ title: "Funil excluído" }); }}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Stage Editor Dialog */}
       <Dialog open={stageDialogOpen} onOpenChange={setStageDialogOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
