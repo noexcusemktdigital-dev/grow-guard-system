@@ -213,13 +213,13 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   }, []);
 
   const scrollToBottom = useCallback(() => {
-    const el = scrollAreaRef.current;
-    if (el) {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    // Use setTimeout to ensure DOM has rendered
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
       isNearBottomRef.current = true;
       setShowScrollBtn(false);
       setNewMsgCount(0);
-    }
+    }, 50);
   }, []);
 
   // Auto-scroll only when near bottom + track new msg count
