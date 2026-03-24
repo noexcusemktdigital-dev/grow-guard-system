@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import {
   usePostHistory, useGeneratePost, useApprovePost, useDeletePost,
-  useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing,
+  useBulkDeletePosts, useBulkApprovePosts, useGenerateBriefing, useGenerateVideoBriefing,
   usePostQuota, CREDIT_COST_ART, CREDIT_COST_VIDEO, getVideoCost, PostItem,
 } from "@/hooks/useClientePosts";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
