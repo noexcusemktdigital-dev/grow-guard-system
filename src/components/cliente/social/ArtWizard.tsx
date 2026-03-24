@@ -11,6 +11,7 @@ import { LayoutPicker } from "./LayoutPicker";
 import { ContentPickerDialog } from "./ContentPickerDialog";
 import {
   ART_FORMATS, LAYOUT_TYPES, POST_TYPES, ART_OBJECTIVES,
+  PRINT_FORMATS, PRINT_TYPES,
 } from "./constants";
 import { ContentItem } from "@/hooks/useClienteContentV2";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
