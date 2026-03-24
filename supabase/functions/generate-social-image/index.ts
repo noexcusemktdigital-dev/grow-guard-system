@@ -834,6 +834,11 @@ Output ONLY the extracted logo image.`,
       );
     }
 
+    // Add print-specific instructions
+    if (isPrint) {
+      fullPrompt += `\n\nPRINT MODE (CMYK): This design is for PHYSICAL PRINTING. Use CMYK-safe colors only — NO neon, fluorescent, or overly saturated RGB colors. Ensure high resolution suitable for 300dpi print. Design should have proper bleed margins. Text must be extra crisp for print quality.`;
+    }
+
     // Append layout instructions to prompt if not already in CoT
     if (layoutInstructions && !optimized) {
       fullPrompt += `\n\n${layoutInstructions}`;
