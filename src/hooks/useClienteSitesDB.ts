@@ -80,6 +80,7 @@ export function useApproveSite() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-sites"] });
+      qc.invalidateQueries({ queryKey: ["approval-stats"] });
     },
   });
 }

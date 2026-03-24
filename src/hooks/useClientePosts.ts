@@ -307,6 +307,7 @@ export function useApprovePost() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-posts"] });
+      qc.invalidateQueries({ queryKey: ["approval-stats"] });
       toast({ title: "Postagem aprovada!" });
     },
   });
