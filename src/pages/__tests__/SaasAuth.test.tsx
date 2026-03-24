@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
 import { screen, fireEvent, waitFor } from "@testing-library/dom";
+import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 
 const mockSignIn = vi.fn();
@@ -42,6 +43,25 @@ vi.mock("sonner", () => ({
 
 vi.mock("@/assets/NOE3.png", () => ({ default: "logo.png" }));
 vi.mock("@/components/SaasBrandingPanel", () => ({ default: () => <div data-testid="branding" /> }));
+vi.mock("@/components/ui/tabs", () => ({
+  Tabs: ({ children }: any) => <div>{children}</div>,
+  TabsList: ({ children }: any) => <div>{children}</div>,
+  TabsTrigger: ({ children, value, className, ...props }: any) => (
+    <button type="button" className={className} {...props}>{children}</button>
+  ),
+  TabsContent: ({ children, value }: any) => <div>{children}</div>,
+}));
+vi.mock("@/components/ui/checkbox", () => ({
+  Checkbox: ({ checked, onCheckedChange, ...props }: any) => (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={() => onCheckedChange?.(!checked)}
+      {...props}
+    />
+  ),
+}));
 
 import SaasAuth from "../SaasAuth";
 
@@ -116,5 +136,34 @@ describe("SaasAuth (Cliente SaaS)", () => {
     renderSaas();
     fireEvent.click(screen.getByText("Esqueci minha senha"));
     expect(screen.getByText("Recuperar senha")).toBeInTheDocument();
+  });
+
+  it("shows existing account state and resends confirmation when signup returns obfuscated existing user", async () => {
+    mockSignUp.mockResolvedValue({
+      data: { user: { id: "u-existing", identities: [] } },
+      error: null,
+    });
+
+    renderSaas();
+
+    fireEvent.click(screen.getByRole("tab", { name: /criar conta/i }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /criar conta/i }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Nome completo")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Teste Cliente" } });
+    fireEvent.change(screen.getByLabelText("Email", { selector: "#signup-email" }), { target: { value: "existente@test.com" } });
+    fireEvent.change(screen.getByLabelText("Senha", { selector: "#signup-password" }), { target: { value: "Senha123!" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.submit(screen.getByLabelText("Nome completo").closest("form") as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("Este email já possui cadastro. Reenviamos a confirmação se a conta ainda não foi ativada.");
+    });
+
+    expect(screen.getByText("Este email já está cadastrado")).toBeInTheDocument();
+    expect(screen.getByText(/já possui cadastro/i)).toBeInTheDocument();
   });
 });
