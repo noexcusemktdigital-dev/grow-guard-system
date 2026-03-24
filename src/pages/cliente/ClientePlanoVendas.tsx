@@ -753,12 +753,25 @@ export default function ClientePlanoVendas() {
 
   const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f97316", "#6366f1", "#14b8a6"];
 
-  const parseFunnelStages = (text: string): { id: string; name: string; color: string }[] => {
+  const parseFunnelStages = (text: string) => {
     const parts = text.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean);
     return parts.map((name, i) => ({
-      id: String(i + 1),
-      name,
+      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
+      label: name,
       color: STAGE_COLORS[i % STAGE_COLORS.length],
+      icon: "circle-dot",
+    }));
+  };
+
+  const getDefaultFunnelStages = (modelo: string) => {
+    const b2bStages = ["Prospecção", "Qualificação", "Reunião", "Proposta", "Negociação", "Fechamento", "Perdido"];
+    const b2cStages = ["Novo Lead", "Primeiro Contato", "Apresentação", "Proposta", "Venda", "Perdido"];
+    const stages = modelo === "b2b" ? b2bStages : modelo === "b2c" ? b2cStages : [...b2bStages.slice(0, -1), "Pós-venda", "Perdido"];
+    return stages.map((name, i) => ({
+      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
+      label: name,
+      color: STAGE_COLORS[i % STAGE_COLORS.length],
+      icon: "circle-dot",
     }));
   };
 
@@ -769,19 +782,24 @@ export default function ClientePlanoVendas() {
     const { percentage: pct } = computeScores(ans);
     saveSalesPlan.mutate({ answers: ans, score: Math.round(pct) });
 
-    // ── Auto-create CRM funnel from etapas_funil ──
+    // ── Auto-create CRM funnel from etapas_funil or default ──
     const etapasText = ans.etapas_funil;
-    if (typeof etapasText === "string" && etapasText.trim().length > 0 && (!existingFunnels || existingFunnels.length === 0)) {
-      const stages = parseFunnelStages(etapasText);
-      if (stages.length >= 2) {
+    if (!existingFunnels || existingFunnels.length === 0) {
+      let funnelStages: { key: string; label: string; color: string; icon: string }[] = [];
+      if (typeof etapasText === "string" && etapasText.trim().length > 0) {
+        funnelStages = parseFunnelStages(etapasText);
+      } else {
+        funnelStages = getDefaultFunnelStages((ans.modelo_negocio as string) || "ambos");
+      }
+      if (funnelStages.length >= 2) {
         try {
           await createFunnel.mutateAsync({
             name: "Funil Principal",
             description: "Criado automaticamente a partir do Plano de Vendas",
-            stages,
+            stages: funnelStages,
             is_default: true,
           });
-          toast({ title: "Funil CRM criado automaticamente!", description: `${stages.length} etapas configuradas.` });
+          toast({ title: "Funil CRM criado automaticamente!", description: `${funnelStages.length} etapas configuradas.` });
         } catch (e) {
           console.error("Auto-funnel error:", e);
         }
