@@ -90,15 +90,19 @@ export function ArtWizard({
   const [objective, setObjective] = useState("vender");
   const [mandatoryPhrase, setMandatoryPhrase] = useState("");
 
-  // Step 2: Type + quantity
+  // Step 1: Output mode (digital vs print)
+  const [outputMode, setOutputMode] = useState<"digital" | "print">("digital");
+  const [printType, setPrintType] = useState("flyer");
+
+  // Step 3: Type + quantity
   const [tipoPostagem, setTipoPostagem] = useState("post_unico");
   const [quantity, setQuantity] = useState(1);
   const [carouselSlides, setCarouselSlides] = useState(5);
 
-  // Step 3: Layout (replaces old Style)
+  // Step 4: Layout (replaces old Style)
   const [layoutTypes, setLayoutTypes] = useState<string[]>(["hero_central"]);
 
-  // Step 4: References + Logo + Photos
+  // Step 5: References + Logo + Photos
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
@@ -106,8 +110,10 @@ export function ArtWizard({
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
-  // Step 5: Format
+  // Step 6: Format (per-piece when quantity > 1)
   const [artFormat, setArtFormat] = useState("portrait");
+  const [artFormats, setArtFormats] = useState<string[]>([]);
+  const [printFormat, setPrintFormat] = useState("flyer_a5");
 
   // Step 6: AI-generated text (review)
   const [headline, setHeadline] = useState("");
