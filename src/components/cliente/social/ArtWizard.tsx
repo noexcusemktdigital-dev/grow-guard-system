@@ -77,7 +77,7 @@ export interface ArtBriefingResult {
   suggested_tipo: string;
 }
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 export function ArtWizard({
   orgId, visualIdentity, contentHistory, contentData, setContentData,
