@@ -264,10 +264,7 @@ export default function Matriz() {
                 {inviteRole === "cliente_user" && "Acesso operacional: utiliza as ferramentas do dia a dia."}
               </p>
             </div>
-            <div>
-              <Label>Times / Funções</Label>
-              <TeamSelector selectedIds={inviteTeamIds} onToggle={(id) => toggleTeam(id, inviteTeamIds, setInviteTeamIds)} />
-            </div>
+            <TeamSelector selectedIds={inviteTeamIds} onToggle={(id) => toggleTeam(id, inviteTeamIds, setInviteTeamIds)} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInvite(false)}>
