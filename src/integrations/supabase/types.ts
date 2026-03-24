@@ -6097,6 +6097,18 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_org_members_with_email: {
+        Args: { _org_id: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          email: string
+          full_name: string
+          job_title: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_parent_org_id: { Args: { _org_id: string }; Returns: string }
       get_rankings_with_parent: {
         Args: { _org_id: string }
