@@ -816,7 +816,7 @@ export default function ClienteCRM() {
             </div>
           )}
 
-          {allLeads.length === 0 ? (
+          {allLeads.length === 0 && stages.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                 <Users className="w-12 h-12 text-muted-foreground/30 mb-4" />
