@@ -70,7 +70,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.invite-user]
     verify_jwt = false
   [functions.process-email-queue]
-    verify_jwt = false
+    verify_jwt = true
   [functions.provision-unit]
     verify_jwt = false
   [functions.recharge-credits]
