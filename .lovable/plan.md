@@ -1,121 +1,57 @@
 
 
-# Diagnóstico Completo — Criação de Contas, Vínculo e Gestão de Usuários
+# Correção do CRM — Leads Duplicados, Vínculo, Formatação e Auto-funil
 
-## Arquitetura Atual
+## Problemas Identificados
 
-O sistema opera em 3 portais com isolamento de sessão via `storageKey` dinâmico (`noe-saas-auth` vs `noe-franchise-auth`), dois clientes Supabase (`src/lib/supabase.ts` e `src/integrations/supabase/client.ts`), e uma Edge Function central `invite-user` compartilhada entre todos os portais.
+### BUG CRÍTICO: Leads replicados em todas as colunas do Kanban
+A função `parseFunnelStages` no Plano de Vendas gera etapas com formato `{id, name, color}`, mas o CRM espera `{key, label, color, icon}`. Quando o Kanban lê as etapas (linha 319 de `ClienteCRM.tsx`), faz `s.key || s.label?.toLowerCase()...` — como ambos são `undefined`, TODAS as colunas recebem a mesma key `"stage"`. O lead é mapeado para todas as colunas simultaneamente.
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│                    Fluxos de Criação                     │
-├──────────────┬───────────────────┬───────────────────────┤
-│  FRANQUEADORA │    FRANQUEADO     │       CLIENTE SaaS    │
-│ (Matriz.tsx)  │ (FranqConfig.tsx) │  (SaasAuth.tsx)       │
-│  invite-user  │  invite-user      │  signUp + signup-saas │
-│  role: admin  │  role: franq/user │  role: cliente_admin  │
-└──────┬───────┴────────┬──────────┴──────────┬────────────┘
-       │                │                     │
-       ▼                ▼                     ▼
-   invite-user EF    invite-user EF      signup-saas EF
-   (cria user +      (cria user +        (cria org +
-    membership +      membership +         subscription +
-    role + email)     role + email)        wallet + role)
-```
+### Campo "Vincular a contato" sem utilidade clara
+O campo de busca de contatos no diálogo de novo lead não explica sua função e confunde o usuário. Não é essencial para criação de leads.
+
+### Formatação de números sem padrão brasileiro
+Valores monetários exibidos sem separador de milhar/decimal correto (ex: `R$ 20000` ao invés de `R$ 20.000`).
+
+### Auto-geração de funil incompleta
+Quando o usuário não preenche `etapas_funil` no Plano de Vendas, nenhum funil é criado. Deveria gerar um funil padrão baseado no modelo de negócio.
 
 ---
 
-## BUGS IDENTIFICADOS (7)
+## Plano de Correção
 
-### BUG 1 — `invite-user`: listUsers limitado a 50 registros
-**Gravidade: Alta**
-Linha 145 de `invite-user/index.ts`:
-```javascript
-const { data: { users } } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 50 });
-const existing = users?.find((u) => u.email === email);
+### 1. Corrigir `parseFunnelStages` — formato compatível com CRM
+Alterar a função para retornar `{key, label, color, icon}` ao invés de `{id, name, color}`.
+
+```typescript
+// DE:  { id: String(i+1), name, color }
+// PARA: { key: name.toLowerCase().replace(/\s+/g,"_"), label: name, color: "blue", icon: "circle-dot" }
 ```
-Se o sistema tiver mais de 50 usuários e o e-mail existente estiver além da primeira página, o convite falhará com "Usuário existe mas não foi encontrado na listagem". Deve usar `getUserByEmail` ou paginação.
 
-### BUG 2 — `update-member`: deleta `user_roles` globalmente
-**Gravidade: Alta**
-Linha 46 de `update-member/index.ts`:
-```javascript
-await admin.from("user_roles").delete().eq("user_id", user_id);
-```
-Ao remover um membro de uma organização, apaga TODOS os roles do usuário — mesmo que ele pertença a outra organização. Se um usuário for membro de 2 orgs, remover de uma apaga o role usado na outra.
+**Arquivo**: `src/pages/cliente/ClientePlanoVendas.tsx`
 
-### BUG 3 — `org_team_memberships` delete usa `organization_id` mas a tabela provavelmente não tem essa coluna
-**Gravidade: Média**
-Linha 45 de `update-member/index.ts`:
-```javascript
-await admin.from("org_team_memberships").delete().eq("user_id", user_id).eq("organization_id", organization_id);
-```
-A tabela `org_team_memberships` tem colunas `team_id` e `user_id` — não `organization_id`. O filtro por `organization_id` silenciosamente não deleta nada, deixando registros órfãos de team membership.
+### 2. Gerar funil padrão quando não há `etapas_funil`
+Se o usuário completar o Plano de Vendas sem descrever etapas, gerar automaticamente um funil padrão baseado no `modelo_negocio` (B2B, B2C ou Ambos), usando etapas pré-definidas sensatas.
 
-### BUG 4 — `invite-user`: redirect hardcoded para `/acessofranquia`
-**Gravidade: Média**
-Linha 177: O link de recuperação redireciona SEMPRE para `/acessofranquia`, mesmo quando o convite é para o portal SaaS (cliente). Um cliente convidado recebe um link que leva ao login da franquia, não do SaaS (`/app`).
+**Arquivo**: `src/pages/cliente/ClientePlanoVendas.tsx`
 
-### BUG 5 — `signup-saas`: não tem autenticação do chamador
-**Gravidade: Média**
-A função `signup-saas` aceita qualquer `user_id` no body sem validar quem está chamando. Qualquer requisição com o anon key pode provisionar organizações para qualquer user_id. Na prática o risco é baixo porque requer um user_id válido, mas viola o princípio de menor privilégio.
+### 3. Remover campo "Vincular a contato" do diálogo de novo lead
+Eliminar a seção de busca de contatos que confunde o usuário. O preenchimento automático via `prefillContact` continuará funcionando internamente.
 
-### BUG 6 — Fallback de role no `AuthContext` mascara problemas
-**Gravidade: Baixa**
-Linhas 128-129: Se o fetch de roles falhar por timeout, o sistema atribui `cliente_admin` ou `franqueado` como fallback. Isso pode dar acesso administrativo indevido a um usuário que deveria ser `cliente_user`.
+**Arquivo**: `src/components/crm/CrmNewLeadDialog.tsx`
 
-### BUG 7 — `useOrgMembers` não retorna e-mail
-**Gravidade: Baixa**
-Linha 54: `email: ""` — o hook retorna string vazia para email porque `auth.users` não é acessível via client SDK. Os administradores não conseguem ver o e-mail dos membros na interface de gestão.
+### 4. Corrigir formatação de valores monetários no CRM
+Aplicar `toLocaleString("pt-BR")` nos valores exibidos no Kanban (cards e resumo do pipeline).
+
+**Arquivo**: `src/pages/cliente/ClienteCRM.tsx`
 
 ---
 
-## MELHORIAS IDENTIFICADAS (5)
-
-### MELHORIA 1 — Roles devem ser vinculados à organização, não globais
-A tabela `user_roles` tem `(user_id, role)` sem referência à organização. Um usuário com múltiplas organizações (ex: admin de franquia E cliente SaaS) não pode ter roles diferentes por org. A solução ideal é mover role para `organization_memberships.role` ou adicionar `organization_id` em `user_roles`.
-
-### MELHORIA 2 — Link de convite deveria ser contextual
-O `invite-user` deve receber um parâmetro `portal` ou derivar do tipo da organização para gerar o `redirectTo` correto (`/app` para SaaS, `/acessofranquia` para franquia).
-
-### MELHORIA 3 — Plano de limites deveria checar na Franqueadora/Franqueado
-O `invite-user` valida limite de usuários apenas via `subscriptions`, que existe para orgs tipo `cliente`. Franqueadoras e Franqueados não têm subscription — o limite fica `planLimits[undefined] ?? 10`, aplicando 10 como fallback arbitrário.
-
-### MELHORIA 4 — Email do membro acessível na UI
-Criar uma RPC `get_org_members_with_email` (SECURITY DEFINER) que cruza `organization_memberships` com `auth.users` para retornar emails, evitando o problema do BUG 7.
-
-### MELHORIA 5 — Super admin check na remoção deveria ser scoped
-Em `update-member`, a verificação do "último super_admin" conta TODOS os super_admins globais, não os da organização atual. Deveria filtrar por `organization_memberships` da org em questão.
-
----
-
-## PLANO DE CORREÇÃO
-
-### Fase 1: Bugs Críticos (invite-user + update-member)
-
-1. **`invite-user/index.ts`**: Substituir `listUsers` por busca filtrada ou iteração paginada para encontrar usuários existentes
-2. **`invite-user/index.ts`**: Derivar `redirectTo` do tipo da organização (SaaS → `/app`, franchise → `/acessofranquia`)
-3. **`update-member/index.ts`**: Corrigir deleção de roles para ser scoped à organização (deletar apenas se não pertence a outra org)
-4. **`update-member/index.ts`**: Corrigir deleção de team memberships para usar `team_id IN (teams da org)` ao invés de `organization_id`
-
-### Fase 2: Segurança
-
-5. **`signup-saas/index.ts`**: Adicionar validação de que o `user_id` corresponde ao chamador autenticado
-6. **`AuthContext.tsx`**: Usar fallback role mais conservador (`cliente_user` ao invés de `cliente_admin`)
-
-### Fase 3: Melhorias de UX
-
-7. **`useOrgMembers.ts`**: Criar RPC para retornar emails dos membros
-8. **`invite-user`**: Melhorar limite de usuários para franqueadoras (sem subscription)
-
-### Arquivos Afetados
+## Arquivos Afetados
 
 | Arquivo | Ação |
 |---|---|
-| `supabase/functions/invite-user/index.ts` | Editar — Bugs 1, 4 |
-| `supabase/functions/update-member/index.ts` | Editar — Bugs 2, 3, Melhoria 5 |
-| `supabase/functions/signup-saas/index.ts` | Editar — Bug 5 |
-| `src/contexts/AuthContext.tsx` | Editar — Bug 6 |
-| `src/hooks/useOrgMembers.ts` | Editar — Bug 7 (se RPC criada) |
-| Migration SQL | Nova — RPC `get_org_members_with_email` |
+| `src/pages/cliente/ClientePlanoVendas.tsx` | Corrigir `parseFunnelStages` + auto-funil padrão |
+| `src/components/crm/CrmNewLeadDialog.tsx` | Remover seção "Vincular a contato" |
+| `src/pages/cliente/ClienteCRM.tsx` | Corrigir formatação monetária pt-BR |
 
