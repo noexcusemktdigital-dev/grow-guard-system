@@ -52,10 +52,18 @@ interface LeadRow {
   whatsapp_contact_id?: string | null;
 }
 
+interface FunnelOption {
+  id: string;
+  name: string;
+  stages: any[];
+}
+
 interface CrmLeadDetailSheetProps {
   lead: LeadRow | null;
   onClose: () => void;
   stages: FunnelStage[];
+  funnels?: FunnelOption[];
+  currentFunnelId?: string;
 }
 
 const ACTIVITY_TYPES = [
