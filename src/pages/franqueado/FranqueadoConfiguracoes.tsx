@@ -115,6 +115,7 @@ function TeamTab() {
   const { data: orgId } = useUserOrgId();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
+  const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
   const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
 
