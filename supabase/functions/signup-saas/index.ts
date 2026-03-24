@@ -26,7 +26,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Wait for auth.users row to be fully committed (race condition with signUp)
+    // Ensure profile exists before creating memberships. Some signup flows can race
+    // with the auth trigger that creates public.profiles.
     let userExists = false;
     for (let attempt = 0; attempt < 10; attempt++) {
       const { data: profile } = await supabaseAdmin
@@ -38,6 +39,25 @@ Deno.serve(async (req) => {
         userExists = true;
         break;
       }
+
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(user_id);
+      if (authUser?.user) {
+        const fullName = typeof authUser.user.user_metadata?.full_name === "string"
+          ? authUser.user.user_metadata.full_name
+          : "";
+
+        const { error: profileInsertError } = await supabaseAdmin
+          .from("profiles")
+          .insert({ id: user_id, full_name: fullName } as any);
+
+        if (!profileInsertError || profileInsertError.code === "23505") {
+          userExists = true;
+          break;
+        }
+
+        console.warn("Failed to create missing profile during signup:", profileInsertError);
+      }
+
       await new Promise((r) => setTimeout(r, 500));
     }
     if (!userExists) {
