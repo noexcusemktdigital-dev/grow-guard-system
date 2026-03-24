@@ -215,6 +215,29 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
                 </SelectContent>
               </Select>
             </div>
+            {funnels && funnels.length > 1 && (
+              <div>
+                <Label className="text-xs">Funil</Label>
+                <Select
+                  value={currentFunnelId || ""}
+                  onValueChange={(funnelId) => {
+                    const targetFunnel = funnels.find(f => f.id === funnelId);
+                    if (!targetFunnel) return;
+                    const targetStages = targetFunnel.stages as any[];
+                    const firstStageKey = Array.isArray(targetStages) && targetStages.length > 0
+                      ? (targetStages[0].key || targetStages[0].label?.toLowerCase().replace(/\s+/g, "_") || "novo")
+                      : "novo";
+                    updateLead.mutate({ id: lead.id, funnel_id: funnelId, stage: firstStageKey });
+                    toast({ title: `Lead transferido para "${targetFunnel.name}"` });
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecionar funil" /></SelectTrigger>
+                  <SelectContent>
+                    {funnels.map(f => <SelectItem key={f.id} value={f.id} className="text-sm">{f.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div>
