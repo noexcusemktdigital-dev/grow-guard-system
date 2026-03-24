@@ -143,6 +143,7 @@ function TeamTab() {
       toast.success("Convite enviado! O funcionário receberá um e-mail para definir sua senha.");
       setInviteOpen(false);
       setInviteForm({ email: "", full_name: "", role: "cliente_user" });
+      setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
     },
     onError: (err: any) => toast.error(err.message),
