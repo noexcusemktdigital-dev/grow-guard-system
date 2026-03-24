@@ -202,11 +202,11 @@ Deno.serve(async (req) => {
 
     // Generate a password recovery link — redirect based on org type
     const siteUrl = Deno.env.get("SITE_URL") || "https://sistema.noexcusedigital.com.br";
-    const redirectPath = orgType === "cliente" ? "/app" : "/acessofranquia";
+    const redirectPath = "/reset-password";
     const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${siteUrl}${redirectPath}` },
+      options: { redirectTo: `${siteUrl}${redirectPath}?portal=${orgType === "cliente" ? "saas" : "franchise"}` },
     });
 
     if (linkErr) {
