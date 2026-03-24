@@ -76,6 +76,9 @@ export function useGeneratePost() {
       primary_ref_index?: number;
       objective?: string;
       photo_image_urls?: string[];
+      // Print mode fields
+      output_mode?: "digital" | "print";
+      print_format?: string;
       // Video-specific structured fields
       plataforma?: string;
       estilo_visual?: string;

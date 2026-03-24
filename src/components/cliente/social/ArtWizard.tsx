@@ -38,6 +38,7 @@ interface ArtWizardProps {
 
 export interface ArtGeneratePayload {
   format: string;
+  formats?: string[];
   style: string;
   tipoPostagem: string;
   headline: string;
@@ -59,6 +60,8 @@ export interface ArtGeneratePayload {
   primaryRefIndex?: number;
   objective?: string;
   photoUrls?: string[];
+  outputMode?: "digital" | "print";
+  printFormat?: string;
 }
 
 export interface ArtBriefingResult {
