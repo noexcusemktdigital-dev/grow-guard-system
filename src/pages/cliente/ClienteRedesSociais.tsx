@@ -176,6 +176,7 @@ export default function ClienteRedesSociais() {
             logo_url: payload.logoUrl || undefined,
             primary_ref_index: payload.primaryRefIndex,
             objective: payload.objective || undefined,
+            photo_image_urls: payload.photoUrls,
           });
 
           results.push(result);
