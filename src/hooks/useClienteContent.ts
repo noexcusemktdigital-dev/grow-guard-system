@@ -74,13 +74,23 @@ export function useClienteSites() {
 
 export function useClienteNotifications() {
   const { user } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["client-notifications", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("client_notifications").select("*").eq("user_id", user!.id).order("created_at", { ascending: false });
+    queryFn: async ({ pageParam = 0 }) => {
+      const from = pageParam * NOTIFICATIONS_PAGE_SIZE;
+      const to = from + NOTIFICATIONS_PAGE_SIZE - 1;
+      const { data, error } = await supabase
+        .from("client_notifications")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      return data;
+      return { data: data ?? [], page: pageParam };
     },
+    getNextPageParam: (lastPage) =>
+      lastPage.data.length === NOTIFICATIONS_PAGE_SIZE ? lastPage.page + 1 : undefined,
+    initialPageParam: 0,
     enabled: !!user,
   });
 }
