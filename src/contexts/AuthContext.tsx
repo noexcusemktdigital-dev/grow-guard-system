@@ -120,13 +120,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           || roles[0];
         setRole(topRole);
         lastFetchedUserRef.current = currentUser.id;
+        // Cache role for timeout fallback
+        try { localStorage.setItem("noe-cached-role", topRole); } catch {}
       } else {
         // Check if this was a timeout (null result) vs genuine "no roles"
         if (roleResult === null) {
-          // On timeout, use fallback based on URL context — don't provision
-          console.warn("[Auth] Role fetch timed out, using conservative fallback role");
-          const fallback: AppRole = isSaasPortal ? "cliente_user" : "franqueado";
-          setRole(fallback);
+          // On timeout, use cached role if available — don't guess
+          console.warn("[Auth] Role fetch timed out, checking cached role");
+          const cached = localStorage.getItem("noe-cached-role") as AppRole | null;
+          if (cached) {
+            console.log("[Auth] Using cached role:", cached);
+            setRole(cached);
+          } else {
+            // Last resort fallback
+            const fallback: AppRole = isSaasPortal ? "cliente_user" : "franqueado";
+            setRole(fallback);
+          }
           lastFetchedUserRef.current = currentUser.id;
           return;
         }
