@@ -79,9 +79,16 @@ export function RefUploader({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const [svgWarning, setSvgWarning] = useState(false);
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !orgId || !setLogoUrl) return;
+    
+    // Check for SVG
+    const isSvg = file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
+    setSvgWarning(isSvg);
+    
     setUploading(true);
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `logos/${orgId}/${Date.now()}_${safeName}`;
