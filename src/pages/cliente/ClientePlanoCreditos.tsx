@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CreditCard, Zap, ArrowUpRight, Plus, Check, Star, Crown, BarChart3,
   History, Package, FileText, ExternalLink, Receipt, Calculator,
@@ -306,6 +307,7 @@ function SubscriptionDialog({
   const [couponLoading, setCouponLoading] = useState(false);
   const [paymentResult, setPaymentResult] = useState<any>(null);
   const { data: orgId } = useUserOrgId();
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const handleClose = (o: boolean) => {
@@ -486,9 +488,12 @@ function SubscriptionDialog({
                 </RadioGroup>
               </div>
               {!hasCnpj && (
-                <p className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
-                  ⚠️ Preencha o CNPJ/CPF da empresa em <strong>Configurações → Organização</strong> antes de assinar.
-                </p>
+                <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3 flex items-center justify-between gap-2">
+                  <span>⚠️ Preencha o CNPJ/CPF da empresa antes de assinar.</span>
+                  <Button size="sm" variant="outline" className="shrink-0 border-destructive text-destructive hover:bg-destructive/10" onClick={() => navigate("/cliente/configuracoes")}>
+                    Cadastrar CNPJ
+                  </Button>
+                </div>
               )}
             </div>
             <DialogFooter>
