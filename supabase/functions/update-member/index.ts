@@ -35,16 +35,41 @@ Deno.serve(async (req) => {
     const adminRoles = ["super_admin", "admin", "franqueado", "cliente_admin"];
     if (!adminRoles.includes(callerRole)) return new Response(JSON.stringify({ error: "Apenas administradores podem gerenciar membros" }), { status: 403, headers: corsHeaders });
 
-    // Cannot modify self
+    // Cannot modify self on remove
     if (action === "remove" && user_id === caller.id) {
       return new Response(JSON.stringify({ error: "Você não pode remover a si mesmo" }), { status: 400, headers: corsHeaders });
     }
 
     if (action === "remove") {
-      // Delete from org_team_memberships, user_roles, organization_memberships
-      await admin.from("org_team_memberships").delete().eq("user_id", user_id).eq("organization_id", organization_id);
-      await admin.from("user_roles").delete().eq("user_id", user_id);
+      // Get teams belonging to this organization so we can clean up team memberships
+      const { data: orgTeams } = await admin
+        .from("org_teams")
+        .select("id")
+        .eq("organization_id", organization_id);
+      const orgTeamIds = (orgTeams ?? []).map((t: any) => t.id);
+
+      // Delete team memberships for this org's teams only
+      if (orgTeamIds.length > 0) {
+        await admin
+          .from("org_team_memberships")
+          .delete()
+          .eq("user_id", user_id)
+          .in("team_id", orgTeamIds);
+      }
+
+      // Remove membership from this org
       await admin.from("organization_memberships").delete().eq("user_id", user_id).eq("organization_id", organization_id);
+
+      // Only delete user_roles if user has NO other organization memberships
+      const { count: otherMemberships } = await admin
+        .from("organization_memberships")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user_id);
+
+      if ((otherMemberships ?? 0) === 0) {
+        await admin.from("user_roles").delete().eq("user_id", user_id);
+      }
+
       return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
     }
 
@@ -59,14 +84,26 @@ Deno.serve(async (req) => {
     }
 
     if (role) {
-      // Prevent removing the last super_admin
+      // Prevent removing the last super_admin — scoped to this org
       if (role !== "super_admin") {
         const { data: targetRole } = await admin.rpc("get_user_role", { _user_id: user_id });
         if (targetRole === "super_admin") {
-          const { data: allRoles } = await admin.from("user_roles").select("user_id").eq("role", "super_admin");
-          const superAdminInOrg = (allRoles ?? []).filter(r => r.user_id !== user_id);
-          if (superAdminInOrg.length === 0) {
-            return new Response(JSON.stringify({ error: "Não é possível rebaixar o último Super Admin" }), { status: 400, headers: corsHeaders });
+          // Count super_admins that are members of THIS organization
+          const { data: orgMembers } = await admin
+            .from("organization_memberships")
+            .select("user_id")
+            .eq("organization_id", organization_id);
+          const memberIds = (orgMembers ?? []).map((m: any) => m.user_id);
+
+          const { data: superAdminRoles } = await admin
+            .from("user_roles")
+            .select("user_id")
+            .eq("role", "super_admin")
+            .in("user_id", memberIds);
+
+          const otherSuperAdmins = (superAdminRoles ?? []).filter((r: any) => r.user_id !== user_id);
+          if (otherSuperAdmins.length === 0) {
+            return new Response(JSON.stringify({ error: "Não é possível rebaixar o último Super Admin desta organização" }), { status: 400, headers: corsHeaders });
           }
         }
       }

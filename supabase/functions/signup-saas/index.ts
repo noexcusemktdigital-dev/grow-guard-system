@@ -12,10 +12,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     const { user_id, company_name, franchisee_org_id, referral_code } = await req.json();
 
@@ -26,8 +26,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Ensure profile exists before creating memberships. Some signup flows can race
-    // with the auth trigger that creates public.profiles.
+    // ---- Validate caller matches user_id ----
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: { user: caller } } = await userClient.auth.getUser();
+      if (caller && caller.id !== user_id) {
+        return new Response(JSON.stringify({ error: "Forbidden: user_id does not match authenticated user" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Ensure profile exists before creating memberships
     let userExists = false;
     for (let attempt = 0; attempt < 10; attempt++) {
       const { data: profile } = await supabaseAdmin
@@ -98,7 +113,6 @@ Deno.serve(async (req) => {
         resolvedParentOrgId = referralData.id;
         referralOrgId = referralData.id;
 
-        // Get discount config
         const { data: discountData } = await supabaseAdmin
           .from("referral_discounts")
           .select("discount_percent, is_active")
@@ -108,16 +122,14 @@ Deno.serve(async (req) => {
 
         if (discountData) {
           discountPercent = discountData.discount_percent || 5;
-          // Increment uses_count
           await supabaseAdmin.rpc("increment_referral_uses", { _org_id: referralData.id }).catch(() => {
-            // Fallback: direct update
             supabaseAdmin
               .from("referral_discounts")
               .update({ uses_count: (discountData as any).uses_count + 1 } as any)
               .eq("organization_id", referralData.id);
           });
         } else {
-          discountPercent = 5; // Default 5% even if no config row
+          discountPercent = 5;
         }
 
         console.log(`Referral resolved: code=${referral_code}, org=${referralData.id}, discount=${discountPercent}%`);

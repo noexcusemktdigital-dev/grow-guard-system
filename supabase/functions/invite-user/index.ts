@@ -55,6 +55,23 @@ async function sendViaResend(to: string, html: string): Promise<void> {
   }
 }
 
+/** Find an existing user by email using paginated admin.listUsers */
+async function findUserByEmail(adminClient: any, email: string): Promise<any | null> {
+  const normalizedEmail = email.toLowerCase().trim();
+  let page = 1;
+  const perPage = 100;
+  while (true) {
+    const { data: { users }, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    if (!users || users.length === 0) break;
+    const found = users.find((u: any) => u.email?.toLowerCase() === normalizedEmail);
+    if (found) return found;
+    if (users.length < perPage) break; // last page
+    page++;
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -105,15 +122,30 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ---- Validate maxUsers server-side ----
-    const { data: sub } = await adminClient
-      .from("subscriptions")
-      .select("plan, status")
-      .eq("organization_id", organization_id)
-      .maybeSingle();
+    // ---- Determine org type for contextual redirect and limits ----
+    const { data: orgData } = await adminClient
+      .from("organizations")
+      .select("type")
+      .eq("id", organization_id)
+      .single();
+    const orgType = orgData?.type; // 'franqueadora' | 'franqueado' | 'cliente'
 
-    const planLimits: Record<string, number> = { starter: 10, pro: 20, enterprise: 9999, trial: 2 };
-    const maxUsers = planLimits[sub?.plan ?? ""] ?? 10;
+    // ---- Validate maxUsers server-side ----
+    let maxUsers = 9999; // default for franchise orgs without subscriptions
+    if (orgType === "cliente") {
+      const { data: sub } = await adminClient
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+
+      const planLimits: Record<string, number> = { starter: 10, pro: 20, enterprise: 9999, trial: 2 };
+      maxUsers = planLimits[sub?.plan ?? ""] ?? 10;
+    } else if (orgType === "franqueado") {
+      maxUsers = 50; // reasonable limit for franchise units
+    } else if (orgType === "franqueadora") {
+      maxUsers = 200; // reasonable limit for franqueadora
+    }
 
     const { count: currentMembers } = await adminClient
       .from("organization_memberships")
@@ -122,7 +154,7 @@ Deno.serve(async (req) => {
 
     if ((currentMembers ?? 0) >= maxUsers) {
       return new Response(
-        JSON.stringify({ error: `Limite de ${maxUsers} usuários do plano atingido. Faça upgrade para adicionar mais.` }),
+        JSON.stringify({ error: `Limite de ${maxUsers} usuários atingido. Faça upgrade para adicionar mais.` }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -140,10 +172,9 @@ Deno.serve(async (req) => {
     let userId: string;
 
     if (createErr && (createErr as any).code === "email_exists") {
-      // User already exists — find them
+      // User already exists — find them via paginated search
       console.log("[invite-user] User already exists, looking up:", email);
-      const { data: { users } } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 50 });
-      const existing = users?.find((u: any) => u.email === email);
+      const existing = await findUserByEmail(adminClient, email);
       if (!existing) throw new Error("Usuário existe mas não foi encontrado na listagem");
 
       // Check if already member of this org
@@ -169,12 +200,13 @@ Deno.serve(async (req) => {
       userId = newUser.user.id;
     }
 
-    // Generate a password recovery link so the user can set their own password
+    // Generate a password recovery link — redirect based on org type
     const siteUrl = Deno.env.get("SITE_URL") || "https://sistema.noexcusedigital.com.br";
+    const redirectPath = orgType === "cliente" ? "/app" : "/acessofranquia";
     const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${siteUrl}/acessofranquia` },
+      options: { redirectTo: `${siteUrl}${redirectPath}` },
     });
 
     if (linkErr) {
@@ -191,7 +223,6 @@ Deno.serve(async (req) => {
         console.log(`Invite email sent via Resend to ${email}`);
       } catch (emailErr) {
         console.error("Failed to send invite email via Resend:", emailErr);
-        // Don't block the user creation - log the error but continue
       }
     } else {
       console.warn("No recovery URL generated, skipping email send");
@@ -209,19 +240,12 @@ Deno.serve(async (req) => {
       organization_id,
     }, { onConflict: "user_id,organization_id", ignoreDuplicates: true });
 
-    // Determine default role based on organization type
+    // Determine role based on org type
     const allowedRoles = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
     let validRole: string;
     if (allowedRoles.includes(role)) {
       validRole = role;
     } else {
-      // Lookup org type to pick the correct default
-      const { data: orgData } = await adminClient
-        .from("organizations")
-        .select("type")
-        .eq("id", organization_id)
-        .single();
-      const orgType = orgData?.type;
       validRole = (orgType === "franqueadora" || orgType === "franqueado") ? "franqueado" : "cliente_user";
       console.log(`[invite-user] No explicit role, org type=${orgType}, defaulting to ${validRole}`);
     }
