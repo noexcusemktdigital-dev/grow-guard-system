@@ -458,6 +458,7 @@ export function ArtWizard({
             </div>
           </div>
         );
+      }
 
       // ─── Step 5: Format ───
       case 5:
