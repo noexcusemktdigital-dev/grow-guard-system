@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
-import { Search, RefreshCw, Clock, MessageCircle, Wifi, Bot, User, Users } from "lucide-react";
+import { Search, Clock, MessageCircle, Wifi, Bot, User, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,14 +16,12 @@ interface Props {
   isConnected?: boolean;
   lastMessages?: Map<string, string>;
   connectedPhone?: string;
-  onSync?: () => void;
-  isSyncing?: boolean;
 }
 
 type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
 
 export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
-  function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone, onSync, isSyncing }, ref) {
+  function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone }, ref) {
     const [search, setSearch] = useState("");
     const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
     const [agentFilter, setAgentFilter] = useState("");
@@ -89,11 +87,6 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              {onSync && (
-                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={onSync} disabled={isSyncing} title="Sincronizar conversas do WhatsApp">
-                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-                </Button>
-              )}
               {totalUnread > 0 && (
                 <Badge className="h-5 min-w-5 px-1.5 text-[10px] bg-primary text-primary-foreground rounded-full">{totalUnread}</Badge>
               )}

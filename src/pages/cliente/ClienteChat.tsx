@@ -33,7 +33,7 @@ export default function ClienteChat() {
   const { data: contacts = [], isLoading: loadingContacts } = useWhatsAppContacts(instance?.id ?? null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+  
   const [mobileShowConversation, setMobileShowConversation] = useState(false);
   const [realtimeConnected, setRealtimeConnected] = useState(true);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -102,28 +102,6 @@ export default function ClienteChat() {
 
   const handleBackToList = useCallback(() => setMobileShowConversation(false), []);
 
-  const handleSyncChats = useCallback(async () => {
-    if (!instance?.instance_id || isSyncing) return;
-    setIsSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-sync-chats", {
-        body: { instanceId: instance.instance_id },
-      });
-      if (error) throw error;
-      toast({
-        title: "Sincronização concluída!",
-        description: `${data.contacts_created} novos, ${data.contacts_updated} atualizados, ${data.contacts_removed || 0} removidos de ${data.total_chats_found} conversas.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-      supabase.functions.invoke("whatsapp-sync-photos", { body: { limit: 30 } })
-        .then(() => queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] }))
-        .catch(() => {});
-    } catch (err: any) {
-      toast({ title: "Erro na sincronização", description: err.message, variant: "destructive" });
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [instance?.instance_id, isSyncing, queryClient]);
 
   const handleCreateLeadFromChat = async () => {
     if (!selectedContact) return;
@@ -256,8 +234,6 @@ export default function ClienteChat() {
               isConnected={isConnected}
               lastMessages={lastMessages}
               connectedPhone={formattedPhone ?? undefined}
-              onSync={handleSyncChats}
-              isSyncing={isSyncing}
             />
           )}
         </div>
