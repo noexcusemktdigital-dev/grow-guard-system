@@ -444,6 +444,18 @@ export default function ClienteCRM() {
     toast({ title: "Tag adicionada em massa" });
   };
 
+  const handleBulkTransferFunnel = (funnelId: string) => {
+    const targetFunnel = accessibleFunnels.find(f => f.id === funnelId);
+    if (!targetFunnel) return;
+    const targetStages = targetFunnel.stages as any[];
+    const firstStageKey = Array.isArray(targetStages) && targetStages.length > 0
+      ? (targetStages[0].key || targetStages[0].label?.toLowerCase().replace(/\s+/g, "_") || "novo")
+      : "novo";
+    bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { funnel_id: funnelId, stage: firstStageKey } });
+    setSelectedLeadIds(new Set());
+    toast({ title: `Leads transferidos para "${targetFunnel.name}"` });
+  };
+
   const handleBulkMarkLost = () => {
     bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { lost_at: new Date().toISOString(), stage: "perdido" } });
     setSelectedLeadIds(new Set());
@@ -802,6 +814,19 @@ export default function ClienteCRM() {
                 <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkAddTag} disabled={!bulkTagInput.trim()}><Tag className="w-3 h-3 mr-1" /> Tag</Button>
               </div>
 
+              {accessibleFunnels.length > 1 && (
+                <Select value="" onValueChange={handleBulkTransferFunnel}>
+                  <SelectTrigger className="h-7 w-36 text-xs bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+                    <Shuffle className="w-3 h-3 mr-1" /><SelectValue placeholder="Transferir funil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accessibleFunnels.filter(f => f.id !== selectedFunnelId).map(f => (
+                      <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
               <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkMarkLost}>
                 <XCircle className="w-3 h-3 mr-1" /> Perdido
               </Button>
@@ -816,7 +841,7 @@ export default function ClienteCRM() {
             </div>
           )}
 
-          {allLeads.length === 0 ? (
+          {allLeads.length === 0 && stages.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                 <Users className="w-12 h-12 text-muted-foreground/30 mb-4" />
@@ -963,7 +988,7 @@ export default function ClienteCRM() {
       )}
 
       {/* Lead Detail Sheet */}
-      <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} />
+      <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} funnels={accessibleFunnels.map(f => ({ id: f.id, name: f.name, stages: f.stages as any[] }))} currentFunnelId={selectedFunnelId || undefined} />
 
       {/* New Lead Dialog */}
       <CrmNewLeadDialog open={newLeadOpen} onOpenChange={(o) => { setNewLeadOpen(o); if (!o) setNewLeadContact(null); }} defaultStage={stages[0]?.key || "novo"} funnelId={selectedFunnelId || undefined} prefillContact={newLeadContact} />

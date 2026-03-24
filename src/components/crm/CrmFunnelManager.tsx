@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const { toast } = useToast();
   const { data: funnelsData } = useCrmFunnels();
   const { createFunnel, updateFunnel, deleteFunnel } = useCrmFunnelMutations();
+  const [deletingFunnel, setDeletingFunnel] = useState<any>(null);
   const { data: subscription } = useClienteSubscription();
 
   const [editingFunnel, setEditingFunnel] = useState<any>(null);
@@ -136,7 +138,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
                   {!funnel.is_default && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAsDefault(funnel.id)}>Tornar padrão</Button>}
                   <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEditFunnel(funnel)}>Editar</Button>
                   {!funnel.is_default && deleteFunnel && (
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => { deleteFunnel.mutate(funnel.id); toast({ title: "Funil excluído" }); }}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => setDeletingFunnel(funnel)}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   )}
@@ -146,6 +148,24 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
           ))}
         </div>
       )}
+
+      {/* Delete Funnel Confirmation */}
+      <AlertDialog open={!!deletingFunnel} onOpenChange={(o) => !o && setDeletingFunnel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir funil "{deletingFunnel?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Os leads vinculados a este funil ficarão sem funil associado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { deleteFunnel.mutate(deletingFunnel.id); setDeletingFunnel(null); toast({ title: "Funil excluído" }); }}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Stage Editor Dialog */}
       <Dialog open={stageDialogOpen} onOpenChange={setStageDialogOpen}>

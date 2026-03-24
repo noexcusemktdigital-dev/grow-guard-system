@@ -52,10 +52,18 @@ interface LeadRow {
   whatsapp_contact_id?: string | null;
 }
 
+interface FunnelOption {
+  id: string;
+  name: string;
+  stages: any[];
+}
+
 interface CrmLeadDetailSheetProps {
   lead: LeadRow | null;
   onClose: () => void;
   stages: FunnelStage[];
+  funnels?: FunnelOption[];
+  currentFunnelId?: string;
 }
 
 const ACTIVITY_TYPES = [
@@ -73,20 +81,20 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   rejected: { label: "Rejeitada", color: "bg-red-500/15 text-red-600 border-red-500/30" },
 };
 
-export function CrmLeadDetailSheet({ lead, onClose, stages }: CrmLeadDetailSheetProps) {
+export function CrmLeadDetailSheet({ lead, onClose, stages, funnels, currentFunnelId }: CrmLeadDetailSheetProps) {
   return (
     <Sheet open={!!lead} onOpenChange={open => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{lead?.name}</SheetTitle>
         </SheetHeader>
-        {lead && <LeadDetailTabs lead={lead} stages={stages} />}
+        {lead && <LeadDetailTabs lead={lead} stages={stages} funnels={funnels} currentFunnelId={currentFunnelId} />}
       </SheetContent>
     </Sheet>
   );
 }
 
-function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[] }) {
+function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: LeadRow; stages: FunnelStage[]; funnels?: FunnelOption[]; currentFunnelId?: string }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateLead, markAsWon, markAsLost } = useCrmLeadMutations();
@@ -207,6 +215,29 @@ function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[]
                 </SelectContent>
               </Select>
             </div>
+            {funnels && funnels.length > 1 && (
+              <div>
+                <Label className="text-xs">Funil</Label>
+                <Select
+                  value={currentFunnelId || ""}
+                  onValueChange={(funnelId) => {
+                    const targetFunnel = funnels.find(f => f.id === funnelId);
+                    if (!targetFunnel) return;
+                    const targetStages = targetFunnel.stages as any[];
+                    const firstStageKey = Array.isArray(targetStages) && targetStages.length > 0
+                      ? (targetStages[0].key || targetStages[0].label?.toLowerCase().replace(/\s+/g, "_") || "novo")
+                      : "novo";
+                    updateLead.mutate({ id: lead.id, funnel_id: funnelId, stage: firstStageKey });
+                    toast({ title: `Lead transferido para "${targetFunnel.name}"` });
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecionar funil" /></SelectTrigger>
+                  <SelectContent>
+                    {funnels.map(f => <SelectItem key={f.id} value={f.id} className="text-sm">{f.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div>
