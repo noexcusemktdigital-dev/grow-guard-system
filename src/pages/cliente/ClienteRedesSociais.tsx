@@ -37,6 +37,82 @@ import {
 
 type MainView = "gallery" | "art-wizard" | "video-wizard" | "result";
 
+interface CarouselSlideContent {
+  headline: string;
+  subheadline?: string;
+  supportingText?: string;
+  bulletPoints?: string;
+  cta?: string;
+}
+
+/**
+ * Distributes content across carousel slides so each one is visually distinct.
+ * Slide 0 = cover (headline only), last slide = CTA, middle slides split content.
+ */
+function buildCarouselSlideContents(
+  totalSlides: number,
+  headline: string,
+  subheadline: string,
+  supportingText: string,
+  bulletPoints: string,
+  cta: string,
+): CarouselSlideContent[] {
+  const slides: CarouselSlideContent[] = [];
+
+  // Parse bullet points into individual items
+  const bullets = bulletPoints
+    .split(/\n|;|•|—/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  // Slide 0: Cover — headline prominent, subheadline as support
+  slides.push({
+    headline,
+    subheadline: subheadline || undefined,
+    cta: undefined,
+  });
+
+  // Middle slides: distribute supporting text and bullet points
+  const middleCount = Math.max(totalSlides - 2, 1);
+
+  if (totalSlides <= 2) {
+    // Only cover + CTA
+  } else {
+    // Split bullets across middle slides
+    const bulletsPerSlide = Math.max(1, Math.ceil(bullets.length / middleCount));
+    const supportSentences = supportingText
+      .split(/\.\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const sentencesPerSlide = Math.max(1, Math.ceil(supportSentences.length / middleCount));
+
+    for (let i = 0; i < middleCount; i++) {
+      const slideBullets = bullets.slice(i * bulletsPerSlide, (i + 1) * bulletsPerSlide);
+      const slideSentences = supportSentences.slice(i * sentencesPerSlide, (i + 1) * sentencesPerSlide);
+
+      slides.push({
+        headline: slideBullets.length > 0
+          ? slideBullets[0]
+          : `${headline} — ${i + 2}/${totalSlides}`,
+        subheadline: slideBullets.length > 1 ? slideBullets.slice(1).join(" • ") : undefined,
+        supportingText: slideSentences.length > 0 ? slideSentences.join(". ") + "." : undefined,
+        bulletPoints: slideBullets.length > 0 ? slideBullets.join("\n") : undefined,
+      });
+    }
+  }
+
+  // Last slide: CTA
+  if (totalSlides > 1) {
+    slides.push({
+      headline: cta || "Saiba mais",
+      subheadline: subheadline || headline,
+      cta: cta || "Saiba mais",
+    });
+  }
+
+  return slides;
+}
+
 export default function ClienteRedesSociais() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<MainView>("gallery");
@@ -145,53 +221,90 @@ export default function ClienteRedesSociais() {
         ? { palette: visualIdentity.palette, fonts: visualIdentity.fonts, style: visualIdentity.style, tone: visualIdentity.tone, logo_url: visualIdentity.logo_url }
         : undefined;
 
-      const layoutVariations = payload.layoutTypes.length > 0 ? payload.layoutTypes : ["hero_central"];
+      const selectedLayout = payload.layoutTypes.length > 0 ? payload.layoutTypes[0] : "hero_central";
       const isCarousel = payload.tipoPostagem === "carrossel";
       const totalPieces = isCarousel ? payload.carouselSlides : payload.quantity;
       const results: { post: PostItem; result_url: string | null; result_data: any }[] = [];
-      // Per-piece formats (if provided) or single format for all
       const formats = payload.formats && payload.formats.length === totalPieces ? payload.formats : [];
 
+      // Build per-slide content for carousels so each slide is visually distinct
+      const slideContents = isCarousel ? buildCarouselSlideContents(
+        totalPieces,
+        payload.headline,
+        payload.subheadline || "",
+        payload.supportingText || "",
+        payload.bulletPoints || "",
+        payload.cta || "",
+      ) : null;
+
       for (let i = 0; i < totalPieces; i++) {
-        // Round-robin layout assignment
-        const currentLayout = layoutVariations[i % layoutVariations.length];
         const pieceFormat = formats.length > 0 ? formats[i] : payload.format;
 
-        const result = await generatePost.mutateAsync({
-          type: "art",
-          format: pieceFormat,
-          style: currentLayout,
-          input_text: payload.headline,
-          reference_image_urls: payload.referenceUrls,
-          identidade_visual: iv,
-          content_id: payload.contentId || undefined,
-          tipo_postagem: isCarousel ? (i === 0 ? "capa_carrossel" : "slide_carrossel") : payload.tipoPostagem,
-          headline: isCarousel && i > 0 && i < totalPieces - 1
-            ? `${payload.headline} — Slide ${i + 1}`
-            : payload.headline,
-          subheadline: payload.subheadline || undefined,
-          cta: isCarousel && i === totalPieces - 1 ? (payload.cta || "Saiba mais") : (payload.cta || undefined),
-          cena: payload.cena || undefined,
-          elementos_visuais: payload.elementosVisuais || undefined,
-          manual_colors: !visualIdentity && payload.manualColors ? payload.manualColors : undefined,
-          manual_style: !visualIdentity && payload.manualStyle ? payload.manualStyle : undefined,
-          brand_name: payload.brandName || undefined,
-          supporting_text: payload.supportingText || undefined,
-          bullet_points: payload.bulletPoints || undefined,
-          layout_type: currentLayout,
-          logo_url: payload.logoUrl || undefined,
-          primary_ref_index: payload.primaryRefIndex,
-          objective: payload.objective || undefined,
-          photo_image_urls: payload.photoUrls,
-          output_mode: payload.outputMode,
-          print_format: payload.printFormat,
-        });
+        // Carousel: each slide gets unique content
+        const slideData = slideContents?.[i];
+        const slideHeadline = slideData?.headline ?? payload.headline;
+        const slideSubheadline = slideData?.subheadline ?? (payload.subheadline || undefined);
+        const slideSupportingText = slideData?.supportingText ?? (payload.supportingText || undefined);
+        const slideBulletPoints = slideData?.bulletPoints ?? (payload.bulletPoints || undefined);
+        const slideCta = slideData?.cta ?? (payload.cta || undefined);
+        const slideTipo = isCarousel
+          ? (i === 0 ? "capa_carrossel" : i === totalPieces - 1 ? "cta_carrossel" : "slide_carrossel")
+          : payload.tipoPostagem;
 
-        results.push(result);
+        try {
+          const result = await generatePost.mutateAsync({
+            type: "art",
+            format: pieceFormat,
+            style: selectedLayout,
+            input_text: slideHeadline,
+            reference_image_urls: payload.referenceUrls,
+            identidade_visual: iv,
+            content_id: payload.contentId || undefined,
+            tipo_postagem: slideTipo,
+            headline: slideHeadline,
+            subheadline: slideSubheadline,
+            cta: slideCta,
+            cena: payload.cena || undefined,
+            elementos_visuais: payload.elementosVisuais || undefined,
+            manual_colors: !visualIdentity && payload.manualColors ? payload.manualColors : undefined,
+            manual_style: !visualIdentity && payload.manualStyle ? payload.manualStyle : undefined,
+            brand_name: payload.brandName || undefined,
+            supporting_text: slideSupportingText,
+            bullet_points: slideBulletPoints,
+            layout_type: selectedLayout,
+            logo_url: payload.logoUrl || undefined,
+            primary_ref_index: payload.primaryRefIndex,
+            objective: payload.objective || undefined,
+            photo_image_urls: payload.photoUrls,
+            output_mode: payload.outputMode,
+            print_format: payload.printFormat,
+          });
+          results.push(result);
+        } catch (slideErr: any) {
+          if (isInsufficientCreditsError(slideErr)) {
+            if (results.length === 0) {
+              setShowCreditsDialog(true);
+              setView("art-wizard");
+              clearInterval(interval);
+              setIsGenerating(false);
+              return;
+            }
+            toast({ title: `Créditos insuficientes após slide ${results.length}`, variant: "destructive" });
+            break;
+          }
+          console.error(`Slide ${i + 1} failed:`, slideErr);
+          toast({ title: `Erro no slide ${i + 1}`, description: slideErr.message, variant: "destructive" });
+          // Continue generating remaining slides
+        }
       }
 
-      setBatchResults(results);
-      setGeneratedResult(results[0]);
+      if (results.length > 0) {
+        setBatchResults(results);
+        setGeneratedResult(results[0]);
+      } else {
+        toast({ title: "Nenhum slide gerado com sucesso", variant: "destructive" });
+        setView("art-wizard");
+      }
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) {
         setShowCreditsDialog(true);
