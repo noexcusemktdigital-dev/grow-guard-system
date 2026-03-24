@@ -195,6 +195,7 @@ function UsersAndTeamsTab() {
       toast.success("Convite enviado!");
       setInviteOpen(false);
       setInviteForm({ email: "", full_name: "", role: "cliente_user" });
+      setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
     },
     onError: (err: any) => toast.error(err.message),
