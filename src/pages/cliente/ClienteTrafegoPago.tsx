@@ -138,12 +138,12 @@ export default function ClienteTrafegoPago() {
     });
   };
 
-  // Auto-detect assets
+  // Auto-detect assets (status values: "approved", "Aprovado", "pending")
   const detectedAssets: string[] = [];
-  if (sitesData?.some((s) => s.status === "Publicado" || s.url)) detectedAssets.push("site");
+  if (sitesData?.some((s) => s.status === "Aprovado" || s.status === "approved" || s.url)) detectedAssets.push("site");
   if (sitesData?.some((s) => s.type === "landing_page")) detectedAssets.push("landing_page");
-  if (postsData?.some((p) => p.type === "art" && p.status === "done")) detectedAssets.push("artes");
-  if (postsData?.some((p) => p.type === "video" && p.status === "done")) detectedAssets.push("videos");
+  if (postsData?.some((p) => p.type === "art" && (p.status === "approved" || p.status === "pending"))) detectedAssets.push("artes");
+  if (postsData?.some((p) => p.type === "video" && (p.status === "approved" || p.status === "pending"))) detectedAssets.push("videos");
 
   const canAdvance = () => {
     switch (STEPS[step].id) {
