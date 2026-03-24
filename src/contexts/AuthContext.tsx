@@ -205,11 +205,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (newSession?.user) {
           // For TOKEN_REFRESHED events, skip re-fetching if already have data
-          if (_event === "TOKEN_REFRESHED" && role !== null) {
+          if (_event === "TOKEN_REFRESHED" && roleRef.current !== null && lastFetchedUserRef.current === newSession.user.id) {
             setLoading(false);
             return;
           }
-          await fetchProfileAndRole(newSession.user);
+          await fetchProfileAndRole(newSession.user, _event === "SIGNED_IN");
         } else {
           setProfile(null);
           setRole(null);
