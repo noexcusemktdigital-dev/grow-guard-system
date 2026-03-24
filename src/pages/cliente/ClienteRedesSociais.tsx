@@ -144,43 +144,48 @@ export default function ClienteRedesSociais() {
         : undefined;
 
       const layoutVariations = payload.layoutTypes.length > 0 ? payload.layoutTypes : ["hero_central"];
-      const basePieces = payload.tipoPostagem === "carrossel" ? payload.carouselSlides : payload.quantity;
+      const isCarousel = payload.tipoPostagem === "carrossel";
+      const totalPieces = isCarousel ? payload.carouselSlides : payload.quantity;
       const results: { post: PostItem; result_url: string | null; result_data: any }[] = [];
+      // Per-piece formats (if provided) or single format for all
+      const formats = payload.formats && payload.formats.length === totalPieces ? payload.formats : [];
 
-      for (const currentLayout of layoutVariations) {
-        for (let i = 0; i < basePieces; i++) {
-          const isCarousel = payload.tipoPostagem === "carrossel";
+      for (let i = 0; i < totalPieces; i++) {
+        // Round-robin layout assignment
+        const currentLayout = layoutVariations[i % layoutVariations.length];
+        const pieceFormat = formats.length > 0 ? formats[i] : payload.format;
 
-          const result = await generatePost.mutateAsync({
-            type: "art",
-            format: payload.format,
-            style: currentLayout,
-            input_text: payload.headline,
-            reference_image_urls: payload.referenceUrls,
-            identidade_visual: iv,
-            content_id: payload.contentId || undefined,
-            tipo_postagem: isCarousel ? (i === 0 ? "capa_carrossel" : "slide_carrossel") : payload.tipoPostagem,
-            headline: isCarousel && i > 0 && i < basePieces - 1
-              ? `${payload.headline} — Slide ${i + 1}`
-              : payload.headline,
-            subheadline: payload.subheadline || undefined,
-            cta: isCarousel && i === basePieces - 1 ? (payload.cta || "Saiba mais") : (payload.cta || undefined),
-            cena: payload.cena || undefined,
-            elementos_visuais: payload.elementosVisuais || undefined,
-            manual_colors: !visualIdentity && payload.manualColors ? payload.manualColors : undefined,
-            manual_style: !visualIdentity && payload.manualStyle ? payload.manualStyle : undefined,
-            brand_name: payload.brandName || undefined,
-            supporting_text: payload.supportingText || undefined,
-            bullet_points: payload.bulletPoints || undefined,
-            layout_type: currentLayout,
-            logo_url: payload.logoUrl || undefined,
-            primary_ref_index: payload.primaryRefIndex,
-            objective: payload.objective || undefined,
-            photo_image_urls: payload.photoUrls,
-          });
+        const result = await generatePost.mutateAsync({
+          type: "art",
+          format: pieceFormat,
+          style: currentLayout,
+          input_text: payload.headline,
+          reference_image_urls: payload.referenceUrls,
+          identidade_visual: iv,
+          content_id: payload.contentId || undefined,
+          tipo_postagem: isCarousel ? (i === 0 ? "capa_carrossel" : "slide_carrossel") : payload.tipoPostagem,
+          headline: isCarousel && i > 0 && i < totalPieces - 1
+            ? `${payload.headline} — Slide ${i + 1}`
+            : payload.headline,
+          subheadline: payload.subheadline || undefined,
+          cta: isCarousel && i === totalPieces - 1 ? (payload.cta || "Saiba mais") : (payload.cta || undefined),
+          cena: payload.cena || undefined,
+          elementos_visuais: payload.elementosVisuais || undefined,
+          manual_colors: !visualIdentity && payload.manualColors ? payload.manualColors : undefined,
+          manual_style: !visualIdentity && payload.manualStyle ? payload.manualStyle : undefined,
+          brand_name: payload.brandName || undefined,
+          supporting_text: payload.supportingText || undefined,
+          bullet_points: payload.bulletPoints || undefined,
+          layout_type: currentLayout,
+          logo_url: payload.logoUrl || undefined,
+          primary_ref_index: payload.primaryRefIndex,
+          objective: payload.objective || undefined,
+          photo_image_urls: payload.photoUrls,
+          output_mode: payload.outputMode,
+          print_format: payload.printFormat,
+        });
 
-          results.push(result);
-        }
+        results.push(result);
       }
 
       setBatchResults(results);

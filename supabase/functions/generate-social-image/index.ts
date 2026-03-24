@@ -226,11 +226,12 @@ CRITICAL RULES:
 2. The image model renders text directly into the design — describe WHERE and HOW text should appear.
 3. Be hyper-specific about composition, colors, lighting, and spatial layout.
 4. Never use vague descriptions like "professional look" or "modern design". Be CONCRETE.
-${hasRefs ? `5. You have been given BRAND REFERENCE IMAGES. Analyze them carefully and extract the exact visual design system: color usage patterns, layout structures, card shapes, icon styles, typography approach, photographic vs graphic style. Your output must faithfully replicate this design language in a NEW scene.
-6. IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references. Create a NEW scene that follows the same brand design language.
-7. ${context.primary_ref_index !== undefined ? `Reference image #${(context.primary_ref_index || 0) + 1} is the PRIMARY reference (weight 60%). Match its design language MOST closely. The remaining references share the other 40% of influence.` : "All reference images have equal weight."}` : ""}
-${context.logo_url ? `8. A BRAND LOGO image has been provided separately. You MUST include the logo in the composition. Place it naturally (typically top-left or top-right corner) without distortion. Use the exact logo as provided.` : ""}
-${context.layout_type ? `9. LAYOUT TYPE SELECTED: "${context.layout_type}". You MUST follow the specific layout composition rules for this type. The layout determines WHERE elements go — follow it precisely.` : ""}
+5. CRITICAL COLOR RULE: The color palette you output MUST match the dominant colors from the reference images. Do NOT invent new colors. Extract the EXACT hex codes visible in the references. If references show yellow/gold tones, your palette MUST be yellow/gold — NEVER substitute with red, blue, or any other color family.
+${hasRefs ? `6. You have been given BRAND REFERENCE IMAGES. Analyze them carefully and extract the exact visual design system: color usage patterns, layout structures, card shapes, icon styles, typography approach, photographic vs graphic style. Your output must faithfully replicate this design language in a NEW scene.
+7. IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references. Create a NEW scene that follows the same brand design language.
+8. ${context.primary_ref_index !== undefined ? `Reference image #${(context.primary_ref_index || 0) + 1} is the PRIMARY reference (weight 60%). Match its design language MOST closely. The remaining references share the other 40% of influence.` : "All reference images have equal weight."}` : ""}
+${context.logo_url ? `9. A BRAND LOGO image has been provided separately. DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo placement space COMPLETELY EMPTY — the real logo will be composited in post-production.` : ""}
+${context.layout_type ? `10. LAYOUT TYPE SELECTED: "${context.layout_type}". You MUST follow the specific layout composition rules for this type. The layout determines WHERE elements go — follow it precisely.` : ""}
 
 ${context.layout_type ? getLayoutRulesForPrompt(context.layout_type) : ""}
 
@@ -535,7 +536,9 @@ IMPORTANT RENDERING RULES:
 - Maintain strong visual hierarchy between headline, highlight, subtext, and CTA
 - All text must have sufficient contrast against its background
 - Typography should feel intentional and designed, not auto-generated
-- The overall composition must be balanced and publication-ready`;
+- The overall composition must be balanced and publication-ready
+- MANDATORY COLOR RULE: Use ONLY the colors listed in the color_palette section. Do NOT substitute or invent different colors. If the palette says yellow, use yellow — NEVER red or any other hue.
+- DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo space COMPLETELY EMPTY — it will be composited in post-production.`;
 }
 
 // --- Build fallback prompt when CoT fails ---
@@ -625,6 +628,8 @@ serve(async (req) => {
       layout_type, logo_url, primary_ref_index, objective,
       extract_logo,
       photo_images,
+      output_mode,
+      print_format,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -754,8 +759,8 @@ Output ONLY the extracted logo image.`,
     let base64Refs: { type: string; image_url: { url: string } }[] = [];
 
     if (hasRefs) {
-      console.log(`📥 Converting ${Math.min(reference_images.length, 3)} reference images to base64...`);
-      for (const refUrl of reference_images.slice(0, 3)) {
+      console.log(`📥 Converting ${Math.min(reference_images.length, 5)} reference images to base64...`);
+      for (const refUrl of reference_images.slice(0, 5)) {
         const b64 = await urlToBase64(refUrl);
         if (b64) {
           base64Refs.push({ type: "image_url", image_url: { url: b64 } });
@@ -801,8 +806,20 @@ Output ONLY the extracted logo image.`,
       portrait: "portrait 4:5 (1080×1350px) social media post for Instagram",
       story: "vertical 9:16 (1080×1920px) story/reel for Instagram Stories",
       banner: "landscape 16:9 (1920×1080px) banner for social media cover",
+      // Print formats
+      cartao_visita: "business card front (1063×591px, 9×5cm at 300dpi) for CMYK print",
+      cartao_visita_verso: "business card back (1063×591px, 9×5cm at 300dpi) for CMYK print",
+      flyer_a5: "A5 flyer (1748×2480px, 14.8×21cm at 300dpi) for CMYK print",
+      flyer_a4: "A4 flyer (2480×3508px, 21×29.7cm at 300dpi) for CMYK print",
+      banner_100x60: "large banner (1920×1152px, 100×60cm) for CMYK print",
     };
     const formatDescription = formatDescMap[format] || formatDescMap.feed;
+
+    // Print mode instructions
+    const isPrint = output_mode === "print";
+    if (isPrint) {
+      fullPrompt = fullPrompt || "";
+    }
 
     // Build final prompt
     let fullPrompt: string;
@@ -817,6 +834,11 @@ Output ONLY the extracted logo image.`,
       );
     }
 
+    // Add print-specific instructions
+    if (isPrint) {
+      fullPrompt += `\n\nPRINT MODE (CMYK): This design is for PHYSICAL PRINTING. Use CMYK-safe colors only — NO neon, fluorescent, or overly saturated RGB colors. Ensure high resolution suitable for 300dpi print. Design should have proper bleed margins. Text must be extra crisp for print quality.`;
+    }
+
     // Append layout instructions to prompt if not already in CoT
     if (layoutInstructions && !optimized) {
       fullPrompt += `\n\n${layoutInstructions}`;
@@ -824,7 +846,7 @@ Output ONLY the extracted logo image.`,
 
     // Instruct the model to RESERVE SPACE for the logo instead of rendering it
     if (logo_url) {
-      fullPrompt += `\n\nBRAND LOGO PLACEMENT: Leave a CLEAN, EMPTY rectangular space (approximately 10-15% of image width) in the top-left corner of the design for the brand logo. This space must have a solid, uniform background matching the surrounding design — do NOT place any text, graphics, or busy patterns there. The logo will be composited in post-production.`;
+      fullPrompt += `\n\nBRAND LOGO PLACEMENT: Leave a CLEAN, EMPTY rectangular space (approximately 10-15% of image width) in the top-left corner of the design for the brand logo. This space must have a solid, uniform background matching the surrounding design — do NOT place any text, graphics, or busy patterns there. The logo will be composited in post-production. DO NOT render any logo, logotype, brand mark, or brand name text ANYWHERE in the image.`;
     }
 
     // Convert photo_images to base64 for inclusion in the design
@@ -919,6 +941,8 @@ RULES:
 - Do NOT redraw, stylize, modify, reinterpret, or simplify the logo in ANY way
 - Do NOT change any other part of the design — keep everything else pixel-perfect
 - If the corner area has a busy background, add a very subtle semi-transparent backing behind the logo for legibility
+- If there is already a logo or brand mark visible in the design, REMOVE IT and replace with the provided logo
+- There must be EXACTLY ONE logo in the final image — the one provided
 - Maintain the overall design composition and quality
 
 OUTPUT: The same design with the real brand logo composited in.`,

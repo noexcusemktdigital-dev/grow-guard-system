@@ -11,6 +11,7 @@ import { LayoutPicker } from "./LayoutPicker";
 import { ContentPickerDialog } from "./ContentPickerDialog";
 import {
   ART_FORMATS, LAYOUT_TYPES, POST_TYPES, ART_OBJECTIVES,
+  PRINT_FORMATS, PRINT_TYPES,
 } from "./constants";
 import { ContentItem } from "@/hooks/useClienteContentV2";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
@@ -38,6 +39,7 @@ interface ArtWizardProps {
 
 export interface ArtGeneratePayload {
   format: string;
+  formats?: string[];
   style: string;
   tipoPostagem: string;
   headline: string;
@@ -59,6 +61,8 @@ export interface ArtGeneratePayload {
   primaryRefIndex?: number;
   objective?: string;
   photoUrls?: string[];
+  outputMode?: "digital" | "print";
+  printFormat?: string;
 }
 
 export interface ArtBriefingResult {
@@ -73,7 +77,7 @@ export interface ArtBriefingResult {
   suggested_tipo: string;
 }
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 export function ArtWizard({
   orgId, visualIdentity, contentHistory, contentData, setContentData,
@@ -86,15 +90,19 @@ export function ArtWizard({
   const [objective, setObjective] = useState("vender");
   const [mandatoryPhrase, setMandatoryPhrase] = useState("");
 
-  // Step 2: Type + quantity
+  // Step 1: Output mode (digital vs print)
+  const [outputMode, setOutputMode] = useState<"digital" | "print">("digital");
+  const [printType, setPrintType] = useState("flyer");
+
+  // Step 3: Type + quantity
   const [tipoPostagem, setTipoPostagem] = useState("post_unico");
   const [quantity, setQuantity] = useState(1);
   const [carouselSlides, setCarouselSlides] = useState(5);
 
-  // Step 3: Layout (replaces old Style)
+  // Step 4: Layout (replaces old Style)
   const [layoutTypes, setLayoutTypes] = useState<string[]>(["hero_central"]);
 
-  // Step 4: References + Logo + Photos
+  // Step 5: References + Logo + Photos
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
@@ -102,8 +110,10 @@ export function ArtWizard({
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
-  // Step 5: Format
+  // Step 6: Format (per-piece when quantity > 1)
   const [artFormat, setArtFormat] = useState("portrait");
+  const [artFormats, setArtFormats] = useState<string[]>([]);
+  const [printFormat, setPrintFormat] = useState("flyer_a5");
 
   // Step 6: AI-generated text (review)
   const [headline, setHeadline] = useState("");
@@ -147,23 +157,26 @@ export function ArtWizard({
 
   const canProceed = () => {
     switch (step) {
-      case 1: return !!(briefingText.trim() || contentData);
-      case 2: return true;
-      case 3: return layoutTypes.length >= 1;
-      case 4: return referenceUrls.length >= 3 && !!logoUrl;
-      case 5: return true;
-      case 6: return !!headline.trim();
+      case 1: return true; // output mode always valid
+      case 2: return !!(briefingText.trim() || contentData);
+      case 3: return true;
+      case 4: return layoutTypes.length >= 1;
+      case 5: return referenceUrls.length >= 3 && !!logoUrl;
+      case 6: return true;
+      case 7: return !!headline.trim();
       default: return true;
     }
   };
 
   const handleStepChange = (nextStep: number) => {
     // Auto-trigger AI text generation when entering review step
-    if (nextStep === 6 && !briefingFilled) {
+    if (nextStep === 7 && !briefingFilled) {
       handleAutoFillTexts();
     }
     setStep(nextStep);
   };
+
+  const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
 
   const handleGenerate = () => {
     if (!headline.trim()) {
@@ -174,8 +187,15 @@ export function ArtWizard({
       toast({ title: "Envie pelo menos 3 referências", variant: "destructive" });
       return;
     }
+
+    // Build per-piece formats array
+    const finalFormats = outputMode === "print"
+      ? Array(totalPieces).fill(printFormat)
+      : (artFormats.length === totalPieces ? artFormats : Array(totalPieces).fill(artFormat));
+
     onGenerate({
-      format: artFormat,
+      format: outputMode === "print" ? printFormat : artFormat,
+      formats: totalPieces > 1 ? finalFormats : undefined,
       style: layoutTypes[0],
       tipoPostagem,
       headline, subheadline, cta, cena, elementosVisuais,
@@ -188,6 +208,8 @@ export function ArtWizard({
       primaryRefIndex,
       objective,
       photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
+      outputMode,
+      printFormat: outputMode === "print" ? printFormat : undefined,
     });
   };
 
@@ -218,8 +240,51 @@ export function ArtWizard({
 
   const renderStep = () => {
     switch (step) {
-      // ─── Step 1: Briefing + Objective ───
+      // ─── Step 1: Output Mode (Digital vs Print) ───
       case 1:
+        return (
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-base font-semibold mb-1">🎯 Onde será usada?</h3>
+              <p className="text-sm text-muted-foreground">Escolha o destino da arte para otimizar formato e cores</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <SelectCard selected={outputMode === "digital"} onClick={() => setOutputMode("digital")}>
+                <CardContent className="p-5 text-center">
+                  <p className="text-3xl mb-2">📱</p>
+                  <p className="font-semibold text-sm">Digital (Rede Social)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Feed, Stories, Reels — cores RGB vibrantes</p>
+                </CardContent>
+              </SelectCard>
+              <SelectCard selected={outputMode === "print"} onClick={() => setOutputMode("print")}>
+                <CardContent className="p-5 text-center">
+                  <p className="text-3xl mb-2">🖨️</p>
+                  <p className="font-semibold text-sm">Impressão (CMYK)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Cartão de visita, flyer, banner</p>
+                </CardContent>
+              </SelectCard>
+            </div>
+            {outputMode === "print" && (
+              <div>
+                <Label className="text-xs font-semibold">Tipo de material</Label>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {PRINT_TYPES.map((t) => (
+                    <SelectCard key={t.value} selected={printType === t.value} onClick={() => setPrintType(t.value)}>
+                      <CardContent className="p-3 text-center">
+                        <p className="text-xl mb-1">{t.icon}</p>
+                        <p className="font-semibold text-xs">{t.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{t.desc}</p>
+                      </CardContent>
+                    </SelectCard>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      // ─── Step 2: Briefing + Objective ───
+      case 2:
         return (
           <div className="space-y-4">
             <div>
@@ -294,8 +359,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 2: Type + Quantity ───
-      case 2:
+      // ─── Step 3: Type + Quantity ───
+      case 3:
         return (
           <div className="space-y-5">
             <div>
@@ -349,8 +414,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 3: Layout (Diagramação) ───
-      case 3:
+      // ─── Step 4: Layout (Diagramação) ───
+      case 4:
         return (
           <div className="space-y-4">
             <div>
@@ -363,8 +428,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 4: References + Logo + Photos ───
-      case 4: {
+      // ─── Step 5: References + Logo + Photos ───
+      case 5: {
         const photoInputRef = { current: null as HTMLInputElement | null };
         const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
           const files = e.target.files;
@@ -460,8 +525,78 @@ export function ArtWizard({
         );
       }
 
-      // ─── Step 5: Format ───
-      case 5:
+      // ─── Step 6: Format ───
+      case 6: {
+        if (outputMode === "print") {
+          const printFormatsForType = PRINT_FORMATS.filter(f => {
+            if (printType === "cartao") return f.value.startsWith("cartao");
+            if (printType === "flyer") return f.value.startsWith("flyer");
+            if (printType === "banner") return f.value.startsWith("banner");
+            return true;
+          });
+          return (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold mb-1">📐 Formato de impressão</h3>
+                <p className="text-sm text-muted-foreground">Dimensões em centímetros a 300dpi (CMYK)</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {printFormatsForType.map((f) => (
+                  <SelectCard key={f.value} selected={printFormat === f.value} onClick={() => setPrintFormat(f.value)}>
+                    <CardContent className="p-4 text-center">
+                      <p className="font-semibold text-sm">{f.label}</p>
+                      <p className="text-xs text-muted-foreground">{f.cm}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{f.ratio}</p>
+                    </CardContent>
+                  </SelectCard>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Digital mode — per-piece format selection
+        const pieces = totalPieces;
+        if (pieces > 1 && tipoPostagem !== "carrossel") {
+          // Initialize artFormats if needed
+          if (artFormats.length !== pieces) {
+            setArtFormats(Array(pieces).fill(artFormat));
+          }
+          return (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold mb-1">📐 Formato por peça</h3>
+                <p className="text-sm text-muted-foreground">Escolha o formato de cada peça individualmente</p>
+              </div>
+              {Array.from({ length: pieces }, (_, i) => (
+                <div key={i} className="space-y-1">
+                  <Label className="text-xs font-medium">Peça {i + 1} — Layout: {LAYOUT_TYPES.find(l => l.value === layoutTypes[i % layoutTypes.length])?.label}</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ART_FORMATS.map((f) => (
+                      <SelectCard
+                        key={f.value}
+                        selected={(artFormats[i] || artFormat) === f.value}
+                        onClick={() => {
+                          const newFormats = [...(artFormats.length === pieces ? artFormats : Array(pieces).fill(artFormat))];
+                          newFormats[i] = f.value;
+                          setArtFormats(newFormats);
+                        }}
+                      >
+                        <CardContent className="p-2 flex flex-col items-center text-center gap-1">
+                          <f.icon className="w-4 h-4 text-primary" />
+                          <p className="font-semibold text-[11px]">{f.label}</p>
+                          <p className="text-[10px] text-muted-foreground">{f.desc}</p>
+                        </CardContent>
+                      </SelectCard>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
+
+        // Single piece — simple format selector
         return (
           <div className="space-y-4">
             <div>
@@ -482,15 +617,15 @@ export function ArtWizard({
             </div>
           </div>
         );
+      }
 
-      // ─── Step 6: Review (AI-generated texts) ───
-      case 6: {
-        const basePieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
-        const layoutMultiplier = layoutTypes.length;
-        const totalPieces = basePieces * layoutMultiplier;
-        const totalCost = totalPieces * creditCost;
+      // ─── Step 7: Review (AI-generated texts) ───
+      case 7: {
+        const reviewTotalCost = totalPieces * creditCost;
         const selectedLayouts = layoutTypes.map(lt => LAYOUT_TYPES.find(l => l.value === lt)).filter(Boolean);
-        const selectedFormat = ART_FORMATS.find(f => f.value === artFormat);
+        const selectedFormat = outputMode === "print"
+          ? PRINT_FORMATS.find(f => f.value === printFormat)
+          : ART_FORMATS.find(f => f.value === artFormat);
         const selectedType = POST_TYPES.find(t => t.value === tipoPostagem);
 
         return (
@@ -598,7 +733,7 @@ export function ArtWizard({
                       <span>{selectedLayouts.map(l => l?.label).join(" + ")}</span>
 
                       <span className="text-muted-foreground">Formato:</span>
-                      <span>{selectedFormat?.label} ({selectedFormat?.ratio})</span>
+                      <span>{selectedFormat?.label} ({(selectedFormat as any)?.ratio || (selectedFormat as any)?.cm})</span>
 
                       {visualIdentity && <>
                         <span className="text-muted-foreground">Identidade:</span>
@@ -609,7 +744,7 @@ export function ArtWizard({
                     <div className="pt-2 border-t mt-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold">Custo total</span>
-                        <Badge variant="secondary" className="text-xs">{totalCost} créditos</Badge>
+                        <Badge variant="secondary" className="text-xs">{reviewTotalCost} créditos</Badge>
                       </div>
                     </div>
                   </CardContent>
@@ -636,8 +771,6 @@ export function ArtWizard({
   };
 
   const isLastStep = step === TOTAL_STEPS;
-  const basePieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
-  const totalPieces = basePieces * layoutTypes.length;
   const totalCost = totalPieces * creditCost;
 
   return (

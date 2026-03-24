@@ -103,6 +103,21 @@ export const SCENE_SUGGESTIONS = [
   "Reunião de negócios", "Estudante em biblioteca", "Chef na cozinha",
 ];
 
+/* ── Print Formats (CMYK / Impressão) ── */
+export const PRINT_FORMATS = [
+  { value: "cartao_visita", label: "Cartão de Visita", desc: "9×5 cm (frente)", ratio: "1063×591px", w: 1063, h: 591, cm: "9×5 cm" },
+  { value: "cartao_visita_verso", label: "Cartão (verso)", desc: "9×5 cm (verso)", ratio: "1063×591px", w: 1063, h: 591, cm: "9×5 cm" },
+  { value: "flyer_a5", label: "Flyer A5", desc: "14.8×21 cm", ratio: "1748×2480px", w: 1748, h: 2480, cm: "14.8×21 cm" },
+  { value: "flyer_a4", label: "Flyer A4", desc: "21×29.7 cm", ratio: "2480×3508px", w: 2480, h: 3508, cm: "21×29.7 cm" },
+  { value: "banner_100x60", label: "Banner 100×60", desc: "100×60 cm", ratio: "3000×1800px", w: 1920, h: 1152, cm: "100×60 cm" },
+] as const;
+
+export const PRINT_TYPES = [
+  { value: "cartao", label: "Cartão de Visita", icon: "💳", desc: "Frente e/ou verso" },
+  { value: "flyer", label: "Flyer", icon: "📄", desc: "A5 ou A4" },
+  { value: "banner", label: "Banner", icon: "🖼️", desc: "100×60 cm" },
+] as const;
+
 /* ── Video constants ── */
 export const VIDEO_PLATFORMS = [
   { value: "instagram_reels", label: "Instagram Reels", format: "story" },

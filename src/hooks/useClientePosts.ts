@@ -76,6 +76,9 @@ export function useGeneratePost() {
       primary_ref_index?: number;
       objective?: string;
       photo_image_urls?: string[];
+      // Print mode fields
+      output_mode?: "digital" | "print";
+      print_format?: string;
       // Video-specific structured fields
       plataforma?: string;
       estilo_visual?: string;
@@ -116,6 +119,9 @@ export function useGeneratePost() {
             primary_ref_index: payload.primary_ref_index,
             objective: payload.objective,
             photo_images: payload.photo_image_urls,
+            // Print mode
+            output_mode: payload.output_mode,
+            print_format: payload.print_format,
           },
         });
         if (resp.error) throw new Error(resp.error.message || "Erro ao gerar arte");
