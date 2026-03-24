@@ -18,45 +18,21 @@ export function useOrgMembers() {
   return useQuery({
     queryKey: ["org-members", orgId],
     queryFn: async () => {
-      // Get memberships
-      const { data: memberships, error: mErr } = await supabase
-        .from("organization_memberships")
-        .select("user_id, created_at")
-        .eq("organization_id", orgId!);
-      if (mErr) throw mErr;
-      if (!memberships || memberships.length === 0) return [];
-
-      const userIds = memberships.map((m) => m.user_id);
-
-      // Get profiles
-      const { data: profiles, error: pErr } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, phone, job_title")
-        .in("id", userIds);
-      if (pErr) throw pErr;
-
-      // Get roles
-      const { data: roles, error: rErr } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .in("user_id", userIds);
-      if (rErr) throw rErr;
-
-      const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
-      const roleMap = new Map((roles ?? []).map((r) => [r.user_id, r.role]));
-
-      return memberships.map((m): OrgMember => {
-        const prof = profileMap.get(m.user_id);
-        return {
-          user_id: m.user_id,
-          role: roleMap.get(m.user_id) ?? "cliente_user",
-          full_name: prof?.full_name ?? null,
-          email: "", // email comes from auth, not accessible here
-          avatar_url: prof?.avatar_url ?? null,
-          job_title: prof?.job_title ?? null,
-          created_at: m.created_at,
-        };
+      // Use the SECURITY DEFINER RPC that joins with auth.users for emails
+      const { data, error } = await supabase.rpc("get_org_members_with_email", {
+        _org_id: orgId!,
       });
+      if (error) throw error;
+
+      return (data ?? []).map((m: any): OrgMember => ({
+        user_id: m.user_id,
+        role: m.role ?? "cliente_user",
+        full_name: m.full_name ?? null,
+        email: m.email ?? "",
+        avatar_url: m.avatar_url ?? null,
+        job_title: m.job_title ?? null,
+        created_at: m.created_at,
+      }));
     },
     enabled: !!orgId,
   });
