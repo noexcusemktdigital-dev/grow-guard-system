@@ -94,11 +94,13 @@ export function ArtWizard({
   // Step 3: Layout (replaces old Style)
   const [layoutTypes, setLayoutTypes] = useState<string[]>(["hero_central"]);
 
-  // Step 4: References + Logo
+  // Step 4: References + Logo + Photos
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
   const [primaryRefIndex, setPrimaryRefIndex] = useState(0);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   // Step 5: Format
   const [artFormat, setArtFormat] = useState("portrait");
