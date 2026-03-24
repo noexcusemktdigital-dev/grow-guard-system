@@ -23,6 +23,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const { toast } = useToast();
   const { data: funnelsData } = useCrmFunnels();
   const { createFunnel, updateFunnel, deleteFunnel } = useCrmFunnelMutations();
+  const [deletingFunnel, setDeletingFunnel] = useState<any>(null);
   const { data: subscription } = useClienteSubscription();
 
   const [editingFunnel, setEditingFunnel] = useState<any>(null);
