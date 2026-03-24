@@ -61,7 +61,7 @@ const sistemaSection: SidebarItem[] = [
   { label: "Suporte", icon: Headphones, path: "/cliente/suporte" },
   { label: "Integrações", icon: Link, path: "/cliente/integracoes", adminOnly: true },
   { label: "Plano & Créditos", icon: CreditCard, path: "/cliente/plano-creditos", badgeKey: "plano-creditos", adminOnly: true },
-  { label: "Configurações", icon: Settings, path: "/cliente/configuracoes" },
+  { label: "Configurações", icon: Settings, path: "/cliente/configuracoes?tab=organizacao" },
 ] as SidebarItem[];
 
 function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: boolean; isGated: boolean }) {
