@@ -492,7 +492,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   };
 
   useEffect(() => {
-    if (matchedLead && contact && !crmLeadId) {
+    if (matchedLead && contact && !crmLeadId && !linkMutation.isPending) {
       linkMutation.mutate({ contactId: contact.id, leadId: matchedLead.id });
     }
   }, [matchedLead?.id, contact?.id, crmLeadId]);
