@@ -759,8 +759,8 @@ Output ONLY the extracted logo image.`,
     let base64Refs: { type: string; image_url: { url: string } }[] = [];
 
     if (hasRefs) {
-      console.log(`📥 Converting ${Math.min(reference_images.length, 3)} reference images to base64...`);
-      for (const refUrl of reference_images.slice(0, 3)) {
+      console.log(`📥 Converting ${Math.min(reference_images.length, 5)} reference images to base64...`);
+      for (const refUrl of reference_images.slice(0, 5)) {
         const b64 = await urlToBase64(refUrl);
         if (b64) {
           base64Refs.push({ type: "image_url", image_url: { url: b64 } });
