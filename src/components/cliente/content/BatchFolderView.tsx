@@ -91,8 +91,23 @@ export function BatchFolderView({ history, navigate, onDelete }: BatchFolderView
     });
   };
 
+  // Approval counters
+  const approvalCounts = useMemo(() => ({
+    pending: history.filter(i => i.status !== "approved").length,
+    approved: history.filter(i => i.status === "approved").length,
+  }), [history]);
+
   return (
     <div className="space-y-4">
+      {/* Approval count bar */}
+      {history.length > 0 && (
+        <ApprovalCountBar
+          pending={approvalCounts.pending}
+          approved={approvalCounts.approved}
+          label="Conteúdos"
+        />
+      )}
+
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
