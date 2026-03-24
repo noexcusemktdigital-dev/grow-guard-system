@@ -1,28 +1,20 @@
 
 
-# Corrigir ordenação da lista de conversas
+# Remover botão de Refresh/Sync do Conversas
 
 ## Problema
-Ao abrir uma conversa, o `unread_count` vai para 0 e o contato "desce" na lista porque a ordenação atual prioriza mensagens não lidas no topo. Isso quebra a experiência — o usuário perde de vista a conversa que acabou de abrir.
+O botão de refresh (ícone ↻) na lista de conversas é desnecessário — o sistema já espelha as conversas em tempo real via Realtime + polling fallback.
 
-## Solução
-Remover a priorização por `unread_count` na ordenação. A lista deve ser **puramente cronológica** — ordenada por `last_message_at` (mais recente no topo). Abrir a conversa apenas remove o badge de não lida, sem mudar a posição.
+## Alterações
 
-## Alteração
+**`src/components/cliente/ChatContactList.tsx`**:
+- Remover o import de `RefreshCw`
+- Remover `onSync` e `isSyncing` da interface Props e do destructuring
+- Remover o bloco `{onSync && (<Button>...</Button>)}` (linhas 92-96)
 
-**`src/components/cliente/ChatContactList.tsx`** (linhas 48-56):
-- Remover as linhas que comparam `unread_count` na função de sort
-- Manter apenas a ordenação por `last_message_at` (descendente)
+**`src/pages/cliente/ClienteChat.tsx`**:
+- Remover as props `onSync={handleSyncChats}` e `isSyncing={isSyncing}` do `<ChatContactList>`
+- Remover a função `handleSyncChats` e o estado `isSyncing` (já que não serão mais usados em nenhum lugar)
 
-```typescript
-const sortedContacts = useMemo(() => {
-  return [...filtered].sort((a, b) => {
-    const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-    const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-    return db - da;
-  });
-}, [filtered]);
-```
-
-Resultado: ordem cronológica fixa, conversa não se move ao ser aberta, apenas perde o badge.
+O sync automático no `useEffect` de mount continua funcionando normalmente em background — apenas o botão manual é removido.
 
