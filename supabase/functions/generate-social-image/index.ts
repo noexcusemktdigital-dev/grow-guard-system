@@ -536,7 +536,9 @@ IMPORTANT RENDERING RULES:
 - Maintain strong visual hierarchy between headline, highlight, subtext, and CTA
 - All text must have sufficient contrast against its background
 - Typography should feel intentional and designed, not auto-generated
-- The overall composition must be balanced and publication-ready`;
+- The overall composition must be balanced and publication-ready
+- MANDATORY COLOR RULE: Use ONLY the colors listed in the color_palette section. Do NOT substitute or invent different colors. If the palette says yellow, use yellow — NEVER red or any other hue.
+- DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo space COMPLETELY EMPTY — it will be composited in post-production.`;
 }
 
 // --- Build fallback prompt when CoT fails ---
