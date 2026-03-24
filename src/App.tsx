@@ -189,8 +189,8 @@ function App() {
               {/* Cliente onboarding (full-screen, no sidebar) */}
               <Route path="/cliente/onboarding" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteOnboardingCompany /></ProtectedRoute>} />
 
-              <Route path="/cliente/*" element={<ProtectedRoute><Index /></ProtectedRoute>}>
-                <Route path="*" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ErrorBoundary><ClienteLayout /></ErrorBoundary></ProtectedRoute>}>
+              <Route path="/cliente/*" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><Index /></ProtectedRoute>}>
+                <Route path="*" element={<ErrorBoundary><ClienteLayout /></ErrorBoundary>}>
                   <Route index element={<Navigate to="/cliente/inicio" replace />} />
                   <Route path="inicio" element={<ClienteInicio />} />
                   <Route path="checklist" element={<ClienteChecklist />} />
