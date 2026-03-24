@@ -58,6 +58,7 @@ export interface ArtGeneratePayload {
   logoUrl?: string;
   primaryRefIndex?: number;
   objective?: string;
+  photoUrls?: string[];
 }
 
 export interface ArtBriefingResult {
