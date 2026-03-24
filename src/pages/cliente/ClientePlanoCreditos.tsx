@@ -307,6 +307,7 @@ function SubscriptionDialog({
   const [couponLoading, setCouponLoading] = useState(false);
   const [paymentResult, setPaymentResult] = useState<any>(null);
   const { data: orgId } = useUserOrgId();
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const handleClose = (o: boolean) => {
