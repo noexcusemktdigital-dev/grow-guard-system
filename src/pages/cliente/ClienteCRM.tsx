@@ -630,7 +630,7 @@ export default function ClienteCRM() {
               </CardContent></Card>
               <Card><CardContent className="p-3">
                 <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Valor no pipeline</p>
-                <p className="text-xl font-bold text-primary mt-1">R$ {pipelineSummary.totalValue.toLocaleString()}</p>
+                <p className="text-xl font-bold text-primary mt-1">R$ {pipelineSummary.totalValue.toLocaleString("pt-BR")}</p>
               </CardContent></Card>
               <Card><CardContent className="p-3">
                 <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Ticket médio</p>
