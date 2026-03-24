@@ -22,7 +22,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
-const SUPPORT_LINK = "https://wa.me/5500000000000?text=Olá! Preciso de ajuda com a integração WhatsApp.";
+const SUPPORT_LINK = "https://wa.me/554499997369?text=Olá! Preciso de ajuda com a integração WhatsApp.";
 
 const WEBHOOK_EVENTS = [
   { value: "lead_created", label: "Lead criado" },

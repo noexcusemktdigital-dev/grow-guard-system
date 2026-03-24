@@ -151,6 +151,7 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
       playSound("success");
     },
   });
@@ -211,7 +212,10 @@ export function useCrmLeadMutations() {
       const { error } = await supabase.from("crm_leads").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+    },
   });
 
   const bulkUpdateLeads = useMutation({
@@ -230,7 +234,10 @@ export function useCrmLeadMutations() {
       const { error } = await supabase.from("crm_leads").delete().in("id", ids);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+    },
   });
 
   const bulkAddTag = useMutation({
@@ -253,7 +260,10 @@ export function useCrmLeadMutations() {
         .lt("lost_at", cutoff.toISOString());
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+    },
   });
 
   return { createLead, updateLead, deleteLead, markAsWon, markAsLost, bulkUpdateLeads, bulkDeleteLeads, bulkAddTag, archiveOldLeads };
