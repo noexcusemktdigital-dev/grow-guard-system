@@ -945,7 +945,7 @@ export default function ClienteCRM() {
                           {stage?.label || lead.stage}
                         </Badge>
                         <span className="text-sm font-semibold text-primary whitespace-nowrap">
-                          {lead.value ? `R$ ${Number(lead.value).toLocaleString()}` : "—"}
+                          {lead.value ? `R$ ${Number(lead.value).toLocaleString("pt-BR")}` : "—"}
                         </span>
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                           {new Date(lead.created_at).toLocaleDateString("pt-BR")}
