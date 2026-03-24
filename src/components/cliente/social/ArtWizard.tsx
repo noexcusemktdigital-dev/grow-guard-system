@@ -525,8 +525,78 @@ export function ArtWizard({
         );
       }
 
-      // ─── Step 5: Format ───
-      case 5:
+      // ─── Step 6: Format ───
+      case 6: {
+        if (outputMode === "print") {
+          const printFormatsForType = PRINT_FORMATS.filter(f => {
+            if (printType === "cartao") return f.value.startsWith("cartao");
+            if (printType === "flyer") return f.value.startsWith("flyer");
+            if (printType === "banner") return f.value.startsWith("banner");
+            return true;
+          });
+          return (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold mb-1">📐 Formato de impressão</h3>
+                <p className="text-sm text-muted-foreground">Dimensões em centímetros a 300dpi (CMYK)</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {printFormatsForType.map((f) => (
+                  <SelectCard key={f.value} selected={printFormat === f.value} onClick={() => setPrintFormat(f.value)}>
+                    <CardContent className="p-4 text-center">
+                      <p className="font-semibold text-sm">{f.label}</p>
+                      <p className="text-xs text-muted-foreground">{f.cm}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{f.ratio}</p>
+                    </CardContent>
+                  </SelectCard>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Digital mode — per-piece format selection
+        const pieces = totalPieces;
+        if (pieces > 1 && tipoPostagem !== "carrossel") {
+          // Initialize artFormats if needed
+          if (artFormats.length !== pieces) {
+            setArtFormats(Array(pieces).fill(artFormat));
+          }
+          return (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold mb-1">📐 Formato por peça</h3>
+                <p className="text-sm text-muted-foreground">Escolha o formato de cada peça individualmente</p>
+              </div>
+              {Array.from({ length: pieces }, (_, i) => (
+                <div key={i} className="space-y-1">
+                  <Label className="text-xs font-medium">Peça {i + 1} — Layout: {LAYOUT_TYPES.find(l => l.value === layoutTypes[i % layoutTypes.length])?.label}</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ART_FORMATS.map((f) => (
+                      <SelectCard
+                        key={f.value}
+                        selected={(artFormats[i] || artFormat) === f.value}
+                        onClick={() => {
+                          const newFormats = [...(artFormats.length === pieces ? artFormats : Array(pieces).fill(artFormat))];
+                          newFormats[i] = f.value;
+                          setArtFormats(newFormats);
+                        }}
+                      >
+                        <CardContent className="p-2 flex flex-col items-center text-center gap-1">
+                          <f.icon className="w-4 h-4 text-primary" />
+                          <p className="font-semibold text-[11px]">{f.label}</p>
+                          <p className="text-[10px] text-muted-foreground">{f.desc}</p>
+                        </CardContent>
+                      </SelectCard>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
+
+        // Single piece — simple format selector
         return (
           <div className="space-y-4">
             <div>
@@ -547,15 +617,15 @@ export function ArtWizard({
             </div>
           </div>
         );
+      }
 
-      // ─── Step 6: Review (AI-generated texts) ───
-      case 6: {
-        const basePieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
-        const layoutMultiplier = layoutTypes.length;
-        const totalPieces = basePieces * layoutMultiplier;
-        const totalCost = totalPieces * creditCost;
+      // ─── Step 7: Review (AI-generated texts) ───
+      case 7: {
+        const reviewTotalCost = totalPieces * creditCost;
         const selectedLayouts = layoutTypes.map(lt => LAYOUT_TYPES.find(l => l.value === lt)).filter(Boolean);
-        const selectedFormat = ART_FORMATS.find(f => f.value === artFormat);
+        const selectedFormat = outputMode === "print"
+          ? PRINT_FORMATS.find(f => f.value === printFormat)
+          : ART_FORMATS.find(f => f.value === artFormat);
         const selectedType = POST_TYPES.find(t => t.value === tipoPostagem);
 
         return (
