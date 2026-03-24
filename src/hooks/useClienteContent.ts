@@ -1,9 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { playSound } from "@/lib/sounds";
 import { toast } from "sonner";
+
+const NOTIFICATIONS_PAGE_SIZE = 50;
 
 export function useClienteContent() {
   const { data: orgId } = useUserOrgId();
