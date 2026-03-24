@@ -34,6 +34,9 @@ export default function ClienteChat() {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  // Mobile: show conversation when contact selected
+  const [mobileShowConversation, setMobileShowConversation] = useState(false);
+
   const selectedContact = useMemo(
     () => contacts.find((c) => c.id === selectedContactId) ?? null,
     [contacts, selectedContactId]
@@ -98,7 +101,6 @@ export default function ClienteChat() {
 
 
   // Fetch real message previews from the database
-  // Stringify IDs to stabilize the query key and prevent infinite re-fetches
   const contactIdsStr = useMemo(() => contacts.map((c) => c.id).sort().join(","), [contacts]);
   const contactIds = useMemo(() => contactIdsStr ? contactIdsStr.split(",") : [], [contactIdsStr]);
   const { data: realPreviews } = useContactPreviews(contactIds);
@@ -106,10 +108,15 @@ export default function ClienteChat() {
 
   const handleSelectContact = (contact: WhatsAppContact) => {
     setSelectedContactId(contact.id);
+    setMobileShowConversation(true);
     if (contact.unread_count > 0) {
       markRead.mutate(contact.id);
     }
   };
+
+  const handleBackToList = useCallback(() => {
+    setMobileShowConversation(false);
+  }, []);
 
   const handleSyncChats = useCallback(async () => {
     if (!instance?.instance_id || isSyncing) return;
@@ -177,7 +184,6 @@ export default function ClienteChat() {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         }
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-        // Sound is played by ChatConversation — no duplicate here
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
@@ -226,8 +232,8 @@ export default function ClienteChat() {
 
   return (
     <div className="flex overflow-hidden h-[calc(100vh-3.5rem)]">
-      {/* Contact List */}
-      <div className="w-[340px] shrink-0 h-full overflow-hidden">
+      {/* Contact List — hide on mobile when conversation is open */}
+      <div className={`${mobileShowConversation ? "hidden md:flex" : "flex"} w-full md:w-[340px] shrink-0 h-full overflow-hidden flex-col`}>
         {loadingContacts ? (
           <div className="p-4 space-y-3 border-r border-border">
             {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[68px] rounded-lg" />)}
@@ -247,14 +253,15 @@ export default function ClienteChat() {
         )}
       </div>
 
-      {/* Conversation */}
-      <div className="flex-1 min-w-0 h-full overflow-hidden relative">
+      {/* Conversation — show on mobile when selected */}
+      <div className={`${mobileShowConversation ? "flex" : "hidden md:flex"} flex-1 min-w-0 h-full overflow-hidden relative flex-col`}>
         <ChatConversation
           contact={selectedContact}
           messages={messages}
           isLoading={loadingMessages}
           agents={agents}
           instanceId={instance?.instance_id ?? null}
+          onBack={handleBackToList}
         />
         {/* Toggle lead panel button */}
         {selectedContact && (

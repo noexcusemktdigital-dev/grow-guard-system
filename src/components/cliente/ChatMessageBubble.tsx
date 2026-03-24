@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Check, CheckCheck, Bot, User, Image as ImageIcon, FileText, Mic, Video, Reply } from "lucide-react";
+import { Check, CheckCheck, Bot, User, Image as ImageIcon, FileText, Mic, Video, Reply, Sticker } from "lucide-react";
 import type { WhatsAppMessage } from "@/hooks/useWhatsApp";
 
 interface Props {
@@ -30,6 +30,7 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
 
   const metadata = (message.metadata || {}) as Record<string, unknown>;
   const isAiGenerated = !!metadata.ai_generated;
+  const senderName = (metadata.pushName || metadata.senderName) as string | undefined;
 
   // Quote support
   const quotedMessageId = (metadata.quotedMessageId || metadata.quotedMsg) as string | undefined;
@@ -43,7 +44,26 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
     || (message.type === "audio" && metadata.audio ? (metadata.audio as any)?.audioUrl : null)
     || null;
 
+  // Sticker detection
+  const isSticker = message.type === "sticker" || !!(metadata.stickerMessage);
+  const stickerUrl = isSticker ? (resolvedMediaUrl || message.media_url) : null;
+
   const renderMedia = () => {
+    // Sticker
+    if (isSticker && stickerUrl && !imgError) {
+      return (
+        <div className="mb-1">
+          <img
+            src={stickerUrl}
+            alt="Sticker"
+            className="w-32 h-32 object-contain"
+            onError={() => setImgError(true)}
+            loading="lazy"
+          />
+        </div>
+      );
+    }
+
     // Audio messages — always render even without URL
     if (message.type === "audio") {
       if (resolvedMediaUrl) {
@@ -111,6 +131,11 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
               : "wa-bubble-in"
           } ${!isGrouped && isOutbound ? "rounded-tr-none" : ""} ${!isGrouped && !isOutbound ? "rounded-tl-none" : ""}`}
         >
+          {/* Sender name for group messages / inbound */}
+          {!isOutbound && !isGrouped && senderName && (
+            <p className="text-[10px] font-bold text-primary/80 mb-0.5 truncate">{senderName}</p>
+          )}
+
           {/* Quoted message block */}
           {quotedMessage && (
             <div className={`rounded-md px-2.5 py-1.5 mb-1.5 border-l-3 ${
@@ -127,7 +152,7 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
 
           {renderMedia()}
 
-          {message.content && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
+          {message.content && !isSticker && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
 
           {/* Footer */}
           <div className={`flex items-center gap-1.5 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
