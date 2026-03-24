@@ -170,7 +170,7 @@ export function ArtWizard({
 
   const handleStepChange = (nextStep: number) => {
     // Auto-trigger AI text generation when entering review step
-    if (nextStep === 6 && !briefingFilled) {
+    if (nextStep === 7 && !briefingFilled) {
       handleAutoFillTexts();
     }
     setStep(nextStep);
