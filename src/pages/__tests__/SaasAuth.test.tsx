@@ -43,6 +43,25 @@ vi.mock("sonner", () => ({
 
 vi.mock("@/assets/NOE3.png", () => ({ default: "logo.png" }));
 vi.mock("@/components/SaasBrandingPanel", () => ({ default: () => <div data-testid="branding" /> }));
+vi.mock("@/components/ui/tabs", () => ({
+  Tabs: ({ children }: any) => <div>{children}</div>,
+  TabsList: ({ children }: any) => <div>{children}</div>,
+  TabsTrigger: ({ children, value, className, ...props }: any) => (
+    <button type="button" className={className} {...props}>{children}</button>
+  ),
+  TabsContent: ({ children, value }: any) => <div>{children}</div>,
+}));
+vi.mock("@/components/ui/checkbox", () => ({
+  Checkbox: ({ checked, onCheckedChange, ...props }: any) => (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={() => onCheckedChange?.(!checked)}
+      {...props}
+    />
+  ),
+}));
 
 import SaasAuth from "../SaasAuth";
 
