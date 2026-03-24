@@ -157,12 +157,13 @@ export function ArtWizard({
 
   const canProceed = () => {
     switch (step) {
-      case 1: return !!(briefingText.trim() || contentData);
-      case 2: return true;
-      case 3: return layoutTypes.length >= 1;
-      case 4: return referenceUrls.length >= 3 && !!logoUrl;
-      case 5: return true;
-      case 6: return !!headline.trim();
+      case 1: return true; // output mode always valid
+      case 2: return !!(briefingText.trim() || contentData);
+      case 3: return true;
+      case 4: return layoutTypes.length >= 1;
+      case 5: return referenceUrls.length >= 3 && !!logoUrl;
+      case 6: return true;
+      case 7: return !!headline.trim();
       default: return true;
     }
   };
