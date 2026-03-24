@@ -814,6 +814,19 @@ export default function ClienteCRM() {
                 <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkAddTag} disabled={!bulkTagInput.trim()}><Tag className="w-3 h-3 mr-1" /> Tag</Button>
               </div>
 
+              {accessibleFunnels.length > 1 && (
+                <Select value="" onValueChange={handleBulkTransferFunnel}>
+                  <SelectTrigger className="h-7 w-36 text-xs bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+                    <Shuffle className="w-3 h-3 mr-1" /><SelectValue placeholder="Transferir funil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accessibleFunnels.filter(f => f.id !== selectedFunnelId).map(f => (
+                      <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
               <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleBulkMarkLost}>
                 <XCircle className="w-3 h-3 mr-1" /> Perdido
               </Button>
