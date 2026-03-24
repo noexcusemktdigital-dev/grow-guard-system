@@ -27,14 +27,7 @@ const ROLE_LABELS: Record<string, string> = {
   cliente_user: "Usuário",
 };
 
-const TEAM_COLORS: Record<string, string> = {
-  vendas: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  marketing: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-  suporte: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
-  juridico: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  operacoes: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  financeiro: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-};
+const TEAM_COLORS_LOCAL = TEAM_COLORS;
 
 export default function Matriz() {
   const { data: members, isLoading: loadingMembers } = useOrgMembers();
