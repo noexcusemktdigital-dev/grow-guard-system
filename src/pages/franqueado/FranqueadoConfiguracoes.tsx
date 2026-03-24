@@ -132,6 +132,7 @@ function TeamTab() {
           full_name: inviteForm.full_name,
           role: inviteForm.role,
           organization_id: orgId,
+          team_ids: inviteTeamIds,
         },
       });
       if (error) throw error;
