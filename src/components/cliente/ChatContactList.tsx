@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
-import { Search, RefreshCw, Clock, MessageCircle, Wifi, Bot, User, Users } from "lucide-react";
+import { Search, Clock, MessageCircle, Wifi, Bot, User, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
