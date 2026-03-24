@@ -860,7 +860,7 @@ export default function ClienteCRM() {
                         {(stageValues[stage.key] > 0 || totalPipelineValue > 0) && (
                           <div className="mt-1.5 space-y-1">
                             <span className="text-[10px] font-bold text-primary">
-                              R$ {stageValues[stage.key].toLocaleString()}
+                              R$ {stageValues[stage.key].toLocaleString("pt-BR")}
                             </span>
                             {totalPipelineValue > 0 && (
                               <Progress
