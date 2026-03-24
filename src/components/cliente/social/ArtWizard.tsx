@@ -176,6 +176,8 @@ export function ArtWizard({
     setStep(nextStep);
   };
 
+  const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+
   const handleGenerate = () => {
     if (!headline.trim()) {
       toast({ title: "Insira a headline da arte", variant: "destructive" });
@@ -185,8 +187,15 @@ export function ArtWizard({
       toast({ title: "Envie pelo menos 3 referências", variant: "destructive" });
       return;
     }
+
+    // Build per-piece formats array
+    const finalFormats = outputMode === "print"
+      ? Array(totalPieces).fill(printFormat)
+      : (artFormats.length === totalPieces ? artFormats : Array(totalPieces).fill(artFormat));
+
     onGenerate({
-      format: artFormat,
+      format: outputMode === "print" ? printFormat : artFormat,
+      formats: totalPieces > 1 ? finalFormats : undefined,
       style: layoutTypes[0],
       tipoPostagem,
       headline, subheadline, cta, cena, elementosVisuais,
@@ -199,6 +208,8 @@ export function ArtWizard({
       primaryRefIndex,
       objective,
       photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
+      outputMode,
+      printFormat: outputMode === "print" ? printFormat : undefined,
     });
   };
 
