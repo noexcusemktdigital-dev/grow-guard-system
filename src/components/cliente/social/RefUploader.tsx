@@ -79,9 +79,16 @@ export function RefUploader({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const [svgWarning, setSvgWarning] = useState(false);
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !orgId || !setLogoUrl) return;
+    
+    // Check for SVG
+    const isSvg = file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
+    setSvgWarning(isSvg);
+    
     setUploading(true);
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `logos/${orgId}/${Date.now()}_${safeName}`;
@@ -138,6 +145,9 @@ export function RefUploader({
           </div>
           <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
           <p className="text-[10px] text-muted-foreground">A logo será inserida na arte exatamente como enviada.</p>
+          {svgWarning && logoUrl && (
+            <p className="text-[10px] text-amber-600 font-medium">⚠️ Logo em SVG detectada. O sistema vai converter automaticamente, mas para melhor resultado recomendamos enviar em PNG.</p>
+          )}
           {!logoUrl && referenceUrls.length > 0 && (
             <Button
               variant="outline"

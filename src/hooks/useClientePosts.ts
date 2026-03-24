@@ -75,6 +75,7 @@ export function useGeneratePost() {
       logo_url?: string;
       primary_ref_index?: number;
       objective?: string;
+      photo_image_urls?: string[];
       // Video-specific structured fields
       plataforma?: string;
       estilo_visual?: string;
@@ -114,6 +115,7 @@ export function useGeneratePost() {
             logo_url: payload.logo_url,
             primary_ref_index: payload.primary_ref_index,
             objective: payload.objective,
+            photo_images: payload.photo_image_urls,
           },
         });
         if (resp.error) throw new Error(resp.error.message || "Erro ao gerar arte");

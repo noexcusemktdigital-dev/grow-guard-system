@@ -19,10 +19,53 @@ async function urlToBase64(url: string): Promise<string | null> {
     }
     let contentType = res.headers.get("content-type") || "image/png";
 
-    // The AI model does not support SVG — skip unsupported MIME types
+    // SVG: convert to PNG by re-rendering via AI model
     if (contentType.includes("svg")) {
-      console.warn(`Skipping unsupported MIME type (${contentType}): ${url}`);
-      return null;
+      console.log(`🔄 SVG detected, converting to PNG via AI: ${url}`);
+      try {
+        const svgText = new TextDecoder().decode(new Uint8Array(await res.clone().arrayBuffer()));
+        // Use a simple base64 of the SVG for the AI to render
+        const svgB64 = `data:image/svg+xml;base64,${btoa(svgText)}`;
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        if (!LOVABLE_API_KEY) {
+          console.warn("No LOVABLE_API_KEY for SVG conversion, skipping");
+          return null;
+        }
+        const convResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3.1-flash-image-preview",
+            messages: [{
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Render this SVG logo as a clean PNG image on a solid white background. Maintain exact colors, proportions and text. Output only the rendered image.",
+                },
+                { type: "image_url", image_url: { url: svgB64 } },
+              ],
+            }],
+            modalities: ["image", "text"],
+          }),
+        });
+        if (convResp.ok) {
+          const convData = await convResp.json();
+          const pngUrl = convData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+          if (pngUrl) {
+            console.log("✅ SVG converted to PNG successfully");
+            return pngUrl;
+          }
+        }
+        console.warn("SVG→PNG conversion failed, skipping");
+        return null;
+      } catch (svgErr) {
+        console.warn("SVG→PNG conversion error:", svgErr);
+        return null;
+      }
     }
 
     // Normalize content-type to a supported raster format
@@ -581,6 +624,7 @@ serve(async (req) => {
       supporting_text, bullet_points,
       layout_type, logo_url, primary_ref_index, objective,
       extract_logo,
+      photo_images,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -783,11 +827,30 @@ Output ONLY the extracted logo image.`,
       fullPrompt += `\n\nBRAND LOGO PLACEMENT: Leave a CLEAN, EMPTY rectangular space (approximately 10-15% of image width) in the top-left corner of the design for the brand logo. This space must have a solid, uniform background matching the surrounding design — do NOT place any text, graphics, or busy patterns there. The logo will be composited in post-production.`;
     }
 
-    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
+    // Convert photo_images to base64 for inclusion in the design
+    let photoBase64s: { type: string; image_url: { url: string } }[] = [];
+    if (photo_images && photo_images.length > 0) {
+      console.log(`📷 Converting ${photo_images.length} photo images for inclusion in art...`);
+      for (const photoUrl of photo_images.slice(0, 4)) {
+        const b64 = await urlToBase64(photoUrl);
+        if (b64) photoBase64s.push({ type: "image_url", image_url: { url: b64 } });
+      }
+      fullPrompt += `\n\nPHOTOS TO INCLUDE IN THE DESIGN: ${photoBase64s.length} photo(s) have been attached. These photos MUST appear as visual elements IN the final design composition. Incorporate them naturally into the layout — they are real product/person/place photos that the client wants visible in the art. Do NOT use them just as style reference.`;
+    }
+
+    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, photos: ${photoBase64s.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
-    // Stage 2: Generate image (NO logo image sent — just text prompt + refs)
-    const messageContent: any = fullPrompt;
+    // Stage 2: Generate image (with photo images if provided)
+    let messageContent: any;
+    if (photoBase64s.length > 0) {
+      messageContent = [
+        { type: "text", text: fullPrompt },
+        ...photoBase64s,
+      ];
+    } else {
+      messageContent = fullPrompt;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
