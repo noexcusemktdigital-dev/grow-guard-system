@@ -132,8 +132,8 @@ function App() {
               <Route path="/" element={<SaasLanding />} />
 
               {/* Protected app shell */}
-              <Route path="/franqueadora/*" element={<ProtectedRoute><Index /></ProtectedRoute>}>
-                <Route path="*" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><ErrorBoundary><FranqueadoraLayout /></ErrorBoundary></ProtectedRoute>}>
+              <Route path="/franqueadora/*" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Index /></ProtectedRoute>}>
+                <Route path="*" element={<ErrorBoundary><FranqueadoraLayout /></ErrorBoundary>}>
                   <Route index element={<Navigate to="/franqueadora/inicio" replace />} />
                   <Route path="inicio" element={<Home />} />
                   <Route path="financeiro" element={<FinanceiroDashboard />} />
@@ -161,8 +161,8 @@ function App() {
                 </Route>
               </Route>
 
-              <Route path="/franqueado/*" element={<ProtectedRoute><Index /></ProtectedRoute>}>
-                <Route path="*" element={<ProtectedRoute allowedRoles={["franqueado"]}><ErrorBoundary><FranqueadoLayout /></ErrorBoundary></ProtectedRoute>}>
+              <Route path="/franqueado/*" element={<ProtectedRoute allowedRoles={["franqueado"]}><Index /></ProtectedRoute>}>
+                <Route path="*" element={<ErrorBoundary><FranqueadoLayout /></ErrorBoundary>}>
                   <Route index element={<Navigate to="/franqueado/inicio" replace />} />
                   <Route path="inicio" element={<FranqueadoDashboard />} />
                   <Route path="agenda" element={<FranqueadoAgenda />} />
@@ -189,8 +189,8 @@ function App() {
               {/* Cliente onboarding (full-screen, no sidebar) */}
               <Route path="/cliente/onboarding" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteOnboardingCompany /></ProtectedRoute>} />
 
-              <Route path="/cliente/*" element={<ProtectedRoute><Index /></ProtectedRoute>}>
-                <Route path="*" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ErrorBoundary><ClienteLayout /></ErrorBoundary></ProtectedRoute>}>
+              <Route path="/cliente/*" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><Index /></ProtectedRoute>}>
+                <Route path="*" element={<ErrorBoundary><ClienteLayout /></ErrorBoundary>}>
                   <Route index element={<Navigate to="/cliente/inicio" replace />} />
                   <Route path="inicio" element={<ClienteInicio />} />
                   <Route path="checklist" element={<ClienteChecklist />} />

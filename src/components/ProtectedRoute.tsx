@@ -22,7 +22,7 @@ function getLoginPath(pathname: string): string {
   return "/acessofranquia";
 }
 
-const ROLE_TIMEOUT_MS = 10000;
+const ROLE_TIMEOUT_MS = 6000;
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, role, loading } = useAuth();

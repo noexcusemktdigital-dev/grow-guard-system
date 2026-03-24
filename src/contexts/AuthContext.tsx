@@ -69,16 +69,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const path = window.location.pathname;
       const isSaasPortal = path.startsWith("/cliente") || path.startsWith("/app") || path === "/" || path.startsWith("/landing");
 
-      // Use longer timeouts (20s) and retry up to 3 times with exponential backoff
+      // Fast timeouts (6s) with max 2 retries — no exponential backoff, just quick retry
       const fetchWithRetry = async <T,>(fn: () => PromiseLike<T>, label: string): Promise<T | null> => {
-        for (let attempt = 0; attempt < 3; attempt++) {
+        for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const result = await withTimeout(fn(), 20000, null as any);
+            const result = await withTimeout(fn(), 6000, null as any);
             if (result !== null) return result;
           } catch {
             // retry
           }
-          if (attempt < 2) await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+          if (attempt < 1) await new Promise(r => setTimeout(r, 300));
         }
         console.warn(`[Auth] ${label} failed after retries`);
         return null;
@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 supabase.functions.invoke("signup-saas", {
                   body: { user_id: currentUser.id, company_name: companyName },
                 }),
-                12000,
+                8000,
                 { error: { message: "timeout" } } as any
               );
 
