@@ -240,8 +240,51 @@ export function ArtWizard({
 
   const renderStep = () => {
     switch (step) {
-      // ─── Step 1: Briefing + Objective ───
+      // ─── Step 1: Output Mode (Digital vs Print) ───
       case 1:
+        return (
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-base font-semibold mb-1">🎯 Onde será usada?</h3>
+              <p className="text-sm text-muted-foreground">Escolha o destino da arte para otimizar formato e cores</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <SelectCard selected={outputMode === "digital"} onClick={() => setOutputMode("digital")}>
+                <CardContent className="p-5 text-center">
+                  <p className="text-3xl mb-2">📱</p>
+                  <p className="font-semibold text-sm">Digital (Rede Social)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Feed, Stories, Reels — cores RGB vibrantes</p>
+                </CardContent>
+              </SelectCard>
+              <SelectCard selected={outputMode === "print"} onClick={() => setOutputMode("print")}>
+                <CardContent className="p-5 text-center">
+                  <p className="text-3xl mb-2">🖨️</p>
+                  <p className="font-semibold text-sm">Impressão (CMYK)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Cartão de visita, flyer, banner</p>
+                </CardContent>
+              </SelectCard>
+            </div>
+            {outputMode === "print" && (
+              <div>
+                <Label className="text-xs font-semibold">Tipo de material</Label>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {PRINT_TYPES.map((t) => (
+                    <SelectCard key={t.value} selected={printType === t.value} onClick={() => setPrintType(t.value)}>
+                      <CardContent className="p-3 text-center">
+                        <p className="text-xl mb-1">{t.icon}</p>
+                        <p className="font-semibold text-xs">{t.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{t.desc}</p>
+                      </CardContent>
+                    </SelectCard>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      // ─── Step 2: Briefing + Objective ───
+      case 2:
         return (
           <div className="space-y-4">
             <div>
