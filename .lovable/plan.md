@@ -1,35 +1,38 @@
 
 
-# Adicionar botão de redirecionamento ao alerta de CNPJ
+# Corrigir navegação "Configurações" no portal do Cliente
 
 ## Problema
 
-Quando o cliente tenta assinar um plano ou fazer recarga sem ter CNPJ/CPF cadastrado, aparece um alerta informando que ele precisa preencher os dados em "Configurações → Organização", mas não há nenhum botão para levá-lo diretamente a essa página.
+No `UserMenu`, tanto "Meu Perfil" quanto "Configurações" redirecionam para `/cliente/configuracoes`, que abre sempre na aba "Perfil". O usuário espera que "Configurações" abra na aba de organização/sistema.
+
+## Causa raiz
+
+- `UserMenu.tsx` linha 65: "Meu Perfil" → `/cliente/configuracoes` (correto, abre no perfil)
+- `UserMenu.tsx` linha 73: "Configurações" → `/cliente/configuracoes` (deveria abrir em outra aba)
+- `ClienteSidebar.tsx`: item "Configurações" → `/cliente/configuracoes` (mesmo problema)
+- `ClienteConfiguracoes.tsx` linha 444: `defaultValue="perfil"` — sempre abre na aba perfil
 
 ## Correção
 
-### Arquivo: `src/pages/cliente/ClientePlanoCreditos.tsx`
+### 1. `ClienteConfiguracoes.tsx` — Ler tab da URL
 
-Na linha 488-492, onde o alerta `!hasCnpj` é exibido, transformar o texto estático em um bloco com botão/link que redireciona para `/cliente/configuracoes`:
+Usar `useSearchParams` para ler um parâmetro `?tab=` e definir a aba ativa. Se `?tab=organizacao`, abrir na aba de organização. Caso contrário, manter "perfil" como padrão.
 
-```tsx
-{!hasCnpj && (
-  <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3 flex items-center justify-between gap-2">
-    <span>⚠️ Preencha o CNPJ/CPF da empresa antes de assinar.</span>
-    <Button size="sm" variant="outline" className="shrink-0" onClick={() => navigate("/cliente/configuracoes")}>
-      Cadastrar CNPJ
-    </Button>
-  </div>
-)}
-```
+### 2. `UserMenu.tsx` — Diferenciar as rotas
 
-Verificar se `useNavigate` já está importado no componente (provavelmente sim). Caso contrário, adicionar o import.
+- "Meu Perfil" → `/cliente/configuracoes?tab=perfil`
+- "Configurações" → `/cliente/configuracoes?tab=organizacao`
 
----
+### 3. `ClienteSidebar.tsx` — Atualizar path
 
-### Arquivo afetado
+Alterar o item "Configurações" de `/cliente/configuracoes` para `/cliente/configuracoes?tab=organizacao`.
+
+## Arquivos afetados
 
 | Arquivo | Ação |
 |---|---|
-| `src/pages/cliente/ClientePlanoCreditos.tsx` | Adicionar botão "Cadastrar CNPJ" ao alerta |
+| `src/pages/cliente/ClienteConfiguracoes.tsx` | Ler `?tab=` da URL para definir aba ativa |
+| `src/components/UserMenu.tsx` | Diferenciar navegação Perfil vs Configurações |
+| `src/components/ClienteSidebar.tsx` | Atualizar path do item Configurações |
 
