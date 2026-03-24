@@ -30,6 +30,7 @@ const BENEFITS = [
 const SaasAuth = () => {
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [mode, setMode] = useState<"form" | "forgot" | "verify-email">("form");
+  const [verificationContext, setVerificationContext] = useState<"new" | "existing">("new");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -135,7 +136,22 @@ const SaasAuth = () => {
       toast.error(error.message);
       return;
     }
+
+    const isExistingUser = Boolean(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
+
+    if (isExistingUser) {
+      setLoading(false);
+      setVerificationContext("existing");
+      toast.error("Este email já possui cadastro. Reenviamos a confirmação se a conta ainda não foi ativada.");
+      try {
+        await supabase.auth.resend({ type: "signup", email });
+      } catch {}
+      setMode("verify-email");
+      return;
+    }
+
     if (data.user) {
+      setVerificationContext("new");
       // Save terms acceptance
       try {
         await supabase.from("profiles").update({ accepted_terms_at: new Date().toISOString() } as any).eq("id", data.user.id);
@@ -211,10 +227,21 @@ const SaasAuth = () => {
             <div className="mx-auto mb-6 w-16 h-16 rounded-full bg-[hsl(355,78%,50%)]/20 flex items-center justify-center">
               <CheckCircle2 className="h-8 w-8 text-[hsl(355,78%,50%)]" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Verifique seu email</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              {verificationContext === "existing" ? "Este email já está cadastrado" : "Verifique seu email"}
+            </h2>
             <p className="text-white/50 text-sm mb-4">
-              Enviamos um link de confirmação para <span className="text-white font-medium">{email}</span>. 
-              Clique no link para ativar sua conta e começar seu período de teste gratuito.
+              {verificationContext === "existing" ? (
+                <>
+                  O email <span className="text-white font-medium">{email}</span> já possui cadastro. Se a conta ainda não foi ativada,
+                  você pode reenviar a confirmação abaixo ou entrar após confirmar.
+                </>
+              ) : (
+                <>
+                  Enviamos um link de confirmação para <span className="text-white font-medium">{email}</span>. 
+                  Clique no link para ativar sua conta e começar seu período de teste gratuito.
+                </>
+              )}
             </p>
             <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-6">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />

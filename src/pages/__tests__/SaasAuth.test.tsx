@@ -117,4 +117,27 @@ describe("SaasAuth (Cliente SaaS)", () => {
     fireEvent.click(screen.getByText("Esqueci minha senha"));
     expect(screen.getByText("Recuperar senha")).toBeInTheDocument();
   });
+
+  it("shows existing account state and resends confirmation when signup returns obfuscated existing user", async () => {
+    mockSignUp.mockResolvedValue({
+      data: { user: { id: "u-existing", identities: [] } },
+      error: null,
+    });
+
+    renderSaas();
+
+    fireEvent.click(screen.getByRole("tab", { name: /criar conta/i }));
+    fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Teste Cliente" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "existente@test.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "Senha123!" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /começar 7 dias grátis/i }));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("Este email já possui cadastro. Reenviamos a confirmação se a conta ainda não foi ativada.");
+    });
+
+    expect(screen.getByText("Este email já está cadastrado")).toBeInTheDocument();
+    expect(screen.getByText(/já possui cadastro/i)).toBeInTheDocument();
+  });
 });
