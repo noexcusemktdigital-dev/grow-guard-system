@@ -43,6 +43,7 @@ interface Props {
   isLoading: boolean;
   agents?: { id: string; name: string }[];
   instanceId?: string | null;
+  onBack?: () => void;
 }
 
 const DISPLAY_STEP = 100;
