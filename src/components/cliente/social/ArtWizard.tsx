@@ -15,7 +15,7 @@ import {
 import { ContentItem } from "@/hooks/useClienteContentV2";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import {
-  Check, FileText, X, Wand2, Loader2, AlertTriangle, Sparkles, ArrowLeft, Pencil,
+  Check, FileText, X, Wand2, Loader2, AlertTriangle, Sparkles, ArrowLeft, Pencil, Plus,
 } from "lucide-react";
 
 interface ArtWizardProps {
