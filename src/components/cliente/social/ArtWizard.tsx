@@ -363,15 +363,34 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 4: References + Logo ───
-      case 4:
+      // ─── Step 4: References + Logo + Photos ───
+      case 4: {
+        const photoInputRef = { current: null as HTMLInputElement | null };
+        const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+          const files = e.target.files;
+          if (!files || !orgId) return;
+          setUploadingPhotos(true);
+          const newUrls: string[] = [];
+          for (const file of Array.from(files)) {
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+            const path = `photos/${orgId}/${Date.now()}_${safeName}`;
+            const { error } = await (await import("@/lib/supabase")).supabase.storage.from("social-arts").upload(path, file);
+            if (!error) {
+              const { data: urlData } = (await import("@/lib/supabase")).supabase.storage.from("social-arts").getPublicUrl(path);
+              newUrls.push(urlData.publicUrl);
+            }
+          }
+          setPhotoUrls(prev => [...prev, ...newUrls]);
+          setUploadingPhotos(false);
+        };
+
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold mb-1">📸 Referências + Logo</h3>
+              <h3 className="text-base font-semibold mb-1">📸 Referências + Logo + Fotos</h3>
               <p className="text-sm text-muted-foreground">
                 A IA extrai <strong>cores, fontes e estilo</strong> das referências.
-                Envie a logo separadamente para garantir que apareça na arte.
+                Envie a logo e fotos que devem aparecer na arte.
               </p>
             </div>
             <Card className="bg-accent/30 border-accent">
@@ -397,6 +416,46 @@ export function ArtWizard({
               primaryRefIndex={primaryRefIndex}
               setPrimaryRefIndex={setPrimaryRefIndex}
             />
+
+            {/* Photos to include in the art */}
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center gap-2">
+                <span className="text-base">📷</span>
+                <p className="text-sm font-semibold">Fotos para incluir na arte</p>
+                <Badge variant="outline" className="text-[10px]">Opcional</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Essas fotos serão usadas <strong>diretamente na composição</strong> da arte (ex: foto de produto, pessoa, imóvel).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {photoUrls.map((url, i) => (
+                  <div key={i} className="relative group w-20 h-20 rounded-xl overflow-hidden border-2 border-border">
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      onClick={() => setPhotoUrls(prev => prev.filter((_, j) => j !== i))}
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  className="w-20 h-20 rounded-xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors gap-1"
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = "image/*";
+                    input.multiple = true;
+                    input.onchange = (ev) => handlePhotoUpload(ev as any);
+                    input.click();
+                  }}
+                  disabled={uploadingPhotos}
+                >
+                  {uploadingPhotos ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                  <span className="text-[10px]">Foto</span>
+                </button>
+              </div>
+            </div>
           </div>
         );
 
