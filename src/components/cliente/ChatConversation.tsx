@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import {
   Send, Loader2, MessageCircle, Bot, User, UserPlus, ExternalLink,
   ArrowRight, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Paperclip, Smile,
-  ArrowDown, Search, X, Mic, Square, Trash2,
+  ArrowDown, Search, X, Mic, Square, Trash2, ArrowLeft,
 } from "lucide-react";
 import { ChatQuickReplies } from "./ChatQuickReplies";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ interface Props {
   isLoading: boolean;
   agents?: { id: string; name: string }[];
   instanceId?: string | null;
+  onBack?: () => void;
 }
 
 const DISPLAY_STEP = 100;
@@ -93,7 +94,7 @@ const DateSeparator = React.forwardRef<HTMLDivElement, { date: Date }>(({ date }
 });
 DateSeparator.displayName = "DateSeparator";
 
-export function ChatConversation({ contact, messages, isLoading, agents = [], instanceId }: Props) {
+export function ChatConversation({ contact, messages, isLoading, agents = [], instanceId, onBack }: Props) {
   const [text, setText] = useState("");
   const [actionsOpen, setActionsOpen] = useState(false);
   const [displayCount, setDisplayCount] = useState(DISPLAY_STEP);
@@ -244,12 +245,15 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     }
   }, [messages.length]);
 
-  // Sound effect on new inbound message
+  // Sound effect on new inbound message — only if tab is visible and not the active conversation
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.direction === "inbound" && lastSeenIdRef.current && lastMsg.id !== lastSeenIdRef.current) {
-      playSound("notification");
+      // Only play sound if document is not focused or user scrolled away
+      if (document.hidden || !isNearBottomRef.current) {
+        playSound("notification");
+      }
     }
     lastSeenIdRef.current = lastMsg.id;
   }, [messages]);
@@ -488,7 +492,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   };
 
   useEffect(() => {
-    if (matchedLead && contact && !crmLeadId) {
+    if (matchedLead && contact && !crmLeadId && !linkMutation.isPending) {
       linkMutation.mutate({ contactId: contact.id, leadId: matchedLead.id });
     }
   }, [matchedLead?.id, contact?.id, crmLeadId]);
@@ -564,7 +568,12 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* WhatsApp-style Header */}
-      <div className="flex items-center gap-3 px-4 py-3 wa-header shrink-0">
+      <div className="flex items-center gap-2 px-3 md:px-4 py-3 wa-header shrink-0">
+        {onBack && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/10 md:hidden shrink-0" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        )}
         <Avatar className="h-10 w-10 border-2 border-white/20">
           <AvatarImage src={contact.photo_url || undefined} />
           <AvatarFallback className="bg-white/20 text-white text-xs font-semibold">
