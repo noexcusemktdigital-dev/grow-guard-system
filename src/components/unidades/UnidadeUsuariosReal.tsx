@@ -76,6 +76,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
     setInviteOpen(false);
     setInvName(""); setInvEmail(""); setInvRole("cliente_user");
     setInviteSuccess(false);
+    setInviteTeamIds([]);
   }
 
   if (isLoading) return <Skeleton className="h-48 w-full" />;
