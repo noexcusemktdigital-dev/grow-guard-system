@@ -94,7 +94,7 @@ export function CrmLeadDetailSheet({ lead, onClose, stages, funnels, currentFunn
   );
 }
 
-function LeadDetailTabs({ lead, stages }: { lead: LeadRow; stages: FunnelStage[] }) {
+function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: LeadRow; stages: FunnelStage[]; funnels?: FunnelOption[]; currentFunnelId?: string }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateLead, markAsWon, markAsLost } = useCrmLeadMutations();
