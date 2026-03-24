@@ -806,8 +806,20 @@ Output ONLY the extracted logo image.`,
       portrait: "portrait 4:5 (1080×1350px) social media post for Instagram",
       story: "vertical 9:16 (1080×1920px) story/reel for Instagram Stories",
       banner: "landscape 16:9 (1920×1080px) banner for social media cover",
+      // Print formats
+      cartao_visita: "business card front (1063×591px, 9×5cm at 300dpi) for CMYK print",
+      cartao_visita_verso: "business card back (1063×591px, 9×5cm at 300dpi) for CMYK print",
+      flyer_a5: "A5 flyer (1748×2480px, 14.8×21cm at 300dpi) for CMYK print",
+      flyer_a4: "A4 flyer (2480×3508px, 21×29.7cm at 300dpi) for CMYK print",
+      banner_100x60: "large banner (1920×1152px, 100×60cm) for CMYK print",
     };
     const formatDescription = formatDescMap[format] || formatDescMap.feed;
+
+    // Print mode instructions
+    const isPrint = output_mode === "print";
+    if (isPrint) {
+      fullPrompt = fullPrompt || "";
+    }
 
     // Build final prompt
     let fullPrompt: string;
