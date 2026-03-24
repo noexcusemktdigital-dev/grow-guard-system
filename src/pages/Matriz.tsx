@@ -129,27 +129,7 @@ export default function Matriz() {
     );
   }
 
-  const TeamSelector = ({ selectedIds, onToggle }: { selectedIds: string[]; onToggle: (id: string) => void }) => (
-    <div className="flex flex-wrap gap-2">
-      {(teams ?? []).map((team) => {
-        const isSelected = selectedIds.includes(team.id);
-        const color = TEAM_COLORS[team.slug] || "bg-muted text-muted-foreground";
-        return (
-          <button
-            key={team.id}
-            type="button"
-            onClick={() => onToggle(team.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
-              isSelected ? `${color} border-transparent ring-2 ring-primary/30` : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
-            }`}
-          >
-            {team.name}
-            {isSelected && <X className="w-3 h-3 inline ml-1" />}
-          </button>
-        );
-      })}
-    </div>
-  );
+  // TeamSelector is now imported from @/components/TeamSelector
 
   return (
     <div className="space-y-6">
