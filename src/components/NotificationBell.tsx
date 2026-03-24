@@ -23,7 +23,7 @@ function getNotificacoesPath(pathname: string) {
 
 export function NotificationBell() {
   const { user } = useAuth();
-  const { data: notifications } = useClienteNotifications();
+  const { data: notifPages } = useClienteNotifications();
   const { markNotificationRead, markAllNotificationsRead } = useClienteContentMutations();
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,8 +31,9 @@ export function NotificationBell() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
-  const unread = notifications?.filter(n => !n.is_read) || [];
-  const read = notifications?.filter(n => n.is_read).slice(0, 5) || [];
+  const allNotifs = notifPages?.pages?.flatMap(p => p.data) ?? [];
+  const unread = allNotifs.filter(n => !n.is_read);
+  const read = allNotifs.filter(n => n.is_read).slice(0, 5);
 
   // Subscribe to realtime notifications (INSERT + UPDATE)
   useEffect(() => {

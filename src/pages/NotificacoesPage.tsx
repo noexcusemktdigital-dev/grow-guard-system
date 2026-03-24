@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Bell, Users, MessageCircle, Rocket, Target, CheckCheck } from "lucide-react";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { Bell, Users, MessageCircle, Rocket, Target, CheckCheck, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,13 +26,13 @@ const typeColors: Record<string, string> = {
 };
 
 export default function NotificacoesPage() {
-  const { data: notifs, isLoading } = useClienteNotifications();
+  const { data: notifPages, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useClienteNotifications();
   const { markNotificationRead, markAllNotificationsRead } = useClienteContentMutations();
   const [filter, setFilter] = useState<string>("Todos");
   const navigate = useNavigate();
   const location = useLocation();
 
-  const allNotifs = notifs ?? [];
+  const allNotifs = useMemo(() => notifPages?.pages?.flatMap(p => p.data) ?? [], [notifPages]);
   const unreadCount = allNotifs.filter(n => !n.is_read).length;
   const filters = ["Todos", "Não lidas", "CRM", "Chat", "Campanhas", "Metas"];
 
@@ -41,6 +41,22 @@ export default function NotificacoesPage() {
     if (filter === "Não lidas") return !n.is_read;
     return n.type === filter;
   });
+
+  // Infinite scroll observer
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastItemRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isFetchingNextPage) return;
+      if (observerRef.current) observerRef.current.disconnect();
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasNextPage) {
+          fetchNextPage();
+        }
+      });
+      if (node) observerRef.current.observe(node);
+    },
+    [isFetchingNextPage, hasNextPage, fetchNextPage]
+  );
 
   const handleClick = (n: any) => {
     if (!n.is_read) {
@@ -104,14 +120,16 @@ export default function NotificacoesPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map(n => {
+          {filtered.map((n, idx) => {
             const Icon = typeIcons[n.type || "info"] || Bell;
             const timeAgo = n.created_at
               ? formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })
               : "";
+            const isLast = idx === filtered.length - 1;
             return (
               <Card
                 key={n.id}
+                ref={isLast ? lastItemRef : undefined}
                 className={`transition-all duration-300 cursor-pointer hover:shadow-md ${
                   !n.is_read ? "border-primary/20 bg-primary/5" : "opacity-60"
                 }`}
@@ -133,6 +151,11 @@ export default function NotificacoesPage() {
               </Card>
             );
           })}
+          {isFetchingNextPage && (
+            <div className="flex justify-center py-4">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
         </div>
       )}
     </div>
