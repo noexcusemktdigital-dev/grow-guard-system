@@ -628,6 +628,8 @@ serve(async (req) => {
       layout_type, logo_url, primary_ref_index, objective,
       extract_logo,
       photo_images,
+      output_mode,
+      print_format,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
