@@ -89,7 +89,7 @@ export function useClienteNotifications() {
       return { data: data ?? [], page: pageParam };
     },
     getNextPageParam: (lastPage) =>
-      lastPage.data.length === NOTIFICATIONS_PAGE_SIZE ? lastPage.page + 1 : undefined,
+      lastPage?.data?.length === NOTIFICATIONS_PAGE_SIZE ? lastPage.page + 1 : undefined,
     initialPageParam: 0,
     enabled: !!user,
   });
