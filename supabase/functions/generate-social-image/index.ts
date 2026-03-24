@@ -924,6 +924,8 @@ RULES:
 - Do NOT redraw, stylize, modify, reinterpret, or simplify the logo in ANY way
 - Do NOT change any other part of the design — keep everything else pixel-perfect
 - If the corner area has a busy background, add a very subtle semi-transparent backing behind the logo for legibility
+- If there is already a logo or brand mark visible in the design, REMOVE IT and replace with the provided logo
+- There must be EXACTLY ONE logo in the final image — the one provided
 - Maintain the overall design composition and quality
 
 OUTPUT: The same design with the real brand logo composited in.`,
