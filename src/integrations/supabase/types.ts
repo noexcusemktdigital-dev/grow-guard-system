@@ -4646,6 +4646,44 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_reply_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          organization_id: string
+          position: number
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label: string
+          organization_id: string
+          position?: number
+          text: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          organization_id?: string
+          position?: number
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quick_reply_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rankings: {
         Row: {
           created_at: string
