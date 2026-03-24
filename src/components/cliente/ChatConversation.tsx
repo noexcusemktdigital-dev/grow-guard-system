@@ -565,7 +565,12 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* WhatsApp-style Header */}
-      <div className="flex items-center gap-3 px-4 py-3 wa-header shrink-0">
+      <div className="flex items-center gap-2 px-3 md:px-4 py-3 wa-header shrink-0">
+        {onBack && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/10 md:hidden shrink-0" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        )}
         <Avatar className="h-10 w-10 border-2 border-white/20">
           <AvatarImage src={contact.photo_url || undefined} />
           <AvatarFallback className="bg-white/20 text-white text-xs font-semibold">
