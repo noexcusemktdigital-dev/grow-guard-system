@@ -33,6 +33,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
   const [invRole, setInvRole] = useState("cliente_user");
   const [inviting, setInviting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
 
   // Edit member state
   const [editOpen, setEditOpen] = useState(false);
