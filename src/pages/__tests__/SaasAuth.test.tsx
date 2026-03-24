@@ -120,7 +120,6 @@ describe("SaasAuth (Cliente SaaS)", () => {
   });
 
   it("shows existing account state and resends confirmation when signup returns obfuscated existing user", async () => {
-    const user = userEvent.setup();
     mockSignUp.mockResolvedValue({
       data: { user: { id: "u-existing", identities: [] } },
       error: null,
@@ -128,7 +127,8 @@ describe("SaasAuth (Cliente SaaS)", () => {
 
     renderSaas();
 
-    await user.click(screen.getByRole("tab", { name: /criar conta/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /criar conta/i }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /criar conta/i }));
 
     await waitFor(() => {
       expect(screen.getByLabelText("Nome completo")).toBeInTheDocument();
@@ -137,7 +137,7 @@ describe("SaasAuth (Cliente SaaS)", () => {
     fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Teste Cliente" } });
     fireEvent.change(screen.getByLabelText("Email", { selector: "#signup-email" }), { target: { value: "existente@test.com" } });
     fireEvent.change(screen.getByLabelText("Senha", { selector: "#signup-password" }), { target: { value: "Senha123!" } });
-    await user.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.submit(screen.getByLabelText("Nome completo").closest("form") as HTMLFormElement);
 
     await waitFor(() => {
