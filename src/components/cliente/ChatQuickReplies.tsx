@@ -1,18 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquareText, Plus, X, Send } from "lucide-react";
+import { MessageSquareText, Plus, X, Send, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-const DEFAULT_TEMPLATES = [
-  { id: "1", label: "Saudação", text: "Olá! Tudo bem? Como posso ajudar? 😊" },
-  { id: "2", label: "Obrigado", text: "Muito obrigado pelo contato! Qualquer dúvida, estou à disposição." },
-  { id: "3", label: "Aguardando", text: "Vou verificar isso para você e retorno em breve!" },
-  { id: "4", label: "Proposta", text: "Vou preparar uma proposta personalizada e envio em instantes!" },
-  { id: "5", label: "Follow-up", text: "Olá! Passando para saber se teve alguma dúvida sobre nossa conversa." },
-];
+interface Template {
+  id: string;
+  label: string;
+  text: string;
+  position: number;
+}
 
 interface Props {
   onSelect: (text: string) => void;
@@ -20,30 +22,59 @@ interface Props {
 
 export function ChatQuickReplies({ onSelect }: Props) {
   const [open, setOpen] = useState(false);
-  const [templates, setTemplates] = useState(() => {
-    const saved = localStorage.getItem("chat_quick_replies");
-    return saved ? JSON.parse(saved) : DEFAULT_TEMPLATES;
-  });
   const [newLabel, setNewLabel] = useState("");
   const [newText, setNewText] = useState("");
   const [adding, setAdding] = useState(false);
+  const { data: orgId } = useUserOrgId();
+  const queryClient = useQueryClient();
 
-  const saveTemplates = (t: typeof templates) => {
-    setTemplates(t);
-    localStorage.setItem("chat_quick_replies", JSON.stringify(t));
-  };
+  const { data: templates = [], isLoading } = useQuery({
+    queryKey: ["quick-reply-templates", orgId],
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("quick_reply_templates" as any)
+        .select("*")
+        .eq("organization_id", orgId)
+        .order("position", { ascending: true });
+      if (error) throw error;
+      return (data || []) as unknown as Template[];
+    },
+    enabled: !!orgId,
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async ({ label, text }: { label: string; text: string }) => {
+      if (!orgId) return;
+      const { error } = await supabase
+        .from("quick_reply_templates" as any)
+        .insert({ organization_id: orgId, label, text, position: templates.length } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quick-reply-templates"] });
+      setNewLabel("");
+      setNewText("");
+      setAdding(false);
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("quick_reply_templates" as any)
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quick-reply-templates"] });
+    },
+  });
 
   const handleAdd = () => {
     if (!newLabel.trim() || !newText.trim()) return;
-    const updated = [...templates, { id: Date.now().toString(), label: newLabel.trim(), text: newText.trim() }];
-    saveTemplates(updated);
-    setNewLabel("");
-    setNewText("");
-    setAdding(false);
-  };
-
-  const handleRemove = (id: string) => {
-    saveTemplates(templates.filter((t: any) => t.id !== id));
+    addMutation.mutate({ label: newLabel.trim(), text: newText.trim() });
   };
 
   return (
@@ -67,34 +98,42 @@ export function ChatQuickReplies({ onSelect }: Props) {
             <Input placeholder="Mensagem..." value={newText} onChange={e => setNewText(e.target.value)} className="h-7 text-xs" />
             <div className="flex gap-1 justify-end">
               <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setAdding(false)}>Cancelar</Button>
-              <Button size="sm" className="h-6 text-[10px]" onClick={handleAdd}>Salvar</Button>
+              <Button size="sm" className="h-6 text-[10px]" onClick={handleAdd} disabled={addMutation.isPending}>
+                {addMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Salvar"}
+              </Button>
             </div>
           </div>
         )}
 
         <ScrollArea className="max-h-60">
-          <div className="p-1.5 space-y-0.5">
-            {templates.map((t: any) => (
-              <div
-                key={t.id}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer group transition"
-                onClick={() => { onSelect(t.text); setOpen(false); }}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <Badge variant="secondary" className="text-[8px] px-1 py-0 shrink-0">{t.label}</Badge>
+          {isLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-4 text-xs text-muted-foreground">Nenhuma resposta rápida. Clique em "+ Nova" para criar.</div>
+          ) : (
+            <div className="p-1.5 space-y-0.5">
+              {templates.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer group transition"
+                  onClick={() => { onSelect(t.text); setOpen(false); }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="secondary" className="text-[8px] px-1 py-0 shrink-0">{t.label}</Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">{t.text}</p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{t.text}</p>
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
+                    <Send className="w-3 h-3 text-primary" />
+                    <button onClick={(e) => { e.stopPropagation(); removeMutation.mutate(t.id); }} className="p-0.5 hover:text-destructive">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
-                  <Send className="w-3 h-3 text-primary" />
-                  <button onClick={(e) => { e.stopPropagation(); handleRemove(t.id); }} className="p-0.5 hover:text-destructive">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </ScrollArea>
       </PopoverContent>
     </Popover>
