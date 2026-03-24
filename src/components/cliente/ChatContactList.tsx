@@ -87,11 +87,6 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              {onSync && (
-                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={onSync} disabled={isSyncing} title="Sincronizar conversas do WhatsApp">
-                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-                </Button>
-              )}
               {totalUnread > 0 && (
                 <Badge className="h-5 min-w-5 px-1.5 text-[10px] bg-primary text-primary-foreground rounded-full">{totalUnread}</Badge>
               )}

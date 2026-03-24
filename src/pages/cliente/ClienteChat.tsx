@@ -234,8 +234,6 @@ export default function ClienteChat() {
               isConnected={isConnected}
               lastMessages={lastMessages}
               connectedPhone={formattedPhone ?? undefined}
-              onSync={handleSyncChats}
-              isSyncing={isSyncing}
             />
           )}
         </div>
