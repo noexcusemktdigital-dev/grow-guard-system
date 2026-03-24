@@ -53,7 +53,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
     setInviting(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-user", {
-        body: { email: invEmail.trim(), full_name: invName.trim(), role: invRole, organization_id: unitOrgId },
+        body: { email: invEmail.trim(), full_name: invName.trim(), role: invRole, organization_id: unitOrgId, team_ids: inviteTeamIds },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
