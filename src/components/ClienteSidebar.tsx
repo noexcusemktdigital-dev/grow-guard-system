@@ -68,7 +68,7 @@ function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: b
   const location = useLocation();
   const { level } = useCreditAlert();
   const Icon = item.icon;
-  const isActive = location.pathname.startsWith(item.path);
+  const isActive = location.pathname.startsWith(item.path.split("?")[0]);
 
   const showBadge = item.badgeKey === "plano-creditos" && (level === "warning" || level === "critical" || level === "zero");
 
