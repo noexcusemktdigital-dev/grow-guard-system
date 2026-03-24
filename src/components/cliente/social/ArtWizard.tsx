@@ -187,6 +187,7 @@ export function ArtWizard({
       logoUrl,
       primaryRefIndex,
       objective,
+      photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
     });
   };
 
