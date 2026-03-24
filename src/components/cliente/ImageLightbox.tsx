@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -28,9 +29,9 @@ export function ImageLightbox({ images, currentIndex, onClose, onNavigate }: Pro
     };
   }, [handleKeyDown]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
       onClick={onClose}
     >
       <Button
@@ -77,6 +78,7 @@ export function ImageLightbox({ images, currentIndex, onClose, onNavigate }: Pro
           {currentIndex + 1} / {images.length}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

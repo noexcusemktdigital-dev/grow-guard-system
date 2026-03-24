@@ -213,13 +213,13 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   }, []);
 
   const scrollToBottom = useCallback(() => {
-    const el = scrollAreaRef.current;
-    if (el) {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    // Use setTimeout to ensure DOM has rendered
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
       isNearBottomRef.current = true;
       setShowScrollBtn(false);
       setNewMsgCount(0);
-    }
+    }, 50);
   }, []);
 
   // Auto-scroll only when near bottom + track new msg count
@@ -230,8 +230,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
       setNewMsgCount(prev => prev + newCount);
     }
     if (isNearBottomRef.current) {
-      const el = scrollAreaRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "auto" }), 30);
     }
     prevMsgCountRef.current = messages.length;
   }, [messages.length]);

@@ -30,6 +30,27 @@ function renderTextWithLinks(text: string) {
   });
 }
 
+function ExpandableText({ text, maxLength = 500 }: { text: string; maxLength?: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const needsTruncation = text.length > maxLength;
+  const displayText = needsTruncation && !expanded ? text.substring(0, maxLength) + "..." : text;
+
+  return (
+    <p className="whitespace-pre-wrap break-words">
+      {renderTextWithLinks(displayText)}
+      {needsTruncation && (
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="text-[11px] font-medium text-primary/70 hover:text-primary ml-1"
+        >
+          {expanded ? "Ver menos" : "Ver mais"}
+        </button>
+      )}
+    </p>
+  );
+}
+
 function isImageUrl(url: string, type?: string): boolean {
   if (type === "image") return true;
   return /\.(jpe?g|png|gif|webp|bmp|svg)(\?|$)/i.test(url);
@@ -191,7 +212,7 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
           {renderMedia()}
 
           {message.content && !isSticker && (
-            <p className="whitespace-pre-wrap break-words">{renderTextWithLinks(message.content)}</p>
+            <ExpandableText text={message.content} maxLength={500} />
           )}
 
           {/* Footer */}
