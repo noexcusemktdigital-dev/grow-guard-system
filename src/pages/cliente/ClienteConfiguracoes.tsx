@@ -185,7 +185,7 @@ function UsersAndTeamsTab() {
   const inviteMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("invite-user", {
-        body: { email: inviteForm.email, full_name: inviteForm.full_name, role: inviteForm.role, organization_id: orgId },
+        body: { email: inviteForm.email, full_name: inviteForm.full_name, role: inviteForm.role, organization_id: orgId, team_ids: inviteTeamIds },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
