@@ -359,8 +359,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 2: Type + Quantity ───
-      case 2:
+      // ─── Step 3: Type + Quantity ───
+      case 3:
         return (
           <div className="space-y-5">
             <div>
