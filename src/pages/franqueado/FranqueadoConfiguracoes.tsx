@@ -18,6 +18,7 @@ import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useContracts } from "@/hooks/useContracts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
+import { TeamSelector } from "@/components/TeamSelector";
 import { supabase } from "@/lib/supabase";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -114,6 +115,7 @@ function TeamTab() {
   const { data: orgId } = useUserOrgId();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
+  const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
   const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
 
@@ -130,6 +132,7 @@ function TeamTab() {
           full_name: inviteForm.full_name,
           role: inviteForm.role,
           organization_id: orgId,
+          team_ids: inviteTeamIds,
         },
       });
       if (error) throw error;
@@ -140,6 +143,7 @@ function TeamTab() {
       toast.success("Convite enviado! O funcionário receberá um e-mail para definir sua senha.");
       setInviteOpen(false);
       setInviteForm({ email: "", full_name: "", role: "cliente_user" });
+      setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
     },
     onError: (err: any) => toast.error(err.message),
@@ -225,6 +229,7 @@ function TeamTab() {
                 </SelectContent>
               </Select>
             </div>
+            <TeamSelector selectedIds={inviteTeamIds} onToggle={(id) => setInviteTeamIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancelar</Button>

@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
+import { TeamSelector } from "@/components/TeamSelector";
 import { useUnitMembers } from "@/hooks/useUnitMembers";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -32,6 +33,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
   const [invRole, setInvRole] = useState("cliente_user");
   const [inviting, setInviting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
 
   // Edit member state
   const [editOpen, setEditOpen] = useState(false);
@@ -51,7 +53,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
     setInviting(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-user", {
-        body: { email: invEmail.trim(), full_name: invName.trim(), role: invRole, organization_id: unitOrgId },
+        body: { email: invEmail.trim(), full_name: invName.trim(), role: invRole, organization_id: unitOrgId, team_ids: inviteTeamIds },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -74,6 +76,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
     setInviteOpen(false);
     setInvName(""); setInvEmail(""); setInvRole("cliente_user");
     setInviteSuccess(false);
+    setInviteTeamIds([]);
   }
 
   if (isLoading) return <Skeleton className="h-48 w-full" />;
@@ -201,6 +204,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
                     </SelectContent>
                   </Select>
                 </div>
+                <TeamSelector selectedIds={inviteTeamIds} onToggle={(id) => setInviteTeamIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={resetForm}>Cancelar</Button>

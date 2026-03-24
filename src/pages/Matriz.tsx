@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Shield, Inbox, Users, UserPlus, Building2, X } from "lucide-react";
+import { Shield, Inbox, Users, UserPlus, Building2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import MatrizEmpresa from "@/components/matriz/MatrizEmpresa";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
+import { TeamSelector, TEAM_COLORS } from "@/components/TeamSelector";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
@@ -26,14 +27,7 @@ const ROLE_LABELS: Record<string, string> = {
   cliente_user: "Usuário",
 };
 
-const TEAM_COLORS: Record<string, string> = {
-  vendas: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  marketing: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-  suporte: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
-  juridico: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  operacoes: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  financeiro: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-};
+const TEAM_COLORS_LOCAL = TEAM_COLORS;
 
 export default function Matriz() {
   const { data: members, isLoading: loadingMembers } = useOrgMembers();
@@ -68,8 +62,12 @@ export default function Matriz() {
   };
 
   const handleInvite = async () => {
-    if (!inviteEmail.trim() || !orgId) {
+    if (!inviteEmail.trim()) {
       toast({ title: "Informe o e-mail", variant: "destructive" });
+      return;
+    }
+    if (!orgId) {
+      toast({ title: "Erro: organização não encontrada. Recarregue a página.", variant: "destructive" });
       return;
     }
     setInviteLoading(true);
@@ -131,27 +129,7 @@ export default function Matriz() {
     );
   }
 
-  const TeamSelector = ({ selectedIds, onToggle }: { selectedIds: string[]; onToggle: (id: string) => void }) => (
-    <div className="flex flex-wrap gap-2">
-      {(teams ?? []).map((team) => {
-        const isSelected = selectedIds.includes(team.id);
-        const color = TEAM_COLORS[team.slug] || "bg-muted text-muted-foreground";
-        return (
-          <button
-            key={team.id}
-            type="button"
-            onClick={() => onToggle(team.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
-              isSelected ? `${color} border-transparent ring-2 ring-primary/30` : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
-            }`}
-          >
-            {team.name}
-            {isSelected && <X className="w-3 h-3 inline ml-1" />}
-          </button>
-        );
-      })}
-    </div>
-  );
+  // TeamSelector is now imported from @/components/TeamSelector
 
   return (
     <div className="space-y-6">
@@ -226,7 +204,7 @@ export default function Matriz() {
                     <div className="flex flex-wrap gap-1.5 mt-3">
                       {userTeams.length > 0 ? (
                         userTeams.map((t) => (
-                          <span key={t.id} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${TEAM_COLORS[t.slug] || "bg-muted text-muted-foreground"}`}>
+                          <span key={t.id} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${TEAM_COLORS_LOCAL[t.slug] || TEAM_COLORS[t.slug] || "bg-muted text-muted-foreground"}`}>
                             {t.name}
                           </span>
                         ))
@@ -286,10 +264,7 @@ export default function Matriz() {
                 {inviteRole === "cliente_user" && "Acesso operacional: utiliza as ferramentas do dia a dia."}
               </p>
             </div>
-            <div>
-              <Label>Times / Funções</Label>
-              <TeamSelector selectedIds={inviteTeamIds} onToggle={(id) => toggleTeam(id, inviteTeamIds, setInviteTeamIds)} />
-            </div>
+            <TeamSelector selectedIds={inviteTeamIds} onToggle={(id) => toggleTeam(id, inviteTeamIds, setInviteTeamIds)} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInvite(false)}>
@@ -314,10 +289,7 @@ export default function Matriz() {
           setEditingMember(null);
         }}
         extraContent={
-          <div className="space-y-2">
-            <Label>Times / Funções</Label>
-            <TeamSelector selectedIds={editTeamIds} onToggle={(id) => toggleTeam(id, editTeamIds, setEditTeamIds)} />
-          </div>
+          <TeamSelector selectedIds={editTeamIds} onToggle={(id) => toggleTeam(id, editTeamIds, setEditTeamIds)} />
         }
       />
     </div>

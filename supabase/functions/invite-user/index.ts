@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
     }
 
     // Generate a password recovery link so the user can set their own password
-    const siteUrl = Deno.env.get("SITE_URL") || "https://grow-guard-system.lovable.app";
+    const siteUrl = Deno.env.get("SITE_URL") || "https://sistema.noexcusedigital.com.br";
     const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,

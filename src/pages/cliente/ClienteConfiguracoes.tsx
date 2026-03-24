@@ -22,6 +22,7 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
+import { TeamSelector } from "@/components/TeamSelector";
 import { getEffectiveLimits } from "@/constants/plans";
 import { supabase } from "@/lib/supabase";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -172,6 +173,7 @@ function UsersAndTeamsTab() {
   const currentCount = members?.length ?? 0;
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
+  const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
   const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
 
@@ -183,7 +185,7 @@ function UsersAndTeamsTab() {
   const inviteMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("invite-user", {
-        body: { email: inviteForm.email, full_name: inviteForm.full_name, role: inviteForm.role, organization_id: orgId },
+        body: { email: inviteForm.email, full_name: inviteForm.full_name, role: inviteForm.role, organization_id: orgId, team_ids: inviteTeamIds },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -193,6 +195,7 @@ function UsersAndTeamsTab() {
       toast.success("Convite enviado!");
       setInviteOpen(false);
       setInviteForm({ email: "", full_name: "", role: "cliente_user" });
+      setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
     },
     onError: (err: any) => toast.error(err.message),
@@ -362,6 +365,7 @@ function UsersAndTeamsTab() {
                 </SelectContent>
               </Select>
             </div>
+            <TeamSelector selectedIds={inviteTeamIds} onToggle={(id) => setInviteTeamIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancelar</Button>
