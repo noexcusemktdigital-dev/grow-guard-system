@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 supabase.functions.invoke("signup-saas", {
                   body: { user_id: currentUser.id, company_name: companyName },
                 }),
-                12000,
+                8000,
                 { error: { message: "timeout" } } as any
               );
 

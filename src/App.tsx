@@ -132,8 +132,8 @@ function App() {
               <Route path="/" element={<SaasLanding />} />
 
               {/* Protected app shell */}
-              <Route path="/franqueadora/*" element={<ProtectedRoute><Index /></ProtectedRoute>}>
-                <Route path="*" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><ErrorBoundary><FranqueadoraLayout /></ErrorBoundary></ProtectedRoute>}>
+              <Route path="/franqueadora/*" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Index /></ProtectedRoute>}>
+                <Route path="*" element={<ErrorBoundary><FranqueadoraLayout /></ErrorBoundary>}>
                   <Route index element={<Navigate to="/franqueadora/inicio" replace />} />
                   <Route path="inicio" element={<Home />} />
                   <Route path="financeiro" element={<FinanceiroDashboard />} />
