@@ -75,6 +75,7 @@ export function useGeneratePost() {
       logo_url?: string;
       primary_ref_index?: number;
       objective?: string;
+      photo_image_urls?: string[];
       // Video-specific structured fields
       plataforma?: string;
       estilo_visual?: string;
