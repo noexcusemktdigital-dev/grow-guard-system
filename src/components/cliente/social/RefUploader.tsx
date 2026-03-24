@@ -145,6 +145,9 @@ export function RefUploader({
           </div>
           <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
           <p className="text-[10px] text-muted-foreground">A logo será inserida na arte exatamente como enviada.</p>
+          {svgWarning && logoUrl && (
+            <p className="text-[10px] text-amber-600 font-medium">⚠️ Logo em SVG detectada. O sistema vai converter automaticamente, mas para melhor resultado recomendamos enviar em PNG.</p>
+          )}
           {!logoUrl && referenceUrls.length > 0 && (
             <Button
               variant="outline"

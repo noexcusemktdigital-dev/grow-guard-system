@@ -19,10 +19,53 @@ async function urlToBase64(url: string): Promise<string | null> {
     }
     let contentType = res.headers.get("content-type") || "image/png";
 
-    // The AI model does not support SVG — skip unsupported MIME types
+    // SVG: convert to PNG by re-rendering via AI model
     if (contentType.includes("svg")) {
-      console.warn(`Skipping unsupported MIME type (${contentType}): ${url}`);
-      return null;
+      console.log(`🔄 SVG detected, converting to PNG via AI: ${url}`);
+      try {
+        const svgText = new TextDecoder().decode(new Uint8Array(await res.clone().arrayBuffer()));
+        // Use a simple base64 of the SVG for the AI to render
+        const svgB64 = `data:image/svg+xml;base64,${btoa(svgText)}`;
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        if (!LOVABLE_API_KEY) {
+          console.warn("No LOVABLE_API_KEY for SVG conversion, skipping");
+          return null;
+        }
+        const convResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3.1-flash-image-preview",
+            messages: [{
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Render this SVG logo as a clean PNG image on a solid white background. Maintain exact colors, proportions and text. Output only the rendered image.",
+                },
+                { type: "image_url", image_url: { url: svgB64 } },
+              ],
+            }],
+            modalities: ["image", "text"],
+          }),
+        });
+        if (convResp.ok) {
+          const convData = await convResp.json();
+          const pngUrl = convData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+          if (pngUrl) {
+            console.log("✅ SVG converted to PNG successfully");
+            return pngUrl;
+          }
+        }
+        console.warn("SVG→PNG conversion failed, skipping");
+        return null;
+      } catch (svgErr) {
+        console.warn("SVG→PNG conversion error:", svgErr);
+        return null;
+      }
     }
 
     // Normalize content-type to a supported raster format
