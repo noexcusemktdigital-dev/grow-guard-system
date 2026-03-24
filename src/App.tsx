@@ -161,8 +161,8 @@ function App() {
                 </Route>
               </Route>
 
-              <Route path="/franqueado/*" element={<ProtectedRoute><Index /></ProtectedRoute>}>
-                <Route path="*" element={<ProtectedRoute allowedRoles={["franqueado"]}><ErrorBoundary><FranqueadoLayout /></ErrorBoundary></ProtectedRoute>}>
+              <Route path="/franqueado/*" element={<ProtectedRoute allowedRoles={["franqueado"]}><Index /></ProtectedRoute>}>
+                <Route path="*" element={<ErrorBoundary><FranqueadoLayout /></ErrorBoundary>}>
                   <Route index element={<Navigate to="/franqueado/inicio" replace />} />
                   <Route path="inicio" element={<FranqueadoDashboard />} />
                   <Route path="agenda" element={<FranqueadoAgenda />} />
