@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import MatrizEmpresa from "@/components/matriz/MatrizEmpresa";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
+import { TeamSelector, TEAM_COLORS } from "@/components/TeamSelector";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
