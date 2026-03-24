@@ -13,6 +13,7 @@ import {
 import { useStrategyData } from "@/hooks/useStrategyData";
 import { useNavigate } from "react-router-dom";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
+import { ApprovalDashboard } from "@/components/cliente/ApprovalDashboard";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -189,6 +190,8 @@ export default function ClienteConteudos() {
       <PageHeader title="Geração de Conteúdo" subtitle="Gere lotes estratégicos de conteúdos alinhados com seu plano" actions={<FeatureTutorialButton slug="conteudos" />} />
 
       <StrategyBanner toolName="a geração de conteúdo" dataUsed="Pilares, ICP e tom de voz" />
+
+      <ApprovalDashboard />
 
       <div className="flex flex-wrap items-center gap-3">
         {hasStrategy && (

@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
+import { ApprovalCountBar } from "@/components/cliente/ApprovalCountBar";
 import { PostCard } from "./PostCard";
 import { PostItem } from "@/hooks/useClientePosts";
 import {
   Share2, Plus, CheckSquare, Trash2, Loader2,
-  Search, Filter, FolderOpen, Image, Video, Calendar
+  Search, Filter, FolderOpen, Image, Video, Calendar, Check
 } from "lucide-react";
 import { format, startOfMonth, startOfWeek, isThisMonth, isThisWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -31,8 +32,10 @@ interface PostGalleryProps {
   onViewPost: (post: PostItem) => void;
   onDeleteSingle: (id: string) => void;
   onBulkDelete: (ids: string[]) => void;
+  onBulkApprove?: (ids: string[]) => void;
   isDeleting: boolean;
   isBulkDeleting: boolean;
+  isBulkApproving?: boolean;
 }
 
 type FilterStatus = "all" | "pending" | "approved";
@@ -41,7 +44,8 @@ type GroupBy = "month" | "week";
 
 export function PostGallery({
   posts, isLoading, onCreateNew, onViewPost,
-  onDeleteSingle, onBulkDelete, isDeleting, isBulkDeleting,
+  onDeleteSingle, onBulkDelete, onBulkApprove,
+  isDeleting, isBulkDeleting, isBulkApproving,
 }: PostGalleryProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -59,27 +63,40 @@ export function PostGallery({
     });
   };
 
-  // Filter + group
+  // Approval counters
+  const approvalCounts = useMemo(() => {
+    if (!posts) return { pending: 0, approved: 0 };
+    return {
+      pending: posts.filter(p => p.status !== "approved").length,
+      approved: posts.filter(p => p.status === "approved").length,
+    };
+  }, [posts]);
+
+  // Filter + group (pendentes primeiro)
   const grouped = useMemo(() => {
     if (!posts) return [];
 
     let filtered = posts;
 
-    // Search
     if (search.trim()) {
       const q = search.toLowerCase();
       filtered = filtered.filter(p => p.input_text?.toLowerCase().includes(q));
     }
 
-    // Status
     if (filterStatus === "pending") filtered = filtered.filter(p => p.status !== "approved");
     if (filterStatus === "approved") filtered = filtered.filter(p => p.status === "approved");
 
-    // Type
     if (filterType === "art") filtered = filtered.filter(p => p.type === "art");
     if (filterType === "video") filtered = filtered.filter(p => p.type === "video");
 
-    // Group
+    // Sort: pending first, then by date desc
+    filtered = [...filtered].sort((a, b) => {
+      const aPending = a.status !== "approved" ? 0 : 1;
+      const bPending = b.status !== "approved" ? 0 : 1;
+      if (aPending !== bPending) return aPending - bPending;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
     const groups = new Map<string, { label: string; posts: PostItem[] }>();
 
     for (const post of filtered) {
@@ -119,6 +136,12 @@ export function PostGallery({
 
   const totalFiltered = grouped.reduce((sum, g) => sum + g.posts.length, 0);
 
+  // Check if selected items have any pending
+  const selectedPendingCount = useMemo(() => {
+    if (!posts) return 0;
+    return posts.filter(p => selectedIds.has(p.id) && p.status !== "approved").length;
+  }, [posts, selectedIds]);
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -144,6 +167,15 @@ export function PostGallery({
       />
 
       <StrategyBanner toolName="suas postagens" dataUsed="Tom de voz, persona e estilo visual" />
+
+      {/* Approval counters */}
+      {posts && posts.length > 0 && (approvalCounts.pending > 0 || approvalCounts.approved > 0) && (
+        <ApprovalCountBar
+          pending={approvalCounts.pending}
+          approved={approvalCounts.approved}
+          label="Postagens"
+        />
+      )}
 
       {/* Filters bar */}
       {posts && posts.length > 0 && (
@@ -253,6 +285,30 @@ export function PostGallery({
       {selectionMode && selectedIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card border shadow-lg rounded-xl px-5 py-3 flex items-center gap-4">
           <span className="text-sm font-medium">{selectedIds.size} selecionado(s)</span>
+
+          {/* Approve selected */}
+          {onBulkApprove && selectedPendingCount > 0 && (
+            <Button
+              variant="default"
+              size="sm"
+              disabled={isBulkApproving}
+              onClick={() => {
+                const pendingIds = Array.from(selectedIds).filter(id =>
+                  posts?.find(p => p.id === id && p.status !== "approved")
+                );
+                if (pendingIds.length > 0) {
+                  onBulkApprove(pendingIds);
+                  setSelectedIds(new Set());
+                  setSelectionMode(false);
+                }
+              }}
+            >
+              {isBulkApproving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
+              Aprovar ({selectedPendingCount})
+            </Button>
+          )}
+
+          {/* Delete selected */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" disabled={isBulkDeleting}>

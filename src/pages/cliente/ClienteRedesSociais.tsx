@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import {
   usePostHistory, useGeneratePost, useApprovePost, useDeletePost,
-  useBulkDeletePosts, useGenerateBriefing, useGenerateVideoBriefing,
+  useBulkDeletePosts, useBulkApprovePosts, useGenerateBriefing, useGenerateVideoBriefing,
   usePostQuota, CREDIT_COST_ART, CREDIT_COST_VIDEO, getVideoCost, PostItem,
 } from "@/hooks/useClientePosts";
 import { useVisualIdentity } from "@/hooks/useVisualIdentity";
@@ -11,6 +11,7 @@ import { useContentHistory } from "@/hooks/useClienteContentV2";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
+import { ApprovalDashboard } from "@/components/cliente/ApprovalDashboard";
 
 import { PostGallery } from "@/components/cliente/social/PostGallery";
 import { ArtWizard, ArtGeneratePayload, ArtBriefingResult } from "@/components/cliente/social/ArtWizard";
@@ -77,6 +78,7 @@ export default function ClienteRedesSociais() {
   const generateVideoBriefing = useGenerateVideoBriefing();
   const deletePost = useDeletePost();
   const bulkDelete = useBulkDeletePosts();
+  const bulkApprove = useBulkApprovePosts();
   const quota = usePostQuota();
 
   // Handle content_id from query params
@@ -317,6 +319,7 @@ export default function ClienteRedesSociais() {
   if (view === "gallery") {
     return (
       <>
+        <ApprovalDashboard />
         <PostGallery
           posts={posts}
           isLoading={postsLoading}
@@ -329,8 +332,10 @@ export default function ClienteRedesSociais() {
           }}
           onDeleteSingle={(id) => deletePost.mutate(id)}
           onBulkDelete={(ids) => bulkDelete.mutate(ids)}
+          onBulkApprove={(ids) => bulkApprove.mutate(ids)}
           isDeleting={deletePost.isPending}
           isBulkDeleting={bulkDelete.isPending}
+          isBulkApproving={bulkApprove.isPending}
         />
         <InsufficientCreditsDialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog} actionLabel="esta arte" creditCost={CREDIT_COST_ART} />
       </>

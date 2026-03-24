@@ -275,6 +275,25 @@ export function useBulkDeletePosts() {
   });
 }
 
+export function useBulkApprovePosts() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (postIds: string[]) => {
+      const { error } = await supabase
+        .from("client_posts" as any)
+        .update({ status: "approved" } as any)
+        .in("id", postIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-posts"] });
+      qc.invalidateQueries({ queryKey: ["approval-stats"] });
+      toast({ title: "Postagens aprovadas com sucesso!" });
+    },
+  });
+}
+
 export function useApprovePost() {
   const qc = useQueryClient();
 
@@ -288,6 +307,7 @@ export function useApprovePost() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-posts"] });
+      qc.invalidateQueries({ queryKey: ["approval-stats"] });
       toast({ title: "Postagem aprovada!" });
     },
   });

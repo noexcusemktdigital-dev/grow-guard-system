@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
+import { ApprovalCountBar } from "@/components/cliente/ApprovalCountBar";
 import type { ContentItem } from "@/hooks/useClienteContentV2";
 import type { ContentBatch } from "./ContentTypes";
 import { parseConteudoPrincipal } from "./ContentTypes";
@@ -90,8 +91,23 @@ export function BatchFolderView({ history, navigate, onDelete }: BatchFolderView
     });
   };
 
+  // Approval counters
+  const approvalCounts = useMemo(() => ({
+    pending: history.filter(i => i.status !== "approved").length,
+    approved: history.filter(i => i.status === "approved").length,
+  }), [history]);
+
   return (
     <div className="space-y-4">
+      {/* Approval count bar */}
+      {history.length > 0 && (
+        <ApprovalCountBar
+          pending={approvalCounts.pending}
+          approved={approvalCounts.approved}
+          label="Conteúdos"
+        />
+      )}
+
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">

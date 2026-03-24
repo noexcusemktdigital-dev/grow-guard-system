@@ -20,6 +20,7 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getEffectiveLimits } from "@/constants/plans";
 import { SitePreview } from "@/components/sites/SitePreview";
 import { SiteHistory, type SavedSite } from "@/components/sites/SiteHistory";
+import { ApprovalDashboard } from "@/components/cliente/ApprovalDashboard";
 import { useClienteSitesDB, useCreateClientSite, useApproveSite } from "@/hooks/useClienteSitesDB";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 import { useContentHistory } from "@/hooks/useClienteContentV2";
@@ -801,21 +802,30 @@ export default function ClienteSites() {
   return (
     <div className="w-full space-y-6">
       <PageHeader title="Sites & Landing Pages" subtitle="Gere sites profissionais com IA e publique no seu domínio" icon={<Globe className="w-5 h-5 text-primary" />} actions={<FeatureTutorialButton slug="sites" />} />
+
+      <ApprovalDashboard />
+
       <UsageQuotaBanner used={sites.length} limit={maxSites} label="sites ativos" planName="Atual" />
       <Button className="w-full gap-2" size="lg" onClick={() => setCreating(true)} disabled={sites.length >= maxSites}>
         <Sparkles className="w-4 h-4" /> Criar Novo Site
       </Button>
       <div>
         <p className="section-label mb-3">HISTÓRICO DE SITES</p>
-        <SiteHistory sites={sites} onPreview={(site) => {
-          if (site.html) {
-            setGeneratedHtml(site.html);
-            setCurrentSiteId(site.id);
-            setCurrentSiteStatus(site.status);
-            setShowPreview(true);
-            setCreating(true);
-          }
-        }} />
+        <SiteHistory
+          sites={sites}
+          onPreview={(site) => {
+            if (site.html) {
+              setGeneratedHtml(site.html);
+              setCurrentSiteId(site.id);
+              setCurrentSiteStatus(site.status);
+              setShowPreview(true);
+              setCreating(true);
+            }
+          }}
+          onApprove={(site) => {
+            approveSiteMutation.mutate(site.id);
+          }}
+        />
       </div>
     </div>
   );
