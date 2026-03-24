@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
+import { ApprovalCountBar } from "@/components/cliente/ApprovalCountBar";
 import type { ContentItem } from "@/hooks/useClienteContentV2";
 import type { ContentBatch } from "./ContentTypes";
 import { parseConteudoPrincipal } from "./ContentTypes";
