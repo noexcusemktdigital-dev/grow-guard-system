@@ -127,11 +127,16 @@ describe("SaasAuth (Cliente SaaS)", () => {
     renderSaas();
 
     fireEvent.click(screen.getByRole("tab", { name: /criar conta/i }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Nome completo")).toBeInTheDocument();
+    });
+
     fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Teste Cliente" } });
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "existente@test.com" } });
-    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "Senha123!" } });
+    fireEvent.change(screen.getByLabelText("Email", { selector: "#signup-email" }), { target: { value: "existente@test.com" } });
+    fireEvent.change(screen.getByLabelText("Senha", { selector: "#signup-password" }), { target: { value: "Senha123!" } });
     fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: /começar 7 dias grátis/i }));
+    fireEvent.submit(screen.getByLabelText("Nome completo").closest("form") as HTMLFormElement);
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith("Este email já possui cadastro. Reenviamos a confirmação se a conta ainda não foi ativada.");
