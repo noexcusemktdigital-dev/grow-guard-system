@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
+import { TeamSelector } from "@/components/TeamSelector";
 import { useUnitMembers } from "@/hooks/useUnitMembers";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
