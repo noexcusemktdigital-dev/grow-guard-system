@@ -191,7 +191,7 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
           {renderMedia()}
 
           {message.content && !isSticker && (
-            <p className="whitespace-pre-wrap break-words">{renderTextWithLinks(message.content)}</p>
+            <ExpandableText text={message.content} maxLength={500} />
           )}
 
           {/* Footer */}
