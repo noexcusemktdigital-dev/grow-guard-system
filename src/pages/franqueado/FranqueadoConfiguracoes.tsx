@@ -18,6 +18,7 @@ import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useContracts } from "@/hooks/useContracts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
+import { TeamSelector } from "@/components/TeamSelector";
 import { supabase } from "@/lib/supabase";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
