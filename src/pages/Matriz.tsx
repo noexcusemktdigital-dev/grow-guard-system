@@ -289,10 +289,7 @@ export default function Matriz() {
           setEditingMember(null);
         }}
         extraContent={
-          <div className="space-y-2">
-            <Label>Times / Funções</Label>
-            <TeamSelector selectedIds={editTeamIds} onToggle={(id) => toggleTeam(id, editTeamIds, setEditTeamIds)} />
-          </div>
+          <TeamSelector selectedIds={editTeamIds} onToggle={(id) => toggleTeam(id, editTeamIds, setEditTeamIds)} />
         }
       />
     </div>
