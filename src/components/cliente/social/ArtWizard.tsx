@@ -428,8 +428,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 4: References + Logo + Photos ───
-      case 4: {
+      // ─── Step 5: References + Logo + Photos ───
+      case 5: {
         const photoInputRef = { current: null as HTMLInputElement | null };
         const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
           const files = e.target.files;
