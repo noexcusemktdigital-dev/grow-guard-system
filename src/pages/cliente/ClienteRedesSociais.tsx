@@ -77,6 +77,7 @@ export default function ClienteRedesSociais() {
   const generateVideoBriefing = useGenerateVideoBriefing();
   const deletePost = useDeletePost();
   const bulkDelete = useBulkDeletePosts();
+  const bulkApprove = useBulkApprovePosts();
   const quota = usePostQuota();
 
   // Handle content_id from query params
