@@ -827,11 +827,30 @@ Output ONLY the extracted logo image.`,
       fullPrompt += `\n\nBRAND LOGO PLACEMENT: Leave a CLEAN, EMPTY rectangular space (approximately 10-15% of image width) in the top-left corner of the design for the brand logo. This space must have a solid, uniform background matching the surrounding design — do NOT place any text, graphics, or busy patterns there. The logo will be composited in post-production.`;
     }
 
-    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
+    // Convert photo_images to base64 for inclusion in the design
+    let photoBase64s: { type: string; image_url: { url: string } }[] = [];
+    if (photo_images && photo_images.length > 0) {
+      console.log(`📷 Converting ${photo_images.length} photo images for inclusion in art...`);
+      for (const photoUrl of photo_images.slice(0, 4)) {
+        const b64 = await urlToBase64(photoUrl);
+        if (b64) photoBase64s.push({ type: "image_url", image_url: { url: b64 } });
+      }
+      fullPrompt += `\n\nPHOTOS TO INCLUDE IN THE DESIGN: ${photoBase64s.length} photo(s) have been attached. These photos MUST appear as visual elements IN the final design composition. Incorporate them naturally into the layout — they are real product/person/place photos that the client wants visible in the art. Do NOT use them just as style reference.`;
+    }
+
+    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, photos: ${photoBase64s.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
-    // Stage 2: Generate image (NO logo image sent — just text prompt + refs)
-    const messageContent: any = fullPrompt;
+    // Stage 2: Generate image (with photo images if provided)
+    let messageContent: any;
+    if (photoBase64s.length > 0) {
+      messageContent = [
+        { type: "text", text: fullPrompt },
+        ...photoBase64s,
+      ];
+    } else {
+      messageContent = fullPrompt;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
