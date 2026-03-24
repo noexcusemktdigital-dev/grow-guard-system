@@ -37,6 +37,82 @@ import {
 
 type MainView = "gallery" | "art-wizard" | "video-wizard" | "result";
 
+interface CarouselSlideContent {
+  headline: string;
+  subheadline?: string;
+  supportingText?: string;
+  bulletPoints?: string;
+  cta?: string;
+}
+
+/**
+ * Distributes content across carousel slides so each one is visually distinct.
+ * Slide 0 = cover (headline only), last slide = CTA, middle slides split content.
+ */
+function buildCarouselSlideContents(
+  totalSlides: number,
+  headline: string,
+  subheadline: string,
+  supportingText: string,
+  bulletPoints: string,
+  cta: string,
+): CarouselSlideContent[] {
+  const slides: CarouselSlideContent[] = [];
+
+  // Parse bullet points into individual items
+  const bullets = bulletPoints
+    .split(/\n|;|•|—/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  // Slide 0: Cover — headline prominent, subheadline as support
+  slides.push({
+    headline,
+    subheadline: subheadline || undefined,
+    cta: undefined,
+  });
+
+  // Middle slides: distribute supporting text and bullet points
+  const middleCount = Math.max(totalSlides - 2, 1);
+
+  if (totalSlides <= 2) {
+    // Only cover + CTA
+  } else {
+    // Split bullets across middle slides
+    const bulletsPerSlide = Math.max(1, Math.ceil(bullets.length / middleCount));
+    const supportSentences = supportingText
+      .split(/\.\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const sentencesPerSlide = Math.max(1, Math.ceil(supportSentences.length / middleCount));
+
+    for (let i = 0; i < middleCount; i++) {
+      const slideBullets = bullets.slice(i * bulletsPerSlide, (i + 1) * bulletsPerSlide);
+      const slideSentences = supportSentences.slice(i * sentencesPerSlide, (i + 1) * sentencesPerSlide);
+
+      slides.push({
+        headline: slideBullets.length > 0
+          ? slideBullets[0]
+          : `${headline} — ${i + 2}/${totalSlides}`,
+        subheadline: slideBullets.length > 1 ? slideBullets.slice(1).join(" • ") : undefined,
+        supportingText: slideSentences.length > 0 ? slideSentences.join(". ") + "." : undefined,
+        bulletPoints: slideBullets.length > 0 ? slideBullets.join("\n") : undefined,
+      });
+    }
+  }
+
+  // Last slide: CTA
+  if (totalSlides > 1) {
+    slides.push({
+      headline: cta || "Saiba mais",
+      subheadline: subheadline || headline,
+      cta: cta || "Saiba mais",
+    });
+  }
+
+  return slides;
+}
+
 export default function ClienteRedesSociais() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<MainView>("gallery");
