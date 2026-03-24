@@ -365,6 +365,7 @@ function UsersAndTeamsTab() {
                 </SelectContent>
               </Select>
             </div>
+            <TeamSelector selectedIds={inviteTeamIds} onToggle={(id) => setInviteTeamIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancelar</Button>
