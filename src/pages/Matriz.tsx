@@ -62,8 +62,12 @@ export default function Matriz() {
   };
 
   const handleInvite = async () => {
-    if (!inviteEmail.trim() || !orgId) {
+    if (!inviteEmail.trim()) {
       toast({ title: "Informe o e-mail", variant: "destructive" });
+      return;
+    }
+    if (!orgId) {
+      toast({ title: "Erro: organização não encontrada. Recarregue a página.", variant: "destructive" });
       return;
     }
     setInviteLoading(true);
