@@ -829,7 +829,7 @@ Output ONLY the extracted logo image.`,
 
     // Instruct the model to RESERVE SPACE for the logo instead of rendering it
     if (logo_url) {
-      fullPrompt += `\n\nBRAND LOGO PLACEMENT: Leave a CLEAN, EMPTY rectangular space (approximately 10-15% of image width) in the top-left corner of the design for the brand logo. This space must have a solid, uniform background matching the surrounding design — do NOT place any text, graphics, or busy patterns there. The logo will be composited in post-production.`;
+      fullPrompt += `\n\nBRAND LOGO PLACEMENT: Leave a CLEAN, EMPTY rectangular space (approximately 10-15% of image width) in the top-left corner of the design for the brand logo. This space must have a solid, uniform background matching the surrounding design — do NOT place any text, graphics, or busy patterns there. The logo will be composited in post-production. DO NOT render any logo, logotype, brand mark, or brand name text ANYWHERE in the image.`;
     }
 
     // Convert photo_images to base64 for inclusion in the design
