@@ -65,16 +65,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const path = window.location.pathname;
       const isSaasPortal = path.startsWith("/cliente") || path.startsWith("/app") || path === "/" || path.startsWith("/landing");
 
-      // Use longer timeouts (15s) and retry once on failure
+      // Use longer timeouts (20s) and retry up to 3 times with exponential backoff
       const fetchWithRetry = async <T,>(fn: () => PromiseLike<T>, label: string): Promise<T | null> => {
-        for (let attempt = 0; attempt < 2; attempt++) {
+        for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            const result = await withTimeout(fn(), 15000, null as any);
+            const result = await withTimeout(fn(), 20000, null as any);
             if (result !== null) return result;
           } catch {
             // retry
           }
-          if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+          if (attempt < 2) await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
         }
         console.warn(`[Auth] ${label} failed after retries`);
         return null;
