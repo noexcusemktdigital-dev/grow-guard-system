@@ -245,12 +245,15 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     }
   }, [messages.length]);
 
-  // Sound effect on new inbound message
+  // Sound effect on new inbound message — only if tab is visible and not the active conversation
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.direction === "inbound" && lastSeenIdRef.current && lastMsg.id !== lastSeenIdRef.current) {
-      playSound("notification");
+      // Only play sound if document is not focused or user scrolled away
+      if (document.hidden || !isNearBottomRef.current) {
+        playSound("notification");
+      }
     }
     lastSeenIdRef.current = lastMsg.id;
   }, [messages]);
