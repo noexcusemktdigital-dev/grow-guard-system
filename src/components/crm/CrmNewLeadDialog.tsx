@@ -22,7 +22,6 @@ interface CrmNewLeadDialogProps {
 export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, prefillContact }: CrmNewLeadDialogProps) {
   const { toast } = useToast();
   const { createLead } = useCrmLeadMutations();
-  const { data: contacts } = useCrmContacts();
   const { data: funnelsData } = useCrmFunnels();
   const { maxLeads, atLimit } = useLeadQuota();
 
@@ -33,9 +32,6 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const [value, setValue] = useState("");
   const [source, setSource] = useState("");
   const [tagInput, setTagInput] = useState("");
-  const [contactSearch, setContactSearch] = useState("");
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [showContactList, setShowContactList] = useState(false);
 
   // Auto-fill from prefillContact
   const [prefilled, setPrefilled] = useState(false);
@@ -44,35 +40,14 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
     setPhone(prefillContact.phone || "");
     setEmail(prefillContact.email || "");
     setCompany(prefillContact.company || "");
-    setSelectedContactId(prefillContact.id || null);
-    setContactSearch(prefillContact.name || "");
     setPrefilled(true);
   }
   if (!open && prefilled) {
     setPrefilled(false);
   }
 
-  const filteredContacts = useMemo(() => {
-    if (!contactSearch || !contacts) return [];
-    const q = contactSearch.toLowerCase();
-    return contacts.filter(c =>
-      c.name.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.phone?.includes(q)
-    ).slice(0, 8);
-  }, [contactSearch, contacts]);
-
   const reset = () => {
     setName(""); setPhone(""); setEmail(""); setCompany(""); setValue(""); setSource(""); setTagInput("");
-    setContactSearch(""); setSelectedContactId(null); setShowContactList(false);
-  };
-
-  const selectContact = (contact: any) => {
-    setSelectedContactId(contact.id);
-    setName(contact.name);
-    setPhone(contact.phone || "");
-    setEmail(contact.email || "");
-    setCompany(contact.company || "");
-    setContactSearch(contact.name);
-    setShowContactList(false);
   };
 
   const handleCreate = () => {
