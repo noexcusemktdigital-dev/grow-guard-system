@@ -444,6 +444,18 @@ export default function ClienteCRM() {
     toast({ title: "Tag adicionada em massa" });
   };
 
+  const handleBulkTransferFunnel = (funnelId: string) => {
+    const targetFunnel = accessibleFunnels.find(f => f.id === funnelId);
+    if (!targetFunnel) return;
+    const targetStages = targetFunnel.stages as any[];
+    const firstStageKey = Array.isArray(targetStages) && targetStages.length > 0
+      ? (targetStages[0].key || targetStages[0].label?.toLowerCase().replace(/\s+/g, "_") || "novo")
+      : "novo";
+    bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { funnel_id: funnelId, stage: firstStageKey } });
+    setSelectedLeadIds(new Set());
+    toast({ title: `Leads transferidos para "${targetFunnel.name}"` });
+  };
+
   const handleBulkMarkLost = () => {
     bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { lost_at: new Date().toISOString(), stage: "perdido" } });
     setSelectedLeadIds(new Set());
