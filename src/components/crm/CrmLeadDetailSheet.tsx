@@ -81,14 +81,14 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   rejected: { label: "Rejeitada", color: "bg-red-500/15 text-red-600 border-red-500/30" },
 };
 
-export function CrmLeadDetailSheet({ lead, onClose, stages }: CrmLeadDetailSheetProps) {
+export function CrmLeadDetailSheet({ lead, onClose, stages, funnels, currentFunnelId }: CrmLeadDetailSheetProps) {
   return (
     <Sheet open={!!lead} onOpenChange={open => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{lead?.name}</SheetTitle>
         </SheetHeader>
-        {lead && <LeadDetailTabs lead={lead} stages={stages} />}
+        {lead && <LeadDetailTabs lead={lead} stages={stages} funnels={funnels} currentFunnelId={currentFunnelId} />}
       </SheetContent>
     </Sheet>
   );
