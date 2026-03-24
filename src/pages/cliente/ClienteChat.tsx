@@ -33,7 +33,7 @@ export default function ClienteChat() {
   const { data: contacts = [], isLoading: loadingContacts } = useWhatsAppContacts(instance?.id ?? null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+  
   const [mobileShowConversation, setMobileShowConversation] = useState(false);
   const [realtimeConnected, setRealtimeConnected] = useState(true);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
