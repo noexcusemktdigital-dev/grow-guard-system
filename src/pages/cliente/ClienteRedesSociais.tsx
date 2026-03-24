@@ -330,8 +330,10 @@ export default function ClienteRedesSociais() {
           }}
           onDeleteSingle={(id) => deletePost.mutate(id)}
           onBulkDelete={(ids) => bulkDelete.mutate(ids)}
+          onBulkApprove={(ids) => bulkApprove.mutate(ids)}
           isDeleting={deletePost.isPending}
           isBulkDeleting={bulkDelete.isPending}
+          isBulkApproving={bulkApprove.isPending}
         />
         <InsufficientCreditsDialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog} actionLabel="esta arte" creditCost={CREDIT_COST_ART} />
       </>
