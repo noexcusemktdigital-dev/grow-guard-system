@@ -226,11 +226,12 @@ CRITICAL RULES:
 2. The image model renders text directly into the design — describe WHERE and HOW text should appear.
 3. Be hyper-specific about composition, colors, lighting, and spatial layout.
 4. Never use vague descriptions like "professional look" or "modern design". Be CONCRETE.
-${hasRefs ? `5. You have been given BRAND REFERENCE IMAGES. Analyze them carefully and extract the exact visual design system: color usage patterns, layout structures, card shapes, icon styles, typography approach, photographic vs graphic style. Your output must faithfully replicate this design language in a NEW scene.
-6. IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references. Create a NEW scene that follows the same brand design language.
-7. ${context.primary_ref_index !== undefined ? `Reference image #${(context.primary_ref_index || 0) + 1} is the PRIMARY reference (weight 60%). Match its design language MOST closely. The remaining references share the other 40% of influence.` : "All reference images have equal weight."}` : ""}
-${context.logo_url ? `8. A BRAND LOGO image has been provided separately. You MUST include the logo in the composition. Place it naturally (typically top-left or top-right corner) without distortion. Use the exact logo as provided.` : ""}
-${context.layout_type ? `9. LAYOUT TYPE SELECTED: "${context.layout_type}". You MUST follow the specific layout composition rules for this type. The layout determines WHERE elements go — follow it precisely.` : ""}
+5. CRITICAL COLOR RULE: The color palette you output MUST match the dominant colors from the reference images. Do NOT invent new colors. Extract the EXACT hex codes visible in the references. If references show yellow/gold tones, your palette MUST be yellow/gold — NEVER substitute with red, blue, or any other color family.
+${hasRefs ? `6. You have been given BRAND REFERENCE IMAGES. Analyze them carefully and extract the exact visual design system: color usage patterns, layout structures, card shapes, icon styles, typography approach, photographic vs graphic style. Your output must faithfully replicate this design language in a NEW scene.
+7. IMPORTANT: Do NOT recreate the same people, same scene or same composition from the references. Create a NEW scene that follows the same brand design language.
+8. ${context.primary_ref_index !== undefined ? `Reference image #${(context.primary_ref_index || 0) + 1} is the PRIMARY reference (weight 60%). Match its design language MOST closely. The remaining references share the other 40% of influence.` : "All reference images have equal weight."}` : ""}
+${context.logo_url ? `9. A BRAND LOGO image has been provided separately. DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo placement space COMPLETELY EMPTY — the real logo will be composited in post-production.` : ""}
+${context.layout_type ? `10. LAYOUT TYPE SELECTED: "${context.layout_type}". You MUST follow the specific layout composition rules for this type. The layout determines WHERE elements go — follow it precisely.` : ""}
 
 ${context.layout_type ? getLayoutRulesForPrompt(context.layout_type) : ""}
 
