@@ -230,8 +230,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
       setNewMsgCount(prev => prev + newCount);
     }
     if (isNearBottomRef.current) {
-      const el = scrollAreaRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "auto" }), 30);
     }
     prevMsgCountRef.current = messages.length;
   }, [messages.length]);
