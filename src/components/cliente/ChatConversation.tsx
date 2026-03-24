@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import {
   Send, Loader2, MessageCircle, Bot, User, UserPlus, ExternalLink,
   ArrowRight, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Paperclip, Smile,
-  ArrowDown, Search, X, Mic, Square, Trash2,
+  ArrowDown, Search, X, Mic, Square, Trash2, ArrowLeft,
 } from "lucide-react";
 import { ChatQuickReplies } from "./ChatQuickReplies";
 import { Button } from "@/components/ui/button";
