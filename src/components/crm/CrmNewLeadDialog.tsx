@@ -86,34 +86,6 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>Novo Lead</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          {/* Contact lookup */}
-          <div className="relative">
-            <Label className="text-xs flex items-center gap-1"><UserCircle className="w-3 h-3" /> Vincular a contato (opcional)</Label>
-            <div className="relative mt-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                value={contactSearch}
-                onChange={e => { setContactSearch(e.target.value); setShowContactList(true); setSelectedContactId(null); }}
-                onFocus={() => contactSearch && setShowContactList(true)}
-                placeholder="Buscar contato pelo nome..."
-                className="pl-8 h-8 text-xs"
-              />
-            </div>
-            {showContactList && filteredContacts.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-40 overflow-auto">
-                {filteredContacts.map(c => (
-                  <button key={c.id} className="w-full text-left px-3 py-2 text-xs hover:bg-muted/50 flex items-center gap-2" onClick={() => selectContact(c)}>
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold shrink-0">{c.name.charAt(0)}</div>
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{c.name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{c.email || c.phone || ""}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div><Label className="text-xs">Nome *</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="Nome do lead" /></div>
             <div><Label className="text-xs">Telefone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" /></div>

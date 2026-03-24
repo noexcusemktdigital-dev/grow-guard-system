@@ -782,19 +782,24 @@ export default function ClientePlanoVendas() {
     const { percentage: pct } = computeScores(ans);
     saveSalesPlan.mutate({ answers: ans, score: Math.round(pct) });
 
-    // ── Auto-create CRM funnel from etapas_funil ──
+    // ── Auto-create CRM funnel from etapas_funil or default ──
     const etapasText = ans.etapas_funil;
-    if (typeof etapasText === "string" && etapasText.trim().length > 0 && (!existingFunnels || existingFunnels.length === 0)) {
-      const stages = parseFunnelStages(etapasText);
-      if (stages.length >= 2) {
+    if (!existingFunnels || existingFunnels.length === 0) {
+      let funnelStages: { key: string; label: string; color: string; icon: string }[] = [];
+      if (typeof etapasText === "string" && etapasText.trim().length > 0) {
+        funnelStages = parseFunnelStages(etapasText);
+      } else {
+        funnelStages = getDefaultFunnelStages((ans.modelo_negocio as string) || "ambos");
+      }
+      if (funnelStages.length >= 2) {
         try {
           await createFunnel.mutateAsync({
             name: "Funil Principal",
             description: "Criado automaticamente a partir do Plano de Vendas",
-            stages,
+            stages: funnelStages,
             is_default: true,
           });
-          toast({ title: "Funil CRM criado automaticamente!", description: `${stages.length} etapas configuradas.` });
+          toast({ title: "Funil CRM criado automaticamente!", description: `${funnelStages.length} etapas configuradas.` });
         } catch (e) {
           console.error("Auto-funnel error:", e);
         }

@@ -134,7 +134,7 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
 
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-bold text-primary">
-              {lead.value ? `R$ ${Number(lead.value).toLocaleString()}` : "—"}
+              {lead.value ? `R$ ${Number(lead.value).toLocaleString("pt-BR")}` : "—"}
             </span>
             <div className="flex items-center gap-1">
               {/* Temperature cycling button */}
