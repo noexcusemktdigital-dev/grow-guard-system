@@ -204,7 +204,7 @@ export default function Matriz() {
                     <div className="flex flex-wrap gap-1.5 mt-3">
                       {userTeams.length > 0 ? (
                         userTeams.map((t) => (
-                          <span key={t.id} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${TEAM_COLORS[t.slug] || "bg-muted text-muted-foreground"}`}>
+                          <span key={t.id} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${TEAM_COLORS_LOCAL[t.slug] || TEAM_COLORS[t.slug] || "bg-muted text-muted-foreground"}`}>
                             {t.name}
                           </span>
                         ))
