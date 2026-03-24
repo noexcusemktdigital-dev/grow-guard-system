@@ -744,7 +744,7 @@ export function ArtWizard({
                     <div className="pt-2 border-t mt-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold">Custo total</span>
-                        <Badge variant="secondary" className="text-xs">{totalCost} créditos</Badge>
+                        <Badge variant="secondary" className="text-xs">{reviewTotalCost} créditos</Badge>
                       </div>
                     </div>
                   </CardContent>
