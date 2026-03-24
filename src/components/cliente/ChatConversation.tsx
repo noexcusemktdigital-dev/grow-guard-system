@@ -94,7 +94,7 @@ const DateSeparator = React.forwardRef<HTMLDivElement, { date: Date }>(({ date }
 });
 DateSeparator.displayName = "DateSeparator";
 
-export function ChatConversation({ contact, messages, isLoading, agents = [], instanceId }: Props) {
+export function ChatConversation({ contact, messages, isLoading, agents = [], instanceId, onBack }: Props) {
   const [text, setText] = useState("");
   const [actionsOpen, setActionsOpen] = useState(false);
   const [displayCount, setDisplayCount] = useState(DISPLAY_STEP);
