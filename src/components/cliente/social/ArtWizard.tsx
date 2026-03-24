@@ -414,8 +414,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 3: Layout (Diagramação) ───
-      case 3:
+      // ─── Step 4: Layout (Diagramação) ───
+      case 4:
         return (
           <div className="space-y-4">
             <div>
