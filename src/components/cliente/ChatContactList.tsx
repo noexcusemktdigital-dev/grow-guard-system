@@ -16,8 +16,6 @@ interface Props {
   isConnected?: boolean;
   lastMessages?: Map<string, string>;
   connectedPhone?: string;
-  onSync?: () => void;
-  isSyncing?: boolean;
 }
 
 type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
