@@ -753,12 +753,25 @@ export default function ClientePlanoVendas() {
 
   const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f97316", "#6366f1", "#14b8a6"];
 
-  const parseFunnelStages = (text: string): { id: string; name: string; color: string }[] => {
+  const parseFunnelStages = (text: string) => {
     const parts = text.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean);
     return parts.map((name, i) => ({
-      id: String(i + 1),
-      name,
+      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
+      label: name,
       color: STAGE_COLORS[i % STAGE_COLORS.length],
+      icon: "circle-dot",
+    }));
+  };
+
+  const getDefaultFunnelStages = (modelo: string) => {
+    const b2bStages = ["Prospecção", "Qualificação", "Reunião", "Proposta", "Negociação", "Fechamento", "Perdido"];
+    const b2cStages = ["Novo Lead", "Primeiro Contato", "Apresentação", "Proposta", "Venda", "Perdido"];
+    const stages = modelo === "b2b" ? b2bStages : modelo === "b2c" ? b2cStages : [...b2bStages.slice(0, -1), "Pós-venda", "Perdido"];
+    return stages.map((name, i) => ({
+      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
+      label: name,
+      color: STAGE_COLORS[i % STAGE_COLORS.length],
+      icon: "circle-dot",
     }));
   };
 
