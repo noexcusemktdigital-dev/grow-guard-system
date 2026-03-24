@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { MessageCircle, Settings2, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { MessageCircle, Settings2, PanelRightOpen, PanelRightClose, WifiOff } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-
+import { setCachedContacts, getCachedContacts } from "@/lib/chatCache";
 
 export default function ClienteChat() {
   const navigate = useNavigate();
@@ -34,8 +34,10 @@ export default function ClienteChat() {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  // Mobile: show conversation when contact selected
   const [mobileShowConversation, setMobileShowConversation] = useState(false);
+  const [realtimeConnected, setRealtimeConnected] = useState(true);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const disconnectedAtRef = useRef<number | null>(null);
 
   const selectedContact = useMemo(
     () => contacts.find((c) => c.id === selectedContactId) ?? null,
@@ -44,12 +46,16 @@ export default function ClienteChat() {
   const { data: messages = [], isLoading: loadingMessages } = useWhatsAppMessages(selectedContact?.id ?? null);
   const markRead = useMarkContactRead();
   const { data: agentsData } = useClienteAgents();
-  const { data: leadsData } = useCrmLeads();
   const { data: funnelsData } = useCrmFunnels();
   const { createLead } = useCrmLeadMutations();
   const linkMutation = useLinkContactToCrmLead();
 
   const isConnected = instance?.status === "connected";
+
+  // Cache contacts to IndexedDB
+  useEffect(() => {
+    if (contacts.length > 0) setCachedContacts(contacts);
+  }, [contacts]);
 
   // Auto check-status + sync chats on mount
   useEffect(() => {
@@ -60,32 +66,18 @@ export default function ClienteChat() {
         await supabase.functions.invoke("whatsapp-setup", {
           body: { action: "check-status", instanceId: instance.instance_id },
         });
-        if (!cancelled) {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
-        }
-      } catch (err) {
-        console.error("Auto check-status failed:", err);
-      }
-      // Auto sync chats
+        if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
+      } catch (err) { console.error("Auto check-status failed:", err); }
       try {
         await supabase.functions.invoke("whatsapp-sync-chats", {
           body: { instanceId: instance.instance_id },
         });
-        if (!cancelled) {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-        }
-      } catch (err) {
-        console.error("Auto sync-chats failed:", err);
-      }
-      // Auto sync photos (separate call, non-blocking)
+        if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+      } catch (err) { console.error("Auto sync-chats failed:", err); }
       try {
-        supabase.functions.invoke("whatsapp-sync-photos", {
-          body: { limit: 30 },
-        }).then(() => {
-          if (!cancelled) {
-            queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-          }
-        }).catch(() => {});
+        supabase.functions.invoke("whatsapp-sync-photos", { body: { limit: 30 } })
+          .then(() => { if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] }); })
+          .catch(() => {});
       } catch {}
     };
     sync();
@@ -93,14 +85,10 @@ export default function ClienteChat() {
   }, [instance?.instance_id, queryClient]);
 
   const agents = useMemo(() =>
-    (agentsData || [])
-      .filter((a) => a.status === "active")
-      .map((a) => ({ id: a.id, name: a.name })),
+    (agentsData || []).filter((a) => a.status === "active").map((a) => ({ id: a.id, name: a.name })),
     [agentsData]
   );
 
-
-  // Fetch real message previews from the database
   const contactIdsStr = useMemo(() => contacts.map((c) => c.id).sort().join(","), [contacts]);
   const contactIds = useMemo(() => contactIdsStr ? contactIdsStr.split(",") : [], [contactIdsStr]);
   const { data: realPreviews } = useContactPreviews(contactIds);
@@ -109,14 +97,10 @@ export default function ClienteChat() {
   const handleSelectContact = (contact: WhatsAppContact) => {
     setSelectedContactId(contact.id);
     setMobileShowConversation(true);
-    if (contact.unread_count > 0) {
-      markRead.mutate(contact.id);
-    }
+    if (contact.unread_count > 0) markRead.mutate(contact.id);
   };
 
-  const handleBackToList = useCallback(() => {
-    setMobileShowConversation(false);
-  }, []);
+  const handleBackToList = useCallback(() => setMobileShowConversation(false), []);
 
   const handleSyncChats = useCallback(async () => {
     if (!instance?.instance_id || isSyncing) return;
@@ -131,8 +115,6 @@ export default function ClienteChat() {
         description: `${data.contacts_created} novos, ${data.contacts_updated} atualizados, ${data.contacts_removed || 0} removidos de ${data.total_chats_found} conversas.`,
       });
       queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-      
-      // Trigger photo sync in background
       supabase.functions.invoke("whatsapp-sync-photos", { body: { limit: 30 } })
         .then(() => queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] }))
         .catch(() => {});
@@ -148,17 +130,11 @@ export default function ClienteChat() {
     try {
       const defaultFunnel = funnelsData?.find(f => f.is_default) || funnelsData?.[0];
       const dbStages = defaultFunnel?.stages as any[] | undefined;
-      const firstStage = Array.isArray(dbStages) && dbStages.length > 0
-        ? (dbStages[0].key || "novo")
-        : "novo";
-
+      const firstStage = Array.isArray(dbStages) && dbStages.length > 0 ? (dbStages[0].key || "novo") : "novo";
       const lead = await createLead.mutateAsync({
         name: selectedContact.name || selectedContact.phone,
-        phone: selectedContact.phone,
-        source: "whatsapp",
-        tags: ["whatsapp"],
-        funnel_id: defaultFunnel?.id,
-        stage: firstStage,
+        phone: selectedContact.phone, source: "whatsapp", tags: ["whatsapp"],
+        funnel_id: defaultFunnel?.id, stage: firstStage,
       });
       if (lead?.id) {
         await linkMutation.mutateAsync({ contactId: selectedContact.id, leadId: lead.id });
@@ -169,13 +145,13 @@ export default function ClienteChat() {
     }
   };
 
-  // Stable ref for selectedContactId to avoid recreating Realtime channel
   const selectedContactIdRef = useRef<string | null>(null);
   useEffect(() => { selectedContactIdRef.current = selectedContactId; }, [selectedContactId]);
 
-  // Realtime subscriptions (stable — no selectedContactId in deps)
+  // Realtime subscriptions with connection tracking
   useEffect(() => {
     if (!instance?.organization_id) return;
+
     const channel = supabase
       .channel(`whatsapp-realtime-${instance.organization_id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, (payload: any) => {
@@ -188,8 +164,34 @@ export default function ClienteChat() {
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
       })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setRealtimeConnected(true);
+          disconnectedAtRef.current = null;
+          // Stop polling if active
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          if (!disconnectedAtRef.current) disconnectedAtRef.current = Date.now();
+          // Start polling fallback after 10s disconnected
+          setTimeout(() => {
+            if (disconnectedAtRef.current && Date.now() - disconnectedAtRef.current >= 10000 && !pollingRef.current) {
+              setRealtimeConnected(false);
+              pollingRef.current = setInterval(() => {
+                queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+                queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+              }, 5000);
+            }
+          }, 10000);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+    };
   }, [instance?.organization_id, queryClient]);
 
   const formattedPhone = instance?.phone_number
@@ -214,9 +216,7 @@ export default function ClienteChat() {
             <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-4">
               <MessageCircle className="w-7 h-7 text-muted-foreground/30" />
             </div>
-            <Badge variant="outline" className="gap-1.5 mb-3 text-orange-400 border-orange-500/30">
-              WhatsApp não conectado
-            </Badge>
+            <Badge variant="outline" className="gap-1.5 mb-3 text-orange-400 border-orange-500/30">WhatsApp não conectado</Badge>
             <p className="text-sm font-medium">Configure o WhatsApp para usar as conversas</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-md mb-4">
               Vá em Integrações para conectar sua instância Z-API e começar a enviar e receber mensagens.
@@ -231,59 +231,68 @@ export default function ClienteChat() {
   }
 
   return (
-    <div className="flex overflow-hidden h-[calc(100vh-3.5rem)]">
-      {/* Contact List — hide on mobile when conversation is open */}
-      <div className={`${mobileShowConversation ? "hidden md:flex" : "flex"} w-full md:w-[340px] shrink-0 h-full overflow-hidden flex-col`}>
-        {loadingContacts ? (
-          <div className="p-4 space-y-3 border-r border-border">
-            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[68px] rounded-lg" />)}
-          </div>
-        ) : (
-          <ChatContactList
-            contacts={contacts}
-            selectedId={selectedContact?.id ?? null}
-            onSelect={handleSelectContact}
+    <div className="flex flex-col overflow-hidden h-[calc(100vh-3.5rem)]">
+      {/* Reconnecting banner */}
+      {!realtimeConnected && (
+        <div className="flex items-center justify-center gap-2 py-1.5 bg-amber-500/10 border-b border-amber-500/30 text-amber-600 text-xs font-medium shrink-0">
+          <WifiOff className="w-3.5 h-3.5" />
+          Reconectando... (atualizando a cada 5s)
+        </div>
+      )}
+
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Contact List */}
+        <div className={`${mobileShowConversation ? "hidden md:flex" : "flex"} w-full md:w-[340px] shrink-0 h-full overflow-hidden flex-col`}>
+          {loadingContacts ? (
+            <div className="p-4 space-y-3 border-r border-border">
+              {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[68px] rounded-lg" />)}
+            </div>
+          ) : (
+            <ChatContactList
+              contacts={contacts}
+              selectedId={selectedContact?.id ?? null}
+              onSelect={handleSelectContact}
+              agents={agents}
+              isConnected={isConnected}
+              lastMessages={lastMessages}
+              connectedPhone={formattedPhone ?? undefined}
+              onSync={handleSyncChats}
+              isSyncing={isSyncing}
+            />
+          )}
+        </div>
+
+        {/* Conversation */}
+        <div className={`${mobileShowConversation ? "flex" : "hidden md:flex"} flex-1 min-w-0 h-full overflow-hidden relative flex-col`}>
+          <ChatConversation
+            contact={selectedContact}
+            messages={messages}
+            isLoading={loadingMessages}
             agents={agents}
-            isConnected={isConnected}
-            lastMessages={lastMessages}
-            connectedPhone={formattedPhone ?? undefined}
-            onSync={handleSyncChats}
-            isSyncing={isSyncing}
+            instanceId={instance?.instance_id ?? null}
+            onBack={handleBackToList}
+          />
+          {selectedContact && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-3 right-3 h-8 w-8 rounded-full bg-card/80 backdrop-blur-sm border border-border shadow-sm z-10"
+              onClick={() => setLeadPanelOpen(!leadPanelOpen)}
+            >
+              {leadPanelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+            </Button>
+          )}
+        </div>
+
+        {/* Lead Info Panel */}
+        {leadPanelOpen && selectedContact && (
+          <ChatLeadPanel
+            contact={selectedContact}
+            onClose={() => setLeadPanelOpen(false)}
+            onCreateLead={handleCreateLeadFromChat}
           />
         )}
       </div>
-
-      {/* Conversation — show on mobile when selected */}
-      <div className={`${mobileShowConversation ? "flex" : "hidden md:flex"} flex-1 min-w-0 h-full overflow-hidden relative flex-col`}>
-        <ChatConversation
-          contact={selectedContact}
-          messages={messages}
-          isLoading={loadingMessages}
-          agents={agents}
-          instanceId={instance?.instance_id ?? null}
-          onBack={handleBackToList}
-        />
-        {/* Toggle lead panel button */}
-        {selectedContact && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-3 right-3 h-8 w-8 rounded-full bg-card/80 backdrop-blur-sm border border-border shadow-sm z-10"
-            onClick={() => setLeadPanelOpen(!leadPanelOpen)}
-          >
-            {leadPanelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
-          </Button>
-        )}
-      </div>
-
-      {/* Lead Info Panel */}
-      {leadPanelOpen && selectedContact && (
-        <ChatLeadPanel
-          contact={selectedContact}
-          onClose={() => setLeadPanelOpen(false)}
-          onCreateLead={handleCreateLeadFromChat}
-        />
-      )}
     </div>
   );
 }

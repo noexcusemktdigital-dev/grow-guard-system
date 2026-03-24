@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { Search, RefreshCw, Clock, MessageCircle, Wifi, Bot, User, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChatContactItem } from "@/components/cliente/ChatContactItem";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type { WhatsAppContact } from "@/hooks/useWhatsApp";
 
 interface Props {
@@ -27,6 +27,7 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
     const [search, setSearch] = useState("");
     const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
     const [agentFilter, setAgentFilter] = useState("");
+    const parentRef = useRef<HTMLDivElement>(null);
 
     const filtered = contacts.filter((c) => {
       const q = search.toLowerCase();
@@ -46,7 +47,6 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
 
     const sortedContacts = useMemo(() => {
       return [...filtered].sort((a, b) => {
-        // Unread contacts first
         if (a.unread_count > 0 && b.unread_count === 0) return -1;
         if (a.unread_count === 0 && b.unread_count > 0) return 1;
         const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
@@ -55,7 +55,18 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
       });
     }, [filtered]);
 
-    const groupCount = useMemo(() => contacts.filter((c) => (c as any).contact_type === "group").length, [contacts]);
+    const virtualizer = useVirtualizer({
+      count: sortedContacts.length,
+      getScrollElement: () => parentRef.current,
+      estimateSize: () => 72,
+      overscan: 5,
+    });
+
+    const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
+
+    const now = useMemo(() => new Date(), []);
+    const todayStart = useMemo(() => { const d = new Date(now); d.setHours(0, 0, 0, 0); return d.getTime(); }, [now]);
+    const activeToday = useMemo(() => contacts.filter(c => c.last_message_at && new Date(c.last_message_at).getTime() >= todayStart).length, [contacts, todayStart]);
 
     const modeButtons: { key: ModeFilter; label: string; icon?: React.ReactNode }[] = [
       { key: "all", label: "Todos" },
@@ -64,18 +75,6 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
       { key: "waiting", label: "Espera", icon: <Clock className="w-3 h-3" /> },
       { key: "groups", label: "Grupos", icon: <Users className="w-3 h-3" /> },
     ];
-
-    const totalUnread = contacts.reduce((s, c) => s + c.unread_count, 0);
-
-    // Stats: active contacts today
-    const now = useMemo(() => new Date(), []);
-    const todayStart = useMemo(() => {
-      const d = new Date(now); d.setHours(0,0,0,0); return d.getTime();
-    }, [now]);
-    const activeToday = useMemo(() => contacts.filter(c => {
-      if (!c.last_message_at) return false;
-      return new Date(c.last_message_at).getTime() >= todayStart;
-    }).length, [contacts, todayStart]);
 
     return (
       <div ref={ref} className="flex flex-col h-full border-r border-border bg-card/50">
@@ -93,14 +92,7 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
             </div>
             <div className="flex items-center gap-1.5">
               {onSync && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 rounded-full"
-                  onClick={onSync}
-                  disabled={isSyncing}
-                  title="Sincronizar conversas do WhatsApp"
-                >
+                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={onSync} disabled={isSyncing} title="Sincronizar conversas do WhatsApp">
                   <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
                 </Button>
               )}
@@ -114,16 +106,12 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
             </div>
           </div>
 
-          {/* Connected phone */}
           {connectedPhone && (
             <div className="mb-2">
-              <Badge variant="outline" className="text-[10px] gap-1 font-normal">
-                📱 {connectedPhone}
-              </Badge>
+              <Badge variant="outline" className="text-[10px] gap-1 font-normal">📱 {connectedPhone}</Badge>
             </div>
           )}
 
-          {/* Mode pills */}
           <div className="flex gap-1 mb-2 flex-wrap">
             {modeButtons.map((btn) => (
               <Button
@@ -139,7 +127,6 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
             ))}
           </div>
 
-          {/* Search */}
           <div className="relative">
             <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -150,7 +137,6 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
             />
           </div>
 
-          {/* Secondary filters */}
           {agents.length > 0 && (
             <div className="flex gap-1.5 mt-2">
               <Select value={agentFilter} onValueChange={(v) => setAgentFilter(v === "all" ? "" : v)}>
@@ -168,26 +154,41 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
           )}
         </div>
 
-        <ScrollArea className="flex-1">
+        {/* Virtualized contact list */}
+        <div ref={parentRef} className="flex-1 overflow-auto">
           {sortedContacts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">
               <MessageCircle className="w-8 h-8 text-muted-foreground/20 mb-2" />
               <p className="text-xs text-muted-foreground">Nenhum contato encontrado</p>
             </div>
           ) : (
-            <div>
-              {sortedContacts.map((contact) => (
-                <ChatContactItem
-                  key={contact.id}
-                  contact={contact}
-                  isSelected={selectedId === contact.id}
-                  onSelect={onSelect}
-                  preview={lastMessages?.get(contact.id)}
-                />
-              ))}
+            <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const contact = sortedContacts[virtualRow.index];
+                return (
+                  <div
+                    key={contact.id}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <ChatContactItem
+                      contact={contact}
+                      isSelected={selectedId === contact.id}
+                      onSelect={onSelect}
+                      preview={lastMessages?.get(contact.id)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </div>
     );
   }
