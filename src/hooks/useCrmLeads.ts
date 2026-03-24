@@ -260,7 +260,10 @@ export function useCrmLeadMutations() {
         .lt("lost_at", cutoff.toISOString());
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+    },
   });
 
   return { createLead, updateLead, deleteLead, markAsWon, markAsLost, bulkUpdateLeads, bulkDeleteLeads, bulkAddTag, archiveOldLeads };
