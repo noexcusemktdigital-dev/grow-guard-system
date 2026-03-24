@@ -20,6 +20,7 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getEffectiveLimits } from "@/constants/plans";
 import { SitePreview } from "@/components/sites/SitePreview";
 import { SiteHistory, type SavedSite } from "@/components/sites/SiteHistory";
+import { ApprovalDashboard } from "@/components/cliente/ApprovalDashboard";
 import { useClienteSitesDB, useCreateClientSite, useApproveSite } from "@/hooks/useClienteSitesDB";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 import { useContentHistory } from "@/hooks/useClienteContentV2";
