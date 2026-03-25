@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Hash, User, Plus, MessageCircle } from "lucide-react";
+import { Hash, User, MessageCircle, Users, Briefcase } from "lucide-react";
 import { useTeamChat, type TeamChannel } from "@/hooks/useTeamChat";
 import { TeamChatConversation } from "@/components/teamchat/TeamChatConversation";
+import { CreateGroupDialog } from "@/components/teamchat/CreateGroupDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
@@ -13,18 +14,23 @@ export default function FranqueadoraChat() {
     channels,
     channelsLoading,
     members,
+    unreadCounts,
     ensureGeneralChannel,
+    createCustomGroup,
     getOrCreateDM,
     useChannelMessages,
     sendMessage,
     subscribeToChannel,
     getDMPartnerName,
+    getChannelMembers,
+    markAsRead,
+    uploadFile,
     user,
   } = useTeamChat();
 
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
 
-  // Ensure general channel on mount
+  // Ensure general + team channels on mount
   useEffect(() => {
     if (members.length > 0) {
       ensureGeneralChannel.mutate();
@@ -39,27 +45,23 @@ export default function FranqueadoraChat() {
     }
   }, [channels, selectedChannelId]);
 
-  // Subscribe to realtime
+  // Subscribe to realtime + mark as read
   useEffect(() => {
     subscribeToChannel(selectedChannelId);
-  }, [selectedChannelId, subscribeToChannel]);
+    if (selectedChannelId) {
+      markAsRead(selectedChannelId);
+    }
+  }, [selectedChannelId, subscribeToChannel, markAsRead]);
 
   const messagesQuery = useChannelMessages(selectedChannelId);
-
   const selectedChannel = channels.find((c) => c.id === selectedChannelId);
-
-  const getChannelDisplayName = (ch: TeamChannel) => {
-    if (ch.type === "group") return `# ${ch.name || "Canal"}`;
-    return getDMPartnerName(ch);
-  };
+  const selectedMembers = selectedChannelId ? getChannelMembers(selectedChannelId) : [];
 
   const handleStartDM = async (otherUserId: string) => {
     if (otherUserId === user?.id) return;
     try {
       const channelId = await getOrCreateDM(otherUserId);
-      if (channelId) {
-        setSelectedChannelId(channelId);
-      }
+      if (channelId) setSelectedChannelId(channelId);
     } catch {
       toast.error("Erro ao iniciar conversa");
     }
@@ -70,12 +72,59 @@ export default function FranqueadoraChat() {
     sendMessage.mutate({ channelId: selectedChannelId, content });
   };
 
-  const groupChannels = channels.filter((c) => c.type === "group");
+  const handleSendFile = async (file: File) => {
+    if (!selectedChannelId) return;
+    try {
+      const { url, name } = await uploadFile(file, selectedChannelId);
+      const type = file.type.startsWith("image/") ? "image" : "file";
+      sendMessage.mutate({ channelId: selectedChannelId, type, fileUrl: url, fileName: name });
+    } catch {
+      toast.error("Erro ao enviar arquivo");
+    }
+  };
+
+  const handleCreateGroup = async (name: string, description: string, memberIds: string[]) => {
+    try {
+      const channelId = await createCustomGroup.mutateAsync({ name, description, memberIds });
+      if (channelId) setSelectedChannelId(channelId);
+      toast.success("Grupo criado!");
+    } catch {
+      toast.error("Erro ao criar grupo");
+    }
+  };
+
+  // Categorize channels
+  const geralChannel = channels.find((c) => c.type === "group" && c.name === "Geral" && !c.team_id);
+  const teamChannels = channels.filter((c) => c.type === "group" && c.team_id);
+  const customGroups = channels.filter((c) => c.type === "group" && c.created_by && !c.team_id && c.name !== "Geral");
   const dmChannels = channels.filter((c) => c.type === "direct");
   const otherMembers = members.filter((m) => m.user_id !== user?.id);
 
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+  const renderChannelButton = (ch: TeamChannel, label: string, icon: React.ReactNode) => {
+    const unread = unreadCounts[ch.id] || 0;
+    return (
+      <button
+        key={ch.id}
+        onClick={() => setSelectedChannelId(ch.id)}
+        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
+          selectedChannelId === ch.id
+            ? "bg-primary/10 text-primary font-medium"
+            : "text-foreground hover:bg-muted"
+        }`}
+      >
+        {icon}
+        <span className="truncate flex-1 text-left">{label}</span>
+        {unread > 0 && (
+          <Badge variant="destructive" className="h-5 min-w-[20px] px-1 text-[10px] font-bold">
+            {unread > 99 ? "99+" : unread}
+          </Badge>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="flex h-[calc(100vh-120px)] border rounded-xl bg-card overflow-hidden">
@@ -90,24 +139,44 @@ export default function FranqueadoraChat() {
 
         <ScrollArea className="flex-1">
           <div className="p-2">
-            {/* Group channels */}
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1">
-              Canais
-            </p>
-            {groupChannels.map((ch) => (
-              <button
-                key={ch.id}
-                onClick={() => setSelectedChannelId(ch.id)}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                  selectedChannelId === ch.id
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-foreground hover:bg-muted"
-                }`}
-              >
-                <Hash className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="truncate">{ch.name || "Canal"}</span>
-              </button>
-            ))}
+            {/* Geral */}
+            {geralChannel && (
+              <>
+                {renderChannelButton(geralChannel, "# Geral", <Hash className="h-3.5 w-3.5 shrink-0" />)}
+                <Separator className="my-2" />
+              </>
+            )}
+
+            {/* Team channels */}
+            {teamChannels.length > 0 && (
+              <>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1 flex items-center gap-1">
+                  <Briefcase className="h-3 w-3" /> Times
+                </p>
+                {teamChannels.map((ch) =>
+                  renderChannelButton(ch, `# ${ch.name || "Canal"}`, <Hash className="h-3.5 w-3.5 shrink-0" />)
+                )}
+                <Separator className="my-2" />
+              </>
+            )}
+
+            {/* Custom groups */}
+            <div className="flex items-center justify-between px-2 py-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Users className="h-3 w-3" /> Grupos
+              </p>
+              <CreateGroupDialog
+                members={members}
+                onCreateGroup={handleCreateGroup}
+                currentUserId={user?.id || ""}
+              />
+            </div>
+            {customGroups.map((ch) =>
+              renderChannelButton(ch, `# ${ch.name || "Grupo"}`, <Hash className="h-3.5 w-3.5 shrink-0" />)
+            )}
+            {customGroups.length === 0 && (
+              <p className="text-[11px] text-muted-foreground px-2 py-1">Nenhum grupo criado</p>
+            )}
 
             <Separator className="my-2" />
 
@@ -117,25 +186,12 @@ export default function FranqueadoraChat() {
             </p>
             {dmChannels.map((ch) => {
               const name = getDMPartnerName(ch);
-              return (
-                <button
-                  key={ch.id}
-                  onClick={() => setSelectedChannelId(ch.id)}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                    selectedChannelId === ch.id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-foreground hover:bg-muted"
-                  }`}
-                >
-                  <User className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="truncate">{name}</span>
-                </button>
-              );
+              return renderChannelButton(ch, name, <User className="h-3.5 w-3.5 shrink-0" />);
             })}
 
             <Separator className="my-2" />
 
-            {/* Start new DM */}
+            {/* Members list for starting DMs */}
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1">
               Membros
             </p>
@@ -166,11 +222,14 @@ export default function FranqueadoraChat() {
             isLoading={messagesQuery.isLoading}
             currentUserId={user?.id || ""}
             onSend={handleSend}
+            onSendFile={handleSendFile}
             channelName={
               selectedChannel.type === "group"
                 ? `# ${selectedChannel.name || "Canal"}`
                 : getDMPartnerName(selectedChannel)
             }
+            channelDescription={selectedChannel.description}
+            memberCount={selectedChannel.type !== "direct" ? selectedMembers.length : undefined}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
