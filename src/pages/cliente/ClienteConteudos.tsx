@@ -243,7 +243,7 @@ export default function ClienteConteudos() {
                     <RotateCcw className="w-4 h-4 mr-1" /> Novo Lote
                   </Button>
                   <Button size="sm" onClick={() => setConfirmApproveAll(true)} disabled={approveBatchMutation.isPending}>
-                    <Check className="w-4 h-4 mr-1" /> Aprovar Tudo ({generatedIds.length * 200} créditos)
+                    <Check className="w-4 h-4 mr-1" /> Aprovar Tudo ({generatedIds.length * CREDIT_COST_APPROVE_CONTENT} créditos)
                   </Button>
                 </div>
               </div>
