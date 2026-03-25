@@ -107,7 +107,7 @@ export default function ClienteConteudos() {
     if (!id) return;
     try {
       await approveMutation.mutateAsync(id);
-      toast({ title: "Conteúdo aprovado!", description: "200 créditos debitados." });
+      toast({ title: "Conteúdo aprovado!", description: `${CREDIT_COST_APPROVE_CONTENT} créditos debitados.` });
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) setShowCreditsDialog(true);
       else toast({ title: "Erro", description: err?.message, variant: "destructive" });
