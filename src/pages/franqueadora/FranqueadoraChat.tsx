@@ -187,7 +187,7 @@ export default function FranqueadoraChat() {
             </p>
             {otherMembers.map((m) => {
               const existingDm = dmChannels.find((ch) => {
-                const partner = channelMembersRaw.filter((cm) => cm.channel_id === ch.id);
+                const partner = channelMemberships.filter((cm) => cm.channel_id === ch.id);
                 return partner.some((p) => p.user_id === m.user_id);
               });
               const unread = existingDm ? (unreadCounts[existingDm.id] || 0) : 0;
