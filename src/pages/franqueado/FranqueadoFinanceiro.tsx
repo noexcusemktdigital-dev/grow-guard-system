@@ -60,7 +60,7 @@ export default function FranqueadoFinanceiro() {
         if (start && start <= new Date(y, m + 1, 0) && (!end || end >= new Date(y, m, 1))) return s + Number((c as any).monthly_value || 0);
         return s;
       }, 0);
-      return { name: `${monthNames[m]}/${String(y).slice(2)}`, Receita: monthMrr, Participação: monthMrr * 0.2 };
+      return { name: `${monthNames[m]}/${String(y).slice(2)}`, Receita: monthMrr, Participação: monthMrr * FRANCHISEE_SHARE_PERCENT };
     });
   }, [activeContracts]);
 
