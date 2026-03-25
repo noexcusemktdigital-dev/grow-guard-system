@@ -159,7 +159,7 @@ export default function FranqueadoFinanceiro() {
                       <TableHead>Cliente</TableHead>
                       <TableHead>Contrato</TableHead>
                       <TableHead>Valor Mensal</TableHead>
-                      <TableHead>Sua Part. (20%)</TableHead>
+                      <TableHead>Sua Part. ({FRANCHISEE_SHARE_PERCENT * 100}%)</TableHead>
                       <TableHead>Dia Pagamento</TableHead>
                       <TableHead>Vigência</TableHead>
                     </TableRow>
