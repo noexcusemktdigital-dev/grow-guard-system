@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useEffect, useCallback, useRef } from "react";
@@ -101,9 +101,11 @@ export function useTeamChat() {
           );
         }
       } else {
-        // Ensure current user is member
+        // Ensure ALL org members are in the channel (handles new members)
+        const members = membersQuery.data || [];
+        const allMembers = members.length > 0 ? members : [{ user_id: user.id }];
         await supabase.from("team_chat_members").upsert(
-          { channel_id: channelId, user_id: user.id },
+          allMembers.map((m) => ({ channel_id: channelId!, user_id: m.user_id })),
           { onConflict: "channel_id,user_id" }
         );
       }
@@ -199,7 +201,10 @@ export function useTeamChat() {
       const { error } = await supabase
         .from("team_chat_messages")
         .insert({ channel_id: channelId, sender_id: user!.id, content });
-      if (error) throw error;
+      if (error) {
+        console.error("[TeamChat] sendMessage error:", error);
+        throw error;
+      }
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["team-chat-messages", vars.channelId] });
