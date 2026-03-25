@@ -113,7 +113,8 @@ function ErrosTab() {
       toast.success("Erro marcado como resolvido");
       setResolveDialog(null);
       setResolveNote("");
-    } catch {
+    } catch (err) {
+      console.error("Erro ao resolver:", err);
       toast.error("Falha ao resolver erro");
     }
   };
@@ -124,7 +125,8 @@ function ErrosTab() {
       await deleteError.mutateAsync(deleteTarget);
       toast.success("Erro excluído");
       setDeleteTarget(null);
-    } catch {
+    } catch (err) {
+      console.error("Erro ao excluir:", err);
       toast.error("Falha ao excluir erro");
     }
   };

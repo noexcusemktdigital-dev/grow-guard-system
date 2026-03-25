@@ -245,7 +245,7 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
   );
 }
 
-function SidebarFooter() {
+function SidebarFooter({ collapsed = false }: { collapsed?: boolean }) {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const userName = profile?.full_name?.split(" ")[0] || "Admin";
@@ -256,10 +256,10 @@ function SidebarFooter() {
     .toUpperCase()
     .slice(0, 2);
   return (
-    <div className="px-3 py-3 border-t border-sidebar-border">
+    <div className="border-t border-sidebar-border">
       <Popover>
         <PopoverTrigger asChild>
-          <button className="flex items-center gap-2.5 rounded-lg px-1 py-1 hover:bg-white/[0.06] transition-colors w-full text-left">
+          <button className={`w-full flex items-center gap-2.5 hover:bg-white/[0.06] transition-colors ${collapsed ? "justify-center px-2 py-3" : "px-3 py-3"}`}>
             <div className="w-8 h-8 rounded-full bg-sidebar-primary/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
               {profile?.avatar_url ? (
                 <img src={profile.avatar_url} alt={userName} className="w-full h-full object-cover" />
@@ -267,13 +267,17 @@ function SidebarFooter() {
                 <span className="text-[11px] font-semibold text-sidebar-primary">{initials}</span>
               )}
             </div>
-            <div className="min-w-0">
-              <p className="text-[12px] font-semibold text-white truncate">{userName}</p>
-              <p className="text-[10px] text-sidebar-muted truncate">Franqueadora</p>
-            </div>
+            {!collapsed && (
+              <>
+                <div className="min-w-0 text-left flex-1">
+                  <p className="text-[12px] font-semibold text-white truncate">{userName}</p>
+                  <p className="text-[10px] text-sidebar-muted truncate">Franqueadora</p>
+                </div>
+              </>
+            )}
           </button>
         </PopoverTrigger>
-        <PopoverContent side="top" align="start" className="w-48 p-1">
+        <PopoverContent side={collapsed ? "right" : "top"} align="start" className="w-48 p-1">
           <button
             onClick={() => navigate("/franqueadora/perfil")}
             className="flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
@@ -327,9 +331,7 @@ export function FranqueadoraSidebarContent({ collapsed, setCollapsed }: { collap
       </div>
 
       {/* Footer — User */}
-      {!collapsed && (
-        <SidebarFooter />
-      )}
+      <SidebarFooter collapsed={collapsed} />
 
       <button
         onClick={() => setCollapsed(!collapsed)}

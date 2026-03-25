@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const FRANCHISEE_SHARE_PERCENT = 0.2; // 20% participation
 
 export default function FranqueadoFinanceiro() {
   const { data: contracts, isLoading: loadingCon } = useContracts();
@@ -43,7 +44,7 @@ export default function FranqueadoFinanceiro() {
 
   // KPIs
   const mrr = useMemo(() => activeContracts.reduce((s, c) => s + Number((c as any).monthly_value || 0), 0), [activeContracts]);
-  const participacao20 = mrr * 0.2;
+  const participacao20 = mrr * FRANCHISEE_SHARE_PERCENT;
   const ticketMedio = activeContracts.length > 0 ? mrr / activeContracts.length : 0;
   const previsao3m = mrr * 3;
 
@@ -59,7 +60,7 @@ export default function FranqueadoFinanceiro() {
         if (start && start <= new Date(y, m + 1, 0) && (!end || end >= new Date(y, m, 1))) return s + Number((c as any).monthly_value || 0);
         return s;
       }, 0);
-      return { name: `${monthNames[m]}/${String(y).slice(2)}`, Receita: monthMrr, Participação: monthMrr * 0.2 };
+      return { name: `${monthNames[m]}/${String(y).slice(2)}`, Receita: monthMrr, Participação: monthMrr * FRANCHISEE_SHARE_PERCENT };
     });
   }, [activeContracts]);
 
@@ -99,7 +100,7 @@ export default function FranqueadoFinanceiro() {
         title: c.title,
         client: c.signer_name || "—",
         value,
-        participacao: value * 0.2,
+        participacao: value * FRANCHISEE_SHARE_PERCENT,
         payDay,
         status,
         invoiceUrl,
@@ -142,7 +143,7 @@ export default function FranqueadoFinanceiro() {
         <TabsContent value="visao" className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <KpiCard label="Receita Recorrente (MRR)" value={`R$ ${mrr.toLocaleString("pt-BR")}`} icon={DollarSign} delay={0} variant="accent" />
-            <KpiCard label="Sua Participação (20%)" value={`R$ ${participacao20.toLocaleString("pt-BR")}`} icon={Percent} delay={1} />
+            <KpiCard label={`Sua Participação (${FRANCHISEE_SHARE_PERCENT * 100}%)`} value={`R$ ${participacao20.toLocaleString("pt-BR")}`} icon={Percent} delay={1} />
             <KpiCard label="Contratos Ativos" value={String(activeContracts.length)} icon={FileSignature} delay={2} />
             <KpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={TrendingUp} delay={3} />
             <KpiCard label="Previsão 3 Meses" value={`R$ ${previsao3m.toLocaleString("pt-BR")}`} icon={Calendar} delay={4} />
@@ -158,7 +159,7 @@ export default function FranqueadoFinanceiro() {
                       <TableHead>Cliente</TableHead>
                       <TableHead>Contrato</TableHead>
                       <TableHead>Valor Mensal</TableHead>
-                      <TableHead>Sua Part. (20%)</TableHead>
+                      <TableHead>Sua Part. ({FRANCHISEE_SHARE_PERCENT * 100}%)</TableHead>
                       <TableHead>Dia Pagamento</TableHead>
                       <TableHead>Vigência</TableHead>
                     </TableRow>
@@ -169,7 +170,7 @@ export default function FranqueadoFinanceiro() {
                         <TableCell className="font-medium">{c.signer_name || "—"}</TableCell>
                         <TableCell>{c.title}</TableCell>
                         <TableCell className="font-semibold text-primary">R$ {Number((c as any).monthly_value || 0).toLocaleString("pt-BR")}</TableCell>
-                        <TableCell className="font-semibold text-emerald-600">R$ {(Number((c as any).monthly_value || 0) * 0.2).toLocaleString("pt-BR")}</TableCell>
+                        <TableCell className="font-semibold text-emerald-600">R$ {(Number((c as any).monthly_value || 0) * FRANCHISEE_SHARE_PERCENT).toLocaleString("pt-BR")}</TableCell>
                         <TableCell><Badge variant="outline">Dia {(c as any).payment_day || "—"}</Badge></TableCell>
                         <TableCell className="text-muted-foreground text-xs">
                           {(c as any).start_date ? new Date((c as any).start_date).toLocaleDateString("pt-BR") : "—"} — {(c as any).end_date ? new Date((c as any).end_date).toLocaleDateString("pt-BR") : "—"}
@@ -231,7 +232,7 @@ export default function FranqueadoFinanceiro() {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Contrato</TableHead>
                     <TableHead>Valor</TableHead>
-                    <TableHead>Sua Part. (20%)</TableHead>
+                    <TableHead>Sua Part. ({FRANCHISEE_SHARE_PERCENT * 100}%)</TableHead>
                     <TableHead>Dia Pgto</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Ação</TableHead>
