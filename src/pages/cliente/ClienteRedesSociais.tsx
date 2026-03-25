@@ -422,7 +422,7 @@ export default function ClienteRedesSociais() {
     const results = batchResults.length > 0 ? batchResults : (generatedResult ? [generatedResult] : []);
     for (const r of results) {
       if (r.post.status !== "approved") {
-        try { await deletePost.mutateAsync(r.post.id); } catch {}
+        try { await deletePost.mutateAsync(r.post.id); } catch (err) { console.error("Erro ao excluir rascunho:", err); }
       }
     }
     setGeneratedResult(null);
