@@ -133,7 +133,8 @@ export default function FranqueadoSuporte() {
       setNovoAnexos([]);
       setNovaSubcategoria("");
       toast.success("Chamado criado!");
-    } catch {
+    } catch (err) {
+      console.error("Erro ao criar chamado:", err);
       toast.error("Erro ao criar chamado");
     }
     setCreatingTicket(false);
