@@ -278,7 +278,7 @@ export default function ClienteConteudos() {
           <AlertDialogHeader>
             <AlertDialogTitle>Aprovar todos os conteúdos?</AlertDialogTitle>
             <AlertDialogDescription>
-              Isso consumirá <strong>{generatedIds.length * 200} créditos</strong> da sua carteira.
+              Isso consumirá <strong>{generatedIds.length * CREDIT_COST_APPROVE_CONTENT} créditos</strong> da sua carteira.
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
