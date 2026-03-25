@@ -356,7 +356,7 @@ export default function ClienteGamificacao() {
   const { data: checklistDoneCount } = useQuery({
     queryKey: ["gamification-checklist-done", user?.id],
     queryFn: async () => {
-      const { count } = await supabase.from("client_checklist_items").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("is_completed", true);
+      const { count } = await supabase.from("client_checklist_items").select("id", { count: "exact", head: true }).eq("user_id", user?.id ?? "").eq("is_completed", true);
       return count ?? 0;
     },
     enabled: !!user,
@@ -366,7 +366,7 @@ export default function ClienteGamificacao() {
   const { data: academyProgress } = useQuery({
     queryKey: ["gamification-academy", user?.id],
     queryFn: async () => {
-      const { count } = await supabase.from("academy_progress").select("id", { count: "exact", head: true }).eq("user_id", user!.id).not("completed_at", "is", null);
+      const { count } = await supabase.from("academy_progress").select("id", { count: "exact", head: true }).eq("user_id", user?.id ?? "").not("completed_at", "is", null);
       return count ?? 0;
     },
     enabled: !!user,
@@ -376,7 +376,7 @@ export default function ClienteGamificacao() {
   const { data: customFunnels } = useQuery({
     queryKey: ["gamification-funnels", orgId],
     queryFn: async () => {
-      const { count } = await supabase.from("crm_funnels").select("id", { count: "exact", head: true }).eq("organization_id", orgId!);
+      const { count } = await supabase.from("crm_funnels").select("id", { count: "exact", head: true }).eq("organization_id", orgId ?? "");
       return count ?? 0;
     },
     enabled: !!orgId,
@@ -389,7 +389,7 @@ export default function ClienteGamificacao() {
       const { data, error } = await supabase
         .from("gamification_claims" as any)
         .select("*")
-        .eq("organization_id", orgId!);
+        .eq("organization_id", orgId ?? "");
       if (error) throw error;
       return data as any[];
     },
@@ -403,7 +403,7 @@ export default function ClienteGamificacao() {
       const { data, error } = await supabase
         .from("client_gamification")
         .select("user_id, xp, title, streak_days")
-        .eq("organization_id", orgId!);
+        .eq("organization_id", orgId ?? "");
       if (error) throw error;
       return data;
     },
@@ -415,15 +415,15 @@ export default function ClienteGamificacao() {
     mutationFn: async ({ level, value }: { level: number; value: number }) => {
       const { error: claimError } = await supabase
         .from("gamification_claims" as any)
-        .insert({ user_id: user!.id, organization_id: orgId!, reward_id: `level-${level}` as any, status: "claimed" } as any);
+        .insert({ user_id: user?.id ?? "", organization_id: orgId ?? "", reward_id: `level-${level}` as any, status: "claimed" } as any);
       if (claimError) throw claimError;
       if (value > 0) {
         const { data: wallet } = await supabase
-          .from("credit_wallets").select("id, balance").eq("organization_id", orgId!).maybeSingle();
+          .from("credit_wallets").select("id, balance").eq("organization_id", orgId ?? "").maybeSingle();
         if (wallet) {
           await supabase.from("credit_wallets").update({ balance: (wallet.balance || 0) + value }).eq("id", wallet.id);
           await supabase.from("credit_transactions").insert({
-            organization_id: orgId!, type: "bonus", amount: value,
+            organization_id: orgId ?? "", type: "bonus", amount: value,
             balance_after: (wallet.balance || 0) + value,
             description: `Recompensa de gamificação - Nível ${level}`,
             metadata: { source: "gamification_reward", level },

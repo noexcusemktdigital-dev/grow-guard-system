@@ -730,7 +730,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                 if (item.type === "date") return <DateSeparator key={`date-${i}`} date={item.date!} />;
                 const isHighlighted = searchQuery && item.message?.content?.toLowerCase().includes(searchQuery.toLowerCase());
                 return (
-                  <div key={item.message!.id} className={isHighlighted ? "ring-2 ring-primary/50 rounded-xl" : ""}>
+                  <div key={item.message?.id ?? `msg-${i}`} className={isHighlighted ? "ring-2 ring-primary/50 rounded-xl" : ""}>
                     <ChatMessageBubble
                       message={item.message!}
                       isGrouped={item.isGrouped}

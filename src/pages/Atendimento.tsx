@@ -365,7 +365,7 @@ export default function Atendimento() {
                 {msgAttachments.length > 0 && (
                   <div className="flex gap-2 flex-wrap">
                     {msgAttachments.map((f, i) => (
-                      <div key={i} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-[11px]">
+                      <div key={`${f.name}-${i}`} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-[11px]">
                         <FileText className="w-3 h-3" />
                         <span className="truncate max-w-[120px]">{f.name}</span>
                         <button onClick={() => setMsgAttachments(prev => prev.filter((_, j) => j !== i))}>

@@ -10,7 +10,7 @@ export function useAnnouncementViews() {
       const { data, error } = await supabase
         .from("announcement_views")
         .select("*")
-        .eq("user_id", user!.id);
+        .eq("user_id", user?.id ?? "");
       if (error) throw error;
       return data;
     },

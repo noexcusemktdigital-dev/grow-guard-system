@@ -142,7 +142,7 @@ function drawBackground(ctx: CanvasRenderingContext2D, bg: BackgroundConfig, w: 
     const x1 = cx + Math.cos(angle) * len / 2;
     const y1 = cy + Math.sin(angle) * len / 2;
     const grad = ctx.createLinearGradient(x0, y0, x1, y1);
-    bg.gradientColors.forEach((c, i) => grad.addColorStop(i / (bg.gradientColors!.length - 1), c));
+    bg.gradientColors.forEach((c, i) => grad.addColorStop(i / ((bg.gradientColors?.length ?? 1) - 1), c));
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
   }

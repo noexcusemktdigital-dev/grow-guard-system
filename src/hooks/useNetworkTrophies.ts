@@ -46,10 +46,11 @@ export function useNetworkTrophies() {
 
         const monthlyRevenue: Record<string, { total: number; lastDate: string }> = {};
         for (const l of leads) {
-          const month = l.won_at!.substring(0, 7);
-          if (!monthlyRevenue[month]) monthlyRevenue[month] = { total: 0, lastDate: l.won_at! };
+          const month = (l.won_at?.substring(0, 7)) ?? "";
+          if (!month) continue;
+          if (!monthlyRevenue[month]) monthlyRevenue[month] = { total: 0, lastDate: l.won_at ?? "" };
           monthlyRevenue[month].total += Number(l.value) || 0;
-          if (l.won_at! > monthlyRevenue[month].lastDate) monthlyRevenue[month].lastDate = l.won_at!;
+          if ((l.won_at ?? "") > monthlyRevenue[month].lastDate) monthlyRevenue[month].lastDate = l.won_at ?? "";
         }
         const topMonth = Object.values(monthlyRevenue).find(m => m.total >= 20000);
         const topRevenue: TrophyStatus = topMonth

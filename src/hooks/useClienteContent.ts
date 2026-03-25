@@ -82,7 +82,7 @@ export function useClienteNotifications() {
       const { data, error } = await supabase
         .from("client_notifications")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", user?.id ?? "")
         .order("created_at", { ascending: false })
         .range(from, to);
       if (error) throw error;
@@ -100,7 +100,7 @@ export function useClienteChecklist(date?: string) {
   return useQuery({
     queryKey: ["client-checklist", user?.id, date],
     queryFn: async () => {
-      let q = supabase.from("client_checklist_items").select("*").eq("user_id", user!.id).order("created_at");
+      let q = supabase.from("client_checklist_items").select("*").eq("user_id", user?.id ?? "").order("created_at");
       if (date) q = q.eq("date", date);
       const { data, error } = await q;
       if (error) throw error;
@@ -117,7 +117,7 @@ export function useClienteGamification() {
   return useQuery({
     queryKey: ["client-gamification", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("client_gamification").select("*").eq("user_id", user!.id).eq("organization_id", orgId!).maybeSingle();
+      const { data, error } = await supabase.from("client_gamification").select("*").eq("user_id", user?.id ?? "").eq("organization_id", orgId ?? "").maybeSingle();
       if (error) throw error;
       return data;
     },

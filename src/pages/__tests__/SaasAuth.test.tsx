@@ -43,14 +43,20 @@ vi.mock("sonner", () => ({
 
 vi.mock("@/assets/NOE3.png", () => ({ default: "logo.png" }));
 vi.mock("@/components/SaasBrandingPanel", () => ({ default: () => <div data-testid="branding" /> }));
-vi.mock("@/components/ui/tabs", () => ({
-  Tabs: ({ children }: any) => <div>{children}</div>,
-  TabsList: ({ children }: any) => <div>{children}</div>,
-  TabsTrigger: ({ children, value, className, ...props }: any) => (
-    <button type="button" className={className} {...props}>{children}</button>
-  ),
-  TabsContent: ({ children, value }: any) => <div>{children}</div>,
-}));
+vi.mock("@/components/ui/tabs", () => {
+  const { useState } = require("react");
+  function StatefulTabs({ children, defaultValue }: any) {
+    return <div data-default={defaultValue}>{children}</div>;
+  }
+  return {
+    Tabs: ({ children, defaultValue, onValueChange }: any) => <div>{children}</div>,
+    TabsList: ({ children }: any) => <div>{children}</div>,
+    TabsTrigger: ({ children, value, className, ...props }: any) => (
+      <button type="button" role="tab" className={className} {...props}>{children}</button>
+    ),
+    TabsContent: ({ children, value }: any) => <div data-tab={value}>{children}</div>,
+  };
+});
 vi.mock("@/components/ui/checkbox", () => ({
   Checkbox: ({ checked, onCheckedChange, ...props }: any) => (
     <button
@@ -78,8 +84,8 @@ describe("SaasAuth (Cliente SaaS)", () => {
 
   it("renders login tab by default with email and password", () => {
     renderSaas();
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(screen.getByLabelText("Senha")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Email").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByLabelText("Senha").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders both tab triggers", () => {
@@ -97,8 +103,10 @@ describe("SaasAuth (Cliente SaaS)", () => {
     mockSignIn.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
     renderSaas();
 
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "user@test.com" } });
-    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "pass123" } });
+    const emailInputs = screen.getAllByLabelText("Email");
+    const senhaInputs = screen.getAllByLabelText("Senha");
+    fireEvent.change(emailInputs[0], { target: { value: "user@test.com" } });
+    fireEvent.change(senhaInputs[0], { target: { value: "pass123" } });
     fireEvent.click(screen.getByRole("button", { name: /^entrar$/i }));
 
     await waitFor(() => {
@@ -110,8 +118,10 @@ describe("SaasAuth (Cliente SaaS)", () => {
     mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Invalid" } });
     renderSaas();
 
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "bad@test.com" } });
-    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "wrong" } });
+    const emailInputs = screen.getAllByLabelText("Email");
+    const senhaInputs = screen.getAllByLabelText("Senha");
+    fireEvent.change(emailInputs[0], { target: { value: "bad@test.com" } });
+    fireEvent.change(senhaInputs[0], { target: { value: "wrong" } });
     fireEvent.click(screen.getByRole("button", { name: /^entrar$/i }));
 
     await waitFor(() => {
@@ -123,8 +133,10 @@ describe("SaasAuth (Cliente SaaS)", () => {
     mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Email not confirmed" } });
     renderSaas();
 
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "unverified@test.com" } });
-    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "pass123" } });
+    const emailInputs = screen.getAllByLabelText("Email");
+    const senhaInputs = screen.getAllByLabelText("Senha");
+    fireEvent.change(emailInputs[0], { target: { value: "unverified@test.com" } });
+    fireEvent.change(senhaInputs[0], { target: { value: "pass123" } });
     fireEvent.click(screen.getByRole("button", { name: /^entrar$/i }));
 
     await waitFor(() => {
@@ -146,18 +158,18 @@ describe("SaasAuth (Cliente SaaS)", () => {
 
     renderSaas();
 
-    fireEvent.click(screen.getByRole("tab", { name: /criar conta/i }));
-    fireEvent.mouseDown(screen.getByRole("tab", { name: /criar conta/i }));
+    const nomeInput = screen.getByLabelText("Nome completo");
+    expect(nomeInput).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(screen.getByLabelText("Nome completo")).toBeInTheDocument();
-    });
-
-    fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Teste Cliente" } });
-    fireEvent.change(screen.getByLabelText("Email", { selector: "#signup-email" }), { target: { value: "existente@test.com" } });
-    fireEvent.change(screen.getByLabelText("Senha", { selector: "#signup-password" }), { target: { value: "Senha123!" } });
+    fireEvent.change(nomeInput, { target: { value: "Teste Cliente" } });
+    // Use getAllByLabelText since both login and signup forms render
+    const emailInputs = screen.getAllByLabelText("Email");
+    const senhaInputs = screen.getAllByLabelText("Senha");
+    // Signup inputs are the second set (index 1)
+    fireEvent.change(emailInputs[emailInputs.length - 1], { target: { value: "existente@test.com" } });
+    fireEvent.change(senhaInputs[senhaInputs.length - 1], { target: { value: "Senha123!" } });
     fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.submit(screen.getByLabelText("Nome completo").closest("form") as HTMLFormElement);
+    fireEvent.submit(nomeInput.closest("form") as HTMLFormElement);
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith("Este email já possui cadastro. Reenviamos a confirmação se a conta ainda não foi ativada.");

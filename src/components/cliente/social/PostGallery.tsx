@@ -126,7 +126,7 @@ export function PostGallery({
       if (!groups.has(key)) {
         groups.set(key, { label, posts: [] });
       }
-      groups.get(key)!.posts.push(post);
+      groups.get(key)?.posts.push(post);
     }
 
     return Array.from(groups.entries())

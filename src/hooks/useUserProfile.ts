@@ -12,7 +12,7 @@ export function useUserProfile() {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user!.id)
+        .eq("id", user?.id ?? "")
         .single();
       if (error) throw error;
       return data;
@@ -27,7 +27,7 @@ export function useUserProfile() {
       const { error } = await supabase
         .from("profiles")
         .update(updates)
-        .eq("id", user!.id);
+        .eq("id", user?.id ?? "");
       if (error) throw error;
     },
     onSuccess: () => {

@@ -331,7 +331,7 @@ export function useTeamChat() {
         .from("team_chat_messages")
         .insert({
           channel_id: channelId,
-          sender_id: user!.id,
+          sender_id: user?.id ?? "",
           content: content || null,
           type,
           file_url: fileUrl || null,

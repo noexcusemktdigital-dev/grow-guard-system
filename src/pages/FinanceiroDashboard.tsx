@@ -1034,7 +1034,7 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
             </tr></thead>
             <tbody>
               {consolidation.map((c, i) => (
-                <tr key={i} className="border-b hover:bg-muted/30">
+                <tr key={c.orgId} className="border-b hover:bg-muted/30">
                   <td className="py-3 px-4 font-medium flex items-center gap-2"><Building2 className="w-4 h-4 text-muted-foreground" />{c.orgName}</td>
                   <td className="py-3 px-4 text-center">{c.contracts}</td>
                   <td className="py-3 px-4 text-right">{formatBRL(c.mrr)}</td>

@@ -149,7 +149,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           let provisioned = false;
           for (let attempt = 0; attempt < 2 && !provisioned; attempt++) {
             try {
-              console.log(`[Auth] Provisioning attempt ${attempt + 1} for user ${currentUser.id}`);
               const provResult = await withTimeout(
                 supabase.functions.invoke("signup-saas", {
                   body: { user_id: currentUser.id, company_name: companyName },
@@ -175,7 +174,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setRole(topRole);
                 provisioned = true;
                 lastFetchedUserRef.current = currentUser.id;
-                console.log(`[Auth] Provisioning successful, role: ${topRole}`);
               }
             } catch (err) {
               console.error(`[Auth] Provisioning attempt ${attempt + 1} failed:`, err);
@@ -240,7 +238,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const { data: { session: defaultSession } } = await defaultClient.auth.getSession();
           if (defaultSession) {
-            console.log("[Auth] Transferring OAuth session from default client to portal client");
             const { data: { session: transferred } } = await supabase.auth.setSession({
               access_token: defaultSession.access_token,
               refresh_token: defaultSession.refresh_token,
