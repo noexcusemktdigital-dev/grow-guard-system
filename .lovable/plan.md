@@ -1,56 +1,38 @@
 
 
-# CRM — Exclusão de Funil, Kanban Imediato e Transferência de Leads entre Funis
+# Corrigir Chat da Equipe (Matriz)
 
-## Problemas
+## Problema identificado
 
-1. **Não é possível excluir um funil** — O `CrmFunnelManager` tem o botão de delete, mas ele só aparece para funis que NÃO são padrão, e a lógica de `deleteFunnel` existe no hook. Preciso verificar se o botão está realmente renderizando e se há confirmação antes de excluir.
+O chat da equipe carrega mas não funciona corretamente por dois motivos:
 
-2. **Funil recém-criado não exibe colunas vazias** — Quando o Kanban não tem leads, mostra "Nenhum lead cadastrado" ao invés das colunas vazias do funil. O Kanban precisa sempre mostrar as etapas, mesmo sem leads.
+1. **Cliente Supabase errado**: O hook `useTeamChat.ts` importa o Supabase de `@/integrations/supabase/client` (cliente genérico), enquanto todo o sistema de autenticação usa `@/lib/supabase` (cliente com sessão do portal correto). Isso faz com que as queries do chat rodem sem autenticação válida, e o RLS bloqueia tudo silenciosamente.
 
-3. **Não há opção de transferir leads entre funis** — Nem no detalhe do lead, nem na seleção em massa, existe a opção de mover leads para outro funil (alterar `funnel_id`).
-
----
+2. **Usuário não adicionado ao canal Geral**: A lógica de `ensureGeneralChannel` tenta fazer upsert mas falha silenciosamente pelo mesmo problema de cliente. O super_admin (davi.ttesch) não está na tabela `team_chat_members` do canal "Geral".
 
 ## Correções
 
-### 1. Garantir exclusão de funil com confirmação
-**Arquivo**: `src/components/crm/CrmFunnelManager.tsx`
+### 1. Trocar import do Supabase em `useTeamChat.ts`
+**Arquivo**: `src/hooks/useTeamChat.ts`
 
-- Adicionar `AlertDialog` de confirmação antes de excluir um funil
-- Informar quantos leads estão vinculados ao funil (se possível)
-- O botão de delete já existe para funis não-padrão — garantir que está visível e funcional
+- Linha 2: trocar `import { supabase } from "@/integrations/supabase/client"` para `import { supabase } from "@/lib/supabase"`
+- Isso garante que todas as queries usem a mesma sessão autenticada do portal franchise
 
-### 2. Kanban mostra colunas vazias mesmo sem leads
-**Arquivo**: `src/pages/cliente/ClienteCRM.tsx`
+### 2. Melhorar `ensureGeneralChannel` para adicionar todos os membros
+**Arquivo**: `src/hooks/useTeamChat.ts`
 
-- Na linha ~819, o estado vazio `allLeads.length === 0` mostra um card genérico. Alterar para que, quando há um funil selecionado com etapas definidas, o Kanban renderize as colunas vazias normalmente (com header de cada etapa), e apenas mostre a mensagem "Adicione seu primeiro lead" dentro de cada coluna ou como um banner acima
-- Mover a verificação de empty state para dentro do Kanban, mostrando colunas vazias com um botão "Novo Lead" na primeira coluna
+- Quando o canal "Geral" já existe (bloco `else` na linha 103), além de adicionar o usuário atual, também adicionar todos os membros da org que ainda não estão no canal
+- Isso resolve o caso de novos membros que entram na org depois da criação do canal
 
-### 3. Transferir leads entre funis — Individual e em massa
-**Arquivos**: `src/pages/cliente/ClienteCRM.tsx`, `src/components/crm/CrmLeadDetailSheet.tsx`
+### 3. Adicionar tratamento de erros visíveis
+**Arquivo**: `src/hooks/useTeamChat.ts`
 
-**Bulk Actions (ClienteCRM.tsx)**:
-- Adicionar um `Select` na barra de ações em massa para "Transferir para funil"
-- Listar todos os funis disponíveis (exceto o atual)
-- Ao selecionar, chamar `bulkUpdateLeads` com `{ funnel_id: novoFunnelId, stage: primeiraEtapaDoNovoFunil }`
-- Os leads transferidos são movidos para a primeira etapa do funil destino
+- Adicionar `console.error` nos pontos de falha para facilitar debug futuro
+- Mostrar toast de erro quando `ensureGeneralChannel` ou `sendMessage` falha
 
-**Lead Detail (CrmLeadDetailSheet.tsx)**:
-- Adicionar um campo "Funil" no detalhe do lead com um Select dos funis disponíveis
-- Ao trocar o funil, atualizar `funnel_id` e resetar o `stage` para a primeira etapa do funil destino
-- Necessário passar `funnels` como prop (lista de funis acessíveis)
-
-**Hook (useCrmLeads.ts)**:
-- O `updateLead` já aceita qualquer campo, incluindo `funnel_id` — não precisa de alteração no hook
-
----
-
-## Arquivos Afetados
+## Arquivos afetados
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/crm/CrmFunnelManager.tsx` | Adicionar confirmação de exclusão com AlertDialog |
-| `src/pages/cliente/ClienteCRM.tsx` | Kanban com colunas vazias + ação bulk "Transferir funil" |
-| `src/components/crm/CrmLeadDetailSheet.tsx` | Adicionar seletor de funil no detalhe do lead |
+| `src/hooks/useTeamChat.ts` | Corrigir import do Supabase + melhorar lógica de membership |
 
