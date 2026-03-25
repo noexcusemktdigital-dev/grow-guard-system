@@ -5136,24 +5136,36 @@ export type Database = {
       }
       team_chat_channels: {
         Row: {
+          avatar_url: string | null
           created_at: string
+          created_by: string | null
+          description: string | null
           id: string
           name: string | null
           organization_id: string
+          team_id: string | null
           type: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           id?: string
           name?: string | null
           organization_id: string
+          team_id?: string | null
           type?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           id?: string
           name?: string | null
           organization_id?: string
+          team_id?: string | null
           type?: string
         }
         Relationships: [
@@ -5164,6 +5176,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "team_chat_channels_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "org_teams"
+            referencedColumns: ["id"]
+          },
         ]
       }
       team_chat_members: {
@@ -5171,18 +5190,21 @@ export type Database = {
           channel_id: string
           id: string
           last_read_at: string | null
+          role: string
           user_id: string
         }
         Insert: {
           channel_id: string
           id?: string
           last_read_at?: string | null
+          role?: string
           user_id: string
         }
         Update: {
           channel_id?: string
           id?: string
           last_read_at?: string | null
+          role?: string
           user_id?: string
         }
         Relationships: [
@@ -5198,24 +5220,33 @@ export type Database = {
       team_chat_messages: {
         Row: {
           channel_id: string
-          content: string
+          content: string | null
           created_at: string
+          file_name: string | null
+          file_url: string | null
           id: string
           sender_id: string
+          type: string
         }
         Insert: {
           channel_id: string
-          content: string
+          content?: string | null
           created_at?: string
+          file_name?: string | null
+          file_url?: string | null
           id?: string
           sender_id: string
+          type?: string
         }
         Update: {
           channel_id?: string
-          content?: string
+          content?: string | null
           created_at?: string
+          file_name?: string | null
+          file_url?: string | null
           id?: string
           sender_id?: string
+          type?: string
         }
         Relationships: [
           {
@@ -6212,6 +6243,7 @@ export type Database = {
         }[]
       }
       seed_default_teams: { Args: { _org_id: string }; Returns: undefined }
+      sync_team_chat_channels: { Args: { _org_id: string }; Returns: undefined }
     }
     Enums: {
       app_role:
