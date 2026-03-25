@@ -100,7 +100,7 @@ export default function FranqueadoFinanceiro() {
         title: c.title,
         client: c.signer_name || "—",
         value,
-        participacao: value * 0.2,
+        participacao: value * FRANCHISEE_SHARE_PERCENT,
         payDay,
         status,
         invoiceUrl,

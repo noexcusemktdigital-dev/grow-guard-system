@@ -125,7 +125,8 @@ function ErrosTab() {
       await deleteError.mutateAsync(deleteTarget);
       toast.success("Erro excluído");
       setDeleteTarget(null);
-    } catch {
+    } catch (err) {
+      console.error("Erro ao excluir:", err);
       toast.error("Falha ao excluir erro");
     }
   };
