@@ -143,7 +143,7 @@ export default function FranqueadoFinanceiro() {
         <TabsContent value="visao" className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <KpiCard label="Receita Recorrente (MRR)" value={`R$ ${mrr.toLocaleString("pt-BR")}`} icon={DollarSign} delay={0} variant="accent" />
-            <KpiCard label="Sua Participação (20%)" value={`R$ ${participacao20.toLocaleString("pt-BR")}`} icon={Percent} delay={1} />
+            <KpiCard label={`Sua Participação (${FRANCHISEE_SHARE_PERCENT * 100}%)`} value={`R$ ${participacao20.toLocaleString("pt-BR")}`} icon={Percent} delay={1} />
             <KpiCard label="Contratos Ativos" value={String(activeContracts.length)} icon={FileSignature} delay={2} />
             <KpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={TrendingUp} delay={3} />
             <KpiCard label="Previsão 3 Meses" value={`R$ ${previsao3m.toLocaleString("pt-BR")}`} icon={Calendar} delay={4} />
