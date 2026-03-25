@@ -201,7 +201,10 @@ export function useTeamChat() {
       const { error } = await supabase
         .from("team_chat_messages")
         .insert({ channel_id: channelId, sender_id: user!.id, content });
-      if (error) throw error;
+      if (error) {
+        console.error("[TeamChat] sendMessage error:", error);
+        throw error;
+      }
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["team-chat-messages", vars.channelId] });
