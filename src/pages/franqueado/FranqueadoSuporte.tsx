@@ -155,7 +155,8 @@ export default function FranqueadoSuporte() {
       } as any);
       setNewMessage("");
       setMsgAttachments([]);
-    } catch {
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
       toast.error("Erro ao enviar mensagem");
     }
     setUploadingMsg(false);
