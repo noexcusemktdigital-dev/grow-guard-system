@@ -111,22 +111,24 @@ export function useClienteAgentMutations() {
 
   const duplicateAgent = useMutation({
     mutationFn: async (agent: AiAgent) => {
+      // Strip existing " (cópia)" suffixes to avoid concatenation
+      const baseName = agent.name.replace(/\s*\(cópia(?:\s*\d*)?\)\s*$/i, "");
       const { data, error } = await supabase
         .from("client_ai_agents")
         .insert({
-          name: `${agent.name} (cópia)`,
-          description: agent.description,
-          avatar_url: agent.avatar_url,
+          name: `${baseName} (cópia)`,
+          description: agent.description ?? null,
+          avatar_url: agent.avatar_url ?? null,
           status: "draft",
-          persona: agent.persona,
-          knowledge_base: agent.knowledge_base,
-          prompt_config: agent.prompt_config,
-          channel: agent.channel,
-          tags: agent.tags,
+          persona: agent.persona ?? {},
+          knowledge_base: agent.knowledge_base ?? [],
+          prompt_config: agent.prompt_config ?? {},
+          channel: agent.channel ?? "whatsapp",
+          tags: agent.tags ?? [],
           role: agent.role ?? "sdr",
           gender: agent.gender ?? null,
-          objectives: agent.objectives ?? [],
-          crm_actions: agent.crm_actions ?? {},
+          objectives: Array.isArray(agent.objectives) ? agent.objectives : [],
+          crm_actions: agent.crm_actions && typeof agent.crm_actions === "object" ? agent.crm_actions : {},
           whatsapp_instance_ids: agent.whatsapp_instance_ids ?? [],
           organization_id: orgId!,
           created_by: user?.id,

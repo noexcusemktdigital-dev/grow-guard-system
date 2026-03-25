@@ -78,14 +78,15 @@ function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; 
   const location = useLocation();
   const { level } = useCreditAlert();
   const Icon = item.icon;
-  const isActive = location.pathname.startsWith(item.path.split("?")[0]);
+  const basePath = item.path.split("?")[0];
+  const isActive = location.pathname === basePath || (basePath !== "/cliente/inicio" && location.pathname.startsWith(basePath + "/"));
 
   const showBadge = item.badgeKey === "plano-creditos" && (level === "warning" || level === "critical" || level === "zero");
 
   const link = (
     <RouterNavLink
       to={isGated ? "#" : item.path}
-      onClick={isGated ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+      onClick={isGated ? (e: React.MouseEvent) => { e.preventDefault(); import("sonner").then(m => m.toast.warning(gateReason ? GATE_REASON_LABELS[gateReason] || "Recurso bloqueado" : "Recurso bloqueado")); } : undefined}
       className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
         ${collapsed ? "justify-center px-2 mx-1" : ""}
         ${isGated ? "opacity-40 cursor-not-allowed" : ""}
@@ -169,7 +170,7 @@ function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed
 
 function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { title: string; items: SidebarItem[]; collapsed: boolean; defaultOpen?: boolean }) {
   const location = useLocation();
-  const isActive = items.some(item => location.pathname.startsWith(item.path));
+  const isActive = items.some(item => { const bp = item.path.split("?")[0]; return location.pathname === bp || location.pathname.startsWith(bp + "/"); });
   const [isOpen, setIsOpen] = useState(defaultOpen || isActive);
 
   if (collapsed) {
