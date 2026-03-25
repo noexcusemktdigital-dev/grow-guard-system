@@ -71,8 +71,10 @@ export function OnboardingTour({ enabled = true, onComplete }: { enabled?: boole
       const timer = setTimeout(() => setOpen(true), 1000);
       return () => clearTimeout(timer);
     } else {
+      // Already completed — signal parent immediately
       onComplete?.();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]);
 
   const positionTooltip = useCallback(() => {
