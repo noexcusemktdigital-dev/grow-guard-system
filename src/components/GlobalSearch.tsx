@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   CommandDialog,
   CommandEmpty,
@@ -10,32 +10,97 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
-const pages = [
-  { label: "Início", path: "/franqueadora/inicio", group: "Páginas" },
-  { label: "CRM & Expansão", path: "/franqueadora/crm", group: "Páginas" },
-  { label: "Financeiro", path: "/franqueadora/financeiro/dashboard", group: "Páginas" },
-  { label: "Unidades", path: "/franqueadora/unidades", group: "Páginas" },
-  { label: "Comunicados", path: "/franqueadora/comunicados", group: "Páginas" },
-  { label: "Marketing", path: "/franqueadora/marketing", group: "Páginas" },
-  { label: "Academy", path: "/franqueadora/academy", group: "Páginas" },
-  { label: "Metas & Ranking", path: "/franqueadora/metas", group: "Páginas" },
-  { label: "Onboarding", path: "/franqueadora/onboarding", group: "Páginas" },
-  { label: "Contratos", path: "/franqueadora/contratos/gerenciamento", group: "Páginas" },
-  { label: "Agenda", path: "/franqueadora/agenda", group: "Páginas" },
-  { label: "Atendimento", path: "/franqueadora/atendimento", group: "Páginas" },
-  { label: "Matriz de Acesso", path: "/franqueadora/matriz", group: "Páginas" },
+/* ─── Page definitions per portal ─── */
+const franqueadoraPages = [
+  { label: "Início", path: "/franqueadora/inicio" },
+  { label: "CRM & Expansão", path: "/franqueadora/crm" },
+  { label: "Financeiro", path: "/franqueadora/financeiro" },
+  { label: "Unidades", path: "/franqueadora/unidades" },
+  { label: "Comunicados", path: "/franqueadora/comunicados" },
+  { label: "Marketing", path: "/franqueadora/marketing" },
+  { label: "Academy", path: "/franqueadora/treinamentos" },
+  { label: "Metas & Ranking", path: "/franqueadora/metas" },
+  { label: "Onboarding", path: "/franqueadora/onboarding" },
+  { label: "Contratos", path: "/franqueadora/contratos" },
+  { label: "Agenda", path: "/franqueadora/agenda" },
+  { label: "Atendimento", path: "/franqueadora/atendimento" },
+  { label: "Matriz de Acesso", path: "/franqueadora/matriz" },
+  { label: "Playbooks", path: "/franqueadora/playbooks" },
+  { label: "Chat", path: "/franqueadora/chat" },
 ];
 
-const quickActions = [
-  { label: "Novo Lead", path: "/franqueadora/crm", group: "Ações Rápidas" },
-  { label: "Gerar Proposta", path: "/franqueado/propostas", group: "Ações Rápidas" },
-  { label: "Novo Comunicado", path: "/franqueadora/comunicados", group: "Ações Rápidas" },
-  { label: "Nova Receita", path: "/franqueadora/financeiro/receitas", group: "Ações Rápidas" },
+const franqueadoraActions = [
+  { label: "Novo Lead", path: "/franqueadora/crm" },
+  { label: "Novo Comunicado", path: "/franqueadora/comunicados" },
 ];
+
+const franqueadoPages = [
+  { label: "Início", path: "/franqueado/inicio" },
+  { label: "Agenda", path: "/franqueado/agenda" },
+  { label: "Comunicados", path: "/franqueado/comunicados" },
+  { label: "Prospecção IA", path: "/franqueado/prospeccao" },
+  { label: "Estratégia", path: "/franqueado/estrategia" },
+  { label: "Propostas", path: "/franqueado/propostas" },
+  { label: "CRM", path: "/franqueado/crm" },
+  { label: "Materiais", path: "/franqueado/materiais" },
+  { label: "Academy", path: "/franqueado/academy" },
+  { label: "Financeiro", path: "/franqueado/financeiro" },
+  { label: "Contratos", path: "/franqueado/contratos" },
+  { label: "Diagnóstico", path: "/franqueado/diagnostico" },
+  { label: "Minha Unidade", path: "/franqueado/unidade" },
+  { label: "Metas & Ranking", path: "/franqueado/metas" },
+  { label: "Suporte", path: "/franqueado/suporte" },
+];
+
+const franqueadoActions = [
+  { label: "Novo Lead", path: "/franqueado/crm" },
+  { label: "Nova Proposta", path: "/franqueado/propostas" },
+];
+
+const clientePages = [
+  { label: "Início", path: "/cliente/inicio" },
+  { label: "Tarefas", path: "/cliente/checklist" },
+  { label: "Agenda", path: "/cliente/agenda" },
+  { label: "Gamificação", path: "/cliente/gamificacao" },
+  { label: "Plano de Vendas", path: "/cliente/plano-vendas" },
+  { label: "CRM", path: "/cliente/crm" },
+  { label: "Conversas", path: "/cliente/chat" },
+  { label: "Agentes IA", path: "/cliente/agentes-ia" },
+  { label: "Scripts", path: "/cliente/scripts" },
+  { label: "Disparos", path: "/cliente/disparos" },
+  { label: "Relatórios", path: "/cliente/dashboard" },
+  { label: "Plano de Marketing", path: "/cliente/plano-marketing" },
+  { label: "Conteúdos", path: "/cliente/conteudos" },
+  { label: "Redes Sociais", path: "/cliente/redes-sociais" },
+  { label: "Sites", path: "/cliente/sites" },
+  { label: "Tráfego Pago", path: "/cliente/trafego-pago" },
+  { label: "Integrações", path: "/cliente/integracoes" },
+  { label: "Plano & Créditos", path: "/cliente/plano-creditos" },
+  { label: "Configurações", path: "/cliente/configuracoes" },
+  { label: "Avaliações", path: "/cliente/avaliacoes" },
+  { label: "Suporte", path: "/cliente/suporte" },
+  { label: "Marketing Hub", path: "/cliente/marketing-hub" },
+  { label: "Comunicados", path: "/cliente/comunicados" },
+];
+
+const clienteActions = [
+  { label: "Novo Lead", path: "/cliente/crm" },
+  { label: "Novo Script", path: "/cliente/scripts" },
+  { label: "Novo Conteúdo", path: "/cliente/conteudos" },
+];
+
+function getPortalData(pathname: string) {
+  if (pathname.startsWith("/cliente")) return { pages: clientePages, actions: clienteActions };
+  if (pathname.startsWith("/franqueado/") || pathname === "/franqueado") return { pages: franqueadoPages, actions: franqueadoActions };
+  return { pages: franqueadoraPages, actions: franqueadoraActions };
+}
 
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const { pages, actions } = useMemo(() => getPortalData(location.pathname), [location.pathname]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -77,13 +142,15 @@ export function GlobalSearch() {
               </CommandItem>
             ))}
           </CommandGroup>
-          <CommandGroup heading="Ações Rápidas">
-            {quickActions.map((item) => (
-              <CommandItem key={item.path + item.label} onSelect={() => handleSelect(item.path)}>
-                {item.label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          {actions.length > 0 && (
+            <CommandGroup heading="Ações Rápidas">
+              {actions.map((item) => (
+                <CommandItem key={item.path + item.label} onSelect={() => handleSelect(item.path)}>
+                  {item.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
         </CommandList>
       </CommandDialog>
     </>
