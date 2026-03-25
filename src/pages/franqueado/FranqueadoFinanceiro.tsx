@@ -44,7 +44,7 @@ export default function FranqueadoFinanceiro() {
 
   // KPIs
   const mrr = useMemo(() => activeContracts.reduce((s, c) => s + Number((c as any).monthly_value || 0), 0), [activeContracts]);
-  const participacao20 = mrr * 0.2;
+  const participacao20 = mrr * FRANCHISEE_SHARE_PERCENT;
   const ticketMedio = activeContracts.length > 0 ? mrr / activeContracts.length : 0;
   const previsao3m = mrr * 3;
 
