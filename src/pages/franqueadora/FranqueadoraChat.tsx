@@ -14,6 +14,7 @@ export default function FranqueadoraChat() {
     channels,
     channelsLoading,
     members,
+    channelMemberships,
     unreadCounts,
     ensureGeneralChannel,
     createCustomGroup,
@@ -180,36 +181,42 @@ export default function FranqueadoraChat() {
 
             <Separator className="my-2" />
 
-            {/* DM channels */}
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1">
-              Mensagens Diretas
-            </p>
-            {dmChannels.map((ch) => {
-              const name = getDMPartnerName(ch);
-              return renderChannelButton(ch, name, <User className="h-3.5 w-3.5 shrink-0" />);
-            })}
-
-            <Separator className="my-2" />
-
-            {/* Members list for starting DMs */}
+            {/* Members (clicking opens/creates DM) */}
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1">
               Membros
             </p>
-            {otherMembers.map((m) => (
-              <button
-                key={m.user_id}
-                onClick={() => handleStartDM(m.user_id)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-foreground hover:bg-muted transition-colors"
-              >
-                <Avatar className="h-5 w-5">
-                  <AvatarImage src={m.avatar_url || undefined} />
-                  <AvatarFallback className="text-[8px] bg-muted">
-                    {getInitials(m.full_name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="truncate">{m.full_name}</span>
-              </button>
-            ))}
+            {otherMembers.map((m) => {
+              const existingDm = dmChannels.find((ch) => {
+                const partner = channelMemberships.filter((cm) => cm.channel_id === ch.id);
+                return partner.some((p) => p.user_id === m.user_id);
+              });
+              const unread = existingDm ? (unreadCounts[existingDm.id] || 0) : 0;
+              const isSelected = existingDm?.id === selectedChannelId;
+              return (
+                <button
+                  key={m.user_id}
+                  onClick={() => handleStartDM(m.user_id)}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
+                    isSelected
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={m.avatar_url || undefined} />
+                    <AvatarFallback className="text-[8px] bg-muted">
+                      {getInitials(m.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate flex-1 text-left">{m.full_name}</span>
+                  {unread > 0 && (
+                    <Badge variant="destructive" className="h-5 min-w-[20px] px-1 text-[10px] font-bold">
+                      {unread > 99 ? "99+" : unread}
+                    </Badge>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </ScrollArea>
       </div>

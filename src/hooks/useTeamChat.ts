@@ -434,6 +434,7 @@ export function useTeamChat() {
     channels: channelsQuery.data || [],
     channelsLoading: channelsQuery.isLoading,
     members: membersQuery.data || [],
+    channelMemberships: channelMembersQuery.data || [],
     unreadCounts,
     ensureGeneralChannel,
     createCustomGroup,
