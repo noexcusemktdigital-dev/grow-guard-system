@@ -306,7 +306,7 @@ export default function ClienteConteudos() {
         open={showCreditsDialog}
         onOpenChange={setShowCreditsDialog}
         actionLabel="este conteúdo"
-        creditCost={200}
+        creditCost={CREDIT_COST_APPROVE_CONTENT}
       />
     </div>
   );
