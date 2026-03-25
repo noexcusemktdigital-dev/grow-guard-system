@@ -118,7 +118,7 @@ export default function ClienteConteudos() {
     setConfirmApproveAll(false);
     try {
       await approveBatchMutation.mutateAsync(generatedIds);
-      toast({ title: "Lote aprovado!", description: `${generatedIds.length * 200} créditos debitados.` });
+      toast({ title: "Lote aprovado!", description: `${generatedIds.length * CREDIT_COST_APPROVE_CONTENT} créditos debitados.` });
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) setShowCreditsDialog(true);
       else toast({ title: "Erro", description: err?.message, variant: "destructive" });
