@@ -113,7 +113,8 @@ function ErrosTab() {
       toast.success("Erro marcado como resolvido");
       setResolveDialog(null);
       setResolveNote("");
-    } catch {
+    } catch (err) {
+      console.error("Erro ao resolver:", err);
       toast.error("Falha ao resolver erro");
     }
   };
