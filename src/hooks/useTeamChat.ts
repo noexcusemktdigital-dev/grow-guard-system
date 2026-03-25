@@ -101,9 +101,11 @@ export function useTeamChat() {
           );
         }
       } else {
-        // Ensure current user is member
+        // Ensure ALL org members are in the channel (handles new members)
+        const members = membersQuery.data || [];
+        const allMembers = members.length > 0 ? members : [{ user_id: user.id }];
         await supabase.from("team_chat_members").upsert(
-          { channel_id: channelId, user_id: user.id },
+          allMembers.map((m) => ({ channel_id: channelId!, user_id: m.user_id })),
           { onConflict: "channel_id,user_id" }
         );
       }
