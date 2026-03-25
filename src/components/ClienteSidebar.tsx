@@ -151,14 +151,18 @@ function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed
 
   return (
     <nav className="flex flex-col gap-[2px]">
-      {visibleItems.map((item) => (
-        <NavItem
-          key={item.path}
-          item={item}
-          collapsed={collapsed}
-          isGated={!!getGateReason(item.path)}
-        />
-      ))}
+      {visibleItems.map((item) => {
+        const reason = getGateReason(item.path);
+        return (
+          <NavItem
+            key={item.path}
+            item={item}
+            collapsed={collapsed}
+            isGated={!!reason}
+            gateReason={reason}
+          />
+        );
+      })}
     </nav>
   );
 }
