@@ -72,9 +72,6 @@ Deno.serve(async (req) => {
           name: "Diagnóstico PRO Ltda",
           type: "cliente",
           parent_org_id: franqueadoraOrg?.id || null,
-          document: "12.345.678/0001-90",
-          phone: "(11) 99999-0000",
-          segment: "Tecnologia",
         })
         .select("id")
         .single();
