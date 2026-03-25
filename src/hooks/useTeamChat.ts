@@ -2,13 +2,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useMemo } from "react";
 
 export interface TeamChannel {
   id: string;
   organization_id: string;
-  type: "group" | "direct";
+  type: "group" | "direct" | "custom";
   name: string | null;
+  description: string | null;
+  avatar_url: string | null;
+  created_by: string | null;
+  team_id: string | null;
   created_at: string;
 }
 
@@ -16,7 +20,10 @@ export interface TeamMessage {
   id: string;
   channel_id: string;
   sender_id: string;
-  content: string;
+  content: string | null;
+  type: string;
+  file_url: string | null;
+  file_name: string | null;
   created_at: string;
   sender_name?: string;
   sender_avatar?: string;
@@ -28,28 +35,54 @@ export interface TeamMember {
   avatar_url: string | null;
 }
 
+export interface ChannelMembership {
+  channel_id: string;
+  user_id: string;
+  last_read_at: string | null;
+  role: string;
+}
+
 export function useTeamChat() {
   const { user } = useAuth();
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
   const channelSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // Fetch channels
+  // Fetch channels user is a member of
   const channelsQuery = useQuery({
     queryKey: ["team-chat-channels", orgId],
     queryFn: async () => {
+      // Get channels the user is member of
+      const { data: memberOf } = await supabase
+        .from("team_chat_members")
+        .select("channel_id")
+        .eq("user_id", user!.id);
+
+      const channelIds = (memberOf || []).map((m) => m.channel_id);
+
+      if (channelIds.length === 0) {
+        // Also get org-wide channels
+        const { data, error } = await supabase
+          .from("team_chat_channels")
+          .select("*")
+          .eq("organization_id", orgId!)
+          .order("created_at");
+        if (error) throw error;
+        return (data || []) as TeamChannel[];
+      }
+
       const { data, error } = await supabase
         .from("team_chat_channels")
         .select("*")
         .eq("organization_id", orgId!)
         .order("created_at");
       if (error) throw error;
-      return data as TeamChannel[];
+      return (data || []) as TeamChannel[];
     },
-    enabled: !!orgId,
+    enabled: !!orgId && !!user,
   });
 
-  // Fetch org members (for DMs and sender names)
+  // Fetch org members
   const membersQuery = useQuery({
     queryKey: ["team-chat-org-members", orgId],
     queryFn: async () => {
@@ -67,18 +100,83 @@ export function useTeamChat() {
     enabled: !!orgId,
   });
 
-  // Ensure general channel exists + user is member
+  // Fetch all channel memberships (for unread + DM names)
+  const channelMembersQuery = useQuery({
+    queryKey: ["team-chat-all-members", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("team_chat_members")
+        .select("channel_id, user_id, last_read_at, role");
+      if (error) throw error;
+      return (data || []) as ChannelMembership[];
+    },
+    enabled: !!orgId,
+  });
+
+  // Fetch last message timestamp per channel (for unread calc)
+  const lastMessagesQuery = useQuery({
+    queryKey: ["team-chat-last-messages", orgId],
+    queryFn: async () => {
+      const channels = channelsQuery.data || [];
+      if (channels.length === 0) return {};
+
+      const result: Record<string, { created_at: string; count: number }> = {};
+
+      for (const ch of channels) {
+        const { count } = await supabase
+          .from("team_chat_messages")
+          .select("*", { count: "exact", head: true })
+          .eq("channel_id", ch.id);
+
+        const myMembership = channelMembersQuery.data?.find(
+          (m) => m.channel_id === ch.id && m.user_id === user?.id
+        );
+
+        if (myMembership?.last_read_at) {
+          const { count: unreadCount } = await supabase
+            .from("team_chat_messages")
+            .select("*", { count: "exact", head: true })
+            .eq("channel_id", ch.id)
+            .gt("created_at", myMembership.last_read_at);
+
+          result[ch.id] = { created_at: myMembership.last_read_at, count: unreadCount || 0 };
+        } else {
+          result[ch.id] = { created_at: "", count: count || 0 };
+        }
+      }
+
+      return result;
+    },
+    enabled: !!orgId && !!user && (channelsQuery.data?.length ?? 0) > 0 && (channelMembersQuery.data?.length ?? 0) > 0,
+    refetchInterval: 30000,
+  });
+
+  // Unread counts map
+  const unreadCounts = useMemo(() => {
+    const data = lastMessagesQuery.data || {};
+    const counts: Record<string, number> = {};
+    for (const [chId, info] of Object.entries(data)) {
+      counts[chId] = info.count;
+    }
+    return counts;
+  }, [lastMessagesQuery.data]);
+
+  // Ensure general channel + sync team channels
   const ensureGeneralChannel = useMutation({
     mutationFn: async () => {
       if (!orgId || !user) return null;
 
-      // Check if general channel exists
+      // Sync team-based channels
+      await supabase.rpc("sync_team_chat_channels", { _org_id: orgId });
+
+      // Ensure #Geral exists
       const { data: existing } = await supabase
         .from("team_chat_channels")
         .select("id")
         .eq("organization_id", orgId)
         .eq("type", "group")
         .eq("name", "Geral")
+        .is("team_id", null)
         .maybeSingle();
 
       let channelId = existing?.id;
@@ -91,21 +189,13 @@ export function useTeamChat() {
           .single();
         if (error) throw error;
         channelId = created.id;
+      }
 
-        // Add all org members
-        const members = membersQuery.data || [];
-        if (members.length > 0) {
-          await supabase.from("team_chat_members").upsert(
-            members.map((m) => ({ channel_id: channelId!, user_id: m.user_id })),
-            { onConflict: "channel_id,user_id" }
-          );
-        }
-      } else {
-        // Ensure ALL org members are in the channel (handles new members)
-        const members = membersQuery.data || [];
-        const allMembers = members.length > 0 ? members : [{ user_id: user.id }];
+      // Add all org members to Geral
+      const members = membersQuery.data || [];
+      if (members.length > 0) {
         await supabase.from("team_chat_members").upsert(
-          allMembers.map((m) => ({ channel_id: channelId!, user_id: m.user_id })),
+          members.map((m) => ({ channel_id: channelId!, user_id: m.user_id })),
           { onConflict: "channel_id,user_id" }
         );
       }
@@ -115,12 +205,46 @@ export function useTeamChat() {
     },
   });
 
+  // Create custom group
+  const createCustomGroup = useMutation({
+    mutationFn: async ({ name, description, memberIds }: { name: string; description?: string; memberIds: string[] }) => {
+      if (!orgId || !user) throw new Error("Not authenticated");
+
+      const { data: ch, error } = await supabase
+        .from("team_chat_channels")
+        .insert({
+          organization_id: orgId,
+          type: "group",
+          name,
+          description: description || null,
+          created_by: user.id,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+
+      // Add creator as admin + selected members
+      const allMembers = [
+        { channel_id: ch.id, user_id: user.id, role: "admin" },
+        ...memberIds.filter((id) => id !== user.id).map((id) => ({
+          channel_id: ch.id,
+          user_id: id,
+          role: "member",
+        })),
+      ];
+
+      await supabase.from("team_chat_members").insert(allMembers);
+
+      qc.invalidateQueries({ queryKey: ["team-chat-channels"] });
+      return ch.id;
+    },
+  });
+
   // Get or create DM channel
   const getOrCreateDM = useCallback(
     async (otherUserId: string) => {
       if (!orgId || !user) return null;
 
-      // Find existing DM with this user
       const { data: myChannels } = await supabase
         .from("team_chat_members")
         .select("channel_id")
@@ -149,7 +273,6 @@ export function useTeamChat() {
         }
       }
 
-      // Create new DM
       const { data: newCh, error } = await supabase
         .from("team_chat_channels")
         .insert({ organization_id: orgId, type: "direct", name: null })
@@ -197,10 +320,23 @@ export function useTeamChat() {
 
   // Send message
   const sendMessage = useMutation({
-    mutationFn: async ({ channelId, content }: { channelId: string; content: string }) => {
+    mutationFn: async ({ channelId, content, type = "text", fileUrl, fileName }: {
+      channelId: string;
+      content?: string;
+      type?: string;
+      fileUrl?: string;
+      fileName?: string;
+    }) => {
       const { error } = await supabase
         .from("team_chat_messages")
-        .insert({ channel_id: channelId, sender_id: user!.id, content });
+        .insert({
+          channel_id: channelId,
+          sender_id: user!.id,
+          content: content || null,
+          type,
+          file_url: fileUrl || null,
+          file_name: fileName || null,
+        });
       if (error) {
         console.error("[TeamChat] sendMessage error:", error);
         throw error;
@@ -208,8 +344,36 @@ export function useTeamChat() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["team-chat-messages", vars.channelId] });
+      qc.invalidateQueries({ queryKey: ["team-chat-last-messages"] });
     },
   });
+
+  // Mark channel as read
+  const markAsRead = useCallback(
+    async (channelId: string) => {
+      if (!user) return;
+      await supabase
+        .from("team_chat_members")
+        .update({ last_read_at: new Date().toISOString() })
+        .eq("channel_id", channelId)
+        .eq("user_id", user.id);
+      qc.invalidateQueries({ queryKey: ["team-chat-last-messages"] });
+    },
+    [user, qc]
+  );
+
+  // Upload file to chat-media bucket
+  const uploadFile = useCallback(
+    async (file: File, channelId: string) => {
+      const ext = file.name.split(".").pop();
+      const path = `${orgId}/${channelId}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("chat-media").upload(path, file);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(path);
+      return { url: urlData.publicUrl, name: file.name };
+    },
+    [orgId]
+  );
 
   // Realtime subscription
   const subscribeToChannel = useCallback(
@@ -227,6 +391,7 @@ export function useTeamChat() {
           { event: "INSERT", schema: "public", table: "team_chat_messages", filter: `channel_id=eq.${channelId}` },
           () => {
             qc.invalidateQueries({ queryKey: ["team-chat-messages", channelId] });
+            qc.invalidateQueries({ queryKey: ["team-chat-last-messages"] });
           }
         )
         .subscribe();
@@ -236,7 +401,6 @@ export function useTeamChat() {
     [qc]
   );
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (channelSubRef.current) {
@@ -244,29 +408,6 @@ export function useTeamChat() {
       }
     };
   }, []);
-
-  // Get DM channel members (to show partner name)
-  const getDMPartner = useCallback(
-    (channel: TeamChannel) => {
-      if (channel.type !== "direct" || !user) return null;
-      // We'll need to fetch members for this channel — for now return null
-      return null;
-    },
-    [user]
-  );
-
-  // Fetch channel members for DM name resolution
-  const channelMembersQuery = useQuery({
-    queryKey: ["team-chat-all-members", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("team_chat_members")
-        .select("channel_id, user_id");
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!orgId,
-  });
 
   const getDMPartnerName = useCallback(
     (channel: TeamChannel) => {
@@ -280,16 +421,30 @@ export function useTeamChat() {
     [user, channelMembersQuery.data, membersQuery.data]
   );
 
+  // Get channel members
+  const getChannelMembers = useCallback(
+    (channelId: string) => {
+      const memberIds = channelMembersQuery.data?.filter((m) => m.channel_id === channelId).map((m) => m.user_id) || [];
+      return membersQuery.data?.filter((m) => memberIds.includes(m.user_id)) || [];
+    },
+    [channelMembersQuery.data, membersQuery.data]
+  );
+
   return {
     channels: channelsQuery.data || [],
     channelsLoading: channelsQuery.isLoading,
     members: membersQuery.data || [],
+    unreadCounts,
     ensureGeneralChannel,
+    createCustomGroup,
     getOrCreateDM,
     useChannelMessages,
     sendMessage,
     subscribeToChannel,
     getDMPartnerName,
+    getChannelMembers,
+    markAsRead,
+    uploadFile,
     user,
   };
 }

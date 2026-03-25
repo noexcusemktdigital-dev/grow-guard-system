@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Send, Paperclip, Image as ImageIcon, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,37 +13,92 @@ interface Props {
   isLoading: boolean;
   currentUserId: string;
   onSend: (content: string) => void;
+  onSendFile?: (file: File) => void;
   channelName: string;
+  channelDescription?: string | null;
+  memberCount?: number;
 }
 
-export function TeamChatConversation({ messages, isLoading, currentUserId, onSend, channelName }: Props) {
+function isImageFile(url: string) {
+  return /\.(jpe?g|png|gif|webp|svg|bmp)(\?|$)/i.test(url);
+}
+
+export function TeamChatConversation({
+  messages,
+  isLoading,
+  currentUserId,
+  onSend,
+  onSendFile,
+  channelName,
+  channelDescription,
+  memberCount,
+}: Props) {
   const [text, setText] = useState("");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
   const handleSend = () => {
+    if (pendingFile && onSendFile) {
+      onSendFile(pendingFile);
+      setPendingFile(null);
+      setText("");
+      return;
+    }
     const trimmed = text.trim();
     if (!trimmed) return;
     onSend(trimmed);
     setText("");
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPendingFile(file);
+    }
+    e.target.value = "";
+  };
+
   const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+  const renderMessageContent = (msg: TeamMessage) => {
+    if (msg.type === "image" && msg.file_url) {
+      return (
+        <div>
+          <img src={msg.file_url} alt={msg.file_name || "Imagem"} className="max-w-[280px] max-h-[200px] rounded-md object-cover cursor-pointer" loading="lazy" />
+          {msg.content && <p className="mt-1 text-sm">{msg.content}</p>}
+        </div>
+      );
+    }
+    if (msg.type === "file" && msg.file_url) {
+      return (
+        <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-md bg-background/50 hover:bg-background/80 transition-colors">
+          <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+          <span className="text-sm font-medium truncate">{msg.file_name || "Arquivo"}</span>
+        </a>
+      );
+    }
+    return msg.content ? <p className="whitespace-pre-wrap break-words">{msg.content}</p> : null;
+  };
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b px-4 py-3 flex items-center gap-2">
-        <h2 className="font-semibold text-foreground">{channelName}</h2>
+      <div className="border-b px-4 py-3 flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold text-foreground">{channelName}</h2>
+          {channelDescription && (
+            <p className="text-xs text-muted-foreground">{channelDescription}</p>
+          )}
+        </div>
+        {memberCount !== undefined && (
+          <span className="text-xs text-muted-foreground">{memberCount} membros</span>
+        )}
       </div>
 
       {/* Messages */}
@@ -86,7 +141,7 @@ export function TeamChatConversation({ messages, isLoading, currentUserId, onSen
                           : "bg-muted text-foreground rounded-tl-sm"
                       }`}
                     >
-                      {msg.content}
+                      {renderMessageContent(msg)}
                     </div>
                     <p className={`text-[10px] text-muted-foreground mt-0.5 ${isMine ? "text-right" : ""}`}>
                       {format(new Date(msg.created_at), "HH:mm", { locale: ptBR })}
@@ -100,6 +155,21 @@ export function TeamChatConversation({ messages, isLoading, currentUserId, onSen
         )}
       </ScrollArea>
 
+      {/* Pending file preview */}
+      {pendingFile && (
+        <div className="border-t px-4 py-2 flex items-center gap-2 bg-muted/30">
+          {pendingFile.type.startsWith("image/") ? (
+            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          )}
+          <span className="text-sm text-foreground truncate flex-1">{pendingFile.name}</span>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingFile(null)}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+
       {/* Input */}
       <div className="border-t px-4 py-3">
         <form
@@ -109,6 +179,26 @@ export function TeamChatConversation({ messages, isLoading, currentUserId, onSen
             handleSend();
           }}
         >
+          {onSendFile && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                onChange={handleFileSelect}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -116,7 +206,7 @@ export function TeamChatConversation({ messages, isLoading, currentUserId, onSen
             className="flex-1"
             autoFocus
           />
-          <Button type="submit" size="icon" disabled={!text.trim()}>
+          <Button type="submit" size="icon" disabled={!text.trim() && !pendingFile}>
             <Send className="h-4 w-4" />
           </Button>
         </form>
