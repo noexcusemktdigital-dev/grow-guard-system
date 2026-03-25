@@ -315,9 +315,9 @@ export default function ClienteCRM() {
     if (selectedFunnel) {
       const dbStages = selectedFunnel.stages as any[];
       if (Array.isArray(dbStages) && dbStages.length > 0) {
-        return dbStages.map((s: any) => ({
-          key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || "stage",
-          label: s.label || "Etapa",
+        return dbStages.map((s: any, idx: number) => ({
+          key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || `stage_${idx}`,
+          label: s.label || `Etapa ${idx + 1}`,
           color: s.color || "blue",
           icon: s.icon || "circle-dot",
         }));

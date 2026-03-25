@@ -1112,7 +1112,7 @@ export default function ClientePlanoMarketing() {
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> ~7 minutos</span>
-            <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> 300 créditos</span>
+            <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> 50 créditos</span>
             <span className="flex items-center gap-1">Saldo: {wallet?.balance ?? 0}</span>
           </div>
           <Button size="lg" onClick={() => setShowChat(true)} className="gap-2 mt-2">
