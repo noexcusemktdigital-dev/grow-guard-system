@@ -884,7 +884,7 @@ function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, statu
               </AlertDialog>
               {status !== "approved" && (
                 <Button size="sm" onClick={onApprove} disabled={isApproving} className="gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {isApproving ? "Aprovando..." : "Aprovar (300 créditos)"}
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {isApproving ? "Aprovando..." : "Aprovar (50 créditos)"}
                 </Button>
               )}
             </div>
@@ -1016,7 +1016,7 @@ export default function ClientePlanoMarketing() {
     if (!activeStrategy?.id) return;
     try {
       await approveStrategy.mutateAsync(activeStrategy.id);
-      toast({ title: "Estratégia aprovada! ✅", description: "300 créditos foram consumidos." });
+      toast({ title: "Estratégia aprovada! ✅", description: "50 créditos foram consumidos." });
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) {
         setShowCreditsDialog(true);
@@ -1112,7 +1112,7 @@ export default function ClientePlanoMarketing() {
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> ~7 minutos</span>
-            <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> 300 créditos</span>
+            <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> 50 créditos</span>
             <span className="flex items-center gap-1">Saldo: {wallet?.balance ?? 0}</span>
           </div>
           <Button size="lg" onClick={() => setShowChat(true)} className="gap-2 mt-2">

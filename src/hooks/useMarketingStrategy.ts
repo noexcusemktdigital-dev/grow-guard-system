@@ -121,7 +121,7 @@ export function useApproveStrategy() {
       // Call debit via RPC (server-side)
       const { error: debitError } = await supabase.rpc("debit_credits" as any, {
         _org_id: orgId,
-        _amount: 300,
+        _amount: 50,
         _description: "Estratégia de marketing aprovada",
         _source: "marketing-strategy",
       });

@@ -64,7 +64,17 @@ const sistemaSection: SidebarItem[] = [
   { label: "Configurações", icon: Settings, path: "/cliente/configuracoes?tab=organizacao" },
 ] as SidebarItem[];
 
-function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: boolean; isGated: boolean }) {
+const GATE_REASON_LABELS: Record<string, string> = {
+  trial_expired: "Trial expirado",
+  trial_limited: "Disponível no plano pago",
+  no_credits: "Sem créditos",
+  no_sales_plan: "Complete o Plano de Vendas",
+  no_marketing_strategy: "Complete o Plano de Marketing",
+  admin_only: "Apenas administradores",
+  plan_locked: "Upgrade de plano necessário",
+};
+
+function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; collapsed: boolean; isGated: boolean; gateReason: string | null }) {
   const location = useLocation();
   const { level } = useCreditAlert();
   const Icon = item.icon;
@@ -74,11 +84,12 @@ function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: b
 
   const link = (
     <RouterNavLink
-      to={item.path}
+      to={isGated ? "#" : item.path}
+      onClick={isGated ? (e: React.MouseEvent) => e.preventDefault() : undefined}
       className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
         ${collapsed ? "justify-center px-2 mx-1" : ""}
-        ${isGated ? "opacity-40 pointer-events-auto" : ""}
-        ${isActive
+        ${isGated ? "opacity-40 cursor-not-allowed" : ""}
+        ${isActive && !isGated
           ? "bg-sidebar-primary/15 text-white font-medium"
           : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
         }
@@ -86,9 +97,9 @@ function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: b
     >
       <div className="relative">
         <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
-          isActive ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
+          isActive && !isGated ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
         }`} />
-        {isActive && (
+        {isActive && !isGated && (
           <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-sidebar-primary" />
         )}
       </div>
@@ -106,12 +117,23 @@ function NavItem({ item, collapsed, isGated }: { item: SidebarItem; collapsed: b
     </RouterNavLink>
   );
 
+  if (isGated && !collapsed) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" className="text-xs font-medium">
+          {gateReason ? GATE_REASON_LABELS[gateReason] || "Recurso bloqueado" : "Recurso bloqueado"}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
   if (collapsed) {
     return (
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>{link}</TooltipTrigger>
         <TooltipContent side="right" className="text-xs font-medium">
-          {item.label}
+          {item.label}{isGated && gateReason ? ` · ${GATE_REASON_LABELS[gateReason]}` : ""}
         </TooltipContent>
       </Tooltip>
     );
@@ -129,14 +151,18 @@ function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed
 
   return (
     <nav className="flex flex-col gap-[2px]">
-      {visibleItems.map((item) => (
-        <NavItem
-          key={item.path}
-          item={item}
-          collapsed={collapsed}
-          isGated={!!getGateReason(item.path)}
-        />
-      ))}
+      {visibleItems.map((item) => {
+        const reason = getGateReason(item.path);
+        return (
+          <NavItem
+            key={item.path}
+            item={item}
+            collapsed={collapsed}
+            isGated={!!reason}
+            gateReason={reason}
+          />
+        );
+      })}
     </nav>
   );
 }
@@ -211,7 +237,7 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
           <CollapsibleSection title="Vendas" items={vendasSection} collapsed={collapsed} defaultOpen />
         </div>
         <div data-tour="marketing">
-          <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
+          <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} defaultOpen />
         </div>
         <div data-tour="sistema">
           <CollapsibleSection title="Sistema" items={sistemaSection} collapsed={collapsed} />
