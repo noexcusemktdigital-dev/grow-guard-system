@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const FRANCHISEE_SHARE_PERCENT = 0.2; // 20% participation
 
 export default function FranqueadoFinanceiro() {
   const { data: contracts, isLoading: loadingCon } = useContracts();
