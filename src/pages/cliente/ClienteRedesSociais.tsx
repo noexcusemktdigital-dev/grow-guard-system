@@ -184,7 +184,10 @@ export default function ClienteRedesSociais() {
         .eq("id", id)
         .single();
       if (!error && data) setContentData(data);
-    } catch {}
+    } catch (err) {
+      console.error("Erro ao carregar conteúdo:", err);
+      toast({ title: "Erro ao carregar conteúdo vinculado", variant: "destructive" });
+    }
   };
 
   const resetAll = () => {
