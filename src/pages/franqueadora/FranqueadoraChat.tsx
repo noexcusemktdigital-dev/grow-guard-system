@@ -14,6 +14,7 @@ export default function FranqueadoraChat() {
     channels,
     channelsLoading,
     members,
+    channelMemberships,
     unreadCounts,
     ensureGeneralChannel,
     createCustomGroup,
