@@ -884,7 +884,7 @@ function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, statu
               </AlertDialog>
               {status !== "approved" && (
                 <Button size="sm" onClick={onApprove} disabled={isApproving} className="gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {isApproving ? "Aprovando..." : "Aprovar (300 créditos)"}
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {isApproving ? "Aprovando..." : "Aprovar (50 créditos)"}
                 </Button>
               )}
             </div>
