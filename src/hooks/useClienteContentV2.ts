@@ -172,9 +172,9 @@ export function useApproveContent() {
 
       const { error: debitError } = await supabase.rpc("debit_credits" as any, {
         _org_id: orgId,
-        _amount: 200,
+        _amount: CREDIT_COST_APPROVE_CONTENT,
         _description: "Conteúdo aprovado",
-        _source: "generate-content",
+        _source: "approve-content",
       });
       if (debitError) throw debitError;
 
