@@ -170,7 +170,7 @@ function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed
 
 function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { title: string; items: SidebarItem[]; collapsed: boolean; defaultOpen?: boolean }) {
   const location = useLocation();
-  const isActive = items.some(item => location.pathname.startsWith(item.path));
+  const isActive = items.some(item => { const bp = item.path.split("?")[0]; return location.pathname === bp || location.pathname.startsWith(bp + "/"); });
   const [isOpen, setIsOpen] = useState(defaultOpen || isActive);
 
   if (collapsed) {
