@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import {
   useContentHistory, useGenerateContent, useApproveContent,
-  useApproveBatch, useContentQuota, useDeleteContent,
+  useApproveBatch, useContentQuota, useDeleteContent, CREDIT_COST_APPROVE_CONTENT,
 } from "@/hooks/useClienteContentV2";
 import { useStrategyData } from "@/hooks/useStrategyData";
 import { useNavigate } from "react-router-dom";
