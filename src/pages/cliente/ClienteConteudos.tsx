@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import {
   useContentHistory, useGenerateContent, useApproveContent,
-  useApproveBatch, useContentQuota, useDeleteContent,
+  useApproveBatch, useContentQuota, useDeleteContent, CREDIT_COST_APPROVE_CONTENT,
 } from "@/hooks/useClienteContentV2";
 import { useStrategyData } from "@/hooks/useStrategyData";
 import { useNavigate } from "react-router-dom";
@@ -107,7 +107,7 @@ export default function ClienteConteudos() {
     if (!id) return;
     try {
       await approveMutation.mutateAsync(id);
-      toast({ title: "Conteúdo aprovado!", description: "200 créditos debitados." });
+      toast({ title: "Conteúdo aprovado!", description: `${CREDIT_COST_APPROVE_CONTENT} créditos debitados.` });
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) setShowCreditsDialog(true);
       else toast({ title: "Erro", description: err?.message, variant: "destructive" });
@@ -118,7 +118,7 @@ export default function ClienteConteudos() {
     setConfirmApproveAll(false);
     try {
       await approveBatchMutation.mutateAsync(generatedIds);
-      toast({ title: "Lote aprovado!", description: `${generatedIds.length * 200} créditos debitados.` });
+      toast({ title: "Lote aprovado!", description: `${generatedIds.length * CREDIT_COST_APPROVE_CONTENT} créditos debitados.` });
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) setShowCreditsDialog(true);
       else toast({ title: "Erro", description: err?.message, variant: "destructive" });
@@ -243,7 +243,7 @@ export default function ClienteConteudos() {
                     <RotateCcw className="w-4 h-4 mr-1" /> Novo Lote
                   </Button>
                   <Button size="sm" onClick={() => setConfirmApproveAll(true)} disabled={approveBatchMutation.isPending}>
-                    <Check className="w-4 h-4 mr-1" /> Aprovar Tudo ({generatedIds.length * 200} créditos)
+                    <Check className="w-4 h-4 mr-1" /> Aprovar Tudo ({generatedIds.length * CREDIT_COST_APPROVE_CONTENT} créditos)
                   </Button>
                 </div>
               </div>
@@ -278,7 +278,7 @@ export default function ClienteConteudos() {
           <AlertDialogHeader>
             <AlertDialogTitle>Aprovar todos os conteúdos?</AlertDialogTitle>
             <AlertDialogDescription>
-              Isso consumirá <strong>{generatedIds.length * 200} créditos</strong> da sua carteira.
+              Isso consumirá <strong>{generatedIds.length * CREDIT_COST_APPROVE_CONTENT} créditos</strong> da sua carteira.
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -306,7 +306,7 @@ export default function ClienteConteudos() {
         open={showCreditsDialog}
         onOpenChange={setShowCreditsDialog}
         actionLabel="este conteúdo"
-        creditCost={200}
+        creditCost={CREDIT_COST_APPROVE_CONTENT}
       />
     </div>
   );

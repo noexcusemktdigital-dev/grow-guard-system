@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   CheckSquare, Plus, CheckCircle2, Flame, Settings2, Zap, Sparkles,
@@ -214,9 +214,9 @@ function TaskFormDialog({ open, onOpenChange, task, members, isAdmin, onSubmit, 
     assigned_team: task?.assigned_team ?? "",
   });
 
-  // Reset form when task changes
+  // Reset form when task changes (BUG-07 fix)
   const key = task?.id ?? "new";
-  useState(() => {
+  useEffect(() => {
     setForm({
       title: task?.title ?? "",
       description: task?.description ?? "",
@@ -225,7 +225,7 @@ function TaskFormDialog({ open, onOpenChange, task, members, isAdmin, onSubmit, 
       assigned_to: task?.assigned_to ?? "__none__",
       assigned_team: task?.assigned_team ?? "",
     });
-  });
+  }, [task?.id]);
 
   const handleSubmit = () => {
     if (!form.title.trim()) return;
