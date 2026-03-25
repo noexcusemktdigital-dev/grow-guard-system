@@ -43,7 +43,9 @@ export function useSalesPlan() {
 
 export function useSalesPlanCompleted() {
   const { data: plan, isLoading } = useSalesPlan();
-  const completed = !!plan && Object.keys(plan.answers || {}).length > 5;
+  // A plan is "completed" if it exists and has at least 3 answered questions
+  // (previously required >5, which was too strict and blocked PRO users)
+  const completed = !!plan && Object.keys(plan.answers || {}).length >= 3;
   return { completed, isLoading };
 }
 

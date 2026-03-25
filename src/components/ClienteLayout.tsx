@@ -19,8 +19,9 @@ export function ClienteLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Sequence: Welcome Modal → Tour → Announcements
-  const [welcomeDone, setWelcomeDone] = useState(false);
-  const [tourDone, setTourDone] = useState(false);
+  // Persist done states so they survive re-renders/navigation
+  const [welcomeDone, setWelcomeDone] = useState(() => !!localStorage.getItem("trial_welcome_seen"));
+  const [tourDone, setTourDone] = useState(() => !!localStorage.getItem("onboarding_tour_done"));
 
   const handleWelcomeDone = useCallback(() => setWelcomeDone(true), []);
   const handleTourDone = useCallback(() => setTourDone(true), []);
