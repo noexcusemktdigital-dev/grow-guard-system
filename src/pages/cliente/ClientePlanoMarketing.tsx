@@ -1016,7 +1016,7 @@ export default function ClientePlanoMarketing() {
     if (!activeStrategy?.id) return;
     try {
       await approveStrategy.mutateAsync(activeStrategy.id);
-      toast({ title: "Estratégia aprovada! ✅", description: "300 créditos foram consumidos." });
+      toast({ title: "Estratégia aprovada! ✅", description: "50 créditos foram consumidos." });
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) {
         setShowCreditsDialog(true);
