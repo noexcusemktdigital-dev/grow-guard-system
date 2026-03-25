@@ -4,9 +4,10 @@ import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClienteSubscription } from "./useClienteSubscription";
 import { useClienteWallet } from "./useClienteWallet";
-import { getEffectiveLimits } from "@/constants/plans";
+import { CREDIT_COSTS } from "@/constants/plans";
 
-const CREDIT_COST_PER_CONTENT = 30;
+const CREDIT_COST_PER_CONTENT = CREDIT_COSTS["generate-content"].cost;
+export const CREDIT_COST_APPROVE_CONTENT = CREDIT_COSTS["approve-content"].cost;
 
 export interface ContentItem {
   id: string;
