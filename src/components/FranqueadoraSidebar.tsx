@@ -327,9 +327,7 @@ export function FranqueadoraSidebarContent({ collapsed, setCollapsed }: { collap
       </div>
 
       {/* Footer — User */}
-      {!collapsed && (
-        <SidebarFooter />
-      )}
+      <SidebarFooter collapsed={collapsed} />
 
       <button
         onClick={() => setCollapsed(!collapsed)}
