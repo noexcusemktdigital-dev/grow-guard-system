@@ -211,7 +211,7 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
           <CollapsibleSection title="Vendas" items={vendasSection} collapsed={collapsed} defaultOpen />
         </div>
         <div data-tour="marketing">
-          <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} />
+          <CollapsibleSection title="Marketing" items={marketingSection} collapsed={collapsed} defaultOpen />
         </div>
         <div data-tour="sistema">
           <CollapsibleSection title="Sistema" items={sistemaSection} collapsed={collapsed} />
