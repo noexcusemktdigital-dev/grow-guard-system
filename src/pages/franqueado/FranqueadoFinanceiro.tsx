@@ -170,7 +170,7 @@ export default function FranqueadoFinanceiro() {
                         <TableCell className="font-medium">{c.signer_name || "—"}</TableCell>
                         <TableCell>{c.title}</TableCell>
                         <TableCell className="font-semibold text-primary">R$ {Number((c as any).monthly_value || 0).toLocaleString("pt-BR")}</TableCell>
-                        <TableCell className="font-semibold text-emerald-600">R$ {(Number((c as any).monthly_value || 0) * 0.2).toLocaleString("pt-BR")}</TableCell>
+                        <TableCell className="font-semibold text-emerald-600">R$ {(Number((c as any).monthly_value || 0) * FRANCHISEE_SHARE_PERCENT).toLocaleString("pt-BR")}</TableCell>
                         <TableCell><Badge variant="outline">Dia {(c as any).payment_day || "—"}</Badge></TableCell>
                         <TableCell className="text-muted-foreground text-xs">
                           {(c as any).start_date ? new Date((c as any).start_date).toLocaleDateString("pt-BR") : "—"} — {(c as any).end_date ? new Date((c as any).end_date).toLocaleDateString("pt-BR") : "—"}
