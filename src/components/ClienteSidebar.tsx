@@ -86,7 +86,7 @@ function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; 
   const link = (
     <RouterNavLink
       to={isGated ? "#" : item.path}
-      onClick={isGated ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+      onClick={isGated ? (e: React.MouseEvent) => { e.preventDefault(); import("sonner").then(m => m.toast.warning(gateReason ? GATE_REASON_LABELS[gateReason] || "Recurso bloqueado" : "Recurso bloqueado")); } : undefined}
       className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
         ${collapsed ? "justify-center px-2 mx-1" : ""}
         ${isGated ? "opacity-40 cursor-not-allowed" : ""}
