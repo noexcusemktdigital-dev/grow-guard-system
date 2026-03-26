@@ -1,61 +1,43 @@
 
 
-## Corrigir CSV + Adicionar Exportação PDF nos Relatórios
+## Reestruturar Botão de Ajuda + FAQ + Chat de Suporte
 
 ### Problema
-1. O CSV usa vírgula como separador e não tem BOM UTF-8 — no Windows/Excel pt-BR, tudo aparece numa linha só
-2. Não existe opção de exportar em PDF com os gráficos visuais
+1. O ícone de suporte usa `LifeBuoy` em vez de um ícone de interrogação (?)
+2. O popover atual apenas redireciona para a página de configurações -- não abre chat direto nem FAQ
+3. Não existe página de FAQ dentro do portal do cliente
+4. O fluxo de chamado/chat precisa ir diretamente para a matriz (organização pai)
 
 ### Solução
 
-**1. Corrigir `downloadCsv`** (linha 28-34)
-- Trocar separador de `,` para `;`
-- Adicionar BOM UTF-8 (`\uFEFF`) no início do arquivo
-- Mesma correção já aplicada no template de importação CSV
+**1. Trocar ícone e redesenhar o popover (`SupportButton.tsx`)**
+- Trocar `LifeBuoy` por `CircleHelp` (ícone de interrogação do Lucide)
+- Popover com 2 opções claras:
+  - "Falar com Suporte" → navega para `/cliente/suporte` (página de chamados com chat)
+  - "Perguntas Frequentes (FAQ)" → navega para `/cliente/faq`
 
-**2. Adicionar exportação PDF com html2pdf.js**
-- Criar função `downloadReportPdf(tabName)` que captura o conteúdo visual da aba ativa (KPIs + gráficos) e gera um PDF completo
-- Usar `html2pdf.js` (já instalado no projeto, usado em contratos)
-- O PDF incluirá: cabeçalho com título/período, todos os KPIs e gráficos renderizados
+**2. Criar página de FAQ (`src/pages/cliente/ClienteFaq.tsx`)**
+- Página com perguntas e respostas organizadas por categoria (Geral, CRM, Chat/WhatsApp, Créditos, Financeiro, Integrações)
+- Layout accordion com busca por texto
+- Dados hardcoded inicialmente (a matriz pode gerenciar depois via tabela)
+- Rota: `/cliente/faq`
 
-**3. Substituir botão único por dropdown com 2 opções**
-- Em cada aba (CRM, Chat, Agentes IA), trocar o botão "Exportar" por um `DropdownMenu` com:
-  - "Exportar CSV" — dados tabulares
-  - "Exportar PDF" — relatório visual completo com gráficos
+**3. Melhorar página de Suporte (`ClienteSuporte.tsx`)**
+- Manter como está -- já funciona com tickets + chat por mensagens
+- Os tickets já são vinculados à `organization_id` do cliente
+- A matriz já visualiza via `get_network_tickets` RPC
+
+**4. Registrar nova rota no App.tsx**
+- Adicionar `<Route path="faq" element={<ClienteFaq />} />`
+
+### Arquivos afetados
+- `src/components/SupportButton.tsx` — trocar ícone e links
+- `src/pages/cliente/ClienteFaq.tsx` — nova página de FAQ
+- `src/App.tsx` — nova rota
 
 ### Detalhes técnicos
-
-**CSV fix:**
-```typescript
-function downloadCsv(filename: string, headers: string[], rows: string[][]) {
-  const csv = [headers.join(";"), ...rows.map(r => r.map(c => `"${(c ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  // ...
-}
-```
-
-**PDF export:**
-```typescript
-async function downloadReportPdf(containerId: string, title: string) {
-  const { default: html2pdf } = await import("html2pdf.js");
-  const element = document.getElementById(containerId);
-  // Capture full tab content as PDF with A4 format
-}
-```
-
-**UI — DropdownMenu em cada aba:**
-```tsx
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button variant="outline" size="sm"><Download /> Exportar</Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuItem onClick={exportCsv}>CSV (planilha)</DropdownMenuItem>
-    <DropdownMenuItem onClick={exportPdf}>PDF (relatório visual)</DropdownMenuItem>
-  </DropdownMenuContent>
-</DropdownMenu>
-```
-
-### Arquivo afetado
-- `src/pages/cliente/ClienteDashboard.tsx` — corrigir `downloadCsv`, adicionar `downloadReportPdf`, substituir botões de export por dropdown nas 3 abas
+- O ícone muda de `LifeBuoy` para `CircleHelp` (Lucide)
+- O FAQ usa dados estáticos organizados em categorias com accordion + campo de busca
+- A navegação usa `useNavigate` do React Router
+- A página de suporte existente já tem a arquitetura completa de chamados que vão para a matriz via `support_tickets` + `get_network_tickets`
 
