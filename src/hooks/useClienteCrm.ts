@@ -10,3 +10,4 @@ export { useCrmTeam } from "./useCrmTeam";
 export { useCrmProposals, useCrmProposalMutations } from "./useCrmProposals";
 export { useCrmProducts, useCrmProductMutations } from "./useCrmProducts";
 export { useCrmPartners, useCrmPartnerMutations } from "./useCrmPartners";
+export { useCrmLeadProducts, useCrmLeadProductMutations } from "./useCrmLeadProducts";

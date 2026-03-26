@@ -382,6 +382,11 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
           )}
         </TabsContent>
 
+        {/* === PRODUCTS TAB === */}
+        <TabsContent value="products" className="mt-3">
+          <LeadProductsTab leadId={lead.id} />
+        </TabsContent>
+
         {/* === PROPOSALS TAB === */}
         <TabsContent value="proposals" className="mt-3">
           <ProposalsTab leadId={lead.id} />
