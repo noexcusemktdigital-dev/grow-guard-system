@@ -603,7 +603,7 @@ Deno.serve(async (req) => {
       let connStatus = "disconnected";
       try {
         console.log("[connect] Evolution checking state at", `${cleanBaseUrl}/instance/connectionState/${instanceName}`);
-        const stateRes = await fetch(`${cleanBaseUrl}/instance/connectionState/${instanceName}`, {
+        const stateRes = await fetch(`${cleanBaseUrl}/instance/connectionState/${encodeURIComponent(instanceName)}`, {
           headers: { apikey: effectiveApiKey },
         });
         const stateData = await stateRes.json();
