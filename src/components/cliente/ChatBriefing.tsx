@@ -274,7 +274,15 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
     setMultiSelectValues([]);
   };
 
-  const handleSelect = (value: string) => { advanceStep(value); };
+  const handleSelect = (value: string) => {
+    if (value === "outro" || value === "personalizar") {
+      setCustomTextMode(true);
+      setTextValue("");
+      setTimeout(() => inputRef.current?.focus(), 100);
+      return;
+    }
+    advanceStep(value);
+  };
 
   const handleMultiConfirm = () => {
     if (multiSelectValues.length === 0 && !currentStep?.optional) return;
