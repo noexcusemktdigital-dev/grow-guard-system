@@ -707,7 +707,7 @@ export default function ClienteDashboard() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={async () => {
                   toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
-                  await downloadReportPdf("report-chat", "Chat Relatório");
+                  await downloadReportPdf("report-chat", "Chat — Relatório", orgName);
                   toast({ title: "PDF exportado", description: "Relatório visual do Chat baixado" });
                 }}>
                   <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
