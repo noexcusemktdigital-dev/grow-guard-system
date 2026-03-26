@@ -1,41 +1,80 @@
 
 
-## Corrigir PDF em Branco no Dashboard
+## Integrar Metas ao Relatório CRM + Coloração Verde/Amarelo/Vermelho
 
-### Problema
-O `html2canvas` não consegue renderizar o conteúdo porque:
-1. O wrapper é posicionado em `left:-9999px` (off-screen) — `html2canvas` não renderiza elementos fora da tela corretamente
-2. O app usa dark mode — o clone herda cores claras/transparentes que ficam invisíveis no fundo branco
-3. Os gráficos Recharts (SVG) não clonam bem como HTML estático
+### O que muda
 
-### Solução
+O relatório CRM (`ClienteDashboard.tsx`) passará a consumir as metas ativas do mês e o progresso calculado (`useActiveGoals` + `useGoalProgress`), usando as cores verde (batida/no ritmo), amarelo (em andamento) e vermelho (abaixo/crítica) nos KPIs e gráficos. Uma nova seção de metas aparecerá no topo da aba CRM.
 
-Reescrever `downloadReportPdf` usando abordagem de captura direta com `html2canvas` + `jsPDF`:
+### Mudanças concretas
 
-1. Capturar o elemento **visível na tela** com `html2canvas` diretamente (sem clonar nem mover off-screen)
-2. Configurar `html2canvas` com `backgroundColor: "#ffffff"` para forçar fundo branco
-3. Usar `jsPDF` para montar o PDF com:
-   - Header com nome da organização, título do relatório e data
-   - A imagem capturada do conteúdo, com paginação automática se ultrapassar uma página A4
-4. Esconder temporariamente os botões de export (via CSS class) antes da captura e restaurar depois
+**1. Importar metas e progresso no dashboard**
 
-**Fluxo:**
-```text
-1. Adicionar classe CSS "pdf-exporting" ao container
-   → CSS hide botões [data-pdf-hide], dropdwon triggers
-2. html2canvas captura o elemento VISÍVEL
-3. Remover classe "pdf-exporting"
-4. Montar PDF com jsPDF: header + imagem paginada
-5. Salvar
+- Importar `useActiveGoals` de `useGoals` e `useGoalProgress` de `useGoalProgress`
+- Buscar metas ativas e seu progresso dentro do componente
+
+**2. Nova seção "Metas do Mês" na aba CRM**
+
+Abaixo dos 8 KPI cards, antes dos gráficos, adicionar um bloco com as metas ativas:
+- Cada meta mostra: título, métrica, valor atual vs. alvo, barra de progresso colorida, dias restantes
+- Cores da barra: verde (`batida`/`no_ritmo`), amarelo (`em_andamento`), vermelho (`abaixo`/`critica`)
+- Se não houver metas, mostrar mensagem com link para criar metas
+
+**3. Coloração dos KPI cards baseada nas metas**
+
+- Para os KPIs que têm meta correspondente (ex: "Receita Total" → meta de `revenue`, "Leads Captados" → meta de `leads`, "Taxa de Conversão" → meta de `conversions`, "Ticket Médio" → meta de `avg_ticket`), o gradiente do card muda de acordo com o status:
+  - Verde: `from-emerald-500/15` — meta batida ou no ritmo
+  - Amarelo: `from-amber-500/15` — em andamento
+  - Vermelho: `from-red-500/15` — abaixo ou crítica
+  - Se não há meta para aquele KPI, manter gradiente padrão
+
+**4. Refatorar `KpiCard` para aceitar status de meta**
+
+- Adicionar prop opcional `goalStatus` ao `KpiCard`
+- Adicionar indicador visual (badge ou borda colorida) mostrando "✓ Meta batida", "↗ No ritmo", "→ Em andamento", "↓ Abaixo"
+
+**5. Cores dos gráficos do CRM**
+
+- Gráfico "Taxa de Conversão" (radial): cor baseada em comparação com a meta de conversão (verde se >= meta, amarelo se >= 50% da meta, vermelho se abaixo)
+- Gráfico "Leads por Etapa" (barras): manter cores padrão (não muda)
+- Gráfico "Leads Criados por Semana" (linha): adicionar linha de referência horizontal se houver meta de leads (mostrando o "pace necessário por semana")
+
+**6. Abas Chat e Agentes IA**
+
+- Sem vínculo com metas (como solicitado — são baseadas em ações)
+- Manter cores atuais
+
+### Detalhes técnicos
+
+**Mapeamento KPI → métrica de meta:**
+```typescript
+const metricMap: Record<string, string[]> = {
+  "revenue": ["Receita Total"],
+  "faturamento": ["Receita Total"],
+  "leads": ["Leads Captados"],
+  "conversions": ["Taxa de Conversão"],
+  "avg_ticket": ["Ticket Médio"],
+  "contracts": ["Pipeline Ativo"],
+  "contratos": ["Pipeline Ativo"],
+};
 ```
 
-**Mudanças concretas em `ClienteDashboard.tsx`:**
-- Substituir `html2pdf.js` por `html2canvas` + `jsPDF` importados separadamente
-- Adicionar `data-pdf-hide` nos botões de export (já parcialmente existe)
-- Adicionar CSS temporário via classe no container para esconder botões durante captura
-- Calcular paginação: `imgHeight > pageHeight` → `addPage()` + continuar desenhando
+**Cores por status:**
+```typescript
+function getStatusColor(status: string) {
+  if (status === "batida" || status === "no_ritmo") return { gradient: "from-emerald-500/15 to-emerald-600/5", color: "text-emerald-600", bg: "bg-emerald-100" };
+  if (status === "em_andamento") return { gradient: "from-amber-500/15 to-amber-600/5", color: "text-amber-600", bg: "bg-amber-100" };
+  return { gradient: "from-red-500/15 to-red-600/5", color: "text-red-600", bg: "bg-red-100" };
+}
+```
+
+**Barra de progresso na seção de metas:**
+```tsx
+<div className="h-2 rounded-full bg-muted overflow-hidden">
+  <div className={`h-full rounded-full ${statusBgClass}`} style={{ width: `${Math.min(percent, 100)}%` }} />
+</div>
+```
 
 ### Arquivo afetado
-- `src/pages/cliente/ClienteDashboard.tsx` — reescrever função `downloadReportPdf`
-- `src/index.css` — adicionar regra `.pdf-exporting [data-pdf-hide] { display: none !important; }`
+- `src/pages/cliente/ClienteDashboard.tsx` — importar hooks de metas, nova seção, KpiCard com status, cores condicionais nos gráficos
 
