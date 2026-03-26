@@ -277,7 +277,9 @@ export default function ClienteConteudos() {
                     onApprove={() => handleApproveOne(i)}
                     onDelete={() => handleDeleteGenerated(i)}
                     onExpand={() => setExpandedContent(c)}
+                    onRecord={() => setRecordingScript({ ...c, plataforma })}
                     approving={approveMutation.isPending}
+                    isApproved={c.status === "approved" || (history || []).find((h: any) => h.id === generatedIds[i])?.status === "approved"}
                     showContext={contextInfo}
                   />
                 ))}
