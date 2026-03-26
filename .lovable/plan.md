@@ -1,67 +1,75 @@
 
 
-## 1. Ícone de Olho para Visualizar Senha + 2. Corrigir Erro no Reset de Senha
+## Correção da Arquitetura de Convite de Usuários
 
-### Problema 1: Falta ícone de visualizar senha
-Todos os campos de senha no sistema são `type="password"` fixo, sem opção de alternar visibilidade.
+### Problemas identificados
 
-### Problema 2: Erro ao redefinir senha na criação de conta
-Os logs de autenticação mostram erro `same_password` (422) repetidamente quando o usuário tenta definir a senha via link de convite. Isso indica que o fluxo de recovery está tentando atualizar a senha mas o Supabase detecta que é igual à anterior — possivelmente porque a sessão de recovery não está sendo processada corretamente no `ResetPassword.tsx` (o `useEffect` que verifica `type=recovery` não faz nada útil, e o `supabase.auth.updateUser` pode estar sendo chamado sem uma sessão de recovery válida).
+Analisei o fluxo completo e encontrei **3 bugs interligados**:
+
+**Bug 1 — Sem proteção contra autoconvite**: A edge function `invite-user` não verifica se o admin está convidando o próprio e-mail. Quando isso acontece (acidentalmente ou não), o sistema: encontra o admin via `findUserByEmail`, atualiza o `full_name` do admin com o nome digitado no formulário (ex: "teste"), e gera um link de recovery para o próprio admin — corrompendo o perfil dele.
+
+**Bug 2 — Acúmulo de roles duplicados**: O `upsert` de roles usa `onConflict: "user_id,role"` com `ignoreDuplicates: true`. A constraint no banco é `UNIQUE(user_id, role)` (composta). Isso significa que se um usuário já tem `cliente_admin`, adicionar `cliente_user` cria uma **segunda linha**. O AuthContext depois prioriza `cliente_admin`, fazendo o convidado aparecer como Admin mesmo quando foi convidado como Usuário.
+
+**Bug 3 — Perfil de usuário existente sobrescrito**: Quando o e-mail já existe (path `email_exists`), a função ainda atualiza o `full_name` do perfil — sobrescrevendo o nome real do usuário com o que foi digitado no formulário de convite.
 
 ### Solução
 
-**1. Componente reutilizável `PasswordInput`**
+**1. Edge Function `invite-user`** — 3 correções:
 
-Criar `src/components/ui/password-input.tsx` — um wrapper do `Input` que:
-- Aceita todas as mesmas props do Input
-- Adiciona botão de olho (Eye/EyeOff do Lucide) no lado direito
-- Alterna entre `type="password"` e `type="text"`
-- Funciona com o padding esquerdo existente (ícone de cadeado)
+- Adicionar verificação de autoconvite: se o `userId` resolvido for igual ao `callerId`, retornar erro 400
+- Corrigir atribuição de role: substituir o `upsert` por verificação manual (igual ao `update-member`): buscar role existente → update se existir, insert se não
+- Não atualizar `full_name` do perfil quando o usuário já existia (path `email_exists`)
 
-**2. Substituir todos os campos de senha pelo novo componente**
+**2. Migração SQL** — Limpeza de roles duplicados:
 
-Arquivos afetados:
-- `src/pages/Auth.tsx` — campo de login
-- `src/pages/SaasAuth.tsx` — campos de login e cadastro
-- `src/pages/ResetPassword.tsx` — campos de nova senha e confirmação
-- `src/pages/cliente/ClienteConfiguracoes.tsx` — campos de definir senha
-
-**3. Corrigir fluxo de reset de senha**
-
-No `ResetPassword.tsx`, o `useEffect` atual não processa o token de recovery. Corrigir para:
-- Detectar o hash fragment com `access_token` e `type=recovery`
-- Chamar `supabase.auth.setSession()` com o token do hash para estabelecer a sessão de recovery antes de permitir o `updateUser`
-- Mostrar estado de carregamento enquanto processa o token
-- Mostrar erro claro se não houver sessão válida
+- Remover roles duplicados deixando apenas o de maior prioridade por `user_id`
+- Adicionar constraint `UNIQUE(user_id)` na tabela `user_roles` para impedir acúmulo futuro (o sistema já trata como 1 role por usuário em todo lugar exceto na constraint)
 
 ### Detalhes técnicos
 
-**PasswordInput component:**
-```tsx
-// Toggle entre Eye e EyeOff
-const [show, setShow] = useState(false);
-<Input type={show ? "text" : "password"} className="pr-10" {...props} />
-<button onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2">
-  {show ? <EyeOff /> : <Eye />}
-</button>
+**invite-user — proteção contra autoconvite:**
+```typescript
+// Após resolver userId
+if (userId === callerId) {
+  return new Response(JSON.stringify({ error: "Você não pode convidar a si mesmo" }), 
+    { status: 400, headers: corsHeaders });
+}
 ```
 
-**Fix do ResetPassword — processar sessão de recovery:**
-```tsx
-useEffect(() => {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-    if (event === "PASSWORD_RECOVERY") {
-      setSessionReady(true);
-    }
-  });
-  return () => subscription.unsubscribe();
-}, []);
+**invite-user — corrigir atribuição de role:**
+```typescript
+// Substituir upsert por check+update/insert (mesmo padrão do update-member)
+const { data: existingRole } = await adminClient
+  .from("user_roles").select("id").eq("user_id", userId).maybeSingle();
+if (existingRole) {
+  await adminClient.from("user_roles").update({ role: validRole }).eq("user_id", userId);
+} else {
+  await adminClient.from("user_roles").insert({ user_id: userId, role: validRole });
+}
 ```
 
-### Arquivos
-- `src/components/ui/password-input.tsx` — novo componente
-- `src/pages/Auth.tsx` — usar PasswordInput
-- `src/pages/SaasAuth.tsx` — usar PasswordInput
-- `src/pages/ResetPassword.tsx` — usar PasswordInput + corrigir sessão de recovery
-- `src/pages/cliente/ClienteConfiguracoes.tsx` — usar PasswordInput
+**invite-user — não sobrescrever perfil existente:**
+```typescript
+// Apenas para novos usuários (não no path email_exists)
+if (isNewUser) {
+  await adminClient.from("profiles")
+    .update({ full_name: full_name || email.split("@")[0] })
+    .eq("id", userId);
+}
+```
+
+**Migração — limpar duplicados e enforçar unicidade:**
+```sql
+-- Remover duplicados mantendo o de maior prioridade
+DELETE FROM user_roles a USING user_roles b 
+WHERE a.user_id = b.user_id AND a.id > b.id;
+
+-- Dropar constraint antiga e criar nova
+ALTER TABLE user_roles DROP CONSTRAINT IF EXISTS user_roles_user_id_role_key;
+ALTER TABLE user_roles ADD CONSTRAINT user_roles_user_id_unique UNIQUE(user_id);
+```
+
+### Arquivos afetados
+- `supabase/functions/invite-user/index.ts` — 3 correções
+- `supabase/migrations/` — nova migração (limpeza + constraint)
 
