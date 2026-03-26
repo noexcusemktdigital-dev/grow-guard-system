@@ -651,62 +651,88 @@ export default function ClienteDashboard() {
             </DropdownMenu>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Receita Total" value={`R$ ${totalValue.toLocaleString("pt-BR")}`} icon={DollarSign} gradient="from-emerald-500/15 to-emerald-600/5" trend={calcTrend(totalValue, prevTotalValue)} goalStatus={getKpiGoalStatus("Receita Total")} />
-            <KpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" trend={calcTrend(allLeads.length, prevLeads.length)} goalStatus={getKpiGoalStatus("Leads Captados")} />
-            <KpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" trend={calcTrend(Number(conversionRate), prevConversionRate)} goalStatus={getKpiGoalStatus("Taxa de Conversão")} />
-            <KpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={Eye} gradient="from-amber-500/15 to-amber-600/5" goalStatus={getKpiGoalStatus("Ticket Médio")} />
-          </div>
+          {(() => {
+            const gRecTotal = getKpiGoalData("Receita Total");
+            const gLeads = getKpiGoalData("Leads Captados");
+            const gConv = getKpiGoalData("Taxa de Conversão");
+            const gTicket = getKpiGoalData("Ticket Médio");
+            const gPipeline = getKpiGoalData("Pipeline Ativo");
+            return (<>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard label="Receita Total" value={`R$ ${totalValue.toLocaleString("pt-BR")}`} icon={DollarSign} gradient="from-emerald-500/15 to-emerald-600/5" trend={calcTrend(totalValue, prevTotalValue)} goalStatus={gRecTotal?.status} goalPercent={gRecTotal?.percent} goalTarget={gRecTotal?.targetFormatted} goalDaysLeft={gRecTotal?.daysLeft} />
+                <KpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" trend={calcTrend(allLeads.length, prevLeads.length)} goalStatus={gLeads?.status} goalPercent={gLeads?.percent} goalTarget={gLeads?.targetFormatted} goalDaysLeft={gLeads?.daysLeft} />
+                <KpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" trend={calcTrend(Number(conversionRate), prevConversionRate)} goalStatus={gConv?.status} goalPercent={gConv?.percent} goalTarget={gConv?.targetFormatted} goalDaysLeft={gConv?.daysLeft} />
+                <KpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={Eye} gradient="from-amber-500/15 to-amber-600/5" goalStatus={gTicket?.status} goalPercent={gTicket?.percent} goalTarget={gTicket?.targetFormatted} goalDaysLeft={gTicket?.daysLeft} />
+              </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Pipeline Ativo" value={`R$ ${pipelineValue.toLocaleString("pt-BR")}`} icon={TrendingUp} gradient="from-sky-500/15 to-sky-600/5" goalStatus={getKpiGoalStatus("Pipeline Ativo")} />
-            <KpiCard label="Leads Perdidos" value={String(lostLeads.length)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
-            <KpiCard label="Taxa de Perda" value={`${lossRate}%`} icon={ArrowDownRight} gradient="from-orange-500/15 to-orange-600/5" />
-            <KpiCard label="Tempo Médio Fechamento" value={`${avgClosingDays}d`} icon={Target} gradient="from-indigo-500/15 to-indigo-600/5" />
-          </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard label="Pipeline Ativo" value={`R$ ${pipelineValue.toLocaleString("pt-BR")}`} icon={TrendingUp} gradient="from-sky-500/15 to-sky-600/5" goalStatus={gPipeline?.status} goalPercent={gPipeline?.percent} goalTarget={gPipeline?.targetFormatted} goalDaysLeft={gPipeline?.daysLeft} />
+                <KpiCard label="Leads Perdidos" value={String(lostLeads.length)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
+                <KpiCard label="Taxa de Perda" value={`${lossRate}%`} icon={ArrowDownRight} gradient="from-orange-500/15 to-orange-600/5" />
+                <KpiCard label="Tempo Médio Fechamento" value={`${avgClosingDays}d`} icon={Target} gradient="from-indigo-500/15 to-indigo-600/5" />
+              </div>
+            </>);
+          })()}
 
           {/* ===== METAS DO MÊS ===== */}
           {activeGoals && activeGoals.length > 0 && goalProgress ? (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Target className="w-4 h-4 text-primary" /> Metas do Mês
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Target className="w-4 h-4 text-primary" /> Metas do Mês
+                  </CardTitle>
+                  <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => navigate("/metas-ranking")}>
+                    Ver todas →
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {activeGoals.map((goal: any) => {
-                  const prog = goalProgress[goal.id];
-                  if (!prog) return null;
-                  const statusInfo = getGoalStatusLabel(prog.status);
-                  const barColor =
-                    prog.status === "batida" || prog.status === "no_ritmo" ? "bg-emerald-500" :
-                    prog.status === "em_andamento" ? "bg-amber-500" : "bg-red-500";
-                  return (
-                    <div key={goal.id} className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs font-medium truncate">{goal.title}</span>
-                          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${statusInfo.className}`}>
-                            {statusInfo.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-muted-foreground">
-                            {goal.metric === "revenue" || goal.metric === "faturamento"
-                              ? `${formatBRL(prog.currentValue)} / ${formatBRL(goal.target_value)}`
-                              : `${prog.currentValue} / ${goal.target_value}`}
-                          </span>
-                          {prog.daysLeft > 0 && (
-                            <span className="text-[10px] text-muted-foreground">{prog.daysLeft}d restantes</span>
-                          )}
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {activeGoals.map((goal: any) => {
+                    const prog = goalProgress[goal.id];
+                    if (!prog) return null;
+                    const statusInfo = getGoalStatusLabel(prog.status);
+                    const barColor =
+                      prog.status === "batida" || prog.status === "no_ritmo" ? "bg-emerald-500" :
+                      prog.status === "em_andamento" ? "bg-amber-500" : "bg-red-500";
+                    const ringColor =
+                      prog.status === "batida" || prog.status === "no_ritmo" ? "text-emerald-600" :
+                      prog.status === "em_andamento" ? "text-amber-600" : "text-red-600";
+                    const isMonetary = ["revenue", "faturamento", "avg_ticket"].includes(goal.metric || "");
+                    const isPct = goal.metric === "conversions";
+                    const currentFmt = isMonetary ? formatBRL(prog.currentValue) : isPct ? `${prog.currentValue}%` : String(prog.currentValue);
+                    const targetFmt = isMonetary ? formatBRL(goal.target_value) : isPct ? `${goal.target_value}%` : String(goal.target_value);
+                    // Projection
+                    const projectedPercent = prog.daysLeft > 0 && prog.pacePerDay > 0
+                      ? Math.round(((prog.currentValue + prog.pacePerDay * prog.daysLeft) / (goal.target_value || 1)) * 100)
+                      : Math.round(prog.percent);
+                    return (
+                      <div key={goal.id} className="flex gap-3 p-3 rounded-xl border bg-card/50">
+                        <GoalProgressRing percent={prog.percent} size={52} strokeWidth={5} />
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold truncate">{goal.title}</span>
+                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${statusInfo.className}`}>
+                              {statusInfo.label}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">{currentFmt} / {targetFmt}</p>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div className={`h-full rounded-full ${barColor} transition-all duration-700`} style={{ width: `${Math.min(prog.percent, 100)}%` }} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] text-muted-foreground">
+                              {prog.daysLeft > 0
+                                ? `Projeção: ~${Math.min(projectedPercent, 999)}% • ${prog.daysLeft}d restantes`
+                                : "Período encerrado"}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="h-2 rounded-full bg-muted overflow-hidden">
-                        <div className={`h-full rounded-full ${barColor} transition-all duration-700`} style={{ width: `${Math.min(prog.percent, 100)}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
           ) : (
