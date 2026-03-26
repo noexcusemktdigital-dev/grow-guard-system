@@ -525,7 +525,7 @@ export default function ClienteDashboard() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={async () => {
                   toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
-                  await downloadReportPdf("report-crm", "CRM Relatório");
+                  await downloadReportPdf("report-crm", "CRM — Relatório", orgName);
                   toast({ title: "PDF exportado", description: "Relatório visual do CRM baixado" });
                 }}>
                   <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
