@@ -832,3 +832,54 @@ function WhatsAppTab({ lead }: { lead: LeadRow }) {
     </div>
   );
 }
+
+/* ── Lead History Timeline ── */
+const HISTORY_ICONS: Record<string, React.ReactNode> = {
+  created: <Plus className="w-3 h-3" />,
+  stage_change: <ArrowRight className="w-3 h-3" />,
+  won: <CheckCircle className="w-3 h-3 text-emerald-500" />,
+  lost: <XCircle className="w-3 h-3 text-red-500" />,
+  tag_added: <Tag className="w-3 h-3" />,
+  tag_removed: <Tag className="w-3 h-3" />,
+  field_updated: <StickyNote className="w-3 h-3" />,
+  funnel_change: <ArrowRight className="w-3 h-3" />,
+};
+
+function LeadHistoryTimeline({ leadId }: { leadId: string }) {
+  const { data: history, isLoading } = useCrmLeadHistory(leadId);
+  const [showAll, setShowAll] = useState(false);
+
+  if (isLoading) return <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>;
+  if (!history || history.length === 0) return null;
+
+  const items = showAll ? history : history.slice(0, 5);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] text-muted-foreground uppercase font-medium">Histórico</p>
+      <div className="space-y-0">
+        {items.map((entry, i) => (
+          <div key={entry.id} className="flex gap-2 pb-2">
+            <div className="flex flex-col items-center">
+              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                {HISTORY_ICONS[entry.event_type] || <Clock className="w-3 h-3" />}
+              </div>
+              {i < items.length - 1 && <div className="w-px flex-1 bg-border mt-0.5" />}
+            </div>
+            <div className="flex-1 min-w-0 pb-1">
+              <p className="text-xs">{entry.description}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {new Date(entry.created_at).toLocaleDateString("pt-BR")} · {new Date(entry.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+      {history.length > 5 && !showAll && (
+        <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setShowAll(true)}>
+          Ver mais ({history.length - 5})
+        </Button>
+      )}
+    </div>
+  );
+}
