@@ -311,7 +311,7 @@ function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconne
   return (
     <>
       <Card className="overflow-hidden">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isConn ? "bg-emerald-500/10" : "bg-muted"}`}>
@@ -351,6 +351,35 @@ function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconne
               </Button>
             </div>
           </div>
+
+          {/* Webhook status info for Evolution */}
+          {isEvo && (
+            <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Webhook className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium">Webhook</span>
+                {instance.webhook_url ? (
+                  <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-300 gap-1">
+                    <CheckCircle className="w-2.5 h-2.5" /> Ativo
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[9px] text-amber-600 border-amber-300 gap-1">
+                    <AlertTriangle className="w-2.5 h-2.5" /> Não configurado
+                  </Badge>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                {instance.webhook_url
+                  ? "Webhook configurado automaticamente. Mensagens recebidas serão processadas em tempo real."
+                  : "Clique em \"Webhook\" acima para configurar o recebimento de mensagens."}
+              </p>
+              {instance.webhook_url && (
+                <p className="text-[10px] font-mono text-muted-foreground truncate" title={instance.webhook_url}>
+                  {instance.webhook_url}
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
