@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { RefUploader } from "./RefUploader";
-import { LayoutPicker } from "./LayoutPicker";
-import { ContentPickerDialog } from "./ContentPickerDialog";
 import {
-  ART_FORMATS, LAYOUT_TYPES, POST_TYPES, ART_OBJECTIVES,
+  ART_FORMATS, POST_TYPES, ART_OBJECTIVES,
   PRINT_FORMATS, PRINT_TYPES,
 } from "./constants";
 import { ContentItem } from "@/hooks/useClienteContentV2";
@@ -64,6 +63,7 @@ export interface ArtGeneratePayload {
   photoUrls?: string[];
   outputMode?: "digital" | "print";
   printFormat?: string;
+  artTexts?: ArtTextItem[];
 }
 
 export interface ArtBriefingResult {
@@ -78,7 +78,18 @@ export interface ArtBriefingResult {
   suggested_tipo: string;
 }
 
-const TOTAL_STEPS = 9;
+export interface ArtTextItem {
+  headline: string;
+  subheadline: string;
+  supportingText: string;
+  cta: string;
+  approvedHeadline: boolean;
+  approvedSub: boolean;
+  approvedSupport: boolean;
+  approvedCta: boolean;
+}
+
+const TOTAL_STEPS = 8;
 
 export function ArtWizard({
   orgId, visualIdentity, contentHistory, contentData, setContentData,
@@ -87,7 +98,6 @@ export function ArtWizard({
 }: ArtWizardProps) {
   const [step, setStep] = useState(1);
   const [briefingText, setBriefingText] = useState("");
-  const [showContentPicker, setShowContentPicker] = useState(false);
   const [objective, setObjective] = useState("vender");
   const [mandatoryPhrase, setMandatoryPhrase] = useState("");
 
@@ -100,36 +110,30 @@ export function ArtWizard({
   const [quantity, setQuantity] = useState(1);
   const [carouselSlides, setCarouselSlides] = useState(5);
 
-  // Step 4: Layout
-  const [layoutTypes, setLayoutTypes] = useState<string[]>(["hero_central"]);
-
-  // Step 5: Logo (dedicated)
+  // Step 4: Logo (dedicated)
   const [logoUrl, setLogoUrl] = useState("");
 
-  // Step 6: References (with tutorial)
+  // Step 5: References (with tutorial)
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [primaryRefIndex, setPrimaryRefIndex] = useState(0);
 
-  // Step 7: Photos
+  // Step 6: Photos
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
-  // Step 8: Format
+  // Step 7: Format
   const [artFormat, setArtFormat] = useState("portrait");
   const [artFormats, setArtFormats] = useState<string[]>([]);
   const [printFormat, setPrintFormat] = useState("flyer_a5");
 
-  // Step 9: AI-generated text (review)
-  const [headline, setHeadline] = useState("");
-  const [subheadline, setSubheadline] = useState("");
-  const [cta, setCta] = useState("");
-  const [supportingText, setSupportingText] = useState("");
-  const [bulletPoints, setBulletPoints] = useState("");
+  // Step 8: Per-art texts with individual approval
+  const [artTexts, setArtTexts] = useState<ArtTextItem[]>([]);
   const [brandName, setBrandName] = useState("");
   const [cena, setCena] = useState("");
   const [elementosVisuais, setElementosVisuais] = useState("");
-  const [editingTexts, setEditingTexts] = useState(false);
+  const [bulletPoints, setBulletPoints] = useState("");
+  const [editingPieceIndex, setEditingPieceIndex] = useState<number | null>(null);
 
   // Auto-load from visual identity
   useEffect(() => {
@@ -143,49 +147,62 @@ export function ArtWizard({
     }
   }, [visualIdentity]);
 
+  const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+
   const handleAutoFillTexts = async () => {
-    if (briefingFilled && headline) return;
-    const enrichedBriefing = `${briefingText}\nObjetivo: ${objective}${mandatoryPhrase ? `\nFrase obrigatória: ${mandatoryPhrase}` : ""}`;
+    const enrichedBriefing = `${briefingText}\nObjetivo: ${objective}${mandatoryPhrase ? `\nFrase obrigatória: ${mandatoryPhrase}` : ""}\nQuantidade de peças: ${totalPieces}`;
     const result = await onFillWithAI(enrichedBriefing, contentData);
     if (result) {
-      setHeadline(mandatoryPhrase || result.headline || "");
-      setSubheadline(result.subheadline || "");
-      setCta(result.cta || "");
+      const baseTexts: ArtTextItem[] = Array.from({ length: totalPieces }, (_, i) => ({
+        headline: i === 0 && mandatoryPhrase ? mandatoryPhrase : (result.headline || ""),
+        subheadline: result.subheadline || "",
+        supportingText: result.supporting_text || "",
+        cta: result.cta || "",
+        approvedHeadline: false,
+        approvedSub: false,
+        approvedSupport: false,
+        approvedCta: false,
+      }));
+      setArtTexts(baseTexts);
       setCena(result.cena || "");
       setElementosVisuais(result.elementos_visuais || "");
-      setSupportingText(result.supporting_text || "");
       setBulletPoints(result.bullet_points || "");
       setBriefingFilled(true);
     }
   };
+
+  const updateArtText = (index: number, field: keyof ArtTextItem, value: string | boolean) => {
+    setArtTexts(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  };
+
+  const allTextsApproved = artTexts.length > 0 && artTexts.every(
+    t => t.approvedHeadline && t.approvedSub && t.approvedSupport && t.approvedCta
+  );
 
   const canProceed = () => {
     switch (step) {
       case 1: return true;
       case 2: return !!(briefingText.trim() || contentData);
       case 3: return true;
-      case 4: return layoutTypes.length >= 1;
-      case 5: return !!logoUrl;
-      case 6: return referenceUrls.length >= 3;
-      case 7: return true; // photos optional
-      case 8: return true;
-      case 9: return !!headline.trim();
+      case 4: return !!logoUrl;
+      case 5: return referenceUrls.length >= 3;
+      case 6: return true; // photos optional
+      case 7: return true;
+      case 8: return allTextsApproved;
       default: return true;
     }
   };
 
   const handleStepChange = (nextStep: number) => {
-    if (nextStep === 9 && !briefingFilled) {
+    if (nextStep === 8 && !briefingFilled) {
       handleAutoFillTexts();
     }
     setStep(nextStep);
   };
 
-  const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
-
   const handleGenerate = () => {
-    if (!headline.trim()) {
-      toast({ title: "Insira a headline da arte", variant: "destructive" });
+    if (!allTextsApproved) {
+      toast({ title: "Aprove todos os textos de todas as peças", variant: "destructive" });
       return;
     }
     if (referenceUrls.length < 3) {
@@ -200,20 +217,24 @@ export function ArtWizard({
     onGenerate({
       format: outputMode === "print" ? printFormat : artFormat,
       formats: totalPieces > 1 ? finalFormats : undefined,
-      style: layoutTypes[0],
+      style: "auto",
       tipoPostagem,
-      headline, subheadline, cta, cena, elementosVisuais,
+      headline: artTexts[0]?.headline || "",
+      subheadline: artTexts[0]?.subheadline || "",
+      cta: artTexts[0]?.cta || "",
+      cena, elementosVisuais,
       manualColors: "", manualStyle: "",
-      brandName, supportingText, bulletPoints,
+      brandName, supportingText: artTexts[0]?.supportingText || "", bulletPoints,
       referenceUrls, contentId, quantity,
       carouselSlides: tipoPostagem === "carrossel" ? carouselSlides : 0,
-      layoutTypes,
+      layoutTypes: ["auto"],
       logoUrl,
       primaryRefIndex,
       objective,
       photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
       outputMode,
       printFormat: outputMode === "print" ? printFormat : undefined,
+      artTexts,
     });
   };
 
@@ -327,7 +348,6 @@ export function ArtWizard({
               </p>
             </div>
 
-
             <Textarea
               placeholder="Ex: Quero divulgar que investir em imóveis exige estratégia, não sorte. Para a marca Klir, tom profissional e sofisticado."
               value={briefingText}
@@ -359,7 +379,6 @@ export function ArtWizard({
                 className="mt-1"
               />
             </div>
-
           </div>
         );
 
@@ -418,22 +437,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 4: Layout ───
+      // ─── Step 4: Logo ───
       case 4:
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold mb-1">📐 Diagramação</h3>
-              <p className="text-sm text-muted-foreground">
-                Escolha o layout que será usado para todas as peças geradas.
-              </p>
-            </div>
-            <LayoutPicker selected={layoutTypes} onSelect={setLayoutTypes} />
-          </div>
-        );
-
-      // ─── Step 5: Logo (dedicated step with tutorial) ───
-      case 5:
         return (
           <div className="space-y-5">
             <div>
@@ -480,8 +485,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 6: References (with tutorial) ───
-      case 6:
+      // ─── Step 5: References ───
+      case 5:
         return (
           <div className="space-y-5">
             <div>
@@ -523,6 +528,15 @@ export function ArtWizard({
               </CardContent>
             </Card>
 
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="p-3 flex items-start gap-2">
+                <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-xs text-primary">
+                  <strong>A diagramação e o layout da arte serão criados com base na sua referência principal ⭐.</strong> Escolha referências que representem o estilo de composição desejado.
+                </p>
+              </CardContent>
+            </Card>
+
             <RefUploader
               referenceUrls={referenceUrls}
               setReferenceUrls={setReferenceUrls}
@@ -538,8 +552,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 7: Photos (optional) ───
-      case 7:
+      // ─── Step 6: Photos (optional) ───
+      case 6:
         return (
           <div className="space-y-5">
             <div>
@@ -594,8 +608,8 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 8: Format ───
-      case 8: {
+      // ─── Step 7: Format ───
+      case 7: {
         if (outputMode === "print") {
           const printFormatsForType = PRINT_FORMATS.filter(f => {
             if (printType === "cartao") return f.value.startsWith("cartao");
@@ -685,21 +699,23 @@ export function ArtWizard({
         );
       }
 
-      // ─── Step 9: Review (AI-generated texts) ───
-      case 9: {
+      // ─── Step 8: Review — Per-art texts with individual approval ───
+      case 8: {
         const reviewTotalCost = totalPieces * creditCost;
-        const selectedLayouts = layoutTypes.map(lt => LAYOUT_TYPES.find(l => l.value === lt)).filter(Boolean);
         const selectedFormat = outputMode === "print"
           ? PRINT_FORMATS.find(f => f.value === printFormat)
           : ART_FORMATS.find(f => f.value === artFormat);
         const selectedType = POST_TYPES.find(t => t.value === tipoPostagem);
+        const approvedCount = artTexts.reduce((acc, t) => 
+          acc + (t.approvedHeadline ? 1 : 0) + (t.approvedSub ? 1 : 0) + (t.approvedSupport ? 1 : 0) + (t.approvedCta ? 1 : 0), 0);
+        const totalApprovals = artTexts.length * 4;
 
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-semibold mb-1">✅ Revisão final</h3>
               <p className="text-sm text-muted-foreground">
-                {isFillingAI ? "A IA está gerando os textos..." : "Textos gerados pela IA. Edite se necessário."}
+                {isFillingAI ? "A IA está gerando os textos..." : "Revise e aprove os textos de cada peça individualmente."}
               </p>
             </div>
 
@@ -712,61 +728,133 @@ export function ArtWizard({
               </Card>
             )}
 
-            {!isFillingAI && briefingFilled && (
+            {!isFillingAI && briefingFilled && artTexts.length > 0 && (
               <>
-                <Card>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-muted-foreground">Textos gerados pela IA</p>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs gap-1"
-                          onClick={() => setEditingTexts(!editingTexts)}
-                        >
-                          <Pencil className="w-3 h-3" />
-                          {editingTexts ? "Fechar" : "Editar"}
-                        </Button>
-                      </div>
-                    </div>
+                {/* Approval progress */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all"
+                      style={{ width: `${totalApprovals > 0 ? (approvedCount / totalApprovals) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground">{approvedCount}/{totalApprovals} aprovados</span>
+                </div>
 
-                    {editingTexts ? (
-                      <div className="space-y-2">
-                        <div>
-                          <Label className="text-[10px]">Headline <span className="text-destructive">*</span></Label>
-                          <Input value={headline} onChange={(e) => setHeadline(e.target.value)} className="mt-0.5 h-8 text-xs" />
-                        </div>
-                        <div>
-                          <Label className="text-[10px]">Subheadline</Label>
-                          <Input value={subheadline} onChange={(e) => setSubheadline(e.target.value)} className="mt-0.5 h-8 text-xs" />
-                        </div>
-                        <div>
-                          <Label className="text-[10px]">Texto de apoio</Label>
-                          <Textarea value={supportingText} onChange={(e) => setSupportingText(e.target.value)} rows={2} className="mt-0.5 resize-none text-xs" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <Label className="text-[10px]">CTA</Label>
-                            <Input value={cta} onChange={(e) => setCta(e.target.value)} className="mt-0.5 h-8 text-xs" />
+                {/* Per-art cards */}
+                {artTexts.map((art, i) => {
+                  const isEditing = editingPieceIndex === i;
+                  const pieceApproved = art.approvedHeadline && art.approvedSub && art.approvedSupport && art.approvedCta;
+
+                  return (
+                    <Card key={i} className={pieceApproved ? "border-primary/40 bg-primary/5" : ""}>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={pieceApproved ? "default" : "outline"} className="text-[10px]">
+                              {pieceApproved && <Check className="w-3 h-3 mr-1" />}
+                              Peça {i + 1} de {totalPieces}
+                            </Badge>
                           </div>
-                          <div>
-                            <Label className="text-[10px]">Nome da marca</Label>
-                            <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} className="mt-0.5 h-8 text-xs" />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs gap-1"
+                            onClick={() => setEditingPieceIndex(isEditing ? null : i)}
+                          >
+                            <Pencil className="w-3 h-3" />
+                            {isEditing ? "Fechar" : "Editar"}
+                          </Button>
+                        </div>
+
+                        {/* Headline */}
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={art.approvedHeadline}
+                            onCheckedChange={(v) => updateArtText(i, "approvedHeadline", !!v)}
+                            className="mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-medium text-muted-foreground">Headline</p>
+                            {isEditing ? (
+                              <Input
+                                value={art.headline}
+                                onChange={(e) => updateArtText(i, "headline", e.target.value)}
+                                className="mt-0.5 h-8 text-xs"
+                              />
+                            ) : (
+                              <p className="text-xs font-semibold">{art.headline || "—"}</p>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 text-xs">
-                        <div><span className="text-muted-foreground">Headline:</span> <span className="font-semibold">{headline || "—"}</span></div>
-                        {subheadline && <div><span className="text-muted-foreground">Sub:</span> {subheadline}</div>}
-                        {supportingText && <div><span className="text-muted-foreground">Apoio:</span> <span className="line-clamp-2">{supportingText}</span></div>}
-                        {cta && <div><span className="text-muted-foreground">CTA:</span> {cta}</div>}
-                        {brandName && <div><span className="text-muted-foreground">Marca:</span> {brandName}</div>}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+
+                        {/* Subheadline */}
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={art.approvedSub}
+                            onCheckedChange={(v) => updateArtText(i, "approvedSub", !!v)}
+                            className="mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-medium text-muted-foreground">Subheadline</p>
+                            {isEditing ? (
+                              <Input
+                                value={art.subheadline}
+                                onChange={(e) => updateArtText(i, "subheadline", e.target.value)}
+                                className="mt-0.5 h-8 text-xs"
+                              />
+                            ) : (
+                              <p className="text-xs">{art.subheadline || "—"}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Supporting text */}
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={art.approvedSupport}
+                            onCheckedChange={(v) => updateArtText(i, "approvedSupport", !!v)}
+                            className="mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-medium text-muted-foreground">Texto de apoio</p>
+                            {isEditing ? (
+                              <Textarea
+                                value={art.supportingText}
+                                onChange={(e) => updateArtText(i, "supportingText", e.target.value)}
+                                rows={2}
+                                className="mt-0.5 resize-none text-xs"
+                              />
+                            ) : (
+                              <p className="text-xs line-clamp-2">{art.supportingText || "—"}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* CTA */}
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={art.approvedCta}
+                            onCheckedChange={(v) => updateArtText(i, "approvedCta", !!v)}
+                            className="mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-medium text-muted-foreground">CTA</p>
+                            {isEditing ? (
+                              <Input
+                                value={art.cta}
+                                onChange={(e) => updateArtText(i, "cta", e.target.value)}
+                                className="mt-0.5 h-8 text-xs"
+                              />
+                            ) : (
+                              <p className="text-xs">{art.cta || "—"}</p>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
 
                 {/* Summary */}
                 <Card className="bg-muted/30">
@@ -796,9 +884,6 @@ export function ArtWizard({
                       <span className="text-muted-foreground">Quantidade:</span>
                       <span>{totalPieces} {tipoPostagem === "carrossel" ? "slides" : "peça(s)"}</span>
 
-                      <span className="text-muted-foreground">Diagramação:</span>
-                      <span>{selectedLayouts.map(l => l?.label).join(" + ")}</span>
-
                       <span className="text-muted-foreground">Formato:</span>
                       <span>{selectedFormat?.label} ({(selectedFormat as any)?.ratio || (selectedFormat as any)?.cm})</span>
 
@@ -820,7 +905,11 @@ export function ArtWizard({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleAutoFillTexts}
+                  onClick={() => {
+                    setBriefingFilled(false);
+                    setArtTexts([]);
+                    handleAutoFillTexts();
+                  }}
                   disabled={isFillingAI}
                   className="w-full"
                 >
