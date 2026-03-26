@@ -813,6 +813,14 @@ export default function ClienteDashboard() {
                         <YAxis tick={{ fontSize: 10 }} />
                         <ReTooltip />
                         <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                        {leadsGoal && leadsGoal.target_value && (
+                          <ReferenceLine
+                            y={Math.round(leadsGoal.target_value / 4)}
+                            stroke="hsl(45 93% 47%)"
+                            strokeDasharray="6 3"
+                            label={{ value: "Meta/semana", position: "right", fontSize: 9, fill: "hsl(45 93% 47%)" }}
+                          />
+                        )}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
