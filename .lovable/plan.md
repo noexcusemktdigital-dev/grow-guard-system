@@ -1,38 +1,34 @@
 
 
-# Corrigir Chat da Equipe (Matriz)
+## Diagnóstico
 
-## Problema identificado
+O arquivo CSV modelo usa **vírgula** como separador (linha 10: `"nome,email,telefone,..."`). No Windows com locale pt-BR, o Excel espera **ponto-e-vírgula** como separador CSV, pois a vírgula é usada como separador decimal. Resultado: todos os campos aparecem concatenados numa única coluna.
 
-O chat da equipe carrega mas não funciona corretamente por dois motivos:
+## Solução
 
-1. **Cliente Supabase errado**: O hook `useTeamChat.ts` importa o Supabase de `@/integrations/supabase/client` (cliente genérico), enquanto todo o sistema de autenticação usa `@/lib/supabase` (cliente com sessão do portal correto). Isso faz com que as queries do chat rodem sem autenticação válida, e o RLS bloqueia tudo silenciosamente.
+Alterar o template CSV para usar **ponto-e-vírgula** como delimitador e adicionar **BOM UTF-8** (`\uFEFF`) para garantir que acentos funcionem corretamente no Excel Windows.
 
-2. **Usuário não adicionado ao canal Geral**: A lógica de `ensureGeneralChannel` tenta fazer upsert mas falha silenciosamente pelo mesmo problema de cliente. O super_admin (davi.ttesch) não está na tabela `team_chat_members` do canal "Geral".
+### Mudanças em `src/components/crm/CrmCsvImportDialog.tsx`
 
-## Correções
+1. **Template com ponto-e-vírgula** — Trocar as constantes `CSV_TEMPLATE_HEADERS` e `CSV_TEMPLATE_EXAMPLE` para usar `;` como separador
+2. **BOM UTF-8** — Prefixar o conteúdo do blob com `\uFEFF` no `downloadTemplate()` para que o Excel reconheça a codificação corretamente
 
-### 1. Trocar import do Supabase em `useTeamChat.ts`
-**Arquivo**: `src/hooks/useTeamChat.ts`
+O parser de importação (`parseCsvText`) já faz auto-detect de delimitador (linha 52), então continua funcionando tanto para CSV com vírgula quanto com ponto-e-vírgula.
 
-- Linha 2: trocar `import { supabase } from "@/integrations/supabase/client"` para `import { supabase } from "@/lib/supabase"`
-- Isso garante que todas as queries usem a mesma sessão autenticada do portal franchise
+### Detalhes técnicos
 
-### 2. Melhorar `ensureGeneralChannel` para adicionar todos os membros
-**Arquivo**: `src/hooks/useTeamChat.ts`
+```
+// Antes
+const CSV_TEMPLATE_HEADERS = "nome,email,telefone,empresa,cargo,origem,tags,notas";
 
-- Quando o canal "Geral" já existe (bloco `else` na linha 103), além de adicionar o usuário atual, também adicionar todos os membros da org que ainda não estão no canal
-- Isso resolve o caso de novos membros que entram na org depois da criação do canal
+// Depois
+const CSV_TEMPLATE_HEADERS = "nome;email;telefone;empresa;cargo;origem;tags;notas";
+```
 
-### 3. Adicionar tratamento de erros visíveis
-**Arquivo**: `src/hooks/useTeamChat.ts`
+```
+// downloadTemplate — adicionar BOM
+const content = `\uFEFF${CSV_TEMPLATE_HEADERS}\n${CSV_TEMPLATE_EXAMPLE}`;
+```
 
-- Adicionar `console.error` nos pontos de falha para facilitar debug futuro
-- Mostrar toast de erro quando `ensureGeneralChannel` ou `sendMessage` falha
-
-## Arquivos afetados
-
-| Arquivo | Ação |
-|---|---|
-| `src/hooks/useTeamChat.ts` | Corrigir import do Supabase + melhorar lógica de membership |
+Escopo mínimo: 2 constantes + 1 linha no `downloadTemplate`. Nenhum outro arquivo afetado.
 
