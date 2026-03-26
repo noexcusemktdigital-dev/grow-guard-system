@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
           if (inst.provider === "evolution") {
             // Evolution API status check
             console.log("[check-status] Evolution calling", `${inst.base_url}/instance/connectionState/${inst.instance_id}`);
-            const stateRes = await fetch(`${inst.base_url}/instance/connectionState/${inst.instance_id}`, {
+            const stateRes = await fetch(`${inst.base_url}/instance/connectionState/${encodeURIComponent(inst.instance_id)}`, {
               headers: { apikey: inst.client_token },
             });
             const stateData = await stateRes.json();
@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
             // Fetch phone number if connected and not already known
             if (connected && !phoneNumber) {
               try {
-                const phoneRes = await fetch(`${inst.base_url}/instance/fetchInstances?instanceName=${inst.instance_id}`, {
+                const phoneRes = await fetch(`${inst.base_url}/instance/fetchInstances?instanceName=${encodeURIComponent(inst.instance_id)}`, {
                   headers: { apikey: inst.client_token },
                   signal: AbortSignal.timeout(10000),
                 });
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
               webhookSynced = false;
 
               try {
-                const findRes = await fetch(`${inst.base_url}/webhook/find/${inst.instance_id}`, {
+                const findRes = await fetch(`${inst.base_url}/webhook/find/${encodeURIComponent(inst.instance_id)}`, {
                   headers: { apikey: inst.client_token },
                 });
                 const rawFindBody = await findRes.text();
@@ -410,7 +410,7 @@ Deno.serve(async (req) => {
 
       for (const payload of payloadAttempts) {
         try {
-          const setRes = await fetch(`${cleanBase}/webhook/set/${inst.instance_id}`, {
+          const setRes = await fetch(`${cleanBase}/webhook/set/${encodeURIComponent(inst.instance_id)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json", apikey: key },
             body: JSON.stringify(payload),
@@ -449,7 +449,7 @@ Deno.serve(async (req) => {
       // Verify by finding current webhook config
       let currentWebhook: any = null;
       try {
-        const findRes = await fetch(`${cleanBase}/webhook/find/${inst.instance_id}`, {
+        const findRes = await fetch(`${cleanBase}/webhook/find/${encodeURIComponent(inst.instance_id)}`, {
           headers: { apikey: key },
         });
         currentWebhook = await findRes.json();
@@ -493,7 +493,7 @@ Deno.serve(async (req) => {
 
       let currentWebhook: any = null;
       try {
-        const findRes = await fetch(`${cleanBase}/webhook/find/${inst.instance_id}`, {
+        const findRes = await fetch(`${cleanBase}/webhook/find/${encodeURIComponent(inst.instance_id)}`, {
           headers: { apikey: key },
         });
         currentWebhook = await findRes.json();
@@ -580,7 +580,7 @@ Deno.serve(async (req) => {
         ];
 
         for (const payload of payloadAttempts) {
-          const setRes = await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
+          const setRes = await fetch(`${cleanBaseUrl}/webhook/set/${encodeURIComponent(instanceName)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json", apikey: effectiveApiKey },
             body: JSON.stringify(payload),
@@ -603,7 +603,7 @@ Deno.serve(async (req) => {
       let connStatus = "disconnected";
       try {
         console.log("[connect] Evolution checking state at", `${cleanBaseUrl}/instance/connectionState/${instanceName}`);
-        const stateRes = await fetch(`${cleanBaseUrl}/instance/connectionState/${instanceName}`, {
+        const stateRes = await fetch(`${cleanBaseUrl}/instance/connectionState/${encodeURIComponent(instanceName)}`, {
           headers: { apikey: effectiveApiKey },
         });
         const stateData = await stateRes.json();
@@ -670,7 +670,7 @@ Deno.serve(async (req) => {
         ];
 
         for (const payload of reconfigPayloads) {
-          const reconfigRes = await fetch(`${cleanBaseUrl}/webhook/set/${instanceName}`, {
+          const reconfigRes = await fetch(`${cleanBaseUrl}/webhook/set/${encodeURIComponent(instanceName)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json", apikey: effectiveApiKey },
             body: JSON.stringify(payload),
@@ -686,7 +686,7 @@ Deno.serve(async (req) => {
       let phoneNumber: string | null = null;
       if (connStatus === "connected") {
         try {
-          const listRes = await fetch(`${cleanBaseUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
+          const listRes = await fetch(`${cleanBaseUrl}/instance/fetchInstances?instanceName=${encodeURIComponent(instanceName)}`, {
             headers: { apikey: effectiveApiKey },
             signal: AbortSignal.timeout(10000),
           });
