@@ -3,14 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   User, Phone, Mail, Building2, DollarSign, Tag, Calendar,
-  ExternalLink, UserPlus, X,
+  ExternalLink, UserPlus, X, Image as ImageIcon, FileText, Link2,
 } from "lucide-react";
-import type { WhatsAppContact } from "@/hooks/useWhatsApp";
-import { useFindLeadByPhone } from "@/hooks/useWhatsApp";
+import type { WhatsAppContact, WhatsAppMessage } from "@/hooks/useWhatsApp";
+import { useFindLeadByPhone, useWhatsAppMessages } from "@/hooks/useWhatsApp";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
 import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
 
 interface Props {
   contact: WhatsAppContact | null;
