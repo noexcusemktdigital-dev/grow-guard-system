@@ -326,6 +326,32 @@ export default function ClienteDashboard() {
     return { value: `${Number(pct) >= 0 ? "+" : ""}${pct}%`, positive: Number(pct) >= 0 };
   }
 
+  // Goal status for KPI labels
+  function getKpiGoalStatus(kpiLabel: string): GoalStatus | undefined {
+    if (!activeGoals || !goalProgress) return undefined;
+    for (const goal of activeGoals) {
+      const metric = goal.metric || "revenue";
+      const matchLabels = METRIC_TO_KPI[metric];
+      if (matchLabels?.includes(kpiLabel)) {
+        return goalProgress[goal.id]?.status;
+      }
+    }
+    return undefined;
+  }
+
+  // Goal for conversion chart color
+  const conversionGoal = useMemo(() => {
+    if (!activeGoals || !goalProgress) return null;
+    const g = activeGoals.find((g: any) => g.metric === "conversions");
+    return g ? goalProgress[g.id] : null;
+  }, [activeGoals, goalProgress]);
+
+  // Goal for leads chart reference line
+  const leadsGoal = useMemo(() => {
+    if (!activeGoals) return null;
+    return activeGoals.find((g: any) => g.metric === "leads") || null;
+  }, [activeGoals]);
+
   // Average closing time (days between created_at and won_at)
   const avgClosingDays = useMemo(() => {
     const closedLeads = wonLeads.filter(l => l.won_at && l.created_at);
