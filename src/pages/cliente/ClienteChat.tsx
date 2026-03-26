@@ -104,11 +104,7 @@ export default function ClienteChat() {
 
   const handleBackToList = useCallback(() => setMobileShowConversation(false), []);
 
-  const pinContact = usePinContact();
   const archiveContact = useArchiveContact();
-  const handlePinContact = useCallback((contactId: string, pinned: boolean) => {
-    pinContact.mutate({ contactId, pinned }, { onSuccess: () => toast({ title: pinned ? "Conversa fixada" : "Conversa desafixada" }) });
-  }, [pinContact]);
   const handleArchiveContact = useCallback((contactId: string, archived: boolean) => {
     archiveContact.mutate({ contactId, archived }, { onSuccess: () => toast({ title: archived ? "Conversa arquivada" : "Conversa desarquivada" }) });
   }, [archiveContact]);
