@@ -6,7 +6,7 @@ import {
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
   ChevronDown, Link, CreditCard, Settings, Zap, Lock, Trophy, ClipboardCheck,
-  Headphones, Calendar,
+  Headphones, Calendar, Video, Image,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
@@ -50,8 +50,8 @@ const vendasSection: SidebarItem[] = [
 const marketingSection: SidebarItem[] = [
   
   { label: "Plano de Marketing", icon: Megaphone, path: "/cliente/plano-marketing" },
-  { label: "Conteúdos", icon: FileText, path: "/cliente/conteudos" },
-  { label: "Redes Sociais", icon: Share2, path: "/cliente/redes-sociais" },
+  { label: "Roteiros", icon: Video, path: "/cliente/conteudos" },
+  { label: "Postagem", icon: Image, path: "/cliente/redes-sociais" },
   { label: "Sites", icon: Globe, path: "/cliente/sites" },
   { label: "Tráfego Pago", icon: DollarSign, path: "/cliente/trafego-pago", adminOnly: true },
 ];

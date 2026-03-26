@@ -17,6 +17,7 @@ import { ContentItem } from "@/hooks/useClienteContentV2";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import {
   Check, FileText, X, Wand2, Loader2, AlertTriangle, Sparkles, ArrowLeft, Pencil, Plus,
+  Upload, Star, Camera, Info,
 } from "lucide-react";
 
 interface ArtWizardProps {
@@ -77,7 +78,7 @@ export interface ArtBriefingResult {
   suggested_tipo: string;
 }
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 9;
 
 export function ArtWizard({
   orgId, visualIdentity, contentHistory, contentData, setContentData,
@@ -90,7 +91,7 @@ export function ArtWizard({
   const [objective, setObjective] = useState("vender");
   const [mandatoryPhrase, setMandatoryPhrase] = useState("");
 
-  // Step 1: Output mode (digital vs print)
+  // Step 1: Output mode
   const [outputMode, setOutputMode] = useState<"digital" | "print">("digital");
   const [printType, setPrintType] = useState("flyer");
 
@@ -99,23 +100,27 @@ export function ArtWizard({
   const [quantity, setQuantity] = useState(1);
   const [carouselSlides, setCarouselSlides] = useState(5);
 
-  // Step 4: Layout (replaces old Style)
+  // Step 4: Layout
   const [layoutTypes, setLayoutTypes] = useState<string[]>(["hero_central"]);
 
-  // Step 5: References + Logo + Photos
+  // Step 5: Logo (dedicated)
+  const [logoUrl, setLogoUrl] = useState("");
+
+  // Step 6: References (with tutorial)
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [logoUrl, setLogoUrl] = useState("");
   const [primaryRefIndex, setPrimaryRefIndex] = useState(0);
+
+  // Step 7: Photos
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
-  // Step 6: Format (per-piece when quantity > 1)
+  // Step 8: Format
   const [artFormat, setArtFormat] = useState("portrait");
   const [artFormats, setArtFormats] = useState<string[]>([]);
   const [printFormat, setPrintFormat] = useState("flyer_a5");
 
-  // Step 6: AI-generated text (review)
+  // Step 9: AI-generated text (review)
   const [headline, setHeadline] = useState("");
   const [subheadline, setSubheadline] = useState("");
   const [cta, setCta] = useState("");
@@ -138,9 +143,8 @@ export function ArtWizard({
     }
   }, [visualIdentity]);
 
-  // Auto-fill texts when entering step 6
   const handleAutoFillTexts = async () => {
-    if (briefingFilled && headline) return; // already filled
+    if (briefingFilled && headline) return;
     const enrichedBriefing = `${briefingText}\nObjetivo: ${objective}${mandatoryPhrase ? `\nFrase obrigatória: ${mandatoryPhrase}` : ""}`;
     const result = await onFillWithAI(enrichedBriefing, contentData);
     if (result) {
@@ -157,20 +161,21 @@ export function ArtWizard({
 
   const canProceed = () => {
     switch (step) {
-      case 1: return true; // output mode always valid
+      case 1: return true;
       case 2: return !!(briefingText.trim() || contentData);
       case 3: return true;
       case 4: return layoutTypes.length >= 1;
-      case 5: return referenceUrls.length >= 3 && !!logoUrl;
-      case 6: return true;
-      case 7: return !!headline.trim();
+      case 5: return !!logoUrl;
+      case 6: return referenceUrls.length >= 3;
+      case 7: return true; // photos optional
+      case 8: return true;
+      case 9: return !!headline.trim();
       default: return true;
     }
   };
 
   const handleStepChange = (nextStep: number) => {
-    // Auto-trigger AI text generation when entering review step
-    if (nextStep === 7 && !briefingFilled) {
+    if (nextStep === 9 && !briefingFilled) {
       handleAutoFillTexts();
     }
     setStep(nextStep);
@@ -188,7 +193,6 @@ export function ArtWizard({
       return;
     }
 
-    // Build per-piece formats array
     const finalFormats = outputMode === "print"
       ? Array(totalPieces).fill(printFormat)
       : (artFormats.length === totalPieces ? artFormats : Array(totalPieces).fill(artFormat));
@@ -218,7 +222,6 @@ export function ArtWizard({
     else onBack();
   };
 
-  /* ── Selectable card ── */
   const SelectCard = ({ selected, onClick, children, className }: { selected: boolean; onClick: () => void; children: React.ReactNode; className?: string }) => (
     <Card
       className={`cursor-pointer transition-all hover:shadow-md ${selected ? "ring-2 ring-primary bg-primary/5" : ""} ${className || ""}`}
@@ -228,7 +231,6 @@ export function ArtWizard({
     </Card>
   );
 
-  /* ── Step progress ── */
   const StepProgress = () => (
     <div className="flex items-center gap-1.5 mb-4">
       {Array.from({ length: TOTAL_STEPS }, (_, i) => (
@@ -238,9 +240,40 @@ export function ArtWizard({
     </div>
   );
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !orgId) return;
+    setUploadingPhotos(true);
+    const newUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `photos/${orgId}/${Date.now()}_${safeName}`;
+      const { error } = await (await import("@/lib/supabase")).supabase.storage.from("social-arts").upload(path, file);
+      if (!error) {
+        const { data: urlData } = (await import("@/lib/supabase")).supabase.storage.from("social-arts").getPublicUrl(path);
+        newUrls.push(urlData.publicUrl);
+      }
+    }
+    setPhotoUrls(prev => [...prev, ...newUrls]);
+    setUploadingPhotos(false);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !orgId) return;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `logos/${orgId}/${Date.now()}_${safeName}`;
+    const { error } = await (await import("@/lib/supabase")).supabase.storage.from("social-arts").upload(path, file);
+    if (!error) {
+      const { data: urlData } = (await import("@/lib/supabase")).supabase.storage.from("social-arts").getPublicUrl(path);
+      setLogoUrl(urlData.publicUrl);
+      toast({ title: "Logo carregada!" });
+    }
+  };
+
   const renderStep = () => {
     switch (step) {
-      // ─── Step 1: Output Mode (Digital vs Print) ───
+      // ─── Step 1: Output Mode ───
       case 1:
         return (
           <div className="space-y-5">
@@ -339,7 +372,6 @@ export function ArtWizard({
                 onChange={(e) => setMandatoryPhrase(e.target.value)}
                 className="mt-1"
               />
-              <p className="text-[10px] text-muted-foreground mt-0.5">Se preenchido, será usada como headline principal.</p>
             </div>
 
             <Button variant="outline" size="sm" onClick={() => setShowContentPicker(true)}>
@@ -414,7 +446,7 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 4: Layout (Diagramação) ───
+      // ─── Step 4: Layout ───
       case 4:
         return (
           <div className="space-y-4">
@@ -428,45 +460,97 @@ export function ArtWizard({
           </div>
         );
 
-      // ─── Step 5: References + Logo + Photos ───
-      case 5: {
-        const photoInputRef = { current: null as HTMLInputElement | null };
-        const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-          const files = e.target.files;
-          if (!files || !orgId) return;
-          setUploadingPhotos(true);
-          const newUrls: string[] = [];
-          for (const file of Array.from(files)) {
-            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-            const path = `photos/${orgId}/${Date.now()}_${safeName}`;
-            const { error } = await (await import("@/lib/supabase")).supabase.storage.from("social-arts").upload(path, file);
-            if (!error) {
-              const { data: urlData } = (await import("@/lib/supabase")).supabase.storage.from("social-arts").getPublicUrl(path);
-              newUrls.push(urlData.publicUrl);
-            }
-          }
-          setPhotoUrls(prev => [...prev, ...newUrls]);
-          setUploadingPhotos(false);
-        };
-
+      // ─── Step 5: Logo (dedicated step with tutorial) ───
+      case 5:
         return (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <h3 className="text-base font-semibold mb-1">📸 Referências + Logo + Fotos</h3>
+              <h3 className="text-base font-semibold mb-1">🏷️ Logo da marca</h3>
               <p className="text-sm text-muted-foreground">
-                A IA extrai <strong>cores, fontes e estilo</strong> das referências.
-                Envie a logo e fotos que devem aparecer na arte.
+                Sua logo será aplicada automaticamente na arte final gerada pela IA.
               </p>
             </div>
+
             <Card className="bg-accent/30 border-accent">
-              <CardContent className="p-3 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <div className="text-xs text-muted-foreground">
-                  <strong>Dica:</strong> Envie artes anteriores, posts que você gostou ou materiais da marca.
-                  Marque com ⭐ a referência que mais representa o estilo desejado.
+              <CardContent className="p-4 flex items-start gap-3">
+                <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground">Por que a logo é importante?</p>
+                  <p>A IA reserva um espaço limpo na arte e sobrepõe sua logo original, sem redesenhá-la. Isso garante fidelidade visual total da sua marca.</p>
+                  <p className="text-xs">Formatos aceitos: PNG (fundo transparente recomendado), JPG, SVG</p>
                 </div>
               </CardContent>
             </Card>
+
+            {logoUrl ? (
+              <div className="flex items-center gap-4 p-4 rounded-xl border bg-card">
+                <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-primary bg-white p-1 flex items-center justify-center">
+                  <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-primary flex items-center gap-1.5">
+                    <Check className="w-4 h-4" /> Logo carregada
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Será aplicada em todas as peças geradas</p>
+                  <Button variant="outline" size="sm" className="mt-2 h-7 text-xs" onClick={() => setLogoUrl("")}>
+                    Trocar logo
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full h-40 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
+                <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                <p className="text-sm font-medium">Clique para enviar sua logo</p>
+                <p className="text-xs text-muted-foreground mt-1">PNG com fundo transparente recomendado</p>
+                <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+              </label>
+            )}
+          </div>
+        );
+
+      // ─── Step 6: References (with tutorial) ───
+      case 6:
+        return (
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-base font-semibold mb-1">🎨 Referências visuais</h3>
+              <p className="text-sm text-muted-foreground">
+                A IA extrai <strong>cores, fontes e estilo</strong> das referências para criar artes no mesmo padrão visual.
+              </p>
+            </div>
+
+            <Card className="bg-accent/30 border-accent">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <Star className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p className="font-medium text-foreground">O que são referências visuais?</p>
+                    <p>São <strong>exemplos de artes que você gosta</strong> — posts de outras marcas, materiais antigos, paletas de cores ou qualquer imagem que represente o estilo desejado.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                      <div className="p-2 rounded-lg bg-background border text-xs text-center">
+                        <p className="text-lg mb-1">🎨</p>
+                        <p className="font-medium">Cores e paletas</p>
+                        <p className="text-muted-foreground">Posts com cores que você quer</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-background border text-xs text-center">
+                        <p className="text-lg mb-1">📐</p>
+                        <p className="font-medium">Estilos de layout</p>
+                        <p className="text-muted-foreground">Composições que te agradam</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-background border text-xs text-center">
+                        <p className="text-lg mb-1">✨</p>
+                        <p className="font-medium">Materiais da marca</p>
+                        <p className="text-muted-foreground">Artes antigas, cartões etc.</p>
+                      </div>
+                    </div>
+                    <p className="text-xs mt-1">
+                      <strong>Dica:</strong> Marque com ⭐ a referência que mais representa o estilo desejado. <strong>Envie pelo menos 3 referências.</strong>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <RefUploader
               referenceUrls={referenceUrls}
               setReferenceUrls={setReferenceUrls}
@@ -476,57 +560,70 @@ export function ArtWizard({
               required
               min={3}
               visualIdentity={visualIdentity}
-              logoUrl={logoUrl}
-              setLogoUrl={setLogoUrl}
               primaryRefIndex={primaryRefIndex}
               setPrimaryRefIndex={setPrimaryRefIndex}
             />
-
-            {/* Photos to include in the art */}
-            <div className="space-y-2 pt-2 border-t">
-              <div className="flex items-center gap-2">
-                <span className="text-base">📷</span>
-                <p className="text-sm font-semibold">Fotos para incluir na arte</p>
-                <Badge variant="outline" className="text-[10px]">Opcional</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Essas fotos serão usadas <strong>diretamente na composição</strong> da arte (ex: foto de produto, pessoa, imóvel).
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {photoUrls.map((url, i) => (
-                  <div key={i} className="relative group w-20 h-20 rounded-xl overflow-hidden border-2 border-border">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
-                    <button
-                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                      onClick={() => setPhotoUrls(prev => prev.filter((_, j) => j !== i))}
-                    >
-                      <X className="w-4 h-4 text-white" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  className="w-20 h-20 rounded-xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors gap-1"
-                  onClick={() => {
-                    const input = document.createElement("input");
-                    input.type = "file";
-                    input.accept = "image/*";
-                    input.multiple = true;
-                    input.onchange = (ev) => handlePhotoUpload(ev as any);
-                    input.click();
-                  }}
-                  disabled={uploadingPhotos}
-                >
-                  {uploadingPhotos ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-                  <span className="text-[10px]">Foto</span>
-                </button>
-              </div>
-            </div>
           </div>
         );
-      }
 
-      // ─── Step 6: Format ───
-      case 6: {
+      // ─── Step 7: Photos (optional) ───
+      case 7:
+        return (
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-base font-semibold mb-1">📷 Fotos para incluir na arte</h3>
+              <Badge variant="outline" className="text-[10px] ml-2">Opcional</Badge>
+              <p className="text-sm text-muted-foreground mt-1">
+                Fotos reais que devem aparecer na composição — produto, imóvel, pessoa, etc.
+              </p>
+            </div>
+
+            <Card className="bg-accent/30 border-accent">
+              <CardContent className="p-3 flex items-start gap-2">
+                <Camera className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <div className="text-xs text-muted-foreground">
+                  <strong>Diferença entre referência e foto:</strong> Referências definem o <strong>estilo visual</strong> (cores, layout). Fotos são <strong>inseridas diretamente</strong> na arte final (produto, pessoa, imóvel).
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-wrap gap-2">
+              {photoUrls.map((url, i) => (
+                <div key={i} className="relative group w-20 h-20 rounded-xl overflow-hidden border-2 border-border">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    onClick={() => setPhotoUrls(prev => prev.filter((_, j) => j !== i))}
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+              ))}
+              <button
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors gap-1"
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
+                  input.multiple = true;
+                  input.onchange = (ev) => handlePhotoUpload(ev as any);
+                  input.click();
+                }}
+                disabled={uploadingPhotos}
+              >
+                {uploadingPhotos ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                <span className="text-[10px]">Foto</span>
+              </button>
+            </div>
+
+            {photoUrls.length === 0 && (
+              <p className="text-xs text-muted-foreground">Nenhuma foto adicionada. Você pode pular esta etapa.</p>
+            )}
+          </div>
+        );
+
+      // ─── Step 8: Format ───
+      case 8: {
         if (outputMode === "print") {
           const printFormatsForType = PRINT_FORMATS.filter(f => {
             if (printType === "cartao") return f.value.startsWith("cartao");
@@ -555,10 +652,8 @@ export function ArtWizard({
           );
         }
 
-        // Digital mode — per-piece format selection
         const pieces = totalPieces;
         if (pieces > 1 && tipoPostagem !== "carrossel") {
-          // Initialize artFormats if needed
           if (artFormats.length !== pieces) {
             setArtFormats(Array(pieces).fill(artFormat));
           }
@@ -570,7 +665,7 @@ export function ArtWizard({
               </div>
               {Array.from({ length: pieces }, (_, i) => (
                 <div key={i} className="space-y-1">
-                  <Label className="text-xs font-medium">Peça {i + 1} — Layout: {LAYOUT_TYPES.find(l => l.value === layoutTypes[i % layoutTypes.length])?.label}</Label>
+                  <Label className="text-xs font-medium">Peça {i + 1}</Label>
                   <div className="grid grid-cols-3 gap-2">
                     {ART_FORMATS.map((f) => (
                       <SelectCard
@@ -596,7 +691,6 @@ export function ArtWizard({
           );
         }
 
-        // Single piece — simple format selector
         return (
           <div className="space-y-4">
             <div>
@@ -619,8 +713,8 @@ export function ArtWizard({
         );
       }
 
-      // ─── Step 7: Review (AI-generated texts) ───
-      case 7: {
+      // ─── Step 9: Review (AI-generated texts) ───
+      case 9: {
         const reviewTotalCost = totalPieces * creditCost;
         const selectedLayouts = layoutTypes.map(lt => LAYOUT_TYPES.find(l => l.value === lt)).filter(Boolean);
         const selectedFormat = outputMode === "print"
@@ -648,20 +742,21 @@ export function ArtWizard({
 
             {!isFillingAI && briefingFilled && (
               <>
-                {/* AI-generated texts with edit toggle */}
                 <Card>
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-semibold text-muted-foreground">Textos gerados pela IA</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs gap-1"
-                        onClick={() => setEditingTexts(!editingTexts)}
-                      >
-                        <Pencil className="w-3 h-3" />
-                        {editingTexts ? "Fechar" : "Editar"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs gap-1"
+                          onClick={() => setEditingTexts(!editingTexts)}
+                        >
+                          <Pencil className="w-3 h-3" />
+                          {editingTexts ? "Fechar" : "Editar"}
+                        </Button>
+                      </div>
                     </div>
 
                     {editingTexts ? (
@@ -706,14 +801,14 @@ export function ArtWizard({
                   <CardContent className="p-4 space-y-2">
                     {referenceUrls.length > 0 && (
                       <div className="mb-2">
-                        <p className="text-[10px] font-medium text-muted-foreground mb-1">Referências ({referenceUrls.length}){logoUrl ? " + Logo" : ""}</p>
+                        <p className="text-[10px] font-medium text-muted-foreground mb-1">Referências ({referenceUrls.length}){logoUrl ? " + Logo" : ""}{photoUrls.length > 0 ? ` + ${photoUrls.length} fotos` : ""}</p>
                         <div className="flex flex-wrap gap-1.5">
                           {logoUrl && (
                             <div className="w-10 h-10 rounded-md overflow-hidden border-2 border-primary">
                               <img src={logoUrl} alt="Logo" className="w-full h-full object-contain bg-white p-0.5" />
                             </div>
                           )}
-                          {referenceUrls.map((url, i) => (
+                          {referenceUrls.slice(0, 5).map((url, i) => (
                             <div key={i} className={`w-10 h-10 rounded-md overflow-hidden border ${primaryRefIndex === i ? "border-primary border-2" : "border-border"}`}>
                               <img src={url} alt="" className="w-full h-full object-cover" />
                             </div>

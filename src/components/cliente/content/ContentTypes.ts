@@ -1,17 +1,3 @@
-export interface CarrosselSlide {
-  titulo?: string;
-  texto?: string;
-  content?: string;
-}
-
-export interface PostContent {
-  headline?: string;
-  texto?: string;
-  dica_pratica?: string;
-  dado_autoridade?: string;
-  cta?: string;
-}
-
 export interface VideoContent {
   hook?: string;
   desenvolvimento?: string;
@@ -20,26 +6,13 @@ export interface VideoContent {
   cta?: string;
 }
 
-export interface StoryFrame {
-  texto?: string;
-  content?: string;
-  acao?: string;
-}
-
-export interface ArtigoContent {
-  titulo?: string;
-  introducao?: string;
-  secoes?: { subtitulo: string; texto: string }[];
-  conclusao?: string;
-}
-
 export interface GeneratedContent {
   titulo: string;
   formato: string;
   objetivo: string;
   legenda?: string;
   hashtags?: string[];
-  conteudo_principal?: CarrosselSlide[] | PostContent | VideoContent | StoryFrame[] | ArtigoContent | string;
+  conteudo_principal?: VideoContent | any;
   cta?: string;
 }
 
@@ -62,13 +35,10 @@ export function parseConteudoPrincipal(raw: any): any {
 }
 
 export const FORMATOS = [
-  { value: "carrossel", label: "Carrossel", icon: "Layers" as const },
-  { value: "post_unico", label: "Post Único", icon: "AlignLeft" as const },
-  { value: "roteiro_video", label: "Roteiro de Vídeo", icon: "Video" as const },
-  { value: "story", label: "Story", icon: "Image" as const },
-  { value: "artigo", label: "Artigo", icon: "BookOpen" as const },
-  { value: "post_educativo", label: "Post Educativo", icon: "Lightbulb" as const },
-  { value: "post_autoridade", label: "Post Autoridade", icon: "Target" as const },
+  { value: "roteiro_reels", label: "Reels / TikTok", icon: "Video" as const },
+  { value: "roteiro_youtube", label: "YouTube", icon: "Monitor" as const },
+  { value: "roteiro_stories", label: "Stories", icon: "Smartphone" as const },
+  { value: "roteiro_longo", label: "Vídeo Longo", icon: "Film" as const },
 ] as const;
 
 export const OBJETIVOS = [
@@ -80,13 +50,21 @@ export const OBJETIVOS = [
   { value: "leads", label: "Gerar leads" },
 ] as const;
 
-export const PLATAFORMAS = ["Instagram", "LinkedIn", "TikTok", "YouTube", "Blog"] as const;
+export const PLATAFORMAS = ["Instagram", "TikTok", "YouTube", "LinkedIn"] as const;
+
+export const DURACOES = [
+  { value: "15s", label: "15 segundos", desc: "Reels curto, gancho rápido" },
+  { value: "30s", label: "30 segundos", desc: "Reels padrão" },
+  { value: "60s", label: "1 minuto", desc: "Conteúdo explicativo" },
+  { value: "3min", label: "3 minutos", desc: "YouTube Shorts / mini-aula" },
+  { value: "5min+", label: "5+ minutos", desc: "YouTube longo" },
+] as const;
 
 export const loadingPhrases = [
   "Analisando sua estratégia...",
-  "Distribuindo formatos no funil...",
-  "Criando conteúdos estratégicos...",
-  "Gerando headlines criativas...",
-  "Estruturando legendas completas...",
-  "Finalizando lote de conteúdos...",
+  "Construindo hooks de impacto...",
+  "Criando roteiros estratégicos...",
+  "Estruturando ganchos e CTAs...",
+  "Aplicando técnicas de algoritmo...",
+  "Finalizando roteiros...",
 ];
