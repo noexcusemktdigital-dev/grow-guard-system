@@ -170,8 +170,10 @@ Deno.serve(async (req) => {
     });
 
     let userId: string;
+    let isNewUser = true;
 
     if (createErr && (createErr as any).code === "email_exists") {
+      isNewUser = false;
       // User already exists — find them via paginated search
       console.log("[invite-user] User already exists, looking up:", email);
       const existing = await findUserByEmail(adminClient, email);
@@ -198,6 +200,14 @@ Deno.serve(async (req) => {
       throw createErr;
     } else {
       userId = newUser.user.id;
+    }
+
+    // ---- Prevent self-invite ----
+    if (userId === callerId) {
+      return new Response(
+        JSON.stringify({ error: "Você não pode convidar a si mesmo." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Generate a password recovery link — redirect based on org type
