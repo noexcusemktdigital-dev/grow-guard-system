@@ -1,8 +1,11 @@
 import React from "react";
-import { Bot, User, Users, Globe } from "lucide-react";
+import { Bot, User, Users, Globe, Pin, Archive } from "lucide-react";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { WhatsAppContact } from "@/hooks/useWhatsApp";
 import { isToday, isYesterday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,6 +17,8 @@ interface Props {
   stageLabel?: string;
   preview?: string;
   leadStages?: Map<string, string>;
+  onPin?: (contactId: string, pinned: boolean) => void;
+  onArchive?: (contactId: string, archived: boolean) => void;
 }
 
 function formatContactTime(dateStr: string | null) {
