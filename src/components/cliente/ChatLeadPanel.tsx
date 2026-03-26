@@ -26,9 +26,19 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
   const crmLeadId = contactAny?.crm_lead_id || null;
   const { data: leadData } = useFindLeadByPhone(contact?.phone ?? null);
   const lead = leadData as any;
-  // Use lead id from either linked contact or phone-matched lead
   const effectiveLeadId = crmLeadId || lead?.id || null;
   const { data: activities } = useCrmActivities(effectiveLeadId);
+  const { data: allMessages = [] } = useWhatsAppMessages(contact?.id ?? null);
+
+  const mediaItems = useMemo(() => allMessages.filter(m => m.media_url && (m.type === "image" || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(m.media_url || ""))), [allMessages]);
+  const docItems = useMemo(() => allMessages.filter(m => m.media_url && (m.type === "document" || /\.(pdf|doc|xls|ppt|csv|txt)(\?|$)/i.test(m.media_url || ""))), [allMessages]);
+  const linkItems = useMemo(() => {
+    const urlRegex = /(https?:\/\/[^\s<]+)/gi;
+    return allMessages.filter(m => m.content && urlRegex.test(m.content)).map(m => {
+      const match = m.content!.match(urlRegex);
+      return { ...m, links: match || [] };
+    });
+  }, [allMessages]);
 
   if (!contact) return null;
 
