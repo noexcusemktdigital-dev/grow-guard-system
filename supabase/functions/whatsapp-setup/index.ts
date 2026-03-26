@@ -686,7 +686,7 @@ Deno.serve(async (req) => {
       let phoneNumber: string | null = null;
       if (connStatus === "connected") {
         try {
-          const listRes = await fetch(`${cleanBaseUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
+          const listRes = await fetch(`${cleanBaseUrl}/instance/fetchInstances?instanceName=${encodeURIComponent(instanceName)}`, {
             headers: { apikey: effectiveApiKey },
             signal: AbortSignal.timeout(10000),
           });
