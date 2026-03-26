@@ -179,8 +179,8 @@ export default function ClienteDashboard() {
   const { data: leads, isLoading: leadsLoading } = useCrmLeads();
   const { data: proposals } = useCrmProposals();
   const { data: orgId } = useUserOrgId();
-  const { query: orgQuery } = useOrgProfile();
-  const orgName = orgQuery.data?.name || "Relatório";
+  const orgProfile = useOrgProfile();
+  const orgName = orgProfile.data?.name || "Relatório";
   const { toast } = useToast();
   const [period, setPeriod] = useState("30d");
   const [customFrom, setCustomFrom] = useState("");
