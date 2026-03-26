@@ -273,6 +273,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
     setCurrentStepIdx(currentStepIdx - 1);
     setTextValue("");
     setMultiSelectValues([]);
+    setCustomTextMode(false);
   };
 
   const handleSelect = (value: string) => {
