@@ -699,7 +699,14 @@ export default function ClienteDashboard() {
               <CardContent className="flex flex-col items-center justify-center">
                 <div className="h-40 w-full max-w-xs">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{ name: "Conversão", value: Number(conversionRate), fill: "hsl(var(--primary))" }]} startAngle={90} endAngle={-270}>
+                    <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{
+                      name: "Conversão", value: Number(conversionRate),
+                      fill: conversionGoal
+                        ? conversionGoal.status === "batida" || conversionGoal.status === "no_ritmo" ? "hsl(142 76% 36%)"
+                        : conversionGoal.status === "em_andamento" ? "hsl(45 93% 47%)"
+                        : "hsl(0 84% 60%)"
+                        : "hsl(var(--primary))"
+                    }]} startAngle={90} endAngle={-270}>
                       <RadialBar background={{ fill: "hsl(var(--muted))" }} dataKey="value" cornerRadius={10} />
                     </RadialBarChart>
                   </ResponsiveContainer>
@@ -707,6 +714,9 @@ export default function ClienteDashboard() {
                 <div className="text-center -mt-24 relative z-10">
                   <p className="text-3xl font-bold">{conversionRate}%</p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">de conversão</p>
+                  {conversionGoal && (
+                    <p className="text-[10px] text-muted-foreground">Meta: {conversionGoal.remaining > 0 ? `faltam ${conversionGoal.remaining}%` : "✓ atingida"}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
