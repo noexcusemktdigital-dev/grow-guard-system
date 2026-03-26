@@ -170,8 +170,10 @@ Deno.serve(async (req) => {
     });
 
     let userId: string;
+    let isNewUser = true;
 
     if (createErr && (createErr as any).code === "email_exists") {
+      isNewUser = false;
       // User already exists — find them via paginated search
       console.log("[invite-user] User already exists, looking up:", email);
       const existing = await findUserByEmail(adminClient, email);
@@ -198,6 +200,14 @@ Deno.serve(async (req) => {
       throw createErr;
     } else {
       userId = newUser.user.id;
+    }
+
+    // ---- Prevent self-invite ----
+    if (userId === callerId) {
+      return new Response(
+        JSON.stringify({ error: "Você não pode convidar a si mesmo." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Generate a password recovery link — redirect based on org type
@@ -228,11 +238,13 @@ Deno.serve(async (req) => {
       console.warn("No recovery URL generated, skipping email send");
     }
 
-    // Update profile
-    await adminClient
-      .from("profiles")
-      .update({ full_name: full_name || email.split("@")[0] })
-      .eq("id", userId);
+    // Update profile only for new users (don't overwrite existing profiles)
+    if (isNewUser) {
+      await adminClient
+        .from("profiles")
+        .update({ full_name: full_name || email.split("@")[0] })
+        .eq("id", userId);
+    }
 
     // Create membership (ignore if already exists)
     await adminClient.from("organization_memberships").upsert({
@@ -249,10 +261,14 @@ Deno.serve(async (req) => {
       validRole = (orgType === "franqueadora" || orgType === "franqueado") ? "franqueado" : "cliente_user";
       console.log(`[invite-user] No explicit role, org type=${orgType}, defaulting to ${validRole}`);
     }
-    await adminClient.from("user_roles").upsert({
-      user_id: userId,
-      role: validRole,
-    }, { onConflict: "user_id,role", ignoreDuplicates: true });
+    // Check+update/insert role (prevent duplicate roles)
+    const { data: existingRole } = await adminClient
+      .from("user_roles").select("id").eq("user_id", userId).maybeSingle();
+    if (existingRole) {
+      await adminClient.from("user_roles").update({ role: validRole }).eq("user_id", userId);
+    } else {
+      await adminClient.from("user_roles").insert({ user_id: userId, role: validRole });
+    }
 
     // Assign to teams if provided
     if (Array.isArray(team_ids) && team_ids.length > 0) {
