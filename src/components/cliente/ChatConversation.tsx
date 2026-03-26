@@ -88,6 +88,8 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const [searchQuery, setSearchQuery] = useState("");
   const [contactTyping, setContactTyping] = useState(false);
   const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
+  const [forwardMsg, setForwardMsg] = useState<WhatsAppMessage | null>(null);
+  const [showStarred, setShowStarred] = useState(false);
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
