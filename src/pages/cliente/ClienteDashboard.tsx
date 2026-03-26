@@ -237,9 +237,14 @@ export default function ClienteDashboard() {
   const orgProfile = useOrgProfile();
   const orgName = orgProfile.data?.name || "Relatório";
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [period, setPeriod] = useState("30d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+
+  // Goals data
+  const { data: activeGoals } = useActiveGoals();
+  const { data: goalProgress } = useGoalProgress(activeGoals);
 
   // Chat data
   const { data: chatContacts } = useQuery({
