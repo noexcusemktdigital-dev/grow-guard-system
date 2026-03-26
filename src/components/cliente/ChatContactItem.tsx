@@ -40,12 +40,11 @@ export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
     const isArchived = !!(contactAny.is_archived);
 
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
           <button
             ref={ref}
             onClick={() => onSelect(contact)}
-            onContextMenu={(e) => e.preventDefault()}
             className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-150 ${
               isSelected ? "bg-primary/10" : "hover:bg-muted/40"
             } ${contact.unread_count > 0 ? "bg-primary/[0.03]" : ""}`}
