@@ -14,7 +14,7 @@ import {
   useWhatsAppMessages,
   useMarkContactRead,
   useContactPreviews,
-  usePinContact,
+  
   useArchiveContact,
   type WhatsAppContact,
 } from "@/hooks/useWhatsApp";
