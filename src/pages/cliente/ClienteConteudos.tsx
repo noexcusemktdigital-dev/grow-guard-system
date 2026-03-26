@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
-import { FileText, Check, Sparkles, FolderOpen, RotateCcw } from "lucide-react";
+import { FileText, Check, Sparkles, FolderOpen, RotateCcw, Video } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Refactored components
 import { ContentWizard } from "@/components/cliente/content/ContentWizard";
 import { ContentVisualCard } from "@/components/cliente/content/ContentVisualCard";
 import { BatchFolderView } from "@/components/cliente/content/BatchFolderView";
@@ -48,6 +47,7 @@ export default function ClienteConteudos() {
   const [objetivos, setObjetivos] = useState<string[]>([]);
   const [tema, setTema] = useState("");
   const [plataforma, setPlataforma] = useState("Instagram");
+  const [duracao, setDuracao] = useState("30s");
 
   // Results
   const [generatedContents, setGeneratedContents] = useState<any[]>([]);
@@ -61,7 +61,6 @@ export default function ClienteConteudos() {
   const [confirmApproveAll, setConfirmApproveAll] = useState(false);
   const [expandedContent, setExpandedContent] = useState<any>(null);
 
-  // Pre-fill platform from strategy
   useEffect(() => {
     if (hasStrategy && strategy.canalPrioritario) {
       setPlataforma(strategy.canalPrioritario);
@@ -93,7 +92,7 @@ export default function ClienteConteudos() {
       setGeneratedContents(res.conteudos);
       setGeneratedIds((res.dbRecords as any[]).map((r: any) => r.id));
       setIsResultScreen(true);
-      toast({ title: `${res.conteudos.length} conteúdos gerados com sucesso!` });
+      toast({ title: `${res.conteudos.length} roteiros gerados com sucesso!` });
     } catch (err: any) {
       toast({ title: "Erro ao gerar", description: err?.message, variant: "destructive" });
     } finally {
@@ -107,7 +106,7 @@ export default function ClienteConteudos() {
     if (!id) return;
     try {
       await approveMutation.mutateAsync(id);
-      toast({ title: "Conteúdo aprovado!", description: `${CREDIT_COST_APPROVE_CONTENT} créditos debitados.` });
+      toast({ title: "Roteiro aprovado!", description: `${CREDIT_COST_APPROVE_CONTENT} créditos debitados.` });
     } catch (err: any) {
       if (isInsufficientCreditsError(err)) setShowCreditsDialog(true);
       else toast({ title: "Erro", description: err?.message, variant: "destructive" });
@@ -132,7 +131,7 @@ export default function ClienteConteudos() {
       onSuccess: () => {
         setGeneratedContents(prev => prev.filter((_, i) => i !== idx));
         setGeneratedIds(prev => prev.filter((_, i) => i !== idx));
-        toast({ title: "Conteúdo removido." });
+        toast({ title: "Roteiro removido." });
       },
       onError: (err: any) => toast({ title: "Erro", description: err?.message, variant: "destructive" }),
     });
@@ -140,7 +139,7 @@ export default function ClienteConteudos() {
 
   const handleDeleteHistory = (id: string) => {
     deleteMutation.mutate(id, {
-      onSuccess: () => toast({ title: "Conteúdo removido." }),
+      onSuccess: () => toast({ title: "Roteiro removido." }),
       onError: (err: any) => toast({ title: "Erro", description: err?.message, variant: "destructive" }),
     });
   };
@@ -151,6 +150,7 @@ export default function ClienteConteudos() {
     setFormatDist({});
     setObjetivos([]);
     setTema("");
+    setDuracao("30s");
     setGeneratedContents([]);
     setGeneratedIds([]);
   };
@@ -158,14 +158,17 @@ export default function ClienteConteudos() {
   const copyContent = (c: any) => {
     let text = c.titulo + "\n\n";
     if (c.legenda) text += c.legenda + "\n\n";
-    // Smart copy: include all carousel slides
     const parsed = c.conteudo_principal;
-    if (Array.isArray(parsed)) {
-      text += parsed.map((s: any, i: number) => `[Slide ${i + 1}] ${s.titulo || ""}\n${s.texto || s.content || ""}`).join("\n\n") + "\n\n";
+    if (typeof parsed === "object" && parsed) {
+      if (parsed.hook) text += `[HOOK] ${parsed.hook}\n\n`;
+      if (parsed.desenvolvimento) text += `[DESENVOLVIMENTO] ${parsed.desenvolvimento}\n\n`;
+      if (parsed.texto_tela) text += `[TEXTO DE TELA] ${parsed.texto_tela}\n\n`;
+      if (parsed.conclusao) text += `[CONCLUSÃO] ${parsed.conclusao}\n\n`;
+      if (parsed.cta) text += `[CTA] ${parsed.cta}\n\n`;
     }
     if (c.hashtags?.length) text += c.hashtags.map((h: string) => `#${h.replace(/^#/, "")}`).join(" ");
     navigator.clipboard.writeText(text);
-    toast({ title: "Conteúdo copiado!" });
+    toast({ title: "Roteiro copiado!" });
   };
 
   const downloadPdf = async (c: any, idx: number) => {
@@ -189,7 +192,7 @@ export default function ClienteConteudos() {
         pdf.addImage(imgData, "JPEG", 0, -y, imgW, imgH);
         y += pageH;
       }
-      pdf.save(`${c.titulo || "conteudo"}.pdf`);
+      pdf.save(`${c.titulo || "roteiro"}.pdf`);
     } catch {
       toast({ title: "Erro ao gerar PDF", variant: "destructive" });
     }
@@ -203,9 +206,9 @@ export default function ClienteConteudos() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Geração de Conteúdo" subtitle="Gere lotes estratégicos de conteúdos alinhados com seu plano" actions={<FeatureTutorialButton slug="conteudos" />} />
+      <PageHeader title="Roteiros" subtitle="Gere roteiros estratégicos de vídeo alinhados com seu plano" actions={<FeatureTutorialButton slug="conteudos" />} />
 
-      <StrategyBanner toolName="a geração de conteúdo" dataUsed="Pilares, ICP e tom de voz" />
+      <StrategyBanner toolName="a geração de roteiros" dataUsed="Pilares, ICP e tom de voz" />
 
       <ApprovalDashboard />
 
@@ -216,17 +219,16 @@ export default function ClienteConteudos() {
           </Badge>
         )}
         <Badge variant="outline" className="gap-1.5">
-          <FileText className="w-3.5 h-3.5" /> {quota.creditBalance} créditos · até {quota.remaining} conteúdos ({quota.costPerContent} créditos cada)
+          <Video className="w-3.5 h-3.5" /> {quota.creditBalance} créditos · até {quota.remaining} roteiros ({quota.costPerContent} créditos cada)
         </Badge>
       </div>
 
       <Tabs defaultValue="criar">
         <TabsList>
           <TabsTrigger value="criar"><Sparkles className="w-4 h-4 mr-1" /> Criar Lote</TabsTrigger>
-          <TabsTrigger value="meus"><FolderOpen className="w-4 h-4 mr-1" /> Meus Conteúdos</TabsTrigger>
+          <TabsTrigger value="meus"><FolderOpen className="w-4 h-4 mr-1" /> Meus Roteiros</TabsTrigger>
         </TabsList>
 
-        {/* ── TAB: CRIAR ── */}
         <TabsContent value="criar" className="mt-4">
           {!isResultScreen ? (
             <ContentWizard
@@ -249,11 +251,13 @@ export default function ClienteConteudos() {
               onTemaChange={setTema}
               plataforma={plataforma}
               onPlataformaChange={setPlataforma}
+              duracao={duracao}
+              onDuracaoChange={setDuracao}
             />
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
-                <h2 className="text-xl font-bold">{generatedContents.length} Conteúdos Gerados</h2>
+                <h2 className="text-xl font-bold">{generatedContents.length} Roteiros Gerados</h2>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={resetWizard}>
                     <RotateCcw className="w-4 h-4 mr-1" /> Novo Lote
@@ -282,17 +286,15 @@ export default function ClienteConteudos() {
           )}
         </TabsContent>
 
-        {/* ── TAB: MEUS CONTEÚDOS ── */}
         <TabsContent value="meus" className="mt-4 space-y-4">
           <BatchFolderView history={history || []} navigate={navigate} onDelete={handleDeleteHistory} />
         </TabsContent>
       </Tabs>
 
-      {/* Confirm Approve All */}
       <AlertDialog open={confirmApproveAll} onOpenChange={setConfirmApproveAll}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Aprovar todos os conteúdos?</AlertDialogTitle>
+            <AlertDialogTitle>Aprovar todos os roteiros?</AlertDialogTitle>
             <AlertDialogDescription>
               Isso consumirá <strong>{generatedIds.length * CREDIT_COST_APPROVE_CONTENT} créditos</strong> da sua carteira.
               Esta ação não pode ser desfeita.
@@ -305,23 +307,18 @@ export default function ClienteConteudos() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Expanded Content Detail */}
       <ContentDetailSheet
         open={!!expandedContent}
         onOpenChange={open => !open && setExpandedContent(null)}
         content={expandedContent}
-        onCopy={() => {
-          if (expandedContent) {
-            copyContent(expandedContent);
-          }
-        }}
+        onCopy={() => { if (expandedContent) copyContent(expandedContent); }}
         onPost={() => setExpandedContent(null)}
       />
 
       <InsufficientCreditsDialog
         open={showCreditsDialog}
         onOpenChange={setShowCreditsDialog}
-        actionLabel="este conteúdo"
+        actionLabel="este roteiro"
         creditCost={CREDIT_COST_APPROVE_CONTENT}
       />
     </div>
