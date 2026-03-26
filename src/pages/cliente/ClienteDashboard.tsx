@@ -26,9 +26,10 @@ import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import {
   RadialBarChart, RadialBar, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  LineChart, Line, ResponsiveContainer, PieChart, Pie, Cell, Legend,
+  LineChart, Line, ResponsiveContainer, PieChart, Pie, Cell, Legend, ReferenceLine,
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
+import { formatBRL } from "@/lib/formatting";
 
 /* ========== CSV EXPORT ========== */
 function downloadCsv(filename: string, headers: string[], rows: string[][]) {
