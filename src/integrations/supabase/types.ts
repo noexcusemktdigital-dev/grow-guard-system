@@ -5717,6 +5717,8 @@ export type Database = {
           followup_config: Json | null
           id: string
           instance_id: string | null
+          is_archived: boolean | null
+          is_pinned: boolean | null
           last_message_at: string | null
           last_message_preview: string | null
           name: string | null
@@ -5736,6 +5738,8 @@ export type Database = {
           followup_config?: Json | null
           id?: string
           instance_id?: string | null
+          is_archived?: boolean | null
+          is_pinned?: boolean | null
           last_message_at?: string | null
           last_message_preview?: string | null
           name?: string | null
@@ -5755,6 +5759,8 @@ export type Database = {
           followup_config?: Json | null
           id?: string
           instance_id?: string | null
+          is_archived?: boolean | null
+          is_pinned?: boolean | null
           last_message_at?: string | null
           last_message_preview?: string | null
           name?: string | null
@@ -5852,6 +5858,8 @@ export type Database = {
           created_at: string
           direction: string
           id: string
+          is_deleted: boolean | null
+          is_starred: boolean | null
           media_url: string | null
           message_id_zapi: string | null
           metadata: Json
@@ -5865,6 +5873,8 @@ export type Database = {
           created_at?: string
           direction?: string
           id?: string
+          is_deleted?: boolean | null
+          is_starred?: boolean | null
           media_url?: string | null
           message_id_zapi?: string | null
           metadata?: Json
@@ -5878,6 +5888,8 @@ export type Database = {
           created_at?: string
           direction?: string
           id?: string
+          is_deleted?: boolean | null
+          is_starred?: boolean | null
           media_url?: string | null
           message_id_zapi?: string | null
           metadata?: Json
