@@ -522,6 +522,40 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     inputRef.current?.focus();
   }, []);
 
+  const handleForward = useCallback((message: WhatsAppMessage) => {
+    setForwardMsg(message);
+  }, []);
+
+  const handleStar = useCallback((message: WhatsAppMessage) => {
+    const currentlyStarred = !!(message as any).is_starred;
+    starMessage.mutate(
+      { messageId: message.id, starred: !currentlyStarred },
+      { onSuccess: () => toast({ title: currentlyStarred ? "Estrela removida" : "Mensagem marcada ⭐" }) }
+    );
+  }, [starMessage]);
+
+  const handleDelete = useCallback((message: WhatsAppMessage, forEveryone: boolean) => {
+    deleteMessage.mutate(
+      { messageId: message.id, forEveryone },
+      { onSuccess: () => toast({ title: "Mensagem apagada" }) }
+    );
+  }, [deleteMessage]);
+
+  const handleReact = useCallback((message: WhatsAppMessage, emoji: string) => {
+    // Store reaction in metadata - update optimistically
+    const currentReactions = ((message.metadata as any)?.reactions || []) as Array<{ emoji: string; from: string }>;
+    const newReactions = [...currentReactions, { emoji, from: "user" }];
+    // Update via supabase directly
+    supabase
+      .from("whatsapp_messages" as any)
+      .update({ metadata: { ...message.metadata, reactions: newReactions } } as any)
+      .eq("id", message.id)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+      });
+    toast({ title: `Reação ${emoji} enviada` });
+  }, [queryClient]);
+
   // Lightbox: collect all images in conversation
   const allImageUrls = useMemo(() => {
     return messages.filter(m => m.media_url && (m.type === "image" || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(m.media_url))).map(m => m.media_url!);
