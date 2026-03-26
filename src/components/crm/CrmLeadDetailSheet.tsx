@@ -27,6 +27,7 @@ import { useCrmTasks, useCrmTaskMutations } from "@/hooks/useCrmTasks";
 import { useCrmProposals, useCrmProposalMutations, type CrmProposal, type ProposalItem } from "@/hooks/useCrmProposals";
 import { useCrmProducts, type CrmProduct } from "@/hooks/useCrmProducts";
 import { useCrmLeadProducts, useCrmLeadProductMutations } from "@/hooks/useCrmLeadProducts";
+import { useCrmLeadHistory } from "@/hooks/useCrmLeadHistory";
 import { useCrmPartners } from "@/hooks/useCrmPartners";
 import { useWhatsAppMessages, useSendWhatsAppMessage } from "@/hooks/useWhatsApp";
 import { ChatMessageBubble } from "@/components/cliente/ChatMessageBubble";
