@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
-import { FileText, Check, Sparkles, FolderOpen, RotateCcw, Video } from "lucide-react";
+import { FileText, Check, Sparkles, FolderOpen, RotateCcw, Video, Clapperboard } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
