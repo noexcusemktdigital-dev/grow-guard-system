@@ -718,16 +718,32 @@ export default function ClienteDashboard() {
         </TabsContent>
 
         {/* ===== AGENTS TAB ===== */}
-        <TabsContent value="agents" className="space-y-6 mt-4">
+        <TabsContent value="agents" className="space-y-6 mt-4" id="report-agents">
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => {
-              downloadCsv("ai-logs.csv", ["Agente ID", "Tokens", "Modelo", "Data"],
-                filteredAiLogs.map((l: any) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])
-              );
-              toast({ title: "CSV exportado", description: `${filteredAiLogs.length} logs exportados (${periodLabel})` });
-            }}>
-              <Download className="w-3 h-3" /> Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs gap-1">
+                  <Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  downloadCsv("ai-logs.csv", ["Agente ID", "Tokens", "Modelo", "Data"],
+                    filteredAiLogs.map((l: any) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])
+                  );
+                  toast({ title: "CSV exportado", description: `${filteredAiLogs.length} logs exportados (${periodLabel})` });
+                }}>
+                  <FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => {
+                  toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
+                  await downloadReportPdf("report-agents", "Agentes IA Relatório");
+                  toast({ title: "PDF exportado", description: "Relatório visual dos Agentes IA baixado" });
+                }}>
+                  <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
