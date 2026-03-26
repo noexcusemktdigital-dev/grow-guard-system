@@ -78,22 +78,24 @@ REGRAS OBRIGATÓRIAS:
 4. Use Google Fonts via CDN (link no head)
 5. Design mobile-first com media queries para responsividade
 6. Textos REAIS baseados nos dados fornecidos (NUNCA lorem ipsum)
-7. Cores e fontes do cliente aplicadas como CSS variables
-8. Animações suaves com CSS (hover effects, transitions, scroll animations)
-9. Meta tags SEO (title, description, og:tags)
-10. HTML5 semântico (header, main, section, footer, nav)
-11. Formulário de contato estilizado (sem backend, apenas visual)
-12. Botões de CTA destacados e chamativos
-13. Se for site multi-página, gere TODAS as páginas em um único HTML usando navegação por âncoras/seções
-14. Inclua smooth scrolling
-15. Adicione ícones usando SVG inline quando necessário
-16. O site deve parecer profissional e moderno, como se tivesse sido feito por uma agência top
-17. Use o nome real da empresa em todos os lugares (header, footer, title, meta tags)
-18. Se houver slogan, use no hero
-19. Se houver depoimentos, crie cards de testimonial com aspas e nome do autor
-20. Se houver números de impacto, crie uma seção de "Números" com counters visuais grandes
-21. Se houver link de WhatsApp, use nos botões de CTA como href
-22. Inclua seção de FAQ quando o tipo permitir`;
+7. OBRIGATÓRIO: Se cores forem fornecidas, use EXATAMENTE essas cores como CSS variables :root. NÃO invente cores diferentes. Aplique as cores do cliente em backgrounds, botões, borders, textos de destaque e gradientes.
+8. OBRIGATÓRIO: Se fontes forem fornecidas, use essas fontes via Google Fonts. NÃO use fontes diferentes.
+9. Animações suaves com CSS (hover effects, transitions, scroll animations)
+10. Meta tags SEO (title, description, og:tags)
+11. HTML5 semântico (header, main, section, footer, nav)
+12. Formulário de contato estilizado (sem backend, apenas visual)
+13. Botões de CTA destacados e chamativos
+14. Se for site multi-página, gere TODAS as páginas em um único HTML usando navegação por âncoras/seções
+15. Inclua smooth scrolling
+16. Adicione ícones usando SVG inline quando necessário
+17. O site deve parecer profissional e moderno, como se tivesse sido feito por uma agência top
+18. Use o nome real da empresa em todos os lugares (header, footer, title, meta tags)
+19. Se houver slogan, use no hero
+20. Se houver depoimentos, crie cards de testimonial com aspas e nome do autor
+21. Se houver números de impacto, crie uma seção de "Números" com counters visuais grandes
+22. Se houver link de WhatsApp, use nos botões de CTA como href
+23. Inclua seção de FAQ quando o tipo permitir
+24. OBRIGATÓRIO: Se houver logo_url, inclua <img src="URL_DA_LOGO" alt="Logo NOME_EMPRESA" style="height:48px"> no header E no footer. A logo deve ser visível e bem posicionada.`;
 
     const userPrompt = `Gere um site completo com as seguintes especificações:
 
