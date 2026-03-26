@@ -93,21 +93,38 @@ function buildCandidatePdfHtml(c: FranchiseCandidate, logoBase64: string) {
 }
 
 async function downloadCandidatePdf(candidate: FranchiseCandidate) {
-  const { default: html2pdf } = await import("html2pdf.js");
+  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+    import("jspdf"),
+    import("html2canvas"),
+  ]);
   const logoBase64 = await getLogoBase64();
   const html = buildCandidatePdfHtml(candidate, logoBase64);
   const el = document.createElement("div");
+  el.style.width = "794px";
+  el.style.position = "fixed";
+  el.style.top = "0";
+  el.style.left = "0";
+  el.style.zIndex = "-9999";
+  el.style.background = "#fff";
   el.innerHTML = html;
-  html2pdf()
-    .set({
-      margin: [10, 10, 10, 10],
-      filename: `Ficha_${candidate.name.replace(/\s+/g, "_")}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    })
-    .from(el)
-    .save();
+  document.body.appendChild(el);
+  try {
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgH = (canvas.height * pageW) / canvas.width;
+    let y = 0;
+    while (y < imgH) {
+      if (y > 0) pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, -y, pageW, imgH);
+      y += pageH;
+    }
+    pdf.save(`Ficha_${candidate.name.replace(/\s+/g, "_")}.pdf`);
+  } finally {
+    document.body.removeChild(el);
+  }
 }
 
 export default function FranqueadoraCandidatos() {
