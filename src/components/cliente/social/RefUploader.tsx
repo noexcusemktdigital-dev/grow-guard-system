@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Upload, X, Plus, Loader2, Star, ImageIcon, Wand2 } from "lucide-react";
+import { Upload, X, Plus, Loader2, Star, ImageIcon, Wand2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
