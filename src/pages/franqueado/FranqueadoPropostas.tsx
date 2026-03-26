@@ -50,14 +50,24 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: any; open:
   const handleDownloadPdf = async () => {
     const el = previewRef.current;
     if (!el) return;
-    const html2pdf = (await import("html2pdf.js")).default;
-    html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: `${proposal.title || "Proposta"}.pdf`,
-      image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    }).from(el).save();
+    const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+      import("jspdf"),
+      import("html2canvas"),
+    ]);
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    let y = 0;
+    while (y < imgH) {
+      if (y > 0) pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, -y, imgW, imgH);
+      y += pageH;
+    }
+    pdf.save(`${proposal.title || "Proposta"}.pdf`);
     toast.success("PDF gerado!");
   };
 
