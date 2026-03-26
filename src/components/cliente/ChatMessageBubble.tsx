@@ -117,7 +117,7 @@ const statusIcon: Record<string, React.ReactNode> = {
 };
 
 export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(function ChatMessageBubble(
-  { message, isGrouped = false, onReply, allMessages = [], hideTimestamp = false, onRetry, onImageClick },
+  { message, isGrouped = false, onReply, allMessages = [], hideTimestamp = false, onRetry, onImageClick, onForward, onStar, onDelete, onReact },
   ref
 ) {
   const [imgError, setImgError] = useState(false);
