@@ -37,72 +37,86 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
 
 /* ========== PDF EXPORT ========== */
 async function downloadReportPdf(containerId: string, title: string, orgName?: string) {
-  const { default: html2pdf } = await import("html2pdf.js");
-  const source = document.getElementById(containerId);
-  if (!source) return;
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ]);
 
-  // Build a clean printable clone without export buttons
-  const wrapper = document.createElement("div");
-  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;background:#fff;color:#111;font-family:Inter,Arial,sans-serif;padding:40px 36px;";
+  const element = document.getElementById(containerId);
+  if (!element) return;
 
-  // Header with org name + report title + date
-  const header = document.createElement("div");
-  header.style.cssText = "margin-bottom:28px;border-bottom:2px solid #E2233B;padding-bottom:16px;";
-  header.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;">
-      <div>
-        <h1 style="font-size:22px;font-weight:700;color:#111;margin:0;">${orgName || "Relatório"}</h1>
-        <p style="font-size:13px;color:#666;margin:4px 0 0;">${title}</p>
-      </div>
-      <p style="font-size:11px;color:#999;margin:0;">${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
-    </div>
-  `;
-  wrapper.appendChild(header);
+  // Hide export buttons during capture
+  element.classList.add("pdf-exporting");
 
-  // Clone content
-  const clone = source.cloneNode(true) as HTMLElement;
+  // Small delay to let the DOM update
+  await new Promise(r => setTimeout(r, 100));
 
-  // Remove export buttons and dropdowns from clone
-  clone.querySelectorAll("[data-pdf-hide], button, [role='menu']").forEach(el => {
-    const parent = el.closest(".flex.justify-end");
-    if (parent) parent.remove();
-  });
-  // Also remove any remaining dropdown triggers
-  clone.querySelectorAll(".flex.justify-end").forEach(el => {
-    if (el.querySelector("button")) el.remove();
-  });
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      scrollY: -window.scrollY,
+    });
 
-  // Fix chart containers for static rendering
-  clone.querySelectorAll(".recharts-responsive-container").forEach(el => {
-    (el as HTMLElement).style.width = "100%";
-    (el as HTMLElement).style.height = "200px";
-  });
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const headerHeight = 22;
 
-  // Force white background and dark text on all elements
-  clone.querySelectorAll("*").forEach(el => {
-    const htmlEl = el as HTMLElement;
-    const cs = window.getComputedStyle(el);
-    if (cs.backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)") {
-      // Keep gradient cards but make text visible
+    // Draw header
+    pdf.setFillColor(226, 35, 59); // brand red
+    pdf.rect(0, 0, pageWidth, headerHeight, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(orgName || "Relatório", margin, 10);
+    pdf.setFontSize(9);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(title, margin, 16);
+    const dateStr = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+    pdf.text(dateStr, pageWidth - margin - pdf.getTextWidth(dateStr), 16);
+
+    // Add captured image with pagination
+    const imgData = canvas.toDataURL("image/png");
+    const imgWidth = pageWidth - margin * 2;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const contentStart = headerHeight + 4;
+    const usableHeight = pageHeight - margin;
+
+    let heightLeft = imgHeight;
+    let position = contentStart;
+    let srcY = 0;
+
+    while (heightLeft > 0) {
+      const sliceHeight = Math.min(heightLeft, usableHeight - position);
+      // Create a slice of the canvas for this page
+      const sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = canvas.width;
+      const srcSliceHeight = (sliceHeight / imgHeight) * canvas.height;
+      sliceCanvas.height = srcSliceHeight;
+      const ctx = sliceCanvas.getContext("2d")!;
+      ctx.drawImage(canvas, 0, srcY, canvas.width, srcSliceHeight, 0, 0, canvas.width, srcSliceHeight);
+
+      const sliceData = sliceCanvas.toDataURL("image/png");
+      pdf.addImage(sliceData, "PNG", margin, position, imgWidth, sliceHeight);
+
+      heightLeft -= sliceHeight;
+      srcY += srcSliceHeight;
+
+      if (heightLeft > 0) {
+        pdf.addPage();
+        position = margin;
+      }
     }
-    htmlEl.style.color = htmlEl.style.color || "";
-  });
-  clone.style.cssText = "color:#111;";
 
-  wrapper.appendChild(clone);
-  document.body.appendChild(wrapper);
-
-  const opt = {
-    margin: [8, 8, 8, 8] as [number, number, number, number],
-    filename: `${title.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`,
-    image: { type: "jpeg" as const, quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", scrollY: 0, width: 794, windowWidth: 794 },
-    jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
-    pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-  };
-
-  await html2pdf().set(opt).from(wrapper).save();
-  document.body.removeChild(wrapper);
+    const filename = `${title.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`;
+    pdf.save(filename);
+  } finally {
+    element.classList.remove("pdf-exporting");
+  }
 }
 
 /* ========== DATE FILTER HELPER ========== */
