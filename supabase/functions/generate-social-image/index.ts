@@ -611,6 +611,7 @@ COMPOSITION RULES:
 - Professional color theory: complementary or analogous color relationships
 - Must be legible and impactful at small mobile screen sizes
 - Clean, balanced layout that feels intentionally designed
+- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above. Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.
 
 Generate this image now.`;
 }
