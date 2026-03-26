@@ -279,6 +279,8 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
             <p className="text-[10px] text-muted-foreground uppercase">Criado em</p>
             <p className="text-sm">{new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
           </div>
+
+          <LeadHistoryTimeline leadId={lead.id} />
         </TabsContent>
 
         {/* === ACTIVITIES TAB === */}
