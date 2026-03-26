@@ -203,7 +203,6 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
                       isSelected={selectedId === contact.id}
                       onSelect={onSelect}
                       preview={lastMessages?.get(contact.id)}
-                      onPin={onPinContact}
                       onArchive={onArchiveContact}
                     />
                   </div>
