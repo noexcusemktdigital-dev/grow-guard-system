@@ -140,6 +140,62 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
               </Button>
             </div>
           )}
+
+          <Separator />
+
+          {/* Media/Docs/Links tabs */}
+          <Tabs defaultValue="media" className="w-full">
+            <TabsList className="w-full h-8 bg-muted/30">
+              <TabsTrigger value="media" className="text-[10px] gap-1 flex-1"><ImageIcon className="w-3 h-3" /> Mídia ({mediaItems.length})</TabsTrigger>
+              <TabsTrigger value="docs" className="text-[10px] gap-1 flex-1"><FileText className="w-3 h-3" /> Docs ({docItems.length})</TabsTrigger>
+              <TabsTrigger value="links" className="text-[10px] gap-1 flex-1"><Link2 className="w-3 h-3" /> Links ({linkItems.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="media" className="mt-2">
+              {mediaItems.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground text-center py-4">Nenhuma mídia</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-1">
+                  {mediaItems.slice(0, 30).map(m => (
+                    <a key={m.id} href={m.media_url!} target="_blank" rel="noopener noreferrer">
+                      <img src={m.media_url!} alt="" className="w-full aspect-square object-cover rounded-md" loading="lazy" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="docs" className="mt-2">
+              {docItems.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground text-center py-4">Nenhum documento</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {docItems.slice(0, 20).map(m => (
+                    <a key={m.id} href={m.media_url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                      <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className="text-[11px] truncate">{m.media_url!.split("/").pop()}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="links" className="mt-2">
+              {linkItems.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground text-center py-4">Nenhum link</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {linkItems.slice(0, 20).map(m => (
+                    <div key={m.id}>
+                      {(m as any).links.map((url: string, i: number) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                          <Link2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-[10px] text-primary truncate">{url}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </ScrollArea>
     </div>
