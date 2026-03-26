@@ -436,8 +436,8 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
             </Button>
           )}
 
-          {/* Select — button grid (static options or dynamic) */}
-          {currentStep.inputType === "select" && !hasCategories && displayOptions.length > 0 && (
+          {/* Select — button grid or custom text input */}
+          {currentStep.inputType === "select" && !hasCategories && displayOptions.length > 0 && !customTextMode && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
               {displayOptions.map(opt => (
                 <button
@@ -452,6 +452,30 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
                   </div>
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Custom text input when "Outro" is selected */}
+          {currentStep.inputType === "select" && customTextMode && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Digite seu segmento ou opção personalizada:</p>
+              <div className="flex gap-2">
+                <Input
+                  ref={inputRef as any}
+                  value={textValue}
+                  onChange={e => setTextValue(e.target.value)}
+                  placeholder="Ex: Odontologia, Pet shop, Advocacia..."
+                  className="flex-1 text-sm"
+                  onKeyDown={e => e.key === "Enter" && textValue.trim() && advanceStep(textValue.trim())}
+                  autoFocus
+                />
+                <Button size="sm" onClick={() => textValue.trim() && advanceStep(textValue.trim())} disabled={!textValue.trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+              <Button variant="ghost" size="sm" className="text-[10px] text-muted-foreground h-6" onClick={() => setCustomTextMode(false)}>
+                ← Voltar às opções
+              </Button>
             </div>
           )}
 
