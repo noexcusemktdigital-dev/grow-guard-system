@@ -1,10 +1,14 @@
 import { useState, useMemo } from "react";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
+import { useActiveGoals } from "@/hooks/useGoals";
+import { useGoalProgress } from "@/hooks/useGoalProgress";
 import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
-  MessageCircle, Bot, Download, FileText, Calendar, ChevronDown, FileImage
+  MessageCircle, Bot, Download, FileText, Calendar, ChevronDown, FileImage,
+  CheckCircle2, TrendingDown, ArrowRight, AlertTriangle,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
