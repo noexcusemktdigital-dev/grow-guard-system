@@ -363,10 +363,10 @@ export default function ClienteSites() {
         segmento: form.segmento,
         servicos: form.servicos,
         diferencial: form.diferenciais,
-        faixa_preco: "",
+        faixa_preco: strategy.salesPlanTicketMedio || "",
         publico_alvo: [...(form.publico_chips as string[]), form.publico_custom].filter(Boolean).join(", "),
         faixa_etaria: "",
-        dores: form.dores || strategyAnswers.problema || "",
+        dores: form.dores || strategyAnswers.problema || strategy.salesPlanDorPrincipal || "",
         depoimentos: form.provas_depoimentos,
         numeros_impacto: form.provas_numeros,
         logos_clientes: "",
@@ -380,10 +380,11 @@ export default function ClienteSites() {
         redes_sociais: redesSociais,
         link_whatsapp: whatsappLink,
         instrucoes_adicionais: `Páginas: ${paginasSelecionadas}. Cases: ${form.provas_cases || "N/A"}`,
-        persona: null,
+        persona: strategy.icp ? { nome: strategy.personaName, descricao: strategy.publicoAlvo } : null,
         identidade_visual: visualIdentity ? { paleta: viPalette, fontes: viFonts, estilo: viStyle, tom_visual: visualIdentity.tone } : null,
         estrategia: strategyAnswers,
         organization_id: orgId,
+        logo_url: visualIdentity?.logo_url || "",
       };
 
       const { data, error } = await supabase.functions.invoke("generate-site", { body });
