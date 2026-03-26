@@ -197,7 +197,56 @@ Deno.serve(async (req) => {
 
     if (walletError) throw walletError;
 
-    console.log(`SaaS signup: org=${org.id}, parent=${resolvedParentOrgId || 'none'}, referral=${referral_code || 'none'}, discount=${discountPercent}%`);
+    // 6. Auto-provision WhatsApp instance via IZITECH
+    let whatsappProvisioned = false;
+    try {
+      const izitechKey = Deno.env.get("IZITECH_CROSS_API_KEY") || "";
+      if (izitechKey) {
+        const instanceName = (company_name || "empresa")
+          .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").substring(0, 30);
+        const noeWebhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${org.id}`;
+
+        const izitechRes = await fetch(
+          "https://mdmhsqcfmpyufohxjsrv.supabase.co/functions/v1/provision-instance",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-api-key": izitechKey },
+            body: JSON.stringify({
+              action: "create",
+              instance_name: instanceName,
+              customer_webhook_url: noeWebhookUrl,
+            }),
+            signal: AbortSignal.timeout(25000),
+          }
+        );
+
+        const provisionData = await izitechRes.json().catch(() => ({}));
+
+        if (provisionData.success && provisionData.instance) {
+          // Save instance reference in NOE DB
+          await supabaseAdmin.from("whatsapp_instances").upsert({
+            organization_id: org.id,
+            instance_id: instanceName,
+            label: company_name || instanceName,
+            provider: "evolution",
+            status: "pending",
+            webhook_url: noeWebhookUrl,
+            base_url: "https://evo.grupolamadre.com.br",
+            token: "managed-by-izitech",
+            client_token: "managed-by-izitech",
+          }, { onConflict: "organization_id,instance_id" });
+          whatsappProvisioned = true;
+          console.log(`WhatsApp auto-provisioned: instance=${instanceName}, org=${org.id}`);
+        } else {
+          console.warn(`WhatsApp auto-provision failed: ${provisionData.error || "unknown"}`);
+        }
+      }
+    } catch (e) {
+      // Non-blocking — user can set up WhatsApp manually later
+      console.warn("WhatsApp auto-provision error (non-blocking):", e.message || e);
+    }
+
+    console.log(`SaaS signup: org=${org.id}, parent=${resolvedParentOrgId || 'none'}, referral=${referral_code || 'none'}, discount=${discountPercent}%, whatsapp=${whatsappProvisioned}`);
 
     return new Response(
       JSON.stringify({
@@ -205,6 +254,7 @@ Deno.serve(async (req) => {
         organization_id: org.id,
         referral_applied: !!referral_code && !!resolvedParentOrgId,
         discount_percent: discountPercent,
+        whatsapp_provisioned: whatsappProvisioned,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
