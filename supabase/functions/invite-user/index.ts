@@ -238,11 +238,13 @@ Deno.serve(async (req) => {
       console.warn("No recovery URL generated, skipping email send");
     }
 
-    // Update profile
-    await adminClient
-      .from("profiles")
-      .update({ full_name: full_name || email.split("@")[0] })
-      .eq("id", userId);
+    // Update profile only for new users (don't overwrite existing profiles)
+    if (isNewUser) {
+      await adminClient
+        .from("profiles")
+        .update({ full_name: full_name || email.split("@")[0] })
+        .eq("id", userId);
+    }
 
     // Create membership (ignore if already exists)
     await adminClient.from("organization_memberships").upsert({
