@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
-import { Search, Clock, MessageCircle, Wifi, Bot, User, Users } from "lucide-react";
+import { Search, Clock, MessageCircle, Wifi, Bot, User, Users, Pin, Archive } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,15 +16,18 @@ interface Props {
   isConnected?: boolean;
   lastMessages?: Map<string, string>;
   connectedPhone?: string;
+  onPinContact?: (contactId: string, pinned: boolean) => void;
+  onArchiveContact?: (contactId: string, archived: boolean) => void;
 }
 
 type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
 
 export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
-  function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone }, ref) {
+  function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone, onPinContact, onArchiveContact }, ref) {
     const [search, setSearch] = useState("");
     const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
     const [agentFilter, setAgentFilter] = useState("");
+    const [showArchived, setShowArchived] = useState(false);
     const parentRef = useRef<HTMLDivElement>(null);
 
     const filtered = contacts.filter((c) => {
@@ -34,6 +37,12 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
       const mode = contactAny.attending_mode || "ai";
       const contactType = contactAny.contact_type || "individual";
       const isGroup = contactType === "group";
+      const isArchived = !!(contactAny.is_archived);
+      
+      // Filter archived unless showing archived
+      if (!showArchived && isArchived) return false;
+      if (showArchived) return isArchived && matchSearch;
+      
       let matchMode = true;
       if (modeFilter === "groups") matchMode = isGroup;
       else if (modeFilter === "ai") matchMode = mode === "ai" && !isGroup;
@@ -43,8 +52,15 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
       return matchSearch && matchMode && matchAgent;
     });
 
+    const archivedCount = contacts.filter(c => !!(c as any).is_archived).length;
+
     const sortedContacts = useMemo(() => {
       return [...filtered].sort((a, b) => {
+        // Pinned contacts first
+        const aPinned = !!(a as any).is_pinned ? 1 : 0;
+        const bPinned = !!(b as any).is_pinned ? 1 : 0;
+        if (bPinned !== aPinned) return bPinned - aPinned;
+        
         const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
         const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return db - da;
@@ -145,12 +161,32 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
           )}
         </div>
 
+        {/* Archived link */}
+        {!showArchived && archivedCount > 0 && (
+          <button
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground hover:bg-muted/40 transition-colors border-b border-border"
+            onClick={() => setShowArchived(true)}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            <span>Arquivadas ({archivedCount})</span>
+          </button>
+        )}
+        {showArchived && (
+          <button
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-primary font-medium hover:bg-muted/40 transition-colors border-b border-border"
+            onClick={() => setShowArchived(false)}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            <span>← Voltar às conversas</span>
+          </button>
+        )}
+
         {/* Virtualized contact list */}
         <div ref={parentRef} className="flex-1 overflow-auto">
           {sortedContacts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">
               <MessageCircle className="w-8 h-8 text-muted-foreground/20 mb-2" />
-              <p className="text-xs text-muted-foreground">Nenhum contato encontrado</p>
+              <p className="text-xs text-muted-foreground">{showArchived ? "Nenhuma conversa arquivada" : "Nenhum contato encontrado"}</p>
             </div>
           ) : (
             <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
@@ -173,6 +209,8 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
                       isSelected={selectedId === contact.id}
                       onSelect={onSelect}
                       preview={lastMessages?.get(contact.id)}
+                      onPin={onPinContact}
+                      onArchive={onArchiveContact}
                     />
                   </div>
                 );

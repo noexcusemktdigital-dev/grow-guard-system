@@ -325,6 +325,91 @@ export function useMarkWhatsAppRead() {
   });
 }
 
+// Star/unstar a message
+export function useStarMessage() {
+  const queryClient = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async ({ messageId, starred }: { messageId: string; starred: boolean }) => {
+      if (!orgId) return;
+      const { error } = await supabase
+        .from("whatsapp_messages" as any)
+        .update({ is_starred: starred } as any)
+        .eq("id", messageId)
+        .eq("organization_id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+    },
+  });
+}
+
+// Soft delete a message
+export function useDeleteMessage() {
+  const queryClient = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async ({ messageId, forEveryone }: { messageId: string; forEveryone: boolean }) => {
+      if (!orgId) return;
+      const { error } = await supabase
+        .from("whatsapp_messages" as any)
+        .update({ is_deleted: true } as any)
+        .eq("id", messageId)
+        .eq("organization_id", orgId);
+      if (error) throw error;
+      // TODO: if forEveryone, call whatsapp-send with action "revoke"
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+    },
+  });
+}
+
+// Pin/unpin a contact
+export function usePinContact() {
+  const queryClient = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async ({ contactId, pinned }: { contactId: string; pinned: boolean }) => {
+      if (!orgId) return;
+      const { error } = await supabase
+        .from("whatsapp_contacts" as any)
+        .update({ is_pinned: pinned } as any)
+        .eq("id", contactId)
+        .eq("organization_id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    },
+  });
+}
+
+// Archive/unarchive a contact
+export function useArchiveContact() {
+  const queryClient = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async ({ contactId, archived }: { contactId: string; archived: boolean }) => {
+      if (!orgId) return;
+      const { error } = await supabase
+        .from("whatsapp_contacts" as any)
+        .update({ is_archived: archived } as any)
+        .eq("id", contactId)
+        .eq("organization_id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    },
+  });
+}
+
 // Fetch real message previews for contacts
 export function useContactPreviews(contactIds: string[]) {
   const { data: orgId } = useUserOrgId();

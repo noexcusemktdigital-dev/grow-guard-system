@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ChatMessageBubble } from "./ChatMessageBubble";
+import { ChatForwardDialog } from "./ChatForwardDialog";
 import { ImageLightbox } from "./ImageLightbox";
 import {
   useSendWhatsAppMessage,
@@ -25,6 +26,9 @@ import {
   useSendTypingIndicator,
   useMarkWhatsAppRead,
   useMarkContactRead,
+  useStarMessage,
+  useDeleteMessage,
+  useWhatsAppContacts,
 } from "@/hooks/useWhatsApp";
 import { useCrmLeadMutations, useCrmFunnels } from "@/hooks/useClienteCrm";
 import type { WhatsAppContact, WhatsAppMessage } from "@/hooks/useWhatsApp";
@@ -84,6 +88,8 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const [searchQuery, setSearchQuery] = useState("");
   const [contactTyping, setContactTyping] = useState(false);
   const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
+  const [forwardMsg, setForwardMsg] = useState<WhatsAppMessage | null>(null);
+  const [showStarred, setShowStarred] = useState(false);
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -112,6 +118,9 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const sendTyping = useSendTypingIndicator();
   const markWhatsAppRead = useMarkWhatsAppRead();
   const markContactRead = useMarkContactRead();
+  const starMessage = useStarMessage();
+  const deleteMessage = useDeleteMessage();
+  const { data: allContacts } = useWhatsAppContacts();
   const navigate = useNavigate();
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -513,6 +522,40 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     inputRef.current?.focus();
   }, []);
 
+  const handleForward = useCallback((message: WhatsAppMessage) => {
+    setForwardMsg(message);
+  }, []);
+
+  const handleStar = useCallback((message: WhatsAppMessage) => {
+    const currentlyStarred = !!(message as any).is_starred;
+    starMessage.mutate(
+      { messageId: message.id, starred: !currentlyStarred },
+      { onSuccess: () => toast({ title: currentlyStarred ? "Estrela removida" : "Mensagem marcada ⭐" }) }
+    );
+  }, [starMessage]);
+
+  const handleDelete = useCallback((message: WhatsAppMessage, forEveryone: boolean) => {
+    deleteMessage.mutate(
+      { messageId: message.id, forEveryone },
+      { onSuccess: () => toast({ title: "Mensagem apagada" }) }
+    );
+  }, [deleteMessage]);
+
+  const handleReact = useCallback((message: WhatsAppMessage, emoji: string) => {
+    // Store reaction in metadata - update optimistically
+    const currentReactions = ((message.metadata as any)?.reactions || []) as Array<{ emoji: string; from: string }>;
+    const newReactions = [...currentReactions, { emoji, from: "user" }];
+    // Update via supabase directly
+    supabase
+      .from("whatsapp_messages" as any)
+      .update({ metadata: { ...message.metadata, reactions: newReactions } } as any)
+      .eq("id", message.id)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+      });
+    toast({ title: `Reação ${emoji} enviada` });
+  }, [queryClient]);
+
   // Lightbox: collect all images in conversation
   const allImageUrls = useMemo(() => {
     return messages.filter(m => m.media_url && (m.type === "image" || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(m.media_url))).map(m => m.media_url!);
@@ -738,6 +781,10 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                       onReply={handleReply}
                       onRetry={(item.message as any)?._pending ? handleRetry : undefined}
                       onImageClick={handleImageClick}
+                      onForward={handleForward}
+                      onStar={handleStar}
+                      onDelete={handleDelete}
+                      onReact={handleReact}
                       allMessages={allMessages}
                     />
                   </div>
@@ -913,6 +960,14 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           onNavigate={setLightboxIndex}
         />
       )}
+
+      {/* Forward Dialog */}
+      <ChatForwardDialog
+        open={!!forwardMsg}
+        onOpenChange={(open) => { if (!open) setForwardMsg(null); }}
+        message={forwardMsg}
+        contacts={allContacts || []}
+      />
     </div>
   );
 }

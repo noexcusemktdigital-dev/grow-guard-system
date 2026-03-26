@@ -3,14 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   User, Phone, Mail, Building2, DollarSign, Tag, Calendar,
-  ExternalLink, UserPlus, X,
+  ExternalLink, UserPlus, X, Image as ImageIcon, FileText, Link2,
 } from "lucide-react";
-import type { WhatsAppContact } from "@/hooks/useWhatsApp";
-import { useFindLeadByPhone } from "@/hooks/useWhatsApp";
+import type { WhatsAppContact, WhatsAppMessage } from "@/hooks/useWhatsApp";
+import { useFindLeadByPhone, useWhatsAppMessages } from "@/hooks/useWhatsApp";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
 import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
 
 interface Props {
   contact: WhatsAppContact | null;
@@ -24,9 +26,19 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
   const crmLeadId = contactAny?.crm_lead_id || null;
   const { data: leadData } = useFindLeadByPhone(contact?.phone ?? null);
   const lead = leadData as any;
-  // Use lead id from either linked contact or phone-matched lead
   const effectiveLeadId = crmLeadId || lead?.id || null;
   const { data: activities } = useCrmActivities(effectiveLeadId);
+  const { data: allMessages = [] } = useWhatsAppMessages(contact?.id ?? null);
+
+  const mediaItems = useMemo(() => allMessages.filter(m => m.media_url && (m.type === "image" || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(m.media_url || ""))), [allMessages]);
+  const docItems = useMemo(() => allMessages.filter(m => m.media_url && (m.type === "document" || /\.(pdf|doc|xls|ppt|csv|txt)(\?|$)/i.test(m.media_url || ""))), [allMessages]);
+  const linkItems = useMemo(() => {
+    const urlRegex = /(https?:\/\/[^\s<]+)/gi;
+    return allMessages.filter(m => m.content && urlRegex.test(m.content)).map(m => {
+      const match = m.content!.match(urlRegex);
+      return { ...m, links: match || [] };
+    });
+  }, [allMessages]);
 
   if (!contact) return null;
 
@@ -128,6 +140,62 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
               </Button>
             </div>
           )}
+
+          <Separator />
+
+          {/* Media/Docs/Links tabs */}
+          <Tabs defaultValue="media" className="w-full">
+            <TabsList className="w-full h-8 bg-muted/30">
+              <TabsTrigger value="media" className="text-[10px] gap-1 flex-1"><ImageIcon className="w-3 h-3" /> Mídia ({mediaItems.length})</TabsTrigger>
+              <TabsTrigger value="docs" className="text-[10px] gap-1 flex-1"><FileText className="w-3 h-3" /> Docs ({docItems.length})</TabsTrigger>
+              <TabsTrigger value="links" className="text-[10px] gap-1 flex-1"><Link2 className="w-3 h-3" /> Links ({linkItems.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="media" className="mt-2">
+              {mediaItems.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground text-center py-4">Nenhuma mídia</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-1">
+                  {mediaItems.slice(0, 30).map(m => (
+                    <a key={m.id} href={m.media_url!} target="_blank" rel="noopener noreferrer">
+                      <img src={m.media_url!} alt="" className="w-full aspect-square object-cover rounded-md" loading="lazy" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="docs" className="mt-2">
+              {docItems.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground text-center py-4">Nenhum documento</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {docItems.slice(0, 20).map(m => (
+                    <a key={m.id} href={m.media_url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                      <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className="text-[11px] truncate">{m.media_url!.split("/").pop()}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="links" className="mt-2">
+              {linkItems.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground text-center py-4">Nenhum link</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {linkItems.slice(0, 20).map(m => (
+                    <div key={m.id}>
+                      {(m as any).links.map((url: string, i: number) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                          <Link2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-[10px] text-primary truncate">{url}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </ScrollArea>
     </div>
