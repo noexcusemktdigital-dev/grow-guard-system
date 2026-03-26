@@ -1,0 +1,127 @@
+// ══════════════════════════════════════════════════════════
+// NOE: IZITECH Provision Proxy
+// ══════════════════════════════════════════════════════════
+// Proxies requests to IZITECH Connect's provision-instance API.
+// Creates WhatsApp instances with webhooks auto-pointing to NOE.
+// ══════════════════════════════════════════════════════════
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const IZITECH_URL = "https://mdmhsqcfmpyufohxjsrv.supabase.co/functions/v1/provision-instance";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const json = (body: any, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ── Verify user auth ──
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
+    const { data: { user }, error: authErr } = await userClient.auth.getUser(token);
+    if (authErr || !user) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
+    // ── Get user's org ──
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (!member?.organization_id) {
+      return json({ error: "No organization found" }, 404);
+    }
+
+    const orgId = member.organization_id;
+    const body = await req.json();
+    const { action, instance_name } = body;
+
+    if (!action || !instance_name) {
+      return json({ error: "Missing action or instance_name" }, 400);
+    }
+
+    // ── Build webhook URL for NOE (this system) ──
+    const noeWebhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
+
+    // ── Call IZITECH provision API ──
+    const izitechKey = Deno.env.get("IZITECH_CROSS_API_KEY") || "";
+    if (!izitechKey) {
+      return json({ error: "IZITECH integration not configured" }, 500);
+    }
+
+    const izitechRes = await fetch(IZITECH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": izitechKey,
+      },
+      body: JSON.stringify({
+        action,
+        instance_name,
+        customer_webhook_url: noeWebhookUrl,
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    const data = await izitechRes.json().catch(() => ({ error: "Invalid response from IZITECH" }));
+
+    // ── If creating, save instance reference in NOE DB ──
+    if (action === "create" && data.success && data.instance) {
+      const sanitizedName = String(instance_name)
+        .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+      await supabase.from("whatsapp_instances").upsert({
+        organization_id: orgId,
+        instance_id: sanitizedName,
+        label: instance_name,
+        provider: "evolution",
+        status: "pending",
+        webhook_url: noeWebhookUrl,
+        base_url: "https://evo.grupolamadre.com.br",
+        token: "managed-by-izitech",
+        client_token: "managed-by-izitech",
+      }, { onConflict: "organization_id,instance_id" });
+    }
+
+    // ── If connected, update local DB ──
+    if ((action === "qr" || action === "status") && data.status === "connected") {
+      const sanitizedName = String(instance_name)
+        .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+      await supabase.from("whatsapp_instances")
+        .update({
+          status: "connected",
+          phone_number: data.phone_number || null,
+        })
+        .eq("organization_id", orgId)
+        .eq("instance_id", sanitizedName);
+    }
+
+    return json(data, izitechRes.status);
+  } catch (e: any) {
+    console.error("[izitech-provision] Error:", e.message || e);
+    return json({ error: e.message || "Internal error" }, 500);
+  }
+});
