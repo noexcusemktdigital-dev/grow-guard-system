@@ -131,7 +131,17 @@ export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
             </div>
           )}
         </div>
-      </button>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-40">
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPin?.(contact.id, !isPinned); }} className="text-xs gap-2">
+            <Pin className="w-3.5 h-3.5" /> {isPinned ? "Desafixar" : "Fixar no topo"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive?.(contact.id, !isArchived); }} className="text-xs gap-2">
+            <Archive className="w-3.5 h-3.5" /> {isArchived ? "Desarquivar" : "Arquivar"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 );
