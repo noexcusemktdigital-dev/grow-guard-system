@@ -89,9 +89,15 @@ export function ContentVisualCard({
               <Trash2 className="w-4 h-4" />
             </Button>
           )}
-          <Button size="sm" onClick={onApprove} disabled={approving} className="ml-auto">
-            <Check className="w-4 h-4 mr-1" /> Aprovar
-          </Button>
+          {isApproved && onRecord ? (
+            <Button size="sm" onClick={onRecord} className="ml-auto gap-1 bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Clapperboard className="w-4 h-4" /> Gravar
+            </Button>
+          ) : (
+            <Button size="sm" onClick={onApprove} disabled={approving} className="ml-auto">
+              <Check className="w-4 h-4 mr-1" /> Aprovar
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
