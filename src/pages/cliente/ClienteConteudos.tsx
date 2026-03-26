@@ -61,6 +61,7 @@ export default function ClienteConteudos() {
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [confirmApproveAll, setConfirmApproveAll] = useState(false);
   const [expandedContent, setExpandedContent] = useState<any>(null);
+  const [recordingScript, setRecordingScript] = useState<any>(null);
 
   useEffect(() => {
     if (hasStrategy && strategy.canalPrioritario) {
