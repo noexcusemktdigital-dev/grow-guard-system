@@ -631,16 +631,32 @@ export default function ClienteDashboard() {
         </TabsContent>
 
         {/* ===== CHAT TAB ===== */}
-        <TabsContent value="chat" className="space-y-6 mt-4">
+        <TabsContent value="chat" className="space-y-6 mt-4" id="report-chat">
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => {
-              downloadCsv("chat-contacts.csv", ["Nome", "Telefone", "Última mensagem"],
-                allContacts.map((c: any) => [c.name || "", c.phone || "", c.last_message_at || ""])
-              );
-              toast({ title: "CSV exportado", description: `${allContacts.length} contatos exportados` });
-            }}>
-              <Download className="w-3 h-3" /> Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs gap-1">
+                  <Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  downloadCsv("chat-contacts.csv", ["Nome", "Telefone", "Última mensagem"],
+                    allContacts.map((c: any) => [c.name || "", c.phone || "", c.last_message_at || ""])
+                  );
+                  toast({ title: "CSV exportado", description: `${allContacts.length} contatos exportados` });
+                }}>
+                  <FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => {
+                  toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
+                  await downloadReportPdf("report-chat", "Chat Relatório");
+                  toast({ title: "PDF exportado", description: "Relatório visual do Chat baixado" });
+                }}>
+                  <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
