@@ -943,12 +943,13 @@ RULES:
 - Place the logo in the top-left corner area of the design
 - Scale the logo to approximately 8-12% of the image width
 - The logo must appear EXACTLY as provided — same colors, same shape, same proportions, same text
+- The logo has a transparent background. Place it directly without adding any background behind it unless the area is too busy for legibility.
 - Do NOT redraw, stylize, modify, reinterpret, or simplify the logo in ANY way
 - Do NOT change any other part of the design — keep everything else pixel-perfect
-- If the corner area has a busy background, add a very subtle semi-transparent backing behind the logo for legibility
 - If there is already a logo or brand mark visible in the design, REMOVE IT and replace with the provided logo
 - There must be EXACTLY ONE logo in the final image — the one provided
 - Maintain the overall design composition and quality
+- Do NOT add any text, elements, or modifications beyond placing the logo
 
 OUTPUT: The same design with the real brand logo composited in.`,
                   },
