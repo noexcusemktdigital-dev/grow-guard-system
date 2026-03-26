@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
+import { PasswordInput } from "@/components/ui/password-input";
 import logoDark from "@/assets/NOE3.png";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
 
