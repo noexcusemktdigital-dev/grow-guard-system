@@ -449,16 +449,32 @@ export default function ClienteDashboard() {
         </TabsList>
 
         {/* ===== CRM TAB ===== */}
-        <TabsContent value="crm" className="space-y-6 mt-4">
+        <TabsContent value="crm" className="space-y-6 mt-4" id="report-crm">
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => {
-              downloadCsv("crm-leads.csv", ["Nome", "Empresa", "Valor", "Etapa", "Origem", "Criado em"],
-                allLeads.map(l => [l.name, l.company || "", String(l.value || 0), l.stage, l.source || "", l.created_at])
-              );
-              toast({ title: "CSV exportado", description: `${allLeads.length} leads exportados (${periodLabel})` });
-            }}>
-              <Download className="w-3 h-3" /> Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs gap-1">
+                  <Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  downloadCsv("crm-leads.csv", ["Nome", "Empresa", "Valor", "Etapa", "Origem", "Criado em"],
+                    allLeads.map(l => [l.name, l.company || "", String(l.value || 0), l.stage, l.source || "", l.created_at])
+                  );
+                  toast({ title: "CSV exportado", description: `${allLeads.length} leads exportados (${periodLabel})` });
+                }}>
+                  <FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => {
+                  toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
+                  await downloadReportPdf("report-crm", "CRM Relatório");
+                  toast({ title: "PDF exportado", description: "Relatório visual do CRM baixado" });
+                }}>
+                  <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
