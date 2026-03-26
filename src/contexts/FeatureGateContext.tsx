@@ -98,9 +98,9 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const [simulateNoCredits, setSimulateNoCredits] = useState(false);
   const { role } = useAuth();
 
-  const { data: subscription } = useClienteSubscription();
-  const { data: wallet } = useClienteWallet();
-  const hasActiveStrategy = useHasActiveStrategy();
+  const { data: subscription, isLoading: isLoadingSub } = useClienteSubscription();
+  const { data: wallet, isLoading: isLoadingWallet } = useClienteWallet();
+  const { hasStrategy: hasActiveStrategy, isLoading: isLoadingStrategy } = useHasActiveStrategy();
   const isTrial = subscription?.status === "trial";
 
   const planId = subscription?.plan as string | null;
@@ -115,12 +115,17 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const hasNoCredits =
     simulateNoCredits || (wallet ? wallet.balance <= 0 : false);
 
-  const { completed: salesPlanCompleted } = useSalesPlanCompleted();
+  const { completed: salesPlanCompleted, isLoading: isLoadingSalesPlan } = useSalesPlanCompleted();
+
+  const isDataLoading = isLoadingSub || isLoadingWallet || isLoadingStrategy || isLoadingSalesPlan;
 
   const isClienteUser = role === "cliente_user";
 
   const getGateReason = (feature: string): GateReason => {
     if (ALWAYS_ACCESSIBLE.some((r) => feature.startsWith(r))) return null;
+
+    // Don't gate anything while data is still loading to prevent flash
+    if (isDataLoading) return null;
 
     // Admin-only check
     if (isClienteUser && ADMIN_ONLY_ROUTES.some((r) => feature.startsWith(r)))

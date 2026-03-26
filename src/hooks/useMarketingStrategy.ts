@@ -54,9 +54,9 @@ export function useStrategyHistory() {
   });
 }
 
-export function useHasActiveStrategy(): boolean {
-  const { data } = useActiveStrategy();
-  return !!data;
+export function useHasActiveStrategy(): { hasStrategy: boolean; isLoading: boolean } {
+  const { data, isLoading } = useActiveStrategy();
+  return { hasStrategy: !!data, isLoading };
 }
 
 export function useSaveStrategy() {
