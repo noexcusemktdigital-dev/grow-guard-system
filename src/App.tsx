@@ -92,6 +92,7 @@ const ClienteSuporte = lazy(() => import("./pages/cliente/ClienteSuporte"));
 const ClienteAgenda = lazy(() => import("./pages/cliente/ClienteAgenda"));
 const ClienteMarketingHub = lazy(() => import("./pages/cliente/ClienteMarketingHub"));
 const ClienteComunicados = lazy(() => import("./pages/cliente/ClienteComunicados"));
+const ClienteFaq = lazy(() => import("./pages/cliente/ClienteFaq"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -217,6 +218,7 @@ function App() {
                   <Route path="suporte" element={<ClienteSuporte />} />
                   <Route path="marketing-hub" element={<ClienteMarketingHub />} />
                   <Route path="comunicados" element={<ClienteComunicados />} />
+                  <Route path="faq" element={<ClienteFaq />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
