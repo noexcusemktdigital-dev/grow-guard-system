@@ -4,7 +4,7 @@ import {
   Phone, Mail, Building2, DollarSign, Tag, Clock, CheckCircle, XCircle,
   MessageCircle, ExternalLink, CircleDot, Plus, Trash2, CalendarDays,
   PhoneCall, Video, Send, StickyNote, AlertTriangle, FileText, Copy,
-  MoreHorizontal, ArrowRight, Loader2
+  MoreHorizontal, ArrowRight, Loader2, Package
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
