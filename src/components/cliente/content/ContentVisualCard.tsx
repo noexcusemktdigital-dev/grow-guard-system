@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Download, ExternalLink, Check, Trash2, Eye } from "lucide-react";
+import { Copy, Download, ExternalLink, Check, Trash2, Eye, Clapperboard } from "lucide-react";
 import { ContentVisualRenderer } from "./ContentVisuals";
 import type { GeneratedContent } from "./ContentTypes";
 
