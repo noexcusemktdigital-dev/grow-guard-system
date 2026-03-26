@@ -353,13 +353,18 @@ export default function ClienteDashboard() {
   }
 
   // Goal status for KPI labels
-  function getKpiGoalStatus(kpiLabel: string): GoalStatus | undefined {
+  function getKpiGoalData(kpiLabel: string): { status: GoalStatus; percent: number; targetFormatted: string; daysLeft: number } | undefined {
     if (!activeGoals || !goalProgress) return undefined;
     for (const goal of activeGoals) {
       const metric = goal.metric || "revenue";
       const matchLabels = METRIC_TO_KPI[metric];
       if (matchLabels?.includes(kpiLabel)) {
-        return goalProgress[goal.id]?.status;
+        const prog = goalProgress[goal.id];
+        if (!prog) return undefined;
+        const isMonetary = ["revenue", "faturamento", "avg_ticket"].includes(metric);
+        const isPct = metric === "conversions";
+        const targetFormatted = isMonetary ? formatBRL(goal.target_value) : isPct ? `${goal.target_value}%` : String(goal.target_value);
+        return { status: prog.status, percent: prog.percent, targetFormatted, daysLeft: prog.daysLeft };
       }
     }
     return undefined;
