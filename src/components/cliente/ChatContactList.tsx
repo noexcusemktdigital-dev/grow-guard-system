@@ -16,7 +16,6 @@ interface Props {
   isConnected?: boolean;
   lastMessages?: Map<string, string>;
   connectedPhone?: string;
-  onPinContact?: (contactId: string, pinned: boolean) => void;
   onArchiveContact?: (contactId: string, archived: boolean) => void;
 }
 
