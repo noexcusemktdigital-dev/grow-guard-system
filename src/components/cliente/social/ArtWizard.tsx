@@ -327,20 +327,6 @@ export function ArtWizard({
               </p>
             </div>
 
-            {contentData && (
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="p-3 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-primary">Conteúdo vinculado</p>
-                    <p className="text-xs text-muted-foreground truncate">{contentData.title}</p>
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setContentData(null); setContentId(null); }}>
-                    <X className="w-3 h-3" />
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
 
             <Textarea
               placeholder="Ex: Quero divulgar que investir em imóveis exige estratégia, não sorte. Para a marca Klir, tom profissional e sofisticado."
@@ -374,20 +360,6 @@ export function ArtWizard({
               />
             </div>
 
-            <Button variant="outline" size="sm" onClick={() => setShowContentPicker(true)}>
-              <FileText className="w-4 h-4 mr-1" /> Vincular conteúdo existente
-            </Button>
-
-            <ContentPickerDialog
-              open={showContentPicker}
-              onOpenChange={setShowContentPicker}
-              contentHistory={contentHistory}
-              onSelect={(c) => {
-                setContentId(c.id);
-                setContentData(c);
-                setBriefingText(c.title || briefingText);
-              }}
-            />
           </div>
         );
 

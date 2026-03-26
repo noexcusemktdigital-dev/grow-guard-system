@@ -95,15 +95,6 @@ export default function ClienteRedesSociais() {
   const bulkApprove = useBulkApprovePosts();
   const quota = usePostQuota();
 
-  useEffect(() => {
-    const cid = searchParams.get("content_id");
-    if (cid) {
-      setContentId(cid);
-      setView("art-wizard");
-      loadContentData(cid);
-      setSearchParams({}, { replace: true });
-    }
-  }, [searchParams]);
 
   const loadContentData = async (id: string) => {
     try {

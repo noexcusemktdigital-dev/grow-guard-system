@@ -273,7 +273,7 @@ export default function ClienteConteudos() {
                   <ContentVisualCard key={i} content={c} index={i}
                     onCopy={() => copyContent(c)}
                     onPdf={() => downloadPdf(c, i)}
-                    onPost={() => navigate(`/cliente/redes-sociais?content_id=${generatedIds[i]}`)}
+                    onPost={() => navigate(`/cliente/postagem`)}
                     onApprove={() => handleApproveOne(i)}
                     onDelete={() => handleDeleteGenerated(i)}
                     onExpand={() => setExpandedContent(c)}
