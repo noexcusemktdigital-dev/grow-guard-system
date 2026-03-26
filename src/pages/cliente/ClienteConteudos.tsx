@@ -13,7 +13,7 @@ import {
 import { useStrategyData } from "@/hooks/useStrategyData";
 import { useNavigate } from "react-router-dom";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
-import { ApprovalDashboard } from "@/components/cliente/ApprovalDashboard";
+
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
