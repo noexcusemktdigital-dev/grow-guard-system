@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ChatMessageBubble } from "./ChatMessageBubble";
+import { ChatForwardDialog } from "./ChatForwardDialog";
 import { ImageLightbox } from "./ImageLightbox";
 import {
   useSendWhatsAppMessage,
@@ -25,6 +26,9 @@ import {
   useSendTypingIndicator,
   useMarkWhatsAppRead,
   useMarkContactRead,
+  useStarMessage,
+  useDeleteMessage,
+  useWhatsAppContacts,
 } from "@/hooks/useWhatsApp";
 import { useCrmLeadMutations, useCrmFunnels } from "@/hooks/useClienteCrm";
 import type { WhatsAppContact, WhatsAppMessage } from "@/hooks/useWhatsApp";
