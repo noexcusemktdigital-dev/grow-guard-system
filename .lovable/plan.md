@@ -1,80 +1,81 @@
 
 
-## Integrar Metas ao Relatório CRM + Coloração Verde/Amarelo/Vermelho
+## Redesign Visual dos KPI Cards com Metas Integradas + Seção de Metas Dinâmica
 
 ### O que muda
 
-O relatório CRM (`ClienteDashboard.tsx`) passará a consumir as metas ativas do mês e o progresso calculado (`useActiveGoals` + `useGoalProgress`), usando as cores verde (batida/no ritmo), amarelo (em andamento) e vermelho (abaixo/crítica) nos KPIs e gráficos. Uma nova seção de metas aparecerá no topo da aba CRM.
+Os 8 KPI cards passam a mostrar **dentro do próprio card** a meta vinculada (valor atual vs alvo + mini barra de progresso), tornando desnecessário olhar para outra seção. A seção "Metas do Mês" é redesenhada com visual mais rico — usando `GoalProgressRing` + projeções inline em vez de simples barras de texto.
 
 ### Mudanças concretas
 
-**1. Importar metas e progresso no dashboard**
+**1. Redesign do KpiCard local (dentro de ClienteDashboard)**
 
-- Importar `useActiveGoals` de `useGoals` e `useGoalProgress` de `useGoalProgress`
-- Buscar metas ativas e seu progresso dentro do componente
+Cada KpiCard que tem meta vinculada ganha:
+- Mini progress bar colorida (verde/amarelo/vermelho) na parte inferior do card
+- Texto "Meta: R$ 50.000" ou "Meta: 30 leads" abaixo do valor principal
+- Porcentagem da meta (ex: "78% da meta") ao lado do status badge
+- Se não há meta, o card continua igual (sem barra nem texto de meta)
 
-**2. Nova seção "Metas do Mês" na aba CRM**
+```text
+┌─────────────────────────┐
+│ 💲                      │
+│ R$ 32.500               │
+│ RECEITA TOTAL  ↗ +15%   │
+│ ▓▓▓▓▓▓▓▓▓▓▓▓░░░ 65%    │
+│ Meta: R$ 50.000 → 18d   │
+│ ↗ No ritmo              │
+└─────────────────────────┘
+```
 
-Abaixo dos 8 KPI cards, antes dos gráficos, adicionar um bloco com as metas ativas:
-- Cada meta mostra: título, métrica, valor atual vs. alvo, barra de progresso colorida, dias restantes
-- Cores da barra: verde (`batida`/`no_ritmo`), amarelo (`em_andamento`), vermelho (`abaixo`/`critica`)
-- Se não houver metas, mostrar mensagem com link para criar metas
+Props adicionadas ao KpiCard local:
+- `goalTarget?: string` — valor formatado da meta (ex: "R$ 50.000")
+- `goalPercent?: number` — percentual atingido
+- `goalDaysLeft?: number` — dias restantes
 
-**3. Coloração dos KPI cards baseada nas metas**
+**2. Redesign da seção "Metas do Mês"**
 
-- Para os KPIs que têm meta correspondente (ex: "Receita Total" → meta de `revenue`, "Leads Captados" → meta de `leads`, "Taxa de Conversão" → meta de `conversions`, "Ticket Médio" → meta de `avg_ticket`), o gradiente do card muda de acordo com o status:
-  - Verde: `from-emerald-500/15` — meta batida ou no ritmo
-  - Amarelo: `from-amber-500/15` — em andamento
-  - Vermelho: `from-red-500/15` — abaixo ou crítica
-  - Se não há meta para aquele KPI, manter gradiente padrão
+Substituir a lista de barras simples por cards visuais com:
+- `GoalProgressRing` (anel circular) à esquerda — já existe no projeto
+- Título + métrica + badge de status
+- Barra de progresso expandida com cores
+- Texto de projeção: "No ritmo atual, atingirá ~92% da meta" (lógica já existe no GoalCard)
+- Layout em grid 2 colunas (lg) para ficar mais compacto
 
-**4. Refatorar `KpiCard` para aceitar status de meta**
+```text
+┌──────────────────────────────────────┐
+│  ◎ 78%  │ Faturamento Mensal         │
+│  (ring) │ R$ 32.500 / R$ 50.000      │
+│         │ ▓▓▓▓▓▓▓▓▓▓▓░░░  ↗ No ritmo│
+│         │ ✅ Projeção: ~92% da meta   │
+│         │ 18 dias restantes           │
+└──────────────────────────────────────┘
+```
 
-- Adicionar prop opcional `goalStatus` ao `KpiCard`
-- Adicionar indicador visual (badge ou borda colorida) mostrando "✓ Meta batida", "↗ No ritmo", "→ Em andamento", "↓ Abaixo"
+**3. Lógica de vinculação KPI → Meta**
 
-**5. Cores dos gráficos do CRM**
+Expandir `getKpiGoalStatus` para retornar também os dados numéricos (não só o status), para alimentar a mini barra e os textos do card:
 
-- Gráfico "Taxa de Conversão" (radial): cor baseada em comparação com a meta de conversão (verde se >= meta, amarelo se >= 50% da meta, vermelho se abaixo)
-- Gráfico "Leads por Etapa" (barras): manter cores padrão (não muda)
-- Gráfico "Leads Criados por Semana" (linha): adicionar linha de referência horizontal se houver meta de leads (mostrando o "pace necessário por semana")
+```typescript
+function getKpiGoalData(kpiLabel: string): {
+  status: GoalStatus;
+  percent: number;
+  targetFormatted: string;
+  daysLeft: number;
+} | undefined
+```
 
-**6. Abas Chat e Agentes IA**
+**4. Formatação inteligente da meta no card**
 
-- Sem vínculo com metas (como solicitado — são baseadas em ações)
-- Manter cores atuais
+- Métricas monetárias (revenue, avg_ticket): `formatBRL(target_value)`
+- Métricas numéricas (leads, contracts): `${target_value}`
+- Métricas percentuais (conversions): `${target_value}%`
+
+### Arquivos afetados
+
+- `src/pages/cliente/ClienteDashboard.tsx` — redesign do KpiCard local, nova seção de metas visual, helper `getKpiGoalData`
+- Reutiliza `GoalProgressRing` existente (sem alteração)
 
 ### Detalhes técnicos
 
-**Mapeamento KPI → métrica de meta:**
-```typescript
-const metricMap: Record<string, string[]> = {
-  "revenue": ["Receita Total"],
-  "faturamento": ["Receita Total"],
-  "leads": ["Leads Captados"],
-  "conversions": ["Taxa de Conversão"],
-  "avg_ticket": ["Ticket Médio"],
-  "contracts": ["Pipeline Ativo"],
-  "contratos": ["Pipeline Ativo"],
-};
-```
-
-**Cores por status:**
-```typescript
-function getStatusColor(status: string) {
-  if (status === "batida" || status === "no_ritmo") return { gradient: "from-emerald-500/15 to-emerald-600/5", color: "text-emerald-600", bg: "bg-emerald-100" };
-  if (status === "em_andamento") return { gradient: "from-amber-500/15 to-amber-600/5", color: "text-amber-600", bg: "bg-amber-100" };
-  return { gradient: "from-red-500/15 to-red-600/5", color: "text-red-600", bg: "bg-red-100" };
-}
-```
-
-**Barra de progresso na seção de metas:**
-```tsx
-<div className="h-2 rounded-full bg-muted overflow-hidden">
-  <div className={`h-full rounded-full ${statusBgClass}`} style={{ width: `${Math.min(percent, 100)}%` }} />
-</div>
-```
-
-### Arquivo afetado
-- `src/pages/cliente/ClienteDashboard.tsx` — importar hooks de metas, nova seção, KpiCard com status, cores condicionais nos gráficos
+A seção de metas usa `GoalProgressRing` com `size={52}` para caber no layout compacto. A lógica de projeção é extraída do `GoalCard.tsx` existente (cálculo de `projectedPercent` e `increaseNeeded`). O grid de metas usa `grid-cols-1 lg:grid-cols-2` para responsividade. Os KpiCards mantêm `data-pdf-hide` nos badges de status para não poluir o PDF.
 
