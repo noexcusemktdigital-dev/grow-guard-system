@@ -416,6 +416,166 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   );
 }
 
+/* ========== LEAD PRODUCTS TAB COMPONENT ========== */
+
+function LeadProductsTab({ leadId }: { leadId: string }) {
+  const { toast } = useToast();
+  const { data: leadProducts, isLoading } = useCrmLeadProducts(leadId);
+  const { data: availableProducts } = useCrmProducts(true);
+  const { addProduct, removeProduct } = useCrmLeadProductMutations();
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [qty, setQty] = useState("1");
+  const [discount, setDiscount] = useState("0");
+
+  const selectedProduct = availableProducts?.find(p => p.id === selectedProductId);
+
+  const handleAdd = () => {
+    if (!selectedProductId || !selectedProduct) return;
+    addProduct.mutate(
+      {
+        lead_id: leadId,
+        product_id: selectedProductId,
+        quantity: parseInt(qty) || 1,
+        unit_price: selectedProduct.price,
+        discount_percent: parseFloat(discount) || 0,
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Produto vinculado" });
+          setShowAdd(false);
+          setSelectedProductId("");
+          setQty("1");
+          setDiscount("0");
+        },
+        onError: (err: any) => {
+          toast({ title: "Erro", description: err.message?.includes("duplicate") ? "Produto já vinculado a este lead" : err.message, variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const calcSubtotal = (item: { quantity: number; unit_price: number; discount_percent: number }) =>
+    item.quantity * item.unit_price * (1 - item.discount_percent / 100);
+
+  const total = (leadProducts || []).reduce((sum, lp) => sum + calcSubtotal(lp), 0);
+
+  // Filter out products already linked
+  const linkedIds = new Set((leadProducts || []).map(lp => lp.product_id));
+  const unlinkedProducts = (availableProducts || []).filter(p => !linkedIds.has(p.id));
+
+  if (isLoading) return <div className="text-center py-6 text-xs text-muted-foreground">Carregando...</div>;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold">Produtos ({leadProducts?.length || 0})</p>
+        <Button size="sm" className="h-7 text-xs gap-1" onClick={() => setShowAdd(true)} disabled={unlinkedProducts.length === 0}>
+          <Plus className="w-3 h-3" /> Adicionar
+        </Button>
+      </div>
+
+      {(!leadProducts || leadProducts.length === 0) && !showAdd && (
+        <div className="text-center py-8">
+          <Package className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Nenhum produto vinculado</p>
+          <p className="text-xs text-muted-foreground mt-1">Adicione produtos cadastrados a este lead.</p>
+        </div>
+      )}
+
+      {leadProducts && leadProducts.length > 0 && (
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-[10px] h-8">Produto</TableHead>
+                <TableHead className="text-[10px] h-8 text-right">Qtd</TableHead>
+                <TableHead className="text-[10px] h-8 text-right">Preço</TableHead>
+                <TableHead className="text-[10px] h-8 text-right">Desc%</TableHead>
+                <TableHead className="text-[10px] h-8 text-right">Subtotal</TableHead>
+                <TableHead className="text-[10px] h-8 w-8"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {leadProducts.map(lp => (
+                <TableRow key={lp.id}>
+                  <TableCell className="text-xs py-2">{lp.product_name}</TableCell>
+                  <TableCell className="text-xs py-2 text-right">{lp.quantity}</TableCell>
+                  <TableCell className="text-xs py-2 text-right">
+                    {lp.unit_price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </TableCell>
+                  <TableCell className="text-xs py-2 text-right">{lp.discount_percent}%</TableCell>
+                  <TableCell className="text-xs py-2 text-right font-medium">
+                    {calcSubtotal(lp).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive" onClick={() => { removeProduct.mutate({ id: lp.id, lead_id: leadId }); toast({ title: "Produto removido" }); }}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="flex justify-between items-center px-4 py-2 bg-muted/30 border-t">
+            <span className="text-xs font-semibold">Total</span>
+            <span className="text-sm font-bold text-primary">
+              {total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Add product dialog */}
+      <Dialog open={showAdd} onOpenChange={o => { if (!o) setShowAdd(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Adicionar Produto</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Produto</Label>
+              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {unlinkedProducts.map(p => (
+                    <SelectItem key={p.id} value={p.id} className="text-sm">
+                      {p.name} — {p.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Quantidade</Label>
+                <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} className="h-8 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Desconto (%)</Label>
+                <Input type="number" min="0" max="100" value={discount} onChange={e => setDiscount(e.target.value)} className="h-8 text-sm" />
+              </div>
+            </div>
+            {selectedProduct && (
+              <p className="text-xs text-muted-foreground">
+                Subtotal: {(
+                  (parseInt(qty) || 1) * selectedProduct.price * (1 - (parseFloat(discount) || 0) / 100)
+                ).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowAdd(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleAdd} disabled={!selectedProductId || addProduct.isPending}>
+              {addProduct.isPending && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 /* ========== PROPOSALS TAB COMPONENT ========== */
 
 function ProposalsTab({ leadId }: { leadId: string }) {
