@@ -1,60 +1,47 @@
 
 
-## 4 Mudanças: Site Assertivo + Aprovação Individual + Tutorial de Gravação + Créditos de Roteiro
+## Geração Inteligente de Tarefas com IA — Análise Completa do Usuário
 
-### 1. Site puxando dados reais (logo, cores, estratégia)
+### Problema atual
+O edge function `generate-daily-checklist` usa 3 tarefas fixas hardcoded ("Verificar leads novos", "Responder mensagens", "Atualizar pipeline") e apenas algumas verificações condicionais simples (leads parados, tarefas vencidas, propostas pendentes). Não há análise inteligente nem personalização real.
 
-**Problema**: O wizard do site tem auto-fill básico mas não puxa logo, cores da identidade visual, nem dados completos do plano de marketing. O edge function recebe `cores_principais` e `fontes_preferidas` mas o frontend passa strings vazias quando o `visualIdentity` não tem dados completos.
+### Solução
 
-**Solução**:
-- **`ClienteSites.tsx`**: No auto-fill (linhas 274-285), puxar dados mais ricos do `useStrategyData` (ICP, proposta de valor, tom, diferencial, segmento, serviços, público-alvo) e do `useVisualIdentity` (logo_url, palette, fonts, style, tone). Pré-preencher campos como `servicos`, `diferenciais`, `publico_chips`, `dores`, `tom`, `estilo`, `cores` automaticamente.
-- Adicionar campo `logo_url` ao formulário e passá-lo ao body do `generate-site`. Mostrar badge visual "Logo detectada" quando existir.
-- **`generate-site/index.ts`**: Adicionar `logo_url` ao prompt da IA com instrução: "Se houver logo_url, inclua `<img src='{logo_url}'>` no header e footer do site". Reforçar no system prompt: "OBRIGATÓRIO usar as cores exatas fornecidas como CSS variables `:root`. NÃO inventar cores."
-- Adicionar dados do `useStrategyData` diretamente no body: `salesPlanProducts`, `salesPlanDiferenciais`, `salesPlanSegmento`, `salesPlanDorPrincipal`.
+Reescrever o edge function para **coletar dados completos do usuário** e enviar para a **Lovable AI** gerar tarefas personalizadas e priorizadas.
 
-### 2. Remover ApprovalDashboard global — aprovação individual por ferramenta
+### Dados coletados para análise
 
-**Problema**: `ApprovalDashboard` aparece em Sites, Roteiros e Postagem mostrando estatísticas de TODAS as ferramentas juntas.
+O function vai buscar antes de chamar a IA:
 
-**Solução**:
-- **Remover** `<ApprovalDashboard />` de `ClienteSites.tsx`, `ClienteConteudos.tsx` e `ClienteRedesSociais.tsx`.
-- Cada ferramenta já tem seus próprios indicadores de pendência inline (badges de status, filtros por status). Manter apenas esses.
-- Opcionalmente, manter o componente `ApprovalDashboard.tsx` no codebase para uso futuro no Dashboard, mas removê-lo das 3 páginas de ferramentas.
+1. **CRM**: leads ativos sem contato, leads quentes parados, tarefas vencidas, propostas pendentes/enviadas, leads novos sem follow-up
+2. **WhatsApp/Chat**: mensagens não lidas, contatos sem resposta há mais de 24h
+3. **Conteúdo**: roteiros pendentes de aprovação, postagens em rascunho
+4. **Metas**: goals ativos e progresso atual vs meta
+5. **Gamificação**: streak atual, XP, nível
+6. **Estratégia**: se tem plano de marketing/vendas ativo ou não
+7. **Créditos**: saldo atual (alertar se baixo)
 
-### 3. Roteiros — botão "Gravar" com tutorial dinâmico por formato
+### Fluxo
 
-**Problema**: Após aprovação do roteiro, não há orientação de como gravar.
+1. Edge function coleta todos os dados acima via queries ao Supabase
+2. Monta um prompt contextual com os dados reais do usuário
+3. Chama `ai.gateway.lovable.dev` com `tool_choice` para extrair um array estruturado de tarefas (título, categoria, prioridade, justificativa)
+4. Insere as tarefas retornadas pela IA na tabela `client_checklist_items`
+5. Debita créditos e atualiza streak (lógica existente mantida)
 
-**Solução**:
-- **`ClienteConteudos.tsx`**: Após um roteiro ser aprovado, mostrar botão "🎬 Gravar" ao lado do card.
-- Ao clicar, abrir um **Sheet/Dialog** com tutorial específico baseado no formato escolhido (Reels, Stories, TikTok, YouTube).
-- O tutorial será um componente `RecordingTutorial` com:
-  - **Dicas de enquadramento** (vertical/horizontal, distância)
-  - **Configuração de câmera** (resolução, fps)
-  - **Passo a passo da gravação** numerado, com o roteiro do lado para referência
-  - **Dicas de edição** (cortes, legendas, música)
-  - **Duração recomendada** baseada no formato
-- Conteúdo diferenciado:
-  - **Stories**: 15s por slide, vertical, câmera frontal, foco em autenticidade
-  - **Reels**: 30-90s, vertical, transições dinâmicas, hook nos 3 primeiros segundos
-  - **TikTok**: 15-60s, vertical, tendências, cortes rápidos
-  - **YouTube**: 3-15min, horizontal, introdução, roteiro completo com timestamps
+### Prompt da IA (resumo)
 
-### 4. Custo de aprovação de roteiro = 20 créditos (remover "approve-content" de 200)
-
-**Solução**:
-- **`src/constants/plans.ts`**: Alterar `"approve-content"` de `{ cost: 200, label: "Aprovação de conteúdo" }` para `{ cost: 20, label: "Aprovação de roteiro" }`.
-- Verificar que `useClienteContentV2.ts` já consome `CREDIT_COSTS["approve-content"].cost` — a mudança será automática.
-- Remover a entrada da calculadora de créditos se havia uma referência separada de "Aprovação de conteúdo" na UI de planos.
+```
+Você é um gestor de produtividade. Com base nos dados reais do usuário, gere 5-8 tarefas diárias priorizadas.
+Regras: tarefas específicas e acionáveis, com números reais (ex: "Fazer follow-up nos 3 leads quentes parados há 4 dias").
+Priorize: leads quentes sem contato > tarefas vencidas > mensagens não respondidas > metas atrasadas > rotina.
+```
 
 ### Arquivos afetados
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/pages/cliente/ClienteSites.tsx` | Auto-fill com strategy + visual identity, campo logo_url, remover ApprovalDashboard |
-| `supabase/functions/generate-site/index.ts` | Logo no prompt, cores obrigatórias, dados de strategy |
-| `src/pages/cliente/ClienteConteudos.tsx` | Remover ApprovalDashboard, adicionar botão "Gravar" + tutorial |
-| `src/pages/cliente/ClienteRedesSociais.tsx` | Remover ApprovalDashboard |
-| `src/constants/plans.ts` | approve-content: 200 → 20 |
-| `src/components/cliente/content/RecordingTutorial.tsx` | Novo componente — tutorial de gravação por formato |
+| `supabase/functions/generate-daily-checklist/index.ts` | Reescrever: coletar dados do usuário + chamar Lovable AI + inserir tarefas personalizadas |
+
+Nenhuma mudança no frontend — o botão "Gerar Checklist com IA" já chama esse function e exibe os resultados.
 
