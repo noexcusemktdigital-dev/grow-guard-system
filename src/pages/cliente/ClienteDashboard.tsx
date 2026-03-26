@@ -40,7 +40,7 @@ async function downloadReportPdf(containerId: string, title: string) {
   const element = document.getElementById(containerId);
   if (!element) return;
   const opt = {
-    margin: [10, 10, 10, 10],
+    margin: [10, 10, 10, 10] as [number, number, number, number],
     filename: `${title.toLowerCase().replace(/\s+/g, "-")}-relatorio.pdf`,
     image: { type: "jpeg", quality: 0.95 },
     html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
