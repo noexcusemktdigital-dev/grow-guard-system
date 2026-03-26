@@ -90,8 +90,7 @@ export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
                 <Badge variant="secondary" className="text-[8px] px-1 py-0 shrink-0 bg-sky-500/15 text-sky-400 border-0">Site</Badge>
               )}
             </div>
-            <div className="flex items-center gap-1 shrink-0 ml-2">
-              {isPinned && <Pin className="w-3 h-3 text-muted-foreground rotate-45" />}
+            <div className="flex items-center shrink-0 ml-2">
               <span className={`text-[10px] ${contact.unread_count > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>
                 {formatContactTime(contact.last_message_at)}
               </span>

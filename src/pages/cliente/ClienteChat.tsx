@@ -240,7 +240,6 @@ export default function ClienteChat() {
               lastMessages={lastMessages}
               connectedPhone={formattedPhone ?? undefined}
               onArchiveContact={handleArchiveContact}
-              onArchiveContact={handleArchiveContact}
             />
           )}
         </div>
