@@ -92,6 +92,7 @@ const ClienteSuporte = lazy(() => import("./pages/cliente/ClienteSuporte"));
 const ClienteAgenda = lazy(() => import("./pages/cliente/ClienteAgenda"));
 const ClienteMarketingHub = lazy(() => import("./pages/cliente/ClienteMarketingHub"));
 const ClienteComunicados = lazy(() => import("./pages/cliente/ClienteComunicados"));
+const ClienteFaq = lazy(() => import("./pages/cliente/ClienteFaq"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
