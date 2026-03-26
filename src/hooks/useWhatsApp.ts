@@ -409,16 +409,6 @@ export function useArchiveContact() {
     },
   });
 }
-  return useMutation({
-    mutationFn: async (params: { contactPhone?: string; contactId?: string }) => {
-      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
-        body: { ...params, action: "read", message: "" },
-      });
-      if (error) throw error;
-      return data;
-    },
-  });
-}
 
 // Fetch real message previews for contacts
 export function useContactPreviews(contactIds: string[]) {
