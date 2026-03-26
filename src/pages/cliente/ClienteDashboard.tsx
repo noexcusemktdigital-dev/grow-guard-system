@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useOrgProfile } from "@/hooks/useOrgProfile";
 import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
@@ -35,19 +36,73 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
 }
 
 /* ========== PDF EXPORT ========== */
-async function downloadReportPdf(containerId: string, title: string) {
+async function downloadReportPdf(containerId: string, title: string, orgName?: string) {
   const { default: html2pdf } = await import("html2pdf.js");
-  const element = document.getElementById(containerId);
-  if (!element) return;
+  const source = document.getElementById(containerId);
+  if (!source) return;
+
+  // Build a clean printable clone without export buttons
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;background:#fff;color:#111;font-family:Inter,Arial,sans-serif;padding:40px 36px;";
+
+  // Header with org name + report title + date
+  const header = document.createElement("div");
+  header.style.cssText = "margin-bottom:28px;border-bottom:2px solid #E2233B;padding-bottom:16px;";
+  header.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#111;margin:0;">${orgName || "Relatório"}</h1>
+        <p style="font-size:13px;color:#666;margin:4px 0 0;">${title}</p>
+      </div>
+      <p style="font-size:11px;color:#999;margin:0;">${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
+    </div>
+  `;
+  wrapper.appendChild(header);
+
+  // Clone content
+  const clone = source.cloneNode(true) as HTMLElement;
+
+  // Remove export buttons and dropdowns from clone
+  clone.querySelectorAll("[data-pdf-hide], button, [role='menu']").forEach(el => {
+    const parent = el.closest(".flex.justify-end");
+    if (parent) parent.remove();
+  });
+  // Also remove any remaining dropdown triggers
+  clone.querySelectorAll(".flex.justify-end").forEach(el => {
+    if (el.querySelector("button")) el.remove();
+  });
+
+  // Fix chart containers for static rendering
+  clone.querySelectorAll(".recharts-responsive-container").forEach(el => {
+    (el as HTMLElement).style.width = "100%";
+    (el as HTMLElement).style.height = "200px";
+  });
+
+  // Force white background and dark text on all elements
+  clone.querySelectorAll("*").forEach(el => {
+    const htmlEl = el as HTMLElement;
+    const cs = window.getComputedStyle(el);
+    if (cs.backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)") {
+      // Keep gradient cards but make text visible
+    }
+    htmlEl.style.color = htmlEl.style.color || "";
+  });
+  clone.style.cssText = "color:#111;";
+
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
   const opt = {
-    margin: [10, 10, 10, 10] as [number, number, number, number],
-    filename: `${title.toLowerCase().replace(/\s+/g, "-")}-relatorio.pdf`,
-    image: { type: "jpeg" as const, quality: 0.95 },
-    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+    margin: [8, 8, 8, 8] as [number, number, number, number],
+    filename: `${title.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`,
+    image: { type: "jpeg" as const, quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", scrollY: 0, width: 794, windowWidth: 794 },
+    jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
     pagebreak: { mode: ["avoid-all", "css", "legacy"] },
   };
-  await html2pdf().set(opt).from(element).save();
+
+  await html2pdf().set(opt).from(wrapper).save();
+  document.body.removeChild(wrapper);
 }
 
 /* ========== DATE FILTER HELPER ========== */
@@ -124,6 +179,8 @@ export default function ClienteDashboard() {
   const { data: leads, isLoading: leadsLoading } = useCrmLeads();
   const { data: proposals } = useCrmProposals();
   const { data: orgId } = useUserOrgId();
+  const orgProfile = useOrgProfile();
+  const orgName = orgProfile.data?.name || "Relatório";
   const { toast } = useToast();
   const [period, setPeriod] = useState("30d");
   const [customFrom, setCustomFrom] = useState("");
@@ -468,7 +525,7 @@ export default function ClienteDashboard() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={async () => {
                   toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
-                  await downloadReportPdf("report-crm", "CRM Relatório");
+                  await downloadReportPdf("report-crm", "CRM — Relatório", orgName);
                   toast({ title: "PDF exportado", description: "Relatório visual do CRM baixado" });
                 }}>
                   <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
@@ -650,7 +707,7 @@ export default function ClienteDashboard() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={async () => {
                   toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
-                  await downloadReportPdf("report-chat", "Chat Relatório");
+                  await downloadReportPdf("report-chat", "Chat — Relatório", orgName);
                   toast({ title: "PDF exportado", description: "Relatório visual do Chat baixado" });
                 }}>
                   <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
@@ -737,7 +794,7 @@ export default function ClienteDashboard() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={async () => {
                   toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
-                  await downloadReportPdf("report-agents", "Agentes IA Relatório");
+                  await downloadReportPdf("report-agents", "Agentes IA — Relatório", orgName);
                   toast({ title: "PDF exportado", description: "Relatório visual dos Agentes IA baixado" });
                 }}>
                   <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
