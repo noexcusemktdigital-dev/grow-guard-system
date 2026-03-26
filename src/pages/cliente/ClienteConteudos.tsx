@@ -25,6 +25,7 @@ import { ContentVisualCard } from "@/components/cliente/content/ContentVisualCar
 import { BatchFolderView } from "@/components/cliente/content/BatchFolderView";
 import { ContentDetailSheet } from "@/components/cliente/content/ContentDetailSheet";
 import { OBJETIVOS, loadingPhrases } from "@/components/cliente/content/ContentTypes";
+import { RecordingTutorial } from "@/components/cliente/content/RecordingTutorial";
 
 const TOTAL_STEPS = 4;
 
