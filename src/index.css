@@ -360,4 +360,10 @@
     background-color: hsl(225 16% 10%);
     color: hsl(0 0% 90%);
   }
+
+  /* PDF export: hide buttons during capture */
+  .pdf-exporting [data-pdf-hide],
+  .pdf-exporting .flex.justify-end {
+    display: none !important;
+  }
 }
