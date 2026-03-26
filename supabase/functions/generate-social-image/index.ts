@@ -44,7 +44,7 @@ async function urlToBase64(url: string): Promise<string | null> {
               content: [
                 {
                   type: "text",
-                  text: "Render this SVG logo as a clean PNG image on a solid white background. Maintain exact colors, proportions and text. Output only the rendered image.",
+                  text: "Render this SVG logo as a clean PNG image on a TRANSPARENT background (alpha channel). Maintain exact colors, proportions and text. Output only the rendered image with no background.",
                 },
                 { type: "image_url", image_url: { url: svgB64 } },
               ],
@@ -60,8 +60,10 @@ async function urlToBase64(url: string): Promise<string | null> {
             return pngUrl;
           }
         }
-        console.warn("SVG→PNG conversion failed, skipping");
-        return null;
+        // Fallback: use raw SVG as base64 directly
+        console.warn("SVG→PNG conversion failed, using raw SVG base64 as fallback");
+        const svgTextFallback = new TextDecoder().decode(new Uint8Array(await res.arrayBuffer()));
+        return `data:image/svg+xml;base64,${btoa(svgTextFallback)}`;
       } catch (svgErr) {
         console.warn("SVG→PNG conversion error:", svgErr);
         return null;
@@ -538,7 +540,8 @@ IMPORTANT RENDERING RULES:
 - Typography should feel intentional and designed, not auto-generated
 - The overall composition must be balanced and publication-ready
 - MANDATORY COLOR RULE: Use ONLY the colors listed in the color_palette section. Do NOT substitute or invent different colors. If the palette says yellow, use yellow — NEVER red or any other hue.
-- DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo space COMPLETELY EMPTY — it will be composited in post-production.`;
+- DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo space COMPLETELY EMPTY — it will be composited in post-production.
+- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above (headline, highlight headline, supporting text, bullet points, CTA, brand). Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.`;
 }
 
 // --- Build fallback prompt when CoT fails ---
@@ -608,6 +611,7 @@ COMPOSITION RULES:
 - Professional color theory: complementary or analogous color relationships
 - Must be legible and impactful at small mobile screen sizes
 - Clean, balanced layout that feels intentionally designed
+- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above. Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.
 
 Generate this image now.`;
 }
@@ -857,7 +861,8 @@ Output ONLY the extracted logo image.`,
         const b64 = await urlToBase64(photoUrl);
         if (b64) photoBase64s.push({ type: "image_url", image_url: { url: b64 } });
       }
-      fullPrompt += `\n\nPHOTOS TO INCLUDE IN THE DESIGN: ${photoBase64s.length} photo(s) have been attached. These photos MUST appear as visual elements IN the final design composition. Incorporate them naturally into the layout — they are real product/person/place photos that the client wants visible in the art. Do NOT use them just as style reference.`;
+      fullPrompt += `\n\nPHOTOS TO INCLUDE IN THE DESIGN: ${photoBase64s.length} photo(s) have been attached. These photos MUST appear as visual elements IN the final design composition. Incorporate them naturally into the layout — they are real product/person/place photos that the client wants visible in the art. Do NOT use them just as style reference.
+MANDATORY PHOTO RESTRICTION: Use ONLY the attached photos as visual/photographic elements. Do NOT generate, add, or include ANY additional photographs, people, objects, or illustrated elements beyond the provided photos.`;
     }
 
     console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, photos: ${photoBase64s.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
@@ -938,12 +943,13 @@ RULES:
 - Place the logo in the top-left corner area of the design
 - Scale the logo to approximately 8-12% of the image width
 - The logo must appear EXACTLY as provided — same colors, same shape, same proportions, same text
+- The logo has a transparent background. Place it directly without adding any background behind it unless the area is too busy for legibility.
 - Do NOT redraw, stylize, modify, reinterpret, or simplify the logo in ANY way
 - Do NOT change any other part of the design — keep everything else pixel-perfect
-- If the corner area has a busy background, add a very subtle semi-transparent backing behind the logo for legibility
 - If there is already a logo or brand mark visible in the design, REMOVE IT and replace with the provided logo
 - There must be EXACTLY ONE logo in the final image — the one provided
 - Maintain the overall design composition and quality
+- Do NOT add any text, elements, or modifications beyond placing the logo
 
 OUTPUT: The same design with the real brand logo composited in.`,
                   },
