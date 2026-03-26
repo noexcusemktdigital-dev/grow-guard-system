@@ -243,6 +243,8 @@ export default function ClienteChat() {
               isConnected={isConnected}
               lastMessages={lastMessages}
               connectedPhone={formattedPhone ?? undefined}
+              onPinContact={handlePinContact}
+              onArchiveContact={handleArchiveContact}
             />
           )}
         </div>
