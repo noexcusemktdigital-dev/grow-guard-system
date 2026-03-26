@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
+import { GoalProgressRing } from "@/components/metas/GoalProgressRing";
 import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
