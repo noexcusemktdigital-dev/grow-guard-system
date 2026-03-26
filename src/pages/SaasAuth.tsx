@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles, CheckCircle2, Check, X, AlertTriangle } from "lucide-react";
+import { PasswordInput } from "@/components/ui/password-input";
 import logoDark from "@/assets/NOE3.png";
 import SaasBrandingPanel from "@/components/SaasBrandingPanel";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
@@ -344,8 +345,8 @@ const SaasAuth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="login-password" className="text-white/70">Senha</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                      <Input id="login-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10" />
+                      <PasswordInput id="login-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
                     </div>
                   </div>
                   <Button type="submit" className="w-full bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white" disabled={loading}>
@@ -381,8 +382,8 @@ const SaasAuth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="text-white/70">Senha</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                      <Input id="signup-password" type="password" placeholder="Mínimo 8 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10" />
+                      <PasswordInput id="signup-password" placeholder="Mínimo 8 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
                     </div>
                     {password.length > 0 && (
                       <div className="space-y-2 pt-1">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Settings, User, Building2, Users, Bell, UserPlus, Shield, Camera, Crown, ChevronRight } from "lucide-react";
+import { PasswordInput } from "@/components/ui/password-input";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,9 +59,9 @@ function SetPasswordSection() {
         <CardDescription>Você entrou via Google. Defina uma senha para também poder fazer login por e-mail.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2"><Label>Nova Senha</Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" /></div>
-          <div className="space-y-2"><Label>Confirmar Senha</Label><Input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha" /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2"><Label>Nova Senha</Label><PasswordInput value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" /></div>
+          <div className="space-y-2"><Label>Confirmar Senha</Label><PasswordInput value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha" /></div>
         </div>
         <Button onClick={handleSetPassword} disabled={saving || !password}>{saving ? "Salvando..." : "Definir Senha"}</Button>
       </CardContent>

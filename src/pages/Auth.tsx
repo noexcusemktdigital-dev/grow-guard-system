@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
+import { PasswordInput } from "@/components/ui/password-input";
 import logoDark from "@/assets/NOE3.png";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
 
@@ -158,10 +159,9 @@ const Auth = () => {
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-white/70">Senha</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                    <Input
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10" />
+                    <PasswordInput
                       id="password"
-                      type="password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}

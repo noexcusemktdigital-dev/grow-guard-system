@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, Loader2, CheckCircle, X, Check } from "lucide-react";
@@ -21,6 +21,8 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionError, setSessionError] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -30,21 +32,41 @@ const ResetPassword = () => {
   const passwordsMatch = password.length > 0 && password === confirmPassword;
 
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const type = hashParams.get("type");
-    if (type !== "recovery") {
-      const queryParams = new URLSearchParams(window.location.search);
-      const queryType = queryParams.get("type");
-      if (queryType !== "recovery") {
-        // Allow staying on page — the session might already be set
+    // Listen for PASSWORD_RECOVERY event from Supabase auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" && session) {
+        setSessionReady(true);
       }
-    }
+      // Also accept SIGNED_IN if it came from a recovery link
+      if (event === "SIGNED_IN" && session) {
+        setSessionReady(true);
+      }
+    });
+
+    // Check if session already exists (user clicked link, page loaded with token in hash)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSessionReady(true);
+      }
+    });
+
+    // Timeout: if no session after 8s, show error
+    const timeout = setTimeout(() => {
+      setSessionReady((ready) => {
+        if (!ready) setSessionError(true);
+        return ready;
+      });
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const getRedirectPath = () => {
     if (portal === "franchise") return "/acessofranquia";
     if (portal === "saas") return "/app";
-    // Fallback: try to detect from current storage key / path
     const storageKey = localStorage.getItem("noe-franchise-auth");
     if (storageKey) return "/acessofranquia";
     return "/app";
@@ -90,6 +112,24 @@ const ResetPassword = () => {
             <h2 className="text-xl font-bold text-white">Senha definida!</h2>
             <p className="text-white/50 text-sm">Redirecionando para a plataforma...</p>
           </div>
+        ) : sessionError && !sessionReady ? (
+          <div className="text-center space-y-4">
+            <X className="h-12 w-12 text-red-400 mx-auto" />
+            <h2 className="text-xl font-bold text-white">Link expirado ou inválido</h2>
+            <p className="text-white/50 text-sm">Solicite um novo link de recuperação de senha.</p>
+            <Button
+              variant="outline"
+              className="border-white/10 text-white hover:bg-white/10"
+              onClick={() => navigate("/app")}
+            >
+              Voltar ao login
+            </Button>
+          </div>
+        ) : !sessionReady ? (
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 text-white/50 mx-auto animate-spin" />
+            <p className="text-white/50 text-sm">Verificando link de recuperação...</p>
+          </div>
         ) : (
           <>
             <div className="mb-8">
@@ -103,10 +143,9 @@ const ResetPassword = () => {
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-white/70">Nova senha</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10" />
+                  <PasswordInput
                     id="password"
-                    type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -140,10 +179,9 @@ const ResetPassword = () => {
               <div className="space-y-2">
                 <Label htmlFor="confirm" className="text-white/70">Confirmar senha</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10" />
+                  <PasswordInput
                     id="confirm"
-                    type="password"
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
