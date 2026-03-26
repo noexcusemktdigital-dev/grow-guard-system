@@ -261,10 +261,14 @@ Deno.serve(async (req) => {
       validRole = (orgType === "franqueadora" || orgType === "franqueado") ? "franqueado" : "cliente_user";
       console.log(`[invite-user] No explicit role, org type=${orgType}, defaulting to ${validRole}`);
     }
-    await adminClient.from("user_roles").upsert({
-      user_id: userId,
-      role: validRole,
-    }, { onConflict: "user_id,role", ignoreDuplicates: true });
+    // Check+update/insert role (prevent duplicate roles)
+    const { data: existingRole } = await adminClient
+      .from("user_roles").select("id").eq("user_id", userId).maybeSingle();
+    if (existingRole) {
+      await adminClient.from("user_roles").update({ role: validRole }).eq("user_id", userId);
+    } else {
+      await adminClient.from("user_roles").insert({ user_id: userId, role: validRole });
+    }
 
     // Assign to teams if provided
     if (Array.isArray(team_ids) && team_ids.length > 0) {
