@@ -172,30 +172,32 @@ export function RefUploader({
         </div>
         <div className="flex flex-wrap gap-2">
           {referenceUrls.map((url, i) => (
-            <div key={i} className="relative group">
-              <div className={`w-20 h-20 rounded-xl overflow-hidden border-2 ${primaryRefIndex === i ? "border-primary ring-2 ring-primary/30" : "border-border"}`}>
-                <img src={url} alt="" className="w-full h-full object-cover" />
+            <div key={i} className="flex flex-col items-center gap-1">
+              <div className="relative">
+                <div className={`w-20 h-20 rounded-xl overflow-hidden border-2 ${primaryRefIndex === i ? "border-primary ring-2 ring-primary/30" : "border-border"}`}>
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </div>
+                {/* Primary star indicator */}
+                {setPrimaryRefIndex && (
+                  <button
+                    className={`absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-all ${primaryRefIndex === i ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary"}`}
+                    onClick={(e) => { e.stopPropagation(); setPrimaryRefIndex(i); }}
+                    title={primaryRefIndex === i ? "Referência principal" : "Marcar como principal"}
+                  >
+                    <Star className={`w-3 h-3 ${primaryRefIndex === i ? "fill-current" : ""}`} />
+                  </button>
+                )}
               </div>
-              {/* Primary star indicator */}
-              {setPrimaryRefIndex && (
-                <button
-                  className={`absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-all ${primaryRefIndex === i ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary"}`}
-                  onClick={(e) => { e.stopPropagation(); setPrimaryRefIndex(i); }}
-                  title={primaryRefIndex === i ? "Referência principal" : "Marcar como principal"}
-                >
-                  <Star className={`w-3 h-3 ${primaryRefIndex === i ? "fill-current" : ""}`} />
-                </button>
-              )}
-              {/* Remove button */}
+              {/* Remove button below image */}
               <button
-                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl"
+                className="flex items-center gap-1 text-[10px] text-destructive hover:text-destructive/80 transition-colors"
                 onClick={() => {
                   setReferenceUrls((prev) => prev.filter((_, j) => j !== i));
                   if (setPrimaryRefIndex && primaryRefIndex === i) setPrimaryRefIndex(0);
                   if (setPrimaryRefIndex && primaryRefIndex !== undefined && primaryRefIndex > i) setPrimaryRefIndex(primaryRefIndex - 1);
                 }}
               >
-                <X className="w-4 h-4 text-white" />
+                <Trash2 className="w-3 h-3" />
               </button>
             </div>
           ))}
