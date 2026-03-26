@@ -167,18 +167,49 @@ function filterByDate<T extends { created_at: string }>(items: T[], from: Date |
   });
 }
 
-/* ========== KPI CARD ========== */
-function KpiCard({ label, value, icon: Icon, gradient, trend }: { label: string; value: string; icon: React.ElementType; gradient: string; trend?: { value: string; positive: boolean } }) {
+/* ========== GOAL STATUS HELPERS ========== */
+type GoalStatus = "batida" | "no_ritmo" | "em_andamento" | "abaixo" | "critica";
+
+function getGoalGradient(status: GoalStatus | undefined, fallback: string) {
+  if (!status) return fallback;
+  if (status === "batida" || status === "no_ritmo") return "from-emerald-500/20 to-emerald-600/5";
+  if (status === "em_andamento") return "from-amber-500/20 to-amber-600/5";
+  return "from-red-500/20 to-red-600/5";
+}
+
+function getGoalStatusLabel(status: GoalStatus) {
+  switch (status) {
+    case "batida": return { label: "✓ Meta batida", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" };
+    case "no_ritmo": return { label: "↗ No ritmo", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" };
+    case "em_andamento": return { label: "→ Em andamento", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" };
+    case "abaixo": return { label: "↓ Abaixo", className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
+    case "critica": return { label: "↓ Crítica", className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
+  }
+}
+
+const METRIC_TO_KPI: Record<string, string[]> = {
+  revenue: ["Receita Total"], faturamento: ["Receita Total"],
+  leads: ["Leads Captados"],
+  conversions: ["Taxa de Conversão"],
+  avg_ticket: ["Ticket Médio"],
+  contracts: ["Pipeline Ativo"], contratos: ["Pipeline Ativo"],
+};
+
+function KpiCard({ label, value, icon: Icon, gradient, trend, goalStatus }: {
+  label: string; value: string; icon: React.ElementType; gradient: string;
+  trend?: { value: string; positive: boolean }; goalStatus?: GoalStatus;
+}) {
+  const statusInfo = goalStatus ? getGoalStatusLabel(goalStatus) : null;
   return (
     <Card className="relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-60`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${getGoalGradient(goalStatus, gradient)} opacity-60`} />
       <CardContent className="relative p-4">
         <div className="w-9 h-9 rounded-lg bg-background/50 border flex items-center justify-center">
           <Icon className="w-4 h-4 text-muted-foreground" />
         </div>
         <div className="mt-3">
           <p className="text-2xl font-bold tracking-tight">{value}</p>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
             {trend && (
               <span className={`text-[10px] font-medium flex items-center gap-0.5 ${trend.positive ? "text-emerald-600" : "text-red-500"}`}>
@@ -187,6 +218,11 @@ function KpiCard({ label, value, icon: Icon, gradient, trend }: { label: string;
               </span>
             )}
           </div>
+          {statusInfo && (
+            <span className={`inline-block mt-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${statusInfo.className}`}>
+              {statusInfo.label}
+            </span>
+          )}
         </div>
       </CardContent>
     </Card>
