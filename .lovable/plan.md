@@ -1,28 +1,40 @@
 
 
-## Corrigir Clique no Contato + Remover "Fixar no Topo"
+## Corrigir build error em FranqueadoPropostas.tsx
 
-### Problema
-O `ChatContactItem` envolve o botão inteiro em um `DropdownMenuTrigger`, então **qualquer clique abre o dropdown em vez de entrar na conversa**. Além disso, o "Fixar no topo" não é desejado — apenas "Arquivar" deve existir.
+Mesmo problema dos anteriores: `html2pdf.js` não está instalado.
 
-### Solução
+### Mudança
 
-Remover o `DropdownMenu` como wrapper do botão. O clique normal (`onClick`) abre a conversa. A opção "Arquivar" fica acessível via **clique com botão direito** (context menu) usando `ContextMenu` do Shadcn em vez de `DropdownMenu`.
+**`src/pages/franqueado/FranqueadoPropostas.tsx` (linhas 50-62):**
+Substituir o bloco `handleDownloadPdf` para usar `jspdf` + `html2canvas`:
 
-Remover toda referência a `Pin`/`onPin`/`is_pinned` do componente.
+```tsx
+const handleDownloadPdf = async () => {
+  const el = previewRef.current;
+  if (!el) return;
+  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+    import("jspdf"),
+    import("html2canvas"),
+  ]);
+  const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+  const imgData = canvas.toDataURL("image/jpeg", 0.95);
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const imgW = pageW;
+  const imgH = (canvas.height * imgW) / canvas.width;
+  let y = 0;
+  while (y < imgH) {
+    if (y > 0) pdf.addPage();
+    pdf.addImage(imgData, "JPEG", 0, -y, imgW, imgH);
+    y += pageH;
+  }
+  pdf.save(`${proposal.title || "Proposta"}.pdf`);
+  toast.success("PDF gerado!");
+};
+```
 
-### Mudanças
-
-**`src/components/cliente/ChatContactItem.tsx`:**
-- Trocar `DropdownMenu`/`DropdownMenuTrigger` por `ContextMenu`/`ContextMenuTrigger` do Shadcn
-- O `<button onClick={onSelect}>` fica livre para funcionar normalmente
-- Context menu (botão direito) mostra apenas "Arquivar" / "Desarquivar"
-- Remover import de `Pin`, prop `onPin`, e ícone de pin na UI
-
-**`src/components/cliente/ChatContactList.tsx`:**
-- Remover prop `onPinContact` e referências a `onPin`
-- Manter `onArchiveContact` funcionando via context menu
-
-**`src/pages/cliente/ClienteChat.tsx`:**
-- Remover handler `onPinContact` se existir
+### Arquivo afetado
+- `src/pages/franqueado/FranqueadoPropostas.tsx` — substituir linhas 50-62
 
