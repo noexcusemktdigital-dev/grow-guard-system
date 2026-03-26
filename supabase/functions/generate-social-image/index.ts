@@ -44,7 +44,7 @@ async function urlToBase64(url: string): Promise<string | null> {
               content: [
                 {
                   type: "text",
-                  text: "Render this SVG logo as a clean PNG image on a solid white background. Maintain exact colors, proportions and text. Output only the rendered image.",
+                  text: "Render this SVG logo as a clean PNG image on a TRANSPARENT background (alpha channel). Maintain exact colors, proportions and text. Output only the rendered image with no background.",
                 },
                 { type: "image_url", image_url: { url: svgB64 } },
               ],
