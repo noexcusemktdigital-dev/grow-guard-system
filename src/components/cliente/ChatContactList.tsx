@@ -54,12 +54,7 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
     const archivedCount = contacts.filter(c => !!(c as any).is_archived).length;
 
     const sortedContacts = useMemo(() => {
-      return [...filtered].sort((a, b) => {
-        // Pinned contacts first
-        const aPinned = !!(a as any).is_pinned ? 1 : 0;
-        const bPinned = !!(b as any).is_pinned ? 1 : 0;
-        if (bPinned !== aPinned) return bPinned - aPinned;
-        
+    return [...filtered].sort((a, b) => {
         const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
         const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return db - da;
