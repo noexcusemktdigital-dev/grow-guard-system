@@ -206,6 +206,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
     // Reset input state
     setTextValue("");
     setMultiSelectValues([]);
+    setCustomTextMode(false);
 
     // Find next step (considering skipIf with updated answers)
     let nextIdx = currentStepIdx + 1;
