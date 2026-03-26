@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
               webhookSynced = false;
 
               try {
-                const findRes = await fetch(`${inst.base_url}/webhook/find/${inst.instance_id}`, {
+                const findRes = await fetch(`${inst.base_url}/webhook/find/${encodeURIComponent(inst.instance_id)}`, {
                   headers: { apikey: inst.client_token },
                 });
                 const rawFindBody = await findRes.text();
