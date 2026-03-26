@@ -300,9 +300,25 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
   const handleInfoAdvance = () => { advanceStep(); };
 
   const toggleMulti = (value: string) => {
+    if (value === "personalizar" || value === "outro") {
+      setCustomTextMode(true);
+      setTextValue("");
+      setTimeout(() => inputRef.current?.focus(), 100);
+      return;
+    }
     setMultiSelectValues(prev =>
       prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
     );
+  };
+
+  const addCustomMultiValue = () => {
+    const val = textValue.trim();
+    if (!val) return;
+    if (!multiSelectValues.includes(val)) {
+      setMultiSelectValues(prev => [...prev, val]);
+    }
+    setTextValue("");
+    setCustomTextMode(false);
   };
 
   useEffect(() => { scrollToBottom(); }, [messages, isTyping, scrollToBottom]);
