@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
-  MessageCircle, Bot, Download, FileText, Calendar
+  MessageCircle, Bot, Download, FileText, Calendar, ChevronDown, FileImage
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
