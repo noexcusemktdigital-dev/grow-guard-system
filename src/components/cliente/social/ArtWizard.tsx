@@ -374,20 +374,6 @@ export function ArtWizard({
               />
             </div>
 
-            <Button variant="outline" size="sm" onClick={() => setShowContentPicker(true)}>
-              <FileText className="w-4 h-4 mr-1" /> Vincular conteúdo existente
-            </Button>
-
-            <ContentPickerDialog
-              open={showContentPicker}
-              onOpenChange={setShowContentPicker}
-              contentHistory={contentHistory}
-              onSelect={(c) => {
-                setContentId(c.id);
-                setContentData(c);
-                setBriefingText(c.title || briefingText);
-              }}
-            />
           </div>
         );
 
