@@ -191,6 +191,7 @@ export default function ClienteSites() {
   const { data: contents } = useContentHistory();
   const { data: visualIdentity } = useVisualIdentity();
   const { data: wallet } = useClienteWallet();
+  const strategy = useStrategyData();
 
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const SITE_CREDIT_COST = 100;
