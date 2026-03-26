@@ -24,6 +24,7 @@ serve(async (req) => {
       telefone, email_contato, endereco, redes_sociais, link_whatsapp,
       instrucoes_adicionais,
       persona, identidade_visual, estrategia,
+      logo_url,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
