@@ -410,7 +410,7 @@ Deno.serve(async (req) => {
 
       for (const payload of payloadAttempts) {
         try {
-          const setRes = await fetch(`${cleanBase}/webhook/set/${inst.instance_id}`, {
+          const setRes = await fetch(`${cleanBase}/webhook/set/${encodeURIComponent(inst.instance_id)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json", apikey: key },
             body: JSON.stringify(payload),
