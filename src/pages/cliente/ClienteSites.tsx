@@ -271,17 +271,22 @@ export default function ClienteSites() {
   const viStyle = visualIdentity?.style;
   const approvedContents = (contents || []).filter(c => c.status === "approved");
 
-  // Auto-fill on first open
+  // Auto-fill on first open with rich strategy + visual identity data
   const autoFilled = useState(false);
   if (creating && !autoFilled[0]) {
     autoFilled[1](true);
     setForm(prev => ({
       ...prev,
       nome_empresa: prev.nome_empresa || strategyAnswers.empresa || "",
-      segmento: prev.segmento || strategyAnswers.segmento || "",
+      segmento: prev.segmento || strategyAnswers.segmento || strategy.salesPlanSegmento || "",
       descricao_negocio: prev.descricao_negocio || strategyAnswers.descricao || "",
-      tom: prev.tom || visualIdentity?.tone || "",
+      tom: prev.tom || visualIdentity?.tone || strategy.tomPrincipal || "",
       estilo: prev.estilo || viStyle || "",
+      servicos: prev.servicos || strategy.salesPlanProducts || strategyAnswers.produto || "",
+      diferenciais: prev.diferenciais || strategy.salesPlanDiferenciais || strategyAnswers.diferencial || "",
+      dores: prev.dores || strategy.salesPlanDorPrincipal || strategyAnswers.problema || "",
+      publico_custom: prev.publico_custom || strategy.publicoAlvo || strategyAnswers.publico || "",
+      slogan: prev.slogan || (strategy.propostaValor ? String(strategy.propostaValor) : "") || "",
     }));
   }
 
