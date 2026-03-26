@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useOrgProfile } from "@/hooks/useOrgProfile";
 import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
