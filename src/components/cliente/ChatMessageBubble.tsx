@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Check, CheckCheck, Bot, User, Image as ImageIcon, FileText, Mic, Video, Reply, Sticker, Clock, AlertCircle, RotateCcw, Play, Pause } from "lucide-react";
+import { Check, CheckCheck, Bot, User, Image as ImageIcon, FileText, Mic, Video, Reply, Sticker, Clock, AlertCircle, RotateCcw, Play, Pause, Star, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ChatMessageMenu } from "./ChatMessageMenu";
 import type { WhatsAppMessage } from "@/hooks/useWhatsApp";
 
 interface Props {
@@ -11,6 +12,10 @@ interface Props {
   hideTimestamp?: boolean;
   onRetry?: (message: WhatsAppMessage) => void;
   onImageClick?: (url: string) => void;
+  onForward?: (message: WhatsAppMessage) => void;
+  onStar?: (message: WhatsAppMessage) => void;
+  onDelete?: (message: WhatsAppMessage, forEveryone: boolean) => void;
+  onReact?: (message: WhatsAppMessage, emoji: string) => void;
 }
 
 const URL_REGEX = /(https?:\/\/[^\s<]+[^\s<.,;:!?"')}\]])/gi;
