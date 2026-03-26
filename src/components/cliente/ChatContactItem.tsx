@@ -1,11 +1,11 @@
 import React from "react";
-import { Bot, User, Users, Globe, Pin, Archive } from "lucide-react";
+import { Bot, User, Users, Globe, Archive } from "lucide-react";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { WhatsAppContact } from "@/hooks/useWhatsApp";
 import { isToday, isYesterday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,7 +17,6 @@ interface Props {
   stageLabel?: string;
   preview?: string;
   leadStages?: Map<string, string>;
-  onPin?: (contactId: string, pinned: boolean) => void;
   onArchive?: (contactId: string, archived: boolean) => void;
 }
 
@@ -30,7 +29,7 @@ function formatContactTime(dateStr: string | null) {
 }
 
 export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
-  function ChatContactItem({ contact, isSelected, onSelect, stageLabel, preview, onPin, onArchive }, ref) {
+  function ChatContactItem({ contact, isSelected, onSelect, stageLabel, preview, onArchive }, ref) {
     const contactAny = contact as any;
     const mode = contactAny.attending_mode || null;
     const contactType = contactAny.contact_type || "individual";
@@ -38,16 +37,14 @@ export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
     const isGroup = contactType === "group";
     const isLid = contactType === "lid";
     const isWebsite = contactType === "website";
-    const isPinned = !!(contactAny.is_pinned);
     const isArchived = !!(contactAny.is_archived);
 
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
           <button
             ref={ref}
             onClick={() => onSelect(contact)}
-            onContextMenu={(e) => e.preventDefault()}
             className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-150 ${
               isSelected ? "bg-primary/10" : "hover:bg-muted/40"
             } ${contact.unread_count > 0 ? "bg-primary/[0.03]" : ""}`}
@@ -93,8 +90,7 @@ export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
                 <Badge variant="secondary" className="text-[8px] px-1 py-0 shrink-0 bg-sky-500/15 text-sky-400 border-0">Site</Badge>
               )}
             </div>
-            <div className="flex items-center gap-1 shrink-0 ml-2">
-              {isPinned && <Pin className="w-3 h-3 text-muted-foreground rotate-45" />}
+            <div className="flex items-center shrink-0 ml-2">
               <span className={`text-[10px] ${contact.unread_count > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>
                 {formatContactTime(contact.last_message_at)}
               </span>
@@ -132,16 +128,13 @@ export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
           )}
         </div>
           </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-40">
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPin?.(contact.id, !isPinned); }} className="text-xs gap-2">
-            <Pin className="w-3.5 h-3.5" /> {isPinned ? "Desafixar" : "Fixar no topo"}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive?.(contact.id, !isArchived); }} className="text-xs gap-2">
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-40">
+          <ContextMenuItem onClick={() => onArchive?.(contact.id, !isArchived)} className="text-xs gap-2">
             <Archive className="w-3.5 h-3.5" /> {isArchived ? "Desarquivar" : "Arquivar"}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     );
   }
 );

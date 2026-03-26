@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
-import { Search, Clock, MessageCircle, Wifi, Bot, User, Users, Pin, Archive } from "lucide-react";
+import { Search, Clock, MessageCircle, Wifi, Bot, User, Users, Archive } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,14 +16,13 @@ interface Props {
   isConnected?: boolean;
   lastMessages?: Map<string, string>;
   connectedPhone?: string;
-  onPinContact?: (contactId: string, pinned: boolean) => void;
   onArchiveContact?: (contactId: string, archived: boolean) => void;
 }
 
 type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
 
 export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
-  function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone, onPinContact, onArchiveContact }, ref) {
+  function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone, onArchiveContact }, ref) {
     const [search, setSearch] = useState("");
     const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
     const [agentFilter, setAgentFilter] = useState("");
@@ -55,12 +54,7 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
     const archivedCount = contacts.filter(c => !!(c as any).is_archived).length;
 
     const sortedContacts = useMemo(() => {
-      return [...filtered].sort((a, b) => {
-        // Pinned contacts first
-        const aPinned = !!(a as any).is_pinned ? 1 : 0;
-        const bPinned = !!(b as any).is_pinned ? 1 : 0;
-        if (bPinned !== aPinned) return bPinned - aPinned;
-        
+    return [...filtered].sort((a, b) => {
         const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
         const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return db - da;
@@ -209,7 +203,6 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
                       isSelected={selectedId === contact.id}
                       onSelect={onSelect}
                       preview={lastMessages?.get(contact.id)}
-                      onPin={onPinContact}
                       onArchive={onArchiveContact}
                     />
                   </div>
