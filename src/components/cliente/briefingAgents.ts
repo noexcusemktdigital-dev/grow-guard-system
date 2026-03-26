@@ -17,12 +17,23 @@ export const AGENTS: Record<string, BriefingAgent> = {
    SHARED OPTIONS (reusable across agents)
    ══════════════════════════════════════════════ */
 
-const SEGMENTO_OPTIONS = [
+export const SEGMENTO_OPTIONS = [
   { value: "servicos", label: "Serviços" }, { value: "varejo", label: "Varejo / Loja" },
-  { value: "alimentacao", label: "Alimentação" }, { value: "saude", label: "Saúde / Estética" },
-  { value: "educacao", label: "Educação" }, { value: "tecnologia", label: "Tecnologia" },
-  { value: "industria", label: "Indústria" }, { value: "construcao", label: "Construção" },
-  { value: "financeiro", label: "Financeiro" }, { value: "outro", label: "Outro" },
+  { value: "alimentacao", label: "Alimentação / Restaurante" }, { value: "saude", label: "Saúde / Clínica" },
+  { value: "estetica", label: "Estética / Beleza" }, { value: "educacao", label: "Educação / Cursos" },
+  { value: "tecnologia", label: "Tecnologia / SaaS" }, { value: "industria", label: "Indústria" },
+  { value: "construcao", label: "Construção / Engenharia" }, { value: "financeiro", label: "Financeiro / Contábil" },
+  { value: "advocacia", label: "Advocacia / Jurídico" }, { value: "imobiliario", label: "Imobiliário" },
+  { value: "automotivo", label: "Automotivo" }, { value: "agronegocio", label: "Agronegócio" },
+  { value: "moda", label: "Moda / Vestuário" }, { value: "fitness", label: "Fitness / Academia" },
+  { value: "turismo", label: "Turismo / Hotelaria" }, { value: "logistica", label: "Logística / Transporte" },
+  { value: "marketing", label: "Marketing / Publicidade" }, { value: "consultoria", label: "Consultoria" },
+  { value: "pet", label: "Pet / Veterinário" }, { value: "eventos", label: "Eventos / Entretenimento" },
+  { value: "energia", label: "Energia / Solar" }, { value: "franquias", label: "Franquias" },
+  { value: "ecommerce", label: "E-commerce" }, { value: "seguros", label: "Seguros" },
+  { value: "odontologia", label: "Odontologia" }, { value: "psicologia", label: "Psicologia / Coaching" },
+  { value: "arquitetura", label: "Arquitetura / Design" }, { value: "fotografia", label: "Fotografia / Audiovisual" },
+  { value: "outro", label: "Outro (digitar)" },
 ];
 
 const FAIXA_ETARIA_OPTIONS = [

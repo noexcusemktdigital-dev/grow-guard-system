@@ -115,6 +115,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
   const [isTyping, setIsTyping] = useState(false);
   const [textValue, setTextValue] = useState("");
   const [multiSelectValues, setMultiSelectValues] = useState<string[]>([]);
+  const [customTextMode, setCustomTextMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
