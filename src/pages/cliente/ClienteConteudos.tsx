@@ -315,6 +315,13 @@ export default function ClienteConteudos() {
         onPost={() => setExpandedContent(null)}
       />
 
+      <RecordingTutorial
+        open={!!recordingScript}
+        onOpenChange={(open) => !open && setRecordingScript(null)}
+        format={recordingScript?.plataforma || recordingScript?.format || "reels"}
+        script={recordingScript}
+      />
+
       <InsufficientCreditsDialog
         open={showCreditsDialog}
         onOpenChange={setShowCreditsDialog}
