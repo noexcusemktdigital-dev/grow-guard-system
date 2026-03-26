@@ -1,34 +1,63 @@
 
 
-## Diagnóstico
+## Vincular Produtos a Leads no CRM
 
-O arquivo CSV modelo usa **vírgula** como separador (linha 10: `"nome,email,telefone,..."`). No Windows com locale pt-BR, o Excel espera **ponto-e-vírgula** como separador CSV, pois a vírgula é usada como separador decimal. Resultado: todos os campos aparecem concatenados numa única coluna.
+### Problema
+Os produtos cadastrados na configuração do CRM não podem ser associados a leads. O usuário precisa anexar produtos dentro do detalhe do lead.
 
-## Solução
+### Solução
 
-Alterar o template CSV para usar **ponto-e-vírgula** como delimitador e adicionar **BOM UTF-8** (`\uFEFF`) para garantir que acentos funcionem corretamente no Excel Windows.
+**1. Nova tabela `crm_lead_products`** (migração)
+```sql
+CREATE TABLE public.crm_lead_products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  lead_id uuid NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+  product_id uuid NOT NULL REFERENCES crm_products(id) ON DELETE CASCADE,
+  organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  quantity integer NOT NULL DEFAULT 1,
+  unit_price numeric NOT NULL DEFAULT 0,
+  discount_percent numeric DEFAULT 0,
+  notes text,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (lead_id, product_id)
+);
 
-### Mudanças em `src/components/crm/CrmCsvImportDialog.tsx`
+ALTER TABLE crm_lead_products ENABLE ROW LEVEL SECURITY;
 
-1. **Template com ponto-e-vírgula** — Trocar as constantes `CSV_TEMPLATE_HEADERS` e `CSV_TEMPLATE_EXAMPLE` para usar `;` como separador
-2. **BOM UTF-8** — Prefixar o conteúdo do blob com `\uFEFF` no `downloadTemplate()` para que o Excel reconheça a codificação corretamente
+CREATE POLICY "Members can manage lead products"
+  ON crm_lead_products FOR ALL TO authenticated
+  USING (public.is_member_of_org(auth.uid(), organization_id))
+  WITH CHECK (public.is_member_of_org(auth.uid(), organization_id));
+```
 
-O parser de importação (`parseCsvText`) já faz auto-detect de delimitador (linha 52), então continua funcionando tanto para CSV com vírgula quanto com ponto-e-vírgula.
+**2. Novo hook `useCrmLeadProducts.ts`**
+- `useCrmLeadProducts(leadId)` — lista produtos vinculados ao lead
+- `useAddLeadProduct` — vincula produto ao lead (com quantidade, preço unitário, desconto)
+- `useRemoveLeadProduct` — remove vínculo
+- `useUpdateLeadProduct` — edita quantidade/desconto
+
+**3. Nova aba "Produtos" no `CrmLeadDetailSheet.tsx`**
+- Adicionar 6ª aba na `TabsList`: "Produtos" com ícone `Package`
+- Conteúdo da aba:
+  - Lista de produtos vinculados com nome, quantidade, preço, desconto e subtotal
+  - Botão "Adicionar produto" que abre um seletor com os produtos cadastrados (`useCrmProducts`)
+  - Campos: produto (select), quantidade (input number), desconto % (input number)
+  - Totalização no rodapé (soma dos subtotais)
+  - Ação de remover produto vinculado
+
+**4. Re-export no `useClienteCrm.ts`**
+- Exportar os novos hooks para acesso no portal cliente
 
 ### Detalhes técnicos
 
-```
-// Antes
-const CSV_TEMPLATE_HEADERS = "nome,email,telefone,empresa,cargo,origem,tags,notas";
+- O grid da TabsList passa de `grid-cols-5` para `grid-cols-6`
+- O subtotal é calculado: `quantity * unit_price * (1 - discount_percent/100)`
+- O `unit_price` é pré-preenchido com o preço do produto selecionado mas pode ser editado
+- A tabela usa `UNIQUE (lead_id, product_id)` para evitar duplicatas
 
-// Depois
-const CSV_TEMPLATE_HEADERS = "nome;email;telefone;empresa;cargo;origem;tags;notas";
-```
-
-```
-// downloadTemplate — adicionar BOM
-const content = `\uFEFF${CSV_TEMPLATE_HEADERS}\n${CSV_TEMPLATE_EXAMPLE}`;
-```
-
-Escopo mínimo: 2 constantes + 1 linha no `downloadTemplate`. Nenhum outro arquivo afetado.
+### Arquivos afetados
+- `supabase/migrations/` — nova migração
+- `src/hooks/useCrmLeadProducts.ts` — novo
+- `src/components/crm/CrmLeadDetailSheet.tsx` — nova aba
+- `src/hooks/useClienteCrm.ts` — re-export
 
