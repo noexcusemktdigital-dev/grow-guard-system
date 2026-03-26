@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
-  ArrowLeft, ArrowRight, Sparkles, Layers, Video, AlignLeft,
-  Image, BookOpen, Lightbulb, Target,
+  ArrowLeft, ArrowRight, Sparkles, Video, Smartphone, Monitor, Film,
+  Target, Clock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,15 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
-import { FORMATOS, OBJETIVOS, PLATAFORMAS, loadingPhrases } from "./ContentTypes";
+import { FORMATOS, OBJETIVOS, PLATAFORMAS, DURACOES, loadingPhrases } from "./ContentTypes";
 
 const ICON_MAP: Record<string, any> = {
-  Layers, AlignLeft, Video, Image, BookOpen, Lightbulb, Target,
+  Video, Monitor, Smartphone, Film,
 };
 
 const TOTAL_STEPS = 4;
 
-const STORAGE_KEY = "content-wizard-prefs";
+const STORAGE_KEY = "roteiro-wizard-prefs";
 
 interface WizardPrefs {
   plataforma?: string;
@@ -54,6 +54,8 @@ interface ContentWizardProps {
   onTemaChange: (t: string) => void;
   plataforma: string;
   onPlataformaChange: (p: string) => void;
+  duracao: string;
+  onDuracaoChange: (d: string) => void;
 }
 
 export function ContentWizard({
@@ -64,10 +66,10 @@ export function ContentWizard({
   objetivos, onObjetivosChange,
   tema, onTemaChange,
   plataforma, onPlataformaChange,
+  duracao, onDuracaoChange,
 }: ContentWizardProps) {
   const [step, setStep] = useState(1);
 
-  // Load saved prefs on mount
   useEffect(() => {
     const prefs = loadPrefs();
     if (prefs.plataforma && !hasStrategy) onPlataformaChange(prefs.plataforma);
@@ -90,7 +92,7 @@ export function ContentWizard({
   const canAdvance = () => {
     if (step === 1) return quantidade > 0 && quantidade <= quotaRemaining && formatTotal === quantidade;
     if (step === 2) return objetivos.length > 0;
-    if (step === 3) return true;
+    if (step === 3) return !!duracao;
     if (step === 4) return !!plataforma;
     return false;
   };
@@ -105,7 +107,7 @@ export function ContentWizard({
       <Card className="border-destructive">
         <CardContent className="py-6 text-center space-y-2">
           <p className="font-semibold text-destructive">Créditos insuficientes</p>
-          <p className="text-sm text-muted-foreground">Você tem {creditBalance} créditos. Cada conteúdo custa {costPerContent} créditos. Recarregue para continuar gerando.</p>
+          <p className="text-sm text-muted-foreground">Você tem {creditBalance} créditos. Cada roteiro custa {costPerContent} créditos. Recarregue para continuar gerando.</p>
         </CardContent>
       </Card>
     );
@@ -117,7 +119,7 @@ export function ContentWizard({
         <CardContent className="py-16 text-center space-y-4">
           <div className="animate-spin mx-auto w-10 h-10 border-4 border-primary border-t-transparent rounded-full" />
           <p className="text-lg font-medium animate-pulse">{loadingPhrases[loadingIdx]}</p>
-          <p className="text-sm text-muted-foreground">Gerando {quantidade} conteúdos estratégicos...</p>
+          <p className="text-sm text-muted-foreground">Gerando {quantidade} roteiros estratégicos...</p>
         </CardContent>
       </Card>
     );
@@ -126,9 +128,9 @@ export function ContentWizard({
   const renderStep1 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold mb-1">Quantos conteúdos e em quais formatos?</h3>
+        <h3 className="text-xl font-semibold mb-1">Quantos roteiros e em quais formatos?</h3>
         <p className="text-sm text-muted-foreground">
-          Você tem <strong className="text-primary">{creditBalance}</strong> créditos · Cada conteúdo custa <strong>{costPerContent}</strong> créditos · Máximo neste lote: <strong className="text-primary">{quotaRemaining}</strong>
+          Você tem <strong className="text-primary">{creditBalance}</strong> créditos · Cada roteiro custa <strong>{costPerContent}</strong> créditos · Máximo neste lote: <strong className="text-primary">{quotaRemaining}</strong>
         </p>
       </div>
       <div className="space-y-3">
@@ -139,15 +141,8 @@ export function ContentWizard({
         <p className="text-sm font-medium mb-1">
           Distribuição de formatos: <strong className={formatTotal === quantidade ? "text-primary" : "text-destructive"}>{formatTotal}/{quantidade}</strong>
         </p>
-        {formatTotal !== quantidade && formatTotal > 0 && (
-          <p className="text-xs text-destructive mb-3">
-            {formatTotal < quantidade
-              ? `Distribua mais ${quantidade - formatTotal} conteúdo${quantidade - formatTotal > 1 ? "s" : ""} nos formatos abaixo.`
-              : `Remova ${formatTotal - quantidade} conteúdo${formatTotal - quantidade > 1 ? "s" : ""} dos formatos.`}
-          </p>
-        )}
         {formatTotal === 0 && (
-          <p className="text-xs text-muted-foreground mb-3">Escolha como distribuir seus {quantidade} conteúdos entre os formatos abaixo.</p>
+          <p className="text-xs text-muted-foreground mb-3">Escolha como distribuir seus {quantidade} roteiros entre os formatos abaixo.</p>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FORMATOS.map(f => {
@@ -173,8 +168,8 @@ export function ContentWizard({
   const renderStep2 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold mb-1">Qual é o objetivo desses conteúdos?</h3>
-        <p className="text-sm text-muted-foreground">A IA distribui os objetivos proporcionalmente entre os conteúdos.</p>
+        <h3 className="text-xl font-semibold mb-1">Qual é o objetivo desses roteiros?</h3>
+        <p className="text-sm text-muted-foreground">A IA distribui os objetivos proporcionalmente entre os roteiros.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {OBJETIVOS.map(o => (
@@ -188,40 +183,57 @@ export function ContentWizard({
   );
 
   const renderStep3 = () => (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
-        <h3 className="text-xl font-semibold mb-1">Existe algum tema específico?</h3>
+        <h3 className="text-xl font-semibold mb-1">Duração e tema do vídeo</h3>
         <p className="text-sm text-muted-foreground">
-          {hasStrategy ? "Opcional — se vazio, a IA usa os pilares da sua estratégia." : "Opcional — descreva um tema ou assunto específico."}
+          A IA ajusta o roteiro (hook, desenvolvimento e CTA) para caber no tempo selecionado.
         </p>
       </div>
-      {hasStrategy && strategy.pilares?.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2">Seus pilares estratégicos:</p>
-          <div className="flex flex-wrap gap-2">
-            {strategy.pilares.map((p: any, i: number) => {
-              const name = typeof p === "string" ? p : p.nome || p.pilar || p.name || JSON.stringify(p);
-              return (
-                <button key={i} onClick={() => onTemaChange(name)}
-                  className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${tema === name ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
-                  {name}
-                </button>
-              );
-            })}
-          </div>
+
+      <div>
+        <p className="text-sm font-medium mb-2 flex items-center gap-1.5"><Clock className="w-4 h-4" /> Duração do vídeo</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {DURACOES.map(d => (
+            <button key={d.value} onClick={() => onDuracaoChange(d.value)}
+              className={`p-3 rounded-xl border-2 text-center transition-all ${duracao === d.value ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
+              <p className="font-bold text-sm">{d.label}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{d.desc}</p>
+            </button>
+          ))}
         </div>
-      )}
-      <Textarea placeholder="Ex: marketing para médicos, crédito para empresas..." value={tema} onChange={e => onTemaChange(e.target.value)} rows={3} />
+      </div>
+
+      <div>
+        <p className="text-sm font-medium mb-1">Tema ou assunto específico (opcional)</p>
+        {hasStrategy && strategy.pilares?.length > 0 && (
+          <div className="mb-2">
+            <p className="text-xs text-muted-foreground mb-1.5">Seus pilares estratégicos:</p>
+            <div className="flex flex-wrap gap-2">
+              {strategy.pilares.map((p: any, i: number) => {
+                const name = typeof p === "string" ? p : p.nome || p.pilar || p.name || JSON.stringify(p);
+                return (
+                  <button key={i} onClick={() => onTemaChange(name)}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${tema === name ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <Textarea placeholder="Ex: como investir em imóveis, marketing para médicos..." value={tema} onChange={e => onTemaChange(e.target.value)} rows={3} />
+      </div>
     </div>
   );
 
   const renderStep4 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold mb-1">Onde esses conteúdos serão publicados?</h3>
-        <p className="text-sm text-muted-foreground">Isso ajusta o estilo e formato do conteúdo.</p>
+        <h3 className="text-xl font-semibold mb-1">Onde esses vídeos serão publicados?</h3>
+        <p className="text-sm text-muted-foreground">Ajusta o estilo, linguagem e estrutura do roteiro.</p>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {PLATAFORMAS.map(p => (
           <button key={p} onClick={() => onPlataformaChange(p)}
             className={`p-4 rounded-xl border-2 text-center font-medium transition-all ${plataforma === p ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
@@ -229,14 +241,16 @@ export function ContentWizard({
           </button>
         ))}
       </div>
+
       {/* Review summary */}
       <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
         <p className="text-sm font-semibold">Resumo do lote</p>
         <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-          <span>📊 {quantidade} conteúdos</span>
+          <span>🎬 {quantidade} roteiros</span>
           <span>📱 {plataforma}</span>
+          <span>⏱️ {DURACOES.find(d => d.value === duracao)?.label || duracao}</span>
           <span>🎯 {objetivos.map(o => OBJETIVOS.find(x => x.value === o)?.label).join(", ")}</span>
-          {tema && <span>📝 {tema}</span>}
+          {tema && <span className="col-span-2">📝 {tema}</span>}
         </div>
         {hasStrategy && (
           <div className="pt-2 border-t mt-2 grid grid-cols-2 gap-1 text-xs text-muted-foreground">
@@ -282,7 +296,7 @@ export function ContentWizard({
             </Button>
           ) : (
             <Button onClick={handleGenerate} disabled={!canAdvance()}>
-              <Sparkles className="w-4 h-4 mr-1" /> Gerar {quantidade} Conteúdos ({quantidade * costPerContent} créditos)
+              <Sparkles className="w-4 h-4 mr-1" /> Gerar {quantidade} Roteiros ({quantidade * costPerContent} créditos)
             </Button>
           )}
         </div>
