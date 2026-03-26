@@ -195,11 +195,16 @@ const METRIC_TO_KPI: Record<string, string[]> = {
   contracts: ["Pipeline Ativo"], contratos: ["Pipeline Ativo"],
 };
 
-function KpiCard({ label, value, icon: Icon, gradient, trend, goalStatus }: {
+function KpiCard({ label, value, icon: Icon, gradient, trend, goalStatus, goalTarget, goalPercent, goalDaysLeft }: {
   label: string; value: string; icon: React.ElementType; gradient: string;
   trend?: { value: string; positive: boolean }; goalStatus?: GoalStatus;
+  goalTarget?: string; goalPercent?: number; goalDaysLeft?: number;
 }) {
   const statusInfo = goalStatus ? getGoalStatusLabel(goalStatus) : null;
+  const barColor =
+    goalStatus === "batida" || goalStatus === "no_ritmo" ? "bg-emerald-500" :
+    goalStatus === "em_andamento" ? "bg-amber-500" :
+    goalStatus ? "bg-red-500" : "";
   return (
     <Card className="relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
       <div className={`absolute inset-0 bg-gradient-to-br ${getGoalGradient(goalStatus, gradient)} opacity-60`} />
@@ -218,7 +223,28 @@ function KpiCard({ label, value, icon: Icon, gradient, trend, goalStatus }: {
               </span>
             )}
           </div>
-          {statusInfo && (
+          {/* Goal progress inline */}
+          {goalStatus && goalPercent !== undefined && (
+            <div className="mt-2.5 space-y-1">
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className={`h-full rounded-full ${barColor} transition-all duration-700`} style={{ width: `${Math.min(goalPercent, 100)}%` }} />
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                {goalTarget && (
+                  <span className="text-[9px] text-muted-foreground truncate">Meta: {goalTarget}</span>
+                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[9px] font-semibold" style={{ color: barColor === "bg-emerald-500" ? "#059669" : barColor === "bg-amber-500" ? "#d97706" : "#dc2626" }}>
+                    {Math.round(goalPercent)}%
+                  </span>
+                  {goalDaysLeft !== undefined && goalDaysLeft > 0 && (
+                    <span className="text-[9px] text-muted-foreground">{goalDaysLeft}d</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {statusInfo && !goalPercent && (
             <span className={`inline-block mt-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${statusInfo.className}`}>
               {statusInfo.label}
             </span>
