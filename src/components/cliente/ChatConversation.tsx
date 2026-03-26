@@ -960,6 +960,14 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           onNavigate={setLightboxIndex}
         />
       )}
+
+      {/* Forward Dialog */}
+      <ChatForwardDialog
+        open={!!forwardMsg}
+        onOpenChange={(open) => { if (!open) setForwardMsg(null); }}
+        message={forwardMsg}
+        contacts={allContacts || []}
+      />
     </div>
   );
 }
