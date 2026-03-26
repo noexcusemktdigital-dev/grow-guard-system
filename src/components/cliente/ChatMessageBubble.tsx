@@ -189,15 +189,43 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
     );
   };
 
+  const isDeleted = !!(message as any).is_deleted;
+  const isStarredMsg = !!(message as any).is_starred;
+  const reactions = (metadata.reactions as Array<{ emoji: string; from: string }>) || [];
+
+  if (isDeleted) {
+    return (
+      <div ref={ref} className={`group flex ${isOutbound ? "justify-end" : "justify-start"} ${isGrouped ? "mb-[2px]" : "mb-2"}`}>
+        <div className={`max-w-[75%] lg:max-w-[520px] rounded-lg px-3 py-1.5 text-[13px] italic ${isOutbound ? "wa-bubble-out" : "wa-bubble-in"} opacity-60`}>
+          <div className="flex items-center gap-1.5">
+            <Ban className="w-3.5 h-3.5" />
+            <span>Mensagem apagada</span>
+          </div>
+          {!hideTimestamp && (
+            <span className={`text-[10px] block mt-0.5 ${isOutbound ? "text-emerald-700/50 dark:text-emerald-300/50 text-right" : "text-muted-foreground"}`}>{time}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div ref={ref} className={`group flex ${isOutbound ? "justify-end" : "justify-start"} ${isGrouped ? "mb-[2px]" : "mb-2"} ${isSending ? "opacity-70" : ""}`}>
-      {!isOutbound && onReply && (
-        <button className="self-center opacity-0 group-hover:opacity-100 transition-opacity mr-1 p-1 rounded-full hover:bg-muted/80" onClick={() => onReply(message)} title="Responder">
-          <Reply className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-      )}
-
       <div className={`relative max-w-[75%] lg:max-w-[520px] ${isGrouped ? "" : isOutbound ? "chat-bubble-out" : "chat-bubble-in"}`}>
+        {/* Context menu */}
+        {onReply && onForward && onStar && onDelete && onReact && (
+          <ChatMessageMenu
+            message={message}
+            onReply={onReply}
+            onForward={onForward}
+            onStar={onStar}
+            onDelete={onDelete}
+            onReact={onReact}
+            isOutbound={isOutbound}
+            isStarred={isStarredMsg}
+          />
+        )}
+
         <div className={`rounded-lg px-3 py-1.5 text-[13px] leading-relaxed shadow-sm ${isOutbound ? "wa-bubble-out" : "wa-bubble-in"} ${!isGrouped && isOutbound ? "rounded-tr-none" : ""} ${!isGrouped && !isOutbound ? "rounded-tl-none" : ""} ${isFailed ? "ring-1 ring-destructive/50" : ""}`}>
           {!isOutbound && !isGrouped && senderName && (
             <p className="text-[10px] font-bold text-primary/80 mb-0.5 truncate">{senderName}</p>
@@ -223,6 +251,7 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
           {/* Footer */}
           {!hideTimestamp && (
             <div className={`flex items-center gap-1.5 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
+              {isStarredMsg && <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />}
               {isOutbound && isAiGenerated && (
                 <span className="text-[9px] font-medium flex items-center gap-0.5 text-emerald-700/50 dark:text-emerald-300/50">
                   <Bot className="w-2.5 h-2.5" />IA
@@ -248,13 +277,18 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
             </button>
           )}
         </div>
-      </div>
 
-      {isOutbound && onReply && (
-        <button className="self-center opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-1 rounded-full hover:bg-muted/80" onClick={() => onReply(message)} title="Responder">
-          <Reply className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-      )}
+        {/* Reactions display */}
+        {reactions.length > 0 && (
+          <div className={`flex gap-0.5 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
+            {reactions.map((r, i) => (
+              <span key={i} className="text-sm bg-muted/80 rounded-full px-1.5 py-0.5 border border-border/50 shadow-sm">
+                {r.emoji}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 });
