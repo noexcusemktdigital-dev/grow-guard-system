@@ -781,6 +781,10 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                       onReply={handleReply}
                       onRetry={(item.message as any)?._pending ? handleRetry : undefined}
                       onImageClick={handleImageClick}
+                      onForward={handleForward}
+                      onStar={handleStar}
+                      onDelete={handleDelete}
+                      onReact={handleReact}
                       allMessages={allMessages}
                     />
                   </div>
