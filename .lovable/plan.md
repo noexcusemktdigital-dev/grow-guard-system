@@ -1,47 +1,61 @@
 
 
-## Geração Inteligente de Tarefas com IA — Análise Completa do Usuário
+## Remover Diagramação + Textos por Arte com Aprovação Individual
 
-### Problema atual
-O edge function `generate-daily-checklist` usa 3 tarefas fixas hardcoded ("Verificar leads novos", "Responder mensagens", "Atualizar pipeline") e apenas algumas verificações condicionais simples (leads parados, tarefas vencidas, propostas pendentes). Não há análise inteligente nem personalização real.
+### 1. Remover Step 4 (Diagramação/Layout)
 
-### Solução
+O layout agora será derivado das referências visuais. Remover o step 4 inteiro e ajustar a numeração:
 
-Reescrever o edge function para **coletar dados completos do usuário** e enviar para a **Lovable AI** gerar tarefas personalizadas e priorizadas.
+- Step 1: Modo de saída (digital/print) — mantém
+- Step 2: Briefing + Objetivo — mantém
+- Step 3: Tipo + Quantidade — mantém
+- ~~Step 4: Diagramação~~ — **REMOVIDO**
+- Step 4 (antigo 5): Logo
+- Step 5 (antigo 6): Referências — adicionar nota: "O layout da arte será baseado na referência principal ⭐"
+- Step 6 (antigo 7): Fotos
+- Step 7 (antigo 8): Formato
+- Step 8 (antigo 9): Revisão final
 
-### Dados coletados para análise
+`TOTAL_STEPS` muda de 9 para 8. Remover import de `LayoutPicker`, remover `LAYOUT_TYPES` do import de constants (se não usado em outro lugar). O `layoutTypes` state continua existindo mas será `["auto"]` (a IA decide baseado na referência).
 
-O function vai buscar antes de chamar a IA:
+Na etapa de referências, adicionar texto: "A diagramação e o layout da arte serão criados com base na sua referência principal ⭐. Escolha referências que representem o estilo de composição desejado."
 
-1. **CRM**: leads ativos sem contato, leads quentes parados, tarefas vencidas, propostas pendentes/enviadas, leads novos sem follow-up
-2. **WhatsApp/Chat**: mensagens não lidas, contatos sem resposta há mais de 24h
-3. **Conteúdo**: roteiros pendentes de aprovação, postagens em rascunho
-4. **Metas**: goals ativos e progresso atual vs meta
-5. **Gamificação**: streak atual, XP, nível
-6. **Estratégia**: se tem plano de marketing/vendas ativo ou não
-7. **Créditos**: saldo atual (alertar se baixo)
+Remover a linha "Diagramação:" do summary na revisão final.
 
-### Fluxo
+### 2. Textos por arte (não um bloco único)
 
-1. Edge function coleta todos os dados acima via queries ao Supabase
-2. Monta um prompt contextual com os dados reais do usuário
-3. Chama `ai.gateway.lovable.dev` com `tool_choice` para extrair um array estruturado de tarefas (título, categoria, prioridade, justificativa)
-4. Insere as tarefas retornadas pela IA na tabela `client_checklist_items`
-5. Debita créditos e atualiza streak (lógica existente mantida)
+Atualmente o step 9 gera um único conjunto de textos (headline, sub, apoio, CTA) para todas as peças. Precisa gerar **um conjunto por peça**.
 
-### Prompt da IA (resumo)
+**Mudanças no state:**
+- Substituir `headline`, `subheadline`, `cta`, `supportingText` (strings) por arrays: `artTexts: { headline, subheadline, cta, supportingText, approvedHeadline, approvedSub, approvedSupport, approvedCta }[]`
+- Cada item do array representa os textos de uma peça
 
+**Mudança na geração AI (`handleAutoFillTexts`):**
+- Chamar `onFillWithAI` uma vez por peça (ou passar `quantity` para que retorne um array)
+- Para simplicidade: chamar uma vez e replicar o resultado base, permitindo edição individual
+
+**UI da revisão (step 8 novo):**
+- Renderizar um card por peça: "Peça 1 de 3", "Peça 2 de 3", etc.
+- Cada card mostra headline, subheadline, texto de apoio e CTA
+- Cada campo tem um botão de aprovação individual (checkbox/toggle verde)
+- Campos editáveis inline (click to edit)
+- Botão "Gerar" só fica habilitado quando **todos os 4 campos de todas as peças** estiverem aprovados
+
+**Estrutura de aprovação por campo:**
 ```
-Você é um gestor de produtividade. Com base nos dados reais do usuário, gere 5-8 tarefas diárias priorizadas.
-Regras: tarefas específicas e acionáveis, com números reais (ex: "Fazer follow-up nos 3 leads quentes parados há 4 dias").
-Priorize: leads quentes sem contato > tarefas vencidas > mensagens não respondidas > metas atrasadas > rotina.
+┌─ Peça 1 de 3 ────────────────────────┐
+│ ☐ Headline:  "Investir é estratégia" │ [Editar]
+│ ☐ Subheadline: "Não é sorte"         │ [Editar]
+│ ☐ Texto de apoio: "Lorem ipsum..."   │ [Editar]
+│ ☐ CTA: "Saiba mais"                  │ [Editar]
+└───────────────────────────────────────┘
 ```
+Ao aprovar, o checkbox fica ✅ verde. Todos precisam estar aprovados para habilitar "Gerar".
 
 ### Arquivos afetados
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/generate-daily-checklist/index.ts` | Reescrever: coletar dados do usuário + chamar Lovable AI + inserir tarefas personalizadas |
-
-Nenhuma mudança no frontend — o botão "Gerar Checklist com IA" já chama esse function e exibe os resultados.
+| `src/components/cliente/social/ArtWizard.tsx` | Remover step 4 layout, renumerar, textos por arte com aprovação individual |
+| `src/components/cliente/social/LayoutPicker.tsx` | Pode ser mantido no codebase mas removido dos imports do wizard |
 
