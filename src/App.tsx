@@ -218,6 +218,7 @@ function App() {
                   <Route path="suporte" element={<ClienteSuporte />} />
                   <Route path="marketing-hub" element={<ClienteMarketingHub />} />
                   <Route path="comunicados" element={<ClienteComunicados />} />
+                  <Route path="faq" element={<ClienteFaq />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
