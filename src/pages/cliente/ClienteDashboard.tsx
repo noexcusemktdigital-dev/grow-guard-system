@@ -27,11 +27,27 @@ import { useToast } from "@/hooks/use-toast";
 
 /* ========== CSV EXPORT ========== */
 function downloadCsv(filename: string, headers: string[], rows: string[][]) {
-  const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${(c ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const csv = [headers.join(";"), ...rows.map(r => r.map(c => `"${(c ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
+}
+
+/* ========== PDF EXPORT ========== */
+async function downloadReportPdf(containerId: string, title: string) {
+  const { default: html2pdf } = await import("html2pdf.js");
+  const element = document.getElementById(containerId);
+  if (!element) return;
+  const opt = {
+    margin: [10, 10, 10, 10],
+    filename: `${title.toLowerCase().replace(/\s+/g, "-")}-relatorio.pdf`,
+    image: { type: "jpeg", quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+    pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+  };
+  await html2pdf().set(opt).from(element).save();
 }
 
 /* ========== DATE FILTER HELPER ========== */
