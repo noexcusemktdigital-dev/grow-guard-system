@@ -540,7 +540,8 @@ IMPORTANT RENDERING RULES:
 - Typography should feel intentional and designed, not auto-generated
 - The overall composition must be balanced and publication-ready
 - MANDATORY COLOR RULE: Use ONLY the colors listed in the color_palette section. Do NOT substitute or invent different colors. If the palette says yellow, use yellow — NEVER red or any other hue.
-- DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo space COMPLETELY EMPTY — it will be composited in post-production.`;
+- DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo space COMPLETELY EMPTY — it will be composited in post-production.
+- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above (headline, highlight headline, supporting text, bullet points, CTA, brand). Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.`;
 }
 
 // --- Build fallback prompt when CoT fails ---
