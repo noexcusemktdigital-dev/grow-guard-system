@@ -29,7 +29,7 @@ function formatContactTime(dateStr: string | null) {
 }
 
 export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
-  function ChatContactItem({ contact, isSelected, onSelect, stageLabel, preview, onPin, onArchive }, ref) {
+  function ChatContactItem({ contact, isSelected, onSelect, stageLabel, preview, onArchive }, ref) {
     const contactAny = contact as any;
     const mode = contactAny.attending_mode || null;
     const contactType = contactAny.contact_type || "individual";
@@ -37,7 +37,6 @@ export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
     const isGroup = contactType === "group";
     const isLid = contactType === "lid";
     const isWebsite = contactType === "website";
-    const isPinned = !!(contactAny.is_pinned);
     const isArchived = !!(contactAny.is_archived);
 
     return (
