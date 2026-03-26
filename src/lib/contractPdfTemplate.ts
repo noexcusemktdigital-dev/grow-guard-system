@@ -76,7 +76,10 @@ export function formatContractHtml(content: string, logoBase64: string, title?: 
 }
 
 export async function downloadContractPdf(contract: any) {
-  const { default: html2pdf } = await import("html2pdf.js");
+  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+    import("jspdf"),
+    import("html2canvas"),
+  ]);
   const logoBase64 = await getLogoBase64();
   const content = contract.content || "Conteúdo do contrato não disponível.";
   const pdfTitle = contract.contract_type === "franquia"
@@ -86,17 +89,24 @@ export async function downloadContractPdf(contract: any) {
 
   const el = document.createElement("div");
   el.innerHTML = html;
+  document.body.appendChild(el);
 
-  html2pdf()
-    .set({
-      margin: [10, 10, 10, 10],
-      filename: `${contract.title || "Contrato"}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    })
-    .from(el)
-    .save();
+  const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+  document.body.removeChild(el);
+
+  const imgData = canvas.toDataURL("image/jpeg", 0.95);
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const imgW = pageW - 20;
+  const imgH = (canvas.height * imgW) / canvas.width;
+  let y = 0;
+  while (y < imgH) {
+    if (y > 0) pdf.addPage();
+    pdf.addImage(imgData, "JPEG", 10, 10 - y, imgW, imgH);
+    y += pageH - 20;
+  }
+  pdf.save(`${contract.title || "Contrato"}.pdf`);
 }
 
 export function getPreviewHtml(content: string, contractType?: string): string {

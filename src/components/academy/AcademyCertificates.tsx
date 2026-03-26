@@ -57,15 +57,15 @@ export function AcademyCertificates() {
                   setTimeout(() => {
                     const el = document.getElementById("cert-print-area");
                     if (!el) return;
-                    import("html2pdf.js").then((mod) => {
-                      const html2pdf = mod.default;
-                      html2pdf().set({
-                        margin: 0,
-                        filename: `certificado-${cert.id.slice(0, 8)}.pdf`,
-                        image: { type: "jpeg", quality: 0.98 },
-                        html2canvas: { scale: 2, useCORS: true },
-                        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                      }).from(el).save().then(() => {
+                    Promise.all([import("jspdf"), import("html2canvas")]).then(([{ default: jsPDF }, { default: html2canvas }]) => {
+                      html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" }).then((canvas) => {
+                        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+                        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+                        const pageW = pdf.internal.pageSize.getWidth();
+                        const imgW = pageW;
+                        const imgH = (canvas.height * imgW) / canvas.width;
+                        pdf.addImage(imgData, "JPEG", 0, 0, imgW, imgH);
+                        pdf.save(`certificado-${cert.id.slice(0, 8)}.pdf`);
                         toast({ title: "PDF gerado com sucesso!" });
                       });
                     });

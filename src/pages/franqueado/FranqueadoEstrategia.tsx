@@ -381,18 +381,18 @@ function DiagnosticForm({
 // ── PDF Export Helper ────────────────────────────────────────────
 
 function exportPdf(element: HTMLElement, title: string) {
-  import("html2pdf.js").then((html2pdfModule) => {
-    const html2pdf = html2pdfModule.default;
-    (html2pdf as any)()
-      .from(element)
-      .set({
-        margin: [10, 10, 10, 10],
-        filename: `${title.replace(/[^a-zA-Z0-9À-ú ]/g, "")}.pdf`,
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      })
-      .save();
+  Promise.all([import("jspdf"), import("html2canvas")]).then(([{ default: jsPDF }, { default: html2canvas }]) => {
+    html2canvas(element, { scale: 2, useCORS: true, backgroundColor: "#ffffff" }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      let y = 0;
+      while (y < imgH) { if (y > 0) pdf.addPage(); pdf.addImage(imgData, "JPEG", 0, -y, imgW, imgH); y += pageH; }
+      pdf.save(`${title.replace(/[^a-zA-Z0-9À-ú ]/g, "")}.pdf`);
+    });
   });
 }
 
