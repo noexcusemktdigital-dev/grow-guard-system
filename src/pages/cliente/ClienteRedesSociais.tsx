@@ -295,7 +295,6 @@ export default function ClienteRedesSociais() {
     return (
       <>
         <PageHeader title="Postagem" subtitle="Crie artes profissionais para suas redes sociais" actions={<FeatureTutorialButton slug="redes_sociais" />} />
-        <ApprovalDashboard />
         <PostGallery
           posts={posts}
           isLoading={postsLoading}

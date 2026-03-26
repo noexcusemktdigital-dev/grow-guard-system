@@ -210,8 +210,6 @@ export default function ClienteConteudos() {
 
       <StrategyBanner toolName="a geração de roteiros" dataUsed="Pilares, ICP e tom de voz" />
 
-      <ApprovalDashboard />
-
       <div className="flex flex-wrap items-center gap-3">
         {hasStrategy && (
           <Badge variant="outline" className="gap-1.5 text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30">

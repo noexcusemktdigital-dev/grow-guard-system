@@ -131,6 +131,7 @@ IDENTIDADE VISUAL:
 - Tom: ${tom_comunicacao ? tomDescricao[tom_comunicacao] || tom_comunicacao : identidade_visual?.tom_visual || "Profissional e confiável"}
 - Estilo: ${identidade_visual?.estilo || estilo}
 ${referencia_visual ? `- Site de referência: ${referencia_visual}` : ""}
+${logo_url ? `- LOGO DA EMPRESA (OBRIGATÓRIO incluir no header e footer): ${logo_url}` : "- Sem logo fornecida"}
 
 CONTATO:
 - Telefone/WhatsApp: ${telefone || "Não informado"}
