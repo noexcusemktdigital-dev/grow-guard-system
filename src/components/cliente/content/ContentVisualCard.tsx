@@ -14,12 +14,14 @@ interface ContentVisualCardProps {
   onApprove: () => void;
   onDelete?: () => void;
   onExpand?: () => void;
+  onRecord?: () => void;
   approving: boolean;
+  isApproved?: boolean;
   showContext?: { tom?: string; publico?: string; plataforma?: string };
 }
 
 export function ContentVisualCard({
-  content: c, index, onCopy, onPdf, onPost, onApprove, onDelete, onExpand, approving, showContext,
+  content: c, index, onCopy, onPdf, onPost, onApprove, onDelete, onExpand, onRecord, approving, isApproved, showContext,
 }: ContentVisualCardProps) {
   return (
     <Card id={`content-card-${index}`} className="overflow-hidden group hover:shadow-lg transition-shadow">
