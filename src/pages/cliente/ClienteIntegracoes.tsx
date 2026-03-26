@@ -360,7 +360,7 @@ function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, onReconne
                 <span className="text-xs font-medium">Webhook</span>
                 {instance.webhook_url ? (
                   <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-300 gap-1">
-                    <CheckCircle className="w-2.5 h-2.5" /> Ativo
+                    <CheckCircle2 className="w-2.5 h-2.5" /> Ativo
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-[9px] text-amber-600 border-amber-300 gap-1">
