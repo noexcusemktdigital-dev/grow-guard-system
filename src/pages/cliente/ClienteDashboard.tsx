@@ -1,10 +1,14 @@
 import { useState, useMemo } from "react";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
+import { useActiveGoals } from "@/hooks/useGoals";
+import { useGoalProgress } from "@/hooks/useGoalProgress";
 import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
-  MessageCircle, Bot, Download, FileText, Calendar, ChevronDown, FileImage
+  MessageCircle, Bot, Download, FileText, Calendar, ChevronDown, FileImage,
+  CheckCircle2, TrendingDown, ArrowRight, AlertTriangle,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,9 +26,10 @@ import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import {
   RadialBarChart, RadialBar, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  LineChart, Line, ResponsiveContainer, PieChart, Pie, Cell, Legend,
+  LineChart, Line, ResponsiveContainer, PieChart, Pie, Cell, Legend, ReferenceLine,
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
+import { formatBRL } from "@/lib/formatting";
 
 /* ========== CSV EXPORT ========== */
 function downloadCsv(filename: string, headers: string[], rows: string[][]) {
@@ -162,18 +167,49 @@ function filterByDate<T extends { created_at: string }>(items: T[], from: Date |
   });
 }
 
-/* ========== KPI CARD ========== */
-function KpiCard({ label, value, icon: Icon, gradient, trend }: { label: string; value: string; icon: React.ElementType; gradient: string; trend?: { value: string; positive: boolean } }) {
+/* ========== GOAL STATUS HELPERS ========== */
+type GoalStatus = "batida" | "no_ritmo" | "em_andamento" | "abaixo" | "critica";
+
+function getGoalGradient(status: GoalStatus | undefined, fallback: string) {
+  if (!status) return fallback;
+  if (status === "batida" || status === "no_ritmo") return "from-emerald-500/20 to-emerald-600/5";
+  if (status === "em_andamento") return "from-amber-500/20 to-amber-600/5";
+  return "from-red-500/20 to-red-600/5";
+}
+
+function getGoalStatusLabel(status: GoalStatus) {
+  switch (status) {
+    case "batida": return { label: "✓ Meta batida", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" };
+    case "no_ritmo": return { label: "↗ No ritmo", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" };
+    case "em_andamento": return { label: "→ Em andamento", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" };
+    case "abaixo": return { label: "↓ Abaixo", className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
+    case "critica": return { label: "↓ Crítica", className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
+  }
+}
+
+const METRIC_TO_KPI: Record<string, string[]> = {
+  revenue: ["Receita Total"], faturamento: ["Receita Total"],
+  leads: ["Leads Captados"],
+  conversions: ["Taxa de Conversão"],
+  avg_ticket: ["Ticket Médio"],
+  contracts: ["Pipeline Ativo"], contratos: ["Pipeline Ativo"],
+};
+
+function KpiCard({ label, value, icon: Icon, gradient, trend, goalStatus }: {
+  label: string; value: string; icon: React.ElementType; gradient: string;
+  trend?: { value: string; positive: boolean }; goalStatus?: GoalStatus;
+}) {
+  const statusInfo = goalStatus ? getGoalStatusLabel(goalStatus) : null;
   return (
     <Card className="relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-60`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${getGoalGradient(goalStatus, gradient)} opacity-60`} />
       <CardContent className="relative p-4">
         <div className="w-9 h-9 rounded-lg bg-background/50 border flex items-center justify-center">
           <Icon className="w-4 h-4 text-muted-foreground" />
         </div>
         <div className="mt-3">
           <p className="text-2xl font-bold tracking-tight">{value}</p>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
             {trend && (
               <span className={`text-[10px] font-medium flex items-center gap-0.5 ${trend.positive ? "text-emerald-600" : "text-red-500"}`}>
@@ -182,6 +218,11 @@ function KpiCard({ label, value, icon: Icon, gradient, trend }: { label: string;
               </span>
             )}
           </div>
+          {statusInfo && (
+            <span className={`inline-block mt-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${statusInfo.className}`}>
+              {statusInfo.label}
+            </span>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -196,9 +237,14 @@ export default function ClienteDashboard() {
   const orgProfile = useOrgProfile();
   const orgName = orgProfile.data?.name || "Relatório";
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [period, setPeriod] = useState("30d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+
+  // Goals data
+  const { data: activeGoals } = useActiveGoals();
+  const { data: goalProgress } = useGoalProgress(activeGoals);
 
   // Chat data
   const { data: chatContacts } = useQuery({
@@ -279,6 +325,32 @@ export default function ClienteDashboard() {
     const pct = ((current - previous) / previous * 100).toFixed(0);
     return { value: `${Number(pct) >= 0 ? "+" : ""}${pct}%`, positive: Number(pct) >= 0 };
   }
+
+  // Goal status for KPI labels
+  function getKpiGoalStatus(kpiLabel: string): GoalStatus | undefined {
+    if (!activeGoals || !goalProgress) return undefined;
+    for (const goal of activeGoals) {
+      const metric = goal.metric || "revenue";
+      const matchLabels = METRIC_TO_KPI[metric];
+      if (matchLabels?.includes(kpiLabel)) {
+        return goalProgress[goal.id]?.status;
+      }
+    }
+    return undefined;
+  }
+
+  // Goal for conversion chart color
+  const conversionGoal = useMemo(() => {
+    if (!activeGoals || !goalProgress) return null;
+    const g = activeGoals.find((g: any) => g.metric === "conversions");
+    return g ? goalProgress[g.id] : null;
+  }, [activeGoals, goalProgress]);
+
+  // Goal for leads chart reference line
+  const leadsGoal = useMemo(() => {
+    if (!activeGoals) return null;
+    return activeGoals.find((g: any) => g.metric === "leads") || null;
+  }, [activeGoals]);
 
   // Average closing time (days between created_at and won_at)
   const avgClosingDays = useMemo(() => {
@@ -549,18 +621,76 @@ export default function ClienteDashboard() {
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Receita Total" value={`R$ ${totalValue.toLocaleString("pt-BR")}`} icon={DollarSign} gradient="from-emerald-500/15 to-emerald-600/5" trend={calcTrend(totalValue, prevTotalValue)} />
-            <KpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" trend={calcTrend(allLeads.length, prevLeads.length)} />
-            <KpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" trend={calcTrend(Number(conversionRate), prevConversionRate)} />
-            <KpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={Eye} gradient="from-amber-500/15 to-amber-600/5" />
+            <KpiCard label="Receita Total" value={`R$ ${totalValue.toLocaleString("pt-BR")}`} icon={DollarSign} gradient="from-emerald-500/15 to-emerald-600/5" trend={calcTrend(totalValue, prevTotalValue)} goalStatus={getKpiGoalStatus("Receita Total")} />
+            <KpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" trend={calcTrend(allLeads.length, prevLeads.length)} goalStatus={getKpiGoalStatus("Leads Captados")} />
+            <KpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" trend={calcTrend(Number(conversionRate), prevConversionRate)} goalStatus={getKpiGoalStatus("Taxa de Conversão")} />
+            <KpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={Eye} gradient="from-amber-500/15 to-amber-600/5" goalStatus={getKpiGoalStatus("Ticket Médio")} />
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Pipeline Ativo" value={`R$ ${pipelineValue.toLocaleString("pt-BR")}`} icon={TrendingUp} gradient="from-sky-500/15 to-sky-600/5" />
+            <KpiCard label="Pipeline Ativo" value={`R$ ${pipelineValue.toLocaleString("pt-BR")}`} icon={TrendingUp} gradient="from-sky-500/15 to-sky-600/5" goalStatus={getKpiGoalStatus("Pipeline Ativo")} />
             <KpiCard label="Leads Perdidos" value={String(lostLeads.length)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
             <KpiCard label="Taxa de Perda" value={`${lossRate}%`} icon={ArrowDownRight} gradient="from-orange-500/15 to-orange-600/5" />
             <KpiCard label="Tempo Médio Fechamento" value={`${avgClosingDays}d`} icon={Target} gradient="from-indigo-500/15 to-indigo-600/5" />
           </div>
+
+          {/* ===== METAS DO MÊS ===== */}
+          {activeGoals && activeGoals.length > 0 && goalProgress ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Target className="w-4 h-4 text-primary" /> Metas do Mês
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {activeGoals.map((goal: any) => {
+                  const prog = goalProgress[goal.id];
+                  if (!prog) return null;
+                  const statusInfo = getGoalStatusLabel(prog.status);
+                  const barColor =
+                    prog.status === "batida" || prog.status === "no_ritmo" ? "bg-emerald-500" :
+                    prog.status === "em_andamento" ? "bg-amber-500" : "bg-red-500";
+                  return (
+                    <div key={goal.id} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs font-medium truncate">{goal.title}</span>
+                          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${statusInfo.className}`}>
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-muted-foreground">
+                            {goal.metric === "revenue" || goal.metric === "faturamento"
+                              ? `${formatBRL(prog.currentValue)} / ${formatBRL(goal.target_value)}`
+                              : `${prog.currentValue} / ${goal.target_value}`}
+                          </span>
+                          {prog.daysLeft > 0 && (
+                            <span className="text-[10px] text-muted-foreground">{prog.daysLeft}d restantes</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div className={`h-full rounded-full ${barColor} transition-all duration-700`} style={{ width: `${Math.min(prog.percent, 100)}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex items-center justify-between py-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Nenhuma meta ativa para este mês.</p>
+                </div>
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate("/metas-ranking")}>
+                  Criar metas
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Conversion radial */}
@@ -569,7 +699,14 @@ export default function ClienteDashboard() {
               <CardContent className="flex flex-col items-center justify-center">
                 <div className="h-40 w-full max-w-xs">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{ name: "Conversão", value: Number(conversionRate), fill: "hsl(var(--primary))" }]} startAngle={90} endAngle={-270}>
+                    <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{
+                      name: "Conversão", value: Number(conversionRate),
+                      fill: conversionGoal
+                        ? conversionGoal.status === "batida" || conversionGoal.status === "no_ritmo" ? "hsl(142 76% 36%)"
+                        : conversionGoal.status === "em_andamento" ? "hsl(45 93% 47%)"
+                        : "hsl(0 84% 60%)"
+                        : "hsl(var(--primary))"
+                    }]} startAngle={90} endAngle={-270}>
                       <RadialBar background={{ fill: "hsl(var(--muted))" }} dataKey="value" cornerRadius={10} />
                     </RadialBarChart>
                   </ResponsiveContainer>
@@ -577,6 +714,9 @@ export default function ClienteDashboard() {
                 <div className="text-center -mt-24 relative z-10">
                   <p className="text-3xl font-bold">{conversionRate}%</p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">de conversão</p>
+                  {conversionGoal && (
+                    <p className="text-[10px] text-muted-foreground">Meta: {conversionGoal.remaining > 0 ? `faltam ${conversionGoal.remaining}%` : "✓ atingida"}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -673,6 +813,14 @@ export default function ClienteDashboard() {
                         <YAxis tick={{ fontSize: 10 }} />
                         <ReTooltip />
                         <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                        {leadsGoal && leadsGoal.target_value && (
+                          <ReferenceLine
+                            y={Math.round(leadsGoal.target_value / 4)}
+                            stroke="hsl(45 93% 47%)"
+                            strokeDasharray="6 3"
+                            label={{ value: "Meta/semana", position: "right", fontSize: 9, fill: "hsl(45 93% 47%)" }}
+                          />
+                        )}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
