@@ -382,8 +382,8 @@ const SaasAuth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="text-white/70">Senha</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                      <Input id="signup-password" type="password" placeholder="Mínimo 8 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10" />
+                      <PasswordInput id="signup-password" placeholder="Mínimo 8 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[hsl(355,78%,50%)]" required />
                     </div>
                     {password.length > 0 && (
                       <div className="space-y-2 pt-1">
