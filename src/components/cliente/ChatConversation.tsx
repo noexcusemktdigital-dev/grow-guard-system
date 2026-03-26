@@ -309,7 +309,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
       const blob = new Blob(audioChunksRef.current, { type: mimeType });
       audioChunksRef.current = [];
       mediaRecorderRef.current = null;
-      if (blob.size < 500 || !contact) { setIsRecording(false); setRecordingTime(0); return; }
+      if (blob.size < 100 || !contact) { setIsRecording(false); setRecordingTime(0); toast({ title: "Áudio muito curto", description: "Grave por mais tempo.", variant: "destructive" }); return; }
       setSendingAudio(true);
       try {
         const ext = mimeType.includes("mp4") ? "mp4" : "webm";
