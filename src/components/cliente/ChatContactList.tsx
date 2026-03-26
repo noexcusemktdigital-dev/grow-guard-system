@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
-import { Search, Clock, MessageCircle, Wifi, Bot, User, Users } from "lucide-react";
+import { Search, Clock, MessageCircle, Wifi, Bot, User, Users, Pin, Archive } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ interface Props {
   isConnected?: boolean;
   lastMessages?: Map<string, string>;
   connectedPhone?: string;
+  onPinContact?: (contactId: string, pinned: boolean) => void;
+  onArchiveContact?: (contactId: string, archived: boolean) => void;
 }
 
 type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
