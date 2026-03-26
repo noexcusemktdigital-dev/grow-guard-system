@@ -60,8 +60,10 @@ async function urlToBase64(url: string): Promise<string | null> {
             return pngUrl;
           }
         }
-        console.warn("SVG→PNG conversion failed, skipping");
-        return null;
+        // Fallback: use raw SVG as base64 directly
+        console.warn("SVG→PNG conversion failed, using raw SVG base64 as fallback");
+        const svgTextFallback = new TextDecoder().decode(new Uint8Array(await res.arrayBuffer()));
+        return `data:image/svg+xml;base64,${btoa(svgTextFallback)}`;
       } catch (svgErr) {
         console.warn("SVG→PNG conversion error:", svgErr);
         return null;
