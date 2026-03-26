@@ -1,81 +1,86 @@
 
 
-## Redesign Visual dos KPI Cards com Metas Integradas + Seção de Metas Dinâmica
+## Melhorias no Espelho do WhatsApp — Funcionalidades Faltantes
 
-### O que muda
+Após análise completa do código atual e comparação com as funcionalidades do WhatsApp Web, identifiquei o que já está implementado e o que falta para tornar a ferramenta um espelho mais fiel.
 
-Os 8 KPI cards passam a mostrar **dentro do próprio card** a meta vinculada (valor atual vs alvo + mini barra de progresso), tornando desnecessário olhar para outra seção. A seção "Metas do Mês" é redesenhada com visual mais rico — usando `GoalProgressRing` + projeções inline em vez de simples barras de texto.
+### Já implementado (bem feito)
+- Mensagens em tempo real, optimistic UI, retry automático
+- Áudio (gravação + player estilizado), imagens, vídeos, documentos
+- Emojis, respostas rápidas, citações (reply/quote)
+- Indicador de digitação, confirmações de leitura (✓✓ azul)
+- Lightbox de imagens, stickers, mensagens expansíveis
+- Busca na conversa, filtros por modo (IA/Humano/Grupos)
+- Lista virtualizada, cache IndexedDB, polling fallback
 
-### Mudanças concretas
+### Funcionalidades faltantes a implementar
 
-**1. Redesign do KpiCard local (dentro de ClienteDashboard)**
+**1. Menu de contexto nas mensagens (hover/long-press)**
+Ao passar o mouse sobre uma mensagem, aparece um menu dropdown com ações:
+- Responder (já existe via ícone, mover para o menu)
+- Copiar texto
+- Encaminhar
+- Reagir com emoji
+- Marcar com estrela
+- Apagar mensagem
+- Info da mensagem
 
-Cada KpiCard que tem meta vinculada ganha:
-- Mini progress bar colorida (verde/amarelo/vermelho) na parte inferior do card
-- Texto "Meta: R$ 50.000" ou "Meta: 30 leads" abaixo do valor principal
-- Porcentagem da meta (ex: "78% da meta") ao lado do status badge
-- Se não há meta, o card continua igual (sem barra nem texto de meta)
+**2. Reações com emoji**
+- Barra rápida de 6 emojis (👍❤️😂😮😢🙏) + botão "+" para picker completo
+- Reações ficam abaixo da bolha da mensagem
+- Envia reação via edge function `whatsapp-send` com `type: "reaction"`
 
-```text
-┌─────────────────────────┐
-│ 💲                      │
-│ R$ 32.500               │
-│ RECEITA TOTAL  ↗ +15%   │
-│ ▓▓▓▓▓▓▓▓▓▓▓▓░░░ 65%    │
-│ Meta: R$ 50.000 → 18d   │
-│ ↗ No ritmo              │
-└─────────────────────────┘
-```
+**3. Encaminhar mensagens**
+- Dialog para selecionar contato(s) destino
+- Reenvia a mensagem (texto/mídia) para outro contato
 
-Props adicionadas ao KpiCard local:
-- `goalTarget?: string` — valor formatado da meta (ex: "R$ 50.000")
-- `goalPercent?: number` — percentual atingido
-- `goalDaysLeft?: number` — dias restantes
+**4. Copiar texto da mensagem**
+- Copia o conteúdo para clipboard com feedback via toast
 
-**2. Redesign da seção "Metas do Mês"**
+**5. Marcar mensagens com estrela (favoritas)**
+- Coluna `is_starred` na tabela `whatsapp_messages`
+- Ícone de estrela no hover da mensagem
+- Filtro "Favoritas" no topo da conversa para ver apenas mensagens marcadas
 
-Substituir a lista de barras simples por cards visuais com:
-- `GoalProgressRing` (anel circular) à esquerda — já existe no projeto
-- Título + métrica + badge de status
-- Barra de progresso expandida com cores
-- Texto de projeção: "No ritmo atual, atingirá ~92% da meta" (lógica já existe no GoalCard)
-- Layout em grid 2 colunas (lg) para ficar mais compacto
+**6. Apagar mensagem**
+- "Apagar para mim" (soft delete local) e "Apagar para todos" (envia revoke via API)
+- Mensagem apagada mostra "🚫 Mensagem apagada" no lugar do conteúdo
 
-```text
-┌──────────────────────────────────────┐
-│  ◎ 78%  │ Faturamento Mensal         │
-│  (ring) │ R$ 32.500 / R$ 50.000      │
-│         │ ▓▓▓▓▓▓▓▓▓▓▓░░░  ↗ No ritmo│
-│         │ ✅ Projeção: ~92% da meta   │
-│         │ 18 dias restantes           │
-└──────────────────────────────────────┘
-```
+**7. Painel de mídia/arquivos compartilhados**
+- Nova aba no `ChatLeadPanel` mostrando galeria de mídias, documentos e links compartilhados na conversa
+- Grid de thumbnails para imagens, lista para documentos
 
-**3. Lógica de vinculação KPI → Meta**
+**8. Fixar conversas no topo**
+- Coluna `is_pinned` na tabela `whatsapp_contacts`
+- Contatos fixados ficam sempre no topo da lista
 
-Expandir `getKpiGoalStatus` para retornar também os dados numéricos (não só o status), para alimentar a mini barra e os textos do card:
-
-```typescript
-function getKpiGoalData(kpiLabel: string): {
-  status: GoalStatus;
-  percent: number;
-  targetFormatted: string;
-  daysLeft: number;
-} | undefined
-```
-
-**4. Formatação inteligente da meta no card**
-
-- Métricas monetárias (revenue, avg_ticket): `formatBRL(target_value)`
-- Métricas numéricas (leads, contracts): `${target_value}`
-- Métricas percentuais (conversions): `${target_value}%`
-
-### Arquivos afetados
-
-- `src/pages/cliente/ClienteDashboard.tsx` — redesign do KpiCard local, nova seção de metas visual, helper `getKpiGoalData`
-- Reutiliza `GoalProgressRing` existente (sem alteração)
+**9. Arquivar conversas**
+- Coluna `is_archived` na tabela `whatsapp_contacts`
+- Conversas arquivadas ficam ocultas por padrão, com link "Arquivadas (N)" no topo da lista
 
 ### Detalhes técnicos
 
-A seção de metas usa `GoalProgressRing` com `size={52}` para caber no layout compacto. A lógica de projeção é extraída do `GoalCard.tsx` existente (cálculo de `projectedPercent` e `increaseNeeded`). O grid de metas usa `grid-cols-1 lg:grid-cols-2` para responsividade. Os KpiCards mantêm `data-pdf-hide` nos badges de status para não poluir o PDF.
+**Migração SQL:**
+```sql
+ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS is_starred boolean DEFAULT false;
+ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS is_deleted boolean DEFAULT false;
+ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS is_pinned boolean DEFAULT false;
+ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS is_archived boolean DEFAULT false;
+```
+
+**Menu de contexto** — Componente `ChatMessageMenu` usando `DropdownMenu` do Shadcn, posicionado via hover no canto da bolha (ícone ▾). Ações disparam mutations individuais.
+
+**Reações** — Armazenadas no campo `metadata` da mensagem (ex: `metadata.reactions: [{emoji: "👍", from: "user"}]`). Enviadas via `whatsapp-send` com action `reaction`.
+
+**Painel de mídia** — Filtra `whatsapp_messages` por `media_url IS NOT NULL` agrupando por tipo (imagem, documento, link). Reutiliza o `ChatLeadPanel` adicionando tabs.
+
+### Arquivos afetados
+- `src/components/cliente/ChatMessageBubble.tsx` — adicionar menu de contexto, reações, estrela
+- `src/components/cliente/ChatConversation.tsx` — handlers para encaminhar, apagar, estrelar, filtro de favoritas
+- `src/components/cliente/ChatContactList.tsx` — pinned no topo, seção "Arquivadas"
+- `src/components/cliente/ChatContactItem.tsx` — ícone de pin
+- `src/components/cliente/ChatLeadPanel.tsx` — abas mídia/docs/links
+- `src/components/cliente/ChatForwardDialog.tsx` — novo componente
+- `src/hooks/useWhatsApp.ts` — mutations para star, delete, pin, archive, reaction
+- `supabase/migrations/` — nova migração (colunas is_starred, is_deleted, is_pinned, is_archived)
 
