@@ -1,75 +1,41 @@
 
 
-## Correção da Arquitetura de Convite de Usuários
+## Corrigir PDF em Branco no Dashboard
 
-### Problemas identificados
-
-Analisei o fluxo completo e encontrei **3 bugs interligados**:
-
-**Bug 1 — Sem proteção contra autoconvite**: A edge function `invite-user` não verifica se o admin está convidando o próprio e-mail. Quando isso acontece (acidentalmente ou não), o sistema: encontra o admin via `findUserByEmail`, atualiza o `full_name` do admin com o nome digitado no formulário (ex: "teste"), e gera um link de recovery para o próprio admin — corrompendo o perfil dele.
-
-**Bug 2 — Acúmulo de roles duplicados**: O `upsert` de roles usa `onConflict: "user_id,role"` com `ignoreDuplicates: true`. A constraint no banco é `UNIQUE(user_id, role)` (composta). Isso significa que se um usuário já tem `cliente_admin`, adicionar `cliente_user` cria uma **segunda linha**. O AuthContext depois prioriza `cliente_admin`, fazendo o convidado aparecer como Admin mesmo quando foi convidado como Usuário.
-
-**Bug 3 — Perfil de usuário existente sobrescrito**: Quando o e-mail já existe (path `email_exists`), a função ainda atualiza o `full_name` do perfil — sobrescrevendo o nome real do usuário com o que foi digitado no formulário de convite.
+### Problema
+O `html2canvas` não consegue renderizar o conteúdo porque:
+1. O wrapper é posicionado em `left:-9999px` (off-screen) — `html2canvas` não renderiza elementos fora da tela corretamente
+2. O app usa dark mode — o clone herda cores claras/transparentes que ficam invisíveis no fundo branco
+3. Os gráficos Recharts (SVG) não clonam bem como HTML estático
 
 ### Solução
 
-**1. Edge Function `invite-user`** — 3 correções:
+Reescrever `downloadReportPdf` usando abordagem de captura direta com `html2canvas` + `jsPDF`:
 
-- Adicionar verificação de autoconvite: se o `userId` resolvido for igual ao `callerId`, retornar erro 400
-- Corrigir atribuição de role: substituir o `upsert` por verificação manual (igual ao `update-member`): buscar role existente → update se existir, insert se não
-- Não atualizar `full_name` do perfil quando o usuário já existia (path `email_exists`)
+1. Capturar o elemento **visível na tela** com `html2canvas` diretamente (sem clonar nem mover off-screen)
+2. Configurar `html2canvas` com `backgroundColor: "#ffffff"` para forçar fundo branco
+3. Usar `jsPDF` para montar o PDF com:
+   - Header com nome da organização, título do relatório e data
+   - A imagem capturada do conteúdo, com paginação automática se ultrapassar uma página A4
+4. Esconder temporariamente os botões de export (via CSS class) antes da captura e restaurar depois
 
-**2. Migração SQL** — Limpeza de roles duplicados:
-
-- Remover roles duplicados deixando apenas o de maior prioridade por `user_id`
-- Adicionar constraint `UNIQUE(user_id)` na tabela `user_roles` para impedir acúmulo futuro (o sistema já trata como 1 role por usuário em todo lugar exceto na constraint)
-
-### Detalhes técnicos
-
-**invite-user — proteção contra autoconvite:**
-```typescript
-// Após resolver userId
-if (userId === callerId) {
-  return new Response(JSON.stringify({ error: "Você não pode convidar a si mesmo" }), 
-    { status: 400, headers: corsHeaders });
-}
+**Fluxo:**
+```text
+1. Adicionar classe CSS "pdf-exporting" ao container
+   → CSS hide botões [data-pdf-hide], dropdwon triggers
+2. html2canvas captura o elemento VISÍVEL
+3. Remover classe "pdf-exporting"
+4. Montar PDF com jsPDF: header + imagem paginada
+5. Salvar
 ```
 
-**invite-user — corrigir atribuição de role:**
-```typescript
-// Substituir upsert por check+update/insert (mesmo padrão do update-member)
-const { data: existingRole } = await adminClient
-  .from("user_roles").select("id").eq("user_id", userId).maybeSingle();
-if (existingRole) {
-  await adminClient.from("user_roles").update({ role: validRole }).eq("user_id", userId);
-} else {
-  await adminClient.from("user_roles").insert({ user_id: userId, role: validRole });
-}
-```
+**Mudanças concretas em `ClienteDashboard.tsx`:**
+- Substituir `html2pdf.js` por `html2canvas` + `jsPDF` importados separadamente
+- Adicionar `data-pdf-hide` nos botões de export (já parcialmente existe)
+- Adicionar CSS temporário via classe no container para esconder botões durante captura
+- Calcular paginação: `imgHeight > pageHeight` → `addPage()` + continuar desenhando
 
-**invite-user — não sobrescrever perfil existente:**
-```typescript
-// Apenas para novos usuários (não no path email_exists)
-if (isNewUser) {
-  await adminClient.from("profiles")
-    .update({ full_name: full_name || email.split("@")[0] })
-    .eq("id", userId);
-}
-```
-
-**Migração — limpar duplicados e enforçar unicidade:**
-```sql
--- Remover duplicados mantendo o de maior prioridade
-DELETE FROM user_roles a USING user_roles b 
-WHERE a.user_id = b.user_id AND a.id > b.id;
-
--- Dropar constraint antiga e criar nova
-ALTER TABLE user_roles DROP CONSTRAINT IF EXISTS user_roles_user_id_role_key;
-ALTER TABLE user_roles ADD CONSTRAINT user_roles_user_id_unique UNIQUE(user_id);
-```
-
-### Arquivos afetados
-- `supabase/functions/invite-user/index.ts` — 3 correções
-- `supabase/migrations/` — nova migração (limpeza + constraint)
+### Arquivo afetado
+- `src/pages/cliente/ClienteDashboard.tsx` — reescrever função `downloadReportPdf`
+- `src/index.css` — adicionar regra `.pdf-exporting [data-pdf-hide] { display: none !important; }`
 
