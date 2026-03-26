@@ -161,12 +161,32 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
           )}
         </div>
 
+        {/* Archived link */}
+        {!showArchived && archivedCount > 0 && (
+          <button
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground hover:bg-muted/40 transition-colors border-b border-border"
+            onClick={() => setShowArchived(true)}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            <span>Arquivadas ({archivedCount})</span>
+          </button>
+        )}
+        {showArchived && (
+          <button
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-primary font-medium hover:bg-muted/40 transition-colors border-b border-border"
+            onClick={() => setShowArchived(false)}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            <span>← Voltar às conversas</span>
+          </button>
+        )}
+
         {/* Virtualized contact list */}
         <div ref={parentRef} className="flex-1 overflow-auto">
           {sortedContacts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">
               <MessageCircle className="w-8 h-8 text-muted-foreground/20 mb-2" />
-              <p className="text-xs text-muted-foreground">Nenhum contato encontrado</p>
+              <p className="text-xs text-muted-foreground">{showArchived ? "Nenhuma conversa arquivada" : "Nenhum contato encontrado"}</p>
             </div>
           ) : (
             <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
@@ -189,6 +209,8 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
                       isSelected={selectedId === contact.id}
                       onSelect={onSelect}
                       preview={lastMessages?.get(contact.id)}
+                      onPin={onPinContact}
+                      onArchive={onArchiveContact}
                     />
                   </div>
                 );
