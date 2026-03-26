@@ -166,10 +166,13 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   return (
     <div className="space-y-4 mt-4">
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="w-full grid grid-cols-3 sm:grid-cols-5">
+        <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6">
           <TabsTrigger value="info" className="text-xs">Dados</TabsTrigger>
           <TabsTrigger value="activities" className="text-xs">Atividades</TabsTrigger>
           <TabsTrigger value="tasks" className="text-xs">Tarefas</TabsTrigger>
+          <TabsTrigger value="products" className="text-xs gap-1">
+            <Package className="w-3 h-3" /> Produtos
+          </TabsTrigger>
           <TabsTrigger value="proposals" className="text-xs gap-1">
             <FileText className="w-3 h-3" /> Propostas
           </TabsTrigger>
