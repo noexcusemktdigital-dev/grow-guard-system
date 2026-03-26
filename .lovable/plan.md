@@ -1,63 +1,61 @@
 
 
-## Vincular Produtos a Leads no CRM
+## Histórico Completo de Atividades do Lead
 
 ### Problema
-Os produtos cadastrados na configuração do CRM não podem ser associados a leads. O usuário precisa anexar produtos dentro do detalhe do lead.
+A aba "Dados" do lead não mostra um histórico automático. As atividades na aba "Atividades" são apenas manuais. O usuário quer ver tudo que aconteceu com o lead: movimentações de etapa, tags adicionadas/removidas, marcação como vendido/perdido, etc.
 
 ### Solução
 
-**1. Nova tabela `crm_lead_products`** (migração)
+**1. Nova tabela `crm_lead_history`** (migração)
+
+Tabela de log automático que registra cada evento do lead:
+
 ```sql
-CREATE TABLE public.crm_lead_products (
+CREATE TABLE crm_lead_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   lead_id uuid NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
-  product_id uuid NOT NULL REFERENCES crm_products(id) ON DELETE CASCADE,
-  organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  quantity integer NOT NULL DEFAULT 1,
-  unit_price numeric NOT NULL DEFAULT 0,
-  discount_percent numeric DEFAULT 0,
-  notes text,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE (lead_id, product_id)
+  organization_id uuid NOT NULL,
+  user_id uuid,
+  event_type text NOT NULL, -- 'stage_change', 'tag_added', 'tag_removed', 'won', 'lost', 'created', 'field_updated'
+  description text NOT NULL,
+  metadata jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now()
 );
-
-ALTER TABLE crm_lead_products ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members can manage lead products"
-  ON crm_lead_products FOR ALL TO authenticated
-  USING (public.is_member_of_org(auth.uid(), organization_id))
-  WITH CHECK (public.is_member_of_org(auth.uid(), organization_id));
 ```
 
-**2. Novo hook `useCrmLeadProducts.ts`**
-- `useCrmLeadProducts(leadId)` — lista produtos vinculados ao lead
-- `useAddLeadProduct` — vincula produto ao lead (com quantidade, preço unitário, desconto)
-- `useRemoveLeadProduct` — remove vínculo
-- `useUpdateLeadProduct` — edita quantidade/desconto
+RLS: membros da org podem ler.
 
-**3. Nova aba "Produtos" no `CrmLeadDetailSheet.tsx`**
-- Adicionar 6ª aba na `TabsList`: "Produtos" com ícone `Package`
-- Conteúdo da aba:
-  - Lista de produtos vinculados com nome, quantidade, preço, desconto e subtotal
-  - Botão "Adicionar produto" que abre um seletor com os produtos cadastrados (`useCrmProducts`)
-  - Campos: produto (select), quantidade (input number), desconto % (input number)
-  - Totalização no rodapé (soma dos subtotais)
-  - Ação de remover produto vinculado
+**2. Trigger automático `log_crm_lead_history()`**
 
-**4. Re-export no `useClienteCrm.ts`**
-- Exportar os novos hooks para acesso no portal cliente
+Trigger `AFTER INSERT OR UPDATE` em `crm_leads` que registra automaticamente:
+- **INSERT**: "Lead criado"
+- **Mudança de etapa**: "Movido de X para Y"
+- **Tags adicionadas**: "Tag 'abc' adicionada"
+- **Tags removidas**: "Tag 'abc' removida"
+- **Vendido** (`won_at` preenchido): "Lead marcado como vendido"
+- **Perdido** (`lost_at` preenchido): "Lead marcado como perdido — motivo: ..."
+- **Campos editados** (name, value, company, email, phone): "Campo X atualizado"
 
-### Detalhes técnicos
+**3. Hook `useCrmLeadHistory(leadId)`**
 
-- O grid da TabsList passa de `grid-cols-5` para `grid-cols-6`
-- O subtotal é calculado: `quantity * unit_price * (1 - discount_percent/100)`
-- O `unit_price` é pré-preenchido com o preço do produto selecionado mas pode ser editado
-- A tabela usa `UNIQUE (lead_id, product_id)` para evitar duplicatas
+Query simples que busca os registros de `crm_lead_history` ordenados por `created_at DESC`.
+
+**4. Seção "Histórico" na aba "Dados" do `CrmLeadDetailSheet.tsx`**
+
+Após o bloco "Criado em", adicionar uma timeline visual com:
+- Ícone por tipo de evento (seta para etapa, tag para tag, troféu para venda, etc.)
+- Descrição do evento
+- Data/hora formatada
+- Scroll limitado com "Ver mais" se necessário
 
 ### Arquivos afetados
-- `supabase/migrations/` — nova migração
-- `src/hooks/useCrmLeadProducts.ts` — novo
-- `src/components/crm/CrmLeadDetailSheet.tsx` — nova aba
-- `src/hooks/useClienteCrm.ts` — re-export
+- `supabase/migrations/` — nova migração (tabela + trigger)
+- `src/hooks/useCrmLeadHistory.ts` — novo hook
+- `src/components/crm/CrmLeadDetailSheet.tsx` — seção de histórico na aba "Dados"
+
+### Detalhes técnicos
+- O trigger usa `SECURITY DEFINER` para acessar os dados sem conflito de RLS
+- O histórico é separado das atividades manuais (são conceitos diferentes)
+- Eventos passados não serão retropreenchidos — o log começa a partir da ativação do trigger
 
