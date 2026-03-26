@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
-  MessageCircle, Bot, Download, FileText, Calendar
+  MessageCircle, Bot, Download, FileText, Calendar, ChevronDown, FileImage
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { useCrmLeads } from "@/hooks/useClienteCrm";
@@ -26,11 +27,27 @@ import { useToast } from "@/hooks/use-toast";
 
 /* ========== CSV EXPORT ========== */
 function downloadCsv(filename: string, headers: string[], rows: string[][]) {
-  const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${(c ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const csv = [headers.join(";"), ...rows.map(r => r.map(c => `"${(c ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
+}
+
+/* ========== PDF EXPORT ========== */
+async function downloadReportPdf(containerId: string, title: string) {
+  const { default: html2pdf } = await import("html2pdf.js");
+  const element = document.getElementById(containerId);
+  if (!element) return;
+  const opt = {
+    margin: [10, 10, 10, 10] as [number, number, number, number],
+    filename: `${title.toLowerCase().replace(/\s+/g, "-")}-relatorio.pdf`,
+    image: { type: "jpeg" as const, quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+    pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+  };
+  await html2pdf().set(opt).from(element).save();
 }
 
 /* ========== DATE FILTER HELPER ========== */
@@ -432,16 +449,32 @@ export default function ClienteDashboard() {
         </TabsList>
 
         {/* ===== CRM TAB ===== */}
-        <TabsContent value="crm" className="space-y-6 mt-4">
+        <TabsContent value="crm" className="space-y-6 mt-4" id="report-crm">
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => {
-              downloadCsv("crm-leads.csv", ["Nome", "Empresa", "Valor", "Etapa", "Origem", "Criado em"],
-                allLeads.map(l => [l.name, l.company || "", String(l.value || 0), l.stage, l.source || "", l.created_at])
-              );
-              toast({ title: "CSV exportado", description: `${allLeads.length} leads exportados (${periodLabel})` });
-            }}>
-              <Download className="w-3 h-3" /> Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs gap-1">
+                  <Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  downloadCsv("crm-leads.csv", ["Nome", "Empresa", "Valor", "Etapa", "Origem", "Criado em"],
+                    allLeads.map(l => [l.name, l.company || "", String(l.value || 0), l.stage, l.source || "", l.created_at])
+                  );
+                  toast({ title: "CSV exportado", description: `${allLeads.length} leads exportados (${periodLabel})` });
+                }}>
+                  <FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => {
+                  toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
+                  await downloadReportPdf("report-crm", "CRM Relatório");
+                  toast({ title: "PDF exportado", description: "Relatório visual do CRM baixado" });
+                }}>
+                  <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -598,16 +631,32 @@ export default function ClienteDashboard() {
         </TabsContent>
 
         {/* ===== CHAT TAB ===== */}
-        <TabsContent value="chat" className="space-y-6 mt-4">
+        <TabsContent value="chat" className="space-y-6 mt-4" id="report-chat">
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => {
-              downloadCsv("chat-contacts.csv", ["Nome", "Telefone", "Última mensagem"],
-                allContacts.map((c: any) => [c.name || "", c.phone || "", c.last_message_at || ""])
-              );
-              toast({ title: "CSV exportado", description: `${allContacts.length} contatos exportados` });
-            }}>
-              <Download className="w-3 h-3" /> Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs gap-1">
+                  <Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  downloadCsv("chat-contacts.csv", ["Nome", "Telefone", "Última mensagem"],
+                    allContacts.map((c: any) => [c.name || "", c.phone || "", c.last_message_at || ""])
+                  );
+                  toast({ title: "CSV exportado", description: `${allContacts.length} contatos exportados` });
+                }}>
+                  <FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => {
+                  toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
+                  await downloadReportPdf("report-chat", "Chat Relatório");
+                  toast({ title: "PDF exportado", description: "Relatório visual do Chat baixado" });
+                }}>
+                  <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -669,16 +718,32 @@ export default function ClienteDashboard() {
         </TabsContent>
 
         {/* ===== AGENTS TAB ===== */}
-        <TabsContent value="agents" className="space-y-6 mt-4">
+        <TabsContent value="agents" className="space-y-6 mt-4" id="report-agents">
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => {
-              downloadCsv("ai-logs.csv", ["Agente ID", "Tokens", "Modelo", "Data"],
-                filteredAiLogs.map((l: any) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])
-              );
-              toast({ title: "CSV exportado", description: `${filteredAiLogs.length} logs exportados (${periodLabel})` });
-            }}>
-              <Download className="w-3 h-3" /> Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs gap-1">
+                  <Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  downloadCsv("ai-logs.csv", ["Agente ID", "Tokens", "Modelo", "Data"],
+                    filteredAiLogs.map((l: any) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])
+                  );
+                  toast({ title: "CSV exportado", description: `${filteredAiLogs.length} logs exportados (${periodLabel})` });
+                }}>
+                  <FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => {
+                  toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
+                  await downloadReportPdf("report-agents", "Agentes IA Relatório");
+                  toast({ title: "PDF exportado", description: "Relatório visual dos Agentes IA baixado" });
+                }}>
+                  <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
