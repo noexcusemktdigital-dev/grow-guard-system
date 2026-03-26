@@ -115,6 +115,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
   const [isTyping, setIsTyping] = useState(false);
   const [textValue, setTextValue] = useState("");
   const [multiSelectValues, setMultiSelectValues] = useState<string[]>([]);
+  const [customTextMode, setCustomTextMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
@@ -205,6 +206,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
     // Reset input state
     setTextValue("");
     setMultiSelectValues([]);
+    setCustomTextMode(false);
 
     // Find next step (considering skipIf with updated answers)
     let nextIdx = currentStepIdx + 1;
@@ -271,9 +273,18 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
     setCurrentStepIdx(currentStepIdx - 1);
     setTextValue("");
     setMultiSelectValues([]);
+    setCustomTextMode(false);
   };
 
-  const handleSelect = (value: string) => { advanceStep(value); };
+  const handleSelect = (value: string) => {
+    if (value === "outro" || value === "personalizar") {
+      setCustomTextMode(true);
+      setTextValue("");
+      setTimeout(() => inputRef.current?.focus(), 100);
+      return;
+    }
+    advanceStep(value);
+  };
 
   const handleMultiConfirm = () => {
     if (multiSelectValues.length === 0 && !currentStep?.optional) return;
@@ -289,9 +300,25 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
   const handleInfoAdvance = () => { advanceStep(); };
 
   const toggleMulti = (value: string) => {
+    if (value === "personalizar" || value === "outro") {
+      setCustomTextMode(true);
+      setTextValue("");
+      setTimeout(() => inputRef.current?.focus(), 100);
+      return;
+    }
     setMultiSelectValues(prev =>
       prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
     );
+  };
+
+  const addCustomMultiValue = () => {
+    const val = textValue.trim();
+    if (!val) return;
+    if (!multiSelectValues.includes(val)) {
+      setMultiSelectValues(prev => [...prev, val]);
+    }
+    setTextValue("");
+    setCustomTextMode(false);
   };
 
   useEffect(() => { scrollToBottom(); }, [messages, isTyping, scrollToBottom]);
@@ -425,8 +452,8 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
             </Button>
           )}
 
-          {/* Select — button grid (static options or dynamic) */}
-          {currentStep.inputType === "select" && !hasCategories && displayOptions.length > 0 && (
+          {/* Select — button grid or custom text input */}
+          {currentStep.inputType === "select" && !hasCategories && displayOptions.length > 0 && !customTextMode && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
               {displayOptions.map(opt => (
                 <button
@@ -441,6 +468,30 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
                   </div>
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Custom text input when "Outro" is selected */}
+          {currentStep.inputType === "select" && customTextMode && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Digite seu segmento ou opção personalizada:</p>
+              <div className="flex gap-2">
+                <Input
+                  ref={inputRef as any}
+                  value={textValue}
+                  onChange={e => setTextValue(e.target.value)}
+                  placeholder="Ex: Odontologia, Pet shop, Advocacia..."
+                  className="flex-1 text-sm"
+                  onKeyDown={e => e.key === "Enter" && textValue.trim() && advanceStep(textValue.trim())}
+                  autoFocus
+                />
+                <Button size="sm" onClick={() => textValue.trim() && advanceStep(textValue.trim())} disabled={!textValue.trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+              <Button variant="ghost" size="sm" className="text-[10px] text-muted-foreground h-6" onClick={() => setCustomTextMode(false)}>
+                ← Voltar às opções
+              </Button>
             </div>
           )}
 
@@ -475,31 +526,69 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
           {/* Multi-select */}
           {currentStep.inputType === "multi-select" && (
             <div className="space-y-2">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
-                {displayOptions.map(opt => {
-                  const selected = multiSelectValues.includes(opt.value);
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => toggleMulti(opt.value)}
-                      className={cn(
-                        "flex items-center gap-2 p-2.5 rounded-xl border-2 text-left transition-all duration-150",
-                        selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
-                        selected ? "border-primary bg-primary" : "border-muted-foreground/30"
-                      )}>
-                        {selected && <CheckCircle2 className="w-2.5 h-2.5 text-primary-foreground" />}
-                      </div>
-                      <span className={cn("text-xs", selected ? "font-medium text-foreground" : "text-muted-foreground")}>
-                        {opt.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Custom values as badges */}
+              {multiSelectValues.filter(v => !displayOptions.some(o => o.value === v)).length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {multiSelectValues.filter(v => !displayOptions.some(o => o.value === v)).map(v => (
+                    <Badge key={v} variant="secondary" className="text-xs gap-1 cursor-pointer" onClick={() => setMultiSelectValues(prev => prev.filter(x => x !== v))}>
+                      {v} ✕
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {!customTextMode && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
+                  {displayOptions.map(opt => {
+                    const selected = multiSelectValues.includes(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => toggleMulti(opt.value)}
+                        className={cn(
+                          "flex items-center gap-2 p-2.5 rounded-xl border-2 text-left transition-all duration-150",
+                          selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                          selected ? "border-primary bg-primary" : "border-muted-foreground/30"
+                        )}>
+                          {selected && <CheckCircle2 className="w-2.5 h-2.5 text-primary-foreground" />}
+                        </div>
+                        <span className={cn("text-xs", selected ? "font-medium text-foreground" : "text-muted-foreground")}>
+                          {opt.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Custom text input for multi-select "Outro" */}
+              {customTextMode && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Digite sua opção personalizada:</p>
+                  <div className="flex gap-2">
+                    <Input
+                      ref={inputRef as any}
+                      value={textValue}
+                      onChange={e => setTextValue(e.target.value)}
+                      placeholder="Ex: Meu segmento personalizado..."
+                      className="flex-1 text-sm"
+                      onKeyDown={e => e.key === "Enter" && addCustomMultiValue()}
+                      autoFocus
+                    />
+                    <Button size="sm" onClick={addCustomMultiValue} disabled={!textValue.trim()}>
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-[10px] text-muted-foreground h-6" onClick={() => setCustomTextMode(false)}>
+                    ← Voltar às opções
+                  </Button>
+                </div>
+              )}
+
               <Button
                 size="sm"
                 className="w-full gap-1.5 text-xs"
