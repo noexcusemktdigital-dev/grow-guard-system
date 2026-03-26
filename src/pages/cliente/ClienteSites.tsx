@@ -810,7 +810,6 @@ export default function ClienteSites() {
     <div className="w-full space-y-6">
       <PageHeader title="Sites & Landing Pages" subtitle="Gere sites profissionais com IA e publique no seu domínio" icon={<Globe className="w-5 h-5 text-primary" />} actions={<FeatureTutorialButton slug="sites" />} />
 
-      <ApprovalDashboard />
 
       <UsageQuotaBanner used={sites.length} limit={maxSites} label="sites ativos" planName="Atual" />
       <Button className="w-full gap-2" size="lg" onClick={() => setCreating(true)} disabled={sites.length >= maxSites}>
