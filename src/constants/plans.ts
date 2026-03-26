@@ -123,7 +123,7 @@ export const CREDIT_COSTS: Record<string, { cost: number; label: string }> = {
   "generate-social-concepts":   { cost: 25,  label: "Conceitos visuais" },
   "generate-social-video":      { cost: 25,  label: "Vídeo social" },
   "agent-followup-cron":        { cost: 2,   label: "Follow-up automático (por msg)" },
-  "approve-content":            { cost: 200, label: "Aprovação de conteúdo" },
+  "approve-content":            { cost: 20,  label: "Aprovação de roteiro" },
 };
 
 // ── Credit Packs ────────────────────────────────────────────────

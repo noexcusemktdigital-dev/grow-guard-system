@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Download, ExternalLink, Check, Trash2, Eye } from "lucide-react";
+import { Copy, Download, ExternalLink, Check, Trash2, Eye, Clapperboard } from "lucide-react";
 import { ContentVisualRenderer } from "./ContentVisuals";
 import type { GeneratedContent } from "./ContentTypes";
 
@@ -14,12 +14,14 @@ interface ContentVisualCardProps {
   onApprove: () => void;
   onDelete?: () => void;
   onExpand?: () => void;
+  onRecord?: () => void;
   approving: boolean;
+  isApproved?: boolean;
   showContext?: { tom?: string; publico?: string; plataforma?: string };
 }
 
 export function ContentVisualCard({
-  content: c, index, onCopy, onPdf, onPost, onApprove, onDelete, onExpand, approving, showContext,
+  content: c, index, onCopy, onPdf, onPost, onApprove, onDelete, onExpand, onRecord, approving, isApproved, showContext,
 }: ContentVisualCardProps) {
   return (
     <Card id={`content-card-${index}`} className="overflow-hidden group hover:shadow-lg transition-shadow">
@@ -87,9 +89,15 @@ export function ContentVisualCard({
               <Trash2 className="w-4 h-4" />
             </Button>
           )}
-          <Button size="sm" onClick={onApprove} disabled={approving} className="ml-auto">
-            <Check className="w-4 h-4 mr-1" /> Aprovar
-          </Button>
+          {isApproved && onRecord ? (
+            <Button size="sm" onClick={onRecord} className="ml-auto gap-1 bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Clapperboard className="w-4 h-4" /> Gravar
+            </Button>
+          ) : (
+            <Button size="sm" onClick={onApprove} disabled={approving} className="ml-auto">
+              <Check className="w-4 h-4 mr-1" /> Aprovar
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

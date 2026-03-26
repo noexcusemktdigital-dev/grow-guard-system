@@ -20,7 +20,7 @@ import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getEffectiveLimits } from "@/constants/plans";
 import { SitePreview } from "@/components/sites/SitePreview";
 import { SiteHistory, type SavedSite } from "@/components/sites/SiteHistory";
-import { ApprovalDashboard } from "@/components/cliente/ApprovalDashboard";
+import { useStrategyData } from "@/hooks/useStrategyData";
 import { useClienteSitesDB, useCreateClientSite, useApproveSite } from "@/hooks/useClienteSitesDB";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 import { useContentHistory } from "@/hooks/useClienteContentV2";
@@ -191,6 +191,7 @@ export default function ClienteSites() {
   const { data: contents } = useContentHistory();
   const { data: visualIdentity } = useVisualIdentity();
   const { data: wallet } = useClienteWallet();
+  const strategy = useStrategyData();
 
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const SITE_CREDIT_COST = 100;
@@ -270,17 +271,22 @@ export default function ClienteSites() {
   const viStyle = visualIdentity?.style;
   const approvedContents = (contents || []).filter(c => c.status === "approved");
 
-  // Auto-fill on first open
+  // Auto-fill on first open with rich strategy + visual identity data
   const autoFilled = useState(false);
   if (creating && !autoFilled[0]) {
     autoFilled[1](true);
     setForm(prev => ({
       ...prev,
       nome_empresa: prev.nome_empresa || strategyAnswers.empresa || "",
-      segmento: prev.segmento || strategyAnswers.segmento || "",
+      segmento: prev.segmento || strategyAnswers.segmento || strategy.salesPlanSegmento || "",
       descricao_negocio: prev.descricao_negocio || strategyAnswers.descricao || "",
-      tom: prev.tom || visualIdentity?.tone || "",
+      tom: prev.tom || visualIdentity?.tone || strategy.tomPrincipal || "",
       estilo: prev.estilo || viStyle || "",
+      servicos: prev.servicos || strategy.salesPlanProducts || strategyAnswers.produto || "",
+      diferenciais: prev.diferenciais || strategy.salesPlanDiferenciais || strategyAnswers.diferencial || "",
+      dores: prev.dores || strategy.salesPlanDorPrincipal || strategyAnswers.problema || "",
+      publico_custom: prev.publico_custom || strategy.publicoAlvo || strategyAnswers.publico || "",
+      slogan: prev.slogan || (strategy.propostaValor ? String(strategy.propostaValor) : "") || "",
     }));
   }
 
@@ -357,10 +363,10 @@ export default function ClienteSites() {
         segmento: form.segmento,
         servicos: form.servicos,
         diferencial: form.diferenciais,
-        faixa_preco: "",
+        faixa_preco: strategy.salesPlanTicketMedio || "",
         publico_alvo: [...(form.publico_chips as string[]), form.publico_custom].filter(Boolean).join(", "),
         faixa_etaria: "",
-        dores: form.dores || strategyAnswers.problema || "",
+        dores: form.dores || strategyAnswers.problema || strategy.salesPlanDorPrincipal || "",
         depoimentos: form.provas_depoimentos,
         numeros_impacto: form.provas_numeros,
         logos_clientes: "",
@@ -374,10 +380,11 @@ export default function ClienteSites() {
         redes_sociais: redesSociais,
         link_whatsapp: whatsappLink,
         instrucoes_adicionais: `Páginas: ${paginasSelecionadas}. Cases: ${form.provas_cases || "N/A"}`,
-        persona: null,
+        persona: strategy.icp ? { nome: strategy.personaName, descricao: strategy.publicoAlvo } : null,
         identidade_visual: visualIdentity ? { paleta: viPalette, fontes: viFonts, estilo: viStyle, tom_visual: visualIdentity.tone } : null,
         estrategia: strategyAnswers,
         organization_id: orgId,
+        logo_url: visualIdentity?.logo_url || "",
       };
 
       const { data, error } = await supabase.functions.invoke("generate-site", { body });
@@ -803,7 +810,6 @@ export default function ClienteSites() {
     <div className="w-full space-y-6">
       <PageHeader title="Sites & Landing Pages" subtitle="Gere sites profissionais com IA e publique no seu domínio" icon={<Globe className="w-5 h-5 text-primary" />} actions={<FeatureTutorialButton slug="sites" />} />
 
-      <ApprovalDashboard />
 
       <UsageQuotaBanner used={sites.length} limit={maxSites} label="sites ativos" planName="Atual" />
       <Button className="w-full gap-2" size="lg" onClick={() => setCreating(true)} disabled={sites.length >= maxSites}>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
-import { FileText, Check, Sparkles, FolderOpen, RotateCcw, Video } from "lucide-react";
+import { FileText, Check, Sparkles, FolderOpen, RotateCcw, Video, Clapperboard } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
 import { useStrategyData } from "@/hooks/useStrategyData";
 import { useNavigate } from "react-router-dom";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
-import { ApprovalDashboard } from "@/components/cliente/ApprovalDashboard";
+
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -25,6 +25,7 @@ import { ContentVisualCard } from "@/components/cliente/content/ContentVisualCar
 import { BatchFolderView } from "@/components/cliente/content/BatchFolderView";
 import { ContentDetailSheet } from "@/components/cliente/content/ContentDetailSheet";
 import { OBJETIVOS, loadingPhrases } from "@/components/cliente/content/ContentTypes";
+import { RecordingTutorial } from "@/components/cliente/content/RecordingTutorial";
 
 const TOTAL_STEPS = 4;
 
@@ -60,6 +61,7 @@ export default function ClienteConteudos() {
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [confirmApproveAll, setConfirmApproveAll] = useState(false);
   const [expandedContent, setExpandedContent] = useState<any>(null);
+  const [recordingScript, setRecordingScript] = useState<any>(null);
 
   useEffect(() => {
     if (hasStrategy && strategy.canalPrioritario) {
@@ -210,8 +212,6 @@ export default function ClienteConteudos() {
 
       <StrategyBanner toolName="a geração de roteiros" dataUsed="Pilares, ICP e tom de voz" />
 
-      <ApprovalDashboard />
-
       <div className="flex flex-wrap items-center gap-3">
         {hasStrategy && (
           <Badge variant="outline" className="gap-1.5 text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30">
@@ -277,7 +277,9 @@ export default function ClienteConteudos() {
                     onApprove={() => handleApproveOne(i)}
                     onDelete={() => handleDeleteGenerated(i)}
                     onExpand={() => setExpandedContent(c)}
+                    onRecord={() => setRecordingScript({ ...c, plataforma })}
                     approving={approveMutation.isPending}
+                    isApproved={c.status === "approved" || (history || []).find((h: any) => h.id === generatedIds[i])?.status === "approved"}
                     showContext={contextInfo}
                   />
                 ))}
@@ -313,6 +315,13 @@ export default function ClienteConteudos() {
         content={expandedContent}
         onCopy={() => { if (expandedContent) copyContent(expandedContent); }}
         onPost={() => setExpandedContent(null)}
+      />
+
+      <RecordingTutorial
+        open={!!recordingScript}
+        onOpenChange={(open) => !open && setRecordingScript(null)}
+        format={recordingScript?.plataforma || recordingScript?.format || "reels"}
+        script={recordingScript}
       />
 
       <InsufficientCreditsDialog

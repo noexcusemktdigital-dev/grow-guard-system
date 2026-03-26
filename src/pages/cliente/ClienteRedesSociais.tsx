@@ -11,7 +11,7 @@ import { useContentHistory } from "@/hooks/useClienteContentV2";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
-import { ApprovalDashboard } from "@/components/cliente/ApprovalDashboard";
+
 
 import { PostGallery } from "@/components/cliente/social/PostGallery";
 import { ArtWizard, ArtGeneratePayload, ArtBriefingResult } from "@/components/cliente/social/ArtWizard";
@@ -295,7 +295,6 @@ export default function ClienteRedesSociais() {
     return (
       <>
         <PageHeader title="Postagem" subtitle="Crie artes profissionais para suas redes sociais" actions={<FeatureTutorialButton slug="redes_sociais" />} />
-        <ApprovalDashboard />
         <PostGallery
           posts={posts}
           isLoading={postsLoading}
