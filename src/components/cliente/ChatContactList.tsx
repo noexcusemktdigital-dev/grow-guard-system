@@ -37,6 +37,12 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
       const mode = contactAny.attending_mode || "ai";
       const contactType = contactAny.contact_type || "individual";
       const isGroup = contactType === "group";
+      const isArchived = !!(contactAny.is_archived);
+      
+      // Filter archived unless showing archived
+      if (!showArchived && isArchived) return false;
+      if (showArchived) return isArchived && matchSearch;
+      
       let matchMode = true;
       if (modeFilter === "groups") matchMode = isGroup;
       else if (modeFilter === "ai") matchMode = mode === "ai" && !isGroup;
@@ -46,8 +52,15 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
       return matchSearch && matchMode && matchAgent;
     });
 
+    const archivedCount = contacts.filter(c => !!(c as any).is_archived).length;
+
     const sortedContacts = useMemo(() => {
       return [...filtered].sort((a, b) => {
+        // Pinned contacts first
+        const aPinned = !!(a as any).is_pinned ? 1 : 0;
+        const bPinned = !!(b as any).is_pinned ? 1 : 0;
+        if (bPinned !== aPinned) return bPinned - aPinned;
+        
         const da = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
         const db = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return db - da;
