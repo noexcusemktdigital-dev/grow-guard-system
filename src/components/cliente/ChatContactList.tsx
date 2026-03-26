@@ -22,7 +22,7 @@ interface Props {
 type ModeFilter = "all" | "ai" | "human" | "waiting" | "groups";
 
 export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
-  function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone, onPinContact, onArchiveContact }, ref) {
+  function ChatContactList({ contacts, selectedId, onSelect, agents = [], isConnected, lastMessages, connectedPhone, onArchiveContact }, ref) {
     const [search, setSearch] = useState("");
     const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
     const [agentFilter, setAgentFilter] = useState("");
