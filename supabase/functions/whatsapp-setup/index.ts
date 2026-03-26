@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
             // Fetch phone number if connected and not already known
             if (connected && !phoneNumber) {
               try {
-                const phoneRes = await fetch(`${inst.base_url}/instance/fetchInstances?instanceName=${inst.instance_id}`, {
+                const phoneRes = await fetch(`${inst.base_url}/instance/fetchInstances?instanceName=${encodeURIComponent(inst.instance_id)}`, {
                   headers: { apikey: inst.client_token },
                   signal: AbortSignal.timeout(10000),
                 });
