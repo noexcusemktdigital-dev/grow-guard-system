@@ -58,28 +58,29 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, instance_name } = body;
 
-    if (!action || !instance_name) {
-      return json({ error: "Missing action or instance_name" }, 400);
+    if (!action) return json({ error: "Missing action" }, 400);
+    // instance_name not required for list/cleanup
+    if (!instance_name && !["list", "cleanup"].includes(action)) {
+      return json({ error: "Missing instance_name" }, 400);
     }
+
+    const sanitizedName = instance_name
+      ? String(instance_name).toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+      : "";
 
     // ── Build webhook URL for NOE (this system) ──
     const noeWebhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
 
     // ── Call IZITECH provision API ──
     const izitechKey = Deno.env.get("IZITECH_CROSS_API_KEY") || "";
-    if (!izitechKey) {
-      return json({ error: "IZITECH integration not configured" }, 500);
-    }
+    if (!izitechKey) return json({ error: "IZITECH integration not configured" }, 500);
 
     const izitechRes = await fetch(IZITECH_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": izitechKey,
-      },
+      headers: { "Content-Type": "application/json", "x-api-key": izitechKey },
       body: JSON.stringify({
         action,
-        instance_name,
+        instance_name: instance_name || undefined,
         customer_webhook_url: noeWebhookUrl,
       }),
       signal: AbortSignal.timeout(30000),
@@ -87,36 +88,50 @@ Deno.serve(async (req) => {
 
     const data = await izitechRes.json().catch(() => ({ error: "Invalid response from IZITECH" }));
 
-    // ── If creating, save instance reference in NOE DB ──
-    if (action === "create" && data.success && data.instance) {
-      const sanitizedName = String(instance_name)
-        .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    // ── Sync local DB based on action result ──
 
+    // CREATE: save instance reference
+    if (action === "create" && data.success && data.instance) {
       await supabase.from("whatsapp_instances").upsert({
-        organization_id: orgId,
-        instance_id: sanitizedName,
-        label: instance_name,
-        provider: "evolution",
-        status: "pending",
-        webhook_url: noeWebhookUrl,
-        base_url: "https://evo.grupolamadre.com.br",
-        token: "managed-by-izitech",
-        client_token: "managed-by-izitech",
+        organization_id: orgId, instance_id: sanitizedName,
+        label: instance_name, provider: "evolution", status: "pending",
+        webhook_url: noeWebhookUrl, base_url: "https://evo.grupolamadre.com.br",
+        token: "managed-by-izitech", client_token: "managed-by-izitech",
       }, { onConflict: "organization_id,instance_id" });
     }
 
-    // ── If connected, update local DB ──
-    if ((action === "qr" || action === "status") && data.status === "connected") {
-      const sanitizedName = String(instance_name)
-        .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    // CONNECTED: update status + phone
+    if (["qr", "status", "reconnect"].includes(action) && data.status === "connected") {
+      await supabase.from("whatsapp_instances").update({
+        status: "connected", phone_number: data.phone_number || null,
+      }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
+    }
 
-      await supabase.from("whatsapp_instances")
-        .update({
-          status: "connected",
-          phone_number: data.phone_number || null,
-        })
-        .eq("organization_id", orgId)
-        .eq("instance_id", sanitizedName);
+    // DISCONNECT: update status
+    if (action === "disconnect" && data.success) {
+      await supabase.from("whatsapp_instances").update({
+        status: "disconnected", phone_number: null,
+      }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
+    }
+
+    // RECONNECT with QR: update status
+    if (action === "reconnect" && data.success) {
+      await supabase.from("whatsapp_instances").update({
+        status: "pending",
+      }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
+    }
+
+    // DELETE: remove from local DB
+    if (action === "delete" && data.success) {
+      await supabase.from("whatsapp_instances").delete()
+        .eq("organization_id", orgId).eq("instance_id", sanitizedName);
+    }
+
+    // RESTART: update status
+    if (action === "restart" && data.success) {
+      await supabase.from("whatsapp_instances").update({
+        status: "pending",
+      }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
     }
 
     return json(data, izitechRes.status);
