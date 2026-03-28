@@ -3,21 +3,26 @@ import { format, startOfMonth, subMonths, isAfter, subHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   DollarSign, Users, TrendingUp, Target, AlertTriangle,
-  MessageCircle, BarChart3, ArrowUpRight, ArrowDownRight,
-  CheckSquare, ChevronRight, Sparkles, Clock,
-  Zap, ArrowRight, Bot, Link, FileText, Lightbulb,
-  Wifi, WifiOff, Sun, Moon, CloudSun, ListChecks,
-  Flame, Trophy, CheckCircle2, Star, Megaphone,
+  MessageCircle, BarChart3,
+  CheckSquare,
+  ArrowRight, Bot, Lightbulb,
+  Wifi, Sun, Moon, CloudSun,
+  Trophy,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ProgressCtaCard } from "@/components/premium/ProgressCtaCard";
+import { ClienteInicioTasks } from "./ClienteInicioTasks";
+import { ClienteInicioGoals } from "./ClienteInicioGoals";
+import { ClienteInicioKpis } from "./ClienteInicioKpis";
+import { ClienteInicioLevelCard } from "./ClienteInicioLevelCard";
+import { ClienteInicioHero } from "./ClienteInicioHero";
+import { ClienteInicioAlerts } from "./ClienteInicioAlerts";
+import { ClienteInicioProgress } from "./ClienteInicioProgress";
 import { triggerCelebration } from "@/components/CelebrationEffect";
 import { useClienteChecklist, useClienteGamification, useClienteContentMutations } from "@/hooks/useClienteContent";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
@@ -269,192 +274,33 @@ export default function ClienteInicio() {
     <div className="w-full space-y-5">
 
       {/* Hero Section */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent shadow-md">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/3 pointer-events-none" />
-          <CardContent className="relative p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2.5">
-                  {greetingEmoji}
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    {greeting}
-                  </h1>
-                </div>
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5" />
-                  {format(now, "EEEE, dd 'de' MMMM", { locale: ptBR }).replace(/^./, c => c.toUpperCase())}
-                </p>
-              </div>
-              {/* Gamification mini badge */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/cliente/gamificacao")}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-background/50 backdrop-blur-sm border border-primary/10 hover:border-primary/30 transition-all"
-              >
-                <Trophy className="w-4 h-4 text-primary" />
-                <div className="text-left">
-                  <p className="text-[10px] font-bold text-primary">{levelInfo.title}</p>
-                  <p className="text-[9px] text-muted-foreground">{xp} XP</p>
-                </div>
-                {streakDays > 0 && (
-                  <span className={`text-sm ${streakDays > 7 ? "animate-pulse" : ""}`}>🔥{streakDays}</span>
-                )}
-              </motion.button>
-            </div>
+      <ClienteInicioHero
+        greeting={greeting}
+        greetingEmoji={greetingEmoji}
+        xp={xp}
+        levelInfo={levelInfo}
+        streakDays={streakDays}
+        dailyPhrase={dailyPhrase}
+        dailyMessageAuthor={dailyMessage?.author}
+        pendingTasksCount={pendingTasks.length}
+        thisMonthLeadsCount={thisMonthLeads.length}
+        goalPercent={goalPercent}
+        now={now}
+      />
 
-            <div className="flex items-start gap-3 bg-background/60 rounded-xl p-3.5">
-              <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-foreground/90 italic leading-relaxed">"{dailyPhrase}"</p>
-                {dailyMessage?.author && (
-                  <p className="text-[10px] text-muted-foreground mt-1">— {dailyMessage.author}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <ListChecks className="w-3.5 h-3.5 text-primary" />
-                <span><span className="text-foreground font-semibold">{pendingTasks.length}</span> tarefas pendentes</span>
-              </div>
-              <span className="text-muted-foreground/40">·</span>
-              <div className="flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-primary" />
-                <span><span className="text-foreground font-semibold">{thisMonthLeads.length}</span> leads no mês</span>
-              </div>
-              <span className="text-muted-foreground/40">·</span>
-              <div className="flex items-center gap-1.5">
-                <Target className="w-3.5 h-3.5 text-primary" />
-                <span>Meta em <span className="text-foreground font-semibold">{Math.min(goalPercent, 100).toFixed(0)}%</span></span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Insights alerts */}
-      {insights.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          {insights.map((insight, i) => {
-            const Icon = insight.icon;
-            return (
-              <motion.button
-                key={i}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate(insight.path)}
-                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                  insight.type === "urgent"
-                    ? "bg-destructive/5 border-destructive/15 hover:bg-destructive/10"
-                    : insight.type === "warning"
-                    ? "bg-amber-500/5 border-amber-500/15 hover:bg-amber-500/10"
-                    : "bg-blue-500/5 border-blue-500/15 hover:bg-blue-500/10"
-                }`}
-              >
-                <Icon className={`w-4 h-4 shrink-0 ${
-                  insight.type === "urgent" ? "text-destructive" : insight.type === "warning" ? "text-amber-500" : "text-blue-500"
-                }`} />
-                <span className={`text-xs font-medium ${
-                  insight.type === "urgent" ? "text-destructive" : insight.type === "warning" ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"
-                }`}>{insight.label}</span>
-                <ArrowRight className="w-3 h-3 ml-auto text-muted-foreground" />
-              </motion.button>
-            );
-          })}
-        </motion.div>
-      )}
-
-      {/* Announcement alerts */}
-      {unreadAnnouncements.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-2">
-          {unreadAnnouncements.map((ann) => (
-            <Card key={ann.id} className={`border-l-4 ${ann.priority === "critical" ? "border-l-destructive bg-destructive/5" : ann.priority === "high" ? "border-l-amber-500 bg-amber-500/5" : "border-l-primary bg-primary/5"}`}>
-              <CardContent className="py-3 px-4 flex items-center gap-3">
-                <Megaphone className={`w-4 h-4 shrink-0 ${ann.priority === "critical" ? "text-destructive" : ann.priority === "high" ? "text-amber-500" : "text-primary"}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{ann.title}</p>
-                  {ann.content && <p className="text-xs text-muted-foreground line-clamp-1">{ann.content}</p>}
-                </div>
-                <Badge variant="outline" className="text-[9px] shrink-0">Comunicado</Badge>
-              </CardContent>
-            </Card>
-          ))}
-        </motion.div>
-      )}
+      {/* Insights + Announcement alerts */}
+      <ClienteInicioAlerts insights={insights} unreadAnnouncements={unreadAnnouncements} />
 
       {/* KPIs with animated counters */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {kpiConfig.map((cfg, i) => {
-          const kpi = kpiValues[i];
-          const Icon = cfg.icon;
-          return (
-            <motion.div
-              key={cfg.label}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.08, duration: 0.4 }}
-            >
-              <Card
-                className={`hover-scale bg-gradient-to-br ${cfg.gradient} border-0 shadow-sm cursor-pointer group transition-all duration-300 hover:shadow-md`}
-                onClick={() => navigate(cfg.path)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{cfg.label}</span>
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${cfg.iconColor} bg-background/60 group-hover:scale-110 transition-transform`}>
-                      <Icon className="h-3.5 w-3.5" />
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold tracking-tight">
-                    {leadsLoading ? <Skeleton className="h-7 w-24" /> : kpi.value}
-                  </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    {kpi.trend === "up" && <ArrowUpRight className="h-3 w-3 text-emerald-500" />}
-                    {kpi.trend === "down" && <ArrowDownRight className="h-3 w-3 text-destructive" />}
-                    <span className={`text-[11px] font-medium ${kpi.trend === "up" ? "text-emerald-600 dark:text-emerald-400" : kpi.trend === "down" ? "text-destructive" : "text-muted-foreground"}`}>
-                      {kpi.sublabel}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
+      <ClienteInicioKpis kpiConfig={kpiConfig} kpiValues={kpiValues} leadsLoading={leadsLoading} />
 
       {/* Gamified Daily Progress Bar */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-        <Card className="border-primary/10">
-          <CardContent className="py-4 px-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold">Progresso do Dia</span>
-              </div>
-              <Badge variant={dailyScore >= 80 ? "default" : dailyScore >= 50 ? "secondary" : "outline"} className="text-xs">
-                {dailyScore}/100
-              </Badge>
-            </div>
-            <div className="w-full h-3 rounded-full bg-muted overflow-hidden">
-              <motion.div
-                className={`h-full rounded-full ${
-                  dailyScore >= 80 ? "bg-emerald-500" : dailyScore >= 50 ? "bg-amber-500" : "bg-destructive/70"
-                }`}
-                initial={{ width: 0 }}
-                animate={{ width: `${dailyScore}%` }}
-                transition={{ duration: 1.2, ease: "easeOut", delay: 0.5 }}
-              />
-            </div>
-            <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
-              <span>Checklist {Math.round(taskProgress)}%</span>
-              <span>Metas {Math.min(goalPercent, 100).toFixed(0)}%</span>
-              <span>CRM {Math.min(todayLeadsCount * 20, 100)}%</span>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <ClienteInicioProgress
+        dailyScore={dailyScore}
+        taskProgress={taskProgress}
+        goalPercent={goalPercent}
+        todayLeadsCount={todayLeadsCount}
+      />
 
       {/* Progress CTA */}
       {primaryGoal && primaryProgress && (
@@ -561,174 +407,18 @@ export default function ClienteInicio() {
         {/* Right column */}
         <div className="lg:col-span-2 space-y-5">
           {/* Interactive Tasks */}
-          <Card>
-            <CardHeader className="pb-3 px-5 pt-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <CheckSquare className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                  <CardTitle className="text-sm font-semibold">Tarefas do Dia</CardTitle>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-medium text-muted-foreground">{Math.round(taskProgress)}%</span>
-                  <div className="w-8 h-8 relative">
-                    <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                      <circle cx="18" cy="18" r="15" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
-                      <circle cx="18" cy="18" r="15" fill="none"
-                        stroke={taskProgress >= 70 ? "hsl(142, 71%, 45%)" : taskProgress >= 30 ? "hsl(38, 92%, 50%)" : "hsl(var(--destructive))"}
-                        strokeWidth="3"
-                        strokeDasharray={`${taskProgress * 0.942} 100`}
-                        strokeLinecap="round"
-                        className="transition-all duration-700"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="px-5 pb-5">
-              <div className="space-y-1">
-                <AnimatePresence mode="popLayout">
-                  {pendingTasks.slice(0, 5).map((t, i) => (
-                    <motion.div
-                      key={t.id}
-                      layout
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -20, scale: 0.95 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="group flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/40 transition-all duration-200 cursor-pointer"
-                      onClick={() => handleToggleTask(t.id, !!t.is_completed)}
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.8 }}
-                        className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 group-hover:border-primary transition-colors flex-shrink-0"
-                      />
-                      <span className="text-[13px] flex-1 text-foreground/80 group-hover:text-foreground transition-colors">{t.title}</span>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-                {completedTasks.length > 0 && (
-                  <div className="pt-2 border-t border-border/50 mt-2">
-                    {completedTasks.slice(0, 3).map(t => (
-                      <div
-                        key={t.id}
-                        className="flex items-center gap-3 p-2 rounded-lg opacity-50 hover:opacity-70 cursor-pointer transition-all"
-                        onClick={() => handleToggleTask(t.id, !!t.is_completed)}
-                      >
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                        <span className="text-[13px] flex-1 line-through text-muted-foreground">{t.title}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {pendingTasks.length === 0 && completedTasks.length === 0 && (
-                  <div className="flex flex-col items-center py-4">
-                    <CheckSquare className="w-6 h-6 text-muted-foreground/30 mb-1.5" />
-                    <p className="text-xs text-muted-foreground mb-2">Nenhuma tarefa para hoje</p>
-                    <Button variant="outline" size="sm" className="text-xs h-7 rounded-lg" onClick={() => navigate("/cliente/checklist")}>
-                      Gerar Checklist <ArrowRight className="w-3 h-3 ml-1" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <Button variant="ghost" size="sm" className="w-full mt-3 text-xs h-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/cliente/checklist")}>
-                Ver checklist completo <ChevronRight className="w-3 h-3 ml-1" />
-              </Button>
-            </CardContent>
-          </Card>
+          <ClienteInicioTasks
+            pendingTasks={pendingTasks}
+            completedTasks={completedTasks}
+            taskProgress={taskProgress}
+            handleToggleTask={handleToggleTask}
+          />
 
           {/* Level / Streak Card */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-            <Card className="border-primary/15 bg-gradient-to-br from-primary/5 to-transparent cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/cliente/gamificacao")}>
-              <CardContent className="py-4 px-5">
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Trophy className="w-6 h-6 text-primary" />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-bold text-primary">{levelInfo.title}</span>
-                      <span className="text-[10px] text-muted-foreground">Nível {levelInfo.level}</span>
-                    </div>
-                    <Progress value={levelInfo.progress} className="h-2" />
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[10px] text-muted-foreground">{xp} XP</span>
-                      {levelInfo.nextTitle && (
-                        <span className="text-[10px] text-muted-foreground">{levelInfo.xpToNext} para {levelInfo.nextTitle}</span>
-                      )}
-                    </div>
-                  </div>
-                  {streakDays > 0 && (
-                    <div className={`text-center ${streakDays > 7 ? "animate-pulse" : ""}`}>
-                      <Flame className="w-6 h-6 text-orange-500 mx-auto" />
-                      <span className="text-xs font-bold text-orange-500">{streakDays}d</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <ClienteInicioLevelCard levelInfo={levelInfo} xp={xp} streakDays={streakDays} />
 
           {/* Monthly Goals */}
-          <Card>
-            <CardHeader className="px-5 pt-5 pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Zap className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                  <CardTitle className="text-sm font-semibold">Metas do Mês</CardTitle>
-                </div>
-                <span className="text-[10px] text-muted-foreground capitalize font-medium">{format(now, "MMMM yyyy", { locale: ptBR })}</span>
-              </div>
-            </CardHeader>
-            <CardContent className="px-5 pb-5 space-y-4">
-              {goalsDisplay.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-xs text-muted-foreground mb-2">Nenhuma meta configurada</p>
-                  <Button variant="outline" size="sm" className="text-xs h-8 rounded-lg" onClick={() => navigate("/cliente/plano-vendas")}>
-                    Criar meta <ArrowRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </div>
-              ) : goalsDisplay.map((goal, i) => {
-                const pct = Math.min(goal.percent, 100);
-                const isOnTrack = pct >= 70;
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 + i * 0.1 }}
-                    className="space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-muted-foreground font-medium">{goal.label}</span>
-                      <span className="font-semibold tabular-nums">
-                        {goal.metric === "revenue" ? formatCurrency(goal.current) : goal.current.toLocaleString("pt-BR")}
-                        <span className="text-muted-foreground font-normal"> / {goal.metric === "revenue" ? formatCurrency(goal.target) : goal.target.toLocaleString("pt-BR")}</span>
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                      <motion.div
-                        className={`h-full rounded-full ${isOnTrack ? "bg-emerald-500" : "bg-amber-500"}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, delay: 0.5 + i * 0.1 }}
-                      />
-                    </div>
-                  </motion.div>
-                );
-              })}
-              <Button variant="outline" size="sm" className="w-full text-xs h-9 mt-2 rounded-lg" onClick={() => navigate("/cliente/plano-vendas")}>
-                Ver detalhes <ArrowRight className="w-3 h-3 ml-1" />
-              </Button>
-            </CardContent>
-          </Card>
+          <ClienteInicioGoals goalsDisplay={goalsDisplay} />
         </div>
       </div>
     </div>
